@@ -24,7 +24,7 @@ interface ApiStatus {
 const Index = () => {
   const [apiStatus, setApiStatus] = useState<"loading" | "online" | "offline">("loading");
   const [apiInfo, setApiInfo] = useState<ApiStatus | null>(null);
-  const [agentName, setAgentName] = useState("AGENT-01");
+  const [agentName, setAgentName] = useState("AGENTE-01");
   const [agentToken, setAgentToken] = useState("");
   const [reports, setReports] = useState<Report[]>([]);
   const [isEnrolling, setIsEnrolling] = useState(false);
@@ -50,7 +50,7 @@ const Index = () => {
 
   const enrollAgent = async () => {
     if (!agentName.trim()) {
-      toast.error("Agent name is required");
+      toast.error("Nome do agente é obrigatório");
       return;
     }
 
@@ -66,13 +66,13 @@ const Index = () => {
         }),
       });
 
-      if (!res.ok) throw new Error("Enrollment failed");
+      if (!res.ok) throw new Error("Falha na matrícula");
 
       const data = await res.json();
       setAgentToken(data.agentToken);
-      toast.success("Agent enrolled successfully");
+      toast.success("Agente matriculado com sucesso");
     } catch (error) {
-      toast.error("Failed to enroll agent");
+      toast.error("Falha ao matricular agente");
     } finally {
       setIsEnrolling(false);
     }
@@ -94,11 +94,11 @@ const Index = () => {
         }),
       });
 
-      if (!res.ok) throw new Error("Job creation failed");
+      if (!res.ok) throw new Error("Falha ao criar job");
 
-      toast.success(`Job created: ${label}`);
+      toast.success(`Job criado: ${label}`);
     } catch (error) {
-      toast.error(`Failed to create job: ${label}`);
+      toast.error(`Falha ao criar job: ${label}`);
     } finally {
       setIsCreatingJob(null);
     }
@@ -106,7 +106,7 @@ const Index = () => {
 
   const loadReports = async () => {
     if (!agentToken) {
-      toast.error("Enroll an agent first to view reports");
+      toast.error("Matricule um agente primeiro para ver relatórios");
       return;
     }
 
@@ -115,13 +115,13 @@ const Index = () => {
         headers: { "X-Agent-Token": agentToken },
       });
 
-      if (!res.ok) throw new Error("Failed to load reports");
+      if (!res.ok) throw new Error("Falha ao carregar relatórios");
 
       const data = await res.json();
       setReports(data);
-      toast.success(`Loaded ${data.length} reports`);
+      toast.success(`${data.length} relatórios carregados`);
     } catch (error) {
-      toast.error("Failed to load reports");
+      toast.error("Falha ao carregar relatórios");
     }
   };
 
@@ -138,14 +138,14 @@ const Index = () => {
               <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 CyberShield Panel
               </h1>
-              <p className="text-sm text-muted-foreground">Security Operations Dashboard</p>
+              <p className="text-sm text-muted-foreground">Painel de Operações de Segurança</p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
             <Activity className={`h-4 w-4 ${apiStatus === "online" ? "text-success animate-pulse" : "text-destructive"}`} />
             <Badge variant={apiStatus === "online" ? "default" : "destructive"} className="font-mono">
-              {apiStatus === "loading" ? "Checking..." : apiStatus === "online" ? "API Online" : "API Offline"}
+              {apiStatus === "loading" ? "Verificando..." : apiStatus === "online" ? "API Online" : "API Offline"}
             </Badge>
           </div>
         </div>
@@ -156,17 +156,17 @@ const Index = () => {
             <CardHeader>
               <CardTitle className="text-primary flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5" />
-                System Status
+                Status do Sistema
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground">Service</p>
+                  <p className="text-muted-foreground">Serviço</p>
                   <p className="font-mono text-foreground">{apiInfo.name}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Server Time</p>
+                  <p className="text-muted-foreground">Hora do Servidor</p>
                   <p className="font-mono text-foreground">{new Date(apiInfo.now).toLocaleTimeString()}</p>
                 </div>
                 <div>
@@ -181,19 +181,19 @@ const Index = () => {
         {/* Agent Enrollment */}
         <Card className="bg-gradient-card border-primary/20 animate-slide-in">
           <CardHeader>
-            <CardTitle className="text-foreground">Agent Enrollment</CardTitle>
-            <CardDescription>Register a new security agent to the platform</CardDescription>
+            <CardTitle className="text-foreground">Matrícula de Agente</CardTitle>
+            <CardDescription>Registre um novo agente de segurança na plataforma</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-3">
               <Input
-                placeholder="Enter agent name (e.g., AGENT-01)"
+                placeholder="Digite o nome do agente (ex: AGENTE-01)"
                 value={agentName}
                 onChange={(e) => setAgentName(e.target.value)}
                 className="bg-secondary border-border text-foreground"
               />
               <Button onClick={enrollAgent} disabled={isEnrolling || apiStatus !== "online"}>
-                {isEnrolling ? "Enrolling..." : "Enroll Agent"}
+                {isEnrolling ? "Matriculando..." : "Matricular Agente"}
               </Button>
             </div>
 
@@ -201,13 +201,13 @@ const Index = () => {
               <div className="space-y-2 p-4 bg-secondary/50 rounded-lg border border-accent/20">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-success" />
-                  <p className="text-sm font-semibold text-success">Agent Token Generated</p>
+                  <p className="text-sm font-semibold text-success">Token do Agente Gerado</p>
                 </div>
                 <code className="block text-xs font-mono break-all text-muted-foreground bg-background/50 p-2 rounded">
                   {agentToken}
                 </code>
                 <p className="text-xs text-muted-foreground">
-                  Configure this token in your agent's config file to establish connection.
+                  Configure este token no arquivo de configuração do seu agente para estabelecer a conexão.
                 </p>
               </div>
             )}
@@ -217,53 +217,53 @@ const Index = () => {
         {/* Job Control */}
         <Card className="bg-gradient-card border-primary/20 animate-slide-in">
           <CardHeader>
-            <CardTitle className="text-foreground">Security Operations</CardTitle>
-            <CardDescription>Execute security scans and remediation tasks</CardDescription>
+            <CardTitle className="text-foreground">Operações de Segurança</CardTitle>
+            <CardDescription>Execute scans de segurança e tarefas de remediação</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <Button
                 variant="outline"
                 className="h-auto flex-col items-start p-4 bg-secondary/50 hover:bg-secondary border-border hover:border-primary/50 transition-all"
-                onClick={() => createJob("local_checks", "Local Security Checks")}
+                onClick={() => createJob("local_checks", "Verificações Locais de Segurança")}
                 disabled={isCreatingJob !== null || apiStatus !== "online"}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <CheckCircle2 className="h-4 w-4 text-primary" />
-                  <span className="font-semibold">Local Checks</span>
+                  <span className="font-semibold">Verificações Locais</span>
                 </div>
                 <span className="text-xs text-muted-foreground text-left">
-                  Firewall, SMBv1, RDP NLA, Windows Update status
+                  Firewall, SMBv1, RDP NLA, status do Windows Update
                 </span>
               </Button>
 
               <Button
                 variant="outline"
                 className="h-auto flex-col items-start p-4 bg-secondary/50 hover:bg-secondary border-border hover:border-warning/50 transition-all"
-                onClick={() => createJob("scan_nmap", "Network Scan (Nmap)")}
+                onClick={() => createJob("scan_nmap", "Scan de Rede (Nmap)")}
                 disabled={isCreatingJob !== null || apiStatus !== "online"}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <Activity className="h-4 w-4 text-warning" />
-                  <span className="font-semibold">Nmap Scan</span>
+                  <span className="font-semibold">Scan Nmap</span>
                 </div>
                 <span className="text-xs text-muted-foreground text-left">
-                  Network discovery and service detection
+                  Descoberta de rede e detecção de serviços
                 </span>
               </Button>
 
               <Button
                 variant="outline"
                 className="h-auto flex-col items-start p-4 bg-secondary/50 hover:bg-secondary border-border hover:border-destructive/50 transition-all"
-                onClick={() => createJob("remediate_standard", "Standard Remediation")}
+                onClick={() => createJob("remediate_standard", "Remediação Padrão")}
                 disabled={isCreatingJob !== null || apiStatus !== "online"}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <AlertTriangle className="h-4 w-4 text-destructive" />
-                  <span className="font-semibold">Auto Remediate</span>
+                  <span className="font-semibold">Remediação Automática</span>
                 </div>
                 <span className="text-xs text-muted-foreground text-left">
-                  Enable firewall, disable SMBv1, configure RDP NLA
+                  Ativar firewall, desativar SMBv1, configurar RDP NLA
                 </span>
               </Button>
             </div>
@@ -274,22 +274,22 @@ const Index = () => {
         <Card className="bg-gradient-card border-primary/20 animate-slide-in">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-foreground">Security Reports</CardTitle>
-              <CardDescription>View generated security reports and scan results</CardDescription>
+              <CardTitle className="text-foreground">Relatórios de Segurança</CardTitle>
+              <CardDescription>Visualize relatórios de segurança gerados e resultados de scans</CardDescription>
             </div>
             <Button onClick={loadReports} variant="secondary" size="sm" disabled={!agentToken}>
-              Refresh Reports
+              Atualizar Relatórios
             </Button>
           </CardHeader>
           <CardContent>
             {!agentToken ? (
               <div className="text-center py-8 text-muted-foreground">
                 <AlertTriangle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Enroll an agent to view reports</p>
+                <p>Matricule um agente para visualizar relatórios</p>
               </div>
             ) : reports.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <p>No reports available. Create and execute jobs to generate reports.</p>
+                <p>Nenhum relatório disponível. Crie e execute jobs para gerar relatórios.</p>
               </div>
             ) : (
               <div className="space-y-2 max-h-96 overflow-y-auto">
