@@ -1,1 +1,22 @@
 project_id = "iavbnmduxpxhwubqrzzn"
+
+[functions.health-check]
+verify_jwt = false
+
+[functions.enroll-agent]
+verify_jwt = false
+
+[functions.create-job]
+verify_jwt = false
+
+[functions.poll-jobs]
+verify_jwt = false
+
+[functions.ack-job]
+verify_jwt = false
+
+[functions.upload-report]
+verify_jwt = false
+
+[functions.list-reports]
+verify_jwt = false
