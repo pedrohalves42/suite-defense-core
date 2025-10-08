@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5080";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const API_URL = `${SUPABASE_URL}/functions/v1`;
 
 interface Report {
   id: string;
@@ -38,7 +39,7 @@ const Index = () => {
 
   const checkApiStatus = async () => {
     try {
-      const res = await fetch(`${API_URL}/`);
+      const res = await fetch(`${API_URL}/health-check`);
       const data = await res.json();
       setApiInfo(data);
       setApiStatus("online");
@@ -56,7 +57,7 @@ const Index = () => {
 
     setIsEnrolling(true);
     try {
-      const res = await fetch(`${API_URL}/v1/agents/enroll`, {
+      const res = await fetch(`${API_URL}/enroll-agent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -81,7 +82,7 @@ const Index = () => {
   const createJob = async (type: string, label: string) => {
     setIsCreatingJob(type);
     try {
-      const res = await fetch(`${API_URL}/v1/admin/jobs`, {
+      const res = await fetch(`${API_URL}/create-job`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -111,7 +112,7 @@ const Index = () => {
     }
 
     try {
-      const res = await fetch(`${API_URL}/v1/reports`, {
+      const res = await fetch(`${API_URL}/list-reports`, {
         headers: { "X-Agent-Token": agentToken },
       });
 
@@ -170,8 +171,8 @@ const Index = () => {
                   <p className="font-mono text-foreground">{new Date(apiInfo.now).toLocaleTimeString()}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Endpoint</p>
-                  <p className="font-mono text-foreground text-xs">{API_URL}</p>
+                  <p className="text-muted-foreground">Backend</p>
+                  <p className="font-mono text-foreground text-xs">Lovable Cloud</p>
                 </div>
               </div>
             </CardContent>

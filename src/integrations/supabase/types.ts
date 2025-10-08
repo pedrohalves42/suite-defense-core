@@ -14,7 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agents: {
+        Row: {
+          agent_name: string
+          agent_token: string
+          enrolled_at: string
+          id: string
+          last_heartbeat: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_name: string
+          agent_token: string
+          enrolled_at?: string
+          id?: string
+          last_heartbeat?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Update: {
+          agent_name?: string
+          agent_token?: string
+          enrolled_at?: string
+          id?: string
+          last_heartbeat?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      jobs: {
+        Row: {
+          agent_name: string
+          approved: boolean
+          completed_at: string | null
+          created_at: string
+          delivered_at: string | null
+          id: string
+          payload: Json | null
+          status: string
+          type: string
+        }
+        Insert: {
+          agent_name: string
+          approved?: boolean
+          completed_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          payload?: Json | null
+          status?: string
+          type: string
+        }
+        Update: {
+          agent_name?: string
+          approved?: boolean
+          completed_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          payload?: Json | null
+          status?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          agent_name: string
+          created_at: string
+          file_data: string
+          file_path: string
+          id: string
+          kind: string
+        }
+        Insert: {
+          agent_name: string
+          created_at?: string
+          file_data: string
+          file_path: string
+          id?: string
+          kind: string
+        }
+        Update: {
+          agent_name?: string
+          created_at?: string
+          file_data?: string
+          file_path?: string
+          id?: string
+          kind?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
