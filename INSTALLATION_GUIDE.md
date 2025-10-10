@@ -1,5 +1,7 @@
 # Guia Completo de Instalação - CyberShield
 
+**Domínio Oficial:** suite-defense-core.lovable.app
+
 ## 📋 Índice
 
 1. [Visão Geral](#visão-geral)

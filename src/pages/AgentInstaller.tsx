@@ -8,15 +8,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const API_URL = `${SUPABASE_URL}/functions/v1`;
+const DOMAIN = "suite-defense-core.lovable.app";
+const API_URL = `https://${DOMAIN}/functions/v1`;
 
 const AgentInstaller = () => {
+  const [installType, setInstallType] = useState<"server" | "agent">("agent");
   const [agentName, setAgentName] = useState("AGENT-01");
   const [tenantId, setTenantId] = useState("production");
   const [platform, setPlatform] = useState<"windows" | "linux">("windows");
   const [agentToken, setAgentToken] = useState("");
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [serverPort, setServerPort] = useState("8080");
 
   const enrollAgent = async () => {
     if (!agentName.trim()) {
@@ -48,12 +50,13 @@ const AgentInstaller = () => {
     }
   };
 
-  const windowsInstallScript = `# CyberShield Agent - Windows Installer
+  const windowsInstallScript = `# CyberShield ${installType === 'server' ? 'Server' : 'Agent'} - Windows Installer
 # Execute como Administrador
 
 $AgentName = "${agentName}"
 $AgentToken = "${agentToken || 'SEU_TOKEN_AQUI'}"
-$ServerUrl = "${SUPABASE_URL}"
+$ServerUrl = "https://${DOMAIN}"
+$ServerPort = "${serverPort}"
 
 # Criar diretório do agente
 $AgentDir = "C:\\Program Files\\CyberShield\\Agent"
@@ -104,12 +107,13 @@ Write-Host "✓ Para iniciar: powershell -ExecutionPolicy Bypass -File '$AgentDi
 `;
 
   const linuxInstallScript = `#!/bin/bash
-# CyberShield Agent - Linux Installer
+# CyberShield ${installType === 'server' ? 'Server' : 'Agent'} - Linux Installer
 # Execute com sudo
 
 AGENT_NAME="${agentName}"
 AGENT_TOKEN="${agentToken || 'SEU_TOKEN_AQUI'}"
-SERVER_URL="${SUPABASE_URL}"
+SERVER_URL="https://${DOMAIN}"
+SERVER_PORT="${serverPort}"
 
 # Criar diretório do agente
 AGENT_DIR="/opt/cybershield/agent"
@@ -201,41 +205,75 @@ echo "✓ Para ver logs: journalctl -u cybershield-agent -f"
           </div>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Criador de Instalador de Agente
+              CyberShield - Instalador Completo
             </h1>
-            <p className="text-sm text-muted-foreground">Gere scripts de instalação personalizados para seus agentes</p>
+            <p className="text-sm text-muted-foreground">Instalação de servidor e agentes | Domínio: {DOMAIN}</p>
           </div>
         </div>
 
         {/* Configuration Card */}
         <Card className="bg-gradient-card border-primary/20">
           <CardHeader>
-            <CardTitle className="text-foreground">Configuração do Agente</CardTitle>
-            <CardDescription>Configure os parâmetros do novo agente</CardDescription>
+            <CardTitle className="text-foreground">Configuração da Instalação</CardTitle>
+            <CardDescription>Escolha o tipo e configure os parâmetros</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <Button
+                variant={installType === "server" ? "default" : "outline"}
+                onClick={() => setInstallType("server")}
+                className="h-16"
+              >
+                Servidor Central
+              </Button>
+              <Button
+                variant={installType === "agent" ? "default" : "outline"}
+                onClick={() => setInstallType("agent")}
+                className="h-16"
+              >
+                Agente de Segurança
+              </Button>
+            </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="agentName">Nome do Agente</Label>
-                <Input
-                  id="agentName"
-                  placeholder="AGENT-01"
-                  value={agentName}
-                  onChange={(e) => setAgentName(e.target.value)}
-                  className="bg-secondary border-border text-foreground"
-                />
-              </div>
+              {installType === "agent" && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="agentName">Nome do Agente</Label>
+                    <Input
+                      id="agentName"
+                      placeholder="AGENT-01"
+                      value={agentName}
+                      onChange={(e) => setAgentName(e.target.value)}
+                      className="bg-secondary border-border text-foreground"
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="tenantId">Tenant ID</Label>
-                <Input
-                  id="tenantId"
-                  placeholder="production"
-                  value={tenantId}
-                  onChange={(e) => setTenantId(e.target.value)}
-                  className="bg-secondary border-border text-foreground"
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tenantId">Tenant ID</Label>
+                    <Input
+                      id="tenantId"
+                      placeholder="production"
+                      value={tenantId}
+                      onChange={(e) => setTenantId(e.target.value)}
+                      className="bg-secondary border-border text-foreground"
+                    />
+                  </div>
+                </>
+              )}
+              
+              {installType === "server" && (
+                <div className="space-y-2">
+                  <Label htmlFor="serverPort">Porta do Servidor</Label>
+                  <Input
+                    id="serverPort"
+                    placeholder="8080"
+                    value={serverPort}
+                    onChange={(e) => setServerPort(e.target.value)}
+                    className="bg-secondary border-border text-foreground"
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="platform">Plataforma</Label>
@@ -250,12 +288,14 @@ echo "✓ Para ver logs: journalctl -u cybershield-agent -f"
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>&nbsp;</Label>
-                <Button onClick={enrollAgent} disabled={isEnrolling} className="w-full">
-                  {isEnrolling ? "Gerando Token..." : "Gerar Token de Agente"}
-                </Button>
-              </div>
+              {installType === "agent" && (
+                <div className="space-y-2">
+                  <Label>&nbsp;</Label>
+                  <Button onClick={enrollAgent} disabled={isEnrolling} className="w-full">
+                    {isEnrolling ? "Gerando Token..." : "Gerar Token de Agente"}
+                  </Button>
+                </div>
+              )}
             </div>
 
             {agentToken && (
