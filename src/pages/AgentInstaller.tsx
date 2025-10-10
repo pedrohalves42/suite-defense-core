@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Package, Download, Copy, CheckCircle2, Terminal } from "lucide-react";
+import { Package, Download, Copy, CheckCircle2, Terminal, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 const DOMAIN = "suite-defense-core.lovable.app";
 const API_URL = `https://${DOMAIN}/functions/v1`;
 
 const AgentInstaller = () => {
+  const navigate = useNavigate();
   const [installType, setInstallType] = useState<"server" | "agent">("agent");
   const [agentName, setAgentName] = useState("AGENT-01");
   const [tenantId, setTenantId] = useState("production");
@@ -198,8 +200,15 @@ echo "✓ Para ver logs: journalctl -u cybershield-agent -f"
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/")}
+            className="shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
           <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
             <Package className="h-8 w-8 text-primary animate-pulse-glow" />
           </div>

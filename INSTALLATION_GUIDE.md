@@ -80,7 +80,7 @@ O CyberShield é um sistema de segurança distribuído composto por:
 
 1. **Acesse o instalador web:**
    ```
-   https://[seu-dominio]/agent-installer
+   https://suite-defense-core.lovable.app/installer
    ```
 
 2. **Selecione "Servidor Central"**
@@ -121,14 +121,14 @@ O CyberShield é um sistema de segurança distribuído composto por:
    ```json
    {
      "serverName": "CyberShield-Server",
-     "serverUrl": "https://[seu-supabase-url]",
+     "serverUrl": "https://suite-defense-core.lovable.app",
      "port": 8080,
      "tenantId": "production",
      "apiEndpoints": {
-       "enrollAgent": "https://[seu-supabase-url]/functions/v1/enroll-agent",
-       "createJob": "https://[seu-supabase-url]/functions/v1/create-job",
-       "listReports": "https://[seu-supabase-url]/functions/v1/list-reports",
-       "healthCheck": "https://[seu-supabase-url]/functions/v1/health-check"
+       "enrollAgent": "https://suite-defense-core.lovable.app/functions/v1/enroll-agent",
+       "createJob": "https://suite-defense-core.lovable.app/functions/v1/create-job",
+       "listReports": "https://suite-defense-core.lovable.app/functions/v1/list-reports",
+       "healthCheck": "https://suite-defense-core.lovable.app/functions/v1/health-check"
      },
      "logLevel": "info",
      "maxLogSize": "100MB",
@@ -163,14 +163,14 @@ O CyberShield é um sistema de segurança distribuído composto por:
    ```json
    {
      "serverName": "CyberShield-Server",
-     "serverUrl": "https://[seu-supabase-url]",
+     "serverUrl": "https://suite-defense-core.lovable.app",
      "port": 8080,
      "tenantId": "production",
      "apiEndpoints": {
-       "enrollAgent": "https://[seu-supabase-url]/functions/v1/enroll-agent",
-       "createJob": "https://[seu-supabase-url]/functions/v1/create-job",
-       "listReports": "https://[seu-supabase-url]/functions/v1/list-reports",
-       "healthCheck": "https://[seu-supabase-url]/functions/v1/health-check"
+       "enrollAgent": "https://suite-defense-core.lovable.app/functions/v1/enroll-agent",
+       "createJob": "https://suite-defense-core.lovable.app/functions/v1/create-job",
+       "listReports": "https://suite-defense-core.lovable.app/functions/v1/list-reports",
+       "healthCheck": "https://suite-defense-core.lovable.app/functions/v1/health-check"
      },
      "logLevel": "info",
      "maxLogSize": "100MB",
@@ -242,7 +242,7 @@ O CyberShield é um sistema de segurança distribuído composto por:
 
 1. **Acesse o instalador web:**
    ```
-   https://[seu-dominio]/agent-installer
+   https://suite-defense-core.lovable.app/installer
    ```
 
 2. **Selecione "Agente de Monitoramento"**
@@ -330,14 +330,14 @@ Arquivo: `config.json`
 ```json
 {
   "serverName": "CyberShield-Server",
-  "serverUrl": "https://[seu-supabase-url]",
+  "serverUrl": "https://suite-defense-core.lovable.app",
   "port": 8080,
   "tenantId": "production",
   "apiEndpoints": {
-    "enrollAgent": "https://[seu-supabase-url]/functions/v1/enroll-agent",
-    "createJob": "https://[seu-supabase-url]/functions/v1/create-job",
-    "listReports": "https://[seu-supabase-url]/functions/v1/list-reports",
-    "healthCheck": "https://[seu-supabase-url]/functions/v1/health-check"
+    "enrollAgent": "https://suite-defense-core.lovable.app/functions/v1/enroll-agent",
+    "createJob": "https://suite-defense-core.lovable.app/functions/v1/create-job",
+    "listReports": "https://suite-defense-core.lovable.app/functions/v1/list-reports",
+    "healthCheck": "https://suite-defense-core.lovable.app/functions/v1/health-check"
   },
   "logLevel": "debug",           // info, warn, error, debug
   "maxLogSize": "100MB",
@@ -362,7 +362,7 @@ Arquivo: `config.json`
 {
   "agentName": "AGENT-01",
   "agentToken": "token-aqui",
-  "serverUrl": "https://[seu-supabase-url]",
+  "serverUrl": "https://suite-defense-core.lovable.app",
   "pollInterval": 30,             // Intervalo de polling em segundos
   "heartbeatInterval": 60,        // Intervalo de heartbeat em segundos
   "features": {
@@ -450,7 +450,7 @@ CYBERSHIELD_DEBUG=false
 
 2. **Testar conectividade:**
    ```bash
-   curl -I https://[seu-supabase-url]
+   curl -I https://suite-defense-core.lovable.app
    ```
 
 3. **Verificar firewall:**
@@ -478,7 +478,7 @@ CYBERSHIELD_DEBUG=false
 
 2. **Verificar conectividade:**
    ```bash
-   curl -H "X-Agent-Token: [seu-token]" https://[seu-supabase-url]/functions/v1/poll-jobs
+   curl -H "X-Agent-Token: [seu-token]" https://suite-defense-core.lovable.app/functions/v1/poll-jobs
    ```
 
 3. **Verificar logs:**
