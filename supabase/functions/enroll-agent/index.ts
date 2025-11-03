@@ -27,10 +27,43 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Validar chave de matrícula (DEV mode)
-    if (enrollmentKey !== 'DEV-KEY-123') {
+    // Validar chave de enrollment dinâmica
+    const { data: keyData, error: keyError } = await supabase
+      .from('enrollment_keys')
+      .select('*')
+      .eq('key', enrollmentKey)
+      .eq('is_active', true)
+      .single()
+
+    if (keyError || !keyData) {
+      console.error('Chave de enrollment inválida:', enrollmentKey)
       return new Response(
-        JSON.stringify({ error: 'Chave de matrícula inválida' }),
+        JSON.stringify({ error: 'Chave de matrícula inválida ou expirada' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      )
+    }
+
+    // Verificar expiração
+    if (new Date(keyData.expires_at) < new Date()) {
+      console.error('Chave de enrollment expirada:', enrollmentKey)
+      
+      // Desativar chave expirada
+      await supabase
+        .from('enrollment_keys')
+        .update({ is_active: false })
+        .eq('id', keyData.id)
+
+      return new Response(
+        JSON.stringify({ error: 'Chave de matrícula expirada' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      )
+    }
+
+    // Verificar limite de usos
+    if (keyData.current_uses >= keyData.max_uses) {
+      console.error('Limite de usos da chave atingido:', enrollmentKey)
+      return new Response(
+        JSON.stringify({ error: 'Chave de matrícula atingiu o limite de usos' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
     }
@@ -61,6 +94,18 @@ Deno.serve(async (req) => {
           tenant_id: tenantId || 'dev'
         })
     }
+
+    // Atualizar contador de usos da chave
+    await supabase
+      .from('enrollment_keys')
+      .update({ 
+        current_uses: keyData.current_uses + 1,
+        used_at: new Date().toISOString(),
+        used_by_agent: agentName
+      })
+      .eq('id', keyData.id)
+
+    console.log(`Agente ${agentName} matriculado com sucesso usando chave ${enrollmentKey}`)
 
     return new Response(
       JSON.stringify({
