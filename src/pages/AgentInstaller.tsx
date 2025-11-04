@@ -17,6 +17,7 @@ const AgentInstaller = () => {
   const [installType, setInstallType] = useState<"server" | "agent">("agent");
   const [agentName, setAgentName] = useState("AGENT-01");
   const [tenantId, setTenantId] = useState("production");
+  const [enrollmentKey, setEnrollmentKey] = useState("");
   const [platform, setPlatform] = useState<"windows" | "linux">("windows");
   const [agentToken, setAgentToken] = useState("");
   const [isEnrolling, setIsEnrolling] = useState(false);
@@ -28,14 +29,19 @@ const AgentInstaller = () => {
       return;
     }
 
+    if (!enrollmentKey.trim()) {
+      toast.error("Chave de enrollment é obrigatória");
+      return;
+    }
+
     setIsEnrolling(true);
     try {
       const res = await fetch(`${API_URL}/enroll-agent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tenantId: tenantId,
-          enrollmentKey: "DEV-KEY-123",
+          tenantId: tenantId.trim(),
+          enrollmentKey: enrollmentKey.trim(),
           agentName: agentName.trim(),
         }),
       });
@@ -267,6 +273,20 @@ echo "✓ Para ver logs: journalctl -u cybershield-agent -f"
                       onChange={(e) => setTenantId(e.target.value)}
                       className="bg-secondary border-border text-foreground"
                     />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="enrollmentKey">Chave de Enrollment</Label>
+                    <Input
+                      id="enrollmentKey"
+                      placeholder="XXXX-XXXX-XXXX-XXXX"
+                      value={enrollmentKey}
+                      onChange={(e) => setEnrollmentKey(e.target.value)}
+                      className="bg-secondary border-border text-foreground"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Solicite uma chave de enrollment ao administrador do sistema
+                    </p>
                   </div>
                 </>
               )}
