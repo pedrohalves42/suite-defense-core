@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LogoutButton } from "@/components/LogoutButton";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -138,10 +139,13 @@ const ServerDashboard = () => {
             </div>
           </div>
           
-          <Button onClick={() => navigate("/installer")} className="gap-2">
-            <Download className="h-4 w-4" />
-            Criar Instalador
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button onClick={() => navigate("/installer")} className="gap-2">
+              <Download className="h-4 w-4" />
+              Criar Instalador
+            </Button>
+            <LogoutButton />
+          </div>
         </div>
 
         {/* Stats Cards - Linha 1 */}

@@ -1,130 +1,153 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { corsHeaders, handleError } from '../_shared/errors.ts';
+import { EnrollAgentSchema } from '../_shared/validation.ts';
+import { createAuditLog } from '../_shared/audit.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders });
   }
 
+  const requestId = crypto.randomUUID();
+
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { tenantId, enrollmentKey, agentName } = await req.json()
+    // Parse and validate input
+    const rawData = await req.json();
+    const validatedData = EnrollAgentSchema.parse(rawData);
+    const { tenantId, enrollmentKey, agentName } = validatedData;
 
-    console.log('Matriculando agente:', agentName)
-
-    // Validar entrada
-    if (!agentName || !enrollmentKey) {
-      return new Response(
-        JSON.stringify({ error: 'Campos obrigatórios faltando' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
-
-    // Validar chave de enrollment dinâmica
+    // Validate enrollment key
     const { data: keyData, error: keyError } = await supabase
       .from('enrollment_keys')
       .select('*')
       .eq('key', enrollmentKey)
       .eq('is_active', true)
-      .single()
+      .single();
 
     if (keyError || !keyData) {
-      console.error('Chave de enrollment inválida:', enrollmentKey)
+      await createAuditLog({
+        supabase,
+        action: 'agent_enrollment_failed',
+        resourceType: 'agent',
+        resourceId: agentName,
+        details: { reason: 'invalid_key', tenant_id: tenantId },
+        request: req,
+        success: false,
+      });
+
       return new Response(
-        JSON.stringify({ error: 'Chave de matrícula inválida ou expirada' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      )
+        JSON.stringify({ error: 'Chave de enrollment inválida' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Verificar expiração
+    // Check expiration
     if (new Date(keyData.expires_at) < new Date()) {
-      console.error('Chave de enrollment expirada:', enrollmentKey)
-      
-      // Desativar chave expirada
-      await supabase
-        .from('enrollment_keys')
-        .update({ is_active: false })
-        .eq('id', keyData.id)
+      await createAuditLog({
+        supabase,
+        action: 'agent_enrollment_failed',
+        resourceType: 'agent',
+        resourceId: agentName,
+        details: { reason: 'expired_key', key_id: keyData.id },
+        request: req,
+        success: false,
+      });
 
       return new Response(
-        JSON.stringify({ error: 'Chave de matrícula expirada' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      )
+        JSON.stringify({ error: 'Chave de enrollment expirada' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Verificar limite de usos
-    if (keyData.current_uses >= keyData.max_uses) {
-      console.error('Limite de usos da chave atingido:', enrollmentKey)
+    // Check usage limit
+    if (keyData.max_uses !== null && keyData.current_uses >= keyData.max_uses) {
+      await createAuditLog({
+        supabase,
+        action: 'agent_enrollment_failed',
+        resourceType: 'agent',
+        resourceId: agentName,
+        details: { reason: 'max_uses_exceeded', key_id: keyData.id },
+        request: req,
+        success: false,
+      });
+
       return new Response(
-        JSON.stringify({ error: 'Chave de matrícula atingiu o limite de usos' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      )
+        JSON.stringify({ error: 'Limite de uso da chave atingido' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Gerar token único
-    const agentToken = crypto.randomUUID()
+    // Generate agent token
+    const agentToken = crypto.randomUUID();
 
-    // Verificar se agente já existe
-    const { data: existing } = await supabase
+    // Check if agent already exists
+    const { data: existingAgent } = await supabase
       .from('agents')
-      .select('*')
+      .select('id')
       .eq('agent_name', agentName)
-      .single()
+      .single();
 
-    if (existing) {
-      // Atualizar token existente
+    if (existingAgent) {
+      // Update existing agent token
       await supabase
         .from('agents')
         .update({ agent_token: agentToken })
-        .eq('agent_name', agentName)
+        .eq('agent_name', agentName);
     } else {
-      // Criar novo agente
-      await supabase
-        .from('agents')
-        .insert({
-          agent_name: agentName,
-          agent_token: agentToken,
-          tenant_id: tenantId || 'dev'
-        })
+      // Insert new agent
+      await supabase.from('agents').insert({
+        tenant_id: tenantId,
+        agent_name: agentName,
+        agent_token: agentToken,
+        status: 'active',
+      });
     }
 
-    // Atualizar contador de usos da chave
+    // Increment key usage
     await supabase
       .from('enrollment_keys')
-      .update({ 
-        current_uses: keyData.current_uses + 1,
-        used_at: new Date().toISOString(),
-        used_by_agent: agentName
-      })
-      .eq('id', keyData.id)
+      .update({ current_uses: keyData.current_uses + 1 })
+      .eq('id', keyData.id);
 
-    console.log(`Agente ${agentName} matriculado com sucesso usando chave ${enrollmentKey}`)
+    // Create audit log
+    await createAuditLog({
+      supabase,
+      action: 'agent_enrolled',
+      resourceType: 'agent',
+      resourceId: agentName,
+      details: {
+        tenant_id: tenantId,
+        enrollment_key_id: keyData.id,
+        is_new: !existingAgent,
+      },
+      request: req,
+      success: true,
+    });
+
+    console.log('Agent enrolled:', { agentName, tenantId, requestId });
 
     return new Response(
       JSON.stringify({
         agentToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
-      }
-    )
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
-    console.error('Erro ao matricular agente:', error)
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro desconhecido' }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      }
-    )
+    if (error instanceof Error && error.name === 'ZodError') {
+      return new Response(
+        JSON.stringify({
+          error: 'Dados inválidos',
+          details: JSON.parse(error.message),
+          requestId,
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    return handleError(error, requestId);
   }
-})
+});

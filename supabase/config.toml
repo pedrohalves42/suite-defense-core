@@ -7,7 +7,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.create-job]
-verify_jwt = false
+verify_jwt = true
 
 [functions.poll-jobs]
 verify_jwt = false
