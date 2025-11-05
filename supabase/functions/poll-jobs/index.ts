@@ -30,27 +30,36 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Buscar agente pelo token
-    const { data: agent } = await supabase
-      .from('agents')
-      .select('agent_name')
-      .eq('agent_token', agentToken)
+    // Buscar agente pelo token na tabela dedicada
+    const { data: token } = await supabase
+      .from('agent_tokens')
+      .select('agent_id, agents!inner(agent_name, hmac_secret)')
+      .eq('token', agentToken)
+      .eq('is_active', true)
       .single()
 
-    if (!agent) {
+    if (!token?.agents) {
       return new Response(
         JSON.stringify({ error: 'Token inválido' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
+    const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents
+
     console.log('Agente polling:', agent.agent_name)
 
-    // Atualizar heartbeat
-    await supabase
-      .from('agents')
-      .update({ last_heartbeat: new Date().toISOString() })
-      .eq('agent_token', agentToken)
+    // Atualizar heartbeat e last_used_at do token
+    await Promise.all([
+      supabase
+        .from('agents')
+        .update({ last_heartbeat: new Date().toISOString() })
+        .eq('agent_name', agent.agent_name),
+      supabase
+        .from('agent_tokens')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('token', agentToken)
+    ])
 
     // Buscar jobs pendentes (máx 3)
     const { data: jobs } = await supabase

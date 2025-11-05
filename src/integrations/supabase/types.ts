@@ -14,11 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_tokens: {
+        Row: {
+          agent_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          token: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          token: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_tokens_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agents: {
         Row: {
           agent_name: string
           agent_token: string
           enrolled_at: string
+          hmac_secret: string | null
           id: string
           last_heartbeat: string | null
           status: string
@@ -28,6 +67,7 @@ export type Database = {
           agent_name: string
           agent_token: string
           enrolled_at?: string
+          hmac_secret?: string | null
           id?: string
           last_heartbeat?: string | null
           status?: string
@@ -37,6 +77,7 @@ export type Database = {
           agent_name?: string
           agent_token?: string
           enrolled_at?: string
+          hmac_secret?: string | null
           id?: string
           last_heartbeat?: string | null
           status?: string
@@ -125,6 +166,27 @@ export type Database = {
         }
         Relationships: []
       }
+      hmac_signatures: {
+        Row: {
+          agent_name: string
+          id: string
+          signature: string
+          used_at: string
+        }
+        Insert: {
+          agent_name: string
+          id?: string
+          signature: string
+          used_at?: string
+        }
+        Update: {
+          agent_name?: string
+          id?: string
+          signature?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           agent_name: string
@@ -185,6 +247,36 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          blocked_until: string | null
+          endpoint: string
+          id: string
+          identifier: string
+          last_request_at: string
+          request_count: number
+          window_start: string
+        }
+        Insert: {
+          blocked_until?: string | null
+          endpoint: string
+          id?: string
+          identifier: string
+          last_request_at?: string
+          request_count?: number
+          window_start?: string
+        }
+        Update: {
+          blocked_until?: string | null
+          endpoint?: string
+          id?: string
+          identifier?: string
+          last_request_at?: string
+          request_count?: number
+          window_start?: string
+        }
+        Relationships: []
+      }
       reports: {
         Row: {
           agent_name: string
@@ -236,12 +328,53 @@ export type Database = {
         }
         Relationships: []
       }
+      virus_scans: {
+        Row: {
+          agent_name: string
+          file_hash: string
+          file_path: string
+          id: string
+          is_malicious: boolean | null
+          positives: number | null
+          scan_result: Json | null
+          scanned_at: string
+          total_scans: number | null
+          virustotal_permalink: string | null
+        }
+        Insert: {
+          agent_name: string
+          file_hash: string
+          file_path: string
+          id?: string
+          is_malicious?: boolean | null
+          positives?: number | null
+          scan_result?: Json | null
+          scanned_at?: string
+          total_scans?: number | null
+          virustotal_permalink?: string | null
+        }
+        Update: {
+          agent_name?: string
+          file_hash?: string
+          file_path?: string
+          id?: string
+          is_malicious?: boolean | null
+          positives?: number | null
+          scan_result?: Json | null
+          scanned_at?: string
+          total_scans?: number | null
+          virustotal_permalink?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       cleanup_expired_keys: { Args: never; Returns: undefined }
+      cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
+      cleanup_old_rate_limits: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

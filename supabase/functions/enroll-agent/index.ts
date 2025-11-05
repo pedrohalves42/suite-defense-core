@@ -81,8 +81,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate agent token
+    // Generate agent token and HMAC secret
     const agentToken = crypto.randomUUID();
+    const hmacSecret = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
 
     // Check if agent already exists
     const { data: existingAgent } = await supabase
@@ -91,21 +94,44 @@ Deno.serve(async (req) => {
       .eq('agent_name', agentName)
       .single();
 
+    let agentId: string;
+
     if (existingAgent) {
-      // Update existing agent token
+      // Update existing agent
       await supabase
         .from('agents')
-        .update({ agent_token: agentToken })
+        .update({ agent_token: agentToken, hmac_secret: hmacSecret })
         .eq('agent_name', agentName);
+      
+      agentId = existingAgent.id;
+
+      // Deactivate old tokens
+      await supabase
+        .from('agent_tokens')
+        .update({ is_active: false })
+        .eq('agent_id', agentId);
     } else {
       // Insert new agent
-      await supabase.from('agents').insert({
+      const { data: newAgent } = await supabase.from('agents').insert({
         tenant_id: tenantId,
         agent_name: agentName,
         agent_token: agentToken,
+        hmac_secret: hmacSecret,
         status: 'active',
-      });
+      }).select('id').single();
+      
+      agentId = newAgent!.id;
     }
+
+    // Create token in dedicated table
+    const expiresAt = new Date();
+    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+
+    await supabase.from('agent_tokens').insert({
+      agent_id: agentId,
+      token: agentToken,
+      expires_at: expiresAt.toISOString(),
+    });
 
     // Increment key usage
     await supabase
@@ -133,7 +159,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         agentToken,
-        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        hmacSecret,
+        expiresAt: expiresAt.toISOString(),
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
