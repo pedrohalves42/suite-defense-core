@@ -1,9 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-agent-token',
-}
+import { AgentTokenSchema } from '../_shared/validation.ts'
+import { handleError, corsHeaders } from '../_shared/errors.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -21,6 +18,15 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Token do agente necessário' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      )
+    }
+
+    // Validar formato do token
+    const tokenValidation = AgentTokenSchema.safeParse(agentToken)
+    if (!tokenValidation.success) {
+      return new Response(
+        JSON.stringify({ error: 'Formato de token inválido' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
@@ -63,13 +69,6 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Erro ao listar relatórios:', error)
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro desconhecido' }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      }
-    )
+    return handleError(error, crypto.randomUUID())
   }
 })
