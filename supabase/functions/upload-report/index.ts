@@ -1,9 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-agent-token',
-}
+import { UploadReportSchema, validateFileSize, AgentTokenSchema } from '../_shared/validation.ts'
+import { handleError, corsHeaders } from '../_shared/errors.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -21,6 +18,15 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Token do agente necessário' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      )
+    }
+
+    // Validar formato do token
+    const tokenValidation = AgentTokenSchema.safeParse(agentToken)
+    if (!tokenValidation.success) {
+      return new Response(
+        JSON.stringify({ error: 'Formato de token inválido' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
@@ -50,7 +56,35 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('Upload de relatório:', kind, 'por agente:', agent.agent_name)
+    // Validar inputs
+    const validation = UploadReportSchema.safeParse({
+      kind,
+      filename: file.name
+    })
+
+    if (!validation.success) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Dados inválidos', 
+          details: validation.error.errors.map(e => e.message)
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
+
+    // Validar tamanho do arquivo
+    if (!validateFileSize(file.size)) {
+      return new Response(
+        JSON.stringify({ error: 'Arquivo muito grande (máximo 10MB)' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 413 }
+      )
+    }
+
+    // Usar filename sanitizado
+    const sanitizedFilename = validation.data.filename
+    const sanitizedKind = validation.data.kind
+
+    console.log('Upload de relatório:', sanitizedKind, 'por agente:', agent.agent_name)
 
     // Ler conteúdo do arquivo
     const fileContent = await file.text()
@@ -60,8 +94,8 @@ Deno.serve(async (req) => {
       .from('reports')
       .insert({
         agent_name: agent.agent_name,
-        kind,
-        file_path: file.name,
+        kind: sanitizedKind,
+        file_path: sanitizedFilename,
         file_data: fileContent
       })
       .select()
@@ -83,13 +117,6 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Erro ao fazer upload de relatório:', error)
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro desconhecido' }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      }
-    )
+    return handleError(error, crypto.randomUUID())
   }
 })

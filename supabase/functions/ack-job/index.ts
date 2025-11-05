@@ -1,9 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-agent-token',
-}
+import { JobIdSchema, AgentTokenSchema } from '../_shared/validation.ts'
+import { handleError, corsHeaders } from '../_shared/errors.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -21,6 +18,15 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Token do agente necessário' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      )
+    }
+
+    // Validar formato do token
+    const tokenValidation = AgentTokenSchema.safeParse(agentToken)
+    if (!tokenValidation.success) {
+      return new Response(
+        JSON.stringify({ error: 'Formato de token inválido' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
@@ -42,7 +48,18 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     const jobId = url.pathname.split('/').pop()
 
-    console.log('ACK job:', jobId, 'por agente:', agent.agent_name)
+    // Validar formato do job ID
+    const jobIdValidation = JobIdSchema.safeParse(jobId)
+    if (!jobIdValidation.success) {
+      return new Response(
+        JSON.stringify({ error: 'Formato de job ID inválido' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
+
+    const validatedJobId = jobIdValidation.data
+
+    console.log('ACK job:', validatedJobId, 'por agente:', agent.agent_name)
 
     // Atualizar status do job
     const { error } = await supabase
@@ -51,7 +68,7 @@ Deno.serve(async (req) => {
         status: 'done',
         completed_at: new Date().toISOString()
       })
-      .eq('id', jobId)
+      .eq('id', validatedJobId)
       .eq('agent_name', agent.agent_name)
 
     if (error) {
@@ -69,13 +86,6 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Erro ao confirmar job:', error)
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro desconhecido' }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
-      }
-    )
+    return handleError(error, crypto.randomUUID())
   }
 })
