@@ -29,3 +29,6 @@ verify_jwt = true
 
 [functions.analyze-network-anomalies]
 verify_jwt = true
+
+[functions.scan-virus]
+verify_jwt = false
