@@ -1,6 +1,8 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { JobIdSchema, AgentTokenSchema } from '../_shared/validation.ts'
 import { handleError, corsHeaders } from '../_shared/errors.ts'
+import { verifyHmacSignature } from '../_shared/hmac.ts'
+import { checkRateLimit } from '../_shared/rate-limit.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -46,6 +48,34 @@ Deno.serve(async (req) => {
     }
 
     const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents
+    
+    // Verificar HMAC se configurado
+    if (agent.hmac_secret) {
+      const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
+      if (!hmacResult.valid) {
+        return new Response(
+          JSON.stringify({ error: hmacResult.error }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+    }
+
+    // Rate limiting
+    const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'ack-job', {
+      maxRequests: 60,
+      windowMinutes: 1,
+      blockMinutes: 5,
+    })
+
+    if (!rateLimitResult.allowed) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Rate limit excedido',
+          resetAt: rateLimitResult.resetAt 
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     
     // Atualizar last_used_at do token
     await supabase

@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders, handleError } from '../_shared/errors.ts';
 import { CreateJobSchema } from '../_shared/validation.ts';
 import { createAuditLog } from '../_shared/audit.ts';
+import { checkRateLimit } from '../_shared/rate-limit.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -34,6 +35,23 @@ Deno.serve(async (req) => {
     if (!hasAdminRole) {
       await createAuditLog({ supabase: supabaseAdmin, userId: user.id, action: 'job_creation_denied', resourceType: 'job', details: { reason: 'not_admin' }, request: req, success: false });
       return new Response(JSON.stringify({ error: 'Acesso negado' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // Rate limiting por usuário (prevenir flooding de jobs)
+    const rateLimitResult = await checkRateLimit(supabaseAdmin, user.id, 'create-job', {
+      maxRequests: 60,
+      windowMinutes: 1,
+      blockMinutes: 5,
+    });
+
+    if (!rateLimitResult.allowed) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Rate limit excedido',
+          resetAt: rateLimitResult.resetAt 
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const rawData = await req.json();
