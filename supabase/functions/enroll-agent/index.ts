@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders, handleError } from '../_shared/errors.ts';
 import { EnrollAgentSchema } from '../_shared/validation.ts';
 import { createAuditLog } from '../_shared/audit.ts';
+import { checkRateLimit } from '../_shared/rate-limit.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,6 +15,24 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Rate limiting por IP (prevenir brute force)
+    const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const rateLimitResult = await checkRateLimit(supabase, clientIp, 'enroll-agent', {
+      maxRequests: 5,
+      windowMinutes: 60,
+      blockMinutes: 60,
+    });
+
+    if (!rateLimitResult.allowed) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Muitas tentativas de enrollment. Tente novamente mais tarde.',
+          resetAt: rateLimitResult.resetAt 
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Parse and validate input
     const rawData = await req.json();
