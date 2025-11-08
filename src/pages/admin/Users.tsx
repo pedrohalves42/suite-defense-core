@@ -66,26 +66,42 @@ export default function Users() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-role`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_id: userId, role: newRole }),
-      });
+      // API contract: POST /functions/v1/update-user-role with body { userId, roles: [...] }
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-role`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, roles: [newRole] }),
+        }
+      );
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update user role');
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to update user role');
+      }
+
+      const result = await response.json();
+      return result;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      
+      if (data.updated) {
+        toast({ title: 'Role atualizada com sucesso!' });
+      } else {
+        toast({ title: 'Role já estava definida', variant: 'default' });
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({ title: 'Role atualizada com sucesso!' });
-    },
     onError: (error: Error) => {
-      toast({ title: error.message || 'Erro ao atualizar role', variant: 'destructive' });
+      toast({ 
+        title: 'Erro ao atualizar role', 
+        description: error.message,
+        variant: 'destructive' 
+      });
     },
   });
 
