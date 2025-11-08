@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,17 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Shield } from 'lucide-react';
+
+const loginSchema = z.object({
+  email: z.string()
+    .trim()
+    .min(1, 'Email é obrigatório')
+    .email('Email inválido')
+    .max(255, 'Email muito longo'),
+  password: z.string()
+    .min(1, 'Senha é obrigatória')
+    .max(72, 'Senha muito longa'),
+});
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -19,16 +31,31 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
 
+    // Validate inputs
+    const validation = loginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      const firstError = validation.error.issues[0];
+      toast({
+        variant: 'destructive',
+        title: 'Erro de validação',
+        description: firstError.message,
+      });
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+      email: validation.data.email,
+      password: validation.data.password,
     });
 
     if (error) {
+      // Generic error message to prevent account enumeration
+      const message = 'Email ou senha incorretos. Tente novamente.';
       toast({
         variant: 'destructive',
         title: 'Erro no login',
-        description: error.message,
+        description: message,
       });
     } else {
       toast({
