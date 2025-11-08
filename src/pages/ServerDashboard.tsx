@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings } from "lucide-react";
+import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings, BarChart3, PieChart, LineChart } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Line, LineChart as RechartsLineChart, Bar, BarChart as RechartsBarChart, Pie, PieChart as RechartsPieChart, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from "recharts";
 
 interface Agent {
   id: string;
@@ -60,6 +62,26 @@ interface RateLimit {
   blocked_until: string | null;
 }
 
+interface VirusScan {
+  id: string;
+  agent_name: string;
+  file_path: string;
+  file_hash: string;
+  is_malicious: boolean | null;
+  positives: number | null;
+  total_scans: number | null;
+  scanned_at: string;
+}
+
+interface AuditLog {
+  id: string;
+  action: string;
+  resource_type: string;
+  created_at: string;
+  success: boolean;
+  user_id: string | null;
+}
+
 const ServerDashboard = () => {
   const navigate = useNavigate();
   const { isAdmin } = useIsAdmin();
@@ -68,6 +90,8 @@ const ServerDashboard = () => {
   const [reports, setReports] = useState<Report[]>([]);
   const [agentTokens, setAgentTokens] = useState<AgentToken[]>([]);
   const [rateLimits, setRateLimits] = useState<RateLimit[]>([]);
+  const [virusScans, setVirusScans] = useState<VirusScan[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<number>(0);
 
@@ -100,17 +124,18 @@ const ServerDashboard = () => {
 
   const loadDashboardData = async () => {
     try {
-      const [agentsRes, jobsRes, reportsRes, tokensRes, rateLimitsRes] = await Promise.all([
+      const [agentsRes, jobsRes, reportsRes, tokensRes, rateLimitsRes, scansRes, logsRes] = await Promise.all([
         supabase.from("agents").select("*").order("enrolled_at", { ascending: false }),
         supabase.from("jobs").select("*").order("created_at", { ascending: false }).limit(100),
         supabase.from("reports").select("*").order("created_at", { ascending: false }).limit(100),
         supabase.from("agent_tokens").select("*, agents(agent_name)").order("created_at", { ascending: false }),
         supabase.from("rate_limits").select("*").order("last_request_at", { ascending: false }).limit(100),
+        supabase.from("virus_scans").select("*").order("scanned_at", { ascending: false }).limit(100),
+        supabase.from("audit_logs").select("id, action, resource_type, created_at, success, user_id").order("created_at", { ascending: false }).limit(50),
       ]);
 
       if (agentsRes.data) {
         setAgents(agentsRes.data);
-        // Calcular alertas (agentes inativos)
         const inactiveCount = agentsRes.data.filter(a => {
           if (!a.last_heartbeat) return true;
           const lastHeartbeat = new Date(a.last_heartbeat);
@@ -122,6 +147,8 @@ const ServerDashboard = () => {
       if (reportsRes.data) setReports(reportsRes.data);
       if (tokensRes.data) setAgentTokens(tokensRes.data as AgentToken[]);
       if (rateLimitsRes.data) setRateLimits(rateLimitsRes.data);
+      if (scansRes.data) setVirusScans(scansRes.data);
+      if (logsRes.data) setAuditLogs(logsRes.data);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
       toast.error("Erro ao carregar dados do dashboard");
@@ -153,6 +180,70 @@ const ServerDashboard = () => {
     const completed = new Date(j.completed_at);
     return (new Date().getTime() - completed.getTime()) < 24 * 60 * 60 * 1000;
   }).length;
+
+  // Preparar dados para gráficos
+  const getLast7Days = () => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      days.push(date.toISOString().split('T')[0]);
+    }
+    return days;
+  };
+
+  const last7Days = getLast7Days();
+
+  // Dados para gráfico de tendência de jobs
+  const jobsTrendData = last7Days.map(day => {
+    const dayJobs = jobs.filter(j => j.created_at.startsWith(day));
+    return {
+      date: new Date(day).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+      total: dayJobs.length,
+      completed: dayJobs.filter(j => j.status === 'done').length,
+      failed: dayJobs.filter(j => j.status === 'failed').length,
+    };
+  });
+
+  // Dados para gráfico de scans de vírus
+  const scansTrendData = last7Days.map(day => {
+    const dayScans = virusScans.filter(s => s.scanned_at.startsWith(day));
+    return {
+      date: new Date(day).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+      total: dayScans.length,
+      malicious: dayScans.filter(s => s.is_malicious).length,
+      clean: dayScans.filter(s => s.is_malicious === false).length,
+    };
+  });
+
+  // Dados para distribuição por tipo de job
+  const jobTypeData = Object.entries(
+    jobs.reduce((acc, job) => {
+      acc[job.type] = (acc[job.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([type, count]) => ({ name: type, value: count }));
+
+  // Dados para jobs por agente (top 10)
+  const jobsByAgentData = Object.entries(
+    jobs.reduce((acc, job) => {
+      acc[job.agent_name] = (acc[job.agent_name] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  )
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([agent, count]) => ({ agent, jobs: count }));
+
+  // Timeline de eventos de segurança
+  const securityEvents = auditLogs.slice(0, 10).map(log => ({
+    time: new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    action: log.action,
+    resource: log.resource_type,
+    status: log.success ? 'success' : 'failed',
+  }));
+
+  const COLORS = ['hsl(195 100% 50%)', 'hsl(160 100% 45%)', 'hsl(35 100% 55%)', 'hsl(142 76% 45%)', 'hsl(0 70% 55%)'];
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -345,6 +436,175 @@ const ServerDashboard = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Gráficos e Visualizações */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Tendência de Jobs */}
+          <Card className="bg-gradient-card border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LineChart className="h-5 w-5 text-primary" />
+                Tendência de Jobs (7 dias)
+              </CardTitle>
+              <CardDescription>Volume de jobs criados por dia</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <p className="text-center text-muted-foreground py-8">Carregando...</p>
+              ) : jobsTrendData.every(d => d.total === 0) ? (
+                <p className="text-center text-muted-foreground py-8">Sem dados para exibir</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <RechartsLineChart data={jobsTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 20% 25%)" />
+                    <XAxis dataKey="date" stroke="hsl(180 20% 60%)" style={{ fontSize: '12px' }} />
+                    <YAxis stroke="hsl(180 20% 60%)" style={{ fontSize: '12px' }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Line type="monotone" dataKey="total" stroke="hsl(195 100% 50%)" strokeWidth={2} name="Total" dot={{ fill: 'hsl(195 100% 50%)' }} />
+                    <Line type="monotone" dataKey="completed" stroke="hsl(142 76% 45%)" strokeWidth={2} name="Concluídos" dot={{ fill: 'hsl(142 76% 45%)' }} />
+                    <Line type="monotone" dataKey="failed" stroke="hsl(0 70% 55%)" strokeWidth={2} name="Falhados" dot={{ fill: 'hsl(0 70% 55%)' }} />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tendência de Scans de Vírus */}
+          <Card className="bg-gradient-card border-accent/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-accent" />
+                Scans de Vírus (7 dias)
+              </CardTitle>
+              <CardDescription>Arquivos escaneados por dia</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <p className="text-center text-muted-foreground py-8">Carregando...</p>
+              ) : scansTrendData.every(d => d.total === 0) ? (
+                <p className="text-center text-muted-foreground py-8">Sem dados para exibir</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <RechartsLineChart data={scansTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 20% 25%)" />
+                    <XAxis dataKey="date" stroke="hsl(180 20% 60%)" style={{ fontSize: '12px' }} />
+                    <YAxis stroke="hsl(180 20% 60%)" style={{ fontSize: '12px' }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Line type="monotone" dataKey="total" stroke="hsl(160 100% 45%)" strokeWidth={2} name="Total" dot={{ fill: 'hsl(160 100% 45%)' }} />
+                    <Line type="monotone" dataKey="malicious" stroke="hsl(0 70% 55%)" strokeWidth={2} name="Maliciosos" dot={{ fill: 'hsl(0 70% 55%)' }} />
+                    <Line type="monotone" dataKey="clean" stroke="hsl(142 76% 45%)" strokeWidth={2} name="Limpos" dot={{ fill: 'hsl(142 76% 45%)' }} />
+                  </RechartsLineChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Distribuição por Tipo de Job */}
+          <Card className="bg-gradient-card border-warning/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PieChart className="h-5 w-5 text-warning" />
+                Tipos de Jobs
+              </CardTitle>
+              <CardDescription>Distribuição por categoria</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <p className="text-center text-muted-foreground py-8">Carregando...</p>
+              ) : jobTypeData.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Sem dados para exibir</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <RechartsPieChart>
+                    <Pie
+                      data={jobTypeData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="hsl(195 100% 50%)"
+                      dataKey="value"
+                    >
+                      {jobTypeData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Jobs por Agente */}
+          <Card className="bg-gradient-card border-success/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-success" />
+                Jobs por Agente (Top 10)
+              </CardTitle>
+              <CardDescription>Agentes mais ativos</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <p className="text-center text-muted-foreground py-8">Carregando...</p>
+              ) : jobsByAgentData.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">Sem dados para exibir</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <RechartsBarChart data={jobsByAgentData} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 20% 25%)" />
+                    <XAxis type="number" stroke="hsl(180 20% 60%)" style={{ fontSize: '12px' }} />
+                    <YAxis dataKey="agent" type="category" width={100} stroke="hsl(180 20% 60%)" style={{ fontSize: '10px' }} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="jobs" fill="hsl(142 76% 45%)" radius={[0, 4, 4, 0]} />
+                  </RechartsBarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Timeline de Eventos de Segurança */}
+        <Card className="bg-gradient-card border-destructive/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-destructive" />
+              Timeline de Eventos de Segurança
+            </CardTitle>
+            <CardDescription>Últimas ações registradas no sistema</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <p className="text-center text-muted-foreground py-4">Carregando...</p>
+            ) : securityEvents.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">Nenhum evento registrado</p>
+            ) : (
+              <div className="space-y-2">
+                {securityEvents.map((event, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg border border-border">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${event.status === 'success' ? 'bg-success' : 'bg-destructive'}`} />
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{event.action}</p>
+                        <p className="text-xs text-muted-foreground">{event.resource}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={event.status === 'success' ? 'default' : 'destructive'} className="text-xs">
+                        {event.status}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">{event.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Tabs */}
         <Tabs defaultValue="agents" className="w-full">
