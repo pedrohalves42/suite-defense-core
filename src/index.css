@@ -8,46 +8,47 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 210 30% 8%;
-    --foreground: 180 100% 90%;
+    --background: 220 40% 6%;
+    --foreground: 180 20% 92%;
 
-    --card: 215 25% 12%;
-    --card-foreground: 180 100% 90%;
+    --card: 220 35% 8%;
+    --card-foreground: 180 20% 92%;
 
-    --popover: 215 25% 12%;
-    --popover-foreground: 180 100% 90%;
+    --popover: 220 35% 8%;
+    --popover-foreground: 180 20% 92%;
 
-    --primary: 195 100% 50%;
-    --primary-foreground: 210 30% 8%;
+    --primary: 174 100% 46%;
+    --primary-foreground: 220 40% 6%;
 
-    --secondary: 215 25% 18%;
-    --secondary-foreground: 180 100% 90%;
+    --secondary: 220 30% 12%;
+    --secondary-foreground: 180 20% 92%;
 
-    --muted: 215 20% 20%;
-    --muted-foreground: 180 20% 60%;
+    --muted: 220 25% 15%;
+    --muted-foreground: 180 10% 55%;
 
-    --accent: 160 100% 45%;
-    --accent-foreground: 210 30% 8%;
+    --accent: 189 94% 53%;
+    --accent-foreground: 220 40% 6%;
 
     --destructive: 0 70% 55%;
-    --destructive-foreground: 180 100% 90%;
+    --destructive-foreground: 180 20% 92%;
 
     --warning: 35 100% 55%;
-    --warning-foreground: 210 30% 8%;
+    --warning-foreground: 220 40% 6%;
 
     --success: 142 76% 45%;
-    --success-foreground: 210 30% 8%;
+    --success-foreground: 220 40% 6%;
 
-    --border: 215 20% 25%;
-    --input: 215 20% 25%;
-    --ring: 195 100% 50%;
+    --border: 220 25% 18%;
+    --input: 220 25% 18%;
+    --ring: 174 100% 46%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    --gradient-cyber: linear-gradient(135deg, hsl(195 100% 50% / 0.2), hsl(160 100% 45% / 0.2));
-    --gradient-card: linear-gradient(135deg, hsl(215 25% 14%), hsl(215 25% 11%));
-    --glow-primary: 0 0 20px hsl(195 100% 50% / 0.3);
-    --glow-accent: 0 0 20px hsl(160 100% 45% / 0.3);
+    --gradient-hero: linear-gradient(135deg, hsl(220 40% 6%), hsl(220 35% 8%));
+    --gradient-card: linear-gradient(135deg, hsl(220 35% 9%), hsl(220 35% 7%));
+    --glow-primary: 0 0 40px hsl(174 100% 46% / 0.2);
+    --glow-accent: 0 0 30px hsl(189 94% 53% / 0.15);
+    --border-glow: 0 0 20px hsl(174 100% 46% / 0.3);
   }
 }
 
@@ -93,5 +94,9 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
   }
 }
