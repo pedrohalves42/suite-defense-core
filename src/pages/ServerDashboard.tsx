@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key } from "lucide-react";
+import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 interface Agent {
   id: string;
@@ -61,6 +62,7 @@ interface RateLimit {
 
 const ServerDashboard = () => {
   const navigate = useNavigate();
+  const { isAdmin } = useIsAdmin();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
@@ -170,6 +172,12 @@ const ServerDashboard = () => {
           </div>
           
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Button onClick={() => navigate("/admin/enrollment-keys")} variant="outline" className="gap-2">
+                <Settings className="h-4 w-4" />
+                Administração
+              </Button>
+            )}
             <Button onClick={() => navigate("/installer")} className="gap-2">
               <Download className="h-4 w-4" />
               Criar Instalador

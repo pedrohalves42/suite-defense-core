@@ -45,14 +45,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se o usuário é admin
-    const { data: roles, error: rolesError } = await supabaseClient
+    // Verificar se o usuário é admin e obter tenant_id
+    const { data: userRole, error: rolesError } = await supabaseClient
       .from('user_roles')
-      .select('role')
+      .select('role, tenant_id')
       .eq('user_id', user.id)
-      .eq('role', 'admin');
+      .single();
 
-    if (rolesError || !roles || roles.length === 0) {
+    if (rolesError || !userRole || userRole.role !== 'admin') {
       console.error('User is not admin:', rolesError);
       return new Response(
         JSON.stringify({ error: 'Acesso negado: apenas administradores podem gerar chaves' }),
@@ -62,6 +62,8 @@ Deno.serve(async (req) => {
         }
       );
     }
+
+    const tenantId = userRole.tenant_id;
 
     const { expiresInHours, maxUses = 1, description }: GenerateKeyRequest = await req.json();
 
@@ -102,6 +104,7 @@ Deno.serve(async (req) => {
         expires_at: expiresAt,
         max_uses: maxUses,
         description: description || `Chave gerada por ${user.email}`,
+        tenant_id: tenantId,
       })
       .select()
       .single();
