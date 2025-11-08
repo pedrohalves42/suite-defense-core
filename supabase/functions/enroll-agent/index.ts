@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, handleError } from '../_shared/errors.ts';
+import { handleException, handleValidationError, createErrorResponse, ErrorCode, corsHeaders } from '../_shared/error-handler.ts';
 import { EnrollAgentSchema } from '../_shared/validation.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
@@ -183,16 +183,6 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    if (error instanceof Error && error.name === 'ZodError') {
-      return new Response(
-        JSON.stringify({
-          error: 'Dados inválidos',
-          details: JSON.parse(error.message),
-          requestId,
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    return handleError(error, requestId);
+    return handleException(error, requestId, 'enroll-agent');
   }
 });

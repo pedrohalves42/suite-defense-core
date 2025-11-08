@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { UploadReportSchema, validateFileSize, AgentTokenSchema } from '../_shared/validation.ts'
-import { handleError, corsHeaders } from '../_shared/errors.ts'
+import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 
@@ -156,6 +156,6 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
-    return handleError(error, crypto.randomUUID())
+    return handleException(error, crypto.randomUUID(), 'upload-report')
   }
 })

@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, handleError } from '../_shared/errors.ts';
+import { handleException, createErrorResponse, ErrorCode, corsHeaders } from '../_shared/error-handler.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 
 Deno.serve(async (req) => {
@@ -16,10 +16,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), { 
-        status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -30,10 +27,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), { 
-        status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -41,10 +35,7 @@ Deno.serve(async (req) => {
     const { token: inviteToken } = await req.json();
 
     if (!inviteToken) {
-      return new Response(JSON.stringify({ error: 'Token inválido' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Token inválido', 400, requestId);
     }
 
     // Get invite
@@ -56,26 +47,17 @@ Deno.serve(async (req) => {
       .single();
 
     if (inviteError || !invite) {
-      return new Response(JSON.stringify({ error: 'Convite não encontrado ou expirado' }), { 
-        status: 404, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      return createErrorResponse(ErrorCode.NOT_FOUND, 'Convite não encontrado ou expirado', 404, requestId);
     }
 
     // Check expiration
     if (new Date(invite.expires_at) < new Date()) {
-      return new Response(JSON.stringify({ error: 'Convite expirado' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Convite expirado', 400, requestId);
     }
 
     // Check if email matches
     if (user.email !== invite.email) {
-      return new Response(JSON.stringify({ error: 'Email não corresponde ao convite' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      return createErrorResponse(ErrorCode.FORBIDDEN, 'Email não corresponde ao convite', 403, requestId);
     }
 
     // Create user role
@@ -114,7 +96,6 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error in accept-invite:', error);
-    return handleError(error, requestId);
+    return handleException(error, requestId, 'accept-invite');
   }
 });
