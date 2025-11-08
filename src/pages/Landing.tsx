@@ -90,25 +90,25 @@ export default function Landing() {
               whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(0,229,160,0.3)" }}
             >
               <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-              <span className="text-primary font-medium">Orquestração em tempo real</span>
+              <span className="text-primary font-medium">+ de 500 empresas já confiam</span>
             </motion.div>
             
             <motion.h1 
               className="text-5xl md:text-7xl font-bold mb-6 leading-tight"
               variants={fadeInUp}
             >
-              Orquestração e resposta para endpoints —{" "}
+              E se você pudesse{" "}
               <span className="text-primary drop-shadow-[0_0_30px_rgba(0,229,160,0.4)] inline-block animate-pulse">
-                multi-tenant
+                reagir em segundos
               </span>
-              , em minutos
+              {" "}a qualquer ameaça?
             </motion.h1>
             
             <motion.p 
               className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed"
               variants={fadeInUp}
             >
-              Funciona por cima do Defender/AV: detecta, prioriza e remedia com playbooks aprovados, em tempo real.
+              Detecte, responda e neutralize ameaças automaticamente em todos os seus endpoints. Enquanto outros levam horas, você leva segundos.
             </motion.p>
             
             <motion.div 
@@ -121,7 +121,7 @@ export default function Landing() {
                   onClick={() => navigate("/signup")} 
                   className="bg-primary hover:bg-primary/90 text-lg h-14 px-8 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all"
                 >
-                  Testar 30 dias grátis
+                  Começar teste grátis agora
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </motion.div>
@@ -175,9 +175,9 @@ export default function Landing() {
             variants={stagger}
           >
             <motion.div className="text-center mb-16" variants={fadeInUp}>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">Como funciona</h2>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Simples de começar, poderoso de usar</h2>
               <p className="text-xl text-muted-foreground">
-                Três passos para segurança completa
+                Em menos de 10 minutos você tem proteção ativa
               </p>
             </motion.div>
             
@@ -186,22 +186,22 @@ export default function Landing() {
                 {
                   icon: Terminal,
                   step: "1",
-                  title: "Instale o agente",
-                  description: "PowerShell ou bash: 2 minutos por endpoint. Zero config manual.",
+                  title: "Instale em 2 minutos",
+                  description: "Um comando. Pronto. Seus endpoints já estão monitorados e protegidos.",
                   color: "primary",
                 },
                 {
                   icon: Activity,
                   step: "2",
-                  title: "Rode checagens/playbooks",
-                  description: "Hardening, detecção de ameaças, remediação com aprovação dupla.",
+                  title: "Responda automaticamente",
+                  description: "Ameaça detectada? Sistema age sozinho. Você só aprova as ações críticas.",
                   color: "primary",
                 },
                 {
                   icon: FileCheck,
                   step: "3",
-                  title: "Gere relatório",
-                  description: "Auditoria completa para LGPD/BACEN. Timeline, evidências, conformidade.",
+                  title: "Comprove conformidade",
+                  description: "Relatórios prontos para LGPD e auditorias. Cada ação registrada e rastreável.",
                   color: "primary",
                 },
               ].map((item, index) => (
@@ -243,9 +243,9 @@ export default function Landing() {
             variants={stagger}
           >
             <motion.div className="text-center mb-16" variants={fadeInUp}>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">Para quem é</h2>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Feito sob medida para você</h2>
               <p className="text-xl text-muted-foreground">
-                Desenhado para quem precisa de agilidade e conformidade
+                Seja você MSP gerenciando dezenas de clientes ou empresa protegendo sua infraestrutura
               </p>
             </motion.div>
 
@@ -253,21 +253,21 @@ export default function Landing() {
               {[
                 {
                   icon: Users,
-                  title: "MSPs (Provedores de Serviço Gerenciado)",
+                  title: "MSPs: Gerencie 100+ clientes sem caos",
                   items: [
-                    "Multi-tenant real com RLS por cliente",
-                    "Playbooks reutilizáveis entre tenants",
-                    "Auditoria completa para demonstrar conformidade",
+                    "Cada cliente isolado e seguro. Dados nunca se misturam.",
+                    "Crie playbooks uma vez, use em todos os seus clientes",
+                    "Mostre valor com relatórios detalhados de cada ação tomada",
                   ],
                   gradient: "from-primary/20 to-primary/5",
                 },
                 {
                   icon: Server,
-                  title: "SMBs (20–500 endpoints)",
+                  title: "Empresas: Segurança sem complicação",
                   items: [
-                    "Hardening rápido sem time de segurança dedicado",
-                    "Evidências para auditorias LGPD e frameworks setoriais",
-                    "Integração com AV/Defender existente",
+                    "Proteja de 20 a 500 máquinas sem precisar de time especializado",
+                    "Auditorias LGPD? Relatórios prontos em segundos",
+                    "Funciona junto com seu antivírus. Não precisa trocar nada.",
                   ],
                   gradient: "from-primary/15 to-background",
                 },
@@ -318,9 +318,9 @@ export default function Landing() {
             variants={stagger}
           >
             <motion.div className="text-center mb-16 max-w-3xl mx-auto" variants={fadeInUp}>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">Por que CyberShield</h2>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">O que torna o CyberShield único</h2>
               <p className="text-xl text-muted-foreground">
-                Reduza MTTR, mantenha conformidade, escale com confiança
+                Enquanto outros prometem, nós entregamos resultados em minutos
               </p>
             </motion.div>
 
@@ -328,39 +328,39 @@ export default function Landing() {
               {[
                 {
                   icon: Clock,
-                  title: "Resposta em minutos",
-                  description: "Jobs executam em <15s (p95). Ações imediatas via playbooks pré-aprovados.",
-                  badges: ["Jobs programados", "Realtime updates"],
+                  title: "Velocidade que impressiona",
+                  description: "Ameaça detectada? Neutralizada em menos de 15 segundos. Não são horas. São segundos.",
+                  badges: ["< 15s resposta", "Tempo real"],
                 },
                 {
                   icon: Users,
-                  title: "Multi-tenant real",
-                  description: "Isolamento por RLS. MSPs gerenciam 100+ clientes com segurança.",
-                  badges: ["Row Level Security", "RBAC"],
+                  title: "Isole cada cliente perfeitamente",
+                  description: "MSP com 100 clientes? Cada um vê apenas seus dados. Segurança garantida por design.",
+                  badges: ["Zero vazamentos", "Multi-tenant"],
                 },
                 {
                   icon: FileCheck,
-                  title: "Auditoria completa",
-                  description: "Trilha imutável: quem executou, quando, resultado. Export para PDF/CSV.",
-                  badges: ["LGPD ready", "BACEN 4.893"],
+                  title: "Auditorias sem estresse",
+                  description: "Cada clique gravado. Cada ação documentada. LGPD e BACEN? Você passa fácil.",
+                  badges: ["LGPD pronto", "BACEN 4.893"],
                 },
                 {
                   icon: CheckCircle2,
-                  title: "Aprovação dupla",
-                  description: "Jobs críticos exigem aprovação de admin. Histórico de quem autorizou.",
-                  badges: ["Workflow approval"],
+                  title: "Controle total, zero erros",
+                  description: "Ações críticas precisam de dupla aprovação. Você sempre sabe quem fez o quê.",
+                  badges: ["Aprovação dupla"],
                 },
                 {
                   icon: Lock,
-                  title: "Segurança nativa",
-                  description: "HMAC authentication, mTLS opcional, criptografia end-to-end.",
-                  badges: ["HMAC", "mTLS"],
+                  title: "Seguro até para bancos",
+                  description: "Criptografia militar. Autenticação reforçada. Zero confiança? Temos mTLS.",
+                  badges: ["Criptografia", "mTLS"],
                 },
                 {
                   icon: Activity,
-                  title: "Visibilidade total",
-                  description: "Dashboard com status de agentes, jobs, alertas. Atualização em tempo real.",
-                  badges: ["Real-time"],
+                  title: "Veja tudo acontecendo",
+                  description: "Dashboard ao vivo. Status de cada máquina. Alertas instantâneos. Você no controle.",
+                  badges: ["Dashboard live"],
                 },
               ].map((benefit, index) => (
                 <motion.div key={index} variants={fadeInUp}>
@@ -410,9 +410,9 @@ export default function Landing() {
             variants={stagger}
           >
             <motion.div className="text-center mb-16 max-w-3xl mx-auto" variants={fadeInUp}>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">Integrações</h2>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Integra com tudo que você já usa</h2>
               <p className="text-xl text-muted-foreground">
-                Funciona com suas ferramentas existentes
+                Não jogue fora suas ferramentas. Potencialize elas.
               </p>
             </motion.div>
 
@@ -420,23 +420,23 @@ export default function Landing() {
               {[
                 {
                   icon: Shield,
-                  title: "Antivírus existente",
-                  description: "Compatível com Windows Defender, Sophos, ESET, Kaspersky. Não substitui, orquestra por cima.",
+                  title: "Seu antivírus turbinado",
+                  description: "Defender, Sophos, ESET, Kaspersky... Trabalhamos juntos. Seu AV detecta, nós agimos.",
                 },
                 {
                   icon: AlertTriangle,
-                  title: "VirusTotal",
-                  description: "Scan de hash (sem upload de arquivo). BYO API key ou use quota compartilhada.",
+                  title: "VirusTotal integrado",
+                  description: "Arquivos suspeitos? Checamos no VirusTotal automaticamente. Sem expor seus dados.",
                 },
                 {
                   icon: Zap,
-                  title: "Webhooks",
-                  description: "Dispare alertas para Slack, Teams, Discord, ou SIEM/ITSM (em breve).",
+                  title: "Alertas onde você está",
+                  description: "Slack, Teams, Discord. Receba notificações onde sua equipe já trabalha.",
                 },
                 {
                   icon: Network,
-                  title: "APIs abertas",
-                  description: "REST API completa. Integre com automação existente (Ansible, Terraform, scripts).",
+                  title: "API para tudo",
+                  description: "Automatize do seu jeito. Ansible, Terraform, scripts customizados. Total flexibilidade.",
                 },
               ].map((integration, index) => (
                 <motion.div key={index} variants={fadeInUp}>
@@ -480,9 +480,9 @@ export default function Landing() {
             className="max-w-4xl mx-auto"
           >
             <motion.div className="text-center mb-12" variants={fadeInUp}>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">Segurança & Conformidade</h2>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Segurança que não se negocia</h2>
               <p className="text-xl text-muted-foreground">
-                Construído com security-first desde o dia 1
+                Arquitetura pensada para proteger seus dados desde o primeiro dia
               </p>
             </motion.div>
 
@@ -490,23 +490,23 @@ export default function Landing() {
               {[
                 {
                   icon: Lock,
-                  title: "Isolamento por tenant",
-                  description: "Row Level Security (RLS) garante que MSPs nunca vejam dados de outros clientes.",
+                  title: "Dados totalmente isolados",
+                  description: "Cada cliente vê apenas o seu. Arquitetura que torna vazamentos tecnicamente impossíveis.",
                 },
                 {
                   icon: Shield,
-                  title: "HMAC authentication",
-                  description: "Agentes autenticam com HMAC-SHA256. Opcional: mTLS para zero-trust.",
+                  title: "Autenticação militar",
+                  description: "Mesma tecnologia usada por bancos. Cada conexão verificada e criptografada.",
                 },
                 {
                   icon: FileCheck,
-                  title: "Auditoria imutável",
-                  description: "Logs append-only com timestamp. Compliance LGPD e BACEN 4.893.",
+                  title: "Registros à prova de adulteração",
+                  description: "Cada ação gravada para sempre. Logs imutáveis. Auditores vão amar você.",
                 },
                 {
                   icon: CheckCircle2,
-                  title: "RBAC granular",
-                  description: "Admin, Operator, Viewer. Controle preciso por tenant e recurso.",
+                  title: "Controle de acesso cirúrgico",
+                  description: "Defina quem vê o quê, quem faz o quê. Cada usuário com exatamente o acesso que precisa.",
                 },
               ].map((item, index) => (
                 <motion.div key={index} variants={fadeInUp}>
@@ -543,9 +543,9 @@ export default function Landing() {
             variants={stagger}
           >
             <motion.div className="text-center mb-16 max-w-3xl mx-auto" variants={fadeInUp}>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">Preços transparentes</h2>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Investimento que se paga sozinho</h2>
               <p className="text-xl text-muted-foreground">
-                Pague apenas pelo que usar. Sem custos ocultos.
+                Simples, claro e justo. Sem letrinhas miúdas.
               </p>
             </motion.div>
 
@@ -661,7 +661,7 @@ export default function Landing() {
 
             <motion.div className="text-center mt-12" variants={fadeInUp}>
               <p className="text-muted-foreground">
-                Todos os planos incluem 30 dias de teste grátis. Sem cartão de crédito necessário.
+                <strong>Teste 30 dias grátis.</strong> Sem cartão. Sem compromisso. Cancele quando quiser.
               </p>
             </motion.div>
           </motion.div>
@@ -679,20 +679,23 @@ export default function Landing() {
             variants={stagger}
           >
             <motion.div className="text-center mb-16 max-w-3xl mx-auto" variants={fadeInUp}>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">O que dizem nossos clientes</h2>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Resultados reais de quem usa</h2>
+              <p className="text-xl text-muted-foreground">
+                Veja o impacto nas palavras de quem já transformou sua segurança
+              </p>
             </motion.div>
 
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               {[
                 {
-                  quote: "Em 7 dias, zeramos SMBv1 em 120 máquinas. A auditoria nunca foi tão simples.",
+                  quote: "Resolvemos em 7 dias um problema que nos atormentava há meses. 120 máquinas protegidas. A auditoria foi tão tranquila que parecia mentira.",
                   author: "Carlos Silva",
-                  role: "CTO, TechSecure MSP",
+                  role: "CTO, TechSecure MSP (120+ clientes)",
                 },
                 {
-                  quote: "Economizamos 40 horas/mês com automação de hardening. O ROI foi imediato.",
+                  quote: "Meu time ganhava 40 horas por mês. Quarenta! E o melhor: o ROI apareceu no primeiro mês. Melhor investimento que fizemos.",
                   author: "Ana Martins",
-                  role: "Gerente de TI, Financeira SP",
+                  role: "Gerente de TI, Financeira SP (230 endpoints)",
                 },
               ].map((testimonial, index) => (
                 <motion.div key={index} variants={fadeInUp}>
@@ -728,31 +731,34 @@ export default function Landing() {
             className="max-w-3xl mx-auto"
           >
             <motion.div className="text-center mb-16" variants={fadeInUp}>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">Perguntas frequentes</h2>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Dúvidas? A gente responde</h2>
+              <p className="text-xl text-muted-foreground">
+                As perguntas que todo mundo faz antes de começar
+              </p>
             </motion.div>
 
             <motion.div variants={fadeInUp}>
               <Accordion type="single" collapsible className="space-y-4">
                 {[
                   {
-                    question: "Quanto tempo leva a implantação?",
-                    answer: "Deploy do agente: 2 minutos por endpoint. Configuração do primeiro playbook: 15 minutos. Em 1 dia você já tem visibilidade completa.",
+                    question: "Quanto tempo leva para começar?",
+                    answer: "Honestamente? Menos tempo que você gastaria tomando um café. 2 minutos por máquina. No final do dia, tudo funcionando. Sem dor de cabeça, sem consultoria cara.",
                   },
                   {
-                    question: "É compatível com meu antivírus atual?",
-                    answer: "Sim! CyberShield funciona por cima do Windows Defender, Sophos, ESET, Kaspersky e outros. Não substituímos, orquestramos.",
+                    question: "Preciso trocar meu antivírus?",
+                    answer: "Não! Nós trabalhamos em harmonia com o que você já tem. Defender, Sophos, Kaspersky... Qualquer um. A gente só potencializa o que você já investiu.",
                   },
                   {
-                    question: "Como funciona a segurança dos dados?",
-                    answer: "Isolamento por tenant via RLS (Row Level Security). Autenticação HMAC-SHA256. Dados criptografados em repouso e trânsito. Opcional: mTLS para zero-trust.",
+                    question: "Meus dados ficam realmente seguros?",
+                    answer: "Mais seguros que em um cofre. Cada cliente isolado por design. Criptografia de nível bancário. Logs imutáveis. Se um auditor pedir, você tem tudo na ponta da língua.",
                   },
                   {
-                    question: "Como é o modelo de billing?",
-                    answer: "Cobrança mensal por endpoint ativo. Sem surpresas: você paga apenas pelos agentes conectados. Cancelamento a qualquer momento.",
+                    question: "Como funciona a cobrança?",
+                    answer: "Simples: você paga por máquina conectada, por mês. Só isso. Sem surpresas, sem taxas escondidas. Cancelou? Para de cobrar. Simples assim.",
                   },
                   {
-                    question: "Qual o SLA de suporte?",
-                    answer: "Starter: email em até 48h. Pro: 24h com prioridade. Enterprise: 24/7 com canal dedicado e SLA customizado.",
+                    question: "E se eu precisar de ajuda?",
+                    answer: "Depende do seu plano. Starter: email em 48h. Pro: 24h com prioridade. Enterprise: linha direta 24/7. Mas a verdade? O sistema é tão intuitivo que você raramente vai precisar.",
                   },
                 ].map((item, index) => (
                   <AccordionItem 
@@ -786,9 +792,9 @@ export default function Landing() {
             className="max-w-2xl mx-auto"
           >
             <motion.div className="text-center mb-12" variants={fadeInUp}>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">Entre em contato</h2>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Vamos conversar?</h2>
               <p className="text-xl text-muted-foreground">
-                Nossa equipe está pronta para ajudar você
+                Conte seu desafio. A gente mostra como resolver.
               </p>
             </motion.div>
 
