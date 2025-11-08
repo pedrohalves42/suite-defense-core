@@ -21,6 +21,9 @@ verify_jwt = true
 [functions.test-stripe-integration]
 verify_jwt = true
 
+[functions.test-webhook]
+verify_jwt = true
+
 [functions.list-users]
 verify_jwt = true
 
