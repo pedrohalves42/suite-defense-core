@@ -15,6 +15,12 @@ verify_jwt = false
 [functions.upload-report]
 verify_jwt = false
 
+[functions.list-users]
+verify_jwt = true
+
+[functions.update-user-status]
+verify_jwt = true
+
 [functions.list-reports]
 verify_jwt = false
 
@@ -29,3 +35,9 @@ verify_jwt = true
 
 [functions.scan-virus]
 verify_jwt = false
+
+[functions.send-invite]
+verify_jwt = true
+
+[functions.accept-invite]
+verify_jwt = true
