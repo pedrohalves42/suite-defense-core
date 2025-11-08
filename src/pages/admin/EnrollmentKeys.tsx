@@ -125,17 +125,7 @@ export default function EnrollmentKeys() {
         .from('enrollment_keys')
         .update({ is_active: false })
         .eq('id', key.id);
-      
       if (error) throw error;
-
-      // Audit log
-      await supabase.from('audit_logs').insert({
-        action: 'revoke_enrollment_key',
-        resource_type: 'enrollment_key',
-        resource_id: key.id,
-        details: { key: key.key, description: key.description },
-        success: true,
-      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['enrollment-keys'] });

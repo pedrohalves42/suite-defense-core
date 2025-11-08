@@ -1,13 +1,38 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
-import { createErrorResponse, ErrorCode, handleException, corsHeaders } from '../_shared/error-handler.ts';
-import { createAuditLog } from '../_shared/audit.ts';
+import { corsHeaders } from '../_shared/error-handler.ts';
+import { checkRateLimit } from '../_shared/rate-limit.ts';
 
+// Validation schema
 const UpdateRoleSchema = z.object({
-  user_id: z.string().uuid(),
-  role: z.enum(['admin', 'operator', 'viewer']),
+  userId: z.string().uuid('Invalid user ID format'),
+  roles: z.array(z.enum(['admin', 'operator', 'viewer']))
+    .min(1, 'At least one role is required')
+    .max(3, 'Maximum of 3 roles')
+    .refine((roles) => new Set(roles).size === roles.length, {
+      message: 'Roles must be unique',
+    }),
 });
+
+interface ErrorResponse {
+  error: {
+    code: string;
+    message: string;
+    requestId: string;
+  };
+}
+
+function createError(code: string, message: string, requestId: string, status: number): Response {
+  const body: ErrorResponse = {
+    error: { code, message, requestId },
+  };
+  
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -39,99 +64,132 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
-      return createErrorResponse(
-        ErrorCode.UNAUTHORIZED,
-        'Authentication required',
-        401,
-        requestId
-      );
+      console.error('Authentication failed:', authError);
+      return createError('UNAUTHORIZED', 'Authentication required', requestId, 401);
     }
 
-    // Check if user is admin
-    const { data: adminCheck, error: adminError } = await supabaseAdmin
+    // Check if user is admin and get tenant
+    const { data: actorRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role, tenant_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (adminError || adminCheck?.role !== 'admin') {
-      await createAuditLog({
-        supabase: supabaseAdmin,
-        userId: user.id,
-        action: 'update_user_role',
-        resourceType: 'user_role',
-        details: { reason: 'Insufficient permissions' },
-        request: req,
-        success: false,
-      });
-
-      return createErrorResponse(
-        ErrorCode.FORBIDDEN,
-        'Only admins can update user roles',
-        403,
-        requestId
-      );
+    if (roleError) {
+      console.error('Error fetching actor role:', roleError);
+      return createError('INTERNAL', 'Internal server error', requestId, 500);
     }
 
-    const adminTenantId = adminCheck.tenant_id;
+    if (!actorRole || actorRole.role !== 'admin') {
+      // Audit failed attempt
+      await supabaseAdmin.from('audit_logs').insert({
+        tenant_id: actorRole?.tenant_id || null,
+        user_id: user.id,
+        action: 'update_role',
+        resource_type: 'user',
+        success: false,
+        details: { reason: 'Insufficient permissions', actor_role: actorRole?.role },
+        ip_address: req.headers.get('x-forwarded-for'),
+        user_agent: req.headers.get('user-agent'),
+      });
+
+      return createError('NOT_ALLOWED', 'Only admins can update user roles', requestId, 403);
+    }
+
+    const actorTenantId = actorRole.tenant_id;
+
+    // Rate limiting: 10 req/min per tenant
+    const rateLimitResult = await checkRateLimit(
+      supabaseAdmin,
+      `tenant:${actorTenantId}`,
+      'update-user-role',
+      { maxRequests: 10, windowMinutes: 1 }
+    );
+
+    if (!rateLimitResult.allowed) {
+      return createError(
+        'RATE_LIMIT_EXCEEDED',
+        `Rate limit exceeded. Try again after ${rateLimitResult.resetAt?.toISOString()}`,
+        requestId,
+        429
+      );
+    }
 
     // Parse and validate request body
     const body = await req.json();
-    const validatedData = UpdateRoleSchema.parse(body);
+    const validationResult = UpdateRoleSchema.safeParse(body);
+
+    if (!validationResult.success) {
+      const errorMessage = validationResult.error.issues.map(i => i.message).join(', ');
+      return createError('BAD_REQUEST', errorMessage, requestId, 400);
+    }
+
+    const { userId, roles: newRoles } = validationResult.data;
 
     // Check if target user exists and is in the same tenant
-    const { data: targetUserRole, error: targetUserError } = await supabaseAdmin
+    const { data: targetUserRole, error: targetError } = await supabaseAdmin
       .from('user_roles')
       .select('role, tenant_id')
-      .eq('user_id', validatedData.user_id)
-      .single();
+      .eq('user_id', userId)
+      .maybeSingle();
 
-    if (targetUserError || !targetUserRole) {
-      return createErrorResponse(
-        ErrorCode.NOT_FOUND,
-        'User not found',
-        404,
-        requestId
+    if (targetError) {
+      console.error('Error fetching target user:', targetError);
+      return createError('INTERNAL', 'Internal server error', requestId, 500);
+    }
+
+    if (!targetUserRole) {
+      return createError('NOT_FOUND', 'User not found', requestId, 404);
+    }
+
+    if (targetUserRole.tenant_id !== actorTenantId) {
+      return createError('NOT_ALLOWED', 'Cannot update users from different tenants', requestId, 403);
+    }
+
+    // Prevent admin from changing their own role
+    if (userId === user.id) {
+      return createError('BAD_REQUEST', 'Cannot change your own role', requestId, 400);
+    }
+
+    const currentRole = targetUserRole.role;
+
+    // Idempotency check: if role hasn't changed, return early
+    if (newRoles.length === 1 && newRoles[0] === currentRole) {
+      return new Response(
+        JSON.stringify({
+          updated: false,
+          message: 'Role unchanged',
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
       );
     }
 
-    if (targetUserRole.tenant_id !== adminTenantId) {
-      return createErrorResponse(
-        ErrorCode.FORBIDDEN,
-        'Cannot update users from different tenants',
-        403,
-        requestId
-      );
-    }
+    // For this implementation, we assume only one role per user (matching current schema)
+    // If you need multiple roles, you'd need to modify the user_roles table structure
+    const newRole = newRoles[0];
 
-    // Prevent admin from demoting themselves
-    if (validatedData.user_id === user.id && validatedData.role !== 'admin') {
-      return createErrorResponse(
-        ErrorCode.BAD_REQUEST,
-        'Cannot change your own role',
-        400,
-        requestId
-      );
-    }
-
-    // If demoting the last admin, prevent it
-    if (targetUserRole.role === 'admin' && validatedData.role !== 'admin') {
+    // Prevent removing the last admin
+    if (currentRole === 'admin' && newRole !== 'admin') {
       const { count, error: countError } = await supabaseAdmin
         .from('user_roles')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'admin')
-        .eq('tenant_id', adminTenantId);
+        .eq('tenant_id', actorTenantId);
 
       if (countError) {
-        throw countError;
+        console.error('Error counting admins:', countError);
+        return createError('INTERNAL', 'Internal server error', requestId, 500);
       }
 
       if (count === 1) {
-        return createErrorResponse(
-          ErrorCode.BAD_REQUEST,
-          'Cannot demote the last admin',
-          400,
-          requestId
+        return createError(
+          'BAD_REQUEST',
+          'Cannot demote the last admin. Assign another admin first.',
+          requestId,
+          400
         );
       }
     }
@@ -139,40 +197,55 @@ serve(async (req) => {
     // Update user role
     const { error: updateError } = await supabaseAdmin
       .from('user_roles')
-      .update({ role: validatedData.role })
-      .eq('user_id', validatedData.user_id);
+      .update({ role: newRole })
+      .eq('user_id', userId);
 
     if (updateError) {
-      throw updateError;
+      console.error('Error updating role:', updateError);
+      return createError('INTERNAL', 'Failed to update user role', requestId, 500);
     }
 
-    // Create audit log
-    await createAuditLog({
-      supabase: supabaseAdmin,
-      userId: user.id,
-      action: 'update_user_role',
-      resourceType: 'user_role',
-      resourceId: validatedData.user_id,
-      details: {
-        old_role: targetUserRole.role,
-        new_role: validatedData.role,
-      },
-      request: req,
+    // Create audit log with diff
+    const diffJson = {
+      before: { roles: [currentRole] },
+      after: { roles: [newRole] },
+    };
+
+    await supabaseAdmin.from('audit_logs').insert({
+      tenant_id: actorTenantId,
+      user_id: user.id,
+      action: 'update_role',
+      resource_type: 'user',
+      resource_id: userId,
       success: true,
+      details: diffJson,
+      ip_address: req.headers.get('x-forwarded-for'),
+      user_agent: req.headers.get('user-agent'),
     });
 
     return new Response(
       JSON.stringify({
-        success: true,
+        updated: true,
         message: 'User role updated successfully',
+        data: {
+          userId,
+          previousRole: currentRole,
+          newRole,
+        },
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   } catch (error) {
-    console.error('Error in update-user-role:', error);
-    return handleException(error, requestId, 'update-user-role');
+    console.error('Unexpected error in update-user-role:', error);
+    
+    return createError(
+      'INTERNAL',
+      error instanceof Error ? error.message : 'An unexpected error occurred',
+      requestId,
+      500
+    );
   }
 });
