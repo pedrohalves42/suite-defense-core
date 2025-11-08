@@ -14,6 +14,9 @@ import NotFound from "./pages/NotFound";
 import EnrollmentKeys from "./pages/admin/EnrollmentKeys";
 import Users from "./pages/admin/Users";
 import Settings from "./pages/admin/Settings";
+import AuditLogs from "./pages/admin/AuditLogs";
+import Invites from "./pages/admin/Invites";
+import AcceptInvite from "./pages/AcceptInvite";
 
 const queryClient = new QueryClient();
 
@@ -26,11 +29,14 @@ const App = () => (
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/accept-invite" element={<AcceptInvite />} />
           <Route path="/" element={<ProtectedRoute><ServerDashboard /></ProtectedRoute>} />
           <Route path="/installer" element={<ProtectedRoute><AgentInstaller /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
             <Route path="enrollment-keys" element={<EnrollmentKeys />} />
             <Route path="users" element={<Users />} />
+            <Route path="invites" element={<Invites />} />
+            <Route path="audit-logs" element={<AuditLogs />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

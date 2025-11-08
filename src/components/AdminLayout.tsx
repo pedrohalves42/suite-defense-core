@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, Navigate } from 'react-router-dom';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Button } from './ui/button';
-import { Key, Users, Settings, ArrowLeft } from 'lucide-react';
+import { Key, Users, Settings, ArrowLeft, ScrollText, Mail } from 'lucide-react';
 
 export const AdminLayout = () => {
   const { isAdmin, loading } = useIsAdmin();
@@ -52,6 +52,24 @@ export const AdminLayout = () => {
                 >
                   <Users className="h-4 w-4 mr-2" />
                   Usuários
+                </Button>
+              </Link>
+              <Link to="/admin/invites">
+                <Button 
+                  variant={isActive('/admin/invites') ? 'default' : 'ghost'}
+                  size="sm"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Convites
+                </Button>
+              </Link>
+              <Link to="/admin/audit-logs">
+                <Button 
+                  variant={isActive('/admin/audit-logs') ? 'default' : 'ghost'}
+                  size="sm"
+                >
+                  <ScrollText className="h-4 w-4 mr-2" />
+                  Logs
                 </Button>
               </Link>
               <Link to="/admin/settings">
