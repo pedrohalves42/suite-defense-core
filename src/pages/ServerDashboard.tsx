@@ -178,6 +178,10 @@ const ServerDashboard = () => {
                 Administração
               </Button>
             )}
+            <Button onClick={() => navigate("/virus-scans")} variant="outline" className="gap-2">
+              <Shield className="h-4 w-4" />
+              Scans de Vírus
+            </Button>
             <Button onClick={() => navigate("/installer")} className="gap-2">
               <Download className="h-4 w-4" />
               Criar Instalador

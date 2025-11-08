@@ -29,7 +29,7 @@ export default function Users() {
         .select('user_id, role', { count: 'exact' });
 
       if (roleFilter !== 'all') {
-        rolesQuery = rolesQuery.eq('role', roleFilter);
+        rolesQuery = rolesQuery.eq('role', roleFilter as 'admin' | 'operator' | 'viewer');
       }
 
       const { data: userRoles, error: rolesError, count } = await rolesQuery;
