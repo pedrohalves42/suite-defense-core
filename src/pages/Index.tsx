@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Shield, Activity, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,38 +16,12 @@ interface Report {
   file: string;
 }
 
-interface ApiStatus {
-  ok: boolean;
-  name: string;
-  now: string;
-}
-
 const Index = () => {
-  const [apiStatus, setApiStatus] = useState<"loading" | "online" | "offline">("loading");
-  const [apiInfo, setApiInfo] = useState<ApiStatus | null>(null);
   const [agentName, setAgentName] = useState("AGENTE-01");
   const [agentToken, setAgentToken] = useState("");
   const [reports, setReports] = useState<Report[]>([]);
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isCreatingJob, setIsCreatingJob] = useState<string | null>(null);
-
-  useEffect(() => {
-    checkApiStatus();
-    const interval = setInterval(checkApiStatus, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const checkApiStatus = async () => {
-    try {
-      const res = await fetch(`${API_URL}/health-check`);
-      const data = await res.json();
-      setApiInfo(data);
-      setApiStatus("online");
-    } catch {
-      setApiStatus("offline");
-      setApiInfo(null);
-    }
-  };
 
   const enrollAgent = async () => {
     if (!agentName.trim()) {
@@ -142,42 +116,7 @@ const Index = () => {
               <p className="text-sm text-muted-foreground">Painel de Operações de Segurança</p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Activity className={`h-4 w-4 ${apiStatus === "online" ? "text-success animate-pulse" : "text-destructive"}`} />
-            <Badge variant={apiStatus === "online" ? "default" : "destructive"} className="font-mono">
-              {apiStatus === "loading" ? "Verificando..." : apiStatus === "online" ? "API Online" : "API Offline"}
-            </Badge>
-          </div>
         </div>
-
-        {/* Status Card */}
-        {apiInfo && (
-          <Card className="bg-gradient-card border-primary/20 animate-slide-in">
-            <CardHeader>
-              <CardTitle className="text-primary flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5" />
-                Status do Sistema
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Serviço</p>
-                  <p className="font-mono text-foreground">{apiInfo.name}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Hora do Servidor</p>
-                  <p className="font-mono text-foreground">{new Date(apiInfo.now).toLocaleTimeString()}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Backend</p>
-                  <p className="font-mono text-foreground text-xs">Lovable Cloud</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Agent Enrollment */}
         <Card className="bg-gradient-card border-primary/20 animate-slide-in">
@@ -193,7 +132,7 @@ const Index = () => {
                 onChange={(e) => setAgentName(e.target.value)}
                 className="bg-secondary border-border text-foreground"
               />
-              <Button onClick={enrollAgent} disabled={isEnrolling || apiStatus !== "online"}>
+              <Button onClick={enrollAgent} disabled={isEnrolling}>
                 {isEnrolling ? "Matriculando..." : "Matricular Agente"}
               </Button>
             </div>
@@ -227,7 +166,7 @@ const Index = () => {
                 variant="outline"
                 className="h-auto flex-col items-start p-4 bg-secondary/50 hover:bg-secondary border-border hover:border-primary/50 transition-all"
                 onClick={() => createJob("local_checks", "Verificações Locais de Segurança")}
-                disabled={isCreatingJob !== null || apiStatus !== "online"}
+                disabled={isCreatingJob !== null}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -242,7 +181,7 @@ const Index = () => {
                 variant="outline"
                 className="h-auto flex-col items-start p-4 bg-secondary/50 hover:bg-secondary border-border hover:border-warning/50 transition-all"
                 onClick={() => createJob("scan_nmap", "Scan de Rede (Nmap)")}
-                disabled={isCreatingJob !== null || apiStatus !== "online"}
+                disabled={isCreatingJob !== null}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <Activity className="h-4 w-4 text-warning" />
@@ -257,7 +196,7 @@ const Index = () => {
                 variant="outline"
                 className="h-auto flex-col items-start p-4 bg-secondary/50 hover:bg-secondary border-border hover:border-destructive/50 transition-all"
                 onClick={() => createJob("remediate_standard", "Remediação Padrão")}
-                disabled={isCreatingJob !== null || apiStatus !== "online"}
+                disabled={isCreatingJob !== null}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <AlertTriangle className="h-4 w-4 text-destructive" />

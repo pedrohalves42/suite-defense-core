@@ -1,8 +1,5 @@
 project_id = "iavbnmduxpxhwubqrzzn"
 
-[functions.health-check]
-verify_jwt = false
-
 [functions.enroll-agent]
 verify_jwt = false
 
