@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/hooks/useTenant';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface TenantSettings {
   id: string;
@@ -45,6 +47,19 @@ export default function Settings() {
     enable_webhook_alerts: false,
     enable_auto_quarantine: false,
   });
+
+  const [virusTotalTestResult, setVirusTotalTestResult] = useState<{
+    success: boolean;
+    message: string;
+    details?: any;
+  } | null>(null);
+  const [stripeTestResult, setStripeTestResult] = useState<{
+    success: boolean;
+    message: string;
+    details?: any;
+  } | null>(null);
+  const [testingVirusTotal, setTestingVirusTotal] = useState(false);
+  const [testingStripe, setTestingStripe] = useState(false);
 
   // Fetch tenant settings
   const { data: tenantSettings, isLoading: settingsLoading } = useQuery({
@@ -132,6 +147,78 @@ export default function Settings() {
       toast({ title: error.message || 'Erro ao atualizar configurações', variant: 'destructive' });
     },
   });
+
+  const testVirusTotalIntegration = async () => {
+    setTestingVirusTotal(true);
+    setVirusTotalTestResult(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('test-virustotal-integration');
+      
+      if (error) throw error;
+      
+      setVirusTotalTestResult(data);
+      
+      if (data.success) {
+        toast({ title: 'Teste bem-sucedido', description: data.message });
+      } else {
+        toast({ 
+          title: 'Teste falhou', 
+          description: data.message, 
+          variant: 'destructive' 
+        });
+      }
+    } catch (error) {
+      console.error('Error testing VirusTotal:', error);
+      setVirusTotalTestResult({
+        success: false,
+        message: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+      toast({ 
+        title: 'Erro ao testar integração', 
+        description: 'Verifique os logs para mais detalhes',
+        variant: 'destructive' 
+      });
+    } finally {
+      setTestingVirusTotal(false);
+    }
+  };
+
+  const testStripeIntegration = async () => {
+    setTestingStripe(true);
+    setStripeTestResult(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('test-stripe-integration');
+      
+      if (error) throw error;
+      
+      setStripeTestResult(data);
+      
+      if (data.success) {
+        toast({ title: 'Teste bem-sucedido', description: data.message });
+      } else {
+        toast({ 
+          title: 'Teste falhou', 
+          description: data.message, 
+          variant: 'destructive' 
+        });
+      }
+    } catch (error) {
+      console.error('Error testing Stripe:', error);
+      setStripeTestResult({
+        success: false,
+        message: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+      toast({ 
+        title: 'Erro ao testar integração', 
+        description: 'Verifique os logs para mais detalhes',
+        variant: 'destructive' 
+      });
+    } finally {
+      setTestingStripe(false);
+    }
+  };
 
   const loading = tenantLoading || roleLoading || settingsLoading;
 
@@ -328,6 +415,45 @@ export default function Settings() {
               <p className="text-xs text-muted-foreground">
                 A chave da API do VirusTotal é configurada globalmente nos secrets do projeto
               </p>
+              
+              <div className="pt-4 border-t">
+                <Button 
+                  onClick={testVirusTotalIntegration}
+                  disabled={testingVirusTotal || !canWrite}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {testingVirusTotal ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Testando conexão...
+                    </>
+                  ) : (
+                    'Testar Conexão VirusTotal'
+                  )}
+                </Button>
+                
+                {virusTotalTestResult && (
+                  <Alert className="mt-4" variant={virusTotalTestResult.success ? "default" : "destructive"}>
+                    {virusTotalTestResult.success ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <AlertTitle>{virusTotalTestResult.success ? 'Sucesso' : 'Erro'}</AlertTitle>
+                    <AlertDescription>
+                      {virusTotalTestResult.message}
+                      {virusTotalTestResult.details && (
+                        <div className="mt-2 text-xs">
+                          <pre className="bg-muted p-2 rounded overflow-x-auto">
+                            {JSON.stringify(virusTotalTestResult.details, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -349,6 +475,45 @@ export default function Settings() {
                   onCheckedChange={(checked) => setSettings({ ...settings, stripe_enabled: checked })}
                   disabled={!canWrite}
                 />
+              </div>
+              
+              <div className="pt-4 border-t">
+                <Button 
+                  onClick={testStripeIntegration}
+                  disabled={testingStripe || !canWrite}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {testingStripe ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Testando conexão...
+                    </>
+                  ) : (
+                    'Testar Conexão Stripe'
+                  )}
+                </Button>
+                
+                {stripeTestResult && (
+                  <Alert className="mt-4" variant={stripeTestResult.success ? "default" : "destructive"}>
+                    {stripeTestResult.success ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <AlertTitle>{stripeTestResult.success ? 'Sucesso' : 'Erro'}</AlertTitle>
+                    <AlertDescription>
+                      {stripeTestResult.message}
+                      {stripeTestResult.details && (
+                        <div className="mt-2 text-xs">
+                          <pre className="bg-muted p-2 rounded overflow-x-auto">
+                            {JSON.stringify(stripeTestResult.details, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             </CardContent>
           </Card>

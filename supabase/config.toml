@@ -15,6 +15,12 @@ verify_jwt = false
 [functions.upload-report]
 verify_jwt = false
 
+[functions.test-virustotal-integration]
+verify_jwt = true
+
+[functions.test-stripe-integration]
+verify_jwt = true
+
 [functions.list-users]
 verify_jwt = true
 
