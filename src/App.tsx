@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminLayout } from "./components/AdminLayout";
+import { AppLayout } from "./components/AppLayout";
 import { CookieConsent } from "./components/CookieConsent";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import Landing from "./pages/Landing";
@@ -37,6 +38,7 @@ const App = () => (
         <BrowserRouter>
           <CookieConsent />
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
@@ -45,16 +47,23 @@ const App = () => (
             <Route path="/accept-invite" element={<AcceptInvite />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
-            <Route path="/dashboard" element={<ProtectedRoute><ServerDashboard /></ProtectedRoute>} />
-            <Route path="/installer" element={<ProtectedRoute><AgentInstaller /></ProtectedRoute>} />
-            <Route path="/virus-scans" element={<ProtectedRoute><VirusScans /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
-              <Route path="enrollment-keys" element={<EnrollmentKeys />} />
-              <Route path="users" element={<Users />} />
-              <Route path="invites" element={<Invites />} />
-              <Route path="audit-logs" element={<AuditLogs />} />
-              <Route path="settings" element={<Settings />} />
+            
+            {/* Protected Routes with AppLayout */}
+            <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+              <Route path="/dashboard" element={<ServerDashboard />} />
+              <Route path="/installer" element={<AgentInstaller />} />
+              <Route path="/virus-scans" element={<VirusScans />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route path="enrollment-keys" element={<EnrollmentKeys />} />
+                <Route path="users" element={<Users />} />
+                <Route path="invites" element={<Invites />} />
+                <Route path="audit-logs" element={<AuditLogs />} />
+                <Route path="settings" element={<Settings />} />
+              </Route>
             </Route>
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

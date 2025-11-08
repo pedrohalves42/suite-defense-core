@@ -1,72 +1,103 @@
-import { useState } from "react";
-import { Package, Download, Copy, CheckCircle2, Terminal, ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Package, Download, Copy, CheckCircle2, Terminal, Loader2, Wifi, WifiOff } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
-import { useTenant } from "@/hooks/useTenant";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
 const DOMAIN = "suite-defense-core.lovable.app";
-const API_URL = `https://${DOMAIN}/functions/v1`;
+
+type Step = 1 | 2 | 3;
 
 const AgentInstaller = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const { tenant, loading: tenantLoading } = useTenant();
-  const [installType, setInstallType] = useState<"server" | "agent">("agent");
+  const [currentStep, setCurrentStep] = useState<Step>(1);
   const [agentName, setAgentName] = useState("AGENT-01");
-  const [enrollmentKey, setEnrollmentKey] = useState("");
   const [platform, setPlatform] = useState<"windows" | "linux">("windows");
+  const [isGenerating, setIsGenerating] = useState(false);
   const [agentToken, setAgentToken] = useState("");
-  const [isEnrolling, setIsEnrolling] = useState(false);
-  const [serverPort, setServerPort] = useState("8080");
+  const [enrollmentKey, setEnrollmentKey] = useState("");
+  const [isConnected, setIsConnected] = useState(false);
+  const [checkingConnection, setCheckingConnection] = useState(false);
 
-  const enrollAgent = async () => {
+  useEffect(() => {
+    if (currentStep === 3 && agentName) {
+      checkAgentConnection();
+      const interval = setInterval(checkAgentConnection, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [currentStep, agentName]);
+
+  const checkAgentConnection = async () => {
+    if (!agentName) return;
+    
+    setCheckingConnection(true);
+    try {
+      const { data } = await supabase
+        .from('agents')
+        .select('status, last_heartbeat')
+        .eq('agent_name', agentName)
+        .single();
+
+      if (data?.last_heartbeat) {
+        const lastHeartbeat = new Date(data.last_heartbeat);
+        const now = new Date();
+        const diff = now.getTime() - lastHeartbeat.getTime();
+        setIsConnected(diff < 5 * 60 * 1000); // 5 minutes
+      }
+    } catch (error) {
+      console.error('Error checking connection:', error);
+    } finally {
+      setCheckingConnection(false);
+    }
+  };
+
+  const generateCredentials = async () => {
     if (!agentName.trim()) {
       toast.error("Nome do agente é obrigatório");
       return;
     }
 
-    if (!enrollmentKey.trim()) {
-      toast.error("Chave de enrollment é obrigatória");
-      return;
-    }
-
-    setIsEnrolling(true);
+    setIsGenerating(true);
     try {
-      const res = await fetch(`${API_URL}/enroll-agent`, {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const res = await fetch(`https://${DOMAIN}/functions/v1/auto-generate-enrollment`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          enrollmentKey: enrollmentKey.trim(),
-          agentName: agentName.trim(),
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ agentName: agentName.trim() }),
       });
 
-      if (!res.ok) throw new Error("Falha na matrícula");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Falha ao gerar credenciais");
+      }
 
       const data = await res.json();
       setAgentToken(data.agentToken);
-      toast.success("Token gerado com sucesso");
-    } catch (error) {
-      toast.error("Falha ao gerar token");
+      setEnrollmentKey(data.enrollmentKey);
+      setCurrentStep(2);
+      toast.success("Credenciais geradas com sucesso!");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao gerar credenciais");
     } finally {
-      setIsEnrolling(false);
+      setIsGenerating(false);
     }
   };
 
-  const windowsInstallScript = `# CyberShield ${installType === 'server' ? 'Server' : 'Agent'} - Windows Installer
+  const windowsInstallScript = `# CyberShield Agent - Windows Installer
 # Execute como Administrador
 
 $AgentName = "${agentName}"
-$AgentToken = "${agentToken || 'SEU_TOKEN_AQUI'}"
+$AgentToken = "${agentToken}"
 $ServerUrl = "https://${DOMAIN}"
-$ServerPort = "${serverPort}"
 
 # Criar diretório do agente
 $AgentDir = "C:\\Program Files\\CyberShield\\Agent"
@@ -85,45 +116,17 @@ $ConfigContent = @"
 
 $ConfigContent | Out-File -FilePath "$AgentDir\\config.json" -Encoding UTF8
 
-# Criar script do agente (exemplo básico)
-$AgentScript = @"
-# CyberShield Agent Service
-while ($true) {
-    try {
-        # Poll for jobs
-        $headers = @{
-            "X-Agent-Token" = "$AgentToken"
-        }
-        $jobs = Invoke-RestMethod -Uri "$ServerUrl/functions/v1/poll-jobs" -Headers $headers -Method GET
-        
-        if ($jobs.Count -gt 0) {
-            Write-Host "Received $($jobs.Count) jobs"
-            # Process jobs here
-        }
-        
-        Start-Sleep -Seconds 30
-    }
-    catch {
-        Write-Host "Error: $_"
-        Start-Sleep -Seconds 60
-    }
-}
-"@
-
-$AgentScript | Out-File -FilePath "$AgentDir\\agent.ps1" -Encoding UTF8
-
 Write-Host "✓ Agente instalado em: $AgentDir" -ForegroundColor Green
-Write-Host "✓ Para iniciar: powershell -ExecutionPolicy Bypass -File '$AgentDir\\agent.ps1'" -ForegroundColor Green
+Write-Host "✓ Configuração salva com sucesso!" -ForegroundColor Green
 `;
 
   const linuxInstallScript = `#!/bin/bash
-# CyberShield ${installType === 'server' ? 'Server' : 'Agent'} - Linux Installer
+# CyberShield Agent - Linux Installer
 # Execute com sudo
 
 AGENT_NAME="${agentName}"
-AGENT_TOKEN="${agentToken || 'SEU_TOKEN_AQUI'}"
+AGENT_TOKEN="${agentToken}"
 SERVER_URL="https://${DOMAIN}"
-SERVER_PORT="${serverPort}"
 
 # Criar diretório do agente
 AGENT_DIR="/opt/cybershield/agent"
@@ -140,56 +143,15 @@ cat > "$AGENT_DIR/config.json" << EOF
 }
 EOF
 
-# Criar script do agente
-cat > "$AGENT_DIR/agent.sh" << 'EOF'
-#!/bin/bash
-# CyberShield Agent Service
-
-while true; do
-    # Poll for jobs
-    JOBS=$(curl -s -H "X-Agent-Token: $AGENT_TOKEN" \\
-        "$SERVER_URL/functions/v1/poll-jobs")
-    
-    if [ ! -z "$JOBS" ]; then
-        echo "Received jobs: $JOBS"
-        # Process jobs here
-    fi
-    
-    sleep 30
-done
-EOF
-
 chmod +x "$AGENT_DIR/agent.sh"
 
-# Criar systemd service
-cat > "/etc/systemd/system/cybershield-agent.service" << EOF
-[Unit]
-Description=CyberShield Security Agent
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=$AGENT_DIR
-ExecStart=$AGENT_DIR/agent.sh
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-systemctl daemon-reload
-systemctl enable cybershield-agent.service
-
 echo "✓ Agente instalado em: $AGENT_DIR"
-echo "✓ Para iniciar: systemctl start cybershield-agent"
-echo "✓ Para ver logs: journalctl -u cybershield-agent -f"
+echo "✓ Configuração salva com sucesso!"
 `;
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast.success(`${label} copiado para a área de transferência`);
+    toast.success(`${label} copiado!`);
   };
 
   const downloadScript = (content: string, filename: string) => {
@@ -202,260 +164,299 @@ echo "✓ Para ver logs: journalctl -u cybershield-agent -f"
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success(`Script ${filename} baixado`);
+    toast.success("Script baixado!");
   };
 
-  if (tenantLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>Autenticação Necessária</CardTitle>
-            <CardDescription>Você precisa estar autenticado para acessar o instalador.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate("/login")} className="w-full">
-              Ir para Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const StepIndicator = () => (
+    <div className="flex items-center justify-center gap-4 mb-8">
+      {[1, 2, 3].map((step) => (
+        <div key={step} className="flex items-center">
+          <div
+            className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
+              currentStep >= step
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-muted-foreground"
+            }`}
+          >
+            {step}
+          </div>
+          {step < 3 && (
+            <div
+              className={`w-16 h-1 mx-2 transition-colors ${
+                currentStep > step ? "bg-primary" : "bg-secondary"
+              }`}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-5xl mx-auto space-y-6">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/dashboard")}
-            className="shrink-0"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
-            <Package className="h-8 w-8 text-primary animate-pulse-glow" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              CyberShield - Instalador Completo
-            </h1>
-            <p className="text-sm text-muted-foreground">Instalação de servidor e agentes | Domínio: {DOMAIN}</p>
-          </div>
+    <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
+          <Package className="h-8 w-8 text-primary animate-pulse-glow" />
         </div>
-
-        {/* Configuration Card */}
-        <Card className="bg-gradient-card border-primary/20">
-          <CardHeader>
-            <CardTitle className="text-foreground">Configuração da Instalação</CardTitle>
-            <CardDescription>Escolha o tipo e configure os parâmetros</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <Button
-                variant={installType === "server" ? "default" : "outline"}
-                onClick={() => setInstallType("server")}
-                className="h-16"
-              >
-                Servidor Central
-              </Button>
-              <Button
-                variant={installType === "agent" ? "default" : "outline"}
-                onClick={() => setInstallType("agent")}
-                className="h-16"
-              >
-                Agente de Segurança
-              </Button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {installType === "agent" && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="agentName">Nome do Agente</Label>
-                    <Input
-                      id="agentName"
-                      placeholder="AGENT-01"
-                      value={agentName}
-                      onChange={(e) => setAgentName(e.target.value)}
-                      className="bg-secondary border-border text-foreground"
-                    />
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="enrollmentKey">Chave de Enrollment</Label>
-                    <Input
-                      id="enrollmentKey"
-                      placeholder="XXXX-XXXX-XXXX-XXXX"
-                      value={enrollmentKey}
-                      onChange={(e) => setEnrollmentKey(e.target.value)}
-                      className="bg-secondary border-border text-foreground"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Solicite uma chave de enrollment ao administrador do sistema
-                    </p>
-                  </div>
-                </>
-              )}
-              
-              {installType === "server" && (
-                <div className="space-y-2">
-                  <Label htmlFor="serverPort">Porta do Servidor</Label>
-                  <Input
-                    id="serverPort"
-                    placeholder="8080"
-                    value={serverPort}
-                    onChange={(e) => setServerPort(e.target.value)}
-                    className="bg-secondary border-border text-foreground"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="platform">Plataforma</Label>
-                <Select value={platform} onValueChange={(value: "windows" | "linux") => setPlatform(value)}>
-                  <SelectTrigger className="bg-secondary border-border text-foreground">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="windows">Windows</SelectItem>
-                    <SelectItem value="linux">Linux</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {installType === "agent" && (
-                <div className="space-y-2">
-                  <Label>&nbsp;</Label>
-                  <Button onClick={enrollAgent} disabled={isEnrolling} className="w-full">
-                    {isEnrolling ? "Gerando Token..." : "Gerar Token de Agente"}
-                  </Button>
-                </div>
-              )}
-            </div>
-
-            {agentToken && (
-              <div className="space-y-2 p-4 bg-secondary/50 rounded-lg border border-accent/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                    <p className="text-sm font-semibold text-success">Token Gerado</p>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => copyToClipboard(agentToken, "Token")}
-                    className="gap-2"
-                  >
-                    <Copy className="h-3 w-3" />
-                    Copiar
-                  </Button>
-                </div>
-                <code className="block text-xs font-mono break-all text-muted-foreground bg-background/50 p-2 rounded">
-                  {agentToken}
-                </code>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Installation Scripts */}
-        <Card className="bg-gradient-card border-primary/20">
-          <CardHeader>
-            <CardTitle className="text-foreground flex items-center gap-2">
-              <Terminal className="h-5 w-5 text-primary" />
-              Scripts de Instalação
-            </CardTitle>
-            <CardDescription>Scripts prontos para deploy do agente</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={platform} onValueChange={(value) => setPlatform(value as "windows" | "linux")}>
-              <TabsList className="grid w-full grid-cols-2 bg-secondary">
-                <TabsTrigger value="windows">Windows (PowerShell)</TabsTrigger>
-                <TabsTrigger value="linux">Linux (Bash)</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="windows" className="space-y-3 mt-4">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => copyToClipboard(windowsInstallScript, "Script Windows")}
-                    variant="secondary"
-                    className="gap-2"
-                  >
-                    <Copy className="h-4 w-4" />
-                    Copiar Script
-                  </Button>
-                  <Button
-                    onClick={() => downloadScript(windowsInstallScript, `install-agent-${agentName}.ps1`)}
-                    className="gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    Baixar Script
-                  </Button>
-                </div>
-                <div className="bg-secondary/30 rounded-lg p-4 border border-border overflow-x-auto">
-                  <pre className="text-xs font-mono text-foreground whitespace-pre-wrap">
-                    {windowsInstallScript}
-                  </pre>
-                </div>
-                <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
-                  <p className="text-sm text-warning-foreground font-semibold">Instruções Windows:</p>
-                  <ol className="text-xs text-muted-foreground mt-2 space-y-1 list-decimal list-inside">
-                    <li>Abra PowerShell como Administrador</li>
-                    <li>Execute o script de instalação</li>
-                    <li>O agente será instalado em C:\Program Files\CyberShield\Agent</li>
-                    <li>Configure como serviço do Windows se necessário</li>
-                  </ol>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="linux" className="space-y-3 mt-4">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => copyToClipboard(linuxInstallScript, "Script Linux")}
-                    variant="secondary"
-                    className="gap-2"
-                  >
-                    <Copy className="h-4 w-4" />
-                    Copiar Script
-                  </Button>
-                  <Button
-                    onClick={() => downloadScript(linuxInstallScript, `install-agent-${agentName}.sh`)}
-                    className="gap-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    Baixar Script
-                  </Button>
-                </div>
-                <div className="bg-secondary/30 rounded-lg p-4 border border-border overflow-x-auto">
-                  <pre className="text-xs font-mono text-foreground whitespace-pre-wrap">
-                    {linuxInstallScript}
-                  </pre>
-                </div>
-                <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
-                  <p className="text-sm text-warning-foreground font-semibold">Instruções Linux:</p>
-                  <ol className="text-xs text-muted-foreground mt-2 space-y-1 list-decimal list-inside">
-                    <li>Salve o script e torne-o executável: chmod +x install-agent.sh</li>
-                    <li>Execute como root: sudo ./install-agent.sh</li>
-                    <li>O agente será instalado em /opt/cybershield/agent</li>
-                    <li>O serviço systemd será criado e habilitado automaticamente</li>
-                  </ol>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Instalador de Agente
+          </h1>
+          <p className="text-sm text-muted-foreground">Configuração simplificada em 3 passos</p>
+        </div>
       </div>
+
+      <Card className="bg-gradient-card border-primary/20">
+        <CardContent className="pt-6">
+          <StepIndicator />
+
+          {/* Step 1: Configuração */}
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold mb-2">Passo 1: Configuração</h2>
+                <p className="text-muted-foreground">Configure o nome do agente e plataforma</p>
+              </div>
+
+              <div className="max-w-md mx-auto space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="agentName">Nome do Agente</Label>
+                  <Input
+                    id="agentName"
+                    placeholder="AGENT-01"
+                    value={agentName}
+                    onChange={(e) => setAgentName(e.target.value.toUpperCase())}
+                    className="text-center font-mono text-lg"
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Use apenas letras maiúsculas, números e hífens
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Plataforma</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant={platform === "windows" ? "default" : "outline"}
+                      onClick={() => setPlatform("windows")}
+                      className="h-20"
+                    >
+                      <div className="flex flex-col items-center">
+                        <Terminal className="h-6 w-6 mb-2" />
+                        Windows
+                      </div>
+                    </Button>
+                    <Button
+                      variant={platform === "linux" ? "default" : "outline"}
+                      onClick={() => setPlatform("linux")}
+                      className="h-20"
+                    >
+                      <div className="flex flex-col items-center">
+                        <Terminal className="h-6 w-6 mb-2" />
+                        Linux
+                      </div>
+                    </Button>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={generateCredentials}
+                  disabled={isGenerating}
+                  className="w-full h-12 text-lg"
+                  size="lg"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Gerando...
+                    </>
+                  ) : (
+                    "Gerar Instalador →"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Download */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold mb-2">Passo 2: Download do Script</h2>
+                <p className="text-muted-foreground">Baixe e execute o instalador</p>
+              </div>
+
+              <div className="max-w-2xl mx-auto">
+                <Tabs value={platform} onValueChange={(v) => setPlatform(v as "windows" | "linux")}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="windows">Windows</TabsTrigger>
+                    <TabsTrigger value="linux">Linux</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="windows" className="space-y-4 mt-4">
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => downloadScript(windowsInstallScript, `install-${agentName}.ps1`)}
+                        className="flex-1 h-14"
+                        size="lg"
+                      >
+                        <Download className="mr-2 h-5 w-5" />
+                        Baixar Script Windows
+                      </Button>
+                      <Button
+                        onClick={() => copyToClipboard(windowsInstallScript, "Script")}
+                        variant="outline"
+                        size="lg"
+                      >
+                        <Copy className="h-5 w-5" />
+                      </Button>
+                    </div>
+
+                    <div className="bg-warning/10 border border-warning/30 rounded-lg p-4">
+                      <p className="font-semibold mb-2">📋 Instruções:</p>
+                      <ol className="text-sm space-y-1 list-decimal list-inside">
+                        <li>Baixe o script acima</li>
+                        <li>Clique com botão direito → "Executar como Administrador"</li>
+                        <li>Aguarde a instalação concluir</li>
+                        <li>Clique em "Verificar Conexão" no próximo passo</li>
+                      </ol>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="linux" className="space-y-4 mt-4">
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => downloadScript(linuxInstallScript, `install-${agentName}.sh`)}
+                        className="flex-1 h-14"
+                        size="lg"
+                      >
+                        <Download className="mr-2 h-5 w-5" />
+                        Baixar Script Linux
+                      </Button>
+                      <Button
+                        onClick={() => copyToClipboard(linuxInstallScript, "Script")}
+                        variant="outline"
+                        size="lg"
+                      >
+                        <Copy className="h-5 w-5" />
+                      </Button>
+                    </div>
+
+                    <div className="bg-warning/10 border border-warning/30 rounded-lg p-4">
+                      <p className="font-semibold mb-2">📋 Instruções:</p>
+                      <ol className="text-sm space-y-1 list-decimal list-inside">
+                        <li>Baixe o script acima</li>
+                        <li>Torne executável: chmod +x install-{agentName}.sh</li>
+                        <li>Execute como root: sudo ./install-{agentName}.sh</li>
+                        <li>Clique em "Verificar Conexão" no próximo passo</li>
+                      </ol>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => setCurrentStep(1)}
+                    className="flex-1"
+                  >
+                    ← Voltar
+                  </Button>
+                  <Button onClick={() => setCurrentStep(3)} className="flex-1">
+                    Próximo: Verificar Conexão →
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Verificação */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold mb-2">Passo 3: Verificação de Conexão</h2>
+                <p className="text-muted-foreground">Aguardando o agente se conectar...</p>
+              </div>
+
+              <div className="max-w-md mx-auto">
+                <Card className={isConnected ? "border-success" : "border-warning"}>
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col items-center text-center space-y-4">
+                      {isConnected ? (
+                        <>
+                          <div className="p-4 bg-success/10 rounded-full">
+                            <Wifi className="h-12 w-12 text-success" />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-bold text-success mb-1">
+                              ✓ Agente Conectado!
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              O agente {agentName} está online e funcionando
+                            </p>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setCurrentStep(1);
+                              setAgentName("AGENT-01");
+                              setAgentToken("");
+                              setEnrollmentKey("");
+                              setIsConnected(false);
+                            }}
+                            className="w-full"
+                          >
+                            Configurar Novo Agente
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="p-4 bg-warning/10 rounded-full">
+                            {checkingConnection ? (
+                              <Loader2 className="h-12 w-12 text-warning animate-spin" />
+                            ) : (
+                              <WifiOff className="h-12 w-12 text-warning" />
+                            )}
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-bold mb-1">
+                              Aguardando Conexão...
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              Execute o script de instalação no servidor
+                            </p>
+                          </div>
+                          <Button
+                            onClick={checkAgentConnection}
+                            variant="outline"
+                            className="w-full"
+                            disabled={checkingConnection}
+                          >
+                            {checkingConnection ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Verificando...
+                              </>
+                            ) : (
+                              "Verificar Novamente"
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() => setCurrentStep(2)}
+                            className="w-full"
+                          >
+                            ← Voltar ao Download
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

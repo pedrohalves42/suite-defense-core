@@ -248,35 +248,15 @@ const ServerDashboard = () => {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
-              <Server className="h-8 w-8 text-primary animate-pulse-glow" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Servidor Principal
-              </h1>
-              <p className="text-sm text-muted-foreground">Painel Administrativo do Sistema</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
+            <Server className="h-8 w-8 text-primary animate-pulse-glow" />
           </div>
-          
-          <div className="flex items-center gap-3">
-            {isAdmin && (
-              <Button onClick={() => navigate("/admin/enrollment-keys")} variant="outline" className="gap-2">
-                <Settings className="h-4 w-4" />
-                Administração
-              </Button>
-            )}
-            <Button onClick={() => navigate("/virus-scans")} variant="outline" className="gap-2">
-              <Shield className="h-4 w-4" />
-              Scans de Vírus
-            </Button>
-            <Button onClick={() => navigate("/installer")} className="gap-2">
-              <Download className="h-4 w-4" />
-              Criar Instalador
-            </Button>
-            <LogoutButton />
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Dashboard Principal
+            </h1>
+            <p className="text-sm text-muted-foreground">Visão geral do sistema</p>
           </div>
         </div>
 
