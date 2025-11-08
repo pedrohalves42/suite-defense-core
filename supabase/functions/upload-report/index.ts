@@ -1,10 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { UploadReportSchema, validateFileSize, AgentTokenSchema } from '../_shared/validation.ts'
-import { handleException, corsHeaders } from '../_shared/error-handler.ts'
+import { handleException, handleValidationError, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 
 Deno.serve(async (req) => {
+  const requestId = crypto.randomUUID()
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -102,13 +103,7 @@ Deno.serve(async (req) => {
     })
 
     if (!validation.success) {
-      return new Response(
-        JSON.stringify({ 
-          error: 'Dados inválidos', 
-          details: validation.error.errors.map(e => e.message)
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
+      return handleValidationError(validation.error, requestId)
     }
 
     // Validar tamanho do arquivo
@@ -156,6 +151,6 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
-    return handleException(error, crypto.randomUUID(), 'upload-report')
+    return handleException(error, requestId, 'upload-report')
   }
 })
