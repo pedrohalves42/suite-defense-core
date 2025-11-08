@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Mail, UserCheck, UserX } from 'lucide-react';
 import { format } from 'date-fns';
+import { Link } from 'react-router-dom';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -19,49 +21,45 @@ export default function Users() {
   const [page, setPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
 
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['admin-users', page, searchTerm, roleFilter],
+  const { data: usersData, isLoading } = useQuery({
+    queryKey: ['admin-users'],
     queryFn: async () => {
-      // First get all user roles for current tenant
-      let rolesQuery = supabase
-        .from('user_roles')
-        .select('user_id, role', { count: 'exact' });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
 
-      if (roleFilter !== 'all') {
-        rolesQuery = rolesQuery.eq('role', roleFilter as 'admin' | 'operator' | 'viewer');
-      }
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-users`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-      const { data: userRoles, error: rolesError, count } = await rolesQuery;
-      
-      if (rolesError) throw rolesError;
-
-      // Then get profiles for those users with pagination
-      let profilesQuery = supabase
-        .from('profiles')
-        .select('*')
-        .in('user_id', userRoles?.map(ur => ur.user_id) || [])
-        .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
-
-      if (searchTerm) {
-        profilesQuery = profilesQuery.or(`full_name.ilike.%${searchTerm}%`);
-      }
-
-      const { data: profiles, error: profilesError } = await profilesQuery;
-      
-      if (profilesError) throw profilesError;
-
-      // Combine the data
-      const combined = profiles?.map(profile => ({
-        ...profile,
-        role: userRoles?.find(ur => ur.user_id === profile.user_id)?.role || 'viewer'
-      })) || [];
-
-      return { data: combined, count: count || 0 };
+      if (!response.ok) throw new Error('Failed to fetch users');
+      const data = await response.json();
+      return data.users || [];
     },
   });
 
-  const totalPages = users?.count ? Math.ceil(users.count / ITEMS_PER_PAGE) : 0;
+  // Filter and paginate on frontend
+  const filteredUsers = usersData?.filter((user: any) => {
+    const matchesSearch = !searchTerm || 
+      user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    return matchesSearch && matchesRole;
+  }) || [];
+
+  const paginatedUsers = filteredUsers.slice(
+    page * ITEMS_PER_PAGE,
+    (page + 1) * ITEMS_PER_PAGE
+  );
+
+  const totalCount = filteredUsers.length;
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   const updateRole = useMutation({
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: 'admin' | 'operator' | 'viewer' }) => {
@@ -81,6 +79,36 @@ export default function Users() {
     },
   });
 
+  const updateUserStatus = useMutation({
+    mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-status`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user_id: userId, is_active: isActive }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update user status');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      toast({ title: 'Status do usuário atualizado!' });
+      setStatusDialogOpen(false);
+      setSelectedUser(null);
+    },
+    onError: (error: Error) => {
+      toast({ title: error.message || 'Erro ao atualizar status', variant: 'destructive' });
+    },
+  });
+
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case 'admin': return 'default';
@@ -90,11 +118,24 @@ export default function Users() {
     }
   };
 
+  const handleStatusChange = (user: any) => {
+    setSelectedUser(user);
+    setStatusDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold">Gerenciar Usuários</h2>
-        <p className="text-muted-foreground">Gerencie os usuários e suas permissões no sistema</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold">Gerenciar Usuários</h2>
+          <p className="text-muted-foreground">Gerencie os usuários e suas permissões no sistema</p>
+        </div>
+        <Link to="/admin/invites">
+          <Button>
+            <Mail className="h-4 w-4 mr-2" />
+            Convidar Usuário
+          </Button>
+        </Link>
       </div>
 
       <Card>
@@ -138,7 +179,7 @@ export default function Users() {
         <CardHeader>
           <CardTitle>Usuários</CardTitle>
           <CardDescription>
-            Mostrando {users?.data?.length || 0} de {users?.count || 0} usuários
+            Mostrando {paginatedUsers.length} de {totalCount} usuários
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -151,41 +192,64 @@ export default function Users() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Tenant</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Cadastrado em</TableHead>
-                  <TableHead className="text-right">Alterar Role</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users?.data?.map((user: any) => (
-                  <TableRow key={user.id}>
+                {paginatedUsers.map((user: any) => (
+                  <TableRow key={user.user_id}>
                     <TableCell>{user.full_name || '-'}</TableCell>
-                    <TableCell>{user.user_id}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{user.tenant_name}</Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge variant={getRoleBadgeVariant(user.role)}>
                         {user.role}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <Badge variant={user.is_active ? 'default' : 'secondary'}>
+                        {user.is_active ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{format(new Date(user.created_at), 'dd/MM/yyyy')}</TableCell>
                     <TableCell className="text-right">
-                      <Select
-                        value={user.role}
-                        onValueChange={(value) => 
-                          updateRole.mutate({ 
-                            userId: user.user_id, 
-                            newRole: value as 'admin' | 'operator' | 'viewer' 
-                          })
-                        }
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="operator">Operator</SelectItem>
-                          <SelectItem value="viewer">Viewer</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center justify-end gap-2">
+                        <Select
+                          value={user.role}
+                          onValueChange={(value) => 
+                            updateRole.mutate({ 
+                              userId: user.user_id, 
+                              newRole: value as 'admin' | 'operator' | 'viewer' 
+                            })
+                          }
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="operator">Operator</SelectItem>
+                            <SelectItem value="viewer">Viewer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="sm"
+                          variant={user.is_active ? 'destructive' : 'default'}
+                          onClick={() => handleStatusChange(user)}
+                        >
+                          {user.is_active ? (
+                            <><UserX className="h-4 w-4 mr-1" />Desativar</>
+                          ) : (
+                            <><UserCheck className="h-4 w-4 mr-1" />Ativar</>
+                          )}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -221,6 +285,40 @@ export default function Users() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {selectedUser?.is_active ? 'Desativar' : 'Ativar'} Usuário
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja {selectedUser?.is_active ? 'desativar' : 'ativar'} o usuário{' '}
+              <strong>{selectedUser?.email}</strong>?
+              {selectedUser?.is_active && (
+                <span className="block mt-2 text-destructive">
+                  O usuário não poderá mais acessar o sistema.
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedUser) {
+                  updateUserStatus.mutate({
+                    userId: selectedUser.user_id,
+                    isActive: !selectedUser.is_active,
+                  });
+                }
+              }}
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
