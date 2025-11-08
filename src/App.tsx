@@ -17,6 +17,7 @@ import Settings from "./pages/admin/Settings";
 import AuditLogs from "./pages/admin/AuditLogs";
 import Invites from "./pages/admin/Invites";
 import AcceptInvite from "./pages/AcceptInvite";
+import VirusScans from "./pages/VirusScans";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/accept-invite" element={<AcceptInvite />} />
           <Route path="/" element={<ProtectedRoute><ServerDashboard /></ProtectedRoute>} />
           <Route path="/installer" element={<ProtectedRoute><AgentInstaller /></ProtectedRoute>} />
+          <Route path="/virus-scans" element={<ProtectedRoute><VirusScans /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
             <Route path="enrollment-keys" element={<EnrollmentKeys />} />
             <Route path="users" element={<Users />} />
