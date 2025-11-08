@@ -10,8 +10,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Line, LineChart as RechartsLineChart, Bar, BarChart as RechartsBarChart, Pie, PieChart as RechartsPieChart, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from "recharts";
+import { Line, LineChart as RechartsLineChart, Bar, BarChart as RechartsBarChart, Pie, PieChart as RechartsPieChart, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip } from "recharts";
 
 interface Agent {
   id: string;
@@ -459,7 +458,7 @@ const ServerDashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 20% 25%)" />
                     <XAxis dataKey="date" stroke="hsl(180 20% 60%)" style={{ fontSize: '12px' }} />
                     <YAxis stroke="hsl(180 20% 60%)" style={{ fontSize: '12px' }} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(222 47% 11%)', border: '1px solid hsl(215 20% 25%)', borderRadius: '6px' }} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Line type="monotone" dataKey="total" stroke="hsl(195 100% 50%)" strokeWidth={2} name="Total" dot={{ fill: 'hsl(195 100% 50%)' }} />
                     <Line type="monotone" dataKey="completed" stroke="hsl(142 76% 45%)" strokeWidth={2} name="Concluídos" dot={{ fill: 'hsl(142 76% 45%)' }} />
@@ -490,7 +489,7 @@ const ServerDashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 20% 25%)" />
                     <XAxis dataKey="date" stroke="hsl(180 20% 60%)" style={{ fontSize: '12px' }} />
                     <YAxis stroke="hsl(180 20% 60%)" style={{ fontSize: '12px' }} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(222 47% 11%)', border: '1px solid hsl(215 20% 25%)', borderRadius: '6px' }} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Line type="monotone" dataKey="total" stroke="hsl(160 100% 45%)" strokeWidth={2} name="Total" dot={{ fill: 'hsl(160 100% 45%)' }} />
                     <Line type="monotone" dataKey="malicious" stroke="hsl(0 70% 55%)" strokeWidth={2} name="Maliciosos" dot={{ fill: 'hsl(0 70% 55%)' }} />
@@ -532,7 +531,7 @@ const ServerDashboard = () => {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(222 47% 11%)', border: '1px solid hsl(215 20% 25%)', borderRadius: '6px' }} />
                   </RechartsPieChart>
                 </ResponsiveContainer>
               )}
@@ -559,7 +558,7 @@ const ServerDashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(215 20% 25%)" />
                     <XAxis type="number" stroke="hsl(180 20% 60%)" style={{ fontSize: '12px' }} />
                     <YAxis dataKey="agent" type="category" width={100} stroke="hsl(180 20% 60%)" style={{ fontSize: '10px' }} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(222 47% 11%)', border: '1px solid hsl(215 20% 25%)', borderRadius: '6px' }} />
                     <Bar dataKey="jobs" fill="hsl(142 76% 45%)" radius={[0, 4, 4, 0]} />
                   </RechartsBarChart>
                 </ResponsiveContainer>
