@@ -59,6 +59,7 @@ export type Database = {
           hmac_secret: string | null
           id: string
           last_heartbeat: string | null
+          payload_hash: string | null
           status: string
           tenant_id: string | null
         }
@@ -68,6 +69,7 @@ export type Database = {
           hmac_secret?: string | null
           id?: string
           last_heartbeat?: string | null
+          payload_hash?: string | null
           status?: string
           tenant_id?: string | null
         }
@@ -77,6 +79,7 @@ export type Database = {
           hmac_secret?: string | null
           id?: string
           last_heartbeat?: string | null
+          payload_hash?: string | null
           status?: string
           tenant_id?: string | null
         }
