@@ -6,7 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Loader2 } from 'lucide-react';
+import { Shield, Loader2, AlertCircle } from 'lucide-react';
+import { z } from 'zod';
+
+const passwordSchema = z.string()
+  .min(8, 'Senha deve ter pelo menos 8 caracteres')
+  .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
+  .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
+  .regex(/[0-9]/, 'Senha deve conter pelo menos um número')
+  .regex(/[^A-Za-z0-9]/, 'Senha deve conter pelo menos um caractere especial');
 
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
@@ -19,6 +27,7 @@ export default function AcceptInvite() {
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchInvite = async () => {
@@ -61,6 +70,16 @@ export default function AcceptInvite() {
     fetchInvite();
   }, [token, navigate, toast]);
 
+  const validatePassword = (value: string) => {
+    const result = passwordSchema.safeParse(value);
+    if (!result.success) {
+      setPasswordErrors(result.error.issues.map(e => e.message));
+      return false;
+    }
+    setPasswordErrors([]);
+    return true;
+  };
+
   const handleAccept = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -69,8 +88,12 @@ export default function AcceptInvite() {
       return;
     }
 
-    if (password.length < 6) {
-      toast({ title: 'Senha deve ter pelo menos 6 caracteres', variant: 'destructive' });
+    if (!validatePassword(password)) {
+      toast({ 
+        title: 'Senha não atende aos requisitos', 
+        description: passwordErrors[0],
+        variant: 'destructive' 
+      });
       return;
     }
 
@@ -178,12 +201,28 @@ export default function AcceptInvite() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  validatePassword(e.target.value);
+                }}
                 required
-                minLength={6}
+                minLength={8}
               />
+              {passwordErrors.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {passwordErrors.map((error, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-xs text-destructive">
+                      <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <span>{error}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-2">
+                Senha deve conter: 8+ caracteres, maiúscula, minúscula, número e caractere especial
+              </p>
             </div>
             <Button 
               type="submit" 
