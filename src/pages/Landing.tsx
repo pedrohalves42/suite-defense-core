@@ -1,730 +1,842 @@
-import { Link } from "react-router-dom";
+import { Shield, Users, Clock, CheckCircle2, Lock, Activity, FileCheck, Zap, Server, Terminal, ArrowRight, Play, Sparkles, Boxes, Database, Bell, Network, AlertTriangle, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Shield, 
-  Zap, 
-  Users, 
-  CheckCircle2, 
-  TrendingUp, 
-  Lock, 
-  FileCheck, 
-  Clock,
-  Server,
-  Play,
-  ChevronRight,
-  CheckCircle,
-  AlertTriangle,
-  Network,
-  Activity,
-  BookOpen,
-  Mail
-} from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { ContactForm } from "@/components/ContactForm";
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 40 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+};
+
+const stagger = {
+  visible: {
+    transition: {
+      staggerChildren: 0.12,
+    },
+  },
+};
+
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.5 } },
+};
 
 export default function Landing() {
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-50 bg-background/80">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Shield className="h-8 w-8 text-primary" />
-            <span className="text-xl font-bold">CyberShield</span>
-          </div>
-          <nav className="hidden md:flex items-center gap-6">
-            <a href="#como-funciona" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Como Funciona</a>
-            <a href="#beneficios" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Benefícios</a>
-            <a href="#precos" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Preços</a>
-            <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
-          </nav>
-          <div className="flex items-center gap-3">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">Login</Button>
-            </Link>
-            <Link to="/signup">
-              <Button size="sm" className="shadow-glow-primary">Começar Grátis</Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+  const navigate = useNavigate();
 
-      {/* Hero Section */}
-      <section className="relative py-20 md:py-32 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/5 pointer-events-none" />
-        <div className="container mx-auto px-4 relative">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20">
-              Orquestração Multi-Tenant para Endpoints
-            </Badge>
-            <h1 className="text-4xl md:text-6xl font-bold leading-tight">
-              Orquestração e resposta para endpoints — <span className="text-primary">multi-tenant</span>, em minutos
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Funciona por cima do Defender/AV: detecta, prioriza e remedia com playbooks aprovados, em tempo real
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link to="/signup">
-                <Button size="lg" className="text-lg px-8 shadow-glow-primary hover:shadow-border-glow">
-                  Testar 30 dias grátis
-                  <ChevronRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Button size="lg" variant="outline" className="text-lg px-8">
-                <Play className="mr-2 h-5 w-5" />
-                Ver demo de 5 min
+  return (
+    <div className="min-h-screen bg-background overflow-hidden">
+      {/* Navigation */}
+      <motion.nav 
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="border-b border-border/40 backdrop-blur-xl sticky top-0 z-50 bg-background/95 shadow-sm"
+      >
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <motion.div 
+              className="flex items-center gap-2"
+              whileHover={{ scale: 1.05 }}
+              transition={{ type: "spring", stiffness: 400 }}
+            >
+              <Shield className="w-8 h-8 text-primary drop-shadow-[0_0_10px_rgba(0,229,160,0.5)]" />
+              <span className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                CyberShield
+              </span>
+            </motion.div>
+            <nav className="hidden md:flex items-center gap-8">
+              <a href="#como-funciona" className="text-sm text-muted-foreground hover:text-primary transition-colors">Como Funciona</a>
+              <a href="#beneficios" className="text-sm text-muted-foreground hover:text-primary transition-colors">Benefícios</a>
+              <a href="#precos" className="text-sm text-muted-foreground hover:text-primary transition-colors">Preços</a>
+              <a href="#contato" className="text-sm text-muted-foreground hover:text-primary transition-colors">Contato</a>
+            </nav>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" onClick={() => navigate("/login")} className="hover:text-primary transition-colors">
+                Login
+              </Button>
+              <Button 
+                onClick={() => navigate("/signup")} 
+                className="bg-primary hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25 transition-all hover:scale-105"
+              >
+                Começar agora
               </Button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 pt-8 max-w-2xl mx-auto">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">10K+</div>
-                <div className="text-sm text-muted-foreground">Jobs/mês processados</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">&lt;15s</div>
-                <div className="text-sm text-muted-foreground">p95 execução de job</div>
-              </div>
-              <div className="text-center col-span-2 md:col-span-1">
-                <div className="text-3xl font-bold text-primary">99.8%</div>
-                <div className="text-sm text-muted-foreground">Taxa de sucesso</div>
-              </div>
+          </div>
+        </div>
+      </motion.nav>
+
+      {/* Hero Section */}
+      <section className="pt-20 pb-32 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(0,229,160,0.2),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_60%,rgba(0,229,160,0.1),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgwLDIyOSwxNjAsMC4xKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
+        
+        <div className="container mx-auto px-6 relative z-10">
+          <motion.div 
+            className="max-w-4xl mx-auto text-center"
+            initial="hidden"
+            animate="visible"
+            variants={stagger}
+          >
+            <motion.div 
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 text-sm backdrop-blur-sm"
+              variants={fadeInUp}
+              whileHover={{ scale: 1.05, boxShadow: "0 0 20px rgba(0,229,160,0.3)" }}
+            >
+              <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+              <span className="text-primary font-medium">Orquestração em tempo real</span>
+            </motion.div>
+            
+            <motion.h1 
+              className="text-5xl md:text-7xl font-bold mb-6 leading-tight"
+              variants={fadeInUp}
+            >
+              Orquestração e resposta para endpoints —{" "}
+              <span className="text-primary drop-shadow-[0_0_30px_rgba(0,229,160,0.4)] inline-block animate-pulse">
+                multi-tenant
+              </span>
+              , em minutos
+            </motion.h1>
+            
+            <motion.p 
+              className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed"
+              variants={fadeInUp}
+            >
+              Funciona por cima do Defender/AV: detecta, prioriza e remedia com playbooks aprovados, em tempo real.
+            </motion.p>
+            
+            <motion.div 
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
+              variants={fadeInUp}
+            >
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button 
+                  size="lg" 
+                  onClick={() => navigate("/signup")} 
+                  className="bg-primary hover:bg-primary/90 text-lg h-14 px-8 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all"
+                >
+                  Testar 30 dias grátis
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  className="text-lg h-14 px-8 border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all backdrop-blur-sm"
+                >
+                  <Play className="mr-2 w-5 h-5" />
+                  Ver demo de 5 min
+                </Button>
+              </motion.div>
+            </motion.div>
+            
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto"
+              variants={stagger}
+            >
+              {[
+                { value: "15k+", label: "Jobs executados/mês" },
+                { value: "<45s", label: "p95 execução de job" },
+                { value: "99.8%", label: "Taxa de sucesso" },
+              ].map((stat, index) => (
+                <motion.div
+                  key={index}
+                  className="flex flex-col items-center p-6 rounded-xl bg-gradient-to-br from-background/90 to-background/60 border border-border/50 backdrop-blur-sm hover:border-primary/30 transition-all group"
+                  variants={scaleIn}
+                  whileHover={{ y: -5, boxShadow: "0 10px 40px -10px rgba(0,229,160,0.3)" }}
+                >
+                  <div className="text-4xl font-bold text-primary mb-2 drop-shadow-[0_0_20px_rgba(0,229,160,0.4)] group-hover:scale-110 transition-transform">
+                    {stat.value}
+                  </div>
+                  <div className="text-sm text-muted-foreground">{stat.label}</div>
+                </motion.div>
+              ))}
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section id="como-funciona" className="py-20 bg-gradient-to-b from-muted/30 via-muted/20 to-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,229,160,0.05),transparent_70%)]" />
+        <div className="container mx-auto px-6 relative">
+          <motion.div 
+            className="max-w-5xl mx-auto"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+          >
+            <motion.div className="text-center mb-16" variants={fadeInUp}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Como funciona</h2>
+              <p className="text-xl text-muted-foreground">
+                Três passos para segurança completa
+              </p>
+            </motion.div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {[
+                {
+                  icon: Terminal,
+                  step: "1",
+                  title: "Instale o agente",
+                  description: "PowerShell ou bash: 2 minutos por endpoint. Zero config manual.",
+                  color: "primary",
+                },
+                {
+                  icon: Activity,
+                  step: "2",
+                  title: "Rode checagens/playbooks",
+                  description: "Hardening, detecção de ameaças, remediação com aprovação dupla.",
+                  color: "primary",
+                },
+                {
+                  icon: FileCheck,
+                  step: "3",
+                  title: "Gere relatório",
+                  description: "Auditoria completa para LGPD/BACEN. Timeline, evidências, conformidade.",
+                  color: "primary",
+                },
+              ].map((item, index) => (
+                <motion.div key={index} variants={fadeInUp}>
+                  <Card className="border-border/50 bg-gradient-to-br from-background/90 to-background/60 backdrop-blur-sm hover:border-primary/40 transition-all hover:shadow-lg hover:shadow-primary/10 h-full group">
+                    <CardContent className="p-8">
+                      <motion.div 
+                        className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors"
+                        whileHover={{ rotate: 360 }}
+                        transition={{ duration: 0.6 }}
+                      >
+                        <item.icon className="w-7 h-7 text-primary" />
+                      </motion.div>
+                      <div className="text-4xl font-bold text-primary mb-3 drop-shadow-[0_0_15px_rgba(0,229,160,0.3)]">
+                        {item.step}
+                      </div>
+                      <h3 className="text-xl font-semibold mb-3 group-hover:text-primary transition-colors">
+                        {item.title}
+                      </h3>
+                      <p className="text-muted-foreground leading-relaxed">{item.description}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Como Funciona */}
-      <section id="como-funciona" className="py-20 bg-secondary/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Como funciona</h2>
-            <p className="text-muted-foreground text-lg">Deploy em minutos, controle imediato</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <Card className="bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300">
-              <CardHeader>
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <Server className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-xl">1. Instale o agente</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-base">
-                  Script PowerShell/Bash com HMAC. Compatível com Windows Server 2016+, Linux (Ubuntu/Debian/RHEL).
-                </CardDescription>
-                <div className="mt-4 p-3 bg-muted/30 rounded border border-border/30">
-                  <code className="text-xs font-mono text-primary">./install-agent.ps1</code>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Target Audience */}
+      <section className="py-20 relative">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,229,160,0.05),transparent_70%)]" />
+        <div className="container mx-auto px-6 relative">
+          <motion.div 
+            className="max-w-5xl mx-auto"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+          >
+            <motion.div className="text-center mb-16" variants={fadeInUp}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Para quem é</h2>
+              <p className="text-xl text-muted-foreground">
+                Desenhado para quem precisa de agilidade e conformidade
+              </p>
+            </motion.div>
 
-            <Card className="bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300">
-              <CardHeader>
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <Zap className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-xl">2. Execute playbooks</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-base">
-                  Crie jobs: escanear vírus (VirusTotal), hardening (desabilitar SMBv1), compliance, patches. Aprove em dupla etapa.
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50 border-border/50 hover:border-primary/50 transition-all duration-300">
-              <CardHeader>
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <FileCheck className="h-6 w-6 text-primary" />
-                </div>
-                <CardTitle className="text-xl">3. Gere relatórios</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-base">
-                  Trilha completa de auditoria (quem, quando, resultado). Evidências para LGPD e BACEN 4.893.
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Para Quem É */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Para quem é</h2>
-          </div>
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <Card className="bg-gradient-to-br from-card to-card/50 border-primary/20">
-              <CardHeader>
-                <Users className="h-10 w-10 text-primary mb-2" />
-                <CardTitle className="text-2xl">MSPs e Integradores</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <p className="text-muted-foreground">Multi-tenancy nativo com RLS (Row Level Security)</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <p className="text-muted-foreground">Auditoria completa por cliente e técnico</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <p className="text-muted-foreground">Playbooks reutilizáveis entre clientes</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-card to-card/50 border-accent/20">
-              <CardHeader>
-                <Network className="h-10 w-10 text-accent mb-2" />
-                <CardTitle className="text-2xl">SMBs 20-500 endpoints</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
-                  <p className="text-muted-foreground">Hardening rápido sem equipe dedicada</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
-                  <p className="text-muted-foreground">Evidências para auditorias e compliance</p>
-                </div>
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-accent mt-0.5 flex-shrink-0" />
-                  <p className="text-muted-foreground">Setup em 1 dia, resultados em 7 dias</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Benefícios → Features */}
-      <section id="beneficios" className="py-20 bg-secondary/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Por que CyberShield</h2>
-            <p className="text-muted-foreground text-lg">Reduza MTTR, mantenha conformidade, escale com confiança</p>
-          </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            <Card className="bg-card/50 border-border/50">
-              <CardHeader>
-                <Clock className="h-8 w-8 text-primary mb-2" />
-                <CardTitle>Resposta em minutos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">Jobs executam em &lt;15s (p95). Ações imediatas via playbooks pré-aprovados.</p>
-                <Badge variant="outline" className="text-xs">Jobs programados</Badge>
-                <Badge variant="outline" className="text-xs ml-2">Realtime updates</Badge>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50 border-border/50">
-              <CardHeader>
-                <Users className="h-8 w-8 text-primary mb-2" />
-                <CardTitle>Multi-tenant real</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">Isolamento por RLS. MSPs gerenciam 100+ clientes com segurança.</p>
-                <Badge variant="outline" className="text-xs">Row Level Security</Badge>
-                <Badge variant="outline" className="text-xs ml-2">RBAC</Badge>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50 border-border/50">
-              <CardHeader>
-                <FileCheck className="h-8 w-8 text-primary mb-2" />
-                <CardTitle>Auditoria completa</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">Trilha imutável: quem executou, quando, resultado. Export para PDF/CSV.</p>
-                <Badge variant="outline" className="text-xs">LGPD ready</Badge>
-                <Badge variant="outline" className="text-xs ml-2">BACEN 4.893</Badge>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50 border-border/50">
-              <CardHeader>
-                <CheckCircle2 className="h-8 w-8 text-primary mb-2" />
-                <CardTitle>Aprovação dupla</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">Jobs críticos exigem aprovação de admin. Histórico de quem autorizou.</p>
-                <Badge variant="outline" className="text-xs">Workflow approval</Badge>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50 border-border/50">
-              <CardHeader>
-                <Lock className="h-8 w-8 text-primary mb-2" />
-                <CardTitle>Segurança nativa</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">HMAC authentication, mTLS opcional, criptografia end-to-end.</p>
-                <Badge variant="outline" className="text-xs">HMAC</Badge>
-                <Badge variant="outline" className="text-xs ml-2">mTLS</Badge>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50 border-border/50">
-              <CardHeader>
-                <Activity className="h-8 w-8 text-primary mb-2" />
-                <CardTitle>Visibilidade total</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">Dashboard com status de agentes, jobs, alertas. Atualização em tempo real.</p>
-                <Badge variant="outline" className="text-xs">Real-time</Badge>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Integrações */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Integrações</h2>
-            <p className="text-muted-foreground text-lg">Funciona com suas ferramentas existentes</p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            <Card className="bg-card/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
-                  Antivírus existente
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Compatível com Windows Defender, Sophos, ESET, Kaspersky. Não substitui, orquestra por cima.</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="h-5 w-5 text-primary" />
-                  VirusTotal
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Scan de hash (sem upload de arquivo). BYO API key ou use quota compartilhada.</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-primary" />
-                  Webhooks
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Dispare alertas para Slack, Teams, Discord, ou SIEM/ITSM (em breve).</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Network className="h-5 w-5 text-primary" />
-                  APIs abertas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">REST API completa. Integre com automação existente (Ansible, Terraform, scripts).</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Segurança & Conformidade */}
-      <section className="py-20 bg-secondary/30">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Segurança & Conformidade</h2>
-              <p className="text-muted-foreground text-lg">Construído com security-first desde o dia 1</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {[
+                {
+                  icon: Users,
+                  title: "MSPs (Provedores de Serviço Gerenciado)",
+                  items: [
+                    "Multi-tenant real com RLS por cliente",
+                    "Playbooks reutilizáveis entre tenants",
+                    "Auditoria completa para demonstrar conformidade",
+                  ],
+                  gradient: "from-primary/20 to-primary/5",
+                },
+                {
+                  icon: Server,
+                  title: "SMBs (20–500 endpoints)",
+                  items: [
+                    "Hardening rápido sem time de segurança dedicado",
+                    "Evidências para auditorias LGPD e frameworks setoriais",
+                    "Integração com AV/Defender existente",
+                  ],
+                  gradient: "from-primary/15 to-background",
+                },
+              ].map((audience, index) => (
+                <motion.div key={index} variants={fadeInUp}>
+                  <Card className={`border-border/50 bg-gradient-to-br ${audience.gradient} backdrop-blur-sm hover:border-primary/40 transition-all hover:shadow-xl hover:shadow-primary/10 h-full group`}>
+                    <CardContent className="p-8">
+                      <motion.div 
+                        className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors"
+                        whileHover={{ scale: 1.15, rotate: 5 }}
+                      >
+                        <audience.icon className="w-7 h-7 text-primary" />
+                      </motion.div>
+                      <h3 className="text-2xl font-semibold mb-6 group-hover:text-primary transition-colors">
+                        {audience.title}
+                      </h3>
+                      <ul className="space-y-4">
+                        {audience.items.map((item, i) => (
+                          <motion.li 
+                            key={i} 
+                            className="flex items-start gap-3"
+                            initial={{ opacity: 0, x: -20 }}
+                            whileInView={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.1 }}
+                          >
+                            <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                            <span className="text-muted-foreground">{item}</span>
+                          </motion.li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Benefits */}
+      <section id="beneficios" className="py-20 bg-gradient-to-b from-muted/30 to-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(0,229,160,0.08),transparent_60%)]" />
+        <div className="container mx-auto px-6 relative">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+          >
+            <motion.div className="text-center mb-16 max-w-3xl mx-auto" variants={fadeInUp}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Por que CyberShield</h2>
+              <p className="text-xl text-muted-foreground">
+                Reduza MTTR, mantenha conformidade, escale com confiança
+              </p>
+            </motion.div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              {[
+                {
+                  icon: Clock,
+                  title: "Resposta em minutos",
+                  description: "Jobs executam em <15s (p95). Ações imediatas via playbooks pré-aprovados.",
+                  badges: ["Jobs programados", "Realtime updates"],
+                },
+                {
+                  icon: Users,
+                  title: "Multi-tenant real",
+                  description: "Isolamento por RLS. MSPs gerenciam 100+ clientes com segurança.",
+                  badges: ["Row Level Security", "RBAC"],
+                },
+                {
+                  icon: FileCheck,
+                  title: "Auditoria completa",
+                  description: "Trilha imutável: quem executou, quando, resultado. Export para PDF/CSV.",
+                  badges: ["LGPD ready", "BACEN 4.893"],
+                },
+                {
+                  icon: CheckCircle2,
+                  title: "Aprovação dupla",
+                  description: "Jobs críticos exigem aprovação de admin. Histórico de quem autorizou.",
+                  badges: ["Workflow approval"],
+                },
+                {
+                  icon: Lock,
+                  title: "Segurança nativa",
+                  description: "HMAC authentication, mTLS opcional, criptografia end-to-end.",
+                  badges: ["HMAC", "mTLS"],
+                },
+                {
+                  icon: Activity,
+                  title: "Visibilidade total",
+                  description: "Dashboard com status de agentes, jobs, alertas. Atualização em tempo real.",
+                  badges: ["Real-time"],
+                },
+              ].map((benefit, index) => (
+                <motion.div key={index} variants={fadeInUp}>
+                  <Card className="border-border/50 bg-gradient-to-br from-background/90 to-background/60 backdrop-blur-sm hover:border-primary/40 transition-all hover:shadow-lg hover:shadow-primary/10 h-full group">
+                    <CardHeader>
+                      <motion.div 
+                        className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3 group-hover:bg-primary/20 transition-colors"
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                      >
+                        <benefit.icon className="w-6 h-6 text-primary" />
+                      </motion.div>
+                      <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                        {benefit.title}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground mb-4 leading-relaxed">
+                        {benefit.description}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {benefit.badges.map((badge, i) => (
+                          <Badge 
+                            key={i} 
+                            variant="outline" 
+                            className="text-xs border-primary/30 hover:bg-primary/10 transition-colors"
+                          >
+                            {badge}
+                          </Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Integrations */}
+      <section className="py-20 relative">
+        <div className="container mx-auto px-6">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+          >
+            <motion.div className="text-center mb-16 max-w-3xl mx-auto" variants={fadeInUp}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Integrações</h2>
+              <p className="text-xl text-muted-foreground">
+                Funciona com suas ferramentas existentes
+              </p>
+            </motion.div>
+
+            <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              {[
+                {
+                  icon: Shield,
+                  title: "Antivírus existente",
+                  description: "Compatível com Windows Defender, Sophos, ESET, Kaspersky. Não substitui, orquestra por cima.",
+                },
+                {
+                  icon: AlertTriangle,
+                  title: "VirusTotal",
+                  description: "Scan de hash (sem upload de arquivo). BYO API key ou use quota compartilhada.",
+                },
+                {
+                  icon: Zap,
+                  title: "Webhooks",
+                  description: "Dispare alertas para Slack, Teams, Discord, ou SIEM/ITSM (em breve).",
+                },
+                {
+                  icon: Network,
+                  title: "APIs abertas",
+                  description: "REST API completa. Integre com automação existente (Ansible, Terraform, scripts).",
+                },
+              ].map((integration, index) => (
+                <motion.div key={index} variants={fadeInUp}>
+                  <Card className="border-border/50 bg-gradient-to-br from-background/90 to-background/60 backdrop-blur-sm hover:border-primary/40 transition-all hover:shadow-lg hover:shadow-primary/10 group">
+                    <CardHeader>
+                      <div className="flex items-center gap-3 mb-2">
+                        <motion.div
+                          className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors"
+                          whileHover={{ rotate: 360 }}
+                          transition={{ duration: 0.5 }}
+                        >
+                          <integration.icon className="w-5 h-5 text-primary" />
+                        </motion.div>
+                        <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                          {integration.title}
+                        </CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {integration.description}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Security & Compliance */}
+      <section className="py-20 bg-gradient-to-b from-muted/30 to-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_50%,rgba(0,229,160,0.08),transparent_60%)]" />
+        <div className="container mx-auto px-6 relative">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+            className="max-w-4xl mx-auto"
+          >
+            <motion.div className="text-center mb-12" variants={fadeInUp}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Segurança & Conformidade</h2>
+              <p className="text-xl text-muted-foreground">
+                Construído com security-first desde o dia 1
+              </p>
+            </motion.div>
+
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Lock className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold mb-1">Isolamento por tenant</h3>
-                    <p className="text-sm text-muted-foreground">Row Level Security (RLS) garante que MSPs nunca vejam dados de outros clientes.</p>
+              {[
+                {
+                  icon: Lock,
+                  title: "Isolamento por tenant",
+                  description: "Row Level Security (RLS) garante que MSPs nunca vejam dados de outros clientes.",
+                },
+                {
+                  icon: Shield,
+                  title: "HMAC authentication",
+                  description: "Agentes autenticam com HMAC-SHA256. Opcional: mTLS para zero-trust.",
+                },
+                {
+                  icon: FileCheck,
+                  title: "Auditoria imutável",
+                  description: "Logs append-only com timestamp. Compliance LGPD e BACEN 4.893.",
+                },
+                {
+                  icon: CheckCircle2,
+                  title: "RBAC granular",
+                  description: "Admin, Operator, Viewer. Controle preciso por tenant e recurso.",
+                },
+              ].map((item, index) => (
+                <motion.div key={index} variants={fadeInUp}>
+                  <div className="flex items-start gap-4 p-6 rounded-xl bg-gradient-to-br from-background/90 to-background/60 border border-border/50 hover:border-primary/40 transition-all hover:shadow-lg hover:shadow-primary/10 group">
+                    <motion.div
+                      className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors"
+                      whileHover={{ scale: 1.1 }}
+                    >
+                      <item.icon className="w-6 h-6 text-primary" />
+                    </motion.div>
+                    <div>
+                      <h3 className="font-semibold mb-2 text-lg group-hover:text-primary transition-colors">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Shield className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold mb-1">HMAC authentication</h3>
-                    <p className="text-sm text-muted-foreground">Agentes autenticam com HMAC-SHA256. Opcional: mTLS para zero-trust.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <FileCheck className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold mb-1">Trilha de auditoria</h3>
-                    <p className="text-sm text-muted-foreground">Logs imutáveis de todas as ações. Retention configurável (90 dias padrão).</p>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <CheckCircle2 className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold mb-1">LGPD & BACEN</h3>
-                    <p className="text-sm text-muted-foreground">Relatórios de evidências para LGPD. Apoio a BACEN 4.893 (instituições financeiras).</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Users className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold mb-1">RBAC granular</h3>
-                    <p className="text-sm text-muted-foreground">Roles: admin, operador, auditor. Permissões por tenant e recurso.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Lock className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold mb-1">Dados em repouso</h3>
-                    <p className="text-sm text-muted-foreground">Criptografia AES-256. Backup diário automático com retention de 30 dias.</p>
-                  </div>
-                </div>
-              </div>
+                </motion.div>
+              ))}
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Preços */}
-      <section id="precos" className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Preços transparentes</h2>
-            <p className="text-muted-foreground text-lg">Pague por endpoint ativo. Sem surpresas, sem lock-in.</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* Starter */}
-            <Card className="bg-card/50 border-border/50 relative">
-              <CardHeader>
-                <Badge className="w-fit mb-2" variant="outline">Starter</Badge>
-                <CardTitle className="text-3xl">R$ 29<span className="text-lg font-normal text-muted-foreground">/endpoint/mês</span></CardTitle>
-                <CardDescription>Para SMBs até 50 endpoints</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">1 dispositivo grátis por 30 dias</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Jobs ilimitados</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Auditoria 90 dias</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Suporte por email</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">API básica</span>
-                </div>
-              </CardContent>
-              <div className="p-6 pt-0">
-                <Link to="/signup">
-                  <Button className="w-full" variant="outline">Começar teste grátis</Button>
-                </Link>
-              </div>
-            </Card>
+      {/* Pricing */}
+      <section id="precos" className="py-20 relative">
+        <div className="container mx-auto px-6">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+          >
+            <motion.div className="text-center mb-16 max-w-3xl mx-auto" variants={fadeInUp}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Preços transparentes</h2>
+              <p className="text-xl text-muted-foreground">
+                Pague apenas pelo que usar. Sem custos ocultos.
+              </p>
+            </motion.div>
 
-            {/* Pro */}
-            <Card className="bg-gradient-to-br from-primary/10 to-card border-primary relative shadow-glow-primary">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <Badge className="bg-primary text-primary-foreground">Mais Popular</Badge>
-              </div>
-              <CardHeader>
-                <Badge className="w-fit mb-2 bg-primary/20 text-primary border-primary/30">Pro</Badge>
-                <CardTitle className="text-3xl">R$ 49<span className="text-lg font-normal text-muted-foreground">/endpoint/mês</span></CardTitle>
-                <CardDescription>Para MSPs e empresas 50-500 endpoints</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm font-semibold">Tudo do Starter, mais:</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">5 dispositivos grátis por 30 dias</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Multi-tenant (RLS)</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Auditoria 365 dias</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Suporte prioritário (SLA 4h)</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Webhooks ilimitados</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Playbooks customizados</span>
-                </div>
-              </CardContent>
-              <div className="p-6 pt-0">
-                <Link to="/signup">
-                  <Button className="w-full shadow-glow-primary">Começar teste grátis</Button>
-                </Link>
-              </div>
-            </Card>
+            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {[
+                {
+                  name: "Starter",
+                  price: "29",
+                  description: "Ideal para começar",
+                  features: [
+                    "1 dispositivo grátis por 30 dias",
+                    "Até 10 endpoints",
+                    "Jobs ilimitados",
+                    "Auditoria básica",
+                    "Suporte por email",
+                  ],
+                  cta: "Começar grátis",
+                  popular: false,
+                },
+                {
+                  name: "Pro",
+                  price: "79",
+                  description: "Para empresas em crescimento",
+                  features: [
+                    "1 dispositivo grátis por 30 dias",
+                    "Até 100 endpoints",
+                    "Multi-tenant (até 5 clientes)",
+                    "Auditoria completa",
+                    "Integrações VirusTotal",
+                    "Suporte prioritário",
+                  ],
+                  cta: "Começar teste",
+                  popular: true,
+                },
+                {
+                  name: "Enterprise",
+                  price: "Custom",
+                  description: "Para MSPs e grandes empresas",
+                  features: [
+                    "Endpoints ilimitados",
+                    "Multi-tenant ilimitado",
+                    "SLA garantido",
+                    "Suporte dedicado 24/7",
+                    "Onboarding personalizado",
+                    "Instância dedicada (opcional)",
+                  ],
+                  cta: "Falar com vendas",
+                  popular: false,
+                },
+              ].map((plan, index) => (
+                <motion.div
+                  key={index}
+                  variants={scaleIn}
+                  whileHover={{ y: -8 }}
+                >
+                  <Card 
+                    className={`relative border-border/50 bg-gradient-to-br from-background/90 to-background/60 backdrop-blur-sm hover:shadow-xl transition-all h-full ${
+                      plan.popular ? 'border-primary/50 shadow-lg shadow-primary/20' : ''
+                    }`}
+                  >
+                    {plan.popular && (
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                        <Badge className="bg-primary text-primary-foreground px-4 py-1 shadow-lg">
+                          Mais Popular
+                        </Badge>
+                      </div>
+                    )}
+                    <CardHeader className="text-center pb-8 pt-8">
+                      <CardTitle className="text-2xl mb-2">{plan.name}</CardTitle>
+                      <div className="mb-2">
+                        {plan.price === "Custom" ? (
+                          <div className="text-4xl font-bold text-primary">Sob consulta</div>
+                        ) : (
+                          <div className="flex items-baseline justify-center gap-1">
+                            <span className="text-muted-foreground">R$</span>
+                            <span className="text-5xl font-bold text-primary">{plan.price}</span>
+                            <span className="text-muted-foreground">/mês</span>
+                          </div>
+                        )}
+                      </div>
+                      <CardDescription>{plan.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <ul className="space-y-3 mb-8">
+                        {plan.features.map((feature, i) => (
+                          <li key={i} className="flex items-start gap-3">
+                            <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                            <span className="text-sm text-muted-foreground">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        className={`w-full ${
+                          plan.popular
+                            ? 'bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25'
+                            : 'bg-background border border-primary/30 hover:bg-primary/10'
+                        }`}
+                        onClick={() => {
+                          if (plan.name === "Enterprise") {
+                            document.getElementById("contato")?.scrollIntoView({ behavior: "smooth" });
+                          } else {
+                            navigate("/signup");
+                          }
+                        }}
+                      >
+                        {plan.cta}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
 
-            {/* Enterprise */}
-            <Card className="bg-card/50 border-border/50 relative">
-              <CardHeader>
-                <Badge className="w-fit mb-2" variant="outline">Enterprise</Badge>
-                <CardTitle className="text-3xl">Sob consulta</CardTitle>
-                <CardDescription>Para grandes MSPs e corporações 500+</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm font-semibold">Tudo do Pro, mais:</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">SLA 99.9% uptime</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Suporte 24/7 (SLA 1h)</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">SSO (SAML/OIDC)</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Implementação assistida</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Customizações sob demanda</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">Self-hosted opcional</span>
-                </div>
-              </CardContent>
-              <div className="p-6 pt-0">
-                <Button className="w-full" variant="outline">Falar com vendas</Button>
-              </div>
-            </Card>
-          </div>
-          <p className="text-center text-muted-foreground mt-8 text-sm">
-            💡 Hardening em 7 dias: plano Pro por 30 dias, onboarding incluso. Não ficou satisfeito? 100% reembolso.
-          </p>
+            <motion.div className="text-center mt-12" variants={fadeInUp}>
+              <p className="text-muted-foreground">
+                Todos os planos incluem 30 dias de teste grátis. Sem cartão de crédito necessário.
+              </p>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Provas Sociais */}
-      <section className="py-20 bg-secondary/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">O que nossos clientes dizem</h2>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            <Card className="bg-card/50">
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground mb-4">"Em 7 dias, zeramos SMBv1 em 120 máquinas. Antes levávamos meses fazendo manualmente."</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary">RC</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">Rafael Costa</p>
-                    <p className="text-xs text-muted-foreground">CTO, MSP TechSec</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+      {/* Testimonials */}
+      <section className="py-20 bg-gradient-to-b from-muted/30 to-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,229,160,0.05),transparent_70%)]" />
+        <div className="container mx-auto px-6 relative">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+          >
+            <motion.div className="text-center mb-16 max-w-3xl mx-auto" variants={fadeInUp}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">O que dizem nossos clientes</h2>
+            </motion.div>
 
-            <Card className="bg-card/50">
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground mb-4">"Auditoria do BACEN ficou 3x mais rápida. Conseguimos exportar tudo com 2 cliques."</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary">MS</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">Mariana Silva</p>
-                    <p className="text-xs text-muted-foreground">CISO, Banco Regional</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50">
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground mb-4">"Gerenciamos 80 clientes com 1 técnico. Multi-tenant real mudou nosso negócio."</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary">PA</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">Paulo Andrade</p>
-                    <p className="text-xs text-muted-foreground">CEO, Cloud Services BR</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {[
+                {
+                  quote: "Em 7 dias, zeramos SMBv1 em 120 máquinas. A auditoria nunca foi tão simples.",
+                  author: "Carlos Silva",
+                  role: "CTO, TechSecure MSP",
+                },
+                {
+                  quote: "Economizamos 40 horas/mês com automação de hardening. O ROI foi imediato.",
+                  author: "Ana Martins",
+                  role: "Gerente de TI, Financeira SP",
+                },
+              ].map((testimonial, index) => (
+                <motion.div key={index} variants={fadeInUp}>
+                  <Card className="border-border/50 bg-gradient-to-br from-background/90 to-background/60 backdrop-blur-sm hover:border-primary/40 transition-all hover:shadow-lg hover:shadow-primary/10">
+                    <CardContent className="p-8">
+                      <div className="mb-6">
+                        <svg className="w-10 h-10 text-primary/40" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M11.192 15.757c0-.88-.23-1.618-.69-2.217-.326-.412-.768-.683-1.327-.812-.55-.128-1.07-.137-1.54-.028-.16-.95.1-1.956.76-3.022.66-1.065 1.515-1.867 2.558-2.403L9.373 5c-.8.396-1.56.898-2.26 1.505-.71.607-1.34 1.305-1.9 2.094s-.98 1.68-1.25 2.69-.346 2.04-.217 3.1c.168 1.4.62 2.52 1.356 3.35.735.84 1.652 1.26 2.748 1.26.965 0 1.766-.29 2.4-.878.628-.576.94-1.365.94-2.368l.002.003zm9.124 0c0-.88-.23-1.618-.69-2.217-.326-.42-.77-.692-1.327-.817-.56-.124-1.074-.13-1.54-.022-.16-.94.09-1.95.75-3.02.66-1.06 1.514-1.86 2.557-2.4L18.49 5c-.8.396-1.555.898-2.26 1.505-.708.607-1.34 1.305-1.894 2.094-.556.79-.97 1.68-1.24 2.69-.273 1-.345 2.04-.217 3.1.165 1.4.615 2.52 1.35 3.35.732.833 1.646 1.25 2.742 1.25.967 0 1.768-.29 2.402-.876.627-.576.942-1.365.942-2.368v.01z" />
+                        </svg>
+                      </div>
+                      <p className="text-lg mb-6 leading-relaxed">{testimonial.quote}</p>
+                      <div>
+                        <div className="font-semibold">{testimonial.author}</div>
+                        <div className="text-sm text-muted-foreground">{testimonial.role}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
         </div>
       </section>
 
       {/* FAQ */}
-      <section id="faq" className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Perguntas Frequentes</h2>
-          </div>
-          <div className="max-w-3xl mx-auto space-y-4">
-            <Card className="bg-card/50">
-              <CardHeader>
-                <CardTitle className="text-lg">Quanto tempo leva a implantação?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Setup inicial: 1 hora. Primeiro job rodando: 15 minutos. Hardening completo (SMBv1, patches, compliance): 7 dias em média.</p>
-              </CardContent>
-            </Card>
+      <section className="py-20 relative">
+        <div className="container mx-auto px-6">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+            className="max-w-3xl mx-auto"
+          >
+            <motion.div className="text-center mb-16" variants={fadeInUp}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Perguntas frequentes</h2>
+            </motion.div>
 
-            <Card className="bg-card/50">
-              <CardHeader>
-                <CardTitle className="text-lg">É compatível com meu antivírus atual?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Sim! CyberShield não substitui Defender/Sophos/ESET. Orquestramos ações por cima do AV existente (verificações, hardening, compliance).</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50">
-              <CardHeader>
-                <CardTitle className="text-lg">Onde os dados ficam armazenados?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Cloud (AWS São Paulo) com backup diário. Planos Enterprise podem self-host. Criptografia AES-256 em repouso, TLS 1.3 em trânsito.</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50">
-              <CardHeader>
-                <CardTitle className="text-lg">Como funciona o billing?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Cobrança mensal por endpoint ativo (heartbeat nos últimos 7 dias). Aumente/diminua quantos quiser. Cancele quando quiser, sem multa.</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50">
-              <CardHeader>
-                <CardTitle className="text-lg">Qual o SLA de suporte?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Starter: email em 24h. Pro: 4h (horário comercial). Enterprise: 1h 24/7 com telefone direto.</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card/50">
-              <CardHeader>
-                <CardTitle className="text-lg">Preciso de API key do VirusTotal?</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">Não obrigatório. Oferecemos quota compartilhada (4 req/min). Para volume alto, recomendamos BYO key (Public API é grátis).</p>
-              </CardContent>
-            </Card>
-          </div>
+            <motion.div variants={fadeInUp}>
+              <Accordion type="single" collapsible className="space-y-4">
+                {[
+                  {
+                    question: "Quanto tempo leva a implantação?",
+                    answer: "Deploy do agente: 2 minutos por endpoint. Configuração do primeiro playbook: 15 minutos. Em 1 dia você já tem visibilidade completa.",
+                  },
+                  {
+                    question: "É compatível com meu antivírus atual?",
+                    answer: "Sim! CyberShield funciona por cima do Windows Defender, Sophos, ESET, Kaspersky e outros. Não substituímos, orquestramos.",
+                  },
+                  {
+                    question: "Como funciona a segurança dos dados?",
+                    answer: "Isolamento por tenant via RLS (Row Level Security). Autenticação HMAC-SHA256. Dados criptografados em repouso e trânsito. Opcional: mTLS para zero-trust.",
+                  },
+                  {
+                    question: "Como é o modelo de billing?",
+                    answer: "Cobrança mensal por endpoint ativo. Sem surpresas: você paga apenas pelos agentes conectados. Cancelamento a qualquer momento.",
+                  },
+                  {
+                    question: "Qual o SLA de suporte?",
+                    answer: "Starter: email em até 48h. Pro: 24h com prioridade. Enterprise: 24/7 com canal dedicado e SLA customizado.",
+                  },
+                ].map((item, index) => (
+                  <AccordionItem 
+                    key={index} 
+                    value={`item-${index}`}
+                    className="border border-border/50 rounded-lg px-6 bg-gradient-to-br from-background/90 to-background/60 backdrop-blur-sm hover:border-primary/40 transition-all"
+                  >
+                    <AccordionTrigger className="text-left hover:text-primary transition-colors">
+                      {item.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground leading-relaxed">
+                      {item.answer}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-20 bg-gradient-to-br from-primary/10 via-background to-accent/10">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <h2 className="text-3xl md:text-5xl font-bold">Pronto para hardening em 7 dias?</h2>
-            <p className="text-xl text-muted-foreground">Teste 1 dispositivo grátis por 30 dias. Sem cartão de crédito.</p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-              <Link to="/signup">
-                <Button size="lg" className="text-lg px-8 shadow-glow-primary hover:shadow-border-glow">
-                  Começar teste grátis
-                  <ChevronRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Button size="lg" variant="outline" className="text-lg px-8">
-                <Mail className="mr-2 h-5 w-5" />
-                Falar com especialista
-              </Button>
-            </div>
-          </div>
+      {/* Contact Form */}
+      <section id="contato" className="py-20 bg-gradient-to-b from-muted/30 to-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,229,160,0.08),transparent_70%)]" />
+        <div className="container mx-auto px-6 relative">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={stagger}
+            className="max-w-2xl mx-auto"
+          >
+            <motion.div className="text-center mb-12" variants={fadeInUp}>
+              <h2 className="text-4xl md:text-5xl font-bold mb-4">Entre em contato</h2>
+              <p className="text-xl text-muted-foreground">
+                Nossa equipe está pronta para ajudar você
+              </p>
+            </motion.div>
+
+            <motion.div variants={scaleIn}>
+              <ContactForm />
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border/50 py-12 bg-secondary/30">
-        <div className="container mx-auto px-4">
+      <footer className="border-t border-border/40 bg-background/80 backdrop-blur-sm">
+        <div className="container mx-auto px-6 py-12">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <Shield className="h-6 w-6 text-primary" />
-                <span className="text-lg font-bold">CyberShield</span>
+                <Shield className="w-6 h-6 text-primary" />
+                <span className="font-bold text-lg">CyberShield</span>
               </div>
-              <p className="text-sm text-muted-foreground">Orquestração multi-tenant para endpoints. Resposta em minutos, conformidade em dias.</p>
+              <p className="text-sm text-muted-foreground">
+                Orquestração e resposta para endpoints multi-tenant.
+              </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Produto</h3>
+              <h4 className="font-semibold mb-4">Produto</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#como-funciona" className="hover:text-foreground transition-colors">Como Funciona</a></li>
-                <li><a href="#beneficios" className="hover:text-foreground transition-colors">Benefícios</a></li>
-                <li><a href="#precos" className="hover:text-foreground transition-colors">Preços</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Roadmap</a></li>
+                <li><a href="#como-funciona" className="hover:text-primary transition-colors">Como Funciona</a></li>
+                <li><a href="#beneficios" className="hover:text-primary transition-colors">Benefícios</a></li>
+                <li><a href="#precos" className="hover:text-primary transition-colors">Preços</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Recursos</h3>
+              <h4 className="font-semibold mb-4">Legal</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover:text-foreground transition-colors flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  Documentação
-                </a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">API Reference</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Playbooks</a></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">Status</a></li>
+                <li><a href="/privacy" className="hover:text-primary transition-colors">Privacidade</a></li>
+                <li><a href="/terms" className="hover:text-primary transition-colors">Termos</a></li>
               </ul>
             </div>
             <div>
-              <h3 className="font-semibold mb-4">Legal</h3>
+              <h4 className="font-semibold mb-4">Suporte</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><Link to="/privacy" className="hover:text-foreground transition-colors">Privacidade</Link></li>
-                <li><Link to="/terms" className="hover:text-foreground transition-colors">Termos de Uso</Link></li>
-                <li><a href="#" className="hover:text-foreground transition-colors">LGPD</a></li>
-                <li><a href="mailto:contato@cybershield.com.br" className="hover:text-foreground transition-colors">Contato</a></li>
+                <li><a href="#contato" className="hover:text-primary transition-colors">Contato</a></li>
+                <li><a href="/docs" className="hover:text-primary transition-colors">Documentação</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-border/50 pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; 2025 CyberShield. Todos os direitos reservados.</p>
+          <div className="pt-8 border-t border-border/40 text-center text-sm text-muted-foreground">
+            <p>© 2025 CyberShield. Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>
