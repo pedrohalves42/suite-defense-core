@@ -53,3 +53,6 @@ verify_jwt = true
 
 [functions.update-user-role]
 verify_jwt = true
+
+[functions.auto-generate-enrollment]
+verify_jwt = true
