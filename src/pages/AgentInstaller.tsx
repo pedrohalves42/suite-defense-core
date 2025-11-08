@@ -8,15 +8,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useTenant } from "@/hooks/useTenant";
+import { useAuth } from "@/hooks/useAuth";
 
 const DOMAIN = "suite-defense-core.lovable.app";
 const API_URL = `https://${DOMAIN}/functions/v1`;
 
 const AgentInstaller = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { tenant, loading: tenantLoading } = useTenant();
   const [installType, setInstallType] = useState<"server" | "agent">("agent");
   const [agentName, setAgentName] = useState("AGENT-01");
-  const [tenantId, setTenantId] = useState("production");
   const [enrollmentKey, setEnrollmentKey] = useState("");
   const [platform, setPlatform] = useState<"windows" | "linux">("windows");
   const [agentToken, setAgentToken] = useState("");
@@ -40,7 +43,6 @@ const AgentInstaller = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tenantId: tenantId.trim(),
           enrollmentKey: enrollmentKey.trim(),
           agentName: agentName.trim(),
         }),
@@ -203,6 +205,32 @@ echo "✓ Para ver logs: journalctl -u cybershield-agent -f"
     toast.success(`Script ${filename} baixado`);
   };
 
+  if (tenantLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Autenticação Necessária</CardTitle>
+            <CardDescription>Você precisa estar autenticado para acessar o instalador.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => navigate("/login")} className="w-full">
+              Ir para Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -260,17 +288,6 @@ echo "✓ Para ver logs: journalctl -u cybershield-agent -f"
                       placeholder="AGENT-01"
                       value={agentName}
                       onChange={(e) => setAgentName(e.target.value)}
-                      className="bg-secondary border-border text-foreground"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="tenantId">Tenant ID</Label>
-                    <Input
-                      id="tenantId"
-                      placeholder="production"
-                      value={tenantId}
-                      onChange={(e) => setTenantId(e.target.value)}
                       className="bg-secondary border-border text-foreground"
                     />
                   </div>

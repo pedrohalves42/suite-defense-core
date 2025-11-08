@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     // Parse and validate input
     const rawData = await req.json();
     const validatedData = EnrollAgentSchema.parse(rawData);
-    const { tenantId, enrollmentKey, agentName } = validatedData;
+    const { enrollmentKey, agentName } = validatedData;
 
     // Validate enrollment key
     const { data: keyData, error: keyError } = await supabase
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
         action: 'agent_enrollment_failed',
         resourceType: 'agent',
         resourceId: agentName,
-        details: { reason: 'invalid_key', tenant_id: tenantId },
+        details: { reason: 'invalid_key' },
         request: req,
         success: false,
       });
@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
       // Update existing agent
       await supabase
         .from('agents')
-        .update({ agent_token: agentToken, hmac_secret: hmacSecret })
+        .update({ hmac_secret: hmacSecret })
         .eq('agent_name', agentName);
       
       agentId = existingAgent.id;
@@ -132,9 +132,8 @@ Deno.serve(async (req) => {
     } else {
       // Insert new agent
       const { data: newAgent } = await supabase.from('agents').insert({
-        tenant_id: tenantId,
+        tenant_id: keyData.tenant_id,
         agent_name: agentName,
-        agent_token: agentToken,
         hmac_secret: hmacSecret,
         status: 'active',
       }).select('id').single();
@@ -165,7 +164,7 @@ Deno.serve(async (req) => {
       resourceType: 'agent',
       resourceId: agentName,
       details: {
-        tenant_id: tenantId,
+        tenant_id: keyData.tenant_id,
         enrollment_key_id: keyData.id,
         is_new: !existingAgent,
       },
@@ -173,7 +172,7 @@ Deno.serve(async (req) => {
       success: true,
     });
 
-    console.log('Agent enrolled:', { agentName, tenantId, requestId });
+    console.log('Agent enrolled:', { agentName, tenant_id: keyData.tenant_id, requestId });
 
     return new Response(
       JSON.stringify({
