@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { z } from 'https://deno.land/x/zod@v3.23.8/mod.ts';
-import { corsHeaders, handleError } from '../_shared/errors.ts';
+import { handleException, handleValidationError, createErrorResponse, ErrorCode, corsHeaders } from '../_shared/error-handler.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { EmailSchema } from '../_shared/validation.ts';
 import { Resend } from 'https://esm.sh/resend@4.0.0';
@@ -29,10 +29,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), { 
-        status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -43,10 +40,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), { 
-        status: 401, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -58,10 +52,7 @@ Deno.serve(async (req) => {
     });
 
     if (!hasAdminRole) {
-      return new Response(JSON.stringify({ error: 'Acesso negado' }), { 
-        status: 403, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      return createErrorResponse(ErrorCode.FORBIDDEN, 'Acesso negado', 403, requestId);
     }
 
     // Get user's tenant
@@ -72,10 +63,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (!userRole?.tenant_id) {
-      return new Response(JSON.stringify({ error: 'Tenant não encontrado' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
     }
 
     const body = await req.json();
@@ -83,18 +71,7 @@ Deno.serve(async (req) => {
     // Validate input with Zod
     const validation = InviteSchema.safeParse(body);
     if (!validation.success) {
-      const firstError = validation.error.issues[0];
-      console.error('[VALIDATION ERROR]', { requestId, errors: validation.error.issues });
-      return new Response(
-        JSON.stringify({ 
-          error: 'Dados inválidos',
-          message: firstError.message 
-        }), 
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
+      return handleValidationError(validation.error, requestId);
     }
 
     const { email, role } = validation.data;
@@ -104,10 +81,7 @@ Deno.serve(async (req) => {
     const userExists = existingUser.users.some(u => u.email === email);
 
     if (userExists) {
-      return new Response(JSON.stringify({ error: 'Usuário já cadastrado' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+      return createErrorResponse(ErrorCode.CONFLICT, 'Usuário já cadastrado', 409, requestId);
     }
 
     // Generate unique token
@@ -173,7 +147,6 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Error in send-invite:', error);
-    return handleError(error, requestId);
+    return handleException(error, requestId, 'send-invite');
   }
 });

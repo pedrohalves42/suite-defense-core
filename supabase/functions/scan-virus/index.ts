@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, handleError } from '../_shared/errors.ts';
+import { handleException, corsHeaders } from '../_shared/error-handler.ts';
 import { AgentTokenSchema } from '../_shared/validation.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
@@ -194,6 +194,6 @@ Deno.serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    return handleError(error, requestId);
+    return handleException(error, requestId, 'scan-virus');
   }
 });

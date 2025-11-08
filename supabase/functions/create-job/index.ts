@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { corsHeaders, handleError } from '../_shared/errors.ts';
+import { handleException, handleValidationError, createErrorResponse, ErrorCode, corsHeaders } from '../_shared/error-handler.ts';
 import { CreateJobSchema } from '../_shared/validation.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Não autorizado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (!userRole?.tenant_id) {
-      return new Response(JSON.stringify({ error: 'Tenant não encontrado' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
     }
 
     const { data: job, error: insertError } = await supabaseAdmin.from('jobs').insert({ 
@@ -83,9 +83,6 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({ id: job.id, type: job.type, agentName: job.agent_name }), { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (error) {
-    if (error instanceof Error && error.name === 'ZodError') {
-      return new Response(JSON.stringify({ error: 'Dados inválidos', details: JSON.parse(error.message), requestId }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-    return handleError(error, requestId);
+    return handleException(error, requestId, 'create-job');
   }
 });
