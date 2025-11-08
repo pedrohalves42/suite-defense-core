@@ -11,14 +11,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Copy, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Plus, Copy, XCircle, ChevronLeft, ChevronRight, TrendingUp, Key, Users, Clock } from 'lucide-react';
+import { format, subDays } from 'date-fns';
 
 const ITEMS_PER_PAGE = 10;
 
 export default function EnrollmentKeys() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { canWrite, loading: roleLoading } = useUserRole();
   const [open, setOpen] = useState(false);
   const [expiresInHours, setExpiresInHours] = useState('24');
   const [maxUses, setMaxUses] = useState('1');
@@ -32,7 +34,10 @@ export default function EnrollmentKeys() {
     queryFn: async () => {
       let query = supabase
         .from('enrollment_keys')
-        .select('*', { count: 'exact' })
+        .select(`
+          *,
+          profiles:created_by(full_name)
+        `, { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
 
@@ -48,6 +53,35 @@ export default function EnrollmentKeys() {
       if (error) throw error;
 
       return { data, count };
+    },
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ['enrollment-keys-stats'],
+    queryFn: async () => {
+      const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
+      
+      const { data: allKeys } = await supabase
+        .from('enrollment_keys')
+        .select('*');
+
+      const { data: recentKeys } = await supabase
+        .from('enrollment_keys')
+        .select('*')
+        .gte('created_at', thirtyDaysAgo);
+
+      const { data: usedKeys } = await supabase
+        .from('enrollment_keys')
+        .select('*')
+        .not('used_at', 'is', null)
+        .gte('used_at', thirtyDaysAgo);
+
+      const activeCount = allKeys?.filter(k => k.is_active).length || 0;
+      const recentCount = recentKeys?.length || 0;
+      const usedCount = usedKeys?.length || 0;
+      const totalUses = allKeys?.reduce((sum, k) => sum + k.current_uses, 0) || 0;
+
+      return { activeCount, recentCount, usedCount, totalUses };
     },
   });
 
@@ -85,18 +119,31 @@ export default function EnrollmentKeys() {
     },
   });
 
-  const deleteKey = useMutation({
-    mutationFn: async (id: string) => {
+  const revokeKey = useMutation({
+    mutationFn: async (key: any) => {
       const { error } = await supabase
         .from('enrollment_keys')
-        .delete()
-        .eq('id', id);
+        .update({ is_active: false })
+        .eq('id', key.id);
       
       if (error) throw error;
+
+      // Audit log
+      await supabase.from('audit_logs').insert({
+        action: 'revoke_enrollment_key',
+        resource_type: 'enrollment_key',
+        resource_id: key.id,
+        details: { key: key.key, description: key.description },
+        success: true,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['enrollment-keys'] });
-      toast({ title: 'Chave removida com sucesso!' });
+      queryClient.invalidateQueries({ queryKey: ['enrollment-keys-stats'] });
+      toast({ title: 'Chave revogada com sucesso!' });
+    },
+    onError: () => {
+      toast({ title: 'Erro ao revogar chave', variant: 'destructive' });
     },
   });
 
@@ -105,6 +152,14 @@ export default function EnrollmentKeys() {
     toast({ title: 'Chave copiada!' });
   };
 
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -112,13 +167,14 @@ export default function EnrollmentKeys() {
           <h2 className="text-3xl font-bold">Chaves de Enrollment</h2>
           <p className="text-muted-foreground">Gerencie as chaves para registro de novos agentes</p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Chave
-            </Button>
-          </DialogTrigger>
+        {canWrite && (
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Chave
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Criar Nova Chave</DialogTitle>
@@ -163,6 +219,53 @@ export default function EnrollmentKeys() {
             </div>
           </DialogContent>
         </Dialog>
+        )}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Chaves Ativas</CardTitle>
+            <Key className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.activeCount || 0}</div>
+            <p className="text-xs text-muted-foreground">Total de chaves ativas</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Criadas (30d)</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.recentCount || 0}</div>
+            <p className="text-xs text-muted-foreground">Últimos 30 dias</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Usadas (30d)</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.usedCount || 0}</div>
+            <p className="text-xs text-muted-foreground">Últimos 30 dias</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Usos</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats?.totalUses || 0}</div>
+            <p className="text-xs text-muted-foreground">Todos os tempos</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -213,49 +316,67 @@ export default function EnrollmentKeys() {
             <div className="text-center py-8">Carregando...</div>
           ) : (
             <>
-              <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Chave</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Usos</TableHead>
-                  <TableHead>Expira em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {keys?.data?.map((key: any) => (
-                  <TableRow key={key.id}>
-                    <TableCell className="font-mono text-sm">{key.key}</TableCell>
-                    <TableCell>{key.description || '-'}</TableCell>
-                    <TableCell>
-                      <Badge variant={key.is_active ? 'default' : 'secondary'}>
-                        {key.is_active ? 'Ativa' : 'Inativa'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{key.current_uses}/{key.max_uses}</TableCell>
-                    <TableCell>{format(new Date(key.expires_at), 'dd/MM/yyyy HH:mm')}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={() => copyToClipboard(key.key)}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={() => deleteKey.mutate(key.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Chave</TableHead>
+                      <TableHead>Descrição</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Usos</TableHead>
+                      <TableHead>Criado por</TableHead>
+                      <TableHead>Criado em</TableHead>
+                      <TableHead>Último uso</TableHead>
+                      <TableHead>Expira em</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {keys?.data?.map((key: any) => {
+                      const isExpired = new Date(key.expires_at) < new Date();
+                      const isMaxUsed = key.current_uses >= key.max_uses;
+                      
+                      return (
+                        <TableRow key={key.id}>
+                          <TableCell className="font-mono text-sm">{key.key}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">{key.description || '-'}</TableCell>
+                          <TableCell>
+                            <Badge variant={key.is_active && !isExpired && !isMaxUsed ? 'default' : 'secondary'}>
+                              {!key.is_active ? 'Revogada' : isExpired ? 'Expirada' : isMaxUsed ? 'Esgotada' : 'Ativa'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{key.current_uses}/{key.max_uses}</TableCell>
+                          <TableCell>{key.profiles?.full_name || '-'}</TableCell>
+                          <TableCell className="text-sm">{format(new Date(key.created_at), 'dd/MM/yy HH:mm')}</TableCell>
+                          <TableCell className="text-sm">{key.used_at ? format(new Date(key.used_at), 'dd/MM/yy HH:mm') : '-'}</TableCell>
+                          <TableCell className="text-sm">{format(new Date(key.expires_at), 'dd/MM/yy HH:mm')}</TableCell>
+                          <TableCell className="text-right space-x-2">
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => copyToClipboard(key.key)}
+                              title="Copiar chave"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            {canWrite && key.is_active && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => revokeKey.mutate(key)}
+                                disabled={revokeKey.isPending}
+                                title="Revogar chave"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
 
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-4">

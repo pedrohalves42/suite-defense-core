@@ -1,18 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { handleException, corsHeaders } from '../_shared/error-handler.ts';
+import { z } from 'https://deno.land/x/zod@v3.23.8/mod.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-interface GenerateKeyRequest {
-  expiresInHours: number;
-  maxUses?: number;
-  description?: string;
-}
+const GenerateKeySchema = z.object({
+  expiresInHours: z.number().positive().int(),
+  maxUses: z.number().positive().int().optional().default(1),
+  description: z.string().max(500).optional(),
+});
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
+  const requestId = crypto.randomUUID();
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -28,54 +26,33 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Verificar autenticação do usuário
     const {
       data: { user },
       error: authError,
     } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
-      console.error('Authentication error:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Não autenticado' }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      throw new Error('Unauthorized');
     }
 
-    // Verificar se o usuário é admin e obter tenant_id
     const { data: userRole, error: rolesError } = await supabaseClient
       .from('user_roles')
       .select('role, tenant_id')
       .eq('user_id', user.id)
       .single();
 
-    if (rolesError || !userRole || userRole.role !== 'admin') {
-      console.error('User is not admin:', rolesError);
-      return new Response(
-        JSON.stringify({ error: 'Acesso negado: apenas administradores podem gerar chaves' }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+    if (rolesError || !userRole) {
+      throw new Error('Forbidden');
+    }
+
+    if (userRole.role !== 'admin' && userRole.role !== 'operator') {
+      throw new Error('Forbidden: only admins and operators can generate keys');
     }
 
     const tenantId = userRole.tenant_id;
-
-    const { expiresInHours, maxUses = 1, description }: GenerateKeyRequest = await req.json();
-
-    if (!expiresInHours || expiresInHours <= 0) {
-      return new Response(
-        JSON.stringify({ error: 'expiresInHours é obrigatório e deve ser positivo' }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
+    const body = await req.json();
+    const validatedData = GenerateKeySchema.parse(body);
+    const { expiresInHours, maxUses, description } = validatedData;
 
     // Gerar chave no formato XXXX-XXXX-XXXX-XXXX
     const generateKey = () => {
@@ -110,17 +87,26 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      console.error('Error inserting key:', insertError);
-      return new Response(
-        JSON.stringify({ error: 'Erro ao gerar chave de enrollment' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
+      throw new Error('Failed to create enrollment key');
     }
 
-    console.log(`Enrollment key created: ${enrollmentKey} by user ${user.email}`);
+    // Audit log
+    await supabaseAdmin.from('audit_logs').insert({
+      user_id: user.id,
+      action: 'create_enrollment_key',
+      resource_type: 'enrollment_key',
+      resource_id: keyData.id,
+      tenant_id: tenantId,
+      details: { 
+        key: enrollmentKey, 
+        expiresInHours, 
+        maxUses,
+        description: keyData.description 
+      },
+      success: true,
+    });
+
+    console.log(`[${requestId}] Enrollment key created: ${enrollmentKey} by ${user.email}`);
 
     return new Response(
       JSON.stringify({
@@ -135,13 +121,6 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error in generate-enrollment-key:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro desconhecido' }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return handleException(error, requestId, 'generate-enrollment-key');
   }
 });
