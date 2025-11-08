@@ -9,9 +9,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Copy, Trash2 } from 'lucide-react';
+import { Plus, Copy, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
+
+const ITEMS_PER_PAGE = 10;
 
 export default function EnrollmentKeys() {
   const { toast } = useToast();
@@ -20,19 +23,35 @@ export default function EnrollmentKeys() {
   const [expiresInHours, setExpiresInHours] = useState('24');
   const [maxUses, setMaxUses] = useState('1');
   const [description, setDescription] = useState('');
+  const [page, setPage] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const { data: keys, isLoading } = useQuery({
-    queryKey: ['enrollment-keys'],
+    queryKey: ['enrollment-keys', page, searchTerm, statusFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('enrollment_keys')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
+
+      if (searchTerm) {
+        query = query.or(`description.ilike.%${searchTerm}%,key.ilike.%${searchTerm}%`);
+      }
+
+      if (statusFilter !== 'all') {
+        query = query.eq('is_active', statusFilter === 'active');
+      }
+
+      const { data, error, count } = await query;
       if (error) throw error;
-      return data;
+
+      return { data, count };
     },
   });
+
+  const totalPages = keys?.count ? Math.ceil(keys.count / ITEMS_PER_PAGE) : 0;
 
   const createKey = useMutation({
     mutationFn: async () => {
@@ -148,14 +167,53 @@ export default function EnrollmentKeys() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Chaves Ativas</CardTitle>
-          <CardDescription>Lista de todas as chaves de enrollment</CardDescription>
+          <CardTitle>Filtros</CardTitle>
+          <CardDescription>Busque e filtre as chaves</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Input
+                placeholder="Buscar por descrição ou chave..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(0);
+                }}
+              />
+            </div>
+            <div>
+              <Select value={statusFilter} onValueChange={(value) => {
+                setStatusFilter(value);
+                setPage(0);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="active">Ativas</SelectItem>
+                  <SelectItem value="inactive">Inativas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Chaves de Enrollment</CardTitle>
+          <CardDescription>
+            Mostrando {keys?.data?.length || 0} de {keys?.count || 0} chaves
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">Carregando...</div>
           ) : (
-            <Table>
+            <>
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Chave</TableHead>
@@ -167,7 +225,7 @@ export default function EnrollmentKeys() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {keys?.map((key) => (
+                {keys?.data?.map((key: any) => (
                   <TableRow key={key.id}>
                     <TableCell className="font-mono text-sm">{key.key}</TableCell>
                     <TableCell>{key.description || '-'}</TableCell>
@@ -198,6 +256,33 @@ export default function EnrollmentKeys() {
                 ))}
               </TableBody>
             </Table>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Anterior
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Página {page + 1} de {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            )}
+          </>
           )}
         </CardContent>
       </Card>
