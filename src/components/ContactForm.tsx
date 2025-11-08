@@ -26,11 +26,11 @@ export const ContactForm = () => {
       const { error } = await supabase.from("sales_contacts").insert({
         name: formData.name,
         email: formData.email,
-        company: formData.company,
-        phone: formData.phone,
+        company: formData.company || null,
+        phone: formData.phone || null,
         endpoints: formData.endpoints ? parseInt(formData.endpoints) : null,
-        message: formData.message,
-      });
+        message: formData.message || null,
+      } as any);
 
       if (error) throw error;
 
