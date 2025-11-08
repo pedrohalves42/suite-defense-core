@@ -403,6 +403,65 @@ export type Database = {
           },
         ]
       }
+      tenant_settings: {
+        Row: {
+          alert_email: string | null
+          alert_threshold_failed_jobs: number | null
+          alert_threshold_offline_agents: number | null
+          alert_threshold_virus_positive: number | null
+          alert_webhook_url: string | null
+          created_at: string
+          enable_auto_quarantine: boolean | null
+          enable_email_alerts: boolean | null
+          enable_webhook_alerts: boolean | null
+          id: string
+          stripe_enabled: boolean | null
+          tenant_id: string
+          updated_at: string
+          virustotal_enabled: boolean | null
+        }
+        Insert: {
+          alert_email?: string | null
+          alert_threshold_failed_jobs?: number | null
+          alert_threshold_offline_agents?: number | null
+          alert_threshold_virus_positive?: number | null
+          alert_webhook_url?: string | null
+          created_at?: string
+          enable_auto_quarantine?: boolean | null
+          enable_email_alerts?: boolean | null
+          enable_webhook_alerts?: boolean | null
+          id?: string
+          stripe_enabled?: boolean | null
+          tenant_id: string
+          updated_at?: string
+          virustotal_enabled?: boolean | null
+        }
+        Update: {
+          alert_email?: string | null
+          alert_threshold_failed_jobs?: number | null
+          alert_threshold_offline_agents?: number | null
+          alert_threshold_virus_positive?: number | null
+          alert_webhook_url?: string | null
+          created_at?: string
+          enable_auto_quarantine?: boolean | null
+          enable_email_alerts?: boolean | null
+          enable_webhook_alerts?: boolean | null
+          id?: string
+          stripe_enabled?: boolean | null
+          tenant_id?: string
+          updated_at?: string
+          virustotal_enabled?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           created_at: string
