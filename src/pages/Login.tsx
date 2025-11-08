@@ -111,11 +111,18 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Entrando...' : 'Entrar'}
             </Button>
-            <div className="text-sm text-center text-muted-foreground">
-              Não tem uma conta?{' '}
-              <Link to="/signup" className="text-primary hover:underline">
-                Cadastre-se
-              </Link>
+            <div className="text-sm text-center text-muted-foreground space-y-2">
+              <div>
+                <Link to="/forgot-password" className="text-primary hover:underline">
+                  Esqueceu sua senha?
+                </Link>
+              </div>
+              <div>
+                Não tem uma conta?{' '}
+                <Link to="/signup" className="text-primary hover:underline">
+                  Cadastre-se
+                </Link>
+              </div>
             </div>
           </CardFooter>
         </form>
