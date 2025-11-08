@@ -58,8 +58,14 @@ export default function Settings() {
     message: string;
     details?: any;
   } | null>(null);
+  const [webhookTestResult, setWebhookTestResult] = useState<{
+    success: boolean;
+    message: string;
+    details?: any;
+  } | null>(null);
   const [testingVirusTotal, setTestingVirusTotal] = useState(false);
   const [testingStripe, setTestingStripe] = useState(false);
+  const [testingWebhook, setTestingWebhook] = useState(false);
 
   // Fetch tenant settings
   const { data: tenantSettings, isLoading: settingsLoading } = useQuery({
@@ -220,6 +226,42 @@ export default function Settings() {
     }
   };
 
+  const testWebhook = async () => {
+    setTestingWebhook(true);
+    setWebhookTestResult(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('test-webhook');
+      
+      if (error) throw error;
+      
+      setWebhookTestResult(data);
+      
+      if (data.success) {
+        toast({ title: 'Teste bem-sucedido', description: data.message });
+      } else {
+        toast({ 
+          title: 'Teste falhou', 
+          description: data.message, 
+          variant: 'destructive' 
+        });
+      }
+    } catch (error) {
+      console.error('Error testing webhook:', error);
+      setWebhookTestResult({
+        success: false,
+        message: error instanceof Error ? error.message : 'Erro desconhecido'
+      });
+      toast({ 
+        title: 'Erro ao testar webhook', 
+        description: 'Verifique os logs para mais detalhes',
+        variant: 'destructive' 
+      });
+    } finally {
+      setTestingWebhook(false);
+    }
+  };
+
   const loading = tenantLoading || roleLoading || settingsLoading;
 
   if (loading) {
@@ -342,8 +384,47 @@ export default function Settings() {
                   disabled={!canWrite}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  URL para receber notificações via webhook
+                  URL para receber notificações via webhook (POST requests com JSON payload)
                 </p>
+              </div>
+
+              <div className="pt-4 border-t">
+                <Button 
+                  onClick={testWebhook}
+                  disabled={testingWebhook || !canWrite || !settings.alert_webhook_url}
+                  variant="outline"
+                  className="w-full"
+                >
+                  {testingWebhook ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando ping...
+                    </>
+                  ) : (
+                    'Testar Webhook (Ping/Pong)'
+                  )}
+                </Button>
+                
+                {webhookTestResult && (
+                  <Alert className="mt-4" variant={webhookTestResult.success ? "default" : "destructive"}>
+                    {webhookTestResult.success ? (
+                      <CheckCircle className="h-4 w-4" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4" />
+                    )}
+                    <AlertTitle>{webhookTestResult.success ? 'Sucesso' : 'Erro'}</AlertTitle>
+                    <AlertDescription>
+                      {webhookTestResult.message}
+                      {webhookTestResult.details && (
+                        <div className="mt-2 text-xs">
+                          <pre className="bg-muted p-2 rounded overflow-x-auto max-h-48">
+                            {JSON.stringify(webhookTestResult.details, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
