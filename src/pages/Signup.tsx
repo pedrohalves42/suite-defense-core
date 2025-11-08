@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,25 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Shield } from 'lucide-react';
+
+const signupSchema = z.object({
+  email: z.string()
+    .trim()
+    .min(1, 'Email é obrigatório')
+    .email('Email inválido')
+    .max(255, 'Email muito longo'),
+  password: z.string()
+    .min(8, 'Senha deve ter pelo menos 8 caracteres')
+    .max(72, 'Senha muito longa')
+    .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
+    .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
+    .regex(/[0-9]/, 'Senha deve conter pelo menos um número'),
+  fullName: z.string()
+    .trim()
+    .min(2, 'Nome deve ter pelo menos 2 caracteres')
+    .max(100, 'Nome muito longo')
+    .regex(/^[a-zA-ZÀ-ÿ\s]+$/, 'Nome deve conter apenas letras e espaços'),
+});
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -20,21 +40,39 @@ export default function Signup() {
     e.preventDefault();
     setLoading(true);
 
+    // Validate inputs
+    const validation = signupSchema.safeParse({ email, password, fullName });
+    if (!validation.success) {
+      const firstError = validation.error.issues[0];
+      toast({
+        variant: 'destructive',
+        title: 'Erro de validação',
+        description: firstError.message,
+      });
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.signUp({
-      email,
-      password,
+      email: validation.data.email,
+      password: validation.data.password,
       options: {
         data: {
-          full_name: fullName,
+          full_name: validation.data.fullName,
         },
       },
     });
 
     if (error) {
+      // Generic error messages to prevent account enumeration
+      const message = error.message.includes('already registered') || error.message.includes('already exists')
+        ? 'Já existe uma conta com este email'
+        : 'Erro ao processar seu cadastro. Tente novamente.';
+      
       toast({
         variant: 'destructive',
         title: 'Erro no cadastro',
-        description: error.message,
+        description: message,
       });
     } else {
       toast({
@@ -92,7 +130,7 @@ export default function Signup() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
           </CardContent>
