@@ -91,6 +91,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                maxLength={255}
               />
             </div>
             <div className="space-y-2">
@@ -102,6 +103,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                maxLength={72}
               />
             </div>
           </CardContent>

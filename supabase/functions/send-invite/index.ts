@@ -1,7 +1,17 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { z } from 'https://deno.land/x/zod@v3.23.8/mod.ts';
 import { corsHeaders, handleError } from '../_shared/errors.ts';
 import { createAuditLog } from '../_shared/audit.ts';
-import { Resend } from 'npm:resend@4.0.0';
+import { EmailSchema } from '../_shared/validation.ts';
+import { Resend } from 'https://esm.sh/resend@4.0.0';
+
+// Validation schema for invite
+const InviteSchema = z.object({
+  email: EmailSchema,
+  role: z.enum(['admin', 'operator', 'viewer'], { 
+    errorMap: () => ({ message: 'Role inválida' }) 
+  }),
+});
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
@@ -68,14 +78,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email, role } = await req.json();
+    const body = await req.json();
 
-    if (!email || !role) {
-      return new Response(JSON.stringify({ error: 'Email e role são obrigatórios' }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+    // Validate input with Zod
+    const validation = InviteSchema.safeParse(body);
+    if (!validation.success) {
+      const firstError = validation.error.issues[0];
+      console.error('[VALIDATION ERROR]', { requestId, errors: validation.error.issues });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Dados inválidos',
+          message: firstError.message 
+        }), 
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
+
+    const { email, role } = validation.data;
 
     // Check if user already exists
     const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();

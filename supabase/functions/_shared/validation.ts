@@ -1,5 +1,26 @@
 import { z } from 'https://deno.land/x/zod@v3.23.8/mod.ts';
 
+// Auth validation schemas
+export const EmailSchema = z.string()
+  .trim()
+  .min(1, 'Email é obrigatório')
+  .email('Email inválido')
+  .max(255, 'Email muito longo');
+
+export const PasswordSchema = z.string()
+  .min(8, 'Senha deve ter pelo menos 8 caracteres')
+  .max(72, 'Senha muito longa')
+  .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
+  .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
+  .regex(/[0-9]/, 'Senha deve conter pelo menos um número');
+
+export const FullNameSchema = z.string()
+  .trim()
+  .min(2, 'Nome deve ter pelo menos 2 caracteres')
+  .max(100, 'Nome muito longo')
+  .regex(/^[a-zA-ZÀ-ÿ\s]+$/, 'Nome deve conter apenas letras e espaços');
+
+// Existing schemas
 export const EnrollAgentSchema = z.object({
   enrollmentKey: z.string().length(19, 'Chave de enrollment deve ter formato XXXX-XXXX-XXXX-XXXX'),
   agentName: z.string().min(3).max(64).regex(/^[A-Z0-9-]+$/, 'Nome do agente deve conter apenas letras maiúsculas, números e hífens'),
