@@ -16,7 +16,7 @@ export const AdminLayout = () => {
   }
 
   if (!isAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   const isActive = (path: string) => location.pathname === path;
@@ -27,7 +27,7 @@ export const AdminLayout = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-6">
-              <Link to="/">
+              <Link to="/dashboard">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Dashboard

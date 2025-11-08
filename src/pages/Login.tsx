@@ -62,7 +62,7 @@ export default function Login() {
         title: 'Login realizado com sucesso',
         description: 'Redirecionando...',
       });
-      navigate('/');
+      navigate('/dashboard');
     }
 
     setLoading(false);

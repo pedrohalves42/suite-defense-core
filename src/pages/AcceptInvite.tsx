@@ -108,7 +108,7 @@ export default function AcceptInvite() {
           data: {
             full_name: fullName,
           },
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
         },
       });
 
@@ -135,7 +135,7 @@ export default function AcceptInvite() {
       }
 
       toast({ title: 'Conta criada com sucesso!' });
-      navigate('/');
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Error accepting invite:', error);
       toast({ 
