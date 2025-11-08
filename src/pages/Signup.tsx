@@ -20,7 +20,8 @@ const signupSchema = z.object({
     .max(72, 'Senha muito longa')
     .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
     .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
-    .regex(/[0-9]/, 'Senha deve conter pelo menos um número'),
+    .regex(/[0-9]/, 'Senha deve conter pelo menos um número')
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Senha deve conter pelo menos um caractere especial'),
   fullName: z.string()
     .trim()
     .min(2, 'Nome deve ter pelo menos 2 caracteres')
@@ -53,10 +54,13 @@ export default function Signup() {
       return;
     }
 
+    const redirectUrl = `${window.location.origin}/`;
+    
     const { error } = await supabase.auth.signUp({
       email: validation.data.email,
       password: validation.data.password,
       options: {
+        emailRedirectTo: redirectUrl,
         data: {
           full_name: validation.data.fullName,
         },
@@ -136,6 +140,9 @@ export default function Signup() {
                 minLength={8}
                 maxLength={72}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Mínimo 8 caracteres, incluindo maiúscula, minúscula, número e caractere especial
+              </p>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
