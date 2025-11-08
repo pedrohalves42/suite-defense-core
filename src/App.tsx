@@ -27,7 +27,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/" element={<ProtectedRoute><ServerDashboard /></ProtectedRoute>} />
-          <Route path="/installer" element={<AgentInstaller />} />
+          <Route path="/installer" element={<ProtectedRoute><AgentInstaller /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
             <Route path="enrollment-keys" element={<EnrollmentKeys />} />
             <Route path="users" element={<Users />} />

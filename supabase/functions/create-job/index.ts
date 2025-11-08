@@ -58,7 +58,25 @@ Deno.serve(async (req) => {
     const validatedData = CreateJobSchema.parse(rawData);
     const { agentName, type, payload, approved } = validatedData;
 
-    const { data: job, error: insertError } = await supabaseAdmin.from('jobs').insert({ agent_name: agentName, type, payload, status: 'queued', approved }).select().single();
+    // Buscar tenant_id do usuário autenticado
+    const { data: userRole } = await supabaseAdmin
+      .from('user_roles')
+      .select('tenant_id')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!userRole?.tenant_id) {
+      return new Response(JSON.stringify({ error: 'Tenant não encontrado' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const { data: job, error: insertError } = await supabaseAdmin.from('jobs').insert({ 
+      agent_name: agentName, 
+      type, 
+      payload, 
+      status: 'queued', 
+      approved,
+      tenant_id: userRole.tenant_id
+    }).select().single();
     if (insertError) throw insertError;
 
     await createAuditLog({ supabase: supabaseAdmin, userId: user.id, action: 'job_created', resourceType: 'job', resourceId: job.id, details: { agent_name: agentName, type, approved }, request: req, success: true });
