@@ -445,6 +445,42 @@ export type Database = {
           },
         ]
       }
+      sales_contacts: {
+        Row: {
+          company: string | null
+          created_at: string
+          email: string
+          endpoints: number | null
+          id: string
+          message: string | null
+          name: string
+          phone: string | null
+          status: string | null
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          email: string
+          endpoints?: number | null
+          id?: string
+          message?: string | null
+          name: string
+          phone?: string | null
+          status?: string | null
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          email?: string
+          endpoints?: number | null
+          id?: string
+          message?: string | null
+          name?: string
+          phone?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       tenant_settings: {
         Row: {
           alert_email: string | null
