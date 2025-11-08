@@ -108,6 +108,8 @@ export default function Signup() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
+                minLength={2}
+                maxLength={100}
               />
             </div>
             <div className="space-y-2">
@@ -119,6 +121,7 @@ export default function Signup() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                maxLength={255}
               />
             </div>
             <div className="space-y-2">
@@ -131,6 +134,7 @@ export default function Signup() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={8}
+                maxLength={72}
               />
             </div>
           </CardContent>
