@@ -55,35 +55,40 @@ export type Database = {
       agents: {
         Row: {
           agent_name: string
-          agent_token: string
           enrolled_at: string
           hmac_secret: string | null
           id: string
           last_heartbeat: string | null
           status: string
-          tenant_id: string
+          tenant_id: string | null
         }
         Insert: {
           agent_name: string
-          agent_token: string
           enrolled_at?: string
           hmac_secret?: string | null
           id?: string
           last_heartbeat?: string | null
           status?: string
-          tenant_id?: string
+          tenant_id?: string | null
         }
         Update: {
           agent_name?: string
-          agent_token?: string
           enrolled_at?: string
           hmac_secret?: string | null
           id?: string
           last_heartbeat?: string | null
           status?: string
-          tenant_id?: string
+          tenant_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agents_tenant_id_new_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audit_logs: {
         Row: {
@@ -95,6 +100,7 @@ export type Database = {
           resource_id: string | null
           resource_type: string
           success: boolean
+          tenant_id: string | null
           user_agent: string | null
           user_id: string | null
         }
@@ -107,6 +113,7 @@ export type Database = {
           resource_id?: string | null
           resource_type: string
           success?: boolean
+          tenant_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -119,10 +126,19 @@ export type Database = {
           resource_id?: string | null
           resource_type?: string
           success?: boolean
+          tenant_id?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       enrollment_keys: {
         Row: {
@@ -135,6 +151,7 @@ export type Database = {
           is_active: boolean
           key: string
           max_uses: number
+          tenant_id: string | null
           used_at: string | null
           used_by_agent: string | null
         }
@@ -148,6 +165,7 @@ export type Database = {
           is_active?: boolean
           key: string
           max_uses?: number
+          tenant_id?: string | null
           used_at?: string | null
           used_by_agent?: string | null
         }
@@ -161,10 +179,19 @@ export type Database = {
           is_active?: boolean
           key?: string
           max_uses?: number
+          tenant_id?: string | null
           used_at?: string | null
           used_by_agent?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "enrollment_keys_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hmac_signatures: {
         Row: {
@@ -197,6 +224,7 @@ export type Database = {
           id: string
           payload: Json | null
           status: string
+          tenant_id: string | null
           type: string
         }
         Insert: {
@@ -208,6 +236,7 @@ export type Database = {
           id?: string
           payload?: Json | null
           status?: string
+          tenant_id?: string | null
           type: string
         }
         Update: {
@@ -219,9 +248,18 @@ export type Database = {
           id?: string
           payload?: Json | null
           status?: string
+          tenant_id?: string | null
           type?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -285,6 +323,7 @@ export type Database = {
           file_path: string
           id: string
           kind: string
+          tenant_id: string | null
         }
         Insert: {
           agent_name: string
@@ -293,6 +332,7 @@ export type Database = {
           file_path: string
           id?: string
           kind: string
+          tenant_id?: string | null
         }
         Update: {
           agent_name?: string
@@ -301,6 +341,42 @@ export type Database = {
           file_path?: string
           id?: string
           kind?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenants: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_user_id: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_user_id: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_user_id?: string
+          slug?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -310,6 +386,7 @@ export type Database = {
           created_by: string | null
           id: string
           role: Database["public"]["Enums"]["app_role"]
+          tenant_id: string | null
           user_id: string
         }
         Insert: {
@@ -317,6 +394,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           role: Database["public"]["Enums"]["app_role"]
+          tenant_id?: string | null
           user_id: string
         }
         Update: {
@@ -324,9 +402,18 @@ export type Database = {
           created_by?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          tenant_id?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       virus_scans: {
         Row: {
@@ -338,6 +425,7 @@ export type Database = {
           positives: number | null
           scan_result: Json | null
           scanned_at: string
+          tenant_id: string | null
           total_scans: number | null
           virustotal_permalink: string | null
         }
@@ -350,6 +438,7 @@ export type Database = {
           positives?: number | null
           scan_result?: Json | null
           scanned_at?: string
+          tenant_id?: string | null
           total_scans?: number | null
           virustotal_permalink?: string | null
         }
@@ -362,10 +451,19 @@ export type Database = {
           positives?: number | null
           scan_result?: Json | null
           scanned_at?: string
+          tenant_id?: string | null
           total_scans?: number | null
           virustotal_permalink?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "virus_scans_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -375,6 +473,7 @@ export type Database = {
       cleanup_expired_keys: { Args: never; Returns: undefined }
       cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      current_user_tenant_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
