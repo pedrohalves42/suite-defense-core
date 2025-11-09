@@ -84,44 +84,72 @@ Deno.serve(async (req) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('token', agentToken)
 
-    // Processar multipart form
-    const formData = await req.formData()
-    const kind = formData.get('kind') as string
-    const file = formData.get('file') as File
+    // Detectar tipo de content (JSON ou multipart form)
+    const contentType = req.headers.get('content-type') || ''
 
-    if (!kind || !file) {
-      return new Response(
-        JSON.stringify({ error: 'Campos obrigatórios faltando' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
+    let sanitizedKind: string
+    let sanitizedFilename: string
+    let fileContent: string
+
+    if (contentType.includes('application/json')) {
+      // Processar report de execução de job (JSON)
+      const { job_id, result, timestamp } = await req.json()
+
+      if (!job_id || !result) {
+        return new Response(
+          JSON.stringify({ error: 'Campos obrigatórios faltando (job_id, result)' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+
+      console.log('Upload de report de job:', job_id, 'por agente:', agent.agent_name)
+
+      sanitizedKind = 'job_result'
+      sanitizedFilename = `job-${job_id}-${Date.now()}.json`
+      fileContent = JSON.stringify({
+        job_id,
+        result,
+        timestamp: timestamp || new Date().toISOString(),
+        agent: agent.agent_name
+      }, null, 2)
+
+    } else {
+      // Processar multipart form (upload de arquivo)
+      const formData = await req.formData()
+      const kind = formData.get('kind') as string
+      const file = formData.get('file') as File
+
+      if (!kind || !file) {
+        return new Response(
+          JSON.stringify({ error: 'Campos obrigatórios faltando (kind, file)' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+
+      // Validar inputs
+      const validation = UploadReportSchema.safeParse({
+        kind,
+        filename: file.name
+      })
+
+      if (!validation.success) {
+        return handleValidationError(validation.error, requestId)
+      }
+
+      // Validar tamanho do arquivo
+      if (!validateFileSize(file.size)) {
+        return new Response(
+          JSON.stringify({ error: 'Arquivo muito grande (máximo 10MB)' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 413 }
+        )
+      }
+
+      sanitizedFilename = validation.data.filename
+      sanitizedKind = validation.data.kind
+      fileContent = await file.text()
+
+      console.log('Upload de relatório:', sanitizedKind, 'por agente:', agent.agent_name)
     }
-
-    // Validar inputs
-    const validation = UploadReportSchema.safeParse({
-      kind,
-      filename: file.name
-    })
-
-    if (!validation.success) {
-      return handleValidationError(validation.error, requestId)
-    }
-
-    // Validar tamanho do arquivo
-    if (!validateFileSize(file.size)) {
-      return new Response(
-        JSON.stringify({ error: 'Arquivo muito grande (máximo 10MB)' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 413 }
-      )
-    }
-
-    // Usar filename sanitizado
-    const sanitizedFilename = validation.data.filename
-    const sanitizedKind = validation.data.kind
-
-    console.log('Upload de relatório:', sanitizedKind, 'por agente:', agent.agent_name)
-
-    // Ler conteúdo do arquivo
-    const fileContent = await file.text()
 
     // Salvar relatório no banco
     const { data: report, error } = await supabase
