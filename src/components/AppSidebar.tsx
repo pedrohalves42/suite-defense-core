@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ export const AppSidebar = () => {
 
   const menuItems = [
     { icon: Home, label: 'Dashboard', to: '/dashboard', end: true },
+    { icon: Zap, label: 'Criar Jobs', to: '/jobs' },
     { icon: Shield, label: 'Scans de Vírus', to: '/virus-scans' },
     { icon: Package, label: 'Instalador', to: '/installer' },
   ];

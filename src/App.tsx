@@ -12,6 +12,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import Landing from "./pages/Landing";
 import ServerDashboard from "./pages/ServerDashboard";
 import AgentInstaller from "./pages/AgentInstaller";
+import JobCreator from "./pages/JobCreator";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -51,6 +52,7 @@ const App = () => (
             {/* Protected Routes with AppLayout */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<ServerDashboard />} />
+              <Route path="/jobs" element={<JobCreator />} />
               <Route path="/installer" element={<AgentInstaller />} />
               <Route path="/virus-scans" element={<VirusScans />} />
               
