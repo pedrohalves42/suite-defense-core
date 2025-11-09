@@ -22,6 +22,21 @@ serve(async (req: Request) => {
   }
 
   try {
+    // Verify internal function secret for service-to-service authentication
+    const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+    const authHeader = req.headers.get('X-Internal-Secret');
+    
+    if (!authHeader || authHeader !== internalSecret) {
+      console.error('[AUTO-QUARANTINE] Unauthorized: Invalid or missing internal secret');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     const {

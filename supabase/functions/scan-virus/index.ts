@@ -205,7 +205,12 @@ Deno.serve(async (req) => {
       console.log('[SCAN-VIRUS] Malware detected, triggering auto-quarantine');
       
       try {
+        const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+        
         await supabase.functions.invoke('auto-quarantine', {
+          headers: {
+            'X-Internal-Secret': internalSecret || '',
+          },
           body: {
             virus_scan_id: scanRecord.id,
             agent_name: agent.agent_name,
