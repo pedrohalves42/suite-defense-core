@@ -56,7 +56,7 @@ export default function Signup() {
 
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email: validation.data.email,
       password: validation.data.password,
       options: {
@@ -66,6 +66,22 @@ export default function Signup() {
         },
       },
     });
+
+    // Send welcome email via edge function
+    if (!error && data.user) {
+      try {
+        await supabase.functions.invoke('send-welcome-email', {
+          body: {
+            email: validation.data.email,
+            fullName: validation.data.fullName,
+            userId: data.user.id,
+          },
+        });
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+        // Don't block signup if email fails
+      }
+    }
 
     if (error) {
       // Generic error messages to prevent account enumeration

@@ -8,6 +8,8 @@ import { LogoutButton } from "@/components/LogoutButton";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { OnboardingTour } from "@/components/OnboardingTour";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { Progress } from "@/components/ui/progress";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Line, LineChart as RechartsLineChart, Bar, BarChart as RechartsBarChart, Pie, PieChart as RechartsPieChart, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip } from "recharts";
@@ -83,6 +85,7 @@ interface AuditLog {
 
 const ServerDashboard = () => {
   const navigate = useNavigate();
+  const { showOnboarding, completeOnboarding } = useOnboarding();
   const { isAdmin } = useIsAdmin();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -1088,6 +1091,7 @@ const ServerDashboard = () => {
         </Tabs>
       </div>
     </div>
+    </>
   );
 };
 
