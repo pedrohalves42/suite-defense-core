@@ -26,6 +26,7 @@ import Users from "./pages/admin/Users";
 import Settings from "./pages/admin/Settings";
 import AuditLogs from "./pages/admin/AuditLogs";
 import Invites from "./pages/admin/Invites";
+import Tenants from "./pages/admin/Tenants";
 import AcceptInvite from "./pages/AcceptInvite";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/admin" element={<AdminLayout />}>
                 <Route path="enrollment-keys" element={<EnrollmentKeys />} />
                 <Route path="users" element={<Users />} />
+                <Route path="tenants" element={<Tenants />} />
                 <Route path="invites" element={<Invites />} />
                 <Route path="audit-logs" element={<AuditLogs />} />
                 <Route path="settings" element={<Settings />} />
