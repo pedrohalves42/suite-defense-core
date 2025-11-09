@@ -298,6 +298,32 @@ function Scan-File {
     }
 }
 
+# Função para health check do sistema
+function Test-SystemHealth {
+    $health = @{
+        timestamp_utc = (Get-Date).ToUniversalTime().ToString("o")
+        system_time_local = (Get-Date).ToString("o")
+        powershell_version = $PSVersionTable.PSVersion.ToString()
+        os_version = [Environment]::OSVersion.VersionString
+        hostname = $env:COMPUTERNAME
+        can_reach_server = $false
+        server_latency_ms = $null
+    }
+    
+    try {
+        $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+        $null = Invoke-WebRequest -Uri "$ServerUrl/functions/v1/poll-jobs" -Method HEAD -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+        $stopwatch.Stop()
+        $health.can_reach_server = $true
+        $health.server_latency_ms = $stopwatch.ElapsedMilliseconds
+    } catch {
+        $health.can_reach_server = $false
+        $health.connection_error = $_.Exception.Message
+    }
+    
+    return $health
+}
+
 # Função principal
 function Start-Agent {
     Write-Host "==================================="
@@ -309,16 +335,19 @@ function Start-Agent {
     Write-Host "Retry: Exponential backoff ativo"
     Write-Host ""
     
-    # Teste inicial de conectividade
-    try {
-        Write-Host "[INFO] Testando conectividade com servidor..."
-        $testUrl = "$ServerUrl/functions/v1/poll-jobs"
-        $null = Invoke-WebRequest -Uri $testUrl -Method HEAD -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
-        Write-Host "[OK] Servidor acessível"
-    } catch {
-        Write-Host "[AVISO] Não foi possível conectar ao servidor: $_"
+    # Health check inicial do sistema
+    Write-Host "[INFO] Executando health check inicial..."
+    $health = Test-SystemHealth
+    Write-Host "[INFO] Sistema: $($health.hostname) | OS: $($health.os_version)"
+    Write-Host "[INFO] PowerShell: $($health.powershell_version)"
+    
+    if ($health.can_reach_server) {
+        Write-Host "[OK] Servidor acessível (latência: $($health.server_latency_ms)ms)"
+    } else {
+        Write-Host "[AVISO] Não foi possível conectar ao servidor: $($health.connection_error)"
         Write-Host "[INFO] Continuando, tentativas com retry automático..."
     }
+    Write-Host ""
     
     while ($true) {
         try {

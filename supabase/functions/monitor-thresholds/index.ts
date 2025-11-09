@@ -100,11 +100,13 @@ Deno.serve(async (req) => {
       }
 
       // Count offline agents (no heartbeat in last 5 minutes)
+      // Only count agents that have had at least one heartbeat (ignore newly enrolled agents)
       const { count: offlineAgentsCount, error: offlineAgentsError } = await supabase
         .from('agents')
         .select('*', { count: 'exact', head: true })
         .eq('tenant_id', tenant.id)
-        .or(`last_heartbeat.is.null,last_heartbeat.lt.${last5Minutes}`);
+        .not('last_heartbeat', 'is', null)
+        .lt('last_heartbeat', last5Minutes);
 
       if (offlineAgentsError) {
         console.error(`[${requestId}] Error counting offline agents for tenant ${tenant.id}:`, offlineAgentsError);
