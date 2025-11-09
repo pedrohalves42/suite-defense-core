@@ -27,6 +27,7 @@ import Settings from "./pages/admin/Settings";
 import AuditLogs from "./pages/admin/AuditLogs";
 import Invites from "./pages/admin/Invites";
 import Tenants from "./pages/admin/Tenants";
+import Dashboard from "./pages/admin/Dashboard";
 import AcceptInvite from "./pages/AcceptInvite";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -63,6 +64,8 @@ const App = () => (
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="dashboard" element={<Dashboard />} />
                 <Route path="enrollment-keys" element={<EnrollmentKeys />} />
                 <Route path="users" element={<Users />} />
                 <Route path="tenants" element={<Tenants />} />
