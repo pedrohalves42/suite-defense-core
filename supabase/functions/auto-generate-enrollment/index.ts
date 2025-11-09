@@ -76,13 +76,15 @@ Deno.serve(async (req) => {
       .from('user_roles')
       .select('tenant_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     console.log(`[${requestId}] User role result:`, { tenantId: userRole?.tenant_id, roleError: roleError?.message });
 
     if (!userRole?.tenant_id) {
       console.error(`[${requestId}] User tenant not found for user:`, user.id);
-      return new Response(JSON.stringify({ error: 'User tenant not found. Please contact support.' }), {
+      return new Response(JSON.stringify({ 
+        error: 'Sua conta ainda não está associada a um tenant. Peça a um administrador para criar um tenant e atribuir um papel, ou aceite um convite de tenant.' 
+      }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
