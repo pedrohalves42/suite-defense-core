@@ -1090,8 +1090,13 @@ const ServerDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <OnboardingTour
+        open={showOnboarding}
+        onClose={() => {}}
+        onComplete={completeOnboarding}
+      />
     </div>
-    </>
   );
 };
 
