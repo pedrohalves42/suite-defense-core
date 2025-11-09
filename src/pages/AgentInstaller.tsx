@@ -57,7 +57,7 @@ const AgentInstaller = () => {
     }
   };
 
-  const generateCredentials = async () => {
+  const generateCredentialsWithRetry = async (retryCount = 0): Promise<void> => {
     if (!agentName.trim()) {
       toast.error("Nome do agente é obrigatório");
       return;
@@ -77,12 +77,21 @@ const AgentInstaller = () => {
       setCurrentStep(2);
       toast.success("Credenciais geradas com sucesso!");
     } catch (error: any) {
+      // Retry logic for network errors
+      if (error.message?.includes('Failed to fetch') && retryCount < 2) {
+        console.log(`Retrying... Attempt ${retryCount + 1}/2`);
+        await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)));
+        return generateCredentialsWithRetry(retryCount + 1);
+      }
+      
       toast.error(error.message || "Erro ao gerar credenciais");
       console.error('Error generating credentials:', error);
     } finally {
       setIsGenerating(false);
     }
   };
+
+  const generateCredentials = () => generateCredentialsWithRetry(0);
 
   const windowsInstallScript = `# CyberShield Agent - Windows PowerShell Script com HMAC
 # Versão: 2.0 com autenticação HMAC e rate limiting
@@ -103,6 +112,14 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# Forçar TLS 1.2 para conexões HTTPS
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+# Normalizar ServerUrl removendo barra final
+if ($ServerUrl.EndsWith("/")) {
+    $ServerUrl = $ServerUrl.TrimEnd("/")
+}
 
 # Função para gerar assinatura HMAC
 function Get-HmacSignature {
@@ -125,23 +142,28 @@ function Invoke-SecureRequest {
         [string]$Body = ""
     )
     
-    $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-    $nonce = [guid]::NewGuid().ToString()
-    $payload = "\${timestamp}:\${nonce}:\${Body}"
-    $signature = Get-HmacSignature -Message $payload -Secret $HmacSecret
-    
-    $headers = @{
-        "X-Agent-Token" = $AgentToken
-        "X-HMAC-Signature" = $signature
-        "X-Timestamp" = $timestamp.ToString()
-        "X-Nonce" = $nonce
-        "Content-Type" = "application/json"
-    }
-    
-    if ($Method -eq "GET") {
-        return Invoke-RestMethod -Uri $Url -Method GET -Headers $headers -TimeoutSec 30
-    } else {
-        return Invoke-RestMethod -Uri $Url -Method POST -Headers $headers -Body $Body -TimeoutSec 30
+    try {
+        $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+        $nonce = [guid]::NewGuid().ToString()
+        $payload = "\${timestamp}:\${nonce}:\${Body}"
+        $signature = Get-HmacSignature -Message $payload -Secret $HmacSecret
+        
+        $headers = @{
+            "X-Agent-Token" = $AgentToken
+            "X-HMAC-Signature" = $signature
+            "X-Timestamp" = $timestamp.ToString()
+            "X-Nonce" = $nonce
+            "Content-Type" = "application/json"
+        }
+        
+        if ($Method -eq "GET") {
+            return Invoke-RestMethod -Uri $Url -Method GET -Headers $headers -TimeoutSec 30
+        } else {
+            return Invoke-RestMethod -Uri $Url -Method POST -Headers $headers -Body $Body -TimeoutSec 30
+        }
+    } catch {
+        Write-Host "[ERRO] Falha na requisição para $Url : $($_.Exception.Message)"
+        throw
     }
 }
 
@@ -151,7 +173,7 @@ function Poll-Jobs {
         $jobs = Invoke-SecureRequest -Url "$ServerUrl/functions/v1/poll-jobs"
         return $jobs
     } catch {
-        Write-Host "[ERRO] Falha ao fazer polling: $_"
+        Write-Host "[ERRO] Falha ao fazer polling: $($_.Exception.Message)"
         return @()
     }
 }
@@ -218,7 +240,7 @@ function Ack-Job {
         Write-Host "[INFO] Job $JobId confirmado"
         return $true
     } catch {
-        Write-Host "[ERRO] Falha ao confirmar job $JobId : $_"
+        Write-Host "[ERRO] Falha ao confirmar job $JobId : $($_.Exception.Message)"
         return $false
     }
 }
@@ -267,7 +289,7 @@ function Scan-File {
         
         return $result
     } catch {
-        Write-Host "[ERRO] Falha ao escanear arquivo: $_"
+        Write-Host "[ERRO] Falha ao escanear arquivo: $($_.Exception.Message)"
         return $null
     }
 }
@@ -354,6 +376,9 @@ HMAC_SECRET="${hmacSecret}"
 SERVER_URL="${SUPABASE_URL}"
 POLL_INTERVAL="\${1:-60}"
 
+# Normalizar BASE_URL removendo barra final
+BASE_URL="\${SERVER_URL%/}"
+
 # Função para gerar assinatura HMAC
 generate_hmac_signature() {
     local message="$1"
@@ -372,27 +397,40 @@ secure_request() {
     local payload="\${timestamp}:\${nonce}:\${body}"
     local signature=$(generate_hmac_signature "$payload" "$HMAC_SECRET")
     
+    local response
+    local http_code
+    
     if [ "$method" == "GET" ]; then
-        curl -s -X GET "$url" \\
+        response=$(curl -fSL --connect-timeout 5 --max-time 20 -w "\\n%{http_code}" -X GET "$url" \\
             -H "X-Agent-Token: $AGENT_TOKEN" \\
             -H "X-HMAC-Signature: $signature" \\
             -H "X-Timestamp: $timestamp" \\
             -H "X-Nonce: $nonce" \\
-            -H "Content-Type: application/json"
+            -H "Content-Type: application/json" 2>&1)
     else
-        curl -s -X POST "$url" \\
+        response=$(curl -fSL --connect-timeout 5 --max-time 20 -w "\\n%{http_code}" -X POST "$url" \\
             -H "X-Agent-Token: $AGENT_TOKEN" \\
             -H "X-HMAC-Signature: $signature" \\
             -H "X-Timestamp: $timestamp" \\
             -H "X-Nonce: $nonce" \\
             -H "Content-Type: application/json" \\
-            -d "$body"
+            -d "$body" 2>&1)
     fi
+    
+    http_code=$(echo "$response" | tail -n1)
+    body_response=$(echo "$response" | sed '$d')
+    
+    if [ "$http_code" -ge 400 ]; then
+        echo "[ERRO] HTTP $http_code: $body_response" >&2
+        return 1
+    fi
+    
+    echo "$body_response"
 }
 
 # Função para polling de jobs
 poll_jobs() {
-    secure_request "\${SERVER_URL}/functions/v1/poll-jobs" "GET"
+    secure_request "\${BASE_URL}/functions/v1/poll-jobs" "GET"
 }
 
 # Função para executar job
@@ -425,15 +463,15 @@ execute_job() {
 # Função para ACK do job
 ack_job() {
     local job_id="$1"
-    local url="\${SERVER_URL}/functions/v1/ack-job/\${job_id}"
+    local url="\${BASE_URL}/functions/v1/ack-job/\${job_id}"
     
-    local response=$(secure_request "$url" "POST")
+    local response=$(secure_request "$url" "POST" 2>&1)
     
     if echo "$response" | grep -q '"ok":true'; then
         echo "[INFO] Job $job_id confirmado"
         return 0
     else
-        echo "[ERRO] Falha ao confirmar job $job_id"
+        echo "[ERRO] Falha ao confirmar job $job_id: $response"
         return 1
     fi
 }
@@ -463,13 +501,13 @@ scan_file() {
 EOF
 )
     
-    local result=$(secure_request "\${SERVER_URL}/functions/v1/scan-virus" "POST" "$body")
+    local result=$(secure_request "\${BASE_URL}/functions/v1/scan-virus" "POST" "$body" 2>&1)
     
     if echo "$result" | grep -q '"isMalicious":true'; then
         echo "[ALERTA] Arquivo malicioso detectado!"
         echo "  Arquivo: $file_path"
         echo "  Hash: $file_hash"
-        echo "$result" | jq '.'
+        echo "$result" | jq '.' 2>/dev/null || echo "$result"
     else
         echo "[OK] Arquivo limpo: $file_path"
     fi
@@ -482,7 +520,7 @@ start_agent() {
     echo "==================================="
     echo "CyberShield Agent v2.0 - Iniciando"
     echo "==================================="
-    echo "Servidor: $SERVER_URL"
+    echo "Servidor: $BASE_URL"
     echo "Intervalo: $POLL_INTERVAL segundos"
     echo "HMAC: Habilitado"
     echo ""
@@ -611,9 +649,9 @@ start_agent
         </div>
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Instalador de Agente
+            Instalador de Agente de Monitoramento
           </h1>
-          <p className="text-sm text-muted-foreground">Configuração simplificada em 3 passos</p>
+          <p className="text-sm text-muted-foreground">Configure e instale o agente no seu servidor em 3 passos</p>
         </div>
       </div>
 
@@ -693,8 +731,11 @@ start_agent
           {currentStep === 2 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold mb-2">Passo 2: Download do Script</h2>
-                <p className="text-muted-foreground">Baixe e execute o instalador</p>
+                <h2 className="text-2xl font-bold mb-2">Passo 2: Download do Agente</h2>
+                <p className="text-muted-foreground">Baixe e execute o instalador no servidor que será monitorado</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Nota: Você está instalando o <strong>agente de monitoramento</strong> no seu servidor. O backend já está ativo.
+                </p>
               </div>
 
               <div className="max-w-2xl mx-auto">
