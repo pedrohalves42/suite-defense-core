@@ -27,6 +27,11 @@ interface Job {
   created_at: string;
   approved: boolean;
   payload: any;
+  scheduled_at?: string | null;
+  is_recurring?: boolean;
+  recurrence_pattern?: string | null;
+  next_run_at?: string | null;
+  last_run_at?: string | null;
 }
 
 const JobCreator = () => {
@@ -40,6 +45,10 @@ const JobCreator = () => {
   const [jobType, setJobType] = useState<string>("scan");
   const [payload, setPayload] = useState<string>("{}");
   const [approved, setApproved] = useState<boolean>(true);
+  const [isScheduled, setIsScheduled] = useState<boolean>(false);
+  const [scheduledAt, setScheduledAt] = useState<string>("");
+  const [isRecurring, setIsRecurring] = useState<boolean>(false);
+  const [recurrencePattern, setRecurrencePattern] = useState<string>("0 * * * *");
 
   useEffect(() => {
     loadData();
@@ -132,6 +141,16 @@ const JobCreator = () => {
       return;
     }
 
+    if (isScheduled && !scheduledAt) {
+      toast.error("Defina a data e hora do agendamento");
+      return;
+    }
+
+    if (isRecurring && !recurrencePattern) {
+      toast.error("Selecione um padrão de recorrência");
+      return;
+    }
+
     let parsedPayload;
     try {
       parsedPayload = JSON.parse(payload);
@@ -142,21 +161,36 @@ const JobCreator = () => {
 
     setLoading(true);
     try {
+      const requestBody: any = {
+        agentName: selectedAgent,
+        type: jobType,
+        payload: parsedPayload,
+        approved
+      };
+
+      if (isScheduled && scheduledAt) {
+        requestBody.scheduledAt = new Date(scheduledAt).toISOString();
+      }
+
+      if (isRecurring) {
+        requestBody.isRecurring = true;
+        requestBody.recurrencePattern = recurrencePattern;
+      }
+
       const { data, error } = await supabase.functions.invoke('create-job', {
-        body: {
-          agentName: selectedAgent,
-          type: jobType,
-          payload: parsedPayload,
-          approved
-        }
+        body: requestBody
       });
 
       if (error) throw error;
 
-      toast.success(`Job criado com sucesso! ID: ${data.id}`);
+      const jobTypeLabel = isRecurring ? 'Job recorrente' : isScheduled ? 'Job agendado' : 'Job';
+      toast.success(`${jobTypeLabel} criado com sucesso! ID: ${data.id}`);
       
       // Reset form
       setPayload(getJobTypeExamples(jobType));
+      setIsScheduled(false);
+      setScheduledAt("");
+      setIsRecurring(false);
       
       // Reload jobs
       loadJobs();
@@ -329,12 +363,90 @@ const JobCreator = () => {
                     </p>
                   </div>
 
+                  {/* Schedule Switch */}
+                  <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg border border-border">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="scheduled">Agendar para Depois</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Job será executado em uma data e hora específica
+                      </p>
+                    </div>
+                    <Switch
+                      id="scheduled"
+                      checked={isScheduled}
+                      onCheckedChange={(checked) => {
+                        setIsScheduled(checked);
+                        if (!checked) setScheduledAt("");
+                        if (checked) setIsRecurring(false); // Can't be both scheduled and recurring
+                      }}
+                    />
+                  </div>
+
+                  {/* Scheduled Date/Time */}
+                  {isScheduled && (
+                    <div className="space-y-2">
+                      <Label htmlFor="scheduledAt">Data e Hora</Label>
+                      <Input
+                        id="scheduledAt"
+                        type="datetime-local"
+                        value={scheduledAt}
+                        onChange={(e) => setScheduledAt(e.target.value)}
+                        min={new Date().toISOString().slice(0, 16)}
+                        className="font-mono"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Job será executado automaticamente neste horário
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Recurring Switch */}
+                  <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg border border-border">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="recurring">Job Recorrente</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Job será executado automaticamente em intervalos regulares
+                      </p>
+                    </div>
+                    <Switch
+                      id="recurring"
+                      checked={isRecurring}
+                      onCheckedChange={(checked) => {
+                        setIsRecurring(checked);
+                        if (checked) setIsScheduled(false); // Can't be both scheduled and recurring
+                      }}
+                    />
+                  </div>
+
+                  {/* Recurrence Pattern */}
+                  {isRecurring && (
+                    <div className="space-y-2">
+                      <Label htmlFor="recurrence">Padrão de Recorrência</Label>
+                      <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
+                        <SelectTrigger id="recurrence">
+                          <SelectValue placeholder="Selecione a frequência" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="*/5 * * * *">A cada 5 minutos</SelectItem>
+                          <SelectItem value="*/15 * * * *">A cada 15 minutos</SelectItem>
+                          <SelectItem value="*/30 * * * *">A cada 30 minutos</SelectItem>
+                          <SelectItem value="0 * * * *">A cada hora (no minuto :00)</SelectItem>
+                          <SelectItem value="0 0 * * *">Diariamente (meia-noite)</SelectItem>
+                          <SelectItem value="0 0 * * 0">Semanalmente (domingo meia-noite)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Primeira execução ocorrerá no próximo intervalo
+                      </p>
+                    </div>
+                  )}
+
                   {/* Approved Switch */}
                   <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg border border-border">
                     <div className="space-y-0.5">
                       <Label htmlFor="approved">Aprovação Automática</Label>
                       <p className="text-xs text-muted-foreground">
-                        Job será executado imediatamente sem aprovação manual
+                        Job será executado sem aprovação manual
                       </p>
                     </div>
                     <Switch
@@ -393,7 +505,7 @@ const JobCreator = () => {
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 space-y-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="font-mono">
                               {job.agent_name}
                             </Badge>
@@ -404,6 +516,17 @@ const JobCreator = () => {
                                 Aguardando aprovação
                               </Badge>
                             )}
+                            {job.scheduled_at && (
+                              <Badge variant="outline" className="bg-accent/20 text-accent border-accent/30">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Agendado
+                              </Badge>
+                            )}
+                            {job.is_recurring && (
+                              <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">
+                                🔁 Recorrente
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground font-mono">
                             ID: {job.id}
@@ -411,6 +534,21 @@ const JobCreator = () => {
                           <p className="text-xs text-muted-foreground">
                             Criado: {new Date(job.created_at).toLocaleString('pt-BR')}
                           </p>
+                          {job.scheduled_at && (
+                            <p className="text-xs text-accent">
+                              Execução agendada: {new Date(job.scheduled_at).toLocaleString('pt-BR')}
+                            </p>
+                          )}
+                          {job.is_recurring && job.next_run_at && (
+                            <p className="text-xs text-primary">
+                              Próxima execução: {new Date(job.next_run_at).toLocaleString('pt-BR')}
+                            </p>
+                          )}
+                          {job.is_recurring && job.last_run_at && (
+                            <p className="text-xs text-muted-foreground">
+                              Última execução: {new Date(job.last_run_at).toLocaleString('pt-BR')}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>

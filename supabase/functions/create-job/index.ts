@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
     const rawData = await req.json();
     const validatedData = CreateJobSchema.parse(rawData);
-    const { agentName, type, payload, approved } = validatedData;
+    const { agentName, type, payload, approved, scheduledAt, isRecurring, recurrencePattern } = validatedData;
 
     // Buscar tenant_id do usuário autenticado
     const { data: userRole } = await supabaseAdmin
@@ -69,19 +69,67 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
     }
 
-    const { data: job, error: insertError } = await supabaseAdmin.from('jobs').insert({ 
+    // Calculate next_run_at for recurring jobs
+    let nextRunAt = null;
+    if (isRecurring && recurrencePattern) {
+      const { data: nextRunData } = await supabaseAdmin.rpc('calculate_next_run', {
+        pattern: recurrencePattern,
+        from_time: new Date().toISOString()
+      });
+      nextRunAt = nextRunData;
+    }
+
+    // Prepare job data
+    const jobData: any = {
       agent_name: agentName, 
       type, 
       payload, 
       status: 'queued', 
       approved,
-      tenant_id: userRole.tenant_id
-    }).select().single();
+      tenant_id: userRole.tenant_id,
+      scheduled_at: scheduledAt || null,
+      is_recurring: isRecurring,
+      recurrence_pattern: recurrencePattern || null,
+      next_run_at: nextRunAt
+    };
+
+    const { data: job, error: insertError } = await supabaseAdmin
+      .from('jobs')
+      .insert(jobData)
+      .select()
+      .single();
+      
     if (insertError) throw insertError;
 
-    await createAuditLog({ supabase: supabaseAdmin, userId: user.id, action: 'job_created', resourceType: 'job', resourceId: job.id, details: { agent_name: agentName, type, approved }, request: req, success: true });
+    await createAuditLog({ 
+      supabase: supabaseAdmin, 
+      userId: user.id, 
+      action: 'job_created', 
+      resourceType: 'job', 
+      resourceId: job.id, 
+      details: { 
+        agent_name: agentName, 
+        type, 
+        approved,
+        scheduled_at: scheduledAt,
+        is_recurring: isRecurring,
+        recurrence_pattern: recurrencePattern
+      }, 
+      request: req, 
+      success: true 
+    });
 
-    return new Response(JSON.stringify({ id: job.id, type: job.type, agentName: job.agent_name }), { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    return new Response(
+      JSON.stringify({ 
+        id: job.id, 
+        type: job.type, 
+        agentName: job.agent_name,
+        scheduledAt: job.scheduled_at,
+        isRecurring: job.is_recurring,
+        nextRunAt: job.next_run_at
+      }), 
+      { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     return handleException(error, requestId, 'create-job');
   }

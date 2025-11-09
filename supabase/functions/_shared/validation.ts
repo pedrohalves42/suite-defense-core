@@ -31,7 +31,16 @@ export const CreateJobSchema = z.object({
   type: z.enum(['scan', 'update', 'report', 'config'], { errorMap: () => ({ message: 'Tipo de job inválido' }) }),
   payload: z.record(z.unknown()).optional(),
   approved: z.boolean().default(true),
-});
+  scheduledAt: z.string().datetime().optional(),
+  isRecurring: z.boolean().default(false),
+  recurrencePattern: z.enum(['*/5 * * * *', '*/15 * * * *', '*/30 * * * *', '0 * * * *', '0 0 * * *', '0 0 * * 0']).optional(),
+}).refine(
+  (data) => !data.isRecurring || (data.isRecurring && data.recurrencePattern),
+  {
+    message: 'Padrão de recorrência é obrigatório quando o job é recorrente',
+    path: ['recurrencePattern'],
+  }
+);
 
 export const UploadReportSchema = z.object({
   kind: z.string()
