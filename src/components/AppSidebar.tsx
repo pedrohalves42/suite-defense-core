@@ -29,6 +29,7 @@ export const AppSidebar = () => {
     { icon: Home, label: 'Dashboard', to: '/admin/dashboard', end: true },
     { icon: Users, label: 'Usuários', to: '/admin/users' },
     { icon: Package, label: 'Tenants', to: '/admin/tenants' },
+    { icon: Shield, label: 'Features', to: '/admin/features' },
     { icon: Key, label: 'Chaves', to: '/admin/enrollment-keys' },
     { icon: Mail, label: 'Convites', to: '/admin/invites' },
     { icon: ScrollText, label: 'Logs', to: '/admin/audit-logs' },
