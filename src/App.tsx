@@ -32,6 +32,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import ApiKeys from "./pages/admin/ApiKeys";
 import AgentMonitoring from "./pages/AgentMonitoring";
 import AgentManagement from "./pages/AgentManagement";
+import DataExport from "./pages/DataExport";
 import AcceptInvite from "./pages/AcceptInvite";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -67,6 +68,7 @@ const App = () => (
               <Route path="/agent-test" element={<AgentTest />} />
               <Route path="/monitoring" element={<AgentMonitoring />} />
               <Route path="/agents" element={<AgentManagement />} />
+              <Route path="/export" element={<DataExport />} />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLayout />}>
