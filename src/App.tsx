@@ -78,6 +78,8 @@ const App = () => (
                 <Route path="audit-logs" element={<AuditLogs />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
+
+              <Route path="/monitoring" element={<AgentMonitoring />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
