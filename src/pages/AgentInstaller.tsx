@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-const DOMAIN = "suite-defense-core.lovable.app";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 type Step = 1 | 2 | 3;
 
@@ -65,23 +65,12 @@ const AgentInstaller = () => {
 
     setIsGenerating(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const res = await fetch(`https://${DOMAIN}/functions/v1/auto-generate-enrollment`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({ agentName: agentName.trim() }),
+      const { data, error } = await supabase.functions.invoke('auto-generate-enrollment', {
+        body: { agentName: agentName.trim() }
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || "Falha ao gerar credenciais");
-      }
+      if (error) throw error;
 
-      const data = await res.json();
       setAgentToken(data.agentToken);
       setHmacSecret(data.hmacSecret);
       setEnrollmentKey(data.enrollmentKey);
@@ -89,6 +78,7 @@ const AgentInstaller = () => {
       toast.success("Credenciais geradas com sucesso!");
     } catch (error: any) {
       toast.error(error.message || "Erro ao gerar credenciais");
+      console.error('Error generating credentials:', error);
     } finally {
       setIsGenerating(false);
     }
@@ -106,7 +96,7 @@ param(
     [string]$HmacSecret = "${hmacSecret}",
     
     [Parameter(Mandatory=$false)]
-    [string]$ServerUrl = "https://${DOMAIN}",
+    [string]$ServerUrl = "${SUPABASE_URL}",
     
     [Parameter(Mandatory=$false)]
     [int]$PollInterval = 60
@@ -361,7 +351,7 @@ set -e
 # Parâmetros
 AGENT_TOKEN="${agentToken}"
 HMAC_SECRET="${hmacSecret}"
-SERVER_URL="https://${DOMAIN}"
+SERVER_URL="${SUPABASE_URL}"
 POLL_INTERVAL="\${1:-60}"
 
 # Função para gerar assinatura HMAC
