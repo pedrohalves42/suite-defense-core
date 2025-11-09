@@ -395,6 +395,59 @@ export type Database = {
         }
         Relationships: []
       }
+      quarantined_files: {
+        Row: {
+          agent_name: string
+          created_at: string
+          file_hash: string
+          file_path: string
+          id: string
+          quarantine_reason: string
+          quarantined_at: string
+          restored_at: string | null
+          restored_by: string | null
+          status: string
+          tenant_id: string
+          virus_scan_id: string | null
+        }
+        Insert: {
+          agent_name: string
+          created_at?: string
+          file_hash: string
+          file_path: string
+          id?: string
+          quarantine_reason: string
+          quarantined_at?: string
+          restored_at?: string | null
+          restored_by?: string | null
+          status?: string
+          tenant_id: string
+          virus_scan_id?: string | null
+        }
+        Update: {
+          agent_name?: string
+          created_at?: string
+          file_hash?: string
+          file_path?: string
+          id?: string
+          quarantine_reason?: string
+          quarantined_at?: string
+          restored_at?: string | null
+          restored_by?: string | null
+          status?: string
+          tenant_id?: string
+          virus_scan_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quarantined_files_virus_scan_id_fkey"
+            columns: ["virus_scan_id"]
+            isOneToOne: false
+            referencedRelation: "virus_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rate_limits: {
         Row: {
           blocked_until: string | null
