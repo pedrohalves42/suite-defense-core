@@ -4,7 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,7 +47,7 @@ const AgentInstaller = () => {
         const lastHeartbeat = new Date(data.last_heartbeat);
         const now = new Date();
         const diff = now.getTime() - lastHeartbeat.getTime();
-        setIsConnected(diff < 5 * 60 * 1000); // 5 minutes
+        setIsConnected(diff < 5 * 60 * 1000);
       }
     } catch (error) {
       console.error('Error checking connection:', error);
@@ -96,169 +95,119 @@ const AgentInstaller = () => {
   const generateCredentials = () => generateCredentialsWithRetry(0);
 
   const getWindowsInstallScript = () => {
-    return `# CyberShield Agent - Auto-Installer Windows
-# Execute como Administrador
-
+    const serverUrl = SUPABASE_URL.replace(/\/$/, '');
+    return `# CyberShield Agent Auto-Installer
 $AgentToken = "${agentToken}"
 $HmacSecret = "${hmacSecret}"
-$ServerUrl = "${SUPABASE_URL}".TrimEnd('/')
+$ServerUrl = "${serverUrl}"
 $AgentName = "${agentName}"
 
 Write-Host "Instalando CyberShield Agent..." -ForegroundColor Cyan
-
 $agentDir = "C:\\CyberShield"
 New-Item -ItemType Directory -Path $agentDir -Force | Out-Null
 
-# Criar script do agente
-@"
+$scriptContent = @'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-function Get-HmacSignature {
-    param([string]`$Message, [string]`$Secret)
-    `$hmacsha = New-Object System.Security.Cryptography.HMACSHA256
-    `$hmacsha.Key = [Text.Encoding]::UTF8.GetBytes(`$Secret)
-    `$signature = `$hmacsha.ComputeHash([Text.Encoding]::UTF8.GetBytes(`$Message))
-    return [System.BitConverter]::ToString(`$signature).Replace('-', '').ToLower()
+function Get-HmacSig { param($msg, $key)
+    $h = New-Object System.Security.Cryptography.HMACSHA256
+    $h.Key = [Text.Encoding]::UTF8.GetBytes($key)
+    $s = $h.ComputeHash([Text.Encoding]::UTF8.GetBytes($msg))
+    return [System.BitConverter]::ToString($s).Replace('-', '').ToLower()
 }
 
-function Invoke-SecureRequest {
-    param([string]`$Url, [string]`$Method = "GET", [string]`$Body = "")
-    `$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-    `$nonce = [guid]::NewGuid().ToString()
-    `$payload = "`${timestamp}:`${nonce}:`${Body}"
-    `$signature = Get-HmacSignature -Message `$payload -Secret "$HmacSecret"
-    
-    `$headers = @{
-        "X-Agent-Token" = "$AgentToken"
-        "X-HMAC-Signature" = `$signature
-        "X-Timestamp" = `$timestamp.ToString()
-        "X-Nonce" = `$nonce
-        "Content-Type" = "application/json"
-    }
-    
+function Invoke-Req { param($url, $method = "GET", $body = "")
+    $ts = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    $n = [guid]::NewGuid().ToString()
+    $p = "$ts:$n:$body"
+    $sig = Get-HmacSig $p "${hmacSecret}"
+    $h = @{ "X-Agent-Token" = "${agentToken}"; "X-HMAC-Signature" = $sig; "X-Timestamp" = $ts.ToString(); "X-Nonce" = $n; "Content-Type" = "application/json" }
     try {
-        if (`$Method -eq "GET") {
-            return Invoke-RestMethod -Uri `$Url -Method GET -Headers `$headers -TimeoutSec 30
-        } else {
-            return Invoke-RestMethod -Uri `$Url -Method POST -Headers `$headers -Body `$Body -TimeoutSec 30
-        }
-    } catch { return `$null }
+        if ($method -eq "GET") { return Invoke-RestMethod -Uri $url -Method GET -Headers $h -TimeoutSec 30 }
+        else { return Invoke-RestMethod -Uri $url -Method POST -Headers $h -Body $body -TimeoutSec 30 }
+    } catch { return $null }
 }
 
-Write-Host "[`$(Get-Date -Format 'HH:mm:ss')] Agente iniciado" -ForegroundColor Green
-
-while (`$true) {
+Write-Host "[$(Get-Date -Format 'HH:mm:ss')] Agente iniciado" -ForegroundColor Green
+while ($true) {
     try {
-        `$jobs = Invoke-SecureRequest -Url "$ServerUrl/functions/v1/poll-jobs"
-        
-        if (`$jobs -and `$jobs.Count -gt 0) {
-            foreach (`$job in `$jobs) {
-                Write-Host "[INFO] Processando job `$(`$job.id)" -ForegroundColor Yellow
-                
-                `$result = @{ status = "completed"; timestamp = (Get-Date).ToString("o") } | ConvertTo-Json
-                `$uploadBody = @{ jobId = `$job.id; agentName = "$AgentName"; result = `$result } | ConvertTo-Json
-                Invoke-SecureRequest -Url "$ServerUrl/functions/v1/upload-report" -Method POST -Body `$uploadBody | Out-Null
-                Invoke-SecureRequest -Url "$ServerUrl/functions/v1/ack-job/`$(`$job.id)" -Method POST | Out-Null
-                
-                Write-Host "[OK] Job concluído" -ForegroundColor Green
+        $jobs = Invoke-Req -url "${serverUrl}/functions/v1/poll-jobs"
+        if ($jobs -and $jobs.Count -gt 0) {
+            foreach ($job in $jobs) {
+                Write-Host "[INFO] Job $($job.id)" -ForegroundColor Yellow
+                $r = @{ status = "completed"; timestamp = (Get-Date).ToString("o") } | ConvertTo-Json
+                $ub = @{ jobId = $job.id; agentName = "${agentName}"; result = $r } | ConvertTo-Json
+                Invoke-Req -url "${serverUrl}/functions/v1/upload-report" -method POST -body $ub | Out-Null
+                Invoke-Req -url "${serverUrl}/functions/v1/ack-job/$($job.id)" -method POST | Out-Null
+                Write-Host "[OK] Concluido" -ForegroundColor Green
             }
         }
-        
         Start-Sleep -Seconds 60
-    } catch {
-        Start-Sleep -Seconds 10
-    }
+    } catch { Start-Sleep -Seconds 10 }
 }
-"@ | Out-File -FilePath "$agentDir\\agent.ps1" -Encoding UTF8
+'@
 
-# Criar tarefa agendada
+$scriptContent | Out-File -FilePath "$agentDir\\agent.ps1" -Encoding UTF8
+
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File \`"$agentDir\\agent.ps1\`""
 $trigger = New-ScheduledTaskTrigger -AtStartup
 $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
-
 Register-ScheduledTask -TaskName "CyberShieldAgent" -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
 Start-ScheduledTask -TaskName "CyberShieldAgent"
 
-Write-Host "Instalado com sucesso!" -ForegroundColor Green
-Write-Host "O agente está rodando em segundo plano."
-`;
+Write-Host "Instalado!" -ForegroundColor Green`;
   };
 
   const getLinuxInstallScript = () => {
+    const serverUrl = SUPABASE_URL.replace(/\/$/, '');
     return `#!/bin/bash
-# CyberShield Agent - Auto-Installer Linux
-
 set -e
-
-if [ "$EUID" -ne 0 ]; then 
-    echo "Execute como root: sudo bash install.sh"
-    exit 1
-fi
+if [ "$EUID" -ne 0 ]; then echo "Execute: sudo bash install.sh"; exit 1; fi
 
 echo "Instalando CyberShield Agent..."
-
-# Instalar dependências
 apt-get update && apt-get install -y curl jq 2>/dev/null || yum install -y curl jq 2>/dev/null || true
-
-# Criar diretório
 mkdir -p /opt/cybershield
 
-# Criar script
 cat > /opt/cybershield/agent.sh << 'EOF'
 #!/bin/bash
-
 AGENT_TOKEN="${agentToken}"
 HMAC_SECRET="${hmacSecret}"
-SERVER_URL="${SUPABASE_URL%/}"
+SERVER_URL="${serverUrl}"
 AGENT_NAME="${agentName}"
 
-generate_hmac() {
-    echo -n "$1" | openssl dgst -sha256 -hmac "$2" | awk '{print $2}'
-}
-
-secure_request() {
-    local url="$1"
-    local method="\${2:-GET}"
-    local body="\${3:-}"
-    
-    local timestamp=$(date +%s%3N)
-    local nonce=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen)
-    local signature=$(generate_hmac "\${timestamp}:\${nonce}:\${body}" "$HMAC_SECRET")
-    
+gen_hmac() { echo -n "$1" | openssl dgst -sha256 -hmac "$2" | awk '{print $2}'; }
+req() {
+    local url="$1" method="\${2:-GET}" body="\${3:-}"
+    local ts=$(date +%s%3N) n=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen)
+    local sig=$(gen_hmac "\${ts}:\${n}:\${body}" "$HMAC_SECRET")
     if [ "$method" == "GET" ]; then
-        curl -s -X GET "$url" -H "X-Agent-Token: $AGENT_TOKEN" -H "X-HMAC-Signature: $signature" -H "X-Timestamp: $timestamp" -H "X-Nonce: $nonce" -H "Content-Type: application/json"
+        curl -s -X GET "$url" -H "X-Agent-Token: $AGENT_TOKEN" -H "X-HMAC-Signature: $sig" -H "X-Timestamp: $ts" -H "X-Nonce: $n" -H "Content-Type: application/json"
     else
-        curl -s -X POST "$url" -H "X-Agent-Token: $AGENT_TOKEN" -H "X-HMAC-Signature: $signature" -H "X-Timestamp: $timestamp" -H "X-Nonce: $nonce" -H "Content-Type: application/json" -d "$body"
+        curl -s -X POST "$url" -H "X-Agent-Token: $AGENT_TOKEN" -H "X-HMAC-Signature: $sig" -H "X-Timestamp: $ts" -H "X-Nonce: $n" -H "Content-Type: application/json" -d "$body"
     fi
 }
 
 echo "[$(date '+%H:%M:%S')] Agente iniciado"
-
 while true; do
-    jobs=$(secure_request "$SERVER_URL/functions/v1/poll-jobs" "GET" 2>/dev/null)
-    
+    jobs=$(req "$SERVER_URL/functions/v1/poll-jobs" "GET" 2>/dev/null)
     if [ -n "$jobs" ] && [ "$jobs" != "[]" ]; then
         echo "$jobs" | jq -c '.[]' 2>/dev/null | while read -r job; do
-            job_id=$(echo "$job" | jq -r '.id')
-            echo "[INFO] Processando job $job_id"
-            
-            result='{"status":"completed","timestamp":"'$(date -Iseconds)'"}'
-            upload_body='{"jobId":"'$job_id'","agentName":"'$AGENT_NAME'","result":'$result'}'
-            secure_request "$SERVER_URL/functions/v1/upload-report" "POST" "$upload_body" >/dev/null 2>&1
-            secure_request "$SERVER_URL/functions/v1/ack-job/$job_id" "POST" >/dev/null 2>&1
-            
-            echo "[OK] Job concluído"
+            jid=$(echo "$job" | jq -r '.id')
+            echo "[INFO] Job $jid"
+            r='{"status":"completed","timestamp":"'$(date -Iseconds)'"}'
+            ub='{"jobId":"'$jid'","agentName":"'$AGENT_NAME'","result":'$r'}'
+            req "$SERVER_URL/functions/v1/upload-report" "POST" "$ub" >/dev/null 2>&1
+            req "$SERVER_URL/functions/v1/ack-job/$jid" "POST" >/dev/null 2>&1
+            echo "[OK] Concluido"
         done
     fi
-    
     sleep 60
 done
 EOF
 
 chmod +x /opt/cybershield/agent.sh
 
-# Criar serviço systemd
 cat > /etc/systemd/system/cybershield-agent.service << EOF
 [Unit]
 Description=CyberShield Agent
@@ -278,10 +227,7 @@ EOF
 systemctl daemon-reload
 systemctl enable cybershield-agent
 systemctl start cybershield-agent
-
-echo "Instalado com sucesso!"
-echo "Status: systemctl status cybershield-agent"
-`;
+echo "Instalado!"`;
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -304,7 +250,7 @@ echo "Status: systemctl status cybershield-agent"
 
   const StepIndicator = () => (
     <div className="flex justify-center items-center mb-8">
-      {([1, 2, 3] as Step[]).map((step, index) => (
+      {([1, 2, 3] as Step[]).map((step) => (
         <div key={step} className="flex items-center">
           <div
             className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
@@ -345,7 +291,6 @@ echo "Status: systemctl status cybershield-agent"
         <CardContent className="pt-6">
           <StepIndicator />
 
-          {/* Step 1: Configuração */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
@@ -410,7 +355,6 @@ echo "Status: systemctl status cybershield-agent"
             </div>
           )}
 
-          {/* Step 2: Download */}
           {currentStep === 2 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
@@ -495,7 +439,6 @@ echo "Status: systemctl status cybershield-agent"
             </div>
           )}
 
-          {/* Step 3: Verificação */}
           {currentStep === 3 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
