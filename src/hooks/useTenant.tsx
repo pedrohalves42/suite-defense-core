@@ -30,7 +30,7 @@ export const useTenant = () => {
           .from('user_roles')
           .select('tenant_id')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
         if (roleError) throw roleError;
 
@@ -40,7 +40,7 @@ export const useTenant = () => {
             .from('tenants')
             .select('*')
             .eq('id', userRole.tenant_id)
-            .single();
+            .maybeSingle();
 
           if (tenantError) throw tenantError;
           setTenant(tenantData);

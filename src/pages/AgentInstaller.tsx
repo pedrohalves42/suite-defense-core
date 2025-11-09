@@ -90,24 +90,28 @@ const AgentInstaller = () => {
       toast.success("Credenciais geradas com sucesso!");
     } catch (error: any) {
       console.error('[DEBUG] Full error:', error);
-      
       // Retry logic for network errors
-      if (error.message?.includes('Failed to fetch') && retryCount < 2) {
+      if (error?.message?.includes('Failed to fetch') && retryCount < 2) {
         console.log(`Retrying... Attempt ${retryCount + 1}/2`);
         await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)));
         return generateCredentialsWithRetry(retryCount + 1);
       }
-      
-      // More detailed error message
-      let errorMessage = "Erro ao gerar credenciais";
-      if (error.message?.includes('Unauthorized')) {
-        errorMessage = "Erro de autenticação. Por favor, faça login novamente.";
-      } else if (error.message?.includes('tenant')) {
-        errorMessage = "Erro ao identificar seu tenant. Por favor, contate o suporte.";
-      } else if (error.message) {
-        errorMessage = `Erro: ${error.message}`;
+
+      // Try to extract server-provided error message from the Edge Function
+      const serverMsg =
+        (error as any)?.context?.error ||
+        (error as any)?.context?.message ||
+        (error as any)?.cause?.message ||
+        undefined;
+
+      let errorMessage = serverMsg || 'Erro ao gerar credenciais';
+      if (/unauthorized|invalid token/i.test(errorMessage)) {
+        errorMessage = 'Erro de autenticação. Por favor, faça login novamente.';
       }
-      
+      if (/tenant/i.test(errorMessage)) {
+        errorMessage = 'Sua conta ainda não está associada a um tenant. Peça a um administrador para atribuir um papel ou aceite um convite.';
+      }
+
       toast.error(errorMessage);
       console.error('Error generating credentials:', error);
     } finally {
