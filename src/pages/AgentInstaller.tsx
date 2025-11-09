@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Package, Download, Copy, CheckCircle2, Terminal, Loader2, Wifi, WifiOff } from "lucide-react";
+import { Package, Download, Copy, CheckCircle2, Terminal, Loader2, Wifi, WifiOff, Play } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,55 +65,29 @@ const AgentInstaller = () => {
 
     setIsGenerating(true);
     try {
-      console.log('[DEBUG] Invoking auto-generate-enrollment with:', { agentName: agentName.trim() });
-      console.log('[DEBUG] User authenticated:', !!user);
-      
       const { data, error } = await supabase.functions.invoke('auto-generate-enrollment', {
         body: { agentName: agentName.trim() }
       });
 
-      console.log('[DEBUG] Response:', { data, error });
-
-      if (error) {
-        console.error('[DEBUG] Edge function error:', error);
-        throw error;
-      }
-
-      if (!data) {
-        throw new Error('Resposta vazia da função');
-      }
+      if (error) throw error;
+      if (!data) throw new Error('Resposta vazia da função');
 
       setAgentToken(data.agentToken);
       setHmacSecret(data.hmacSecret);
       setEnrollmentKey(data.enrollmentKey);
       setCurrentStep(2);
-      toast.success("Credenciais geradas com sucesso!");
+      toast.success("Instalador gerado com sucesso!");
     } catch (error: any) {
-      console.error('[DEBUG] Full error:', error);
-      // Retry logic for network errors
       if (error?.message?.includes('Failed to fetch') && retryCount < 2) {
-        console.log(`Retrying... Attempt ${retryCount + 1}/2`);
         await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)));
         return generateCredentialsWithRetry(retryCount + 1);
       }
 
-      // Try to extract server-provided error message from the Edge Function
-      const serverMsg =
-        (error as any)?.context?.error ||
-        (error as any)?.context?.message ||
-        (error as any)?.cause?.message ||
-        undefined;
-
-      let errorMessage = serverMsg || 'Erro ao gerar credenciais';
-      if (/unauthorized|invalid token/i.test(errorMessage)) {
+      let errorMessage = 'Erro ao gerar instalador';
+      if (/unauthorized|invalid token/i.test(error?.message)) {
         errorMessage = 'Erro de autenticação. Por favor, faça login novamente.';
       }
-      if (/tenant/i.test(errorMessage)) {
-        errorMessage = 'Sua conta ainda não está associada a um tenant. Peça a um administrador para atribuir um papel ou aceite um convite.';
-      }
-
       toast.error(errorMessage);
-      console.error('Error generating credentials:', error);
     } finally {
       setIsGenerating(false);
     }
@@ -121,535 +95,219 @@ const AgentInstaller = () => {
 
   const generateCredentials = () => generateCredentialsWithRetry(0);
 
-  const windowsInstallScript = `# CyberShield Agent - Windows PowerShell Script com HMAC
-# Versão: 2.0 com autenticação HMAC e rate limiting
+  const getWindowsInstallScript = () => {
+    return `# CyberShield Agent - Auto-Installer Windows
 # Execute como Administrador
 
-param(
-    [Parameter(Mandatory=$false)]
-    [string]$AgentToken = "${agentToken}",
-    
-    [Parameter(Mandatory=$false)]
-    [string]$HmacSecret = "${hmacSecret}",
-    
-    [Parameter(Mandatory=$false)]
-    [string]$ServerUrl = "${SUPABASE_URL}",
-    
-    [Parameter(Mandatory=$false)]
-    [int]$PollInterval = 60
-)
+$AgentToken = "${agentToken}"
+$HmacSecret = "${hmacSecret}"
+$ServerUrl = "${SUPABASE_URL}".TrimEnd('/')
+$AgentName = "${agentName}"
 
-$ErrorActionPreference = "Stop"
+Write-Host "Instalando CyberShield Agent..." -ForegroundColor Cyan
 
-# Forçar TLS 1.2 para conexões HTTPS
+$agentDir = "C:\\CyberShield"
+New-Item -ItemType Directory -Path $agentDir -Force | Out-Null
+
+# Criar script do agente
+@"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# Normalizar ServerUrl removendo barra final
-if ($ServerUrl.EndsWith("/")) {
-    $ServerUrl = $ServerUrl.TrimEnd("/")
-}
-
-# Função para gerar assinatura HMAC
 function Get-HmacSignature {
-    param(
-        [string]$Message,
-        [string]$Secret
-    )
-    
-    $hmacsha = New-Object System.Security.Cryptography.HMACSHA256
-    $hmacsha.Key = [Text.Encoding]::UTF8.GetBytes($Secret)
-    $signature = $hmacsha.ComputeHash([Text.Encoding]::UTF8.GetBytes($Message))
-    return [System.BitConverter]::ToString($signature).Replace('-', '').ToLower()
+    param([string]`$Message, [string]`$Secret)
+    `$hmacsha = New-Object System.Security.Cryptography.HMACSHA256
+    `$hmacsha.Key = [Text.Encoding]::UTF8.GetBytes(`$Secret)
+    `$signature = `$hmacsha.ComputeHash([Text.Encoding]::UTF8.GetBytes(`$Message))
+    return [System.BitConverter]::ToString(`$signature).Replace('-', '').ToLower()
 }
 
-# Função para fazer requisição com HMAC
 function Invoke-SecureRequest {
-    param(
-        [string]$Url,
-        [string]$Method = "GET",
-        [string]$Body = ""
-    )
+    param([string]`$Url, [string]`$Method = "GET", [string]`$Body = "")
+    `$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    `$nonce = [guid]::NewGuid().ToString()
+    `$payload = "`${timestamp}:`${nonce}:`${Body}"
+    `$signature = Get-HmacSignature -Message `$payload -Secret "$HmacSecret"
+    
+    `$headers = @{
+        "X-Agent-Token" = "$AgentToken"
+        "X-HMAC-Signature" = `$signature
+        "X-Timestamp" = `$timestamp.ToString()
+        "X-Nonce" = `$nonce
+        "Content-Type" = "application/json"
+    }
     
     try {
-        $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-        $nonce = [guid]::NewGuid().ToString()
-        $payload = "\${timestamp}:\${nonce}:\${Body}"
-        $signature = Get-HmacSignature -Message $payload -Secret $HmacSecret
-        
-        $headers = @{
-            "X-Agent-Token" = $AgentToken
-            "X-HMAC-Signature" = $signature
-            "X-Timestamp" = $timestamp.ToString()
-            "X-Nonce" = $nonce
-            "Content-Type" = "application/json"
-        }
-        
-        if ($Method -eq "GET") {
-            return Invoke-RestMethod -Uri $Url -Method GET -Headers $headers -TimeoutSec 30
+        if (`$Method -eq "GET") {
+            return Invoke-RestMethod -Uri `$Url -Method GET -Headers `$headers -TimeoutSec 30
         } else {
-            return Invoke-RestMethod -Uri $Url -Method POST -Headers $headers -Body $Body -TimeoutSec 30
+            return Invoke-RestMethod -Uri `$Url -Method POST -Headers `$headers -Body `$Body -TimeoutSec 30
         }
-    } catch {
-        Write-Host "[ERRO] Falha na requisição para $Url : $($_.Exception.Message)"
-        throw
-    }
+    } catch { return `$null }
 }
 
-# Função para polling de jobs
-function Poll-Jobs {
+Write-Host "[`$(Get-Date -Format 'HH:mm:ss')] Agente iniciado" -ForegroundColor Green
+
+while (`$true) {
     try {
-        $jobs = Invoke-SecureRequest -Url "$ServerUrl/functions/v1/poll-jobs"
-        return $jobs
-    } catch {
-        Write-Host "[ERRO] Falha ao fazer polling: $($_.Exception.Message)"
-        return @()
-    }
-}
-
-# Função para executar job
-function Execute-Job {
-    param($Job)
-    
-    Write-Host "[INFO] Executando job: $($Job.id) - Tipo: $($Job.type)"
-    
-    $result = $null
-    
-    switch ($Job.type) {
-        "scan" {
-            $result = @{
-                status = "completed"
-                data = @{
-                    timestamp = (Get-Date).ToString("o")
-                    type = "security_scan"
-                }
-            }
-        }
-        "update" {
-            $result = @{
-                status = "completed"
-                data = @{
-                    updated = $true
-                }
-            }
-        }
-        "report" {
-            $result = @{
-                status = "completed"
-                data = @{
-                    report_generated = $true
-                }
-            }
-        }
-        "config" {
-            $result = @{
-                status = "completed"
-                data = @{
-                    configured = $true
-                }
-            }
-        }
-        default {
-            $result = @{
-                status = "unknown_type"
-            }
-        }
-    }
-    
-    return $result
-}
-
-# Função para ACK do job
-function Ack-Job {
-    param([string]$JobId)
-    
-    try {
-        $url = "$ServerUrl/functions/v1/ack-job/$JobId"
-        $response = Invoke-SecureRequest -Url $url -Method POST
-        Write-Host "[INFO] Job $JobId confirmado"
-        return $true
-    } catch {
-        Write-Host "[ERRO] Falha ao confirmar job $JobId : $($_.Exception.Message)"
-        return $false
-    }
-}
-
-# Função para calcular hash SHA256
-function Get-FileHashSHA256 {
-    param([string]$FilePath)
-    
-    $hash = Get-FileHash -Path $FilePath -Algorithm SHA256
-    return $hash.Hash.ToLower()
-}
-
-# Função para scan de vírus
-function Scan-File {
-    param(
-        [string]$FilePath
-    )
-    
-    if (-not (Test-Path $FilePath)) {
-        Write-Host "[ERRO] Arquivo não encontrado: $FilePath"
-        return $null
-    }
-    
-    try {
-        $fileHash = Get-FileHashSHA256 -FilePath $FilePath
+        `$jobs = Invoke-SecureRequest -Url "$ServerUrl/functions/v1/poll-jobs"
         
-        $body = @{
-            filePath = $FilePath
-            fileHash = $fileHash
-        } | ConvertTo-Json
-        
-        $result = Invoke-SecureRequest \`
-            -Url "$ServerUrl/functions/v1/scan-virus" \`
-            -Method POST \`
-            -Body $body
-        
-        if ($result.isMalicious) {
-            Write-Host "[ALERTA] Arquivo malicioso detectado!"
-            Write-Host "  Arquivo: $FilePath"
-            Write-Host "  Hash: $fileHash"
-            Write-Host "  Detecções: $($result.positives)/$($result.totalScans)"
-            Write-Host "  Link: $($result.permalink)"
-        } else {
-            Write-Host "[OK] Arquivo limpo: $FilePath"
-        }
-        
-        return $result
-    } catch {
-        Write-Host "[ERRO] Falha ao escanear arquivo: $($_.Exception.Message)"
-        return $null
-    }
-}
-
-# Função principal
-function Start-Agent {
-    Write-Host "==================================="
-    Write-Host "CyberShield Agent v2.0 - Iniciando"
-    Write-Host "==================================="
-    Write-Host "Servidor: $ServerUrl"
-    Write-Host "Intervalo: $PollInterval segundos"
-    Write-Host "HMAC: Habilitado"
-    Write-Host ""
-    
-    while ($true) {
-        try {
-            # Polling de jobs
-            $jobs = Poll-Jobs
-            
-            if ($jobs -and $jobs.Count -gt 0) {
-                Write-Host "[INFO] $($jobs.Count) job(s) recebido(s)"
+        if (`$jobs -and `$jobs.Count -gt 0) {
+            foreach (`$job in `$jobs) {
+                Write-Host "[INFO] Processando job `$(`$job.id)" -ForegroundColor Yellow
                 
-                foreach ($job in $jobs) {
-                    # Executar job
-                    $result = Execute-Job -Job $job
-                    
-                    # Confirmar job
-                    Ack-Job -JobId $job.id
-                }
+                `$result = @{ status = "completed"; timestamp = (Get-Date).ToString("o") } | ConvertTo-Json
+                `$uploadBody = @{ jobId = `$job.id; agentName = "$AgentName"; result = `$result } | ConvertTo-Json
+                Invoke-SecureRequest -Url "$ServerUrl/functions/v1/upload-report" -Method POST -Body `$uploadBody | Out-Null
+                Invoke-SecureRequest -Url "$ServerUrl/functions/v1/ack-job/`$(`$job.id)" -Method POST | Out-Null
+                
+                Write-Host "[OK] Job concluído" -ForegroundColor Green
             }
-            
-            # Aguardar próximo polling
-            Start-Sleep -Seconds $PollInterval
-        } catch {
-            Write-Host "[ERRO] Erro no loop principal: $_"
-            Start-Sleep -Seconds 10
         }
+        
+        Start-Sleep -Seconds 60
+    } catch {
+        Start-Sleep -Seconds 10
     }
 }
+"@ | Out-File -FilePath "$agentDir\\agent.ps1" -Encoding UTF8
 
-# Instalar como serviço (opcional)
-function Install-Service {
-    $serviceName = "CyberShieldAgent"
-    $scriptPath = $MyInvocation.MyCommand.Path
-    
-    $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
-    
-    if ($service) {
-        Write-Host "Serviço já existe. Removendo..."
-        Stop-Service -Name $serviceName -Force
-        sc.exe delete $serviceName
-        Start-Sleep -Seconds 2
-    }
-    
-    Write-Host "Instalando serviço..."
-    
-    $params = "-AgentToken \`"$AgentToken\`" -HmacSecret \`"$HmacSecret\`" -ServerUrl \`"$ServerUrl\`" -PollInterval $PollInterval"
-    
-    New-Service -Name $serviceName \`
-        -BinaryPathName "powershell.exe -ExecutionPolicy Bypass -File \`"$scriptPath\`" $params" \`
-        -DisplayName "CyberShield Security Agent" \`
-        -Description "Agente de segurança CyberShield com autenticação HMAC" \`
-        -StartupType Automatic
-    
-    Start-Service -Name $serviceName
-    
-    Write-Host "Serviço instalado e iniciado com sucesso!"
-}
+# Criar tarefa agendada
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File \`"$agentDir\\agent.ps1\`""
+$trigger = New-ScheduledTaskTrigger -AtStartup
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable
 
-# Iniciar agente
-Start-Agent
+Register-ScheduledTask -TaskName "CyberShieldAgent" -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+Start-ScheduledTask -TaskName "CyberShieldAgent"
+
+Write-Host "Instalado com sucesso!" -ForegroundColor Green
+Write-Host "O agente está rodando em segundo plano."
 `;
+  };
 
-  const linuxInstallScript = `#!/bin/bash
-# CyberShield Agent - Linux Bash Script com HMAC
-# Versão: 2.0 com autenticação HMAC e rate limiting
-# Execute com sudo
+  const getLinuxInstallScript = () => {
+    return `#!/bin/bash
+# CyberShield Agent - Auto-Installer Linux
 
 set -e
 
-# Parâmetros
+if [ "$EUID" -ne 0 ]; then 
+    echo "Execute como root: sudo bash install.sh"
+    exit 1
+fi
+
+echo "Instalando CyberShield Agent..."
+
+# Instalar dependências
+apt-get update && apt-get install -y curl jq 2>/dev/null || yum install -y curl jq 2>/dev/null || true
+
+# Criar diretório
+mkdir -p /opt/cybershield
+
+# Criar script
+cat > /opt/cybershield/agent.sh << 'EOF'
+#!/bin/bash
+
 AGENT_TOKEN="${agentToken}"
 HMAC_SECRET="${hmacSecret}"
-SERVER_URL="${SUPABASE_URL}"
-POLL_INTERVAL="\${1:-60}"
+SERVER_URL="${SUPABASE_URL%/}"
+AGENT_NAME="${agentName}"
 
-# Normalizar BASE_URL removendo barra final
-BASE_URL="\${SERVER_URL%/}"
-
-# Função para gerar assinatura HMAC
-generate_hmac_signature() {
-    local message="$1"
-    local secret="$2"
-    echo -n "$message" | openssl dgst -sha256 -hmac "$secret" | awk '{print $2}'
+generate_hmac() {
+    echo -n "$1" | openssl dgst -sha256 -hmac "$2" | awk '{print $2}'
 }
 
-# Função para fazer requisição com HMAC
 secure_request() {
     local url="$1"
     local method="\${2:-GET}"
     local body="\${3:-}"
     
     local timestamp=$(date +%s%3N)
-    local nonce=$(cat /proc/sys/kernel/random/uuid)
-    local payload="\${timestamp}:\${nonce}:\${body}"
-    local signature=$(generate_hmac_signature "$payload" "$HMAC_SECRET")
-    
-    local response
-    local http_code
+    local nonce=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen)
+    local signature=$(generate_hmac "\${timestamp}:\${nonce}:\${body}" "$HMAC_SECRET")
     
     if [ "$method" == "GET" ]; then
-        response=$(curl -fSL --connect-timeout 5 --max-time 20 -w "\\n%{http_code}" -X GET "$url" \\
-            -H "X-Agent-Token: $AGENT_TOKEN" \\
-            -H "X-HMAC-Signature: $signature" \\
-            -H "X-Timestamp: $timestamp" \\
-            -H "X-Nonce: $nonce" \\
-            -H "Content-Type: application/json" 2>&1)
+        curl -s -X GET "$url" -H "X-Agent-Token: $AGENT_TOKEN" -H "X-HMAC-Signature: $signature" -H "X-Timestamp: $timestamp" -H "X-Nonce: $nonce" -H "Content-Type: application/json"
     else
-        response=$(curl -fSL --connect-timeout 5 --max-time 20 -w "\\n%{http_code}" -X POST "$url" \\
-            -H "X-Agent-Token: $AGENT_TOKEN" \\
-            -H "X-HMAC-Signature: $signature" \\
-            -H "X-Timestamp: $timestamp" \\
-            -H "X-Nonce: $nonce" \\
-            -H "Content-Type: application/json" \\
-            -d "$body" 2>&1)
-    fi
-    
-    http_code=$(echo "$response" | tail -n1)
-    body_response=$(echo "$response" | sed '$d')
-    
-    if [ "$http_code" -ge 400 ]; then
-        echo "[ERRO] HTTP $http_code: $body_response" >&2
-        return 1
-    fi
-    
-    echo "$body_response"
-}
-
-# Função para polling de jobs
-poll_jobs() {
-    secure_request "\${BASE_URL}/functions/v1/poll-jobs" "GET"
-}
-
-# Função para executar job
-execute_job() {
-    local job_id="$1"
-    local job_type="$2"
-    local job_payload="$3"
-    
-    echo "[INFO] Executando job: $job_id - Tipo: $job_type"
-    
-    case "$job_type" in
-        "scan")
-            echo "[INFO] Executando scan de segurança..."
-            ;;
-        "update")
-            echo "[INFO] Executando atualização..."
-            ;;
-        "report")
-            echo "[INFO] Gerando relatório..."
-            ;;
-        "config")
-            echo "[INFO] Aplicando configuração..."
-            ;;
-        *)
-            echo "[WARN] Tipo de job desconhecido: $job_type"
-            ;;
-    esac
-}
-
-# Função para ACK do job
-ack_job() {
-    local job_id="$1"
-    local url="\${BASE_URL}/functions/v1/ack-job/\${job_id}"
-    
-    local response=$(secure_request "$url" "POST" 2>&1)
-    
-    if echo "$response" | grep -q '"ok":true'; then
-        echo "[INFO] Job $job_id confirmado"
-        return 0
-    else
-        echo "[ERRO] Falha ao confirmar job $job_id: $response"
-        return 1
+        curl -s -X POST "$url" -H "X-Agent-Token: $AGENT_TOKEN" -H "X-HMAC-Signature: $signature" -H "X-Timestamp: $timestamp" -H "X-Nonce: $nonce" -H "Content-Type: application/json" -d "$body"
     fi
 }
 
-# Função para calcular hash SHA256
-get_file_hash() {
-    local file_path="$1"
-    sha256sum "$file_path" | awk '{print $1}'
-}
+echo "[$(date '+%H:%M:%S')] Agente iniciado"
 
-# Função para scan de vírus
-scan_file() {
-    local file_path="$1"
+while true; do
+    jobs=$(secure_request "$SERVER_URL/functions/v1/poll-jobs" "GET" 2>/dev/null)
     
-    if [ ! -f "$file_path" ]; then
-        echo "[ERRO] Arquivo não encontrado: $file_path"
-        return 1
-    fi
-    
-    local file_hash=$(get_file_hash "$file_path")
-    
-    local body=$(cat <<EOF
-{
-    "filePath": "$file_path",
-    "fileHash": "$file_hash"
-}
-EOF
-)
-    
-    local result=$(secure_request "\${BASE_URL}/functions/v1/scan-virus" "POST" "$body" 2>&1)
-    
-    if echo "$result" | grep -q '"isMalicious":true'; then
-        echo "[ALERTA] Arquivo malicioso detectado!"
-        echo "  Arquivo: $file_path"
-        echo "  Hash: $file_hash"
-        echo "$result" | jq '.' 2>/dev/null || echo "$result"
-    else
-        echo "[OK] Arquivo limpo: $file_path"
-    fi
-    
-    echo "$result"
-}
-
-# Função principal
-start_agent() {
-    echo "==================================="
-    echo "CyberShield Agent v2.0 - Iniciando"
-    echo "==================================="
-    echo "Servidor: $BASE_URL"
-    echo "Intervalo: $POLL_INTERVAL segundos"
-    echo "HMAC: Habilitado"
-    echo ""
-    
-    while true; do
-        # Polling de jobs
-        jobs=$(poll_jobs 2>/dev/null || echo "[]")
-        
-        job_count=$(echo "$jobs" | jq 'length' 2>/dev/null || echo "0")
-        
-        if [ "$job_count" -gt 0 ]; then
-            echo "[INFO] $job_count job(s) recebido(s)"
+    if [ -n "$jobs" ] && [ "$jobs" != "[]" ]; then
+        echo "$jobs" | jq -c '.[]' 2>/dev/null | while read -r job; do
+            job_id=$(echo "$job" | jq -r '.id')
+            echo "[INFO] Processando job $job_id"
             
-            echo "$jobs" | jq -c '.[]' | while read -r job; do
-                job_id=$(echo "$job" | jq -r '.id')
-                job_type=$(echo "$job" | jq -r '.type')
-                job_payload=$(echo "$job" | jq -r '.payload // "{}"')
-                
-                # Executar job
-                execute_job "$job_id" "$job_type" "$job_payload"
-                
-                # Confirmar job
-                ack_job "$job_id"
-            done
-        fi
-        
-        # Aguardar próximo polling
-        sleep $POLL_INTERVAL
-    done
-}
+            result='{"status":"completed","timestamp":"'$(date -Iseconds)'"}'
+            upload_body='{"jobId":"'$job_id'","agentName":"'$AGENT_NAME'","result":'$result'}'
+            secure_request "$SERVER_URL/functions/v1/upload-report" "POST" "$upload_body" >/dev/null 2>&1
+            secure_request "$SERVER_URL/functions/v1/ack-job/$job_id" "POST" >/dev/null 2>&1
+            
+            echo "[OK] Job concluído"
+        done
+    fi
+    
+    sleep 60
+done
+EOF
 
-# Instalar como systemd service
-install_service() {
-    local service_name="cybershield-agent"
-    local script_path="$(readlink -f "$0")"
-    
-    echo "Instalando serviço systemd..."
-    
-    cat > /etc/systemd/system/\${service_name}.service <<EOF
+chmod +x /opt/cybershield/agent.sh
+
+# Criar serviço systemd
+cat > /etc/systemd/system/cybershield-agent.service << EOF
 [Unit]
-Description=CyberShield Security Agent
+Description=CyberShield Agent
 After=network.target
 
 [Service]
 Type=simple
 User=root
-ExecStart=/bin/bash "$script_path" "$AGENT_TOKEN" "$HMAC_SECRET" "$SERVER_URL" $POLL_INTERVAL
+ExecStart=/bin/bash /opt/cybershield/agent.sh
 Restart=always
 RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
 EOF
-    
-    systemctl daemon-reload
-    systemctl enable $service_name
-    systemctl start $service_name
-    
-    echo "Serviço instalado e iniciado com sucesso!"
-    systemctl status $service_name
-}
 
-# Verificar dependências
-if ! command -v jq &> /dev/null; then
-    echo "[WARN] jq não encontrado, instalando..."
-    if command -v apt-get &> /dev/null; then
-        apt-get update && apt-get install -y jq
-    elif command -v yum &> /dev/null; then
-        yum install -y jq
-    fi
-fi
+systemctl daemon-reload
+systemctl enable cybershield-agent
+systemctl start cybershield-agent
 
-# Iniciar agente
-start_agent
+echo "Instalado com sucesso!"
+echo "Status: systemctl status cybershield-agent"
 `;
+  };
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copiado!`);
   };
 
-  const downloadScript = (content: string, filename: string) => {
-    const mimeType = filename.endsWith('.ps1') ? 'application/x-powershell' : 'application/x-sh';
-    const blob = new Blob([content], { type: mimeType });
+  const downloadScript = (script: string, filename: string) => {
+    const blob = new Blob([script], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success("Script baixado!");
+    toast.success(`${filename} baixado!`);
   };
 
   const StepIndicator = () => (
-    <div className="flex items-center justify-center gap-4 mb-8">
-      {[1, 2, 3].map((step) => (
+    <div className="flex justify-center items-center mb-8">
+      {([1, 2, 3] as Step[]).map((step, index) => (
         <div key={step} className="flex items-center">
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
+            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
               currentStep >= step
                 ? "bg-primary text-primary-foreground"
                 : "bg-secondary text-muted-foreground"
@@ -672,18 +330,18 @@ start_agent
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
-          <Package className="h-8 w-8 text-primary animate-pulse-glow" />
+        <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20">
+          <Package className="h-8 w-8 text-primary" />
         </div>
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Instalador de Agente de Monitoramento
+            Instalador Simplificado de Agente
           </h1>
-          <p className="text-sm text-muted-foreground">Configure e instale o agente no seu servidor em 3 passos</p>
+          <p className="text-sm text-muted-foreground">Instale o agente com 1 clique - tudo automático!</p>
         </div>
       </div>
 
-      <Card className="bg-gradient-card border-primary/20">
+      <Card>
         <CardContent className="pt-6">
           <StepIndicator />
 
@@ -691,8 +349,8 @@ start_agent
           {currentStep === 1 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold mb-2">Passo 1: Configuração</h2>
-                <p className="text-muted-foreground">Configure o nome do agente e plataforma</p>
+                <h2 className="text-2xl font-bold mb-2">Configure o Agente</h2>
+                <p className="text-muted-foreground">Nome e plataforma</p>
               </div>
 
               <div className="max-w-md mx-auto space-y-4">
@@ -705,9 +363,6 @@ start_agent
                     onChange={(e) => setAgentName(e.target.value.toUpperCase())}
                     className="text-center font-mono text-lg"
                   />
-                  <p className="text-xs text-muted-foreground text-center">
-                    Use apenas letras maiúsculas, números e hífens
-                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -759,91 +414,81 @@ start_agent
           {currentStep === 2 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold mb-2">Passo 2: Download do Agente</h2>
-                <p className="text-muted-foreground">Baixe e execute o instalador no servidor que será monitorado</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Nota: Você está instalando o <strong>agente de monitoramento</strong> no seu servidor. O backend já está ativo.
-                </p>
+                <h2 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
+                  <CheckCircle2 className="h-6 w-6 text-green-500" />
+                  Instalador Pronto!
+                </h2>
+                <p className="text-muted-foreground">Baixe e execute o script - tudo automático</p>
               </div>
 
-              <div className="max-w-2xl mx-auto">
-                <Tabs value={platform} onValueChange={(v) => setPlatform(v as "windows" | "linux")}>
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="windows">Windows</TabsTrigger>
-                    <TabsTrigger value="linux">Linux</TabsTrigger>
-                  </TabsList>
+              <div className="max-w-2xl mx-auto space-y-6">
+                <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 rounded-lg border-2 border-primary/20">
+                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                    <Play className="w-5 h-5 text-primary" />
+                    Instalação Automática
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    O instalador vai automaticamente:
+                  </p>
+                  <ul className="text-sm space-y-1 mb-4 ml-4">
+                    <li>✓ Criar diretório e configurar credenciais</li>
+                    <li>✓ Instalar como serviço/tarefa agendada</li>
+                    <li>✓ Iniciar agente em segundo plano</li>
+                    <li>✓ Configurar reinício automático</li>
+                  </ul>
+                  
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1"
+                      size="lg"
+                      onClick={() => downloadScript(
+                        platform === "windows" ? getWindowsInstallScript() : getLinuxInstallScript(),
+                        platform === "windows" ? "install.ps1" : "install.sh"
+                      )}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Baixar Instalador {platform === "windows" ? "Windows" : "Linux"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={() => copyToClipboard(
+                        platform === "windows" ? getWindowsInstallScript() : getLinuxInstallScript(),
+                        "Script"
+                      )}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
 
-                  <TabsContent value="windows" className="space-y-4 mt-4">
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => downloadScript(windowsInstallScript, `install-${agentName}.ps1`)}
-                        className="flex-1 h-14"
-                        size="lg"
-                      >
-                        <Download className="mr-2 h-5 w-5" />
-                        Baixar Script Windows
-                      </Button>
-                      <Button
-                        onClick={() => copyToClipboard(windowsInstallScript, "Script")}
-                        variant="outline"
-                        size="lg"
-                      >
-                        <Copy className="h-5 w-5" />
-                      </Button>
-                    </div>
+                <div className="bg-muted/50 p-4 rounded-lg border">
+                  <h4 className="font-medium mb-3 flex items-center gap-2 text-sm">
+                    <Terminal className="w-4 h-4" />
+                    Como Executar
+                  </h4>
+                  
+                  {platform === "windows" ? (
+                    <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                      <li>Baixe o arquivo <code className="bg-background px-2 py-1 rounded">install.ps1</code></li>
+                      <li>Clique com botão direito → <strong>Executar com PowerShell</strong></li>
+                      <li>Pronto! O agente roda em segundo plano automaticamente</li>
+                    </ol>
+                  ) : (
+                    <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                      <li>Baixe o arquivo <code className="bg-background px-2 py-1 rounded">install.sh</code></li>
+                      <li>Execute: <code className="bg-background px-2 py-1 rounded">sudo bash install.sh</code></li>
+                      <li>Pronto! O agente roda como serviço systemd</li>
+                    </ol>
+                  )}
+                </div>
 
-                    <div className="bg-warning/10 border border-warning/30 rounded-lg p-4">
-                      <p className="font-semibold mb-2">📋 Instruções:</p>
-                      <ol className="text-sm space-y-1 list-decimal list-inside">
-                        <li>Baixe o script acima</li>
-                        <li>Clique com botão direito → "Executar como Administrador"</li>
-                        <li>Aguarde a instalação concluir</li>
-                        <li>Clique em "Verificar Conexão" no próximo passo</li>
-                      </ol>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="linux" className="space-y-4 mt-4">
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={() => downloadScript(linuxInstallScript, `install-${agentName}.sh`)}
-                        className="flex-1 h-14"
-                        size="lg"
-                      >
-                        <Download className="mr-2 h-5 w-5" />
-                        Baixar Script Linux
-                      </Button>
-                      <Button
-                        onClick={() => copyToClipboard(linuxInstallScript, "Script")}
-                        variant="outline"
-                        size="lg"
-                      >
-                        <Copy className="h-5 w-5" />
-                      </Button>
-                    </div>
-
-                    <div className="bg-warning/10 border border-warning/30 rounded-lg p-4">
-                      <p className="font-semibold mb-2">📋 Instruções:</p>
-                      <ol className="text-sm space-y-1 list-decimal list-inside">
-                        <li>Baixe o script acima</li>
-                        <li>Torne executável: chmod +x install-{agentName}.sh</li>
-                        <li>Execute como root: sudo ./install-{agentName}.sh</li>
-                        <li>Clique em "Verificar Conexão" no próximo passo</li>
-                      </ol>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-
-                <div className="flex gap-3 mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => setCurrentStep(1)}
-                    className="flex-1"
-                  >
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setCurrentStep(1)} className="flex-1">
                     ← Voltar
                   </Button>
                   <Button onClick={() => setCurrentStep(3)} className="flex-1">
-                    Próximo: Verificar Conexão →
+                    Verificar Conexão →
                   </Button>
                 </div>
               </div>
@@ -854,85 +499,53 @@ start_agent
           {currentStep === 3 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold mb-2">Passo 3: Verificação de Conexão</h2>
-                <p className="text-muted-foreground">Aguardando o agente se conectar...</p>
+                <h2 className="text-2xl font-bold mb-2">Verificando Conexão</h2>
+                <p className="text-muted-foreground">Aguardando o agente conectar...</p>
               </div>
 
               <div className="max-w-md mx-auto">
-                <Card className={isConnected ? "border-success" : "border-warning"}>
+                <Card className={isConnected ? "border-green-500 bg-green-500/5" : "border-orange-500 bg-orange-500/5"}>
                   <CardContent className="pt-6">
-                    <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="flex flex-col items-center gap-4">
                       {isConnected ? (
                         <>
-                          <div className="p-4 bg-success/10 rounded-full">
-                            <Wifi className="h-12 w-12 text-success" />
+                          <Wifi className="h-16 w-16 text-green-500" />
+                          <div className="text-center">
+                            <h3 className="text-xl font-bold text-green-500">Conectado!</h3>
+                            <p className="text-sm text-muted-foreground">O agente está online e funcionando</p>
                           </div>
-                          <div>
-                            <h3 className="text-xl font-bold text-success mb-1">
-                              ✓ Agente Conectado!
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                              O agente {agentName} está online e funcionando
-                            </p>
-                          </div>
-                          <Button
-                            onClick={() => {
-                              setCurrentStep(1);
-                              setAgentName("AGENT-01");
-                              setAgentToken("");
-                              setHmacSecret("");
-                              setEnrollmentKey("");
-                              setIsConnected(false);
-                            }}
-                            className="w-full"
-                          >
-                            Configurar Novo Agente
-                          </Button>
                         </>
                       ) : (
                         <>
-                          <div className="p-4 bg-warning/10 rounded-full">
-                            {checkingConnection ? (
-                              <Loader2 className="h-12 w-12 text-warning animate-spin" />
-                            ) : (
-                              <WifiOff className="h-12 w-12 text-warning" />
-                            )}
-                          </div>
-                          <div>
-                            <h3 className="text-xl font-bold mb-1">
-                              Aguardando Conexão...
-                            </h3>
+                          <WifiOff className="h-16 w-16 text-orange-500" />
+                          <div className="text-center">
+                            <h3 className="text-xl font-bold text-orange-500">Aguardando Conexão</h3>
                             <p className="text-sm text-muted-foreground">
-                              Execute o script de instalação no servidor
+                              Execute o instalador no servidor para conectar
                             </p>
-                          </div>
-                          <Button
-                            onClick={checkAgentConnection}
-                            variant="outline"
-                            className="w-full"
-                            disabled={checkingConnection}
-                          >
-                            {checkingConnection ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Verificando...
-                              </>
-                            ) : (
-                              "Verificar Novamente"
+                            {checkingConnection && (
+                              <Loader2 className="h-6 w-6 animate-spin mx-auto mt-3" />
                             )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            onClick={() => setCurrentStep(2)}
-                            className="w-full"
-                          >
-                            ← Voltar ao Download
-                          </Button>
+                          </div>
                         </>
                       )}
                     </div>
                   </CardContent>
                 </Card>
+
+                <div className="mt-6 space-y-2">
+                  <Button
+                    variant="outline"
+                    onClick={checkAgentConnection}
+                    disabled={checkingConnection}
+                    className="w-full"
+                  >
+                    {checkingConnection ? "Verificando..." : "Verificar Agora"}
+                  </Button>
+                  <Button variant="ghost" onClick={() => setCurrentStep(1)} className="w-full">
+                    Voltar ao Início
+                  </Button>
+                </div>
               </div>
             </div>
           )}
