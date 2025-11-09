@@ -25,6 +25,7 @@ import AuditLogs from "./pages/admin/AuditLogs";
 import Invites from "./pages/admin/Invites";
 import AcceptInvite from "./pages/AcceptInvite";
 import VirusScans from "./pages/VirusScans";
+import AgentTest from "./pages/AgentTest";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 
@@ -55,6 +56,7 @@ const App = () => (
               <Route path="/jobs" element={<JobCreator />} />
               <Route path="/installer" element={<AgentInstaller />} />
               <Route path="/virus-scans" element={<VirusScans />} />
+              <Route path="/agent-test" element={<AgentTest />} />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLayout />}>

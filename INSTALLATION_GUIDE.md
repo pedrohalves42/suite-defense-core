@@ -40,6 +40,35 @@ O CyberShield é um sistema de segurança distribuído composto por:
 
 ## 💻 Requisitos do Sistema
 
+### ✅ Checklist de Pré-Requisitos
+
+Antes de iniciar a instalação, verifique:
+
+**Para Windows:**
+- [ ] PowerShell 5.1 ou superior instalado
+- [ ] Executar como Administrador
+- [ ] .NET Framework 4.7.2 ou superior
+- [ ] Windows Defender ativo (para funcionalidades de antivírus)
+- [ ] Relógio do sistema sincronizado (importante para HMAC)
+- [ ] Portas de firewall liberadas (8080 para servidor, 443 para HTTPS)
+- [ ] Proxy/VPN configurado corretamente (se aplicável)
+
+**Para Linux:**
+- [ ] systemd instalado e funcionando
+- [ ] Permissões de root/sudo disponíveis
+- [ ] Relógio do sistema sincronizado via NTP
+- [ ] SELinux/AppArmor configurado corretamente
+- [ ] Portas de firewall liberadas
+
+**Verificar Sincronização de Relógio (CRÍTICO para HMAC):**
+```powershell
+# Windows
+w32tm /query /status
+
+# Linux
+timedatectl status
+```
+
 ### Servidor Central
 
 **Windows:**
@@ -473,22 +502,119 @@ CYBERSHIELD_DEBUG=false
 **Soluções:**
 
 1. **Verificar token de agente:**
-   - Token correto no `config.json`?
-   - Token ainda válido?
+   - Token correto no script?
+   - Token ainda válido (não expirado)?
 
-2. **Verificar conectividade:**
-   ```bash
+2. **Verificar conectividade de rede:**
+   ```powershell
+   # Windows - Teste básico de conectividade
+   Test-NetConnection suite-defense-core.lovable.app -Port 443
+   
+   # Teste com curl
    curl -H "X-Agent-Token: [seu-token]" https://suite-defense-core.lovable.app/functions/v1/poll-jobs
    ```
 
-3. **Verificar logs:**
+3. **Verificar sincronização de relógio (CRÍTICO):**
+   ```powershell
+   # Windows
+   w32tm /query /status
+   # Se dessincronizado:
+   w32tm /resync
+   
+   # Linux
+   timedatectl status
+   # Se dessincronizado:
+   sudo timedatectl set-ntp true
+   ```
+
+4. **Verificar firewall e proxy:**
+   ```powershell
+   # Windows - Verificar se porta 443 está bloqueada
+   Test-NetConnection suite-defense-core.lovable.app -Port 443
+   
+   # Verificar configurações de proxy
+   netsh winhttp show proxy
+   ```
+
+5. **Verificar logs detalhados:**
    ```powershell
    # Windows
    Get-Content "C:\Program Files\CyberShield\Agent\logs\agent_*.log" -Tail 50
    
    # Linux
-   sudo journalctl -u cybershield-agent -n 50
+   sudo journalctl -u cybershield-agent -n 50 -f
    ```
+
+6. **Executar health check manual:**
+   ```powershell
+   # No script do agent, a função Test-SystemHealth mostra:
+   # - Versão do PowerShell
+   # - Versão do SO
+   # - Conectividade com servidor
+   # - Latência da conexão
+   ```
+
+#### Problema: Erros de autenticação HMAC
+
+**Sintomas:**
+- Logs mostram "Invalid HMAC signature"
+- "Timestamp too old" ou "Nonce already used"
+
+**Soluções:**
+
+1. **Verificar sincronização de relógio:**
+   - Janela de validade HMAC: 5 minutos
+   - Relógio deve estar sincronizado com NTP
+
+2. **Verificar HMAC Secret:**
+   - Secret correto no script?
+   - Secret corresponde ao registrado no servidor?
+
+3. **Verificar logs do servidor:**
+   - Edge function logs mostram erro específico
+   - Verificar se timestamp está dentro da janela válida
+
+#### Problema: Jobs não são executados
+
+**Sintomas:**
+- Jobs ficam em status "queued" indefinidamente
+- Agent não reporta execução
+
+**Soluções:**
+
+1. **Verificar se agent está fazendo polling:**
+   ```powershell
+   # Logs devem mostrar "[INFO] 0 job(s) recebido(s)" periodicamente
+   ```
+
+2. **Verificar payload do job:**
+   - Para jobs tipo "scan": payload deve conter "filePath"
+   - Para jobs tipo "config": payload contém configurações
+
+3. **Testar fluxo completo:**
+   - Acesse `/agent-test` no dashboard
+   - Selecione um agent ativo
+   - Execute teste de integração completo
+
+#### Problema: Reports não aparecem no dashboard
+
+**Sintomas:**
+- Jobs são executados mas reports não aparecem
+- Tabela `reports` vazia
+
+**Soluções:**
+
+1. **Verificar função Upload-Report no agent:**
+   - Deve ser chamada após Execute-Job
+   - Antes de Ack-Job
+
+2. **Verificar edge function upload-report:**
+   - Aceita `application/json` e `multipart/form-data`
+   - Logs mostram sucesso/erro
+
+3. **Verificar RLS policies:**
+   - Service role tem acesso total à tabela reports
+   - User roles podem visualizar reports do seu tenant
 
 #### Problema: Scan de antivírus falha
 
