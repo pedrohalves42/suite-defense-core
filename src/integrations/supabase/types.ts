@@ -300,7 +300,13 @@ export type Database = {
           created_at: string
           delivered_at: string | null
           id: string
+          is_recurring: boolean | null
+          last_run_at: string | null
+          next_run_at: string | null
+          parent_job_id: string | null
           payload: Json | null
+          recurrence_pattern: string | null
+          scheduled_at: string | null
           status: string
           tenant_id: string
           type: string
@@ -312,7 +318,13 @@ export type Database = {
           created_at?: string
           delivered_at?: string | null
           id?: string
+          is_recurring?: boolean | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          parent_job_id?: string | null
           payload?: Json | null
+          recurrence_pattern?: string | null
+          scheduled_at?: string | null
           status?: string
           tenant_id: string
           type: string
@@ -324,7 +336,13 @@ export type Database = {
           created_at?: string
           delivered_at?: string | null
           id?: string
+          is_recurring?: boolean | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          parent_job_id?: string | null
           payload?: Json | null
+          recurrence_pattern?: string | null
+          scheduled_at?: string | null
           status?: string
           tenant_id?: string
           type?: string
@@ -335,6 +353,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
           {
@@ -678,6 +703,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_next_run: {
+        Args: { from_time?: string; pattern: string }
+        Returns: string
+      }
       cleanup_expired_keys: { Args: never; Returns: undefined }
       cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
