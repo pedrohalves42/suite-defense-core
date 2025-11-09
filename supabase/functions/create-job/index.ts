@@ -30,11 +30,23 @@ Deno.serve(async (req) => {
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Buscar tenant_id do usuário autenticado primeiro
+    const { data: userRole } = await supabaseAdmin
+      .from('user_roles')
+      .select('tenant_id')
+      .eq('user_id', user.id)
+      .single();
+
     const { data: hasAdminRole } = await supabaseAdmin.rpc('has_role', { _user_id: user.id, _role: 'admin' });
 
     if (!hasAdminRole) {
-      await createAuditLog({ supabase: supabaseAdmin, userId: user.id, action: 'job_creation_denied', resourceType: 'job', details: { reason: 'not_admin' }, request: req, success: false });
+      await createAuditLog({ supabase: supabaseAdmin, userId: user.id, tenantId: userRole?.tenant_id || 'unknown', action: 'job_creation_denied', resourceType: 'job', details: { reason: 'not_admin' }, request: req, success: false });
       return new Response(JSON.stringify({ error: 'Acesso negado' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    if (!userRole?.tenant_id) {
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
     }
 
     // Rate limiting por usuário (prevenir flooding de jobs)
@@ -57,17 +69,6 @@ Deno.serve(async (req) => {
     const rawData = await req.json();
     const validatedData = CreateJobSchema.parse(rawData);
     const { agentName, type, payload, approved, scheduledAt, isRecurring, recurrencePattern } = validatedData;
-
-    // Buscar tenant_id do usuário autenticado
-    const { data: userRole } = await supabaseAdmin
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!userRole?.tenant_id) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
-    }
 
     // Calculate next_run_at for recurring jobs
     let nextRunAt = null;
@@ -103,7 +104,8 @@ Deno.serve(async (req) => {
 
     await createAuditLog({ 
       supabase: supabaseAdmin, 
-      userId: user.id, 
+      userId: user.id,
+      tenantId: userRole.tenant_id,
       action: 'job_created', 
       resourceType: 'job', 
       resourceId: job.id, 

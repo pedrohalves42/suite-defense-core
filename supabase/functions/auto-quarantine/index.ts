@@ -94,9 +94,10 @@ serve(async (req: Request) => {
 
     console.log('[AUTO-QUARANTINE] File quarantined successfully:', quarantined.id);
 
-    // Create audit log
+    // Create audit log with tenant_id
     await createAuditLog({
       supabase,
+      tenantId: tenant_id,
       action: 'auto_quarantine',
       resourceType: 'quarantined_files',
       resourceId: quarantined.id,

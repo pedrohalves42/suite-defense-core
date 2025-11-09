@@ -50,8 +50,13 @@ export const UploadReportSchema = z.object({
   filename: z.string()
     .min(1, 'Nome do arquivo é obrigatório')
     .max(255, 'Nome do arquivo deve ter no máximo 255 caracteres')
-    .regex(/^[a-zA-Z0-9._-]+$/, 'Nome do arquivo inválido')
-    .refine(name => !name.includes('..'), 'Path traversal não permitido'),
+    .regex(/^[a-zA-Z0-9._-]+$/, 'Nome do arquivo deve conter apenas caracteres alfanuméricos, ponto, underscore e hífen')
+    .refine(name => {
+      // Block all common path traversal patterns
+      const dangerous = ['../', '..\\', '..%2f', '..%5c', '..%252f', '%2e%2e/'];
+      const lowerName = name.toLowerCase();
+      return !dangerous.some(pattern => lowerName.includes(pattern));
+    }, 'Path traversal detectado - caracteres inválidos'),
 });
 
 export const JobIdSchema = z.string().uuid('Job ID deve ser um UUID válido');

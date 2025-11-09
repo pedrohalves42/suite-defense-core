@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
     await createAuditLog({
       supabase: supabaseAdmin,
       userId: user.id,
+      tenantId: adminTenant?.tenant_id,
       action: is_active ? 'user_activated' : 'user_deactivated',
       resourceType: 'user',
       resourceId: user_id,
