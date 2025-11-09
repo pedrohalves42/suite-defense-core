@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { authenticateApiKey, logApiRequest, hasScope } from '../_shared/api-auth.ts';
+import { checkRateLimit } from '../_shared/rate-limit.ts';
 
 Deno.serve(async (req) => {
   const startTime = Date.now();
@@ -35,6 +36,23 @@ Deno.serve(async (req) => {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
+      );
+    }
+
+    // Rate limiting
+    const rateLimitResult = await checkRateLimit(supabase, authResult.apiKeyId!, 'api-tenant-features', {
+      maxRequests: 100,
+      windowMinutes: 1,
+      blockMinutes: 5,
+    });
+
+    if (!rateLimitResult.allowed) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Rate limit exceeded',
+          resetAt: rateLimitResult.resetAt 
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
