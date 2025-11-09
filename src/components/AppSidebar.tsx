@@ -23,6 +23,7 @@ export const AppSidebar = () => {
     { icon: Shield, label: 'Quarentena', to: '/quarantine' },
     { icon: Package, label: 'Instalador', to: '/installer' },
     { icon: TestTube, label: 'Teste de Agentes', to: '/agent-test' },
+    { icon: Settings, label: 'Monitoramento', to: '/monitoring' },
   ];
 
   const adminItems = [

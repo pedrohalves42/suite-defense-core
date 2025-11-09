@@ -1,7 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { Resend } from 'npm:resend@2.0.0';
 
-const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -90,27 +88,28 @@ Deno.serve(async (req) => {
       `;
     }
 
-    // Send email
-    const emailResponse = await resend.emails.send({
-      from: 'CyberShield Alerts <alerts@resend.dev>',
-      to: [settings.alert_email],
-      subject: subject,
-      html: emailHtml,
+    // Send email via send-alert-email edge function
+    const { error: emailError } = await supabase.functions.invoke('send-alert-email', {
+      body: {
+        tenantId,
+        alertType,
+        subject,
+        data,
+      }
     });
 
-    console.log('[Alert] Email sent:', emailResponse);
+    if (emailError) {
+      console.error('[Alert] Email error:', emailError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to send email', details: emailError.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Create audit log
-    await supabase.from('audit_logs').insert({
-      tenant_id: tenantId,
-      action: 'send_alert',
-      resource_type: 'alert',
-      details: { alertType, subject, emailId: emailResponse.id },
-      success: true,
-    });
+    console.log('[Alert] Email sent successfully');
 
     return new Response(
-      JSON.stringify({ success: true, emailId: emailResponse.id }),
+      JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: any) {
