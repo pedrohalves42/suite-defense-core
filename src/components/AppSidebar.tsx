@@ -27,6 +27,7 @@ export const AppSidebar = () => {
 
   const adminItems = [
     { icon: Users, label: 'Usuários', to: '/admin/users' },
+    { icon: Package, label: 'Tenants', to: '/admin/tenants' },
     { icon: Key, label: 'Chaves', to: '/admin/enrollment-keys' },
     { icon: Mail, label: 'Convites', to: '/admin/invites' },
     { icon: ScrollText, label: 'Logs', to: '/admin/audit-logs' },
