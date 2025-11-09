@@ -31,6 +31,7 @@ import TenantFeatures from "./pages/admin/TenantFeatures";
 import Dashboard from "./pages/admin/Dashboard";
 import ApiKeys from "./pages/admin/ApiKeys";
 import AgentMonitoring from "./pages/AgentMonitoring";
+import AgentManagement from "./pages/AgentManagement";
 import AcceptInvite from "./pages/AcceptInvite";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -64,6 +65,8 @@ const App = () => (
               <Route path="/virus-scans" element={<VirusScans />} />
               <Route path="/quarantine" element={<Quarantine />} />
               <Route path="/agent-test" element={<AgentTest />} />
+              <Route path="/monitoring" element={<AgentMonitoring />} />
+              <Route path="/agents" element={<AgentManagement />} />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLayout />}>
@@ -78,8 +81,6 @@ const App = () => (
                 <Route path="audit-logs" element={<AuditLogs />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
-
-              <Route path="/monitoring" element={<AgentMonitoring />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
