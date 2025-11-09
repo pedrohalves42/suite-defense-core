@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
         return acc;
       }, {} as Record<string, any[]>);
 
-      for (const [tenantId, jobs] of Object.entries(jobsByTenant)) {
+      for (const [tenantId, jobs] of Object.entries(jobsByTenant) as [string, any[]][]) {
         const { data: settings } = await supabase
           .from('tenant_settings')
           .select('*')
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
               subject: `❌ ${jobs.length} Job(s) Falharam`,
               data: {
                 failedCount: jobs.length,
-                jobs: jobs.map(j => ({
+                jobs: jobs.map((j: any) => ({
                   id: j.id,
                   type: j.type,
                   agentName: j.agent_name,
