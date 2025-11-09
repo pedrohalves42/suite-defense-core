@@ -65,11 +65,23 @@ const AgentInstaller = () => {
 
     setIsGenerating(true);
     try {
+      console.log('[DEBUG] Invoking auto-generate-enrollment with:', { agentName: agentName.trim() });
+      console.log('[DEBUG] User authenticated:', !!user);
+      
       const { data, error } = await supabase.functions.invoke('auto-generate-enrollment', {
         body: { agentName: agentName.trim() }
       });
 
-      if (error) throw error;
+      console.log('[DEBUG] Response:', { data, error });
+
+      if (error) {
+        console.error('[DEBUG] Edge function error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('Resposta vazia da função');
+      }
 
       setAgentToken(data.agentToken);
       setHmacSecret(data.hmacSecret);
@@ -77,6 +89,8 @@ const AgentInstaller = () => {
       setCurrentStep(2);
       toast.success("Credenciais geradas com sucesso!");
     } catch (error: any) {
+      console.error('[DEBUG] Full error:', error);
+      
       // Retry logic for network errors
       if (error.message?.includes('Failed to fetch') && retryCount < 2) {
         console.log(`Retrying... Attempt ${retryCount + 1}/2`);
@@ -84,7 +98,17 @@ const AgentInstaller = () => {
         return generateCredentialsWithRetry(retryCount + 1);
       }
       
-      toast.error(error.message || "Erro ao gerar credenciais");
+      // More detailed error message
+      let errorMessage = "Erro ao gerar credenciais";
+      if (error.message?.includes('Unauthorized')) {
+        errorMessage = "Erro de autenticação. Por favor, faça login novamente.";
+      } else if (error.message?.includes('tenant')) {
+        errorMessage = "Erro ao identificar seu tenant. Por favor, contate o suporte.";
+      } else if (error.message) {
+        errorMessage = `Erro: ${error.message}`;
+      }
+      
+      toast.error(errorMessage);
       console.error('Error generating credentials:', error);
     } finally {
       setIsGenerating(false);
