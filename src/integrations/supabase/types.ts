@@ -50,6 +50,13 @@ export type Database = {
             referencedRelation: "agents"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "agent_tokens_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
         ]
       }
       agents: {
@@ -907,7 +914,51 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      agents_safe: {
+        Row: {
+          agent_name: string | null
+          enrolled_at: string | null
+          id: string | null
+          last_heartbeat: string | null
+          payload_hash: string | null
+          status: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          agent_name?: string | null
+          enrolled_at?: string | null
+          id?: string | null
+          last_heartbeat?: string | null
+          payload_hash?: string | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          agent_name?: string | null
+          enrolled_at?: string | null
+          id?: string | null
+          last_heartbeat?: string | null
+          payload_hash?: string | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_tenant_id_new_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_agents_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_next_run: {
