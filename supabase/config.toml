@@ -56,3 +56,6 @@ verify_jwt = true
 
 [functions.auto-generate-enrollment]
 verify_jwt = true
+
+[functions.auto-quarantine]
+verify_jwt = false

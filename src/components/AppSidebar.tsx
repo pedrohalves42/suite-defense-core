@@ -20,6 +20,7 @@ export const AppSidebar = () => {
     { icon: Home, label: 'Dashboard', to: '/dashboard', end: true },
     { icon: Zap, label: 'Criar Jobs', to: '/jobs' },
     { icon: Shield, label: 'Scans de Vírus', to: '/virus-scans' },
+    { icon: Shield, label: 'Quarentena', to: '/quarantine' },
     { icon: Package, label: 'Instalador', to: '/installer' },
     { icon: TestTube, label: 'Teste de Agentes', to: '/agent-test' },
   ];

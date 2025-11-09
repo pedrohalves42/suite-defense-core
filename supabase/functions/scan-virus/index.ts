@@ -171,16 +171,45 @@ Deno.serve(async (req) => {
     const isMalicious = positives > 0;
 
     // Salvar resultado
-    await supabase.from('virus_scans').insert({
-      agent_name: agent.agent_name,
-      file_hash: fileHash,
-      file_path: filePath,
-      scan_result: vtData,
-      is_malicious: isMalicious,
-      positives,
-      total_scans: total,
-      virustotal_permalink: vtData.permalink,
-    });
+    const { data: scanRecord, error: scanError } = await supabase
+      .from('virus_scans')
+      .insert({
+        agent_name: agent.agent_name,
+        file_hash: fileHash,
+        file_path: filePath,
+        scan_result: vtData,
+        is_malicious: isMalicious,
+        positives,
+        total_scans: total,
+        virustotal_permalink: vtData.permalink,
+      })
+      .select()
+      .single();
+
+    if (scanError) {
+      console.error('[SCAN-VIRUS] Error storing scan result:', scanError);
+    }
+
+    // Auto-quarantine if malicious and enabled
+    if (positives > 0 && scanRecord) {
+      console.log('[SCAN-VIRUS] Malware detected, triggering auto-quarantine');
+      
+      try {
+        await supabase.functions.invoke('auto-quarantine', {
+          body: {
+            virus_scan_id: scanRecord.id,
+            agent_name: agent.agent_name,
+            file_path: filePath,
+            file_hash: fileHash,
+            positives: positives,
+            total_scans: total
+          }
+        });
+      } catch (quarantineError) {
+        console.error('[SCAN-VIRUS] Auto-quarantine failed:', quarantineError);
+        // Don't fail the scan if quarantine fails
+      }
+    }
 
     return new Response(
       JSON.stringify({
