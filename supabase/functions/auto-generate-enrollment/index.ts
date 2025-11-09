@@ -2,19 +2,26 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
 Deno.serve(async (req) => {
+  const requestId = crypto.randomUUID();
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log(`[${requestId}] Starting auto-generate-enrollment`);
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Authenticate user
     const authHeader = req.headers.get('Authorization');
+    console.log(`[${requestId}] Auth header present:`, !!authHeader);
+    
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      console.error(`[${requestId}] Missing Authorization header`);
+      return new Response(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -23,16 +30,21 @@ Deno.serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
+    console.log(`[${requestId}] User auth result:`, { userId: user?.id, authError: authError?.message });
+    
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      console.error(`[${requestId}] Auth failed:`, authError);
+      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const { agentName } = await req.json();
+    console.log(`[${requestId}] Request body:`, { agentName });
 
     if (!agentName || typeof agentName !== 'string') {
+      console.error(`[${requestId}] Invalid agent name:`, agentName);
       return new Response(JSON.stringify({ error: 'Agent name is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -59,20 +71,25 @@ Deno.serve(async (req) => {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Get user's tenant
-    const { data: userRole } = await supabase
+    console.log(`[${requestId}] Fetching tenant for user:`, user.id);
+    const { data: userRole, error: roleError } = await supabase
       .from('user_roles')
       .select('tenant_id')
       .eq('user_id', user.id)
       .single();
 
+    console.log(`[${requestId}] User role result:`, { tenantId: userRole?.tenant_id, roleError: roleError?.message });
+
     if (!userRole?.tenant_id) {
-      return new Response(JSON.stringify({ error: 'User tenant not found' }), {
+      console.error(`[${requestId}] User tenant not found for user:`, user.id);
+      return new Response(JSON.stringify({ error: 'User tenant not found. Please contact support.' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     // Create enrollment key
+    console.log(`[${requestId}] Creating enrollment key:`, enrollmentKey);
     const { error: keyError } = await supabase
       .from('enrollment_keys')
       .insert({
@@ -86,7 +103,12 @@ Deno.serve(async (req) => {
         description: `Auto-generated for ${agentName}`,
       });
 
-    if (keyError) throw keyError;
+    if (keyError) {
+      console.error(`[${requestId}] Failed to create enrollment key:`, keyError);
+      throw keyError;
+    }
+    
+    console.log(`[${requestId}] Enrollment key created successfully`);
 
     // Generate agent token and HMAC secret
     const agentToken = crypto.randomUUID();
@@ -152,6 +174,8 @@ Deno.serve(async (req) => {
       .update({ current_uses: 1 })
       .eq('key', enrollmentKey);
 
+    console.log(`[${requestId}] Successfully generated credentials`);
+    
     return new Response(
       JSON.stringify({
         enrollmentKey,
@@ -164,8 +188,11 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error:', error);
+    console.error(`[${requestId}] Error:`, error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorDetails = error instanceof Error ? error.stack : '';
+    console.error(`[${requestId}] Error details:`, errorDetails);
+    
     return new Response(
       JSON.stringify({ error: errorMessage }),
       {
