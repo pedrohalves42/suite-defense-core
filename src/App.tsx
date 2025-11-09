@@ -30,6 +30,7 @@ import Tenants from "./pages/admin/Tenants";
 import TenantFeatures from "./pages/admin/TenantFeatures";
 import Dashboard from "./pages/admin/Dashboard";
 import ApiKeys from "./pages/admin/ApiKeys";
+import AgentMonitoring from "./pages/AgentMonitoring";
 import AcceptInvite from "./pages/AcceptInvite";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
