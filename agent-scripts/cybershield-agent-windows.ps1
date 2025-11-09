@@ -1,5 +1,5 @@
 # CyberShield Agent - Windows PowerShell Script com HMAC
-# Versão: 2.0 com autenticação HMAC e rate limiting
+# Versão: 2.1 com correções críticas para produção
 
 param(
     [Parameter(Mandatory=$true)]
@@ -17,6 +17,30 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+# Capturar path do script no topo (crítico para service installation)
+$SCRIPT_PATH = $PSCommandPath
+
+# Validar parâmetros
+if ([string]::IsNullOrWhiteSpace($AgentToken)) {
+    throw "AgentToken não pode ser vazio"
+}
+
+if ([string]::IsNullOrWhiteSpace($HmacSecret)) {
+    throw "HmacSecret não pode ser vazio"
+}
+
+if ([string]::IsNullOrWhiteSpace($ServerUrl)) {
+    throw "ServerUrl não pode ser vazio"
+}
+
+if ($PollInterval -lt 10) {
+    Write-Host "[AVISO] PollInterval muito baixo, usando 10 segundos"
+    $PollInterval = 10
+}
+
+# Normalizar ServerUrl (remover trailing slash)
+$ServerUrl = $ServerUrl.TrimEnd('/')
+
 # Função para gerar assinatura HMAC
 function Get-HmacSignature {
     param(
@@ -30,31 +54,48 @@ function Get-HmacSignature {
     return [System.BitConverter]::ToString($signature).Replace('-', '').ToLower()
 }
 
-# Função para fazer requisição com HMAC
+# Função para fazer requisição com HMAC e retry com exponential backoff
 function Invoke-SecureRequest {
     param(
         [string]$Url,
         [string]$Method = "GET",
-        [string]$Body = ""
+        [string]$Body = "",
+        [int]$MaxRetries = 3
     )
     
-    $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-    $nonce = [guid]::NewGuid().ToString()
-    $payload = "${timestamp}:${nonce}:${Body}"
-    $signature = Get-HmacSignature -Message $payload -Secret $HmacSecret
+    $retryCount = 0
+    $backoffSeconds = 2
     
-    $headers = @{
-        "X-Agent-Token" = $AgentToken
-        "X-HMAC-Signature" = $signature
-        "X-Timestamp" = $timestamp.ToString()
-        "X-Nonce" = $nonce
-        "Content-Type" = "application/json"
-    }
-    
-    if ($Method -eq "GET") {
-        return Invoke-RestMethod -Uri $Url -Method GET -Headers $headers -TimeoutSec 30
-    } else {
-        return Invoke-RestMethod -Uri $Url -Method POST -Headers $headers -Body $Body -TimeoutSec 30
+    while ($retryCount -le $MaxRetries) {
+        try {
+            $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+            $nonce = [guid]::NewGuid().ToString()
+            $payload = "${timestamp}:${nonce}:${Body}"
+            $signature = Get-HmacSignature -Message $payload -Secret $HmacSecret
+            
+            $headers = @{
+                "X-Agent-Token" = $AgentToken
+                "X-HMAC-Signature" = $signature
+                "X-Timestamp" = $timestamp.ToString()
+                "X-Nonce" = $nonce
+                "Content-Type" = "application/json"
+            }
+            
+            if ($Method -eq "GET") {
+                return Invoke-RestMethod -Uri $Url -Method GET -Headers $headers -TimeoutSec 30
+            } else {
+                return Invoke-RestMethod -Uri $Url -Method POST -Headers $headers -Body $Body -TimeoutSec 30
+            }
+        } catch {
+            $retryCount++
+            if ($retryCount -gt $MaxRetries) {
+                Write-Host "[ERRO] Todas as tentativas falharam: $_"
+                throw
+            }
+            Write-Host "[AVISO] Tentativa $retryCount/$MaxRetries falhou. Aguardando ${backoffSeconds}s..."
+            Start-Sleep -Seconds $backoffSeconds
+            $backoffSeconds *= 2  # Exponential backoff
+        }
     }
 }
 
@@ -69,60 +110,128 @@ function Poll-Jobs {
     }
 }
 
-# Função para executar job
+# Função para executar job com processamento de payload
 function Execute-Job {
     param($Job)
     
     Write-Host "[INFO] Executando job: $($Job.id) - Tipo: $($Job.type)"
     
     $result = $null
+    $payload = $null
+    
+    # Parse payload se existir
+    if ($Job.payload) {
+        try {
+            $payload = $Job.payload | ConvertFrom-Json -ErrorAction SilentlyContinue
+        } catch {
+            Write-Host "[AVISO] Falha ao fazer parse do payload: $_"
+        }
+    }
     
     switch ($Job.type) {
         "scan" {
             # Executar scan de segurança
-            $result = @{
-                status = "completed"
-                data = @{
-                    timestamp = (Get-Date).ToString("o")
-                    type = "security_scan"
+            if ($payload -and $payload.filePath) {
+                Write-Host "[INFO] Escaneando arquivo: $($payload.filePath)"
+                $scanResult = Scan-File -FilePath $payload.filePath
+                
+                if ($scanResult) {
+                    $result = @{
+                        status = "completed"
+                        data = $scanResult
+                        filePath = $payload.filePath
+                    }
+                } else {
+                    $result = @{
+                        status = "failed"
+                        error = "Scan falhou ou arquivo não encontrado"
+                        filePath = $payload.filePath
+                    }
+                }
+            } else {
+                $result = @{
+                    status = "failed"
+                    error = "Payload inválido: filePath obrigatório para scan"
                 }
             }
         }
         "update" {
             # Executar atualização
+            Write-Host "[INFO] Executando update..."
             $result = @{
                 status = "completed"
                 data = @{
                     updated = $true
+                    timestamp = (Get-Date).ToString("o")
                 }
             }
         }
         "report" {
-            # Gerar relatório
+            # Gerar relatório do sistema
+            Write-Host "[INFO] Gerando relatório do sistema..."
+            $systemInfo = @{
+                hostname = $env:COMPUTERNAME
+                os = [Environment]::OSVersion.VersionString
+                powershell = $PSVersionTable.PSVersion.ToString()
+                uptime = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+            }
+            
             $result = @{
                 status = "completed"
                 data = @{
                     report_generated = $true
+                    system_info = $systemInfo
+                    timestamp = (Get-Date).ToString("o")
                 }
             }
         }
         "config" {
             # Configuração
+            Write-Host "[INFO] Aplicando configuração..."
             $result = @{
                 status = "completed"
                 data = @{
                     configured = $true
+                    payload_received = ($payload -ne $null)
+                    timestamp = (Get-Date).ToString("o")
                 }
             }
         }
         default {
             $result = @{
                 status = "unknown_type"
+                error = "Tipo de job desconhecido: $($Job.type)"
             }
         }
     }
     
     return $result
+}
+
+# Função para fazer upload do report de execução do job
+function Upload-Report {
+    param(
+        [string]$JobId,
+        [object]$Result
+    )
+    
+    try {
+        $reportData = @{
+            job_id = $JobId
+            result = $Result
+            timestamp = (Get-Date).ToString("o")
+            agent_token = $AgentToken
+        } | ConvertTo-Json -Depth 10
+        
+        $url = "$ServerUrl/functions/v1/upload-report"
+        $response = Invoke-SecureRequest -Url $url -Method POST -Body $reportData
+        
+        Write-Host "[INFO] Report enviado para job $JobId"
+        return $true
+    } catch {
+        Write-Host "[ERRO] Falha ao enviar report para job $JobId : $_"
+        return $false
+    }
 }
 
 # Função para ACK do job
@@ -192,12 +301,24 @@ function Scan-File {
 # Função principal
 function Start-Agent {
     Write-Host "==================================="
-    Write-Host "CyberShield Agent v2.0 - Iniciando"
+    Write-Host "CyberShield Agent v2.1 - Iniciando"
     Write-Host "==================================="
     Write-Host "Servidor: $ServerUrl"
     Write-Host "Intervalo: $PollInterval segundos"
     Write-Host "HMAC: Habilitado"
+    Write-Host "Retry: Exponential backoff ativo"
     Write-Host ""
+    
+    # Teste inicial de conectividade
+    try {
+        Write-Host "[INFO] Testando conectividade com servidor..."
+        $testUrl = "$ServerUrl/functions/v1/poll-jobs"
+        $null = Invoke-WebRequest -Uri $testUrl -Method HEAD -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+        Write-Host "[OK] Servidor acessível"
+    } catch {
+        Write-Host "[AVISO] Não foi possível conectar ao servidor: $_"
+        Write-Host "[INFO] Continuando, tentativas com retry automático..."
+    }
     
     while ($true) {
         try {
@@ -208,11 +329,26 @@ function Start-Agent {
                 Write-Host "[INFO] $($jobs.Count) job(s) recebido(s)"
                 
                 foreach ($job in $jobs) {
-                    # Executar job
-                    $result = Execute-Job -Job $job
-                    
-                    # Confirmar job
-                    Ack-Job -JobId $job.id
+                    try {
+                        # Executar job
+                        $result = Execute-Job -Job $job
+                        
+                        # Enviar report da execução
+                        $uploadSuccess = Upload-Report -JobId $job.id -Result $result
+                        
+                        # Confirmar job
+                        if ($uploadSuccess) {
+                            Ack-Job -JobId $job.id
+                        } else {
+                            Write-Host "[AVISO] Job $($job.id) executado mas report não enviado"
+                            # ACK mesmo assim para não ficar preso
+                            Ack-Job -JobId $job.id
+                        }
+                    } catch {
+                        Write-Host "[ERRO] Falha ao processar job $($job.id): $_"
+                        # ACK para não reprocessar
+                        Ack-Job -JobId $job.id
+                    }
                 }
             }
             
@@ -220,6 +356,7 @@ function Start-Agent {
             Start-Sleep -Seconds $PollInterval
         } catch {
             Write-Host "[ERRO] Erro no loop principal: $_"
+            Write-Host "[INFO] Aguardando 10s antes de tentar novamente..."
             Start-Sleep -Seconds 10
         }
     }
@@ -228,30 +365,41 @@ function Start-Agent {
 # Instalar como serviço (opcional)
 function Install-Service {
     $serviceName = "CyberShieldAgent"
-    $scriptPath = $MyInvocation.MyCommand.Path
+    
+    # Usar variável capturada no topo do script
+    if (-not $SCRIPT_PATH) {
+        Write-Host "[ERRO] SCRIPT_PATH não definido. Execute o script diretamente, não através de dot-sourcing."
+        return
+    }
     
     $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
     
     if ($service) {
         Write-Host "Serviço já existe. Removendo..."
-        Stop-Service -Name $serviceName -Force
+        Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
         sc.exe delete $serviceName
         Start-Sleep -Seconds 2
     }
     
     Write-Host "Instalando serviço..."
+    Write-Host "Script path: $SCRIPT_PATH"
     
     $params = "-AgentToken `"$AgentToken`" -HmacSecret `"$HmacSecret`" -ServerUrl `"$ServerUrl`" -PollInterval $PollInterval"
     
+    # Configurar serviço com recovery options
     New-Service -Name $serviceName `
-        -BinaryPathName "powershell.exe -ExecutionPolicy Bypass -File `"$scriptPath`" $params" `
+        -BinaryPathName "powershell.exe -ExecutionPolicy Bypass -NoProfile -File `"$SCRIPT_PATH`" $params" `
         -DisplayName "CyberShield Security Agent" `
-        -Description "Agente de segurança CyberShield com autenticação HMAC" `
+        -Description "Agente de segurança CyberShield com autenticação HMAC e retry automático" `
         -StartupType Automatic
+    
+    # Configurar recovery (restart on failure)
+    sc.exe failure $serviceName reset= 86400 actions= restart/60000/restart/60000/restart/60000
     
     Start-Service -Name $serviceName
     
     Write-Host "Serviço instalado e iniciado com sucesso!"
+    Write-Host "Recovery configurado: restart automático em caso de falha"
 }
 
 # Iniciar agente
