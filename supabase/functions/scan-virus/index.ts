@@ -47,10 +47,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Buscar agente e token
+    // Buscar agente e token com tenant_id
     const { data: token } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(agent_name, hmac_secret)')
+      .select('agent_id, agents!inner(agent_name, hmac_secret, tenant_id)')
       .eq('token', agentToken)
       .eq('is_active', true)
       .single();
@@ -63,6 +63,15 @@ Deno.serve(async (req) => {
     }
 
     const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents;
+    
+    // Validar tenant_id existe
+    if (!agent.tenant_id) {
+      console.error(`[${requestId}] Agent ${agent.agent_name} has no tenant_id`);
+      return new Response(
+        JSON.stringify({ error: 'Configuração inválida do agente' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Verificar HMAC se configurado
     if (agent.hmac_secret) {
@@ -170,11 +179,12 @@ Deno.serve(async (req) => {
     const total = vtData.total || 0;
     const isMalicious = positives > 0;
 
-    // Salvar resultado
+    // Salvar resultado com validação explícita de tenant_id
     const { data: scanRecord, error: scanError } = await supabase
       .from('virus_scans')
       .insert({
         agent_name: agent.agent_name,
+        tenant_id: agent.tenant_id,
         file_hash: fileHash,
         file_path: filePath,
         scan_result: vtData,

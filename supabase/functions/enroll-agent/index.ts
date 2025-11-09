@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
     if (keyError || !keyData) {
       await createAuditLog({
         supabase,
+        tenantId: 'unknown',
         action: 'agent_enrollment_failed',
         resourceType: 'agent',
         resourceId: agentName,
@@ -68,6 +69,7 @@ Deno.serve(async (req) => {
     if (new Date(keyData.expires_at) < new Date()) {
       await createAuditLog({
         supabase,
+        tenantId: keyData.tenant_id,
         action: 'agent_enrollment_failed',
         resourceType: 'agent',
         resourceId: agentName,
@@ -86,6 +88,7 @@ Deno.serve(async (req) => {
     if (keyData.max_uses !== null && keyData.current_uses >= keyData.max_uses) {
       await createAuditLog({
         supabase,
+        tenantId: keyData.tenant_id,
         action: 'agent_enrollment_failed',
         resourceType: 'agent',
         resourceId: agentName,
@@ -160,6 +163,7 @@ Deno.serve(async (req) => {
     // Create audit log
     await createAuditLog({
       supabase,
+      tenantId: keyData.tenant_id,
       action: 'agent_enrolled',
       resourceType: 'agent',
       resourceId: agentName,

@@ -134,6 +134,7 @@ Deno.serve(async (req) => {
     await createAuditLog({
       supabase: supabaseAdmin,
       userId: user.id,
+      tenantId: userRole.tenant_id,
       action: 'invite_sent',
       resourceType: 'invite',
       resourceId: invite.id,

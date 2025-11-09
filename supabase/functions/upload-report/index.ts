@@ -33,10 +33,10 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Buscar agente pelo token na tabela dedicada
+    // Buscar agente pelo token na tabela dedicada com tenant_id
     const { data: token } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(agent_name, hmac_secret)')
+      .select('agent_id, agents!inner(agent_name, hmac_secret, tenant_id)')
       .eq('token', agentToken)
       .eq('is_active', true)
       .single()
@@ -49,6 +49,15 @@ Deno.serve(async (req) => {
     }
 
     const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents
+    
+    // Validar tenant_id existe
+    if (!agent.tenant_id) {
+      console.error(`[${requestId}] Agent ${agent.agent_name} has no tenant_id`)
+      return new Response(
+        JSON.stringify({ error: 'Configuração inválida do agente' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
     
     // Verificar HMAC se configurado
     if (agent.hmac_secret) {
@@ -151,11 +160,12 @@ Deno.serve(async (req) => {
       console.log('Upload de relatório:', sanitizedKind, 'por agente:', agent.agent_name)
     }
 
-    // Salvar relatório no banco
+    // Salvar relatório no banco com validação explícita de tenant_id
     const { data: report, error } = await supabase
       .from('reports')
       .insert({
         agent_name: agent.agent_name,
+        tenant_id: agent.tenant_id,
         kind: sanitizedKind,
         file_path: sanitizedFilename,
         file_data: fileContent
