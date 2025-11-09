@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
     // Get all agents and their last heartbeat
     const { data: agents, error: agentsError } = await supabase
       .from('agents')
-      .select('*, tenant_settings!inner(*)')
+      .select('*')
       .eq('status', 'active');
 
     if (agentsError) throw agentsError;
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
     const { data: failedJobs, error: jobsError } = await supabase
       .from('jobs')
-      .select('*, tenant_settings!inner(*)')
+      .select('*')
       .eq('status', 'failed')
       .gte('created_at', fiveMinutesAgo);
 

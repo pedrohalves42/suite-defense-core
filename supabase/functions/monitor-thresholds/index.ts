@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       .select(`
         id,
         name,
-        tenant_settings (
+        tenant_settings!tenant_settings_tenant_id_fkey (
           alert_threshold_virus_positive,
           alert_threshold_failed_jobs,
           alert_threshold_offline_agents,
