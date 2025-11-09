@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { Activity, AlertTriangle, CheckCircle2, Clock, TrendingUp, Wifi, WifiOff, Zap } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Clock, TrendingUp, Wifi, WifiOff, Zap, LineChart as LineChartIcon, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useTenant } from "@/hooks/useTenant";
 
 interface Agent {
   id: string;
@@ -25,6 +27,7 @@ interface Job {
 }
 
 const AgentMonitoring = () => {
+  const { tenant } = useTenant();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
 
@@ -54,6 +57,61 @@ const AgentMonitoring = () => {
       if (error) throw error;
       return data as Job[];
     }
+  });
+
+  // Historical data for charts - last 7 days
+  const { data: historicalScans } = useQuery({
+    queryKey: ['historical-scans', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      
+      const sevenDaysAgo = subDays(new Date(), 7).toISOString();
+      const { data, error } = await supabase
+        .from('virus_scans')
+        .select('scanned_at, is_malicious')
+        .eq('tenant_id', tenant.id)
+        .gte('scanned_at', sevenDaysAgo)
+        .order('scanned_at');
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenant?.id
+  });
+
+  const { data: historicalJobs } = useQuery({
+    queryKey: ['historical-jobs', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      
+      const sevenDaysAgo = subDays(new Date(), 7).toISOString();
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('created_at, status, completed_at')
+        .eq('tenant_id', tenant.id)
+        .gte('created_at', sevenDaysAgo)
+        .order('created_at');
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenant?.id
+  });
+
+  const { data: agentUptimeData } = useQuery({
+    queryKey: ['agent-uptime', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('agents')
+        .select('agent_name, last_heartbeat, enrolled_at')
+        .eq('tenant_id', tenant.id);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenant?.id
   });
 
   // Setup realtime subscriptions
@@ -164,6 +222,57 @@ const AgentMonitoring = () => {
     return `${diffDays}d atrás`;
   };
 
+  // Prepare chart data
+  const getLast7Days = () => {
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = subDays(new Date(), i);
+      days.push({
+        date: format(date, 'yyyy-MM-dd'),
+        label: format(date, 'dd/MM', { locale: ptBR })
+      });
+    }
+    return days;
+  };
+
+  const last7Days = getLast7Days();
+
+  // Scans trend data
+  const scansTrendData = last7Days.map(day => {
+    const dayScans = historicalScans?.filter(s => s.scanned_at.startsWith(day.date)) || [];
+    return {
+      date: day.label,
+      total: dayScans.length,
+      malicious: dayScans.filter(s => s.is_malicious).length,
+      clean: dayScans.filter(s => !s.is_malicious).length,
+    };
+  });
+
+  // Jobs trend data
+  const jobsTrendData = last7Days.map(day => {
+    const dayJobs = historicalJobs?.filter(j => j.created_at.startsWith(day.date)) || [];
+    return {
+      date: day.label,
+      total: dayJobs.length,
+      completed: dayJobs.filter(j => j.status === 'done' || j.status === 'completed').length,
+      failed: dayJobs.filter(j => j.status === 'failed').length,
+      pending: dayJobs.filter(j => j.status === 'queued' || j.status === 'delivered').length,
+    };
+  });
+
+  // Agent uptime data
+  const uptimeChartData = agentUptimeData?.map(agent => {
+    const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null;
+    const now = new Date();
+    const diffMins = lastHeartbeat ? (now.getTime() - lastHeartbeat.getTime()) / (1000 * 60) : 999;
+    const uptime = diffMins < 5 ? 100 : 0;
+    
+    return {
+      name: agent.agent_name.length > 15 ? agent.agent_name.substring(0, 12) + '...' : agent.agent_name,
+      uptime,
+    };
+  }) || [];
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
@@ -232,6 +341,112 @@ const AgentMonitoring = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Historical Charts */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Scans Trend */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LineChartIcon className="h-5 w-5 text-primary" />
+              Tendência de Scans (7 dias)
+            </CardTitle>
+            <CardDescription>Volume de scans de vírus realizados</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {scansTrendData.every(d => d.total === 0) ? (
+              <p className="text-center text-muted-foreground py-8">Sem dados para exibir</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={scansTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))', 
+                      borderRadius: '6px' 
+                    }} 
+                  />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" name="Total" strokeWidth={2} />
+                  <Line type="monotone" dataKey="malicious" stroke="hsl(var(--destructive))" name="Maliciosos" strokeWidth={2} />
+                  <Line type="monotone" dataKey="clean" stroke="hsl(var(--success))" name="Limpos" strokeWidth={2} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Jobs Trend */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              Tendência de Jobs (7 dias)
+            </CardTitle>
+            <CardDescription>Execução de jobs ao longo do tempo</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {jobsTrendData.every(d => d.total === 0) ? (
+              <p className="text-center text-muted-foreground py-8">Sem dados para exibir</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={jobsTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} />
+                  <YAxis stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))', 
+                      border: '1px solid hsl(var(--border))', 
+                      borderRadius: '6px' 
+                    }} 
+                  />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Bar dataKey="completed" fill="hsl(var(--success))" name="Concluídos" />
+                  <Bar dataKey="pending" fill="hsl(var(--warning))" name="Pendentes" />
+                  <Bar dataKey="failed" fill="hsl(var(--destructive))" name="Falhados" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Agent Uptime */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wifi className="h-5 w-5 text-primary" />
+            Uptime dos Agentes
+          </CardTitle>
+          <CardDescription>Status de conectividade atual de cada agente</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {uptimeChartData.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">Nenhum agente cadastrado</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={Math.max(200, uptimeChartData.length * 40)}>
+              <BarChart data={uptimeChartData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" domain={[0, 100]} stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} />
+                <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" style={{ fontSize: '12px' }} width={100} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))', 
+                    borderRadius: '6px' 
+                  }}
+                  formatter={(value: any) => [`${value}%`, 'Uptime']}
+                />
+                <Bar dataKey="uptime" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Agents Status */}
       <Card>
