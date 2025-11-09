@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ export const AppSidebar = () => {
     { icon: Shield, label: 'Quarentena', to: '/quarantine' },
     { icon: Package, label: 'Instalador', to: '/installer' },
     { icon: Settings, label: 'Monitoramento', to: '/monitoring' },
+    { icon: FileDown, label: 'Exportar Dados', to: '/export' },
     { icon: TestTube, label: 'Teste de Agentes', to: '/agent-test' },
   ];
 
