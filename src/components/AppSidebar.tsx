@@ -31,6 +31,7 @@ export const AppSidebar = () => {
     { icon: Package, label: 'Tenants', to: '/admin/tenants' },
     { icon: Shield, label: 'Features', to: '/admin/features' },
     { icon: Key, label: 'Chaves', to: '/admin/enrollment-keys' },
+    { icon: Key, label: 'API Keys', to: '/admin/api-keys' },
     { icon: Mail, label: 'Convites', to: '/admin/invites' },
     { icon: ScrollText, label: 'Logs', to: '/admin/audit-logs' },
     { icon: Settings, label: 'Configurações', to: '/admin/settings' },

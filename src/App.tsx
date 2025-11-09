@@ -29,6 +29,7 @@ import Invites from "./pages/admin/Invites";
 import Tenants from "./pages/admin/Tenants";
 import TenantFeatures from "./pages/admin/TenantFeatures";
 import Dashboard from "./pages/admin/Dashboard";
+import ApiKeys from "./pages/admin/ApiKeys";
 import AcceptInvite from "./pages/AcceptInvite";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -71,6 +72,7 @@ const App = () => (
                 <Route path="users" element={<Users />} />
                 <Route path="tenants" element={<Tenants />} />
                 <Route path="features" element={<TenantFeatures />} />
+                <Route path="api-keys" element={<ApiKeys />} />
                 <Route path="invites" element={<Invites />} />
                 <Route path="audit-logs" element={<AuditLogs />} />
                 <Route path="settings" element={<Settings />} />
