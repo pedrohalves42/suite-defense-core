@@ -959,6 +959,66 @@ export type Database = {
           },
         ]
       }
+      enrollment_keys_safe: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          current_uses: number | null
+          description: string | null
+          expires_at: string | null
+          id: string | null
+          is_active: boolean | null
+          key_masked: string | null
+          max_uses: number | null
+          tenant_id: string | null
+          used_at: string | null
+          used_by_agent: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          current_uses?: number | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          key_masked?: never
+          max_uses?: number | null
+          tenant_id?: string | null
+          used_at?: string | null
+          used_by_agent?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          current_uses?: number | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          key_masked?: never
+          max_uses?: number | null
+          tenant_id?: string | null
+          used_at?: string | null
+          used_by_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollment_keys_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_enrollment_keys_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_next_run: {
