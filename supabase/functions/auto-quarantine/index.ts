@@ -114,15 +114,18 @@ serve(async (req: Request) => {
     // Send alert to admins
     await supabase.functions.invoke('send-system-alert', {
       body: {
-        tenant_id,
-        alert_type: 'auto_quarantine',
-        severity: 'high',
-        title: '⚠️ Arquivo Malicioso em Quarentena',
-        message: `Um arquivo malicioso foi automaticamente colocado em quarentena:\n\nArquivo: ${file_path}\nAgente: ${agent_name}\nDetecções: ${positives}/${total_scans}\n\nAcesse o painel de quarentena para mais detalhes.`,
-        metadata: {
-          quarantine_id: quarantined.id,
+        event: 'virus_detected',
+        severity: 'critical',
+        tenantId: tenant_id,
+        agentName: agent_name,
+        details: {
+          file_path,
           file_hash,
-          virus_scan_id
+          positives,
+          total_scans,
+          quarantine_id: quarantined.id,
+          virus_scan_id,
+          message: `Arquivo malicioso em quarentena: ${file_path} (${positives}/${total_scans} detecções)`
         }
       }
     });
