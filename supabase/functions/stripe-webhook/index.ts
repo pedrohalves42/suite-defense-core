@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { createAuditLog } from "../_shared/audit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,6 +18,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseClient = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    { auth: { persistSession: false } }
+  );
+
   try {
     logStep("Webhook received");
 
@@ -29,6 +36,14 @@ serve(async (req) => {
     
     if (!webhookSecret) {
       logStep("ERROR: STRIPE_WEBHOOK_SECRET not configured");
+      await createAuditLog({
+        supabase: supabaseClient,
+        action: "stripe_webhook_config_error",
+        resourceType: "stripe_webhook",
+        details: { error: "STRIPE_WEBHOOK_SECRET not configured" },
+        request: req,
+        success: false,
+      });
       return new Response(
         JSON.stringify({ error: "Webhook secret not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -38,6 +53,18 @@ serve(async (req) => {
     const signature = req.headers.get("stripe-signature");
     if (!signature) {
       logStep("ERROR: Missing stripe-signature header");
+      await createAuditLog({
+        supabase: supabaseClient,
+        action: "stripe_webhook_missing_signature",
+        resourceType: "stripe_webhook",
+        details: { 
+          error: "Missing stripe-signature header",
+          ip: req.headers.get("x-forwarded-for"),
+          userAgent: req.headers.get("user-agent")
+        },
+        request: req,
+        success: false,
+      });
       return new Response(
         JSON.stringify({ error: "Missing stripe-signature header" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -52,20 +79,60 @@ serve(async (req) => {
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
       logStep("Webhook signature verified", { eventType: event.type });
+      
+      // Log successful verification
+      await createAuditLog({
+        supabase: supabaseClient,
+        action: "stripe_webhook_verified",
+        resourceType: "stripe_webhook",
+        resourceId: event.id,
+        details: { 
+          eventType: event.type,
+          eventId: event.id
+        },
+        request: req,
+        success: true,
+      });
     } catch (err) {
       const errMessage = err instanceof Error ? err.message : String(err);
-      logStep("Webhook signature verification failed", { error: errMessage });
+      logStep("SECURITY ALERT: Webhook signature verification failed", { error: errMessage });
+      
+      // Log failed verification attempt (potential attack)
+      await createAuditLog({
+        supabase: supabaseClient,
+        action: "stripe_webhook_signature_failed",
+        resourceType: "stripe_webhook",
+        details: { 
+          error: errMessage,
+          signature: signature.substring(0, 20) + "...",
+          ip: req.headers.get("x-forwarded-for"),
+          userAgent: req.headers.get("user-agent")
+        },
+        request: req,
+        success: false,
+      });
+      
+      // Check for repeated failures from same IP (potential attack)
+      const ip = req.headers.get("x-forwarded-for");
+      if (ip) {
+        const { count } = await supabaseClient
+          .from("audit_logs")
+          .select("*", { count: "exact", head: true })
+          .eq("action", "stripe_webhook_signature_failed")
+          .eq("ip_address", ip)
+          .gte("created_at", new Date(Date.now() - 3600000).toISOString()); // Last hour
+        
+        if (count && count >= 5) {
+          logStep("CRITICAL: Multiple signature failures from same IP", { ip, count });
+          // Could send alert email here via send-system-alert function
+        }
+      }
+      
       return new Response(
         JSON.stringify({ error: "Invalid signature" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
-    );
 
     // Handle different event types
     switch (event.type) {
