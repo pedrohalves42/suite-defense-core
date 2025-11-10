@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
@@ -18,12 +18,12 @@ export const AppSidebar = () => {
 
   const menuItems = [
     { icon: Home, label: 'Dashboard', to: '/dashboard', end: true },
-    { icon: Server, label: 'Agentes', to: '/agents' },
+    { icon: Server, label: 'Monitoramento', to: '/monitoring' },
+    { icon: Server, label: 'Gerenciar Agentes', to: '/agents' },
     { icon: Zap, label: 'Criar Jobs', to: '/jobs' },
     { icon: Shield, label: 'Scans de Vírus', to: '/virus-scans' },
     { icon: Shield, label: 'Quarentena', to: '/quarantine' },
     { icon: Package, label: 'Instalador', to: '/installer' },
-    { icon: Settings, label: 'Monitoramento', to: '/monitoring' },
     { icon: FileDown, label: 'Exportar Dados', to: '/export' },
     { icon: TestTube, label: 'Teste de Agentes', to: '/agent-test' },
   ];
