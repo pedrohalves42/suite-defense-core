@@ -32,13 +32,15 @@ import TenantFeatures from "./pages/admin/TenantFeatures";
 import Dashboard from "./pages/admin/Dashboard";
 import ApiKeys from "./pages/admin/ApiKeys";
 import Members from "./pages/admin/Members";
-import PlanUpgrade from "./pages/admin/PlanUpgrade";
+import PlanUpgrade from "./pages/admin/PlanUpgradeNew";
 import SuperAdminTenants from "./pages/admin/super/Tenants";
 import SuperAdminMetrics from "./pages/admin/super/Metrics";
 import AgentMonitoring from "./pages/AgentMonitoring";
 import AgentManagement from "./pages/AgentManagement";
 import DataExport from "./pages/DataExport";
 import AcceptInvite from "./pages/AcceptInvite";
+import CheckoutSuccess from "./pages/CheckoutSuccess";
+import CheckoutCancel from "./pages/CheckoutCancel";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import AuthDebug from "./pages/debug/AuthDebug";
@@ -61,6 +63,8 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="/accept-invite" element={<AcceptInvite />} />
+            <Route path="/checkout/success" element={<CheckoutSuccess />} />
+            <Route path="/checkout/cancel" element={<CheckoutCancel />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             

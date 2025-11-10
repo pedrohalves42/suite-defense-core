@@ -681,27 +681,39 @@ export type Database = {
           created_at: string
           id: string
           max_agents: number | null
+          max_devices: number | null
           max_scans_per_month: number | null
           max_users: number
           name: string
+          price_per_device: number | null
+          stripe_price_id: string | null
+          trial_days: number | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
           max_agents?: number | null
+          max_devices?: number | null
           max_scans_per_month?: number | null
           max_users: number
           name: string
+          price_per_device?: number | null
+          stripe_price_id?: string | null
+          trial_days?: number | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
           max_agents?: number | null
+          max_devices?: number | null
           max_scans_per_month?: number | null
           max_users?: number
           name?: string
+          price_per_device?: number | null
+          stripe_price_id?: string | null
+          trial_days?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -822,23 +834,41 @@ export type Database = {
       tenant_subscriptions: {
         Row: {
           created_at: string
+          current_period_end: string | null
+          device_quantity: number | null
           id: string
           plan_id: string
+          status: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           tenant_id: string
+          trial_end: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          current_period_end?: string | null
+          device_quantity?: number | null
           id?: string
           plan_id: string
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           tenant_id: string
+          trial_end?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          current_period_end?: string | null
+          device_quantity?: number | null
           id?: string
           plan_id?: string
+          status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           tenant_id?: string
+          trial_end?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1155,6 +1185,14 @@ export type Database = {
       cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       current_user_tenant_id: { Args: never; Returns: string }
+      ensure_tenant_features: {
+        Args: {
+          p_device_quantity?: number
+          p_plan_name: string
+          p_tenant_id: string
+        }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
