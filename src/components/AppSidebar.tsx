@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ export const AppSidebar = () => {
   const adminItems = [
     { icon: Home, label: 'Dashboard', to: '/admin/dashboard', end: true },
     { icon: Users, label: 'Membros', to: '/admin/members' },
+    { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
     { icon: Users, label: 'Usuários', to: '/admin/users' },
     { icon: Package, label: 'Tenants', to: '/admin/tenants' },
     { icon: Shield, label: 'Features', to: '/admin/features' },

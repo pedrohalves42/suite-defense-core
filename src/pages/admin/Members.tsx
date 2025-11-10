@@ -16,6 +16,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 
 interface Member {
@@ -106,6 +113,31 @@ export default function Members() {
     onError: (error) => {
       toast({
         title: 'Erro ao remover membro',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Atualizar role do membro
+  const updateRole = useMutation({
+    mutationFn: async ({ userRoleId, newRole }: { userRoleId: string; newRole: string }) => {
+      const { error } = await supabase.functions.invoke('update-member-role', {
+        body: { user_role_id: userRoleId, new_role: newRole },
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-members'] });
+      toast({
+        title: 'Role atualizado',
+        description: 'O role do membro foi atualizado com sucesso.',
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro ao atualizar role',
         description: error.message,
         variant: 'destructive',
       });
@@ -214,14 +246,31 @@ export default function Members() {
                       {new Date(member.created_at).toLocaleDateString('pt-BR')}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setMemberToRemove(member)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={member.role}
+                      onValueChange={(newRole) =>
+                        updateRole.mutate({ userRoleId: member.id, newRole })
+                      }
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="operator">Operator</SelectItem>
+                        <SelectItem value="viewer">Viewer</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setMemberToRemove(member)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
