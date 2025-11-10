@@ -12,6 +12,8 @@ export const AppSidebar = () => {
     return saved === 'true';
   });
 
+  console.log('[AppSidebar] isAdmin:', isAdmin);
+
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', collapsed.toString());
     // Dispatch custom event for cross-component sync

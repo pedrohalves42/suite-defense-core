@@ -38,13 +38,28 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
+    console.log(`[${requestId}] Checking admin role for user:`, user.id);
+    
     // Check if user is admin
-    const { data: hasAdminRole } = await supabaseAdmin.rpc('has_role', { 
+    const { data: hasAdminRole, error: roleError } = await supabaseAdmin.rpc('has_role', { 
       _user_id: user.id, 
       _role: 'admin' 
     });
 
+    console.log(`[${requestId}] Admin check result:`, { hasAdminRole, roleError });
+
+    if (roleError) {
+      console.error(`[${requestId}] Role check error:`, roleError);
+      return createErrorResponse(
+        ErrorCode.INTERNAL_ERROR, 
+        'Falha ao verificar permissões de admin', 
+        500, 
+        requestId
+      );
+    }
+
     if (!hasAdminRole) {
+      console.warn(`[${requestId}] User ${user.id} is not admin`);
       return createErrorResponse(ErrorCode.FORBIDDEN, 'Acesso negado', 403, requestId);
     }
 

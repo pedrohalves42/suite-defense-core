@@ -35,19 +35,27 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
+    console.log(`[${requestId}] Checking role for user:`, user.id);
+    
     const { data: userRole, error: rolesError } = await supabaseClient
       .from('user_roles')
       .select('role, tenant_id')
       .eq('user_id', user.id)
       .single();
 
+    console.log(`[${requestId}] User role query result:`, { userRole, rolesError });
+
     if (rolesError || !userRole) {
+      console.error(`[${requestId}] Error fetching user role:`, rolesError);
       throw new Error('Forbidden');
     }
 
     if (userRole.role !== 'admin' && userRole.role !== 'operator') {
+      console.warn(`[${requestId}] User ${user.id} does not have permission, role:`, userRole.role);
       throw new Error('Forbidden: only admins and operators can generate keys');
     }
+
+    console.log(`[${requestId}] User ${user.id} authorized with role:`, userRole.role);
 
     const tenantId = userRole.tenant_id;
     const body = await req.json();
