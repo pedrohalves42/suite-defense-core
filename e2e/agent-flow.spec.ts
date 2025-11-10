@@ -5,8 +5,8 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://iavbnmduxpxhwubqr
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhdmJubWR1eHB4aHd1YnFyenpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NzkzMzIsImV4cCI6MjA3NTQ1NTMzMn0.79Bg6lX-ArhDGLeaUN7MPgChv4FQNJ_KcjdMa5IerWk';
 
 // Helper para gerar HMAC
-function generateHmac(secret: string, body: string, timestamp: string): string {
-  const payload = `${timestamp}:${body}`;
+function generateHmac(secret: string, body: string, timestamp: string, nonce: string): string {
+  const payload = `${timestamp}:${nonce}:${body}`;
   return crypto.createHmac('sha256', secret).update(payload).digest('hex');
 }
 
@@ -88,14 +88,16 @@ test.describe('Agent Flow E2E', () => {
 
   test('3. Agent heartbeat', async ({ request }) => {
     const timestamp = Date.now().toString();
+    const nonce = crypto.randomUUID();
     const body = JSON.stringify({ status: 'active' });
-    const hmacSignature = generateHmac(hmacSecret, body, timestamp);
+    const hmacSignature = generateHmac(hmacSecret, body, timestamp, nonce);
 
     const heartbeatResponse = await request.post(`${SUPABASE_URL}/functions/v1/heartbeat`, {
       headers: {
         'X-Agent-Token': agentToken,
         'X-HMAC-Signature': hmacSignature,
         'X-Timestamp': timestamp,
+        'X-Nonce': nonce,
         'Content-Type': 'application/json',
       },
       data: JSON.parse(body),
@@ -130,14 +132,16 @@ test.describe('Agent Flow E2E', () => {
 
   test('5. Agent poll-jobs (buscar jobs pendentes)', async ({ request }) => {
     const timestamp = Date.now().toString();
+    const nonce = crypto.randomUUID();
     const body = '';
-    const hmacSignature = generateHmac(hmacSecret, body, timestamp);
+    const hmacSignature = generateHmac(hmacSecret, body, timestamp, nonce);
 
-    const pollResponse = await request.post(`${SUPABASE_URL}/functions/v1/poll-jobs`, {
+    const pollResponse = await request.get(`${SUPABASE_URL}/functions/v1/poll-jobs`, {
       headers: {
         'X-Agent-Token': agentToken,
         'X-HMAC-Signature': hmacSignature,
         'X-Timestamp': timestamp,
+        'X-Nonce': nonce,
         'Content-Type': 'application/json',
       },
     });
@@ -155,14 +159,16 @@ test.describe('Agent Flow E2E', () => {
 
   test('6. Agent acknowledge job (ack-job)', async ({ request }) => {
     const timestamp = Date.now().toString();
+    const nonce = crypto.randomUUID();
     const body = '';
-    const hmacSignature = generateHmac(hmacSecret, body, timestamp);
+    const hmacSignature = generateHmac(hmacSecret, body, timestamp, nonce);
 
     const ackResponse = await request.post(`${SUPABASE_URL}/functions/v1/ack-job/${jobId}`, {
       headers: {
         'X-Agent-Token': agentToken,
         'X-HMAC-Signature': hmacSignature,
         'X-Timestamp': timestamp,
+        'X-Nonce': nonce,
         'Content-Type': 'application/json',
       },
     });
@@ -199,8 +205,9 @@ test.describe('Agent Flow E2E', () => {
     const promises = [];
     for (let i = 0; i < 5; i++) {
       const timestamp = Date.now().toString();
+      const nonce = crypto.randomUUID();
       const body = JSON.stringify({ status: 'active' });
-      const hmacSignature = generateHmac(hmacSecret, body, timestamp);
+      const hmacSignature = generateHmac(hmacSecret, body, timestamp, nonce);
 
       promises.push(
         request.post(`${SUPABASE_URL}/functions/v1/heartbeat`, {
@@ -208,6 +215,7 @@ test.describe('Agent Flow E2E', () => {
             'X-Agent-Token': agentToken,
             'X-HMAC-Signature': hmacSignature,
             'X-Timestamp': timestamp,
+            'X-Nonce': nonce,
             'Content-Type': 'application/json',
           },
           data: JSON.parse(body),
@@ -224,14 +232,16 @@ test.describe('Agent Flow E2E', () => {
 
   test('9. Invalid token validation', async ({ request }) => {
     const timestamp = Date.now().toString();
+    const nonce = crypto.randomUUID();
     const body = JSON.stringify({ status: 'active' });
-    const hmacSignature = generateHmac(hmacSecret, body, timestamp);
+    const hmacSignature = generateHmac(hmacSecret, body, timestamp, nonce);
 
     const heartbeatResponse = await request.post(`${SUPABASE_URL}/functions/v1/heartbeat`, {
       headers: {
         'X-Agent-Token': 'invalid-token-12345',
         'X-HMAC-Signature': hmacSignature,
         'X-Timestamp': timestamp,
+        'X-Nonce': nonce,
         'Content-Type': 'application/json',
       },
       data: JSON.parse(body),
@@ -242,6 +252,7 @@ test.describe('Agent Flow E2E', () => {
 
   test('10. Invalid HMAC validation', async ({ request }) => {
     const timestamp = Date.now().toString();
+    const nonce = crypto.randomUUID();
     const body = JSON.stringify({ status: 'active' });
 
     const heartbeatResponse = await request.post(`${SUPABASE_URL}/functions/v1/heartbeat`, {
@@ -249,6 +260,7 @@ test.describe('Agent Flow E2E', () => {
         'X-Agent-Token': agentToken,
         'X-HMAC-Signature': 'invalid-hmac-signature',
         'X-Timestamp': timestamp,
+        'X-Nonce': nonce,
         'Content-Type': 'application/json',
       },
       data: JSON.parse(body),

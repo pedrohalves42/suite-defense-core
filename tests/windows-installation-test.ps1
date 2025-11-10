@@ -117,9 +117,9 @@ function Test-HeartbeatFunction {
     
     try {
         # Criar HMAC signature
-        $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
         $nonce = [guid]::NewGuid().ToString()
-        $message = "$timestamp$nonce{}"
+        $message = "${timestamp}:${nonce}:{}"
         
         $hmacsha = New-Object System.Security.Cryptography.HMACSHA256
         $hmacsha.Key = [Text.Encoding]::UTF8.GetBytes($script:TestHmacSecret)
@@ -156,9 +156,9 @@ function Test-JobPolling {
     }
     
     try {
-        $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
         $nonce = [guid]::NewGuid().ToString()
-        $message = "$timestamp$nonce{}"
+        $message = "${timestamp}:${nonce}:{}"
         
         $hmacsha = New-Object System.Security.Cryptography.HMACSHA256
         $hmacsha.Key = [Text.Encoding]::UTF8.GetBytes($script:TestHmacSecret)
@@ -226,9 +226,9 @@ function Test-ContinuousOperation {
         # Heartbeat a cada 30 segundos
         if ($heartbeatCount -eq 0 -or ((Get-Date) - $lastHeartbeat).TotalSeconds -ge 30) {
             try {
-                $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+                $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
                 $nonce = [guid]::NewGuid().ToString()
-                $message = "$timestamp$nonce{}"
+                $message = "${timestamp}:${nonce}:{}"
                 
                 $hmacsha = New-Object System.Security.Cryptography.HMACSHA256
                 $hmacsha.Key = [Text.Encoding]::UTF8.GetBytes($script:TestHmacSecret)
@@ -256,9 +256,9 @@ function Test-ContinuousOperation {
         # Poll a cada 10 segundos
         if ($pollCount -eq 0 -or ((Get-Date) - $lastPoll).TotalSeconds -ge 10) {
             try {
-                $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+                $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
                 $nonce = [guid]::NewGuid().ToString()
-                $message = "$timestamp$nonce{}"
+                $message = "${timestamp}:${nonce}:{}"
                 
                 $hmacsha = New-Object System.Security.Cryptography.HMACSHA256
                 $hmacsha.Key = [Text.Encoding]::UTF8.GetBytes($script:TestHmacSecret)

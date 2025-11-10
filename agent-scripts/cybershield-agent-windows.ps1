@@ -109,11 +109,11 @@ function Invoke-SecureRequest {
     
     while ($retryCount -lt $MaxRetries) {
         try {
-            $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+            $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
             $nonce = [guid]::NewGuid().ToString()
             
             $bodyJson = if ($Body) { $Body | ConvertTo-Json -Compress } else { "{}" }
-            $message = "$timestamp$nonce$bodyJson"
+            $message = "${timestamp}:${nonce}:${bodyJson}"
             $signature = Get-HmacSignature -Message $message -Secret $HmacSecret
             
             $headers = @{
@@ -348,6 +348,7 @@ function Upload-Report {
         $reportData = @{
             job_id = $JobId
             result = $Result
+            timestamp = (Get-Date).ToString("o")
         } | ConvertTo-Json -Depth 10
         
         $url = "$ServerUrl/functions/v1/upload-report"
