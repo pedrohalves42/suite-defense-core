@@ -62,11 +62,19 @@ Deno.serve(async (req) => {
     const alerts: TenantAlert[] = [];
 
     for (const tenant of tenants || []) {
+      // Skip if no settings configured
       if (!tenant.tenant_settings || tenant.tenant_settings.length === 0) {
+        console.log(`[${requestId}] No settings found for tenant ${tenant.name}, skipping`);
         continue;
       }
 
       const settings = tenant.tenant_settings[0];
+      
+      // Skip if settings object is invalid
+      if (!settings || typeof settings !== 'object') {
+        console.log(`[${requestId}] Invalid settings for tenant ${tenant.name}, skipping`);
+        continue;
+      }
 
       // Skip if alerts are disabled
       if (!settings.enable_email_alerts && !settings.enable_webhook_alerts) {
