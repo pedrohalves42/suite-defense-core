@@ -34,6 +34,7 @@ export const AppSidebar = () => {
 
   const adminItems = [
     { icon: Home, label: 'Dashboard', to: '/admin/dashboard', end: true },
+    { icon: Users, label: 'Membros', to: '/admin/members' },
     { icon: Users, label: 'Usuários', to: '/admin/users' },
     { icon: Package, label: 'Tenants', to: '/admin/tenants' },
     { icon: Shield, label: 'Features', to: '/admin/features' },

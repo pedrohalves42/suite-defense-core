@@ -81,6 +81,38 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
     }
 
+    // Verificar limite de usuários do plano
+    const { data: subscription } = await supabaseAdmin
+      .from('tenant_subscriptions')
+      .select(`
+        subscription_plans (
+          max_users
+        )
+      `)
+      .eq('tenant_id', userRole.tenant_id)
+      .single();
+
+    if (!subscription) {
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Plano não encontrado', 400, requestId);
+    }
+
+    // Contar usuários atuais do tenant
+    const { count: currentUsersCount } = await supabaseAdmin
+      .from('user_roles')
+      .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', userRole.tenant_id);
+
+    const maxUsers = (subscription.subscription_plans as any).max_users;
+
+    if (currentUsersCount && currentUsersCount >= maxUsers) {
+      return createErrorResponse(
+        ErrorCode.FORBIDDEN, 
+        `Limite de usuários atingido. Seu plano permite no máximo ${maxUsers} usuários.`, 
+        403, 
+        requestId
+      );
+    }
+
     const body = await req.json();
 
     // Validate input with Zod
