@@ -43,47 +43,14 @@ export default function Members() {
   const navigate = useNavigate();
   const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
 
-  // Buscar membros do tenant
+  // Buscar membros do tenant via edge function
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['tenant-members'],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Não autorizado');
-
-      // Buscar tenant_id do usuário
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!userRole) throw new Error('Tenant não encontrado');
-
-      // Buscar todos os membros do tenant
-      const { data: membersData, error } = await supabase
-        .from('user_roles')
-        .select(`
-          id,
-          user_id,
-          role,
-          tenant_id,
-          created_at,
-          profiles (
-            full_name
-          )
-        `)
-        .eq('tenant_id', userRole.tenant_id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Buscar emails dos usuários
-      const { data: { users } } = await supabase.auth.admin.listUsers();
+      const { data, error } = await supabase.functions.invoke('list-users');
       
-      return membersData.map((member) => ({
-        ...member,
-        email: users.find((u) => u.id === member.user_id)?.email || 'N/A',
-      }));
+      if (error) throw error;
+      return data.users || [];
     },
   });
 
