@@ -38,6 +38,7 @@ export const AppSidebar = () => {
     { icon: Home, label: 'Dashboard', to: '/admin/dashboard', end: true },
     { icon: Users, label: 'Membros', to: '/admin/members' },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
+    { icon: Activity, label: 'Assinaturas', to: '/admin/subscriptions' },
     { icon: Users, label: 'Usuários', to: '/admin/users' },
     { icon: Package, label: 'Tenants', to: '/admin/tenants' },
     { icon: Shield, label: 'Features', to: '/admin/features' },
