@@ -102,10 +102,16 @@ function Invoke-SecureRequest {
 # Função para polling de jobs
 function Poll-Jobs {
     try {
+        Write-Host "[DEBUG] Polling jobs de: $ServerUrl/functions/v1/poll-jobs"
         $jobs = Invoke-SecureRequest -Url "$ServerUrl/functions/v1/poll-jobs"
+        Write-Host "[✓] Polling bem-sucedido"
         return $jobs
     } catch {
-        Write-Host "[ERRO] Falha ao fazer polling: $_"
+        Write-Host "[✗] ERRO ao fazer polling"
+        Write-Host "[DEBUG] Erro: $($_.Exception.Message)"
+        if ($_.Exception.Response) {
+            Write-Host "[DEBUG] Status: $($_.Exception.Response.StatusCode.value__)"
+        }
         return @()
     }
 }
@@ -240,11 +246,16 @@ function Ack-Job {
     
     try {
         $url = "$ServerUrl/functions/v1/ack-job/$JobId"
-        $response = Invoke-SecureRequest -Url $url -Method POST
-        Write-Host "[INFO] Job $JobId confirmado"
+        Write-Host "[DEBUG] ACK URL: $url"
+        $response = Invoke-SecureRequest -Url $url -Method POST -Body ""
+        Write-Host "[✓] Job $JobId confirmado com sucesso"
+        Write-Host "[DEBUG] Response: $($response | ConvertTo-Json -Compress)"
         return $true
     } catch {
-        Write-Host "[ERRO] Falha ao confirmar job $JobId : $_"
+        Write-Host "[✗] ERRO ao confirmar job $JobId"
+        Write-Host "[DEBUG] Erro detalhado: $($_.Exception.Message)"
+        Write-Host "[DEBUG] Status Code: $($_.Exception.Response.StatusCode.value__)"
+        Write-Host "[DEBUG] Response: $($_.ErrorDetails.Message)"
         return $false
     }
 }
@@ -352,40 +363,58 @@ function Start-Agent {
     while ($true) {
         try {
             # Polling de jobs
+            Write-Host ""
+            Write-Host "[→] Iniciando polling... ($(Get-Date -Format 'HH:mm:ss'))"
             $jobs = Poll-Jobs
             
             if ($jobs -and $jobs.Count -gt 0) {
-                Write-Host "[INFO] $($jobs.Count) job(s) recebido(s)"
+                Write-Host "[INFO] ✓ $($jobs.Count) job(s) recebido(s)"
+                Write-Host ""
                 
                 foreach ($job in $jobs) {
+                    Write-Host "--- Job: $($job.id) ---"
                     try {
                         # Executar job
+                        Write-Host "[1/3] Executando job..."
                         $result = Execute-Job -Job $job
+                        Write-Host "[✓] Job executado"
                         
                         # Enviar report da execução
+                        Write-Host "[2/3] Enviando report..."
                         $uploadSuccess = Upload-Report -JobId $job.id -Result $result
                         
                         # Confirmar job
-                        if ($uploadSuccess) {
-                            Ack-Job -JobId $job.id
+                        Write-Host "[3/3] Confirmando job (ACK)..."
+                        $ackSuccess = Ack-Job -JobId $job.id
+                        
+                        if ($ackSuccess) {
+                            Write-Host "[✓✓✓] Job $($job.id) concluído com sucesso!"
                         } else {
-                            Write-Host "[AVISO] Job $($job.id) executado mas report não enviado"
-                            # ACK mesmo assim para não ficar preso
-                            Ack-Job -JobId $job.id
+                            Write-Host "[!] Job executado mas ACK falhou - job pode ser reprocessado"
                         }
                     } catch {
-                        Write-Host "[ERRO] Falha ao processar job $($job.id): $_"
-                        # ACK para não reprocessar
+                        Write-Host "[✗] ERRO ao processar job $($job.id)"
+                        Write-Host "[DEBUG] Exception: $($_.Exception.Message)"
+                        # Tentar ACK mesmo assim para não reprocessar
+                        Write-Host "[RETRY] Tentando ACK de emergência..."
                         Ack-Job -JobId $job.id
                     }
+                    Write-Host "---"
+                    Write-Host ""
                 }
+            } else {
+                Write-Host "[○] Nenhum job pendente"
             }
             
             # Aguardar próximo polling
+            Write-Host "[SLEEP] Aguardando ${PollInterval}s até próximo polling..."
             Start-Sleep -Seconds $PollInterval
         } catch {
-            Write-Host "[ERRO] Erro no loop principal: $_"
-            Write-Host "[INFO] Aguardando 10s antes de tentar novamente..."
+            Write-Host ""
+            Write-Host "[✗✗✗] ERRO CRÍTICO no loop principal"
+            Write-Host "[DEBUG] Exception: $($_.Exception.Message)"
+            Write-Host "[DEBUG] StackTrace: $($_.ScriptStackTrace)"
+            Write-Host "[RECOVERY] Aguardando 10s antes de tentar novamente..."
             Start-Sleep -Seconds 10
         }
     }
