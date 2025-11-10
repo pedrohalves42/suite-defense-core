@@ -11,32 +11,51 @@ export const useUserRole = () => {
 
   useEffect(() => {
     const checkRole = async () => {
-      console.log('[useUserRole] Checking role for user:', user?.id);
-      
       if (!user) {
-        console.log('[useUserRole] No user found, setting role to null');
         setRole(null);
         setLoading(false);
         return;
       }
 
       try {
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .maybeSingle();
+        // Check roles in priority order using RPC to avoid RLS issues
+        const { data: isAdmin, error: adminError } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin'
+        });
 
-        console.log('[useUserRole] Query result:', { data, error });
-
-        if (error) {
-          console.error('[useUserRole] RLS Policy Error:', error);
-          throw error;
+        if (adminError) throw adminError;
+        if (isAdmin === true) {
+          setRole('admin');
+          setLoading(false);
+          return;
         }
-        
-        const userRole = data?.role as UserRole;
-        console.log('[useUserRole] User role:', userRole);
-        setRole(userRole);
+
+        const { data: isOperator, error: operatorError } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'operator'
+        });
+
+        if (operatorError) throw operatorError;
+        if (isOperator === true) {
+          setRole('operator');
+          setLoading(false);
+          return;
+        }
+
+        const { data: isViewer, error: viewerError } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'viewer'
+        });
+
+        if (viewerError) throw viewerError;
+        if (isViewer === true) {
+          setRole('viewer');
+          setLoading(false);
+          return;
+        }
+
+        setRole(null);
       } catch (error) {
         console.error('[useUserRole] Error checking user role:', error);
         setRole(null);

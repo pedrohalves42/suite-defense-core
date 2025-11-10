@@ -55,6 +55,9 @@ const Landing = () => {
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="text-lg h-14 px-8">
+                <Link to="/login">Entrar</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="text-lg h-14 px-8">
                 <a href="#contact">Falar com Especialista</a>
               </Button>
             </div>
