@@ -14,6 +14,12 @@ import { Plus, Copy, Eye, EyeOff, Trash2, Key } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { z } from 'zod';
+
+const ApiKeyNameSchema = z.string()
+  .min(3, 'Nome deve ter no mínimo 3 caracteres')
+  .max(50, 'Nome deve ter no máximo 50 caracteres')
+  .regex(/^[a-zA-Z0-9\s\-_]+$/, 'Nome deve conter apenas letras, números, espaços, hífens e underscores');
 
 export default function ApiKeys() {
   const { toast } = useToast();
@@ -21,6 +27,7 @@ export default function ApiKeys() {
   const { tenant } = useTenant();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
+  const [nameError, setNameError] = useState<string>('');
   const [scopes, setScopes] = useState<string[]>(['read']);
   const [expiresInDays, setExpiresInDays] = useState('365');
   const [newApiKey, setNewApiKey] = useState<string | null>(null);
@@ -46,6 +53,12 @@ export default function ApiKeys() {
   const createApiKey = useMutation({
     mutationFn: async () => {
       if (!tenant?.id) throw new Error('Tenant não encontrado');
+
+      // Validate name
+      const nameValidation = ApiKeyNameSchema.safeParse(name);
+      if (!nameValidation.success) {
+        throw new Error(nameValidation.error.issues[0].message);
+      }
 
       // Generate API key (sk_live_... format)
       const randomBytes = new Uint8Array(32);
@@ -91,10 +104,12 @@ export default function ApiKeys() {
       setNewApiKey(apiKey);
       toast({ title: 'API key criada com sucesso!' });
       setName('');
+      setNameError('');
       setScopes(['read']);
       setExpiresInDays('365');
     },
     onError: (error: Error) => {
+      setNameError(error.message);
       toast({ title: error.message || 'Erro ao criar API key', variant: 'destructive' });
     },
   });
@@ -188,8 +203,16 @@ export default function ApiKeys() {
                   <Input
                     placeholder="Minha API Key"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      setNameError('');
+                    }}
+                    className={nameError ? 'border-destructive' : ''}
                   />
+                  {nameError && <p className="text-xs text-destructive mt-1">{nameError}</p>}
+                  <p className="text-xs text-muted-foreground mt-1">
+                    3-50 caracteres: letras, números, espaços, hífens e underscores
+                  </p>
                 </div>
                 <div>
                   <Label>Permissões</Label>

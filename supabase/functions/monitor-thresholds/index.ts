@@ -177,6 +177,9 @@ Deno.serve(async (req) => {
 
         // Call send-system-alert edge function
         const { data: alertData, error: alertError } = await supabase.functions.invoke('send-system-alert', {
+          headers: {
+            'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
+          },
           body: {
             event_type: 'threshold_exceeded',
             severity: 'high',

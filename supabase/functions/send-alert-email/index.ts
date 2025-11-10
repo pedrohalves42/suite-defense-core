@@ -19,8 +19,20 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Validate internal secret
+  const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+  const providedSecret = req.headers.get('X-Internal-Secret');
+
+  if (providedSecret !== INTERNAL_SECRET) {
+    console.error('[Alert Email] Unauthorized access attempt');
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   try {
-    // Use service role key for internal calls (no authentication required)
+    // Use service role key for internal calls
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
