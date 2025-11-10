@@ -14,6 +14,13 @@ export const AdminLayout = () => {
     console.log('[AdminLayout] User:', user?.id);
     console.log('[AdminLayout] isAdmin:', isAdmin);
     console.log('[AdminLayout] loading:', loading);
+    if (!loading && !isAdmin) {
+      toast({
+        title: "Acesso Negado",
+        description: "Você não tem permissões de administrador.",
+        variant: "destructive"
+      });
+    }
   }, [user, isAdmin, loading]);
 
   if (loading) {
@@ -27,11 +34,6 @@ export const AdminLayout = () => {
 
   if (!isAdmin) {
     console.warn('[AdminLayout] User is not admin, redirecting to dashboard');
-    toast({
-      title: "Acesso Negado",
-      description: "Você não tem permissões de administrador.",
-      variant: "destructive"
-    });
     return <Navigate to="/dashboard" replace />;
   }
 
