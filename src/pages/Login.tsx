@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Shield } from 'lucide-react';
+import { Shield, Mail } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const loginSchema = z.object({
   email: z.string()
@@ -24,6 +25,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -44,25 +46,85 @@ export default function Login() {
       return;
     }
 
+    console.log('[Login] Tentando login com senha para:', validation.data.email);
+
     const { error } = await supabase.auth.signInWithPassword({
       email: validation.data.email,
       password: validation.data.password,
     });
 
     if (error) {
-      // Generic error message to prevent account enumeration
-      const message = 'Email ou senha incorretos. Tente novamente.';
+      console.error('[Login] Erro no login:', error.message, 'Código:', error.status);
+      
+      // Mensagens específicas baseadas no erro
+      let message = 'Email ou senha incorretos. Tente novamente.';
+      let description = '';
+      
+      if (error.message.includes('Email not confirmed')) {
+        message = 'Email não confirmado';
+        description = 'Verifique sua caixa de entrada para confirmar seu email.';
+      } else if (error.message.includes('Invalid login credentials')) {
+        description = 'Verifique suas credenciais ou tente o login por email mágico.';
+      } else if (error.status === 429) {
+        message = 'Muitas tentativas';
+        description = 'Aguarde alguns minutos antes de tentar novamente.';
+      }
+      
       toast({
         variant: 'destructive',
-        title: 'Erro no login',
-        description: message,
+        title: message,
+        description,
       });
     } else {
+      console.log('[Login] Login bem-sucedido');
       toast({
         title: 'Login realizado com sucesso',
         description: 'Redirecionando...',
       });
       navigate('/dashboard');
+    }
+
+    setLoading(false);
+  };
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const emailValidation = z.string().email('Email inválido').safeParse(email);
+    if (!emailValidation.success) {
+      toast({
+        variant: 'destructive',
+        title: 'Email inválido',
+        description: 'Por favor, insira um email válido.',
+      });
+      setLoading(false);
+      return;
+    }
+
+    console.log('[Login] Enviando link mágico para:', email);
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+
+    if (error) {
+      console.error('[Login] Erro ao enviar link mágico:', error.message);
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao enviar link',
+        description: 'Não foi possível enviar o email. Tente novamente.',
+      });
+    } else {
+      console.log('[Login] Link mágico enviado com sucesso');
+      setMagicLinkSent(true);
+      toast({
+        title: 'Email enviado!',
+        description: 'Verifique sua caixa de entrada e clique no link para fazer login.',
+      });
     }
 
     setLoading(false);
@@ -80,52 +142,106 @@ export default function Login() {
             Entre com suas credenciais para acessar o sistema
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleLogin}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                maxLength={255}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                maxLength={72}
-              />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Entrando...' : 'Entrar'}
-            </Button>
-            <div className="text-sm text-center text-muted-foreground space-y-2">
-              <div>
-                <Link to="/forgot-password" className="text-primary hover:underline">
-                  Esqueceu sua senha?
-                </Link>
-              </div>
-              <div>
-                Não tem uma conta?{' '}
-                <Link to="/signup" className="text-primary hover:underline">
-                  Cadastre-se
-                </Link>
-              </div>
-            </div>
-          </CardFooter>
-        </form>
+
+        <Tabs defaultValue="password" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="password">Senha</TabsTrigger>
+            <TabsTrigger value="magic">Email Mágico</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="password">
+            <form onSubmit={handleLogin}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    maxLength={255}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    maxLength={72}
+                  />
+                </div>
+              </CardContent>
+              <CardFooter className="flex flex-col space-y-4">
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Entrando...' : 'Entrar'}
+                </Button>
+                <div className="text-sm text-center text-muted-foreground space-y-2">
+                  <div>
+                    <Link to="/forgot-password" className="text-primary hover:underline">
+                      Esqueceu sua senha?
+                    </Link>
+                  </div>
+                  <div>
+                    Não tem uma conta?{' '}
+                    <Link to="/signup" className="text-primary hover:underline">
+                      Cadastre-se
+                    </Link>
+                  </div>
+                </div>
+              </CardFooter>
+            </form>
+          </TabsContent>
+
+          <TabsContent value="magic">
+            <form onSubmit={handleMagicLink}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="magic-email">Email</Label>
+                  <Input
+                    id="magic-email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    maxLength={255}
+                  />
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <p className="flex items-start gap-2">
+                    <Mail className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span>
+                      Enviaremos um link de acesso único para seu email. 
+                      {' '}Ideal para redes corporativas com restrições.
+                    </span>
+                  </p>
+                </div>
+                {magicLinkSent && (
+                  <div className="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950 p-3 rounded-md">
+                    ✓ Email enviado! Verifique sua caixa de entrada.
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="flex flex-col space-y-4">
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? 'Enviando...' : 'Enviar Link Mágico'}
+                </Button>
+                <div className="text-sm text-center text-muted-foreground">
+                  Não tem uma conta?{' '}
+                  <Link to="/signup" className="text-primary hover:underline">
+                    Cadastre-se
+                  </Link>
+                </div>
+              </CardFooter>
+            </form>
+          </TabsContent>
+        </Tabs>
       </Card>
     </div>
   );
