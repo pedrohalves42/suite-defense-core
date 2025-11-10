@@ -10,6 +10,115 @@ interface ScanRequest {
   fileHash: string;
 }
 
+interface ScanResult {
+  isMalicious: boolean;
+  positives: number;
+  totalScans: number;
+  permalink?: string;
+  scanDate?: string;
+  scans?: any;
+  scannerUsed: 'hybrid_analysis' | 'virustotal';
+}
+
+// Hybrid Analysis API scan
+async function scanWithHybridAnalysis(fileHash: string, apiKey: string): Promise<ScanResult | null> {
+  try {
+    console.log(`[Hybrid Analysis] Scanning hash: ${fileHash}`);
+    
+    // Query for existing scan report
+    const reportResponse = await fetch(
+      `https://www.hybrid-analysis.com/api/v2/report/${fileHash}/summary`,
+      {
+        headers: {
+          'api-key': apiKey,
+          'User-Agent': 'CyberShield',
+        }
+      }
+    );
+
+    if (reportResponse.status === 404) {
+      console.log('[Hybrid Analysis] File not found in database');
+      return null;
+    }
+
+    if (!reportResponse.ok) {
+      const error = await reportResponse.text();
+      console.error(`[Hybrid Analysis] API error: ${reportResponse.status} - ${error}`);
+      return null;
+    }
+
+    const reportData = await reportResponse.json();
+    
+    // Extract threat level
+    const threatScore = reportData.threat_score || 0;
+    const verdict = reportData.verdict || 'no specific threat';
+    const isMalicious = threatScore >= 50 || verdict.includes('malicious');
+    
+    console.log(`[Hybrid Analysis] Result: ${verdict} (score: ${threatScore})`);
+    
+    return {
+      isMalicious,
+      positives: isMalicious ? threatScore : 0,
+      totalScans: 100,
+      permalink: `https://www.hybrid-analysis.com/sample/${fileHash}`,
+      scanDate: reportData.analysis_start_time,
+      scans: reportData,
+      scannerUsed: 'hybrid_analysis'
+    };
+  } catch (error) {
+    console.error('[Hybrid Analysis] Scan failed:', error);
+    return null;
+  }
+}
+
+// VirusTotal API scan
+async function scanWithVirusTotal(fileHash: string, apiKey: string): Promise<ScanResult | null> {
+  try {
+    console.log(`[VirusTotal] Scanning hash: ${fileHash}`);
+    
+    const vtResponse = await fetch(
+      `https://www.virustotal.com/vtapi/v2/file/report?apikey=${apiKey}&resource=${fileHash}`
+    );
+
+    if (!vtResponse.ok) {
+      console.error(`[VirusTotal] API error: ${vtResponse.status}`);
+      return null;
+    }
+
+    const vtData = await vtResponse.json();
+
+    // response_code: 1 = found, 0 = not found, -2 = queued
+    if (vtData.response_code === 0) {
+      console.log('[VirusTotal] File not found in database');
+      return null;
+    }
+
+    if (vtData.response_code === -2) {
+      console.log('[VirusTotal] Analysis queued');
+      return null;
+    }
+
+    const positives = vtData.positives || 0;
+    const total = vtData.total || 0;
+    const isMalicious = positives > 0;
+
+    console.log(`[VirusTotal] Result: ${positives}/${total} detections`);
+
+    return {
+      isMalicious,
+      positives,
+      totalScans: total,
+      permalink: vtData.permalink,
+      scanDate: vtData.scan_date,
+      scans: vtData.scans,
+      scannerUsed: 'virustotal'
+    };
+  } catch (error) {
+    console.error('[VirusTotal] Scan failed:', error);
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -20,11 +129,12 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const hybridAnalysisApiKey = Deno.env.get('HYBRID_ANALYSIS_API_KEY');
     const virusTotalApiKey = Deno.env.get('VIRUSTOTAL_API_KEY');
     
-    if (!virusTotalApiKey) {
+    if (!hybridAnalysisApiKey && !virusTotalApiKey) {
       return new Response(
-        JSON.stringify({ error: 'API VirusTotal não configurada' }),
+        JSON.stringify({ error: 'Nenhum serviço de scan configurado' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -159,43 +269,32 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Consultar VirusTotal API v2 (grátis - 500 req/dia, 4 req/min)
-    const vtResponse = await fetch(
-      `https://www.virustotal.com/vtapi/v2/file/report?apikey=${virusTotalApiKey}&resource=${fileHash}`
-    );
-
-    if (!vtResponse.ok) {
-      throw new Error(`VirusTotal API error: ${vtResponse.status}`);
+    // Try Hybrid Analysis first (primary scanner)
+    let scanResult: ScanResult | null = null;
+    
+    if (hybridAnalysisApiKey) {
+      console.log(`[${agent.agent_name}] Trying Hybrid Analysis first...`);
+      scanResult = await scanWithHybridAnalysis(fileHash, hybridAnalysisApiKey);
     }
-
-    const vtData = await vtResponse.json();
-
-    // response_code: 1 = encontrado, 0 = não encontrado, -2 = na fila
-    if (vtData.response_code === 0) {
+    
+    // Fallback to VirusTotal if Hybrid Analysis failed or not configured
+    if (!scanResult && virusTotalApiKey) {
+      console.log(`[${agent.agent_name}] Falling back to VirusTotal...`);
+      scanResult = await scanWithVirusTotal(fileHash, virusTotalApiKey);
+    }
+    
+    // If both failed, return error
+    if (!scanResult) {
       return new Response(
         JSON.stringify({ 
-          error: 'Arquivo não encontrado no VirusTotal',
-          message: 'Envie o arquivo para análise primeiro' 
+          error: 'Arquivo não encontrado em nenhum serviço de scan',
+          message: 'Envie o arquivo para análise ou tente novamente mais tarde' 
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (vtData.response_code === -2) {
-      return new Response(
-        JSON.stringify({ 
-          message: 'Análise em andamento, tente novamente em alguns minutos',
-          queued: true 
-        }),
-        { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const positives = vtData.positives || 0;
-    const total = vtData.total || 0;
-    const isMalicious = positives > 0;
-
-    // Salvar resultado com validação explícita de tenant_id
+    // Save scan result
     const { data: scanRecord, error: scanError } = await supabase
       .from('virus_scans')
       .insert({
@@ -203,11 +302,11 @@ Deno.serve(async (req) => {
         tenant_id: agent.tenant_id,
         file_hash: fileHash,
         file_path: filePath,
-        scan_result: vtData,
-        is_malicious: isMalicious,
-        positives,
-        total_scans: total,
-        virustotal_permalink: vtData.permalink,
+        scan_result: scanResult.scans,
+        is_malicious: scanResult.isMalicious,
+        positives: scanResult.positives,
+        total_scans: scanResult.totalScans,
+        virustotal_permalink: scanResult.permalink,
       })
       .select()
       .single();
@@ -217,8 +316,8 @@ Deno.serve(async (req) => {
     }
 
     // Auto-quarantine if malicious and enabled
-    if (positives > 0 && scanRecord) {
-      console.log('[SCAN-VIRUS] Malware detected, triggering auto-quarantine');
+    if (scanResult.isMalicious && scanRecord) {
+      console.log(`[SCAN-VIRUS] Malware detected by ${scanResult.scannerUsed}, triggering auto-quarantine`);
       
       try {
         const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
@@ -232,8 +331,8 @@ Deno.serve(async (req) => {
             agent_name: agent.agent_name,
             file_path: filePath,
             file_hash: fileHash,
-            positives: positives,
-            total_scans: total
+            positives: scanResult.positives,
+            total_scans: scanResult.totalScans
           }
         });
       } catch (quarantineError) {
@@ -244,12 +343,13 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        isMalicious,
-        positives,
-        totalScans: total,
-        permalink: vtData.permalink,
-        scanDate: vtData.scan_date,
-        scans: vtData.scans,
+        isMalicious: scanResult.isMalicious,
+        positives: scanResult.positives,
+        totalScans: scanResult.totalScans,
+        permalink: scanResult.permalink,
+        scanDate: scanResult.scanDate,
+        scans: scanResult.scans,
+        scannerUsed: scanResult.scannerUsed,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
