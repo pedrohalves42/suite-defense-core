@@ -959,6 +959,60 @@ export type Database = {
           },
         ]
       }
+      audit_logs_safe: {
+        Row: {
+          action: string | null
+          created_at: string | null
+          details: Json | null
+          id: string | null
+          ip_address_masked: string | null
+          resource_id: string | null
+          resource_type: string | null
+          success: boolean | null
+          tenant_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action?: string | null
+          created_at?: string | null
+          details?: never
+          id?: string | null
+          ip_address_masked?: never
+          resource_id?: string | null
+          resource_type?: string | null
+          success?: boolean | null
+          tenant_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string | null
+          created_at?: string | null
+          details?: never
+          id?: string | null
+          ip_address_masked?: never
+          resource_id?: string | null
+          resource_type?: string | null
+          success?: boolean | null
+          tenant_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_audit_logs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollment_keys_safe: {
         Row: {
           created_at: string | null
@@ -1036,6 +1090,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "operator" | "viewer"
