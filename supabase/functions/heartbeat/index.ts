@@ -60,9 +60,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Rate limiting: 120 req/min (heartbeat a cada 60s + margem)
+    // Rate limiting: 2 req/min (heartbeat a cada 60s + margem para retry)
     const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'heartbeat', {
-      maxRequests: 120,
+      maxRequests: 2,
       windowMinutes: 1,
       blockMinutes: 5,
     })
