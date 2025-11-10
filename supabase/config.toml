@@ -68,3 +68,6 @@ verify_jwt = true
 
 [functions.auto-quarantine]
 verify_jwt = false
+
+[functions.submit-contact]
+verify_jwt = false

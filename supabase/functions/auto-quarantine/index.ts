@@ -129,6 +129,9 @@ serve(async (req: Request) => {
 
     // Send alert to admins
     await supabase.functions.invoke('send-system-alert', {
+      headers: {
+        'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
+      },
       body: {
         event: 'virus_detected',
         severity: 'critical',

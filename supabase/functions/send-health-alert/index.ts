@@ -20,6 +20,18 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Validate internal secret
+  const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+  const providedSecret = req.headers.get('X-Internal-Secret');
+
+  if (providedSecret !== INTERNAL_SECRET) {
+    console.error('[Health Alert] Unauthorized access attempt');
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
@@ -90,6 +102,9 @@ Deno.serve(async (req) => {
 
     // Send email via send-alert-email edge function
     const { error: emailError } = await supabase.functions.invoke('send-alert-email', {
+      headers: {
+        'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
+      },
       body: {
         tenantId,
         alertType,

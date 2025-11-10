@@ -4,6 +4,18 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
+  // Validate internal secret
+  const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+  const providedSecret = req.headers.get('X-Internal-Secret');
+
+  if (providedSecret !== INTERNAL_SECRET) {
+    console.error('[Monitor] Unauthorized access attempt');
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
@@ -54,6 +66,9 @@ Deno.serve(async (req) => {
 
         if (settings?.enable_email_alerts && settings?.alert_email) {
           await supabase.functions.invoke('send-alert-email', {
+            headers: {
+              'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
+            },
             body: {
               tenantId: agent.tenant_id,
               alertType: 'agent_offline',
@@ -96,6 +111,9 @@ Deno.serve(async (req) => {
 
         if (settings?.enable_email_alerts && settings?.alert_email) {
           await supabase.functions.invoke('send-alert-email', {
+            headers: {
+              'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
+            },
             body: {
               tenantId,
               alertType: 'jobs_failed',
