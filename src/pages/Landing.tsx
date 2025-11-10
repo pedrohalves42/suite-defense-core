@@ -1,13 +1,20 @@
 import { Button } from "@/components/ui/button";
-import { Shield, CheckCircle, Zap, Lock, BarChart, Users, ArrowRight, Mail, Phone, MapPin } from "lucide-react";
+import { Shield, CheckCircle, Zap, Lock, BarChart, Users, ArrowRight, Mail, MessageCircle, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ContactForm } from "@/components/ContactForm";
+import { Navbar } from "@/components/Navbar";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 const Landing = () => {
+  const whatsappLink = "https://wa.me/5534984432835?text=Olá!%20Gostaria%20de%20conhecer%20o%20CyberShield";
+
   return (
     <div className="min-h-screen bg-background">
+      <Navbar />
+      <WhatsAppButton />
+
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
+      <section id="inicio" className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-background" />
         <div className="absolute inset-0 bg-grid-white/[0.02]" />
         
@@ -20,15 +27,15 @@ const Landing = () => {
 
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
               <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-                Sua Empresa Segura
+                Proteja os Ativos Digitais
               </span>
               <br />
-              <span className="text-foreground">em Segundos, Não Dias</span>
+              <span className="text-foreground">da Sua Empresa</span>
             </h1>
 
             <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Detecte e elimine ameaças antes que causem prejuízo. 
-              <span className="text-foreground font-semibold"> Controle total sobre todos os computadores</span> da sua empresa, em tempo real.
+              Monitore todos os computadores da sua empresa em um único painel centralizado.
+              <span className="text-foreground font-semibold"> Visibilidade completa e resposta em tempo real.</span>
             </p>
 
             {/* Proof Stats */}
@@ -48,67 +55,81 @@ const Landing = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-              <Button asChild size="lg" className="text-lg h-14 px-8">
+              <Button
+                asChild
+                size="lg"
+                className="text-lg h-14 px-8 bg-green-600 hover:bg-green-700"
+              >
+                <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="mr-2 h-5 w-5" />
+                  Falar no WhatsApp
+                </a>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="text-lg h-14 px-8">
                 <Link to="/signup">
-                  Testar 30 Dias Grátis
+                  Testar Grátis
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="text-lg h-14 px-8">
-                <Link to="/login">Entrar</Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="text-lg h-14 px-8">
-                <a href="#contact">Falar com Especialista</a>
               </Button>
             </div>
 
             <p className="text-sm text-muted-foreground">
-              ✓ Sem cartão de crédito &nbsp;•&nbsp; ✓ Instalação em 5 minutos &nbsp;•&nbsp; ✓ Suporte em português
+              ✓ Mais de 500 empresas protegidas &nbsp;•&nbsp; ✓ Instalação em 5 minutos &nbsp;•&nbsp; ✓ Suporte 100% em português
             </p>
           </div>
         </div>
       </section>
 
-      {/* Problems Section */}
-      <section className="py-20 bg-muted/30">
+      {/* Benefits Section */}
+      <section id="recursos" className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Você Já Perdeu o Controle da Segurança?
+              Por Que Escolher o CyberShield
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              A maioria das empresas só descobre problemas quando já é tarde demais
+              Proteção empresarial simplificada com tecnologia de ponta
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-card p-8 rounded-2xl border border-border">
-              <div className="w-12 h-12 bg-destructive/10 rounded-lg flex items-center justify-center mb-4">
-                <span className="text-2xl">⚠️</span>
+          <div className="grid md:grid-cols-4 gap-8">
+            <div className="bg-card p-8 rounded-2xl border border-border text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                <span className="text-3xl">👀</span>
               </div>
-              <h3 className="text-xl font-bold mb-3">Sem Visibilidade</h3>
+              <h3 className="text-xl font-bold mb-3">Veja Tudo em Um Só Lugar</h3>
               <p className="text-muted-foreground">
-                Você não sabe quais computadores estão vulneráveis ou infectados agora mesmo
+                Painel centralizado com status de todos os computadores da empresa
               </p>
             </div>
 
-            <div className="bg-card p-8 rounded-2xl border border-border">
-              <div className="w-12 h-12 bg-destructive/10 rounded-lg flex items-center justify-center mb-4">
-                <span className="text-2xl">⏰</span>
+            <div className="bg-card p-8 rounded-2xl border border-border text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                <span className="text-3xl">⚡</span>
               </div>
-              <h3 className="text-xl font-bold mb-3">Resposta Lenta</h3>
+              <h3 className="text-xl font-bold mb-3">Aja em Segundos</h3>
               <p className="text-muted-foreground">
-                Horas ou dias para descobrir e corrigir um problema enquanto o prejuízo aumenta
+                Resposta em tempo real para proteger seus ativos digitais
               </p>
             </div>
 
-            <div className="bg-card p-8 rounded-2xl border border-border">
-              <div className="w-12 h-12 bg-destructive/10 rounded-lg flex items-center justify-center mb-4">
-                <span className="text-2xl">💸</span>
+            <div className="bg-card p-8 rounded-2xl border border-border text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                <span className="text-3xl">💰</span>
               </div>
-              <h3 className="text-xl font-bold mb-3">Custos Escondidos</h3>
+              <h3 className="text-xl font-bold mb-3">Economize Tempo e Dinheiro</h3>
               <p className="text-muted-foreground">
-                Perde tempo e dinheiro com problemas que poderiam ser evitados automaticamente
+                Automação inteligente reduz custos operacionais
+              </p>
+            </div>
+
+            <div className="bg-card p-8 rounded-2xl border border-border text-center">
+              <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
+                <span className="text-3xl">🇧🇷</span>
+              </div>
+              <h3 className="text-xl font-bold mb-3">Suporte Brasileiro</h3>
+              <p className="text-muted-foreground">
+                Equipe local, suporte em português, conformidade com LGPD
               </p>
             </div>
           </div>
@@ -120,10 +141,10 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Como Funciona
+              Implementação Simplificada
             </h2>
             <p className="text-xl text-muted-foreground">
-              Simples, rápido e sem complicação
+              Três passos para proteção completa
             </p>
           </div>
 
@@ -134,9 +155,9 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
                   <span className="text-2xl font-bold text-primary">1</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Instale em Minutos</h3>
+                <h3 className="text-2xl font-bold mb-4">Instalação em Minutos</h3>
                 <p className="text-muted-foreground text-lg">
-                  Baixe o instalador e rode em cada computador. Pronto. Não precisa ser técnico.
+                  Deploy do agente em cada estação de trabalho. Processo simplificado e sem necessidade de conhecimento técnico avançado.
                 </p>
               </div>
             </div>
@@ -147,9 +168,9 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
                   <span className="text-2xl font-bold text-primary">2</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Veja Tudo em Tempo Real</h3>
+                <h3 className="text-2xl font-bold mb-4">Monitoramento Centralizado</h3>
                 <p className="text-muted-foreground text-lg">
-                  Painel mostra status de todos os PCs, vírus detectados e problemas encontrados.
+                  Dashboard unificado exibe status operacional, ameaças detectadas e anomalias em tempo real.
                 </p>
               </div>
             </div>
@@ -160,9 +181,9 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
                   <span className="text-2xl font-bold text-primary">3</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">Corrija com 1 Clique</h3>
+                <h3 className="text-2xl font-bold mb-4">Resposta Automatizada</h3>
                 <p className="text-muted-foreground text-lg">
-                  Execute comandos, atualizações e correções em todos os computadores ao mesmo tempo.
+                  Implemente correções e atualizações em escala através de interface centralizada com aprovação controlada.
                 </p>
               </div>
             </div>
@@ -348,14 +369,14 @@ const Landing = () => {
       </section>
 
       {/* Pricing */}
-      <section className="py-20">
+      <section id="precos" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Preços Simples e Transparentes
+              Planos Empresariais
             </h2>
             <p className="text-xl text-muted-foreground">
-              Pague apenas pelos computadores que você protege
+              Modelo de precificação transparente por endpoint
             </p>
           </div>
 
@@ -364,56 +385,58 @@ const Landing = () => {
             <div className="bg-card p-8 rounded-2xl border border-border">
               <h3 className="text-2xl font-bold mb-2">Starter</h3>
               <div className="mb-6">
-                <span className="text-4xl font-bold">R$ 20</span>
-                <span className="text-muted-foreground">/PC/mês</span>
+                <span className="text-4xl font-bold">R$ 30</span>
+                <span className="text-muted-foreground">/endpoint/mês</span>
               </div>
-              <p className="text-sm text-muted-foreground mb-6">Mínimo 25 computadores</p>
+              <p className="text-sm text-muted-foreground mb-6">Contrato mínimo: 25 endpoints</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">Monitoramento em tempo real</span>
+                  <span className="text-sm">Monitoramento contínuo</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">Comandos básicos</span>
+                  <span className="text-sm">Execução remota básica</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">Alertas por email</span>
+                  <span className="text-sm">Notificações via email</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">VirusTotal (sua chave)</span>
+                  <span className="text-sm">API VirusTotal (chave cliente)</span>
                 </li>
               </ul>
               <Button variant="outline" className="w-full" asChild>
-                <Link to="/signup">Começar Teste Grátis</Link>
+                <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                  Solicitar Cotação
+                </a>
               </Button>
             </div>
 
             {/* Pro */}
             <div className="bg-gradient-to-br from-primary via-primary to-accent p-8 rounded-2xl text-primary-foreground relative scale-105 shadow-2xl">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground px-4 py-1 rounded-full text-sm font-bold">
-                MAIS POPULAR
+                RECOMENDADO
               </div>
-              <h3 className="text-2xl font-bold mb-2">Pro</h3>
+              <h3 className="text-2xl font-bold mb-2">Professional</h3>
               <div className="mb-6">
-                <span className="text-4xl font-bold">R$ 30</span>
-                <span className="opacity-90">/PC/mês</span>
+                <span className="text-4xl font-bold">R$ 20</span>
+                <span className="opacity-90">/endpoint/mês</span>
               </div>
-              <p className="text-sm opacity-90 mb-6">Mínimo 100 computadores</p>
+              <p className="text-sm opacity-90 mb-6">Contrato mínimo: 100 endpoints</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">Tudo do Starter, mais:</span>
+                  <span className="text-sm">Todos recursos do Starter</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">Webhooks personalizados</span>
+                  <span className="text-sm">Webhooks customizáveis</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">Comandos com aprovação</span>
+                  <span className="text-sm">Workflow de aprovação</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -425,7 +448,9 @@ const Landing = () => {
                 </li>
               </ul>
               <Button className="w-full bg-background text-foreground hover:bg-background/90" asChild>
-                <Link to="/signup">Começar Teste Grátis</Link>
+                <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                  Solicitar Cotação
+                </a>
               </Button>
             </div>
 
@@ -433,41 +458,42 @@ const Landing = () => {
             <div className="bg-card p-8 rounded-2xl border border-border">
               <h3 className="text-2xl font-bold mb-2">Enterprise</h3>
               <div className="mb-6">
-                <span className="text-4xl font-bold">Sob</span>
-                <span className="text-muted-foreground"> consulta</span>
+                <span className="text-4xl font-bold">Custom</span>
               </div>
-              <p className="text-sm text-muted-foreground mb-6">Para MSPs e grandes empresas</p>
+              <p className="text-sm text-muted-foreground mb-6">Soluções para MSPs e grandes corporações</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">Tudo do Pro, mais:</span>
+                  <span className="text-sm">Todos recursos Professional</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">SSO/SAML</span>
+                  <span className="text-sm">SSO/SAML integration</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">Integração com SIEM</span>
+                  <span className="text-sm">SIEM integration</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">Retenção estendida</span>
+                  <span className="text-sm">Retenção de dados estendida</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">Suporte 24×7</span>
+                  <span className="text-sm">SLA 24×7</span>
                 </li>
               </ul>
               <Button variant="outline" className="w-full" asChild>
-                <a href="#contact">Falar com Vendas</a>
+                <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                  Contatar Vendas
+                </a>
               </Button>
             </div>
           </div>
 
           <div className="text-center mt-12">
             <p className="text-muted-foreground">
-              Todos os planos incluem: comandos, alertas, integrações e relatórios • Sem custos escondidos
+              Infraestrutura completa incluída em todos os planos • Sem taxas ocultas • Suporte técnico especializado
             </p>
           </div>
         </div>
@@ -484,49 +510,33 @@ const Landing = () => {
 
           <div className="space-y-6">
             <div className="bg-card p-6 rounded-xl border border-border">
-              <h3 className="font-bold text-lg mb-2">Preciso desinstalar meu antivírus atual?</h3>
+              <h3 className="font-bold text-lg mb-2">É necessário substituir a solução antivírus existente?</h3>
               <p className="text-muted-foreground">
-                Não! O CyberShield trabalha junto com seu Defender, Kaspersky, ESET ou qualquer outro antivírus. 
-                Eles continuam detectando vírus, e o CyberShield orquestra as ações de correção.
+                Não. O CyberShield integra-se com soluções antivírus corporativas existentes (Windows Defender, Kaspersky, ESET, etc.), 
+                atuando como camada de orquestração e resposta centralizada.
               </p>
             </div>
 
             <div className="bg-card p-6 rounded-xl border border-border">
-              <h3 className="font-bold text-lg mb-2">Quanto tempo leva para instalar?</h3>
+              <h3 className="font-bold text-lg mb-2">Qual o tempo de implantação?</h3>
               <p className="text-muted-foreground">
-                Menos de 5 minutos por computador. Você baixa um instalador pequeno (menos de 10MB), executa, 
-                e pronto. Não precisa reiniciar. O computador já aparece no painel em segundos.
+                O processo de instalação do agente em cada endpoint leva aproximadamente 5 minutos. 
+                O agente (menos de 10MB) não requer reinicialização e registra-se automaticamente no painel central.
               </p>
             </div>
 
             <div className="bg-card p-6 rounded-xl border border-border">
-              <h3 className="font-bold text-lg mb-2">Meus dados ficam seguros?</h3>
+              <h3 className="font-bold text-lg mb-2">Como é garantida a segurança dos dados?</h3>
               <p className="text-muted-foreground">
-                Sim. Cada cliente é 100% isolado (impossível um ver dados do outro). Toda comunicação é criptografada 
-                com proteção militar. Cada ação é registrada para auditoria. Conformidade total com LGPD.
+                Implementamos isolamento multi-tenant completo, criptografia end-to-end em todas comunicações, 
+                e trilha de auditoria detalhada. Conformidade total com LGPD e normas do Banco Central.
               </p>
             </div>
 
             <div className="bg-card p-6 rounded-xl border border-border">
-              <h3 className="font-bold text-lg mb-2">Posso cancelar quando quiser?</h3>
+              <h3 className="font-bold text-lg mb-2">Qual a política de cancelamento?</h3>
               <p className="text-muted-foreground">
-                Sim, sem multa ou burocracia. Você pode cancelar a qualquer momento e só paga pelo período que usar.
-              </p>
-            </div>
-
-            <div className="bg-card p-6 rounded-xl border border-border">
-              <h3 className="font-bold text-lg mb-2">O que acontece se eu passar do limite de PCs?</h3>
-              <p className="text-muted-foreground">
-                Você paga apenas pelos PCs adicionais, no mesmo valor por PC do seu plano. 
-                Sem surpresas ou taxas escondidas.
-              </p>
-            </div>
-
-            <div className="bg-card p-6 rounded-xl border border-border">
-              <h3 className="font-bold text-lg mb-2">Vocês oferecem suporte em português?</h3>
-              <p className="text-muted-foreground">
-                Sim! Todo o suporte é em português, com equipe brasileira. 
-                Plano Enterprise inclui suporte 24×7.
+                Cancelamento sem penalidades contratuais. Cobrança proporcional ao período efetivamente utilizado.
               </p>
             </div>
           </div>
@@ -538,56 +548,75 @@ const Landing = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/10 to-background" />
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Proteja Sua Empresa Agora
+            Proteja os Ativos Digitais da Sua Empresa
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Teste por 30 dias sem compromisso. Sem cartão de crédito. Cancele quando quiser.
+            Período de avaliação de 30 dias sem compromisso. Sem exigência de cartão de crédito.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="text-lg h-14 px-8">
+            <Button
+              asChild
+              size="lg"
+              className="text-lg h-14 px-8 bg-green-600 hover:bg-green-700"
+            >
+              <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="mr-2 h-5 w-5" />
+                Falar com Especialista
+              </a>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="text-lg h-14 px-8">
               <Link to="/signup">
-                Começar Teste Grátis
+                Iniciar Teste Grátis
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
-            </Button>
-            <Button asChild variant="outline" size="lg" className="text-lg h-14 px-8">
-              <a href="#contact">Agendar Demo</a>
             </Button>
           </div>
         </div>
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="py-20 bg-muted/30">
+      <section id="contato" className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-12 items-start">
             <div>
               <h2 className="text-3xl md:text-4xl font-bold mb-6">
-                Fale com Nossa Equipe
+                Entre em Contato
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
-                Preencha o formulário ou entre em contato diretamente. 
-                Respondemos em até 24 horas.
+                Preencha o formulário ou utilize nossos canais diretos de atendimento. 
+                Tempo de resposta: até 24 horas úteis.
               </p>
 
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Mail className="w-5 h-5 text-primary" />
+                  <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center">
+                    <MessageCircle className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
-                    <div className="font-medium">Email</div>
-                    <div className="text-muted-foreground">contato@cybershield.com.br</div>
+                    <div className="font-medium">WhatsApp</div>
+                    <a
+                      href={whatsappLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-green-600 transition-colors"
+                    >
+                      (34) 98443-2835
+                    </a>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Phone className="w-5 h-5 text-primary" />
+                    <Mail className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <div className="font-medium">Telefone</div>
-                    <div className="text-muted-foreground">(11) 9999-9999</div>
+                    <div className="font-medium">Email Corporativo</div>
+                    <a
+                      href="mailto:gamehousetecnologia@gmail.com"
+                      className="text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      gamehousetecnologia@gmail.com
+                    </a>
                   </div>
                 </div>
 
@@ -597,7 +626,7 @@ const Landing = () => {
                   </div>
                   <div>
                     <div className="font-medium">Localização</div>
-                    <div className="text-muted-foreground">São Paulo, SP - Brasil</div>
+                    <div className="text-muted-foreground">Minas Gerais - Brasil</div>
                   </div>
                 </div>
               </div>
