@@ -334,6 +334,30 @@ export type Database = {
           },
         ]
       }
+      failed_login_attempts: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          ip_address: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          ip_address: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          ip_address?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       hmac_signatures: {
         Row: {
           agent_name: string
@@ -1235,6 +1259,7 @@ export type Database = {
         Returns: string
       }
       cleanup_expired_keys: { Args: never; Returns: undefined }
+      cleanup_old_failed_attempts: { Args: never; Returns: undefined }
       cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       cleanup_old_security_logs: { Args: never; Returns: undefined }
