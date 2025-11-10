@@ -676,6 +676,59 @@ export type Database = {
         }
         Relationships: []
       }
+      security_logs: {
+        Row: {
+          attack_type: string
+          blocked: boolean
+          created_at: string
+          details: Json | null
+          endpoint: string
+          id: string
+          ip_address: string
+          request_id: string | null
+          severity: string
+          tenant_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          attack_type: string
+          blocked?: boolean
+          created_at?: string
+          details?: Json | null
+          endpoint: string
+          id?: string
+          ip_address: string
+          request_id?: string | null
+          severity: string
+          tenant_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          attack_type?: string
+          blocked?: boolean
+          created_at?: string
+          details?: Json | null
+          endpoint?: string
+          id?: string
+          ip_address?: string
+          request_id?: string | null
+          severity?: string
+          tenant_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           created_at: string
@@ -1184,6 +1237,7 @@ export type Database = {
       cleanup_expired_keys: { Args: never; Returns: undefined }
       cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
+      cleanup_old_security_logs: { Args: never; Returns: undefined }
       current_user_tenant_id: { Args: never; Returns: string }
       ensure_tenant_features: {
         Args: {

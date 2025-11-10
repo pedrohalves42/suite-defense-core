@@ -1,8 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { handleException, handleValidationError, createErrorResponse, ErrorCode, corsHeaders } from '../_shared/error-handler.ts';
-import { CreateJobSchema } from '../_shared/validation.ts';
+import { CreateJobSchemaEnhanced } from '../_shared/validation.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { logSecurityEvent, extractIpAddress } from '../_shared/security-log.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -67,8 +68,35 @@ Deno.serve(async (req) => {
     }
 
     const rawData = await req.json();
-    const validatedData = CreateJobSchema.parse(rawData);
-    const { agentName, type, payload, approved, scheduledAt, isRecurring, recurrencePattern } = validatedData;
+    
+    // Validate with enhanced schema
+    const validation = CreateJobSchemaEnhanced.safeParse(rawData);
+    
+    if (!validation.success) {
+      const ipAddress = extractIpAddress(req);
+      
+      // Log validation failure
+      await logSecurityEvent({
+        supabase: supabaseAdmin,
+        tenantId: userRole?.tenant_id,
+        userId: user.id,
+        ipAddress,
+        endpoint: 'create-job',
+        attackType: 'invalid_input',
+        severity: 'medium',
+        blocked: true,
+        details: {
+          errors: validation.error.issues,
+          input: rawData
+        },
+        userAgent: req.headers.get('user-agent') || undefined,
+        requestId
+      });
+      
+      return handleValidationError(validation.error, requestId);
+    }
+    
+    const { agentName, type, payload, approved, scheduledAt, isRecurring, recurrencePattern } = validation.data;
 
     // Calculate next_run_at for recurring jobs
     let nextRunAt = null;
