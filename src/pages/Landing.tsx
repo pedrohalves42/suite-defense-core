@@ -1,12 +1,16 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Shield, CheckCircle, Zap, Lock, BarChart, Users, ArrowRight, Mail, MessageCircle, MapPin, Crown, Activity, TrendingUp } from "lucide-react";
+import { Shield, CheckCircle, Zap, Lock, BarChart, Users, ArrowRight, Mail, MessageCircle, MapPin, Crown, Activity, TrendingUp, Calculator, ChevronDown, ChevronUp } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ContactForm } from "@/components/ContactForm";
 import { Navbar } from "@/components/Navbar";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { Input } from "@/components/ui/input";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const Landing = () => {
   const whatsappLink = "https://wa.me/5534984432835?text=Olá!%20Gostaria%20de%20conhecer%20o%20CyberShield";
+  const [deviceCount, setDeviceCount] = useState<number>(10);
 
   return (
     <div className="min-h-screen bg-background">
@@ -437,6 +441,142 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* Price Calculator */}
+      <section className="py-20 bg-muted/30">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
+              <Calculator className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Calculadora de Preços</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Calcule o Investimento para Sua Empresa
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              Digite quantos dispositivos você precisa proteger e veja o custo mensal
+            </p>
+          </div>
+
+          <div className="bg-card p-8 rounded-2xl border-2 border-primary/20 shadow-lg">
+            <div className="mb-8">
+              <label htmlFor="device-count" className="block text-lg font-bold mb-4 text-center">
+                Quantos dispositivos você tem?
+              </label>
+              <div className="max-w-md mx-auto">
+                <Input
+                  id="device-count"
+                  type="number"
+                  min="1"
+                  max="200"
+                  value={deviceCount}
+                  onChange={(e) => setDeviceCount(Math.max(1, Math.min(200, parseInt(e.target.value) || 1)))}
+                  className="text-center text-2xl h-16 font-bold"
+                />
+                <p className="text-sm text-muted-foreground text-center mt-2">
+                  Entre 1 e 200 dispositivos
+                </p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Starter Calculation */}
+              <div className={`p-6 rounded-xl border-2 transition-all ${
+                deviceCount <= 30 
+                  ? 'border-primary bg-primary/5' 
+                  : 'border-border bg-muted/30 opacity-60'
+              }`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Zap className="w-5 h-5 text-primary" />
+                  <h3 className="text-xl font-bold">Starter</h3>
+                </div>
+                {deviceCount <= 30 ? (
+                  <>
+                    <div className="mb-4">
+                      <div className="text-4xl font-bold text-primary mb-1">
+                        R$ {(deviceCount * 30).toLocaleString('pt-BR')}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        por mês ({deviceCount} × R$ 30)
+                      </div>
+                    </div>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-primary" />
+                        <span>2 scans avançados/dia</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-primary" />
+                        <span>Dashboard avançado</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-primary" />
+                        <span>Suporte por email</span>
+                      </li>
+                    </ul>
+                  </>
+                ) : (
+                  <div className="text-muted-foreground">
+                    <p className="font-semibold mb-2">Limite excedido</p>
+                    <p className="text-sm">O plano Starter suporta até 30 dispositivos.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Pro Calculation */}
+              <div className="p-6 rounded-xl border-2 border-primary bg-gradient-to-br from-primary/10 to-accent/10">
+                <div className="flex items-center gap-2 mb-4">
+                  <Crown className="w-5 h-5 text-primary" />
+                  <h3 className="text-xl font-bold">Pro</h3>
+                  {deviceCount > 30 && (
+                    <span className="ml-auto text-xs bg-accent text-accent-foreground px-2 py-1 rounded-full font-bold">
+                      RECOMENDADO
+                    </span>
+                  )}
+                </div>
+                <div className="mb-4">
+                  <div className="text-4xl font-bold text-primary mb-1">
+                    R$ {(deviceCount * 50).toLocaleString('pt-BR')}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    por mês ({deviceCount} × R$ 50)
+                  </div>
+                </div>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                    <span>Scans ilimitados</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                    <span>Analytics avançado</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                    <span>API completa</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-primary" />
+                    <span>Suporte prioritário</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-8 text-center">
+              <p className="text-sm text-muted-foreground mb-4">
+                💡 Todos os planos incluem 30 dias de trial gratuito
+              </p>
+              <Button size="lg" asChild>
+                <Link to="/signup">
+                  Começar Trial Grátis
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Use Cases */}
       <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -496,6 +636,147 @@ const Landing = () => {
                 </li>
               </ul>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-20 bg-muted/30">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Perguntas Frequentes
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              Tire suas dúvidas sobre instalação, segurança e preços
+            </p>
+          </div>
+
+          <Accordion type="single" collapsible className="space-y-4">
+            {/* Instalação */}
+            <AccordionItem value="item-1" className="bg-card border border-border rounded-lg px-6">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                Como funciona a instalação do CyberShield?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                A instalação é simples e rápida. Após criar sua conta, você receberá um script de instalação personalizado. 
+                Basta executar o script em cada dispositivo que deseja monitorar. O processo leva menos de 5 minutos por dispositivo 
+                e não requer conhecimento técnico avançado. Oferecemos scripts para Windows e Linux.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-2" className="bg-card border border-border rounded-lg px-6">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                Preciso instalar em todos os dispositivos manualmente?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                Para pequenas empresas, a instalação manual é rápida e simples. Para empresas maiores, oferecemos deployment 
+                automatizado via GPO (Group Policy) no Windows ou scripts de deployment em massa para Linux. Nossa equipe de 
+                suporte pode auxiliar na configuração inicial sem custo adicional.
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Segurança */}
+            <AccordionItem value="item-3" className="bg-card border border-border rounded-lg px-6">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                Meus dados estão seguros no CyberShield?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                Sim! Utilizamos criptografia de ponta a ponta para todas as comunicações. Os dados são armazenados em servidores 
+                no Brasil com certificação ISO 27001. Somos 100% compatíveis com a LGPD (Lei Geral de Proteção de Dados). 
+                Cada tenant é completamente isolado, garantindo que seus dados nunca sejam acessíveis a outros clientes.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-4" className="bg-card border border-border rounded-lg px-6">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                O CyberShield afeta a performance dos meus PCs?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                O impacto na performance é mínimo. O agente do CyberShield consome menos de 50MB de RAM e menos de 1% de CPU 
+                em operação normal. Os scans de vírus são executados apenas quando solicitados e podem ser agendados para horários 
+                de baixo uso. Você mantém total controle sobre quando e como os recursos são utilizados.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-5" className="bg-card border border-border rounded-lg px-6">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                Quais tipos de ameaças o CyberShield detecta?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                Detectamos vírus, malware, ransomware, trojans, spyware e outras ameaças através da integração com VirusTotal 
+                e Hybrid Analysis - que agregam dezenas de motores antivírus. Também monitoramos anomalias de rede e 
+                comportamentos suspeitos nos dispositivos. Os arquivos maliciosos são automaticamente colocados em quarentena.
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Preços */}
+            <AccordionItem value="item-6" className="bg-card border border-border rounded-lg px-6">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                Como funciona o trial gratuito de 30 dias?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                Você tem 30 dias de acesso completo a todos os recursos do plano escolhido, sem necessidade de cartão de crédito. 
+                Durante o trial, você pode testar todas as funcionalidades com até 200 dispositivos. Após o período, você decide 
+                se quer continuar. Não há renovação automática - você só paga se decidir assinar.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-7" className="bg-card border border-border rounded-lg px-6">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                Posso mudar de plano depois?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                Sim! Você pode fazer upgrade ou downgrade a qualquer momento. Ao fazer upgrade, você terá acesso imediato aos 
+                novos recursos e pagaremos proporcionalmente. No downgrade, o crédito é aplicado no próximo ciclo de cobrança. 
+                Não há taxas de mudança de plano ou penalidades.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-8" className="bg-card border border-border rounded-lg px-6">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                O que acontece se eu ultrapassar o limite de dispositivos?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                No plano Starter (máx 30 dispositivos), você será notificado ao se aproximar do limite e poderá fazer upgrade 
+                para o Pro. No plano Pro (máx 200 dispositivos), entraremos em contato para criar um plano Enterprise customizado. 
+                Você nunca será cobrado surpresas - sempre avisaremos antes de qualquer mudança necessária.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-9" className="bg-card border border-border rounded-lg px-6">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                Qual a diferença entre scans básicos e avançados?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                Scans avançados utilizam nossa integração com VirusTotal e Hybrid Analysis, que combinam dezenas de motores 
+                antivírus para máxima precisão. O plano Starter inclui 2 scans avançados por dia, ideal para análise de arquivos 
+                suspeitos específicos. O plano Pro oferece scans avançados ilimitados, permitindo análise contínua e em larga escala.
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="item-10" className="bg-card border border-border rounded-lg px-6">
+              <AccordionTrigger className="text-lg font-semibold hover:no-underline">
+                Posso cancelar a qualquer momento?
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                Sim! Não há fidelidade ou multas por cancelamento. Você pode cancelar sua assinatura a qualquer momento através 
+                do painel administrativo ou entrando em contato conosco. O serviço permanecerá ativo até o final do período já 
+                pago, e não há cobranças adicionais.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          <div className="text-center mt-12">
+            <p className="text-muted-foreground mb-4">
+              Ainda tem dúvidas?
+            </p>
+            <Button variant="outline" size="lg" asChild>
+              <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                <MessageCircle className="mr-2 h-5 w-5" />
+                Falar com Nossa Equipe
+              </a>
+            </Button>
           </div>
         </div>
       </section>
