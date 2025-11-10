@@ -1,8 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
-interface ClearFailedLoginsRequest {
-  ipAddress: string;
+function extractIpAddress(req: Request): string {
+  const cfConnectingIp = req.headers.get('cf-connecting-ip');
+  const xRealIp = req.headers.get('x-real-ip');
+  const xForwardedFor = req.headers.get('x-forwarded-for');
+  
+  if (cfConnectingIp) return cfConnectingIp;
+  if (xRealIp) return xRealIp;
+  if (xForwardedFor) return xForwardedFor.split(',')[0].trim();
+  return 'unknown';
 }
 
 Deno.serve(async (req) => {
@@ -16,11 +23,11 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { ipAddress }: ClearFailedLoginsRequest = await req.json();
+    const ipAddress = extractIpAddress(req);
 
-    if (!ipAddress) {
+    if (!ipAddress || ipAddress === 'unknown') {
       return new Response(
-        JSON.stringify({ error: 'IP address is required' }),
+        JSON.stringify({ error: 'Unable to determine IP address' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

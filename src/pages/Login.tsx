@@ -33,23 +33,11 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Obter IP do cliente (aproximação via headers)
-  const getClientIp = async (): Promise<string> => {
-    try {
-      const response = await fetch('https://api.ipify.org?format=json');
-      const data = await response.json();
-      return data.ip || 'unknown';
-    } catch {
-      return 'unknown';
-    }
-  };
-
   // Verificar tentativas falhadas ao carregar a página
   useEffect(() => {
     const checkFailedAttempts = async () => {
-      const ip = await getClientIp();
       const { data, error } = await supabase.functions.invoke('check-failed-logins', {
-        body: { ipAddress: ip },
+        body: {},
       });
 
       if (!error && data) {
@@ -117,12 +105,9 @@ export default function Login() {
       console.error('[Login] Erro no login:', error.message, 'Código:', error.status);
       
       // Registrar tentativa falhada
-      const ip = await getClientIp();
       await supabase.functions.invoke('record-failed-login', {
         body: {
-          ipAddress: ip,
           email: validation.data.email,
-          userAgent: navigator.userAgent,
         },
       });
 
@@ -157,9 +142,8 @@ export default function Login() {
       console.log('[Login] Login bem-sucedido');
       
       // Limpar tentativas falhadas
-      const ip = await getClientIp();
       await supabase.functions.invoke('clear-failed-logins', {
-        body: { ipAddress: ip },
+        body: {},
       });
 
       toast({
