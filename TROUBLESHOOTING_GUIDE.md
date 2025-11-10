@@ -383,7 +383,146 @@ curl -X POST https://seu-server.supabase.co/functions/v1/test-virustotal-integra
 
 ---
 
-## Problemas de Autenticação
+## Problemas de Autenticação HMAC (Agentes)
+
+### Problema: Erro "Assinatura HMAC inválida"
+
+**Causa:** Formato incorreto do payload HMAC ou timestamp expirado.
+
+**Formato Correto:**
+```
+${timestamp}:${nonce}:${body}
+```
+
+**Verificação:**
+```powershell
+# Verifique se o script usa o formato correto:
+Get-Content cybershield-agent-windows.ps1 | Select-String -Pattern '\${timestamp}:\${nonce}:\${bodyJson}'
+
+# Deve encontrar:
+$message = "${timestamp}:${nonce}:${bodyJson}"
+```
+
+**Solução:**
+1. Baixe a versão mais recente do script
+2. Ou corrija manualmente:
+```powershell
+# Linha ~116 - Alterar de:
+$message = "$timestamp$nonce$bodyJson"
+
+# Para:
+$message = "${timestamp}:${nonce}:${bodyJson}"
+```
+
+**Validação:**
+```powershell
+# Execute script de validação:
+.\tests\validate-hmac-format.ps1 -AgentScriptPath ".\cybershield-agent-windows.ps1"
+```
+
+---
+
+### Problema: Erro "Timestamp expirado"
+
+**Causa:** Diferença de mais de 5 minutos entre relógio do agente e servidor.
+
+**Verificação:**
+```powershell
+# Windows - verificar hora do sistema:
+w32tm /query /status
+
+# Ver diferença com servidor de tempo:
+w32tm /stripchart /computer:time.windows.com /samples:3
+```
+
+**Solução:**
+```powershell
+# Sincronizar com servidor de tempo:
+w32tm /resync /force
+
+# Ou configurar sincronização automática:
+w32tm /config /manualpeerlist:"time.windows.com" /syncfromflags:manual /update
+net stop w32time
+net start w32time
+```
+
+**Linux:**
+```bash
+# Instalar NTP:
+sudo apt-get install ntp
+
+# Sincronizar:
+sudo ntpdate -s time.nist.gov
+
+# Ou usar systemd-timesyncd:
+sudo timedatectl set-ntp true
+```
+
+---
+
+### Problema: Erro "Assinatura já utilizada (replay attack detectado)"
+
+**Causa:** Tentativa de reusar a mesma assinatura HMAC (pode ser legítima se houver retry).
+
+**Isso é esperado!** Sistema está funcionando corretamente.
+
+**Solução:**
+- Cada requisição deve gerar novo nonce
+- Aguarde 1 segundo antes de retry
+- Não reutilize assinaturas antigas
+
+---
+
+### Problema: Timestamp em segundos ao invés de millisegundos
+
+**Causa:** Código antigo usando `ToUnixTimeSeconds()`.
+
+**Verificação:**
+```powershell
+# Procurar no script:
+Get-Content cybershield-agent-windows.ps1 | Select-String -Pattern 'ToUnixTimeSeconds'
+
+# Se encontrar, está incorreto!
+```
+
+**Solução:**
+```powershell
+# Linha ~112 - Alterar de:
+$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+
+# Para:
+$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+```
+
+---
+
+### Problema: "Headers HMAC ausentes"
+
+**Causa:** Requisição sem headers obrigatórios.
+
+**Headers obrigatórios:**
+- `X-Agent-Token` - Token do agente (UUID)
+- `X-HMAC-Signature` - Assinatura HMAC (64 chars hex)
+- `X-Timestamp` - Unix timestamp em millisegundos
+- `X-Nonce` - UUID único por requisição
+
+**Teste manual:**
+```bash
+curl -X POST https://seu-server.com/functions/v1/heartbeat \
+  -H "X-Agent-Token: seu-token" \
+  -H "X-HMAC-Signature: sua-assinatura" \
+  -H "X-Timestamp: $(date +%s%3N)" \
+  -H "X-Nonce: $(uuidgen)" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**Documentação completa:**
+Veja `docs/HMAC_SPECIFICATION.md` para referência completa.
+
+---
+
+## Problemas de Autenticação Web (Login)
 
 ### Problema: Erro ao fazer login
 

@@ -209,11 +209,11 @@ function Invoke-SecureRequest {
     
     while ($$retryCount -lt $$MaxRetries) {
         try {
-            $$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+            $$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
             $$nonce = [guid]::NewGuid().ToString()
             
             $$bodyJson = if ($$Body) { $$Body | ConvertTo-Json -Compress } else { "{}" }
-            $$message = "$$timestamp$$nonce$$bodyJson"
+            $$message = "$$timestamp:$$nonce:$$bodyJson"
             $$signature = Get-HmacSignature -Message $$message -Secret $$HmacSecret
             
             $$headers = @{
@@ -314,6 +314,89 @@ function Execute-Job {
         status = "completed"
         timestamp = (Get-Date).ToString("o")
         job_type = $$Job.type
+        data = @{}
+    }
+    
+    try {
+        switch ($$Job.type) {
+            "scan_virus" {
+                if ($$Job.payload.file_path) {
+                    $$filePath = $$Job.payload.file_path
+                    if (Test-Path $$filePath) {
+                        $$fileHash = (Get-FileHash -Path $$filePath -Algorithm SHA256).Hash
+                        $$fileSize = (Get-Item $$filePath).Length
+                        $$result.data = @{
+                            file_path = $$filePath
+                            file_hash = $$fileHash
+                            file_size = $$fileSize
+                            scan_initiated = $$true
+                        }
+                        Write-Log "Virus scan initiated for: $$filePath" "SUCCESS"
+                    } else {
+                        $$result.status = "failed"
+                        $$result.error = "File not found: $$filePath"
+                    }
+                }
+            }
+            
+            "collect_info" {
+                $$os = Get-CimInstance Win32_OperatingSystem
+                $$cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
+                $$disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
+                
+                $$result.data = @{
+                    os_name = $$os.Caption
+                    os_version = $$os.Version
+                    hostname = $$env:COMPUTERNAME
+                    cpu_name = $$cpu.Name
+                    cpu_cores = $$cpu.NumberOfCores
+                    total_memory_gb = [math]::Round($$os.TotalVisibleMemorySize/1MB, 2)
+                    free_memory_gb = [math]::Round($$os.FreePhysicalMemory/1MB, 2)
+                    disk_free_gb = [math]::Round($$disk.FreeSpace/1GB, 2)
+                    disk_total_gb = [math]::Round($$disk.Size/1GB, 2)
+                }
+                Write-Log "System info collected" "SUCCESS"
+            }
+            
+            "update_config" {
+                if ($$Job.payload.poll_interval) {
+                    $$script:PollInterval = $$Job.payload.poll_interval
+                    $$result.data = @{
+                        new_poll_interval = $$script:PollInterval
+                        config_updated = $$true
+                    }
+                    Write-Log "Config updated" "SUCCESS"
+                }
+            }
+            
+            "run_command" {
+                $$allowedCommands = @("ipconfig", "systeminfo", "tasklist", "netstat", "hostname", "whoami")
+                $$command = $$Job.payload.command
+                
+                if ($$allowedCommands -contains $$command) {
+                    $$output = & $$command 2>&1 | Out-String
+                    $$result.data = @{
+                        command = $$command
+                        output = $$output
+                        exit_code = $$LASTEXITCODE
+                    }
+                    Write-Log "Command executed: $$command" "SUCCESS"
+                } else {
+                    $$result.status = "failed"
+                    $$result.error = "Command not allowed"
+                }
+            }
+            
+            default {
+                $$result.status = "failed"
+                $$result.error = "Unknown job type"
+            }
+        }
+    }
+    catch {
+        $$result.status = "failed"
+        $$result.error = $$_.Exception.Message
+        Write-Log "Job execution error: $$_" "ERROR"
     }
     
     return $$result
@@ -326,6 +409,7 @@ function Upload-Report {
         $$reportData = @{
             job_id = $$JobId
             result = $$Result
+            timestamp = (Get-Date).ToString("o")
         } | ConvertTo-Json -Depth 10
         
         $$url = "$$ServerUrl/functions/v1/upload-report"

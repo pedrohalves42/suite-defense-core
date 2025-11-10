@@ -17,6 +17,21 @@ Install-Module -Name ps2exe -Scope CurrentUser -Force
 #### 2. Preparar o Script
 Certifique-se de ter o arquivo `cybershield-agent-windows.ps1` salvo em um diretório acessível.
 
+**⚠️ IMPORTANTE - Validar HMAC Antes de Compilar:**
+```powershell
+# Execute a validação de formato HMAC:
+.\tests\validate-hmac-format.ps1 -AgentScriptPath ".\agent-scripts\cybershield-agent-windows.ps1"
+
+# Só continue se a validação passar!
+```
+
+**Checklist Pré-Build:**
+- [ ] HMAC usa formato `${timestamp}:${nonce}:${bodyJson}` com separadores `:`
+- [ ] Timestamp usa `ToUnixTimeMilliseconds()` (não `ToUnixTimeSeconds()`)
+- [ ] Execute-Job contém lógica completa (scan_virus, collect_info, etc.)
+- [ ] Upload-Report inclui campo `timestamp`
+- [ ] Script passou em `validate-hmac-format.ps1`
+
 #### 3. Gerar o EXE
 ```powershell
 # Navegar até o diretório do script
