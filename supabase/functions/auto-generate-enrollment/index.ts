@@ -70,25 +70,37 @@ Deno.serve(async (req) => {
     const enrollmentKey = generateKey();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Get user's tenant
+    // Get user's tenant - prefer admin role, then any role
     console.log(`[${requestId}] Fetching tenant for user:`, user.id);
-    const { data: userRole, error: roleError } = await supabase
+    const { data: userRoles, error: roleError } = await supabase
       .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+      .select('tenant_id, role')
+      .eq('user_id', user.id);
 
-    console.log(`[${requestId}] User role result:`, { tenantId: userRole?.tenant_id, roleError: roleError?.message });
+    console.log(`[${requestId}] User roles result:`, { 
+      rolesCount: userRoles?.length, 
+      roleError: roleError?.message 
+    });
 
-    if (!userRole?.tenant_id) {
+    if (roleError || !userRoles || userRoles.length === 0) {
       console.error(`[${requestId}] User tenant not found for user:`, user.id);
       return new Response(JSON.stringify({ 
-        error: 'Sua conta ainda não está associada a um tenant. Peça a um administrador para criar um tenant e atribuir um papel, ou aceite um convite de tenant.' 
+        error: 'Sua conta ainda não está associada a um tenant. Entre em contato com o administrador para configurar sua conta.' 
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Prefer admin role, otherwise use first available tenant
+    const adminRole = userRoles.find(r => r.role === 'admin');
+    const tenantId = adminRole?.tenant_id || userRoles[0].tenant_id;
+    
+    console.log(`[${requestId}] Selected tenant:`, { 
+      tenantId, 
+      isAdmin: !!adminRole,
+      totalRoles: userRoles.length 
+    });
 
     // Create enrollment key
     console.log(`[${requestId}] Creating enrollment key:`, enrollmentKey);
@@ -96,7 +108,7 @@ Deno.serve(async (req) => {
       .from('enrollment_keys')
       .insert({
         key: enrollmentKey,
-        tenant_id: userRole.tenant_id,
+        tenant_id: tenantId,
         created_by: user.id,
         expires_at: expiresAt.toISOString(),
         max_uses: 1,
@@ -121,8 +133,8 @@ Deno.serve(async (req) => {
       .from('agents')
       .select('id')
       .eq('agent_name', agentName)
-      .eq('tenant_id', userRole.tenant_id)
-      .single();
+      .eq('tenant_id', tenantId)
+      .maybeSingle();
 
     let agentId: string;
 
@@ -146,7 +158,7 @@ Deno.serve(async (req) => {
         .from('agents')
         .insert({
           agent_name: agentName,
-          tenant_id: userRole.tenant_id,
+          tenant_id: tenantId,
           hmac_secret: hmacSecret,
           status: 'pending',
         })
