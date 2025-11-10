@@ -30,6 +30,8 @@ npx playwright test --ui
 # Executar testes específicos
 npx playwright test admin-access
 npx playwright test agent-flow
+npx playwright test stripe-payment
+npx playwright test load-test
 
 # Ver relatório
 npx playwright show-report
@@ -56,6 +58,24 @@ npx playwright show-report
 - ✓ Rate limiting validation
 - ✓ Invalid token validation
 - ✓ Invalid HMAC validation
+
+### stripe-payment.spec.ts
+- ✓ Verificar status inicial de subscription
+- ✓ Criar checkout session - Starter plan
+- ✓ Criar checkout session - Pro plan
+- ✓ Validar limites de dispositivos
+- ✓ Simular webhook do Stripe
+- ✓ Acessar customer portal
+- ✓ Verificar features por plano
+- ✓ Testar planos inválidos
+- ✓ Testar checkout não autenticado
+
+### load-test.spec.ts
+- ✓ Enroll múltiplos agents (10 simultâneos)
+- ✓ Heartbeats concorrentes
+- ✓ Poll-jobs sequencial com múltiplas iterações
+- ✓ Operações mistas (heartbeat + poll + create job)
+- ✓ Análise de tempo de resposta
 
 ## Variáveis de Ambiente
 
@@ -103,3 +123,50 @@ Aumentar timeout em `playwright.config.ts` se conexão for lenta
 - Incluem validação de segurança (HMAC, rate limiting, tokens)
 - Simulam o comportamento real do agent Windows
 - Criam e limpam dados de teste automaticamente
+
+### Stripe Payment Tests
+- Validam fluxo completo de pagamento
+- Testam limites de planos e dispositivos
+- Simulam webhooks do Stripe
+- Verificam features por plano de subscription
+
+### Load Tests
+- Simulam 10 agents simultâneos por padrão
+- Avaliam performance sob carga
+- Medem tempos de resposta e throughput
+- Executam operações mistas (heartbeat, poll, create job)
+
+## CI/CD Pipeline
+
+Este projeto usa GitHub Actions para executar testes automaticamente:
+
+### e2e-tests.yml
+- Executa em push para `main` ou `develop`
+- Executa em pull requests
+- Upload de relatórios e screenshots
+- Testes de carga apenas em `main`
+
+### security-audit.yml
+- Executa semanalmente (segundas às 2h)
+- npm audit de segurança
+- Verificação de dependências
+- Testes de segurança
+
+### Configurar GitHub Secrets
+
+No repositório GitHub, configure:
+```
+Settings → Secrets → Actions → New repository secret
+```
+
+Secrets necessários:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `TEST_ADMIN_EMAIL`
+- `TEST_ADMIN_PASSWORD`
+- `TEST_USER_EMAIL`
+- `TEST_USER_PASSWORD`
+
+## Documentação Completa
+
+Veja `TESTING_GUIDE.md` para guia completo de testes.
