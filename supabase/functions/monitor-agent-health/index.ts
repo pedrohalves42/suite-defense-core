@@ -4,11 +4,16 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 Deno.serve(async (req) => {
-  // Validate internal secret
+  // Accept either internal secret OR valid JWT (for cron jobs)
   const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
   const providedSecret = req.headers.get('X-Internal-Secret');
+  const authHeader = req.headers.get('Authorization');
 
-  if (providedSecret !== INTERNAL_SECRET) {
+  // Allow if internal secret matches OR if it's an authorized JWT call (cron jobs)
+  const hasValidSecret = providedSecret === INTERNAL_SECRET;
+  const hasJWT = authHeader && authHeader.startsWith('Bearer ');
+  
+  if (!hasValidSecret && !hasJWT) {
     console.error('[Monitor] Unauthorized access attempt');
     return new Response(
       JSON.stringify({ error: 'Unauthorized' }),
