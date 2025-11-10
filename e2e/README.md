@@ -29,6 +29,7 @@ npx playwright test --ui
 
 # Executar testes específicos
 npx playwright test admin-access
+npx playwright test agent-flow
 
 # Ver relatório
 npx playwright show-report
@@ -43,6 +44,34 @@ npx playwright show-report
 - ✓ Admin acessa /admin/settings
 - ✓ Usuário regular NÃO vê seção admin
 - ✓ Usuário regular é redirecionado de rotas admin
+
+### agent-flow.spec.ts
+- ✓ Admin login e gerar enrollment key
+- ✓ Agent enrollment
+- ✓ Agent heartbeat
+- ✓ Admin criar job para o agent
+- ✓ Agent poll-jobs (buscar jobs pendentes)
+- ✓ Agent acknowledge job (ack-job)
+- ✓ Admin verificar job concluído
+- ✓ Rate limiting validation
+- ✓ Invalid token validation
+- ✓ Invalid HMAC validation
+
+## Variáveis de Ambiente
+
+Configure no arquivo `.env.test.local`:
+
+```bash
+# Credenciais de teste
+TEST_ADMIN_EMAIL=pedrohalves42@gmail.com
+TEST_ADMIN_PASSWORD=Test1234!
+TEST_USER_EMAIL=user@example.com
+TEST_USER_PASSWORD=Test1234!
+
+# Supabase (já configurado automaticamente)
+VITE_SUPABASE_URL=https://iavbnmduxpxhwubqrzzn.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
 
 ## Banner de Diagnóstico
 
@@ -68,3 +97,9 @@ O banner aparecerá no topo da aplicação mostrando:
 
 ### Timeout
 Aumentar timeout em `playwright.config.ts` se conexão for lenta
+
+### Agent Flow Tests
+- Os testes do agent flow validam todo o ciclo de vida de um agent
+- Incluem validação de segurança (HMAC, rate limiting, tokens)
+- Simulam o comportamento real do agent Windows
+- Criam e limpam dados de teste automaticamente
