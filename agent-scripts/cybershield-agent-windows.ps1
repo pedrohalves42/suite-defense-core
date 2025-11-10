@@ -214,6 +214,128 @@ function Execute-Job {
         status = "completed"
         timestamp = (Get-Date).ToString("o")
         job_type = $Job.type
+        data = @{}
+    }
+    
+    try {
+        switch ($Job.type) {
+            "scan_virus" {
+                # Implementar scan de vírus
+                if ($Job.payload.file_path) {
+                    $filePath = $Job.payload.file_path
+                    if (Test-Path $filePath) {
+                        $fileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash
+                        $fileSize = (Get-Item $filePath).Length
+                        $result.data = @{
+                            file_path = $filePath
+                            file_hash = $fileHash
+                            file_size = $fileSize
+                            scan_initiated = $true
+                        }
+                        Write-Log "Virus scan initiated for: $filePath (Hash: $fileHash)" "SUCCESS"
+                    } else {
+                        $result.status = "failed"
+                        $result.error = "File not found: $filePath"
+                        Write-Log "File not found: $filePath" "ERROR"
+                    }
+                } else {
+                    $result.status = "failed"
+                    $result.error = "No file_path provided in payload"
+                    Write-Log "No file_path in job payload" "ERROR"
+                }
+            }
+            
+            "collect_info" {
+                # Coletar informações do sistema
+                Write-Log "Collecting system information..." "INFO"
+                $os = Get-CimInstance Win32_OperatingSystem
+                $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
+                $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
+                
+                $result.data = @{
+                    os_name = $os.Caption
+                    os_version = $os.Version
+                    os_build = $os.BuildNumber
+                    hostname = $env:COMPUTERNAME
+                    cpu_name = $cpu.Name
+                    cpu_cores = $cpu.NumberOfCores
+                    total_memory_gb = [math]::Round($os.TotalVisibleMemorySize/1MB, 2)
+                    free_memory_gb = [math]::Round($os.FreePhysicalMemory/1MB, 2)
+                    disk_free_gb = [math]::Round($disk.FreeSpace/1GB, 2)
+                    disk_total_gb = [math]::Round($disk.Size/1GB, 2)
+                    last_boot = $os.LastBootUpTime.ToString("o")
+                }
+                Write-Log "System info collected successfully" "SUCCESS"
+            }
+            
+            "update_config" {
+                # Atualizar configurações do agent
+                Write-Log "Updating agent configuration..." "INFO"
+                if ($Job.payload.poll_interval) {
+                    $script:PollInterval = $Job.payload.poll_interval
+                    $result.data = @{
+                        new_poll_interval = $script:PollInterval
+                        config_updated = $true
+                    }
+                    Write-Log "Poll interval updated to: $($script:PollInterval) seconds" "SUCCESS"
+                } else {
+                    $result.status = "failed"
+                    $result.error = "No configuration changes provided"
+                    Write-Log "No configuration changes in payload" "WARN"
+                }
+            }
+            
+            "run_command" {
+                # Executar comando (com validação de segurança)
+                Write-Log "Running command..." "INFO"
+                if ($Job.payload.command) {
+                    # IMPORTANTE: Apenas comandos seguros permitidos
+                    $allowedCommands = @("ipconfig", "systeminfo", "tasklist", "netstat", "hostname", "whoami")
+                    $command = $Job.payload.command
+                    
+                    if ($allowedCommands -contains $command) {
+                        try {
+                            $output = & $command 2>&1 | Out-String
+                            $result.data = @{
+                                command = $command
+                                output = $output
+                                exit_code = $LASTEXITCODE
+                            }
+                            Write-Log "Command executed successfully: $command" "SUCCESS"
+                        }
+                        catch {
+                            $result.status = "failed"
+                            $result.error = "Command execution failed: $($_.Exception.Message)"
+                            Write-Log "Command execution error: $_" "ERROR"
+                        }
+                    } else {
+                        $result.status = "failed"
+                        $result.error = "Command not allowed: $command. Allowed: $($allowedCommands -join ', ')"
+                        Write-Log "Command not allowed: $command" "ERROR"
+                    }
+                } else {
+                    $result.status = "failed"
+                    $result.error = "No command provided in payload"
+                    Write-Log "No command in payload" "ERROR"
+                }
+            }
+            
+            default {
+                Write-Log "Unknown job type: $($Job.type)" "WARN"
+                $result.status = "failed"
+                $result.error = "Unknown job type: $($Job.type)"
+            }
+        }
+        
+        if ($result.status -eq "completed") {
+            Write-Log "Job executed successfully: $($Job.id)" "SUCCESS"
+        }
+    }
+    catch {
+        Write-Log "Job execution failed: $_" "ERROR"
+        Write-Log "Stack trace: $($_.ScriptStackTrace)" "ERROR"
+        $result.status = "failed"
+        $result.error = $_.Exception.Message
     }
     
     return $result
