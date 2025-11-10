@@ -1,12 +1,12 @@
 import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 
 export const AppSidebar = () => {
-  const { isAdmin } = useUserRole();
+  const { isAdmin } = useIsAdmin();
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved === 'true';
