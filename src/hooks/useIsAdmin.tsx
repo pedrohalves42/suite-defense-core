@@ -9,30 +9,37 @@ export const useIsAdmin = () => {
 
   useEffect(() => {
     const checkAdmin = async () => {
+      console.log('[useIsAdmin] Starting check, user:', user?.id, user?.email);
+      
       if (!user) {
+        console.log('[useIsAdmin] No user, setting isAdmin=false');
         setIsAdmin(false);
         setLoading(false);
         return;
       }
 
       try {
-        // Use RPC has_role to avoid RLS recursion issues
+        console.log('[useIsAdmin] Calling has_role RPC for user:', user.id);
+        
         const { data, error } = await supabase.rpc('has_role', {
           _user_id: user.id,
           _role: 'admin'
         });
 
         if (error) {
-          console.error('[useIsAdmin] Error calling has_role:', error);
+          console.error('[useIsAdmin] ❌ Error calling has_role:', error);
           throw error;
         }
         
+        console.log('[useIsAdmin] RPC has_role returned:', data, 'Type:', typeof data);
         setIsAdmin(data === true);
+        console.log('[useIsAdmin] ✅ Final isAdmin value:', data === true);
       } catch (error) {
-        console.error('[useIsAdmin] Error checking admin status:', error);
+        console.error('[useIsAdmin] ❌ Exception checking admin status:', error);
         setIsAdmin(false);
       } finally {
         setLoading(false);
+        console.log('[useIsAdmin] Loading complete');
       }
     };
 
