@@ -37,7 +37,16 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.send-alert-email]
-verify_jwt = true
+verify_jwt = false
+
+[functions.monitor-agent-health]
+verify_jwt = false
+
+[functions.send-system-alert]
+verify_jwt = false
+
+[functions.send-health-alert]
+verify_jwt = false
 
 [functions.analyze-network-anomalies]
 verify_jwt = true
