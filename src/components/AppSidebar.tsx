@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3 } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
@@ -45,6 +45,7 @@ export const AppSidebar = () => {
     { icon: Key, label: 'Chaves', to: '/admin/enrollment-keys' },
     { icon: Key, label: 'API Keys', to: '/admin/api-keys' },
     { icon: Mail, label: 'Convites', to: '/admin/invites' },
+    { icon: AlertTriangle, label: 'Segurança', to: '/admin/security' },
     { icon: ScrollText, label: 'Logs', to: '/admin/audit-logs' },
     { icon: Settings, label: 'Configurações', to: '/admin/settings' },
   ];

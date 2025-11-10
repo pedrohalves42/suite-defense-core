@@ -2,6 +2,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { AutoGenerateEnrollmentSchema } from '../_shared/validation.ts';
 import { handleException, handleValidationError } from '../_shared/error-handler.ts';
+import { logSecurityEvent, extractIpAddress, checkIpBlocklist } from '../_shared/security-log.ts';
+import { checkRateLimit } from '../_shared/rate-limit.ts';
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -16,6 +18,67 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Extract IP address for security logging and rate limiting
+    const ipAddress = extractIpAddress(req);
+
+    // Check if IP is in blocklist (multiple failed attempts)
+    const ipBlockCheck = await checkIpBlocklist(supabase, ipAddress, 'auto-generate-enrollment', 60);
+    if (ipBlockCheck.blocked) {
+      await logSecurityEvent({
+        supabase,
+        ipAddress,
+        endpoint: 'auto-generate-enrollment',
+        attackType: 'brute_force',
+        severity: 'high',
+        blocked: true,
+        details: {
+          reason: ipBlockCheck.reason,
+          resetAt: ipBlockCheck.resetAt
+        },
+        userAgent: req.headers.get('user-agent') || undefined,
+        requestId
+      });
+
+      return new Response(JSON.stringify({ 
+        error: ipBlockCheck.reason,
+        resetAt: ipBlockCheck.resetAt
+      }), {
+        status: 429,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Rate limiting por IP (prevenir brute force)
+    const rateLimitResult = await checkRateLimit(supabase, ipAddress, 'auto-generate-enrollment', {
+      maxRequests: 10, // Máximo 10 enrollment keys por IP por hora
+      windowMinutes: 60,
+      blockMinutes: 120, // Bloquear por 2 horas se exceder
+    });
+
+    if (!rateLimitResult.allowed) {
+      await logSecurityEvent({
+        supabase,
+        ipAddress,
+        endpoint: 'auto-generate-enrollment',
+        attackType: 'rate_limit',
+        severity: 'medium',
+        blocked: true,
+        details: {
+          resetAt: rateLimitResult.resetAt
+        },
+        userAgent: req.headers.get('user-agent') || undefined,
+        requestId
+      });
+
+      return new Response(
+        JSON.stringify({ 
+          error: 'Rate limit excedido. Muitas tentativas de criação de enrollment keys',
+          resetAt: rateLimitResult.resetAt 
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Authenticate user
     const authHeader = req.headers.get('Authorization');
@@ -50,6 +113,25 @@ Deno.serve(async (req) => {
     
     if (!validation.success) {
       console.error(`[${requestId}] Validation failed:`, validation.error.issues);
+      
+      // Log security event for invalid input
+      await logSecurityEvent({
+        supabase,
+        tenantId: undefined, // Ainda não temos o tenant neste ponto
+        userId: user.id,
+        ipAddress,
+        endpoint: 'auto-generate-enrollment',
+        attackType: 'invalid_input',
+        severity: 'medium',
+        blocked: true,
+        details: {
+          errors: validation.error.issues,
+          input: body
+        },
+        userAgent: req.headers.get('user-agent') || undefined,
+        requestId
+      });
+      
       return handleValidationError(validation.error);
     }
 

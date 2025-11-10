@@ -95,6 +95,63 @@ export const AutoGenerateEnrollmentSchema = z.object({
     }, 'Nome do agente está reservado e não pode ser usado')
 });
 
+// Enhanced CreateJobSchema with additional security validations
+export const CreateJobSchemaEnhanced = z.object({
+  agentName: z.string()
+    .trim()
+    .min(3)
+    .max(64)
+    .regex(/^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]$/)
+    .refine(name => {
+      const sqlPatterns = [/[;'"\\/]/, /(union|select|insert|update|delete|drop)/i, /(--|\*\/|\/\*)/, /[\x00-\x1F\x7F]/];
+      return !sqlPatterns.some(pattern => pattern.test(name));
+    }, 'Nome do agente contém caracteres perigosos'),
+  type: z.enum(['scan', 'update', 'report', 'config'], { errorMap: () => ({ message: 'Tipo de job inválido' }) }),
+  payload: z.record(z.unknown()).optional().refine(payload => {
+    if (!payload) return true;
+    const jsonStr = JSON.stringify(payload);
+    // Block potential XSS in payload
+    const xssPatterns = [/<script/i, /javascript:/i, /onerror=/i, /onload=/i];
+    return !xssPatterns.some(pattern => pattern.test(jsonStr));
+  }, 'Payload contém conteúdo potencialmente perigoso'),
+  approved: z.boolean().default(true),
+  scheduledAt: z.string().datetime().optional(),
+  isRecurring: z.boolean().default(false),
+  recurrencePattern: z.enum(['*/5 * * * *', '*/15 * * * *', '*/30 * * * *', '0 * * * *', '0 0 * * *', '0 0 * * 0']).optional(),
+}).refine(
+  (data) => !data.isRecurring || (data.isRecurring && data.recurrencePattern),
+  {
+    message: 'Padrão de recorrência é obrigatório quando o job é recorrente',
+    path: ['recurrencePattern'],
+  }
+);
+
+// Enhanced UploadReportSchema with XSS protection
+export const UploadReportSchemaEnhanced = UploadReportSchema.extend({
+  kind: z.string()
+    .min(1)
+    .max(50)
+    .regex(/^[a-zA-Z0-9_-]+$/)
+    .refine(kind => {
+      const dangerous = ['script', 'eval', 'exec', 'system'];
+      return !dangerous.includes(kind.toLowerCase());
+    }, 'Tipo de report inválido'),
+  filename: z.string()
+    .min(1)
+    .max(255)
+    .regex(/^[a-zA-Z0-9._-]+$/)
+    .refine(name => {
+      const dangerous = ['../', '..\\', '..%2f', '..%5c', '..%252f', '%2e%2e/', '<', '>', '|', '&'];
+      const lowerName = name.toLowerCase();
+      return !dangerous.some(pattern => lowerName.includes(pattern));
+    }, 'Nome de arquivo contém caracteres perigosos')
+    .refine(name => {
+      // Block executable extensions
+      const executableExts = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.js', '.vbs'];
+      return !executableExts.some(ext => name.toLowerCase().endsWith(ext));
+    }, 'Tipo de arquivo não permitido')
+});
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function validateFileSize(size: number): boolean {

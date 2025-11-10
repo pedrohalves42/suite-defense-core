@@ -45,6 +45,7 @@ import CheckoutCancel from "./pages/CheckoutCancel";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import AuthDebug from "./pages/debug/AuthDebug";
+import SecurityDashboard from "./pages/admin/SecurityDashboard";
 
 const queryClient = new QueryClient();
 
@@ -98,6 +99,7 @@ const App = () => (
                 <Route path="plan-upgrade" element={<PlanUpgrade />} />
                 <Route path="subscriptions" element={<Subscriptions />} />
                 <Route path="audit-logs" element={<AuditLogs />} />
+                <Route path="security" element={<SecurityDashboard />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
 

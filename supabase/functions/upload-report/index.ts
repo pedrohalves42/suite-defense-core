@@ -1,8 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
-import { UploadReportSchema, validateFileSize, AgentTokenSchema } from '../_shared/validation.ts'
+import { UploadReportSchemaEnhanced, validateFileSize, AgentTokenSchema } from '../_shared/validation.ts'
 import { handleException, handleValidationError, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
+import { logSecurityEvent, extractIpAddress } from '../_shared/security-log.ts'
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID()
@@ -135,13 +136,33 @@ Deno.serve(async (req) => {
         )
       }
 
-      // Validar inputs
-      const validation = UploadReportSchema.safeParse({
+      // Validar inputs com schema enhanced
+      const validation = UploadReportSchemaEnhanced.safeParse({
         kind,
         filename: file.name
       })
 
       if (!validation.success) {
+        const ipAddress = extractIpAddress(req);
+        
+        // Log validation failure
+        await logSecurityEvent({
+          supabase,
+          tenantId: agent.tenant_id,
+          ipAddress,
+          endpoint: 'upload-report',
+          attackType: 'invalid_input',
+          severity: 'medium',
+          blocked: true,
+          details: {
+            errors: validation.error.issues,
+            kind,
+            filename: file.name
+          },
+          userAgent: req.headers.get('user-agent') || undefined,
+          requestId
+        });
+        
         return handleValidationError(validation.error, requestId)
       }
 
