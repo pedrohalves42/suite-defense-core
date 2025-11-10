@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { AutoGenerateEnrollmentSchema } from '../_shared/validation.ts';
+import { handleException, handleValidationError } from '../_shared/error-handler.ts';
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -40,16 +42,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { agentName } = await req.json();
-    console.log(`[${requestId}] Request body:`, { agentName });
+    const body = await req.json();
+    console.log(`[${requestId}] Request body received`);
 
-    if (!agentName || typeof agentName !== 'string') {
-      console.error(`[${requestId}] Invalid agent name:`, agentName);
-      return new Response(JSON.stringify({ error: 'Agent name is required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Validate input with Zod
+    const validation = AutoGenerateEnrollmentSchema.safeParse(body);
+    
+    if (!validation.success) {
+      console.error(`[${requestId}] Validation failed:`, validation.error.issues);
+      return handleValidationError(validation.error);
     }
+
+    const { agentName } = validation.data;
+    console.log(`[${requestId}] Valid agent name:`, agentName);
 
     // Generate enrollment key
     const generateKey = () => {
@@ -202,17 +207,6 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error(`[${requestId}] Error:`, error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorDetails = error instanceof Error ? error.stack : '';
-    console.error(`[${requestId}] Error details:`, errorDetails);
-    
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    return handleException(error, requestId, 'auto-generate-enrollment');
   }
 });
