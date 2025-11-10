@@ -1163,6 +1163,7 @@ export type Database = {
         Returns: boolean
       }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
       update_quota_usage: {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }
