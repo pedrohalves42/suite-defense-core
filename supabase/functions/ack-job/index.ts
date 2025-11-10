@@ -98,10 +98,43 @@ Deno.serve(async (req) => {
 
     const validatedJobId = jobIdValidation.data
 
-    console.log('ACK job:', validatedJobId, 'por agente:', agent.agent_name)
+    console.log('[ACK] Job:', validatedJobId, 'por agente:', agent.agent_name)
+
+    // Buscar job primeiro para validar
+    const { data: existingJob, error: fetchError } = await supabase
+      .from('jobs')
+      .select('*')
+      .eq('id', validatedJobId)
+      .single()
+
+    if (fetchError || !existingJob) {
+      console.error('[ACK] Job não encontrado:', validatedJobId, fetchError)
+      return new Response(
+        JSON.stringify({ error: 'Job não encontrado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      )
+    }
+
+    // Verificar se job pertence ao agente
+    if (existingJob.agent_name !== agent.agent_name) {
+      console.error('[ACK] Job pertence a outro agente:', existingJob.agent_name, '!=', agent.agent_name)
+      return new Response(
+        JSON.stringify({ error: 'Job pertence a outro agente' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      )
+    }
+
+    // Idempotência: se já está done, retornar sucesso
+    if (existingJob.status === 'done') {
+      console.log('[ACK] Job já estava confirmado (idempotente):', validatedJobId)
+      return new Response(
+        JSON.stringify({ ok: true, message: 'Job já estava confirmado' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
 
     // Atualizar status do job
-    const { error } = await supabase
+    const { error: updateError, data: updatedJob } = await supabase
       .from('jobs')
       .update({ 
         status: 'done',
@@ -109,13 +142,18 @@ Deno.serve(async (req) => {
       })
       .eq('id', validatedJobId)
       .eq('agent_name', agent.agent_name)
+      .select()
+      .single()
 
-    if (error) {
+    if (updateError) {
+      console.error('[ACK] Erro ao atualizar job:', updateError)
       return new Response(
-        JSON.stringify({ error: 'Job não encontrado' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+        JSON.stringify({ error: 'Erro ao atualizar job' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       )
     }
+
+    console.log('[ACK] Job confirmado com sucesso:', validatedJobId, updatedJob)
 
     return new Response(
       JSON.stringify({ ok: true }),

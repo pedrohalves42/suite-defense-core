@@ -34,10 +34,7 @@ export default function EnrollmentKeys() {
     queryFn: async () => {
       let query = supabase
         .from('enrollment_keys')
-        .select(`
-          *,
-          profiles:created_by(full_name)
-        `, { count: 'exact' })
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
 
@@ -51,6 +48,24 @@ export default function EnrollmentKeys() {
 
       const { data, error, count } = await query;
       if (error) throw error;
+
+      // Buscar nomes dos criadores separadamente
+      if (data && data.length > 0) {
+        const creatorIds = [...new Set(data.map(k => k.created_by).filter(Boolean))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', creatorIds);
+
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]) || []);
+        
+        const dataWithCreators = data.map(key => ({
+          ...key,
+          creator_name: key.created_by ? profileMap.get(key.created_by) : null
+        }));
+
+        return { data: dataWithCreators, count };
+      }
 
       return { data, count };
     },
@@ -336,7 +351,7 @@ export default function EnrollmentKeys() {
                             </Badge>
                           </TableCell>
                           <TableCell>{key.current_uses}/{key.max_uses}</TableCell>
-                          <TableCell>{key.profiles?.full_name || '-'}</TableCell>
+                          <TableCell>{key.creator_name || '-'}</TableCell>
                           <TableCell className="text-sm">{format(new Date(key.created_at), 'dd/MM/yy HH:mm')}</TableCell>
                           <TableCell className="text-sm">{key.used_at ? format(new Date(key.used_at), 'dd/MM/yy HH:mm') : '-'}</TableCell>
                           <TableCell className="text-sm">{format(new Date(key.expires_at), 'dd/MM/yy HH:mm')}</TableCell>
