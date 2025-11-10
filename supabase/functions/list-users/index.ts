@@ -31,26 +31,58 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
+    console.log(`[${requestId}] Checking admin role for user:`, user.id);
+    
     // Check if user is admin
-    const { data: hasAdminRole } = await supabaseAdmin.rpc('has_role', { 
+    const { data: hasAdminRole, error: roleError } = await supabaseAdmin.rpc('has_role', { 
       _user_id: user.id, 
       _role: 'admin' 
     });
 
+    console.log(`[${requestId}] Admin check result:`, { hasAdminRole, roleError });
+
+    if (roleError) {
+      console.error(`[${requestId}] Role check error:`, roleError);
+      return createErrorResponse(
+        ErrorCode.INTERNAL_ERROR, 
+        'Falha ao verificar permissões de admin', 
+        500, 
+        requestId
+      );
+    }
+
     if (!hasAdminRole) {
+      console.warn(`[${requestId}] User ${user.id} is not admin`);
       return createErrorResponse(ErrorCode.FORBIDDEN, 'Acesso negado', 403, requestId);
     }
 
     // Get user's tenant
-    const { data: userRole } = await supabaseAdmin
+    console.log(`[${requestId}] Fetching tenant for user:`, user.id);
+    
+    const { data: userRole, error: tenantError } = await supabaseAdmin
       .from('user_roles')
       .select('tenant_id')
       .eq('user_id', user.id)
       .single();
 
+    console.log(`[${requestId}] Tenant query result:`, { userRole, tenantError });
+
+    if (tenantError) {
+      console.error(`[${requestId}] Error fetching tenant:`, tenantError);
+      return createErrorResponse(
+        ErrorCode.INTERNAL_ERROR, 
+        'Erro ao buscar tenant do usuário', 
+        500, 
+        requestId
+      );
+    }
+
     if (!userRole?.tenant_id) {
+      console.warn(`[${requestId}] No tenant found for user:`, user.id);
       return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
     }
+
+    console.log(`[${requestId}] Found tenant:`, userRole.tenant_id);
 
     // Get all users in the tenant
     const { data: tenantUsers } = await supabaseAdmin

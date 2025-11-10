@@ -11,7 +11,10 @@ export const useUserRole = () => {
 
   useEffect(() => {
     const checkRole = async () => {
+      console.log('[useUserRole] Checking role for user:', user?.id);
+      
       if (!user) {
+        console.log('[useUserRole] No user found, setting role to null');
         setRole(null);
         setLoading(false);
         return;
@@ -24,10 +27,18 @@ export const useUserRole = () => {
           .eq('user_id', user.id)
           .maybeSingle();
 
-        if (error) throw error;
-        setRole(data?.role as UserRole);
+        console.log('[useUserRole] Query result:', { data, error });
+
+        if (error) {
+          console.error('[useUserRole] RLS Policy Error:', error);
+          throw error;
+        }
+        
+        const userRole = data?.role as UserRole;
+        console.log('[useUserRole] User role:', userRole);
+        setRole(userRole);
       } catch (error) {
-        console.error('Error checking user role:', error);
+        console.error('[useUserRole] Error checking user role:', error);
         setRole(null);
       } finally {
         setLoading(false);

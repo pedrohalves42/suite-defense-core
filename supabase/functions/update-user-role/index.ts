@@ -68,6 +68,8 @@ serve(async (req) => {
       return createError('UNAUTHORIZED', 'Authentication required', requestId, 401);
     }
 
+    console.log(`[${requestId}] Checking role for user:`, user.id);
+    
     // Check if user is admin and get tenant
     const { data: actorRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
@@ -75,12 +77,15 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle();
 
+    console.log(`[${requestId}] Actor role query result:`, { actorRole, roleError });
+
     if (roleError) {
-      console.error('Error fetching actor role:', roleError);
+      console.error(`[${requestId}] Error fetching actor role:`, roleError);
       return createError('INTERNAL', 'Internal server error', requestId, 500);
     }
 
     if (!actorRole || actorRole.role !== 'admin') {
+      console.warn(`[${requestId}] User ${user.id} is not admin, role:`, actorRole?.role);
       // Audit failed attempt
       await supabaseAdmin.from('audit_logs').insert({
         tenant_id: actorRole?.tenant_id || null,

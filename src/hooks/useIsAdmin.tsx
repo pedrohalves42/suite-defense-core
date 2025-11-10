@@ -9,7 +9,10 @@ export const useIsAdmin = () => {
 
   useEffect(() => {
     const checkAdmin = async () => {
+      console.log('[useIsAdmin] Checking admin status for user:', user?.id);
+      
       if (!user) {
+        console.log('[useIsAdmin] No user found, setting isAdmin to false');
         setIsAdmin(false);
         setLoading(false);
         return;
@@ -22,10 +25,18 @@ export const useIsAdmin = () => {
           .eq('user_id', user.id)
           .maybeSingle();
 
-        if (error) throw error;
-        setIsAdmin(data?.role === 'admin');
+        console.log('[useIsAdmin] Query result:', { data, error });
+
+        if (error) {
+          console.error('[useIsAdmin] RLS Policy Error:', error);
+          throw error;
+        }
+        
+        const isAdminRole = data?.role === 'admin';
+        console.log('[useIsAdmin] Is admin:', isAdminRole);
+        setIsAdmin(isAdminRole);
       } catch (error) {
-        console.error('Error checking admin status:', error);
+        console.error('[useIsAdmin] Error checking admin status:', error);
         setIsAdmin(false);
       } finally {
         setLoading(false);
