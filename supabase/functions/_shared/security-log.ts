@@ -50,6 +50,39 @@ export async function logSecurityEvent(params: SecurityLogParams): Promise<void>
 
     // Log também no console para monitoramento
     console.log(`[SECURITY] ${severity.toUpperCase()} - ${attackType} blocked at ${endpoint} from ${ipAddress}`);
+
+    // Enviar email para admins se for evento crítico
+    if (severity === 'critical' || severity === 'high') {
+      try {
+        const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+        const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+        
+        if (INTERNAL_SECRET && SUPABASE_URL) {
+          await fetch(`${SUPABASE_URL}/functions/v1/send-alert-email`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Internal-Secret': INTERNAL_SECRET,
+            },
+            body: JSON.stringify({
+              alertType: `${severity.toUpperCase()}: ${attackType}`,
+              message: `Tentativa de ataque detectada no endpoint ${endpoint}`,
+              details: {
+                ip_address: ipAddress,
+                endpoint,
+                attack_type: attackType,
+                severity,
+                blocked,
+                user_agent: userAgent,
+                ...details,
+              },
+            }),
+          });
+        }
+      } catch (emailError) {
+        console.error('[SECURITY-LOG] Failed to send email alert:', emailError);
+      }
+    }
   } catch (error) {
     // Não falhar a requisição se não conseguir logar
     console.error('[SECURITY-LOG] Failed to log security event:', error);
