@@ -3,6 +3,7 @@ import { handleException, corsHeaders } from '../_shared/error-handler.ts';
 import { AgentTokenSchema } from '../_shared/validation.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { checkQuotaAvailable } from '../_shared/quota.ts';
 
 interface ScanRequest {
   filePath: string;
@@ -118,6 +119,21 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[${agent.agent_name}] Scanning file: ${filePath} (${fileHash})`);
+
+    // Check scan quota before proceeding
+    const quotaCheck = await checkQuotaAvailable(supabase, agent.tenant_id, 'max_scans_per_month');
+    
+    if (!quotaCheck.allowed) {
+      console.log(`[${agent.agent_name}] Scan quota exceeded: ${quotaCheck.current}/${quotaCheck.limit}`);
+      return new Response(
+        JSON.stringify({ 
+          error: quotaCheck.error || 'Quota de scans excedida',
+          quotaUsed: quotaCheck.current,
+          quotaLimit: quotaCheck.limit
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Verificar scan existente recente (últimas 24h)
     const { data: existingScan } = await supabase
