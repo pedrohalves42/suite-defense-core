@@ -685,6 +685,7 @@ export type Database = {
           metadata: Json | null
           quota_limit: number | null
           quota_used: number | null
+          quota_warning_threshold: number | null
           tenant_id: string
           updated_at: string
         }
@@ -696,6 +697,7 @@ export type Database = {
           metadata?: Json | null
           quota_limit?: number | null
           quota_used?: number | null
+          quota_warning_threshold?: number | null
           tenant_id: string
           updated_at?: string
         }
@@ -707,6 +709,7 @@ export type Database = {
           metadata?: Json | null
           quota_limit?: number | null
           quota_used?: number | null
+          quota_warning_threshold?: number | null
           tenant_id?: string
           updated_at?: string
         }
@@ -1091,6 +1094,7 @@ export type Database = {
         Returns: boolean
       }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
+      reset_monthly_scan_quota: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "operator" | "viewer"
