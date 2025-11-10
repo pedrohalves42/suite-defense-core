@@ -1,918 +1,658 @@
-import { Shield, Users, Clock, CheckCircle2, Lock, Activity, FileCheck, Zap, Server, Terminal, ArrowRight, Play, Sparkles, Boxes, Database, Bell, Network, AlertTriangle, CheckCircle, ExternalLink, Github, Mail, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { Shield, CheckCircle, Zap, Lock, BarChart, Users, ArrowRight, Mail, Phone, MapPin } from "lucide-react";
+import { Link } from "react-router-dom";
 import { ContactForm } from "@/components/ContactForm";
 
-const fadeInUp = {
-  hidden: { opacity: 0, y: 40 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-};
-
-const stagger = {
-  visible: {
-    transition: {
-      staggerChildren: 0.12,
-    },
-  },
-};
-
-const scaleIn = {
-  hidden: { opacity: 0, scale: 0.9 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.5 } },
-};
-
-export default function Landing() {
-  const navigate = useNavigate();
-
+const Landing = () => {
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
-      {/* Navigation */}
-      <motion.nav 
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="border-b border-border/40 backdrop-blur-xl sticky top-0 z-50 bg-background/95 shadow-sm"
-      >
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <motion.div 
-              className="flex items-center gap-2"
-              whileHover={{ scale: 1.05 }}
-              transition={{ type: "spring", stiffness: 400 }}
-            >
-              <Shield className="w-8 h-8 text-primary drop-shadow-[0_0_10px_rgba(0,229,160,0.5)]" />
-              <span className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                CyberShield
-              </span>
-            </motion.div>
-            <nav className="hidden md:flex items-center gap-8">
-              <a href="#como-funciona" className="text-sm text-muted-foreground hover:text-primary transition-colors">Como Funciona</a>
-              <a href="#segmentos" className="text-sm text-muted-foreground hover:text-primary transition-colors">Segmentos</a>
-              <a href="#seguranca" className="text-sm text-muted-foreground hover:text-primary transition-colors">Segurança</a>
-              <a href="#precos" className="text-sm text-muted-foreground hover:text-primary transition-colors">Preços</a>
-              <a href="#contato" className="text-sm text-muted-foreground hover:text-primary transition-colors">Contato</a>
-            </nav>
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate("/login")} className="hover:text-primary transition-colors">
-                Login
-              </Button>
-              <Button 
-                onClick={() => navigate("/signup")} 
-                className="bg-primary hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/25 transition-all hover:scale-105"
-              >
-                Testar 30 dias
-              </Button>
-            </div>
-          </div>
-        </div>
-      </motion.nav>
-
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="pt-20 pb-32 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(0,229,160,0.2),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_60%,rgba(0,229,160,0.1),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgwLDIyOSwxNjAsMC4xKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-20" />
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-background" />
+        <div className="absolute inset-0 bg-grid-white/[0.02]" />
         
-        <div className="container mx-auto px-6 relative z-10">
-          <motion.div 
-            className="max-w-5xl mx-auto text-center"
-            initial="hidden"
-            animate="visible"
-            variants={stagger}
-          >
-            <motion.h1 
-              className="text-5xl md:text-7xl font-bold mb-6 leading-tight"
-              variants={fadeInUp}
-            >
-              Orquestração e Resposta para Endpoints —{" "}
-              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-pulse-glow">
-                multi‑tenant, em minutos
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24">
+          <div className="text-center space-y-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
+              <Shield className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Proteção Empresarial de Verdade</span>
+            </div>
+
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
+              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+                Sua Empresa Segura
               </span>
-            </motion.h1>
-            
-            <motion.p 
-              className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed"
-              variants={fadeInUp}
-            >
-              Funciona por cima do seu antivírus/Defender: detecta configurações de risco, prioriza e remedia com playbooks aprovados, 
-              <span className="text-primary font-semibold"> em tempo real e com auditoria completa.</span>
-            </motion.p>
+              <br />
+              <span className="text-foreground">em Segundos, Não Dias</span>
+            </h1>
+
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+              Detecte e elimine ameaças antes que causem prejuízo. 
+              <span className="text-foreground font-semibold"> Controle total sobre todos os computadores</span> da sua empresa, em tempo real.
+            </p>
 
             {/* Proof Stats */}
-            <motion.div 
-              className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12"
-              variants={fadeInUp}
-            >
-              <Card className="border-primary/20 bg-card/50 backdrop-blur">
-                <CardContent className="pt-6">
-                  <div className="text-3xl font-bold text-primary mb-2">p95: 12s</div>
-                  <div className="text-sm text-muted-foreground">Tempo de execução de job</div>
-                </CardContent>
-              </Card>
-              <Card className="border-primary/20 bg-card/50 backdrop-blur">
-                <CardContent className="pt-6">
-                  <div className="text-3xl font-bold text-primary mb-2">15.4k</div>
-                  <div className="text-sm text-muted-foreground">Jobs no último mês</div>
-                </CardContent>
-              </Card>
-              <Card className="border-primary/20 bg-card/50 backdrop-blur">
-                <CardContent className="pt-6">
-                  <div className="text-3xl font-bold text-primary mb-2">3 integrações</div>
-                  <div className="text-sm text-muted-foreground">Defender/AV, VirusTotal*, Email/Webhooks</div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div 
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-              variants={fadeInUp}
-            >
-              <Button 
-                size="lg" 
-                onClick={() => navigate("/signup")}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30 transition-all hover:scale-105 text-lg px-8 py-6"
-              >
-                <Play className="mr-2 h-5 w-5" />
-                Testar 30 dias — sem cartão
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="border-primary/50 hover:bg-primary/10 text-lg px-8 py-6"
-              >
-                <Terminal className="mr-2 h-5 w-5" />
-                Ver demo de 5 min
-              </Button>
-            </motion.div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Como Funciona */}
-      <section id="como-funciona" className="py-24 bg-gradient-to-b from-background to-secondary/20">
-        <div className="container mx-auto px-6">
-          <motion.div 
-            className="text-center mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-          >
-            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">SETUP EM MINUTOS</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Como Funciona</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Três passos para proteger todos os seus endpoints
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {[
-              {
-                step: "1",
-                icon: Terminal,
-                title: "Instale o agente",
-                description: "PowerShell/Bash. Heartbeat em segundos.",
-                details: "Um comando para instalar. Registro automático multi-tenant por chave de enrollment."
-              },
-              {
-                step: "2",
-                icon: CheckCircle2,
-                title: "Execute playbooks",
-                description: "SMBv1, RDP, patches, firewall com aprovação dupla.",
-                details: "Detecta configurações de risco e executa remediações aprovadas com auditoria completa."
-              },
-              {
-                step: "3",
-                icon: FileCheck,
-                title: "Comprove conformidade",
-                description: "Relatórios PDF/CSV e trilha de auditoria por tenant.",
-                details: "Evidências LGPD e apoio a BACEN 4.893. Exportação completa de logs e ações."
-              },
-            ].map((item, index) => (
-              <motion.div
-                key={index}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={fadeInUp}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className="h-full border-border/50 hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/10">
-                  <CardHeader>
-                    <div className="mb-4">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20">
-                        <item.icon className="w-8 h-8 text-primary" />
-                      </div>
-                      <div className="inline-flex ml-3 items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold text-lg">
-                        {item.step}
-                      </div>
-                    </div>
-                    <CardTitle className="text-2xl mb-2">{item.title}</CardTitle>
-                    <p className="text-primary font-medium">{item.description}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">{item.details}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Segmentos */}
-      <section id="segmentos" className="py-24">
-        <div className="container mx-auto px-6">
-          <motion.div 
-            className="text-center mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-          >
-            <Badge className="mb-4 bg-accent/10 text-accent border-accent/20">FEITO SOB MEDIDA</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Para Quem É</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Seja MSP ou empresa com 20–500 endpoints
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={scaleIn}
-            >
-              <Card className="h-full border-accent/30 hover:border-accent transition-all hover:shadow-xl hover:shadow-accent/20">
-                <CardHeader>
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-accent/10 border border-accent/20 mb-4">
-                    <Users className="w-8 h-8 text-accent" />
-                  </div>
-                  <CardTitle className="text-3xl mb-4">MSPs</CardTitle>
-                  <CardDescription className="text-base">
-                    Gerencie múltiplos clientes com isolamento total
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium">Painel multi‑tenant</p>
-                      <p className="text-sm text-muted-foreground">Clientes isolados por RLS. Sem vazamento de dados.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium">Playbooks reutilizáveis</p>
-                      <p className="text-sm text-muted-foreground">Crie uma vez, use em todos os clientes com aprovações por função.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium">Relatórios white‑label</p>
-                      <p className="text-sm text-muted-foreground">PDF/CSV para enviar ao cliente com sua marca.</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={scaleIn}
-              transition={{ delay: 0.2 }}
-            >
-              <Card className="h-full border-primary/30 hover:border-primary transition-all hover:shadow-xl hover:shadow-primary/20">
-                <CardHeader>
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mb-4">
-                    <Server className="w-8 h-8 text-primary" />
-                  </div>
-                  <CardTitle className="text-3xl mb-4">Empresas</CardTitle>
-                  <CardDescription className="text-base">
-                    20–500 endpoints com conformidade garantida
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium">Hardening em 7 dias</p>
-                      <p className="text-sm text-muted-foreground">SMBv1, RDP, Windows Update, políticas de firewall.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium">Evidências LGPD/BACEN</p>
-                      <p className="text-sm text-muted-foreground">Trilha de auditoria completa e exportações para compliance.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium">Funciona com seu antivírus</p>
-                      <p className="text-sm text-muted-foreground">Sem troca de ferramenta. Orquestramos por cima do Defender/AV.</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Benefícios */}
-      <section id="beneficios" className="py-24 bg-gradient-to-b from-secondary/20 to-background">
-        <div className="container mx-auto px-6">
-          <motion.div 
-            className="text-center mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-          >
-            <Badge className="mb-4 bg-success/10 text-success border-success/20">DIFERENCIAIS</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Por Que CyberShield?</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Orquestração real, não apenas detecção
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {[
-              {
-                icon: Zap,
-                title: "Resposta Imediata",
-                description: "p95 de 12s. Jobs executados em tempo real com aprovação.",
-                badge: "VELOCIDADE"
-              },
-              {
-                icon: Lock,
-                title: "Multi-tenant Real",
-                description: "Isolamento por RLS. Um cliente nunca enxerga o outro.",
-                badge: "SEGURANÇA"
-              },
-              {
-                icon: Activity,
-                title: "Heartbeat & Jobs",
-                description: "Monitoramento contínuo com execução remota de comandos aprovados.",
-                badge: "CONFIÁVEL"
-              },
-              {
-                icon: FileCheck,
-                title: "Auditoria Completa",
-                description: "Logs imutáveis. Evidências para LGPD e BACEN 4.893.",
-                badge: "COMPLIANCE"
-              },
-              {
-                icon: Network,
-                title: "Integrações Prontas",
-                description: "VirusTotal (hash-only), Webhooks, Email. SIEM em roadmap.",
-                badge: "EXTENSÍVEL"
-              },
-              {
-                icon: Database,
-                title: "Dados Seguros",
-                description: "RLS por tenant, RBAC granular, backups automáticos.",
-                badge: "PRIVACIDADE"
-              },
-            ].map((benefit, index) => (
-              <motion.div
-                key={index}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={scaleIn}
-                transition={{ delay: index * 0.05 }}
-              >
-                <Card className="h-full border-border/50 hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/10 group">
-                  <CardHeader>
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10 border border-primary/20 group-hover:bg-primary/20 transition-colors">
-                        <benefit.icon className="w-7 h-7 text-primary" />
-                      </div>
-                      <Badge variant="outline" className="text-xs">{benefit.badge}</Badge>
-                    </div>
-                    <CardTitle className="text-xl mb-2">{benefit.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">{benefit.description}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Integrações */}
-      <section className="py-24">
-        <div className="container mx-auto px-6">
-          <motion.div 
-            className="text-center mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-          >
-            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">INTEGRAÇÕES</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Funciona com o que você já usa</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Defender/AV continua detectando; o CyberShield orquestra e remedia.
-            </p>
-          </motion.div>
-
-          <motion.div 
-            className="max-w-4xl mx-auto"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={stagger}
-          >
-            <div className="grid md:grid-cols-3 gap-6">
-              {[
-                { name: "Windows Defender", type: "Antivírus nativo", status: "Integrado" },
-                { name: "VirusTotal", type: "Hash-only / BYO-key", status: "Integrado" },
-                { name: "Email / Webhooks", type: "Alertas e notificações", status: "Integrado" },
-              ].map((integration, index) => (
-                <motion.div key={index} variants={fadeInUp}>
-                  <Card className="border-primary/20 hover:border-primary/50 transition-all">
-                    <CardHeader>
-                      <div className="flex items-center justify-between mb-2">
-                        <CardTitle className="text-lg">{integration.name}</CardTitle>
-                        <Badge className="bg-success/20 text-success border-success/30">{integration.status}</Badge>
-                      </div>
-                      <CardDescription>{integration.type}</CardDescription>
-                    </CardHeader>
-                  </Card>
-                </motion.div>
-              ))}
+            <div className="flex flex-wrap justify-center gap-8 pt-4">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary">12s</div>
+                <div className="text-sm text-muted-foreground">Tempo de resposta</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary">15.4k</div>
+                <div className="text-sm text-muted-foreground">Ações automatizadas/mês</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-primary">100%</div>
+                <div className="text-sm text-muted-foreground">Visibilidade dos PCs</div>
+              </div>
             </div>
 
-            <motion.div variants={fadeInUp} className="mt-8">
-              <Card className="border-muted bg-muted/30">
-                <CardContent className="pt-6">
-                  <div className="flex items-start gap-3">
-                    <AlertTriangle className="w-5 h-5 text-warning mt-1" />
-                    <div>
-                      <p className="font-medium">VirusTotal - BYO Empresarial</p>
-                      <p className="text-sm text-muted-foreground">
-                        Verificação hash-only com sua chave empresarial. Privacidade garantida — nenhum arquivo é enviado.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </motion.div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
+              <Button asChild size="lg" className="text-lg h-14 px-8">
+                <Link to="/signup">
+                  Testar 30 Dias Grátis
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="text-lg h-14 px-8">
+                <a href="#contact">Falar com Especialista</a>
+              </Button>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              ✓ Sem cartão de crédito &nbsp;•&nbsp; ✓ Instalação em 5 minutos &nbsp;•&nbsp; ✓ Suporte em português
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* Segurança & Compliance */}
-      <section id="seguranca" className="py-24 bg-gradient-to-b from-background to-secondary/20">
-        <div className="container mx-auto px-6">
-          <motion.div 
-            className="text-center mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-          >
-            <Badge className="mb-4 bg-destructive/10 text-destructive border-destructive/20">SEGURANÇA MÁXIMA</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Arquitetura Segura</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              mTLS + HMAC, RLS por tenant, RBAC granular, logs imutáveis
+      {/* Problems Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Você Já Perdeu o Controle da Segurança?
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              A maioria das empresas só descobre problemas quando já é tarde demais
             </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={scaleIn}
-            >
-              <Card className="h-full border-destructive/30">
-                <CardHeader>
-                  <CardTitle className="text-2xl flex items-center gap-3">
-                    <Lock className="w-6 h-6 text-destructive" />
-                    Comunicação Protegida
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-primary mt-0.5" />
-                    <p className="text-muted-foreground">
-                      <span className="text-foreground font-medium">mTLS</span> entre agente e edge functions
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-primary mt-0.5" />
-                    <p className="text-muted-foreground">
-                      <span className="text-foreground font-medium">HMAC</span> por payload com proteção anti-replay
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-primary mt-0.5" />
-                    <p className="text-muted-foreground">
-                      Tokens únicos por agente com expiração
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true }}
-              variants={scaleIn}
-              transition={{ delay: 0.1 }}
-            >
-              <Card className="h-full border-primary/30">
-                <CardHeader>
-                  <CardTitle className="text-2xl flex items-center gap-3">
-                    <Shield className="w-6 h-6 text-primary" />
-                    Isolamento & Auditoria
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-primary mt-0.5" />
-                    <p className="text-muted-foreground">
-                      <span className="text-foreground font-medium">RLS</span> por tenant — dados segregados por design
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-primary mt-0.5" />
-                    <p className="text-muted-foreground">
-                      <span className="text-foreground font-medium">RBAC</span> granular (admin, operator, viewer)
-                    </p>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-primary mt-0.5" />
-                    <p className="text-muted-foreground">
-                      Logs imutáveis e auditoria completa
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
           </div>
 
-          <motion.div 
-            className="mt-8 max-w-5xl mx-auto"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-          >
-            <Card className="border-border/50 bg-card/50">
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">
-                  <span className="text-foreground font-medium">Cada conexão do agente</span> é verificada com mTLS, e cada mensagem é assinada com HMAC (proteção anti‑replay). 
-                  Dados segregados por RLS — por design, <span className="text-primary font-medium">um cliente nunca enxerga o outro.</span>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-card p-8 rounded-2xl border border-border">
+              <div className="w-12 h-12 bg-destructive/10 rounded-lg flex items-center justify-center mb-4">
+                <span className="text-2xl">⚠️</span>
+              </div>
+              <h3 className="text-xl font-bold mb-3">Sem Visibilidade</h3>
+              <p className="text-muted-foreground">
+                Você não sabe quais computadores estão vulneráveis ou infectados agora mesmo
+              </p>
+            </div>
+
+            <div className="bg-card p-8 rounded-2xl border border-border">
+              <div className="w-12 h-12 bg-destructive/10 rounded-lg flex items-center justify-center mb-4">
+                <span className="text-2xl">⏰</span>
+              </div>
+              <h3 className="text-xl font-bold mb-3">Resposta Lenta</h3>
+              <p className="text-muted-foreground">
+                Horas ou dias para descobrir e corrigir um problema enquanto o prejuízo aumenta
+              </p>
+            </div>
+
+            <div className="bg-card p-8 rounded-2xl border border-border">
+              <div className="w-12 h-12 bg-destructive/10 rounded-lg flex items-center justify-center mb-4">
+                <span className="text-2xl">💸</span>
+              </div>
+              <h3 className="text-xl font-bold mb-3">Custos Escondidos</h3>
+              <p className="text-muted-foreground">
+                Perde tempo e dinheiro com problemas que poderiam ser evitados automaticamente
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Como Funciona
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              Simples, rápido e sem complicação
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-12">
+            <div className="relative">
+              <div className="absolute -top-4 -left-4 w-16 h-16 bg-primary/20 rounded-full blur-2xl" />
+              <div className="relative bg-card p-8 rounded-2xl border border-border h-full">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
+                  <span className="text-2xl font-bold text-primary">1</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-4">Instale em Minutos</h3>
+                <p className="text-muted-foreground text-lg">
+                  Baixe o instalador e rode em cada computador. Pronto. Não precisa ser técnico.
                 </p>
-              </CardContent>
-            </Card>
-          </motion.div>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute -top-4 -left-4 w-16 h-16 bg-primary/20 rounded-full blur-2xl" />
+              <div className="relative bg-card p-8 rounded-2xl border border-border h-full">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
+                  <span className="text-2xl font-bold text-primary">2</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-4">Veja Tudo em Tempo Real</h3>
+                <p className="text-muted-foreground text-lg">
+                  Painel mostra status de todos os PCs, vírus detectados e problemas encontrados.
+                </p>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute -top-4 -left-4 w-16 h-16 bg-primary/20 rounded-full blur-2xl" />
+              <div className="relative bg-card p-8 rounded-2xl border border-border h-full">
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
+                  <span className="text-2xl font-bold text-primary">3</span>
+                </div>
+                <h3 className="text-2xl font-bold mb-4">Corrija com 1 Clique</h3>
+                <p className="text-muted-foreground text-lg">
+                  Execute comandos, atualizações e correções em todos os computadores ao mesmo tempo.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits */}
+      <section className="py-20 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                O Que Você Ganha
+              </h2>
+              <div className="space-y-6">
+                <div className="flex gap-4">
+                  <div className="shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Zap className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg mb-2">Resposta em 12 Segundos</h3>
+                    <p className="text-muted-foreground">
+                      Detecte e bloqueie ameaças antes que causem dano. Não espere horas ou dias.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Lock className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg mb-2">Dados 100% Protegidos</h3>
+                    <p className="text-muted-foreground">
+                      Isolamento total entre clientes, criptografia militar e auditoria completa de tudo que acontece.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="shrink-0 w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <BarChart className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg mb-2">Conformidade Garantida</h3>
+                    <p className="text-muted-foreground">
+                      Relatórios automáticos para LGPD, Banco Central e auditorias. Tudo documentado e rastreável.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 rounded-3xl blur-3xl" />
+              <div className="relative bg-card p-8 rounded-2xl border border-border">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                    <span className="font-medium">Computadores Monitorados</span>
+                    <span className="text-2xl font-bold text-primary">248</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                    <span className="font-medium">Ameaças Bloqueadas Hoje</span>
+                    <span className="text-2xl font-bold text-primary">17</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                    <span className="font-medium">Tempo Médio de Resposta</span>
+                    <span className="text-2xl font-bold text-primary">12s</span>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                    <span className="font-medium">Status Geral</span>
+                    <span className="text-lg font-bold text-green-500">✓ Protegido</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Use Cases */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Para Quem É
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-12">
+            {/* MSPs */}
+            <div className="bg-gradient-to-br from-card via-card to-primary/5 p-8 rounded-2xl border border-border">
+              <div className="flex items-center gap-3 mb-6">
+                <Users className="w-8 h-8 text-primary" />
+                <h3 className="text-2xl font-bold">Provedores de TI (MSPs)</h3>
+              </div>
+              <p className="text-muted-foreground text-lg mb-6">
+                Gerencie dezenas de clientes em um único painel. Cada cliente totalmente isolado e seguro.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span>Um painel para todos os clientes</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span>Comandos reutilizáveis entre clientes</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span>Relatórios personalizados com sua marca</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Empresas */}
+            <div className="bg-gradient-to-br from-card via-card to-accent/5 p-8 rounded-2xl border border-border">
+              <div className="flex items-center gap-3 mb-6">
+                <Shield className="w-8 h-8 text-primary" />
+                <h3 className="text-2xl font-bold">Empresas (20-500 PCs)</h3>
+              </div>
+              <p className="text-muted-foreground text-lg mb-6">
+                Proteja sua empresa sem precisar contratar especialista em segurança.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span>Configuração de segurança em 7 dias</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span>Relatórios prontos para LGPD e Banco Central</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span>Funciona com seu antivírus atual</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Integrations */}
+      <section className="py-20 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Funciona com o que Você Já Usa
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              Não precisa trocar seu antivírus. O CyberShield trabalha junto.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-card p-6 rounded-xl border border-border text-center">
+              <div className="text-4xl mb-3">🛡️</div>
+              <h3 className="font-bold text-lg mb-2">Windows Defender / Antivírus</h3>
+              <p className="text-sm text-muted-foreground">
+                Continua detectando. CyberShield orquestra e corrige.
+              </p>
+            </div>
+
+            <div className="bg-card p-6 rounded-xl border border-border text-center">
+              <div className="text-4xl mb-3">🔍</div>
+              <h3 className="font-bold text-lg mb-2">VirusTotal</h3>
+              <p className="text-sm text-muted-foreground">
+                Verificação de arquivos suspeitos (use sua própria chave empresarial)
+              </p>
+            </div>
+
+            <div className="bg-card p-6 rounded-xl border border-border text-center">
+              <div className="text-4xl mb-3">📧</div>
+              <h3 className="font-bold text-lg mb-2">Email / Webhooks</h3>
+              <p className="text-sm text-muted-foreground">
+                Alertas instantâneos por email ou integração com seu sistema
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Pricing */}
-      <section id="precos" className="py-24">
-        <div className="container mx-auto px-6">
-          <motion.div 
-            className="text-center mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-          >
-            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">PLANOS</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Preços Transparentes</h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Pague por endpoint. Sem pegadinhas. Cancele quando quiser.
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Preços Simples e Transparentes
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              Pague apenas pelos computadores que você protege
             </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {[
-              {
-                name: "Starter",
-                price: "R$ 20",
-                period: "/endpoint/mês",
-                minEndpoints: "Mínimo 25 endpoints",
-                description: "Para começar com o essencial",
-                features: [
-                  "Jobs básicos (scan, update, hardening)",
-                  "Alertas por e-mail",
-                  "VirusTotal hash-only (BYO-key)",
-                  "Dashboard multi-tenant",
-                  "Auditoria de 30 dias",
-                  "Suporte por e-mail"
-                ],
-                cta: "Começar agora",
-                highlighted: false
-              },
-              {
-                name: "Pro",
-                price: "R$ 30",
-                period: "/endpoint/mês",
-                minEndpoints: "Mínimo 100 endpoints",
-                description: "Para MSPs e empresas exigentes",
-                features: [
-                  "Tudo do Starter, mais:",
-                  "Webhooks e integrações",
-                  "Playbooks aprovados customizados",
-                  "Relatórios white-label PDF/CSV",
-                  "Exportação completa de dados",
-                  "Auditoria de 90 dias",
-                  "Suporte prioritário (8h úteis)"
-                ],
-                cta: "Começar teste",
-                highlighted: true
-              },
-              {
-                name: "Enterprise",
-                price: "Sob",
-                period: "consulta",
-                minEndpoints: "500+ endpoints",
-                description: "Para operações críticas",
-                features: [
-                  "Tudo do Pro, mais:",
-                  "SSO/SAML",
-                  "Integração SIEM/ITSM",
-                  "Retenção estendida (1 ano+)",
-                  "SLA garantido",
-                  "Suporte 24×7",
-                  "Implementação assistida"
-                ],
-                cta: "Falar com vendas",
-                highlighted: false
-              }
-            ].map((plan, index) => (
-              <motion.div
-                key={index}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                variants={scaleIn}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className={`h-full relative ${plan.highlighted ? 'border-primary shadow-xl shadow-primary/20 scale-105' : 'border-border/50'}`}>
-                  {plan.highlighted && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-primary text-primary-foreground px-4 py-1">MAIS POPULAR</Badge>
-                    </div>
-                  )}
-                  <CardHeader>
-                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                    <div className="mt-4">
-                      <span className="text-5xl font-bold">{plan.price}</span>
-                      <span className="text-muted-foreground">{plan.period}</span>
-                    </div>
-                    <p className="text-sm text-primary font-medium">{plan.minEndpoints}</p>
-                    <CardDescription className="mt-2">{plan.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <ul className="space-y-3">
-                      {plan.features.map((feature, i) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <CheckCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-muted-foreground">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Button 
-                      className={`w-full ${plan.highlighted ? 'bg-primary hover:bg-primary/90' : ''}`}
-                      variant={plan.highlighted ? 'default' : 'outline'}
-                      size="lg"
-                      onClick={() => navigate(plan.name === 'Enterprise' ? '#contato' : '/signup')}
-                    >
-                      {plan.cta}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
           </div>
 
-          <motion.div 
-            className="mt-12 text-center"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-          >
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Starter */}
+            <div className="bg-card p-8 rounded-2xl border border-border">
+              <h3 className="text-2xl font-bold mb-2">Starter</h3>
+              <div className="mb-6">
+                <span className="text-4xl font-bold">R$ 20</span>
+                <span className="text-muted-foreground">/PC/mês</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">Mínimo 25 computadores</p>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">Monitoramento em tempo real</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">Comandos básicos</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">Alertas por email</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">VirusTotal (sua chave)</span>
+                </li>
+              </ul>
+              <Button variant="outline" className="w-full" asChild>
+                <Link to="/signup">Começar Teste Grátis</Link>
+              </Button>
+            </div>
+
+            {/* Pro */}
+            <div className="bg-gradient-to-br from-primary via-primary to-accent p-8 rounded-2xl text-primary-foreground relative scale-105 shadow-2xl">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground px-4 py-1 rounded-full text-sm font-bold">
+                MAIS POPULAR
+              </div>
+              <h3 className="text-2xl font-bold mb-2">Pro</h3>
+              <div className="mb-6">
+                <span className="text-4xl font-bold">R$ 30</span>
+                <span className="opacity-90">/PC/mês</span>
+              </div>
+              <p className="text-sm opacity-90 mb-6">Mínimo 100 computadores</p>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <span className="text-sm">Tudo do Starter, mais:</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <span className="text-sm">Webhooks personalizados</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <span className="text-sm">Comandos com aprovação</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <span className="text-sm">Relatórios PDF/CSV</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <span className="text-sm">Exportação de dados</span>
+                </li>
+              </ul>
+              <Button className="w-full bg-background text-foreground hover:bg-background/90" asChild>
+                <Link to="/signup">Começar Teste Grátis</Link>
+              </Button>
+            </div>
+
+            {/* Enterprise */}
+            <div className="bg-card p-8 rounded-2xl border border-border">
+              <h3 className="text-2xl font-bold mb-2">Enterprise</h3>
+              <div className="mb-6">
+                <span className="text-4xl font-bold">Sob</span>
+                <span className="text-muted-foreground"> consulta</span>
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">Para MSPs e grandes empresas</p>
+              <ul className="space-y-3 mb-8">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">Tudo do Pro, mais:</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">SSO/SAML</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">Integração com SIEM</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">Retenção estendida</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">Suporte 24×7</span>
+                </li>
+              </ul>
+              <Button variant="outline" className="w-full" asChild>
+                <a href="#contact">Falar com Vendas</a>
+              </Button>
+            </div>
+          </div>
+
+          <div className="text-center mt-12">
             <p className="text-muted-foreground">
-              Todos os planos incluem: 30 dias de teste gratuito • Sem cartão necessário • Cancele quando quiser
+              Todos os planos incluem: comandos, alertas, integrações e relatórios • Sem custos escondidos
             </p>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* FAQ */}
-      <section className="py-24 bg-gradient-to-b from-secondary/20 to-background">
-        <div className="container mx-auto px-6">
-          <motion.div 
-            className="text-center mb-16"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-          >
-            <Badge className="mb-4 bg-accent/10 text-accent border-accent/20">FAQ</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Perguntas Frequentes</h2>
-          </motion.div>
+      <section className="py-20 bg-muted/30">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Perguntas Frequentes
+            </h2>
+          </div>
 
-          <motion.div 
-            className="max-w-3xl mx-auto"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-          >
-            <Accordion type="single" collapsible className="space-y-4">
-              {[
-                {
-                  q: "CyberShield substitui meu antivírus?",
-                  a: "Não. O CyberShield funciona por cima do seu Defender ou antivírus existente. Nós orquestramos ações de resposta e remediação, enquanto o AV continua detectando ameaças."
-                },
-                {
-                  q: "Como funciona o multi-tenant?",
-                  a: "Isolamento real por RLS (Row Level Security). Cada tenant tem seus próprios dados, usuários, agentes e configurações. Um cliente nunca enxerga dados de outro — por design de banco de dados."
-                },
-                {
-                  q: "Posso usar minha chave do VirusTotal?",
-                  a: "Sim. A integração é hash-only e você usa sua própria chave empresarial (BYO-key). Nenhum arquivo é enviado — apenas hashes para consulta."
-                },
-                {
-                  q: "Como funciona a aprovação de jobs?",
-                  a: "Playbooks podem ser configurados para aprovação manual ou automática. Cada execução é auditada com timestamp, usuário responsável e resultado."
-                },
-                {
-                  q: "Quais sistemas operacionais são suportados?",
-                  a: "Windows (PowerShell) e Linux (Bash). O agente é leve, open-source e pode ser auditado antes da instalação."
-                },
-                {
-                  q: "Vocês oferecem suporte em português?",
-                  a: "Sim! Suporte em português por e-mail (todos os planos) e prioritário para clientes Pro e Enterprise."
-                }
-              ].map((faq, index) => (
-                <AccordionItem key={index} value={`item-${index}`} className="border border-border/50 rounded-lg px-6 bg-card/30">
-                  <AccordionTrigger className="text-left hover:text-primary">
-                    {faq.q}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground">
-                    {faq.a}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Contact */}
-      <section id="contato" className="py-24">
-        <div className="container mx-auto px-6">
-          <motion.div 
-            className="max-w-4xl mx-auto"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeInUp}
-          >
-            <div className="text-center mb-12">
-              <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">FALE CONOSCO</Badge>
-              <h2 className="text-4xl md:text-5xl font-bold mb-4">Vamos conversar?</h2>
-              <p className="text-xl text-muted-foreground">
-                Agende uma demo ou tire suas dúvidas
+          <div className="space-y-6">
+            <div className="bg-card p-6 rounded-xl border border-border">
+              <h3 className="font-bold text-lg mb-2">Preciso desinstalar meu antivírus atual?</h3>
+              <p className="text-muted-foreground">
+                Não! O CyberShield trabalha junto com seu Defender, Kaspersky, ESET ou qualquer outro antivírus. 
+                Eles continuam detectando vírus, e o CyberShield orquestra as ações de correção.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
-              <Card className="border-primary/20">
-                <CardHeader>
-                  <CardTitle>Formulário de Contato</CardTitle>
-                  <CardDescription>
-                    Responderemos em até 24 horas úteis
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ContactForm />
-                </CardContent>
-              </Card>
+            <div className="bg-card p-6 rounded-xl border border-border">
+              <h3 className="font-bold text-lg mb-2">Quanto tempo leva para instalar?</h3>
+              <p className="text-muted-foreground">
+                Menos de 5 minutos por computador. Você baixa um instalador pequeno (menos de 10MB), executa, 
+                e pronto. Não precisa reiniciar. O computador já aparece no painel em segundos.
+              </p>
+            </div>
 
-              <div className="space-y-6">
-                <Card className="border-border/50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
-                      <Mail className="w-5 h-5 text-primary" />
-                      E-mail
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <a href="mailto:contato@cybershield.com.br" className="text-primary hover:underline">
-                      contato@cybershield.com.br
-                    </a>
-                  </CardContent>
-                </Card>
+            <div className="bg-card p-6 rounded-xl border border-border">
+              <h3 className="font-bold text-lg mb-2">Meus dados ficam seguros?</h3>
+              <p className="text-muted-foreground">
+                Sim. Cada cliente é 100% isolado (impossível um ver dados do outro). Toda comunicação é criptografada 
+                com proteção militar. Cada ação é registrada para auditoria. Conformidade total com LGPD.
+              </p>
+            </div>
 
-                <Card className="border-border/50">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-3">
-                      <Phone className="w-5 h-5 text-primary" />
-                      Telefone
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">+55 11 99999-9999</p>
-                    <p className="text-sm text-muted-foreground mt-1">Segunda a Sexta, 9h às 18h</p>
-                  </CardContent>
-                </Card>
+            <div className="bg-card p-6 rounded-xl border border-border">
+              <h3 className="font-bold text-lg mb-2">Posso cancelar quando quiser?</h3>
+              <p className="text-muted-foreground">
+                Sim, sem multa ou burocracia. Você pode cancelar a qualquer momento e só paga pelo período que usar.
+              </p>
+            </div>
 
-                <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                  <CardHeader>
-                    <CardTitle>Pronto para começar?</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground mb-4">
-                      Teste grátis por 30 dias. Sem cartão necessário.
-                    </p>
-                    <Button 
-                      className="w-full bg-primary hover:bg-primary/90" 
-                      size="lg"
-                      onClick={() => navigate('/signup')}
-                    >
-                      Criar conta grátis
-                    </Button>
-                  </CardContent>
-                </Card>
+            <div className="bg-card p-6 rounded-xl border border-border">
+              <h3 className="font-bold text-lg mb-2">O que acontece se eu passar do limite de PCs?</h3>
+              <p className="text-muted-foreground">
+                Você paga apenas pelos PCs adicionais, no mesmo valor por PC do seu plano. 
+                Sem surpresas ou taxas escondidas.
+              </p>
+            </div>
+
+            <div className="bg-card p-6 rounded-xl border border-border">
+              <h3 className="font-bold text-lg mb-2">Vocês oferecem suporte em português?</h3>
+              <p className="text-muted-foreground">
+                Sim! Todo o suporte é em português, com equipe brasileira. 
+                Plano Enterprise inclui suporte 24×7.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/10 to-background" />
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            Proteja Sua Empresa Agora
+          </h2>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Teste por 30 dias sem compromisso. Sem cartão de crédito. Cancele quando quiser.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild size="lg" className="text-lg h-14 px-8">
+              <Link to="/signup">
+                Começar Teste Grátis
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="text-lg h-14 px-8">
+              <a href="#contact">Agendar Demo</a>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="py-20 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 gap-12 items-start">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                Fale com Nossa Equipe
+              </h2>
+              <p className="text-lg text-muted-foreground mb-8">
+                Preencha o formulário ou entre em contato diretamente. 
+                Respondemos em até 24 horas.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="font-medium">Email</div>
+                    <div className="text-muted-foreground">contato@cybershield.com.br</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Phone className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="font-medium">Telefone</div>
+                    <div className="text-muted-foreground">(11) 9999-9999</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="font-medium">Localização</div>
+                    <div className="text-muted-foreground">São Paulo, SP - Brasil</div>
+                  </div>
+                </div>
               </div>
             </div>
-          </motion.div>
+
+            <ContactForm />
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border/40 bg-secondary/20 py-12">
-        <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-8">
+      <footer className="border-t border-border py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <Shield className="w-6 h-6 text-primary" />
-                <span className="font-bold text-lg">CyberShield</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Orquestração e resposta para endpoints. Multi-tenant em minutos.
+              <h3 className="font-bold mb-4">Produto</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground transition-colors">Recursos</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Preços</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Segurança</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-bold mb-4">Empresa</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link to="/terms" className="hover:text-foreground transition-colors">Termos de Uso</Link></li>
+                <li><Link to="/privacy" className="hover:text-foreground transition-colors">Privacidade</Link></li>
+                <li><a href="#contact" className="hover:text-foreground transition-colors">Contato</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-bold mb-4">Suporte</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="#" className="hover:text-foreground transition-colors">Documentação</a></li>
+                <li><a href="#" className="hover:text-foreground transition-colors">Central de Ajuda</a></li>
+                <li><Link to="/login" className="hover:text-foreground transition-colors">Área do Cliente</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-bold mb-4">CyberShield</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Proteção empresarial simplificada para MSPs e empresas.
               </p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Produto</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#como-funciona" className="hover:text-primary transition-colors">Como Funciona</a></li>
-                <li><a href="#segmentos" className="hover:text-primary transition-colors">Para Quem É</a></li>
-                <li><a href="#seguranca" className="hover:text-primary transition-colors">Segurança</a></li>
-                <li><a href="#precos" className="hover:text-primary transition-colors">Preços</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Empresa</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="/terms" className="hover:text-primary transition-colors">Termos de Uso</a></li>
-                <li><a href="/privacy" className="hover:text-primary transition-colors">Privacidade</a></li>
-                <li><a href="#contato" className="hover:text-primary transition-colors">Contato</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4">Suporte</h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="mailto:contato@cybershield.com.br" className="hover:text-primary transition-colors">contato@cybershield.com.br</a></li>
-                <li><a href="tel:+5511999999999" className="hover:text-primary transition-colors">+55 11 99999-9999</a></li>
-              </ul>
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-primary" />
+                <span className="font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  CyberShield
+                </span>
+              </div>
             </div>
           </div>
-
-          <div className="mt-12 pt-8 border-t border-border/40 text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} CyberShield. Todos os direitos reservados.</p>
+          <div className="border-t border-border pt-8 text-center text-sm text-muted-foreground">
+            © 2025 CyberShield. Todos os direitos reservados.
           </div>
         </div>
       </footer>
     </div>
   );
-}
+};
+
+export default Landing;
