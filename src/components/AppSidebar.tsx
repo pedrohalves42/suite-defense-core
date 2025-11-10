@@ -14,6 +14,8 @@ export const AppSidebar = () => {
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', collapsed.toString());
+    // Dispatch custom event for cross-component sync
+    window.dispatchEvent(new Event('sidebar-toggle'));
   }, [collapsed]);
 
   const menuItems = [
@@ -110,6 +112,7 @@ export const AppSidebar = () => {
                   <NavLink
                     key={item.to}
                     to={item.to}
+                    end={item.end}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                     activeClassName="bg-accent text-accent-foreground font-medium"
                   >
