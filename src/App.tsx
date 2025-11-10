@@ -36,6 +36,7 @@ import DataExport from "./pages/DataExport";
 import AcceptInvite from "./pages/AcceptInvite";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
+import AuthDebug from "./pages/debug/AuthDebug";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,9 @@ const App = () => (
             <Route path="/accept-invite" element={<AcceptInvite />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            
+            {/* Debug Routes - Protected */}
+            <Route path="/debug/auth" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />
             
             {/* Protected Routes with AppLayout */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
