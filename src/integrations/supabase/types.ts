@@ -1095,6 +1095,10 @@ export type Database = {
       }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
+      update_quota_usage: {
+        Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "operator" | "viewer"
