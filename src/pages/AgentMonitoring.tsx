@@ -179,15 +179,39 @@ const AgentMonitoring = () => {
     ? Math.round((recentJobs.filter(j => j.status === 'done').length / recentJobs.length) * 100)
     : 0;
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-      case 'online':
-        return <Badge className="bg-green-500"><CheckCircle2 className="w-3 h-3 mr-1" />Online</Badge>;
-      case 'offline':
-        return <Badge variant="destructive"><WifiOff className="w-3 h-3 mr-1" />Offline</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
+  const getStatusBadge = (status: string, lastHeartbeat: string | null) => {
+    if (!lastHeartbeat) {
+      return (
+        <Badge variant="secondary" className="gap-1">
+          <WifiOff className="h-3 w-3" />
+          Sem Heartbeat
+        </Badge>
+      );
+    }
+
+    const minutesSinceHeartbeat = (Date.now() - new Date(lastHeartbeat).getTime()) / 1000 / 60;
+
+    if (minutesSinceHeartbeat < 2) {
+      return (
+        <Badge className="bg-green-500 gap-1">
+          <Wifi className="h-3 w-3" />
+          Online
+        </Badge>
+      );
+    } else if (minutesSinceHeartbeat < 5) {
+      return (
+        <Badge className="bg-yellow-500 gap-1">
+          <AlertTriangle className="h-3 w-3" />
+          Warning
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge className="bg-red-500 gap-1">
+          <WifiOff className="h-3 w-3" />
+          Offline
+        </Badge>
+      );
     }
   };
 
@@ -468,9 +492,11 @@ const AgentMonitoring = () => {
                   className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-3 h-3 rounded-full ${
-                      agent.status === 'active' || agent.status === 'online' 
-                        ? 'bg-green-500 animate-pulse' 
+                    <div className={`w-3 h-3 rounded-full animate-pulse ${
+                      agent.last_heartbeat && (Date.now() - new Date(agent.last_heartbeat).getTime()) / 1000 / 60 < 2
+                        ? 'bg-green-500' 
+                        : agent.last_heartbeat && (Date.now() - new Date(agent.last_heartbeat).getTime()) / 1000 / 60 < 5
+                        ? 'bg-yellow-500'
                         : 'bg-red-500'
                     }`} />
                     <div>
@@ -479,10 +505,13 @@ const AgentMonitoring = () => {
                         <Clock className="w-3 h-3" />
                         Último heartbeat: {getTimeSince(agent.last_heartbeat)}
                       </p>
+                      <p className="text-xs text-muted-foreground">
+                        Registrado: {format(new Date(agent.enrolled_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    {getStatusBadge(agent.status)}
+                    {getStatusBadge(agent.status, agent.last_heartbeat)}
                     <span className="text-xs text-muted-foreground">
                       {format(new Date(agent.enrolled_at), "dd/MM/yyyy", { locale: ptBR })}
                     </span>
