@@ -3,6 +3,7 @@ import { handleException, handleValidationError, createErrorResponse, ErrorCode,
 import { EnrollAgentSchema } from '../_shared/validation.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { checkQuotaAvailable } from '../_shared/quota.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -103,18 +104,49 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate agent token and HMAC secret
-    const agentToken = crypto.randomUUID();
-    const hmacSecret = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-
-    // Check if agent already exists
+    // Check agent quota before allowing enrollment
     const { data: existingAgent } = await supabase
       .from('agents')
       .select('id')
       .eq('agent_name', agentName)
       .single();
+
+    // Only check quota for new agents (not re-enrollments)
+    if (!existingAgent) {
+      const quotaCheck = await checkQuotaAvailable(supabase, keyData.tenant_id, 'max_agents');
+      
+      if (!quotaCheck.allowed) {
+        await createAuditLog({
+          supabase,
+          tenantId: keyData.tenant_id,
+          action: 'agent_enrollment_failed',
+          resourceType: 'agent',
+          resourceId: agentName,
+          details: { 
+            reason: 'quota_exceeded', 
+            quota_used: quotaCheck.current,
+            quota_limit: quotaCheck.limit 
+          },
+          request: req,
+          success: false,
+        });
+
+        return new Response(
+          JSON.stringify({ 
+            error: quotaCheck.error || 'Quota de agentes excedida',
+            quotaUsed: quotaCheck.current,
+            quotaLimit: quotaCheck.limit
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Generate agent token and HMAC secret
+    const agentToken = crypto.randomUUID();
+    const hmacSecret = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
 
     let agentId: string;
 
