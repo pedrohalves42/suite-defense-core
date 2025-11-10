@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.submit-contact]
 verify_jwt = false
+
+[functions.check-tenant-quotas]
+verify_jwt = true
