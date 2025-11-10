@@ -15,6 +15,17 @@ param(
     [int]$PollInterval = 60
 )
 
+# Configuração de logging
+$LogDir = "C:\CyberShield\logs"
+$LogFile = Join-Path $LogDir "agent.log"
+$MaxLogSizeMB = 10
+$MaxLogFiles = 7
+
+# Criar diretório de logs se não existir
+if (-not (Test-Path $LogDir)) {
+    New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+}
+
 $ErrorActionPreference = "Stop"
 
 # Capturar path do script no topo (crítico para service installation)
