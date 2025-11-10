@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminLayout } from "./components/AdminLayout";
+import { SuperAdminLayout } from "./components/SuperAdminLayout";
 import { AppLayout } from "./components/AppLayout";
 import { CookieConsent } from "./components/CookieConsent";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -32,6 +33,8 @@ import Dashboard from "./pages/admin/Dashboard";
 import ApiKeys from "./pages/admin/ApiKeys";
 import Members from "./pages/admin/Members";
 import PlanUpgrade from "./pages/admin/PlanUpgrade";
+import SuperAdminTenants from "./pages/admin/super/Tenants";
+import SuperAdminMetrics from "./pages/admin/super/Metrics";
 import AgentMonitoring from "./pages/AgentMonitoring";
 import AgentManagement from "./pages/AgentManagement";
 import DataExport from "./pages/DataExport";
@@ -90,6 +93,13 @@ const App = () => (
                 <Route path="plan-upgrade" element={<PlanUpgrade />} />
                 <Route path="audit-logs" element={<AuditLogs />} />
                 <Route path="settings" element={<Settings />} />
+              </Route>
+
+              {/* Super Admin Routes */}
+              <Route path="/super-admin" element={<SuperAdminLayout />}>
+                <Route index element={<SuperAdminTenants />} />
+                <Route path="tenants" element={<SuperAdminTenants />} />
+                <Route path="metrics" element={<SuperAdminMetrics />} />
               </Route>
             </Route>
             

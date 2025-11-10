@@ -1,18 +1,20 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
+import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 
 export const AppSidebar = () => {
   const { isAdmin } = useIsAdmin();
+  const { isSuperAdmin } = useSuperAdmin();
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved === 'true';
   });
 
-  console.log('[AppSidebar] isAdmin:', isAdmin);
+  console.log('[AppSidebar] isAdmin:', isAdmin, 'isSuperAdmin:', isSuperAdmin);
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', collapsed.toString());
@@ -44,6 +46,11 @@ export const AppSidebar = () => {
     { icon: Mail, label: 'Convites', to: '/admin/invites' },
     { icon: ScrollText, label: 'Logs', to: '/admin/audit-logs' },
     { icon: Settings, label: 'Configurações', to: '/admin/settings' },
+  ];
+
+  const superAdminItems = [
+    { icon: Crown, label: 'Gerenciar Tenants', to: '/super-admin/tenants', end: true },
+    { icon: BarChart3, label: 'Métricas Globais', to: '/super-admin/metrics' },
   ];
 
   return (
@@ -98,6 +105,37 @@ export const AppSidebar = () => {
             );
           })}
         </div>
+
+        {isSuperAdmin && (
+          <>
+            <div className="my-4 px-4">
+              <div className="h-px bg-border" />
+            </div>
+            <div className="space-y-1 px-2">
+              {!collapsed && (
+                <p className="px-3 py-2 text-xs font-semibold text-destructive uppercase flex items-center gap-2">
+                  <Crown className="h-3 w-3" />
+                  Super Admin
+                </p>
+              )}
+              {superAdminItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    activeClassName="bg-destructive/10 text-destructive font-medium"
+                  >
+                    <Icon className="h-5 w-5 shrink-0" />
+                    {!collapsed && <span className="text-sm">{item.label}</span>}
+                  </NavLink>
+                );
+              })}
+            </div>
+          </>
+        )}
 
         {isAdmin && (
           <>
