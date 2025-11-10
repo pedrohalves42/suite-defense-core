@@ -256,6 +256,20 @@ Todos os eventos de segurança são automaticamente logados:
 3. Se falhar: Log criado em `security_logs`
 4. Dashboard atualizado em tempo real
 
+### Alertas por Email
+
+**Acionamento Automático:**
+- Eventos de severidade `high` ou `critical` acionam alertas por email
+- Email enviado para todos os admins do tenant
+- Utiliza Resend API (já configurada)
+
+**Conteúdo do Email:**
+- Tipo de ataque detectado
+- Endpoint afetado
+- IP de origem
+- Detalhes completos do ataque
+- Data/hora do evento
+
 ### Métricas Disponíveis
 
 No Dashboard de Segurança (`/admin/security`):
@@ -267,7 +281,36 @@ No Dashboard de Segurança (`/admin/security`):
 
 ---
 
-## 9. Best Practices Implementadas
+## 9. Proteção Contra Força Bruta
+
+### CAPTCHA Após Tentativas Falhadas
+
+**Sistema Implementado:**
+- Rastreamento de tentativas de login por IP
+- Após 3 tentativas falhadas: CAPTCHA obrigatório
+- Cloudflare Turnstile (gratuito, sem chaves necessárias)
+- Janela de 24 horas para contagem
+
+**Tabela: failed_login_attempts**
+- `ip_address`: IP de origem
+- `email`: Email tentado (opcional)
+- `user_agent`: User agent do navegador
+- `created_at`: Data/hora da tentativa
+
+**Fluxo:**
+1. Usuário erra login
+2. Sistema registra em `failed_login_attempts`
+3. Após 3 falhas: Frontend recarrega com CAPTCHA
+4. Login bem-sucedido: Limpa histórico de falhas
+
+**Edge Functions:**
+- `check-failed-logins`: Verifica se IP precisa de CAPTCHA
+- `record-failed-login`: Registra tentativa falhada
+- `clear-failed-logins`: Limpa após sucesso
+
+---
+
+## 10. Best Practices Implementadas
 
 ### ✅ Defense in Depth
 - Validação client-side (React Hook Form)
@@ -296,16 +339,16 @@ No Dashboard de Segurança (`/admin/security`):
 
 ---
 
-## 10. Roadmap de Segurança
+## 11. Roadmap de Segurança
 
 ### Próximas Implementações
 - [ ] WAF (Web Application Firewall) rules
 - [ ] Geolocation-based blocking
 - [ ] Honeypot endpoints
-- [ ] CAPTCHA para múltiplas falhas
+- [x] CAPTCHA para múltiplas falhas ✅
 - [ ] 2FA (Two-Factor Authentication)
-- [ ] Notificações por email de eventos críticos
-- [ ] Dashboard de ameaças em tempo real
+- [x] Notificações por email de eventos críticos ✅
+- [x] Dashboard de ameaças em tempo real ✅
 - [ ] Integração com SIEM
 
 ### Auditorias Regulares

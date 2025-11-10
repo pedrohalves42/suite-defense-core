@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Mail } from 'lucide-react';
+import { Shield, Mail, AlertCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const loginSchema = z.object({
   email: z.string()
@@ -26,12 +27,71 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [requiresCaptcha, setRequiresCaptcha] = useState(false);
+  const [attemptCount, setAttemptCount] = useState(0);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Obter IP do cliente (aproximação via headers)
+  const getClientIp = async (): Promise<string> => {
+    try {
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip || 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  };
+
+  // Verificar tentativas falhadas ao carregar a página
+  useEffect(() => {
+    const checkFailedAttempts = async () => {
+      const ip = await getClientIp();
+      const { data, error } = await supabase.functions.invoke('check-failed-logins', {
+        body: { ipAddress: ip },
+      });
+
+      if (!error && data) {
+        setRequiresCaptcha(data.requiresCaptcha);
+        setAttemptCount(data.attemptCount);
+        
+        if (data.requiresCaptcha) {
+          // Carregar script do Cloudflare Turnstile
+          const script = document.createElement('script');
+          script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+          script.async = true;
+          script.defer = true;
+          document.body.appendChild(script);
+
+          script.onload = () => {
+            // @ts-ignore - Turnstile global
+            window.turnstile?.render('#captcha-container', {
+              sitekey: '0x4AAAAAAAmAgPxLUV0OjmEL', // Site key público do Cloudflare Turnstile (modo teste)
+              callback: (token: string) => setCaptchaToken(token),
+            });
+          };
+        }
+      }
+    };
+
+    checkFailedAttempts();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    // Validar CAPTCHA se necessário
+    if (requiresCaptcha && !captchaToken) {
+      toast({
+        variant: 'destructive',
+        title: 'CAPTCHA obrigatório',
+        description: 'Complete o CAPTCHA para continuar.',
+      });
+      setLoading(false);
+      return;
+    }
 
     // Validate inputs
     const validation = loginSchema.safeParse({ email, password });
@@ -56,6 +116,24 @@ export default function Login() {
     if (error) {
       console.error('[Login] Erro no login:', error.message, 'Código:', error.status);
       
+      // Registrar tentativa falhada
+      const ip = await getClientIp();
+      await supabase.functions.invoke('record-failed-login', {
+        body: {
+          ipAddress: ip,
+          email: validation.data.email,
+          userAgent: navigator.userAgent,
+        },
+      });
+
+      // Incrementar contador e verificar se precisa de CAPTCHA
+      const newCount = attemptCount + 1;
+      setAttemptCount(newCount);
+      if (newCount >= 3) {
+        setRequiresCaptcha(true);
+        window.location.reload(); // Recarregar para mostrar CAPTCHA
+      }
+      
       // Mensagens específicas baseadas no erro
       let message = 'Email ou senha incorretos. Tente novamente.';
       let description = '';
@@ -77,6 +155,13 @@ export default function Login() {
       });
     } else {
       console.log('[Login] Login bem-sucedido');
+      
+      // Limpar tentativas falhadas
+      const ip = await getClientIp();
+      await supabase.functions.invoke('clear-failed-logins', {
+        body: { ipAddress: ip },
+      });
+
       toast({
         title: 'Login realizado com sucesso',
         description: 'Redirecionando...',
@@ -152,6 +237,14 @@ export default function Login() {
           <TabsContent value="password">
             <form onSubmit={handleLogin}>
               <CardContent className="space-y-4">
+                {requiresCaptcha && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Múltiplas tentativas de login detectadas. Complete o CAPTCHA para continuar.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -176,6 +269,9 @@ export default function Login() {
                     maxLength={72}
                   />
                 </div>
+                {requiresCaptcha && (
+                  <div id="captcha-container" className="flex justify-center" />
+                )}
               </CardContent>
               <CardFooter className="flex flex-col space-y-4">
                 <Button type="submit" className="w-full" disabled={loading}>
