@@ -77,6 +77,19 @@ npx playwright show-report
 - ✓ Operações mistas (heartbeat + poll + create job)
 - ✓ Análise de tempo de resposta
 
+### input-validation.spec.ts
+- ✓ Rejeitar tentativas de SQL injection
+- ✓ Rejeitar tentativas de path traversal
+- ✓ Rejeitar caracteres de controle
+- ✓ Rejeitar nomes reservados (admin, root, system)
+- ✓ Rejeitar repetições excessivas
+- ✓ Rejeitar nomes muito curtos ou longos
+- ✓ Rejeitar início/fim inválido (hífen, underscore)
+- ✓ Aceitar nomes válidos
+- ✓ Rejeitar caracteres de comentário SQL
+- ✓ Rejeitar tentativas de XSS
+- ✓ Validar edge cases (vazio, null, whitespace)
+
 ## Variáveis de Ambiente
 
 Configure no arquivo `.env.test.local`:
@@ -135,6 +148,13 @@ Aumentar timeout em `playwright.config.ts` se conexão for lenta
 - Avaliam performance sob carga
 - Medem tempos de resposta e throughput
 - Executam operações mistas (heartbeat, poll, create job)
+
+### Input Validation Tests
+- Validam proteção contra SQL injection
+- Testam prevenção de path traversal
+- Verificam bloqueio de XSS
+- Garantem formato correto de nomes de agents
+- Testam edge cases e limites de input
 
 ## CI/CD Pipeline
 

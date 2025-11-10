@@ -111,6 +111,63 @@ CONCURRENT_AGENTS=20 npx playwright test load-test
 
 ---
 
+## Testes de Validação de Input
+
+### input-validation.spec.ts
+
+Valida proteção contra ataques de injeção e manipulação de dados:
+
+**Cenários testados:**
+
+1. **SQL Injection**: Tenta injetar comandos SQL maliciosos
+2. **Path Traversal**: Tenta acessar diretórios não autorizados
+3. **Caracteres de Controle**: Valida bloqueio de caracteres especiais
+4. **Nomes Reservados**: Impede uso de nomes como admin, root, system
+5. **Repetições Excessivas**: Previne DoS com strings mal formadas
+6. **Limites de Tamanho**: Valida min/max de caracteres
+7. **Formato Válido**: Garante padrão correto (início/fim alfanumérico)
+8. **XSS Attempts**: Bloqueia tentativas de Cross-Site Scripting
+9. **Edge Cases**: Testa valores nulos, vazios, whitespace
+
+### Executar Testes de Validação
+
+```bash
+# Testes de validação
+npx playwright test input-validation
+
+# Com output detalhado
+npx playwright test input-validation --reporter=line
+
+# Apenas testes de SQL injection
+npx playwright test input-validation -g "SQL injection"
+```
+
+### Proteções Implementadas
+
+**Validação com Zod:**
+- ✓ Formato: `^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]$`
+- ✓ Comprimento: 3-64 caracteres
+- ✓ Bloqueio de SQL keywords: `SELECT`, `DROP`, `UNION`, etc.
+- ✓ Bloqueio de caracteres perigosos: `;`, `'`, `"`, `/`, `\`
+- ✓ Bloqueio de comentários SQL: `--`, `/*`, `*/`
+- ✓ Bloqueio de nomes reservados
+- ✓ Limite de repetições consecutivas: máx 5 caracteres
+
+**Exemplos válidos:**
+- `agent-01`
+- `my_agent`
+- `server-prod-001`
+- `AgentName`
+
+**Exemplos bloqueados:**
+- `'; DROP TABLE agents; --` (SQL injection)
+- `../../../etc/passwd` (Path traversal)
+- `admin` (Nome reservado)
+- `aaaaaaaaa` (Repetição excessiva)
+- `-agent` (Início inválido)
+
+---
+
 ## CI/CD Pipeline
 
 ### GitHub Actions Workflows

@@ -63,6 +63,38 @@ export const JobIdSchema = z.string().uuid('Job ID deve ser um UUID válido');
 
 export const AgentTokenSchema = z.string().uuid('Agent token deve ser um UUID válido');
 
+// Auto-generate enrollment validation
+export const AutoGenerateEnrollmentSchema = z.object({
+  agentName: z.string()
+    .trim()
+    .min(3, 'Nome do agente deve ter pelo menos 3 caracteres')
+    .max(64, 'Nome do agente deve ter no máximo 64 caracteres')
+    .regex(
+      /^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]$/,
+      'Nome do agente deve começar e terminar com letra ou número, e conter apenas letras, números, hífen e underscore'
+    )
+    .refine(name => {
+      // Block SQL injection patterns
+      const sqlPatterns = [
+        /(\bor\b|\band\b)/i,
+        /[;'"\\/]/,
+        /(union|select|insert|update|delete|drop|create|alter|exec|execute)/i,
+        /(--|\*\/|\/\*)/,
+        /[\x00-\x1F\x7F]/  // Control characters
+      ];
+      return !sqlPatterns.some(pattern => pattern.test(name));
+    }, 'Nome do agente contém caracteres inválidos ou potencialmente perigosos')
+    .refine(name => {
+      // Ensure reasonable length without excessive repetition
+      return !/(.)\1{5,}/.test(name);
+    }, 'Nome do agente não pode conter mais de 5 caracteres repetidos consecutivos')
+    .refine(name => {
+      // Block common reserved names
+      const reserved = ['admin', 'root', 'system', 'null', 'undefined', 'true', 'false'];
+      return !reserved.includes(name.toLowerCase());
+    }, 'Nome do agente está reservado e não pode ser usado')
+});
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function validateFileSize(size: number): boolean {
