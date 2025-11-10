@@ -245,6 +245,22 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check daily advanced scans quota
+    const dailyQuotaCheck = await checkQuotaAvailable(supabase, agent.tenant_id, 'advanced_scans_daily');
+    
+    if (!dailyQuotaCheck.allowed) {
+      console.log(`[${agent.agent_name}] Daily advanced scan quota exceeded: ${dailyQuotaCheck.current}/${dailyQuotaCheck.limit}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Limite diário de scans avançados atingido',
+          message: 'Você atingiu o limite de scans avançados do dia. Faça upgrade para o plano Pro para scans ilimitados.',
+          quotaUsed: dailyQuotaCheck.current,
+          quotaLimit: dailyQuotaCheck.limit
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Verificar scan existente recente (últimas 24h)
     const { data: existingScan } = await supabase
       .from('virus_scans')
@@ -314,6 +330,14 @@ Deno.serve(async (req) => {
     if (scanError) {
       console.error('[SCAN-VIRUS] Error storing scan result:', scanError);
     }
+
+    // Increment daily scan quota usage
+    await supabase.rpc('update_quota_usage', {
+      p_tenant_id: agent.tenant_id,
+      p_feature_key: 'advanced_scans_daily',
+      p_delta: 1
+    });
+    console.log(`[${agent.agent_name}] Advanced scan quota incremented`);
 
     // Auto-quarantine if malicious and enabled
     if (scanResult.isMalicious && scanRecord) {

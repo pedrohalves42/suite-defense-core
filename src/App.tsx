@@ -33,6 +33,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import ApiKeys from "./pages/admin/ApiKeys";
 import Members from "./pages/admin/Members";
 import PlanUpgrade from "./pages/admin/PlanUpgradeNew";
+import Subscriptions from "./pages/admin/Subscriptions";
 import SuperAdminTenants from "./pages/admin/super/Tenants";
 import SuperAdminMetrics from "./pages/admin/super/Metrics";
 import AgentMonitoring from "./pages/AgentMonitoring";
@@ -95,6 +96,7 @@ const App = () => (
                 <Route path="invites" element={<Invites />} />
                 <Route path="members" element={<Members />} />
                 <Route path="plan-upgrade" element={<PlanUpgrade />} />
+                <Route path="subscriptions" element={<Subscriptions />} />
                 <Route path="audit-logs" element={<AuditLogs />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
