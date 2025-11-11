@@ -60,8 +60,15 @@ verify_jwt = true
 [functions.send-alert-email]
 verify_jwt = false
 
+[functions.submit-system-metrics]
+verify_jwt = false
+
+[functions.get-agent-dashboard-data]
+verify_jwt = true
+
 [functions.monitor-agent-health]
 verify_jwt = false
+schedule = "*/5 * * * *"
 
 [functions.send-system-alert]
 verify_jwt = false
