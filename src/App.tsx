@@ -95,6 +95,7 @@ const App = () => (
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="dashboard" element={<Dashboard />} />
+                <Route path="agent-installer" element={<AgentInstaller />} />
                 <Route path="monitoring-advanced" element={<AgentMonitoringAdvanced />} />
                 <Route path="enrollment-keys" element={<EnrollmentKeys />} />
                 <Route path="users" element={<Users />} />

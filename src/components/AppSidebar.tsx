@@ -37,6 +37,7 @@ export const AppSidebar = () => {
   const adminItems = [
     { icon: Home, label: 'Dashboard', to: '/admin/dashboard', end: true },
     { icon: Activity, label: 'Monitoramento RT', to: '/admin/monitoring-advanced' },
+    { icon: Package, label: 'Instalador Agentes', to: '/admin/agent-installer' },
     { icon: BarChart3, label: 'Analytics Instalação', to: '/admin/installation-analytics' },
     { icon: Users, label: 'Membros', to: '/admin/members' },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
