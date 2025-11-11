@@ -77,12 +77,49 @@ serve(async (req) => {
 
     const typedSubscription = subscription as SubscriptionWithPlan | null;
 
+    // Check if it's Enterprise/Custom plan (without Stripe)
     if (!typedSubscription?.stripe_subscription_id) {
-      logStep("No Stripe subscription found");
+      const planName = typedSubscription?.subscription_plans?.name || "free";
+      
+      // If Enterprise or Custom plan, return local data
+      if (planName === 'enterprise' || planName === 'custom') {
+        logStep("Enterprise/Custom plan detected - using local data", { planName });
+        
+        // Get features from database
+        const { data: features } = await supabaseClient
+          .from("tenant_features")
+          .select("feature_key, enabled, quota_limit, quota_used")
+          .eq("tenant_id", userRole.tenant_id);
+
+        const featuresMap = features?.reduce((acc: any, f: any) => {
+          acc[f.feature_key] = {
+            enabled: f.enabled,
+            quota_limit: f.quota_limit,
+            quota_used: f.quota_used,
+          };
+          return acc;
+        }, {});
+
+        return new Response(
+          JSON.stringify({
+            subscribed: true, // Enterprise is always subscribed
+            plan_name: planName,
+            device_quantity: typedSubscription?.device_quantity || 0,
+            status: typedSubscription?.status || 'active',
+            trial_end: null,
+            current_period_end: null, // No period for Enterprise
+            features: featuresMap,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+      
+      // For Free plan or no subscription
+      logStep("No Stripe subscription found - Free plan");
       return new Response(
         JSON.stringify({
           subscribed: false,
-          plan_name: typedSubscription?.subscription_plans?.name || "free",
+          plan_name: "free",
           device_quantity: 0,
           status: "inactive",
         }),
