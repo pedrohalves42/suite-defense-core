@@ -38,15 +38,14 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] User authenticated:`, user.id);
     
-    // Check if user is admin
-    const { data: hasAdminRole } = await supabaseClient.rpc('has_role', { 
-      _user_id: user.id, 
-      _role: 'admin' 
+    // Check if user is super_admin
+    const { data: hasSuperAdminRole } = await supabaseClient.rpc('is_super_admin', { 
+      _user_id: user.id
     });
 
-    if (!hasAdminRole) {
-      console.error(`[${requestId}] User is not admin:`, user.id);
-      return new Response(JSON.stringify({ error: 'Access denied: Admin only' }), {
+    if (!hasSuperAdminRole) {
+      console.error(`[${requestId}] User is not super_admin:`, user.id);
+      return new Response(JSON.stringify({ error: 'Access denied: Super Admin only' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

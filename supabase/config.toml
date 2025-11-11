@@ -114,3 +114,9 @@ verify_jwt = false
 
 [functions.clear-failed-logins]
 verify_jwt = false
+
+[functions.serve-installer]
+verify_jwt = false
+
+[functions.list-all-users-admin]
+verify_jwt = true
