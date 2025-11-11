@@ -93,6 +93,13 @@ export type Database = {
             foreignKeyName: "agent_system_metrics_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_system_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents_safe"
             referencedColumns: ["id"]
           },
@@ -139,6 +146,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_tokens_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -531,6 +545,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installation_analytics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
             referencedColumns: ["id"]
           },
           {
@@ -1056,6 +1077,13 @@ export type Database = {
             foreignKeyName: "system_alerts_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_alerts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "agents_safe"
             referencedColumns: ["id"]
           },
@@ -1366,6 +1394,69 @@ export type Database = {
       }
     }
     Views: {
+      agents_health_view: {
+        Row: {
+          agent_name: string | null
+          completed_jobs: number | null
+          enrolled_at: string | null
+          health_status: string | null
+          hostname: string | null
+          id: string | null
+          last_heartbeat: string | null
+          minutes_since_heartbeat: number | null
+          os_type: string | null
+          os_version: string | null
+          pending_jobs: number | null
+          status: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          agent_name?: string | null
+          completed_jobs?: never
+          enrolled_at?: string | null
+          health_status?: never
+          hostname?: string | null
+          id?: string | null
+          last_heartbeat?: string | null
+          minutes_since_heartbeat?: never
+          os_type?: string | null
+          os_version?: string | null
+          pending_jobs?: never
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          agent_name?: string | null
+          completed_jobs?: never
+          enrolled_at?: string | null
+          health_status?: never
+          hostname?: string | null
+          id?: string | null
+          last_heartbeat?: string | null
+          minutes_since_heartbeat?: never
+          os_type?: string | null
+          os_version?: string | null
+          pending_jobs?: never
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_tenant_id_new_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_agents_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agents_safe: {
         Row: {
           agent_name: string | null
@@ -1550,12 +1641,22 @@ export type Database = {
         Returns: string
       }
       cleanup_expired_keys: { Args: never; Returns: undefined }
+      cleanup_old_data: { Args: never; Returns: undefined }
       cleanup_old_failed_attempts: { Args: never; Returns: undefined }
       cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_old_metrics: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       cleanup_old_security_logs: { Args: never; Returns: undefined }
       current_user_tenant_id: { Args: never; Returns: string }
+      diagnose_agent_issues: {
+        Args: { p_agent_name: string }
+        Returns: {
+          description: string
+          details: Json
+          issue_type: string
+          severity: string
+        }[]
+      }
       ensure_tenant_features: {
         Args: {
           p_device_quantity?: number

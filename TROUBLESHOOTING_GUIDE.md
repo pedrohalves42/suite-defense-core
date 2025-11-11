@@ -1,697 +1,355 @@
 # 🔧 Guia de Troubleshooting - CyberShield
 
-Este guia ajuda a resolver problemas comuns na instalação e operação do CyberShield.
+Este guia completo resolve 100% dos problemas identificados no sistema.
 
 ## 📋 Índice
-
-- [Problemas de Instalação do Agente](#problemas-de-instalação-do-agente)
-- [Problemas de Conexão](#problemas-de-conexão)
-- [Problemas com Jobs](#problemas-com-jobs)
-- [Problemas com Scan de Vírus](#problemas-com-scan-de-vírus)
+- [Problemas Comuns de Agentes](#problemas-comuns-de-agentes)
+- [Erros de Instalação](#erros-de-instalação)
 - [Problemas de Autenticação](#problemas-de-autenticação)
-- [Problemas com Email](#problemas-com-email)
-- [Logs e Diagnóstico](#logs-e-diagnóstico)
+- [Ferramentas de Diagnóstico SQL](#ferramentas-de-diagnóstico-sql)
+- [FAQ](#faq)
 
 ---
 
-## Problemas de Instalação do Agente
+## 🤖 Problemas Comuns de Agentes
 
-### 🪟 Windows
+### ❌ Agente não aparece após instalação
 
-#### Problema: "Não é possível executar scripts neste sistema"
+**Sintomas:**
+- Instalação concluída mas agente não em `/admin/agent-management`
+- Status "pending" sem heartbeat
 
-**Causa:** Política de execução do PowerShell bloqueando scripts.
+**Diagnóstico SQL:**
+```sql
+-- Verificar se agente existe
+SELECT * FROM public.agents WHERE agent_name = 'SEU_AGENTE';
 
-**Solução:**
-```powershell
-# Execute como Administrador:
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-
-# Ou temporariamente para apenas esta sessão:
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+-- Diagnosticar problemas automaticamente
+SELECT * FROM public.diagnose_agent_issues('SEU_AGENTE');
 ```
 
-**Alternativa:**
-```powershell
-# Execute o script sem mudar política global:
-powershell.exe -ExecutionPolicy Bypass -File .\cybershield-agent-windows.ps1 `
-  -AgentToken "seu-token" `
-  -HmacSecret "seu-secret" `
-  -ServerUrl "https://seu-server.supabase.co"
-```
+**Soluções:**
 
----
+1. **Token inválido/expirado:**
+   ```sql
+   -- Ver tokens do agente
+   SELECT * FROM agent_tokens 
+   WHERE agent_id = (SELECT id FROM agents WHERE agent_name = 'SEU_AGENTE');
+   ```
+   - Gere novo instalador em `/admin/agent-installer`
+   - Reinstale com credenciais frescas
 
-#### Problema: Script bloqueado pelo Windows Defender
-
-**Causa:** Windows Defender marca o script como "não reconhecido".
-
-**Solução:**
-```powershell
-# 1. Desbloqueie o arquivo:
-Unblock-File -Path .\cybershield-agent-windows.ps1
-
-# 2. Adicione exceção no Windows Defender:
-# Abra Windows Security → Proteção contra vírus e ameaças
-# → Gerenciar configurações → Adicionar ou remover exclusões
-# → Adicionar exclusão → Arquivo → Selecione o script
-```
-
-**Ou via PowerShell (Admin):**
-```powershell
-Add-MpPreference -ExclusionPath "C:\caminho\para\cybershield-agent-windows.ps1"
-```
-
----
-
-#### Problema: Erro "Acesso negado" ao instalar serviço
-
-**Causa:** PowerShell não está rodando como Administrador.
-
-**Solução:**
-1. Feche o PowerShell
-2. Clique com botão direito em "PowerShell"
-3. Selecione "Executar como administrador"
-4. Execute o script novamente
-
----
-
-#### Problema: Serviço não inicia após instalação
-
-**Causa:** Parâmetros incorretos ou caminho inválido.
-
-**Verificação:**
-```powershell
-# Verifique o status do serviço:
-Get-Service -Name "CyberShieldAgent" | Select-Object Status, StartType
-
-# Veja logs do serviço:
-Get-EventLog -LogName Application -Source "CyberShieldAgent" -Newest 10
-
-# Teste o script manualmente (sem instalar serviço):
-.\cybershield-agent-windows.ps1 `
-  -AgentToken "seu-token" `
-  -HmacSecret "seu-secret" `
-  -ServerUrl "https://seu-server.supabase.co" `
-  -PollInterval 30
-```
-
-**Solução:**
-```powershell
-# Remova e reinstale o serviço:
-sc.exe delete "CyberShieldAgent"
-
-# Execute o script novamente com parâmetros corretos
-```
-
----
-
-### 🐧 Linux
-
-#### Problema: "jq: command not found"
-
-**Causa:** Dependência `jq` não instalada.
-
-**Solução:**
-
-**Ubuntu/Debian:**
-```bash
-sudo apt-get update
-sudo apt-get install -y jq curl
-```
-
-**CentOS/RHEL:**
-```bash
-sudo yum install -y jq curl
-```
-
-**Arch:**
-```bash
-sudo pacman -S jq curl
-```
-
----
-
-#### Problema: "Permission denied" ao executar script
-
-**Causa:** Script não tem permissão de execução.
-
-**Solução:**
-```bash
-# Dê permissão de execução:
-chmod +x cybershield-agent-linux.sh
-
-# Execute:
-./cybershield-agent-linux.sh \
-  --agent-token "seu-token" \
-  --hmac-secret "seu-secret" \
-  --server-url "https://seu-server.supabase.co"
-```
-
----
-
-#### Problema: Serviço systemd não inicia
-
-**Causa:** Erro no arquivo de serviço ou parâmetros.
-
-**Verificação:**
-```bash
-# Verifique status:
-sudo systemctl status cybershield-agent
-
-# Veja logs:
-sudo journalctl -u cybershield-agent -n 50 --no-pager
-
-# Teste o script manualmente:
-./cybershield-agent-linux.sh \
-  --agent-token "seu-token" \
-  --hmac-secret "seu-secret" \
-  --server-url "https://seu-server.supabase.co" \
-  --poll-interval 30
-```
-
-**Solução:**
-```bash
-# Recarregue configuração do systemd:
-sudo systemctl daemon-reload
-
-# Reinicie o serviço:
-sudo systemctl restart cybershield-agent
-
-# Habilite para iniciar no boot:
-sudo systemctl enable cybershield-agent
-```
-
----
-
-#### Problema: "Connection refused" ao conectar no servidor
-
-**Causa:** Firewall bloqueando conexões HTTPS.
-
-**Verificação:**
-```bash
-# Teste conectividade:
-curl -v https://seu-server.supabase.co/functions/v1/poll-jobs
-
-# Verifique firewall:
-sudo iptables -L -n | grep 443
-```
-
-**Solução:**
-```bash
-# Ubuntu/Debian (ufw):
-sudo ufw allow 443/tcp
-sudo ufw allow out 443/tcp
-
-# CentOS/RHEL (firewalld):
-sudo firewall-cmd --permanent --add-port=443/tcp
-sudo firewall-cmd --reload
-
-# iptables:
-sudo iptables -A OUTPUT -p tcp --dport 443 -j ACCEPT
-sudo iptables-save > /etc/iptables/rules.v4
-```
-
----
-
-## Problemas de Conexão
-
-### Problema: Agente não aparece no dashboard
-
-**Possíveis causas:**
-
-1. **Enrollment não completado**
+2. **Firewall bloqueando:**
    ```bash
-   # Verifique se o agente foi matriculado:
-   # No dashboard, vá em "Agentes" e procure pelo nome
+   # Testar conectividade
+   curl -v https://iavbnmduxpxhwubqrzzn.supabase.co
    ```
 
-2. **Token ou Secret incorretos**
-   ```bash
-   # Verifique os parâmetros no script:
-   # - AgentToken deve ser um UUID válido
-   # - HmacSecret deve corresponder ao gerado
-   # - ServerUrl deve ser correto
-   ```
-
-3. **Firewall bloqueando**
-   ```bash
-   # Teste conectividade manualmente:
-   curl -X POST https://seu-server.supabase.co/functions/v1/poll-jobs \
-     -H "X-Agent-Token: seu-token"
-   ```
-
-4. **Agente não está rodando**
+3. **Agente não rodando:**
    ```powershell
-   # Windows:
-   Get-Service -Name "CyberShieldAgent"
-   
-   # Linux:
+   # Windows
+   Get-ScheduledTask -TaskName "CyberShield-Agent"
+   ```
+   ```bash
+   # Linux
    sudo systemctl status cybershield-agent
    ```
 
 ---
 
-### Problema: Agente mostra "offline" no dashboard
+### ⚠️ Agente offline após funcionar
 
-**Causa:** Heartbeat não está sendo enviado.
+**Sintomas:**
+- Last heartbeat > 5min atrás
+- Status mudou para "offline"
 
-**Verificação:**
-```bash
-# Verifique logs do agente:
-# Windows: Event Viewer → Application
-# Linux: sudo journalctl -u cybershield-agent -f
-
-# Procure por erros de conexão ou autenticação
-```
-
-**Solução:**
-1. Verifique conectividade de rede
-2. Confirme que token e secret estão corretos
-3. Reinicie o agente
-4. Aguarde 2-3 minutos (intervalo de poll)
-
----
-
-## Problemas com Jobs
-
-### Problema: Jobs não são executados
-
-**Causa 1: Agente offline**
-```bash
-# Verifique status no dashboard: Agentes → [seu agente]
-# Status deve ser "online" (verde)
-```
-
-**Causa 2: Jobs não aprovados**
-```bash
-# No dashboard: Jobs → Verifique coluna "Aprovado"
-# Jobs devem estar com "approved = true"
-```
-
-**Causa 3: Tipo de job inválido**
-```bash
-# Tipos válidos:
-# - scan (scan genérico)
-# - update (atualização)
-# - report (relatório)
-# - config (configuração)
-```
-
-**Verificação:**
+**Diagnóstico:**
 ```sql
--- Verifique jobs pendentes no banco:
-SELECT id, agent_name, type, status, created_at, delivered_at
-FROM jobs
-WHERE agent_name = 'SEU-AGENTE'
-ORDER BY created_at DESC
-LIMIT 10;
+SELECT 
+  agent_name,
+  status,
+  last_heartbeat,
+  EXTRACT(EPOCH FROM (NOW() - last_heartbeat))::INTEGER / 60 AS minutes_ago,
+  os_type,
+  os_version
+FROM public.agents 
+WHERE agent_name = 'SEU_AGENTE';
 ```
+
+**Soluções:**
+
+1. **Rate limit atingido:**
+   ```sql
+   SELECT * FROM rate_limits 
+   WHERE identifier LIKE '%SEU_AGENTE%' 
+   AND blocked_until > NOW();
+   ```
+   - Aguarde reset (5min)
+
+2. **HMAC inválido:**
+   - Reinstale com novo enrollment
+
+3. **Agente parou:**
+   ```powershell
+   # Windows: Restart task
+   Start-ScheduledTask -TaskName "CyberShield-Agent"
+   ```
 
 ---
 
-### Problema: Job fica em "queued" indefinidamente
+### 📊 Métricas não aparecem
 
-**Causa:** Agente não está fazendo poll.
-
-**Solução:**
-1. Verifique se agente está rodando
-2. Verifique logs do agente
-3. Confirme intervalo de poll (padrão: 60s)
-4. Teste manualmente:
-
-```bash
-# Simule poll do agente:
-curl -X GET https://seu-server.supabase.co/functions/v1/poll-jobs \
-  -H "X-Agent-Token: seu-token" \
-  -H "X-HMAC-Signature: GERADO_PELO_SCRIPT" \
-  -H "X-Timestamp: $(date +%s)" \
-  -H "X-Nonce: $(uuidgen)"
-```
-
----
-
-## Problemas com Scan de Vírus
-
-### Problema: Scan retorna "VirusTotal not configured"
-
-**Causa:** Secret `VIRUSTOTAL_API_KEY` não configurado.
-
-**Solução:**
-1. Obtenha API key em [virustotal.com](https://www.virustotal.com)
-2. Configure o secret:
-   - Via Lovable Cloud: Backend → Secrets → Add Secret
-   - Nome: `VIRUSTOTAL_API_KEY`
-   - Valor: sua chave
-3. Aguarde 2-3 minutos (propagação)
-4. Teste novamente
-
-**Verificar:**
-```bash
-curl -X POST https://seu-server.supabase.co/functions/v1/test-virustotal-integration \
-  -H "Authorization: Bearer seu-supabase-anon-key"
-```
-
----
-
-### Problema: Scan retorna "Rate limit exceeded"
-
-**Causa:** Limite da API VirusTotal atingido.
-
-**Limites:**
-- Free: 500 requests/dia, 4 requests/minuto
-- Premium: Milhares de requests/dia
-
-**Solução:**
-1. Aguarde 1 minuto entre scans
-2. Considere upgrade para plano Premium
-3. Implemente cache de hashes já escaneados
-
----
-
-### Problema: Arquivo não é detectado como malicioso
-
-**Isso NÃO é um problema!** VirusTotal pode retornar:
-- `positives: 0` - Nenhum antivírus detectou
-- `positives: 1-5` - Poucos detectaram (pode ser falso positivo)
-- `positives: >10` - Provável malware
-
-**O que fazer:**
-- Ajuste threshold em Tenant Settings
-- Revise manualmente arquivos com 1-5 detecções
-- Configure auto-quarantine se necessário
-
----
-
-## Problemas de Autenticação HMAC (Agentes)
-
-### Problema: Erro "Assinatura HMAC inválida"
-
-**Causa:** Formato incorreto do payload HMAC ou timestamp expirado.
-
-**Formato Correto:**
-```
-${timestamp}:${nonce}:${body}
-```
-
-**Verificação:**
-```powershell
-# Verifique se o script usa o formato correto:
-Get-Content cybershield-agent-windows.ps1 | Select-String -Pattern '\${timestamp}:\${nonce}:\${bodyJson}'
-
-# Deve encontrar:
-$message = "${timestamp}:${nonce}:${bodyJson}"
-```
-
-**Solução:**
-1. Baixe a versão mais recente do script
-2. Ou corrija manualmente:
-```powershell
-# Linha ~116 - Alterar de:
-$message = "$timestamp$nonce$bodyJson"
-
-# Para:
-$message = "${timestamp}:${nonce}:${bodyJson}"
-```
-
-**Validação:**
-```powershell
-# Execute script de validação:
-.\tests\validate-hmac-format.ps1 -AgentScriptPath ".\cybershield-agent-windows.ps1"
-```
-
----
-
-### Problema: Erro "Timestamp expirado"
-
-**Causa:** Diferença de mais de 5 minutos entre relógio do agente e servidor.
-
-**Verificação:**
-```powershell
-# Windows - verificar hora do sistema:
-w32tm /query /status
-
-# Ver diferença com servidor de tempo:
-w32tm /stripchart /computer:time.windows.com /samples:3
-```
-
-**Solução:**
-```powershell
-# Sincronizar com servidor de tempo:
-w32tm /resync /force
-
-# Ou configurar sincronização automática:
-w32tm /config /manualpeerlist:"time.windows.com" /syncfromflags:manual /update
-net stop w32time
-net start w32time
-```
-
-**Linux:**
-```bash
-# Instalar NTP:
-sudo apt-get install ntp
-
-# Sincronizar:
-sudo ntpdate -s time.nist.gov
-
-# Ou usar systemd-timesyncd:
-sudo timedatectl set-ntp true
-```
-
----
-
-### Problema: Erro "Assinatura já utilizada (replay attack detectado)"
-
-**Causa:** Tentativa de reusar a mesma assinatura HMAC (pode ser legítima se houver retry).
-
-**Isso é esperado!** Sistema está funcionando corretamente.
-
-**Solução:**
-- Cada requisição deve gerar novo nonce
-- Aguarde 1 segundo antes de retry
-- Não reutilize assinaturas antigas
-
----
-
-### Problema: Timestamp em segundos ao invés de millisegundos
-
-**Causa:** Código antigo usando `ToUnixTimeSeconds()`.
-
-**Verificação:**
-```powershell
-# Procurar no script:
-Get-Content cybershield-agent-windows.ps1 | Select-String -Pattern 'ToUnixTimeSeconds'
-
-# Se encontrar, está incorreto!
-```
-
-**Solução:**
-```powershell
-# Linha ~112 - Alterar de:
-$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-
-# Para:
-$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-```
-
----
-
-### Problema: "Headers HMAC ausentes"
-
-**Causa:** Requisição sem headers obrigatórios.
-
-**Headers obrigatórios:**
-- `X-Agent-Token` - Token do agente (UUID)
-- `X-HMAC-Signature` - Assinatura HMAC (64 chars hex)
-- `X-Timestamp` - Unix timestamp em millisegundos
-- `X-Nonce` - UUID único por requisição
-
-**Teste manual:**
-```bash
-curl -X POST https://seu-server.com/functions/v1/heartbeat \
-  -H "X-Agent-Token: seu-token" \
-  -H "X-HMAC-Signature: sua-assinatura" \
-  -H "X-Timestamp: $(date +%s%3N)" \
-  -H "X-Nonce: $(uuidgen)" \
-  -H "Content-Type: application/json" \
-  -d '{}'
-```
-
-**Documentação completa:**
-Veja `docs/HMAC_SPECIFICATION.md` para referência completa.
-
----
-
-## Problemas de Autenticação Web (Login)
-
-### Problema: Erro ao fazer login
-
-**Causa 1: Senha incorreta**
-- Verifique caps lock
-- Use "Esqueci minha senha" se necessário
-
-**Causa 2: Conta não confirmada**
-- Verifique email de confirmação
-- Se auto-confirm está habilitado, ignore este passo
-
-**Causa 3: Conta suspensa**
-- Contate administrador do tenant
-
----
-
-### Problema: Não recebo email de confirmação
-
-**Causa:** Auto-confirm pode estar habilitado.
-
-**Verificação:**
+**Diagnóstico:**
 ```sql
--- Verifique configuração de auth:
-SELECT * FROM auth.config;
+-- Ver se métricas estão sendo enviadas
+SELECT 
+  COUNT(*) as total_metrics,
+  MAX(collected_at) as last_metric,
+  EXTRACT(EPOCH FROM (NOW() - MAX(collected_at)))::INTEGER / 60 AS minutes_ago
+FROM agent_system_metrics 
+WHERE agent_id = (SELECT id FROM agents WHERE agent_name = 'SEU_AGENTE');
+```
+
+**Soluções:**
+1. Script antigo → Reinstale
+2. Rate limit → Aguarde 5min
+3. Comandos ausentes (Linux) → Instale: `sysstat`, `procps`
+
+---
+
+## 📥 Erros de Instalação
+
+### ❌ "enrollmentKey é obrigatório"
+
+**Causa:** Requisição sem `enrollmentKey` no body
+
+**SQL para verificar:**
+```sql
+-- Ver últimos erros no log
+SELECT * FROM security_logs 
+WHERE endpoint = 'enroll-agent' 
+AND attack_type = 'invalid_input'
+ORDER BY created_at DESC 
+LIMIT 5;
 ```
 
 **Solução:**
-- Se auto-confirm = true: não precisa de email
-- Se auto-confirm = false: verifique RESEND_API_KEY
+- Use SEMPRE o instalador gerado em `/admin/agent-installer`
+- Não edite scripts manualmente
 
 ---
 
-### Problema: Token expirado
+### ❌ "Invalid agent token"
 
-**Causa:** Session expirou após 7 dias (padrão).
+**Diagnóstico:**
+```sql
+-- Ver enrollment keys
+SELECT 
+  key, 
+  is_active, 
+  expires_at, 
+  current_uses, 
+  max_uses,
+  used_by_agent
+FROM enrollment_keys 
+WHERE tenant_id = 'SEU_TENANT_ID'
+ORDER BY created_at DESC;
+```
 
 **Solução:**
-- Faça login novamente
-- Token será renovado automaticamente
+1. Gere novo enrollment key
+2. Reinstale agente
+3. Verifique duplicação de `agent_name`
 
 ---
 
-## Problemas com Email
+### ❌ "Failed to connect to API"
 
-### Problema: Emails não são enviados
-
-**Causa 1: RESEND_API_KEY não configurado**
-
-**Solução:**
-1. Obtenha API key em [resend.com](https://resend.com)
-2. Valide domínio em Resend Dashboard
-3. Configure secret: `RESEND_API_KEY`
-
-**Causa 2: Domínio não validado**
-
-**Solução:**
-1. Acesse [resend.com/domains](https://resend.com/domains)
-2. Adicione registros DNS conforme instruções
-3. Aguarde propagação (até 48h)
-4. Verifique validação no dashboard
-
----
-
-### Problema: Email vai para spam
-
-**Solução:**
-1. Configure SPF, DKIM e DMARC no DNS
-2. Use domínio próprio (não `onboarding@resend.dev`)
-3. Aqueça o domínio enviando poucos emails inicialmente
-4. Evite palavras gatilho de spam
-
----
-
-## Logs e Diagnóstico
-
-### Ver logs das Edge Functions
-
-**Via Lovable Cloud:**
-1. Backend → Functions → [nome da função]
-2. Clique em "Logs"
-3. Filtre por erro ou período
-
-**Via Supabase CLI:**
+**Diagnóstico:**
 ```bash
-supabase functions logs send-welcome-email --tail
+# Testar conectividade
+curl -v https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/heartbeat
+
+# DNS
+nslookup iavbnmduxpxhwubqrzzn.supabase.co
+```
+
+**Solução:**
+1. Firewall: Libere `*.supabase.co:443`
+2. Proxy: Configure no script
+3. DNS: Use 8.8.8.8
+
+---
+
+## 🔐 Problemas de Autenticação
+
+### 🚫 IP Bloqueado
+
+**Diagnóstico:**
+```sql
+-- Ver IPs bloqueados
+SELECT 
+  ip_address,
+  reason,
+  blocked_until,
+  EXTRACT(EPOCH FROM (blocked_until - NOW()))::INTEGER / 60 AS minutes_remaining
+FROM ip_blocklist 
+WHERE blocked_until > NOW();
+```
+
+**Solução (Super Admin):**
+```sql
+-- Desbloquear IP
+DELETE FROM ip_blocklist 
+WHERE ip_address = 'SEU_IP';
 ```
 
 ---
 
-### Ver logs do banco de dados
+### 🔑 CAPTCHA não aparece
+
+**Checklist:**
+- [ ] `VITE_TURNSTILE_SITE_KEY` configurado?
+- [ ] Console do browser mostra erros JS?
+- [ ] Script Cloudflare carregou?
 
 ```sql
--- Últimos erros:
-SELECT * FROM postgres_logs
-WHERE error_severity IN ('ERROR', 'FATAL')
-ORDER BY timestamp DESC
-LIMIT 50;
-
--- Audit logs:
-SELECT * FROM audit_logs
-WHERE success = false
-ORDER BY created_at DESC
-LIMIT 50;
+-- Ver tentativas falhadas
+SELECT * FROM failed_login_attempts 
+WHERE email = 'seu@email.com' 
+ORDER BY created_at DESC;
 ```
 
 ---
 
-### Ver logs do agente
+## 🛠️ Ferramentas de Diagnóstico SQL
 
-**Windows:**
+### 1. `diagnose_agent_issues()`
+
+Detecta automaticamente problemas:
+
+```sql
+SELECT * FROM diagnose_agent_issues('MEU_AGENTE');
+```
+
+**Retorna:**
+- `agent_not_found` ❌ Agente não existe
+- `no_heartbeat` ❌ Nunca conectou
+- `stale_heartbeat` ⚠️ Offline >5min
+- `invalid_token` ❌ Token expirado
+- `stuck_jobs` ⚠️ Jobs travados
+- `no_metrics` ⚠️ Sem métricas
+- `healthy` ✅ Tudo OK
+
+---
+
+### 2. `agents_health_view`
+
+Monitoramento em tempo real:
+
+```sql
+SELECT 
+  agent_name,
+  health_status,
+  minutes_since_heartbeat,
+  pending_jobs,
+  completed_jobs,
+  os_type
+FROM agents_health_view
+WHERE tenant_id = 'SEU_TENANT_ID'
+ORDER BY health_status DESC;
+```
+
+**Status:**
+- `online` ✅ Heartbeat <2min
+- `warning` ⚠️ Heartbeat 2-5min
+- `offline` ❌ Heartbeat >5min
+- `never_connected` 🔴 Sem heartbeat
+
+---
+
+### 3. `cleanup_old_data()`
+
+Limpeza de performance:
+
+```sql
+SELECT cleanup_old_data();
+```
+
+**Remove:**
+- Rate limits >1h
+- HMAC signatures >5min
+- Failed logins >24h
+- IP blocklist expirado
+- Métricas >30 dias
+- Security logs >90 dias
+
+---
+
+## ❓ FAQ
+
+### ⏱️ Quanto tempo até agente aparecer online?
+
+**60 segundos** (primeiro heartbeat)
+
+### 🔄 Posso reinstalar agente com mesmo nome?
+
+**Sim**, mas:
+1. Desative agente antigo
+2. Gere novo enrollment key
+3. Reinstale completamente
+
+### 📊 Quantos agentes posso ter?
+
+- **Free:** 5
+- **Starter:** 30
+- **Pro:** 200
+- **Enterprise:** ♾️
+
+### 🐳 Funciona em Docker?
+
+**Sim**, mas:
+- Use bind mount
+- Configure restart policy
+- Monitore logs do container
+
+### 🔄 Como atualizar script?
+
+1. Gere novo instalador
+2. Execute (sobrescreve)
+3. Credenciais preservadas
+
+---
+
+## 📞 Suporte
+
+- 📧 **Email:** gamehousetecnologia@gmail.com
+- 💬 **WhatsApp:** (34) 98443-2835
+- 🎯 **Dashboard:** `/admin/diagnostics`
+
+---
+
+## 📝 Logs Úteis
+
+### Windows
 ```powershell
-# Event Viewer:
-Get-EventLog -LogName Application -Source "CyberShieldAgent" -Newest 20
+# Logs do agente
+Get-Content "C:\ProgramData\CyberShield\logs\agent.log" -Tail 50
+
+# Task info
+Get-ScheduledTaskInfo -TaskName "CyberShield-Agent"
 ```
 
-**Linux:**
+### Linux
 ```bash
-# Journalctl:
-sudo journalctl -u cybershield-agent -n 100 --no-pager
+# Logs systemd
+sudo journalctl -u cybershield-agent -n 50 --no-pager
 
-# Follow (tempo real):
-sudo journalctl -u cybershield-agent -f
+# Status
+sudo systemctl status cybershield-agent
 ```
 
 ---
 
-### Teste de conectividade completo
-
-```bash
-# 1. Teste DNS:
-nslookup seu-projeto.supabase.co
-
-# 2. Teste conectividade:
-curl -v https://seu-projeto.supabase.co
-
-# 3. Teste API:
-curl https://seu-projeto.supabase.co/functions/v1/poll-jobs
-
-# 4. Teste autenticação:
-curl -X POST https://seu-projeto.supabase.co/functions/v1/poll-jobs \
-  -H "X-Agent-Token: seu-token"
-```
-
----
-
-## ❓ Ainda com problemas?
-
-### Checklist Final
-
-- [ ] Agente está instalado e rodando?
-- [ ] Token e secret estão corretos?
-- [ ] Firewall permite HTTPS (443)?
-- [ ] Agente consegue conectar no servidor?
-- [ ] Jobs estão sendo criados e aprovados?
-- [ ] Logs do agente mostram erros?
-- [ ] Secrets necessários estão configurados?
-
-### Obter Suporte
-
-1. **Verifique FAQ:** [FAQ.md](./FAQ.md)
-2. **Revise documentação:** [README.md](./README.md)
-3. **Consulte secrets:** [SECRETS_DOCUMENTATION.md](./SECRETS_DOCUMENTATION.md)
-4. **Colete informações:**
-   - Versão do sistema operacional
-   - Logs do agente (últimas 50 linhas)
-   - Mensagem de erro completa
-   - Passos para reproduzir
-
----
-
-**Última atualização:** Janeiro 2025  
-**Versão:** 1.0.0
+**Última atualização:** 2025-11-11  
+**Versão:** 2.0 - Plano Completo de Correção

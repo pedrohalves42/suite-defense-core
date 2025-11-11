@@ -6,11 +6,14 @@ import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { checkQuotaAvailable } from '../_shared/quota.ts';
 
 Deno.serve(async (req) => {
+  const requestId = crypto.randomUUID();
+  const startTime = Date.now();
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const requestId = crypto.randomUUID();
+  console.log(`[${requestId}] [enroll-agent] Starting enrollment request`);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -35,10 +38,34 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Parse and validate input
-    const rawData = await req.json();
-    const validatedData = EnrollAgentSchema.parse(rawData);
-    const { enrollmentKey, agentName } = validatedData;
+    // Parse and validate input with better error handling
+    let rawData;
+    try {
+      rawData = await req.json();
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Invalid JSON';
+      console.error(`[${requestId}] [enroll-agent] Invalid JSON:`, errorMsg);
+      return handleValidationError('Invalid JSON in request body', { error: errorMsg }, requestId);
+    }
+
+    console.log(`[${requestId}] [enroll-agent] Body received:`, {
+      hasEnrollmentKey: !!rawData?.enrollmentKey,
+      agentName: rawData?.agentName || 'MISSING'
+    });
+
+    const validation = EnrollAgentSchema.safeParse(rawData);
+    if (!validation.success) {
+      console.error(`[${requestId}] [enroll-agent] Validation error:`, {
+        errors: validation.error.issues,
+        receivedData: {
+          enrollmentKey: rawData?.enrollmentKey ? 'present' : 'missing',
+          agentName: rawData?.agentName || 'missing'
+        }
+      });
+      return handleValidationError(validation.error, undefined, requestId);
+    }
+
+    const { enrollmentKey, agentName } = validation.data;
 
     // Validate enrollment key
     const { data: keyData, error: keyError } = await supabase
@@ -208,17 +235,25 @@ Deno.serve(async (req) => {
       success: true,
     });
 
-    console.log('Agent enrolled:', { agentName, tenant_id: keyData.tenant_id, requestId });
+    const duration = Date.now() - startTime;
+    console.log(`[${requestId}] [enroll-agent] ✅ Enrollment completed successfully in ${duration}ms`, {
+      agentName,
+      tenantId: keyData.tenant_id,
+      isNew: !existingAgent
+    });
 
     return new Response(
       JSON.stringify({
         agentToken,
         hmacSecret,
         expiresAt: expiresAt.toISOString(),
+        requestId
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`[${requestId}] [enroll-agent] ❌ Error after ${duration}ms:`, error);
     return handleException(error, requestId, 'enroll-agent');
   }
 });

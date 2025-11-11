@@ -120,12 +120,14 @@ export default function Login() {
     if (error) {
       console.error('[Login] Erro no login:', error.message, 'Código:', error.status);
       
-      // Registrar tentativa falhada
-      await supabase.functions.invoke('record-failed-login', {
-        body: {
-          email: validation.data.email,
-        },
-      });
+      // Registrar tentativa falhada com audit log
+      try {
+        await supabase.functions.invoke('record-failed-login', {
+          body: { email: validation.data.email },
+        });
+      } catch (recordError) {
+        console.error('Failed to record login attempt:', recordError);
+      }
 
       // Incrementar contador e verificar se precisa de CAPTCHA
       const newCount = attemptCount + 1;
