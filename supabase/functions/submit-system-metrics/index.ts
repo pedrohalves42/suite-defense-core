@@ -41,20 +41,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar agente
-    const { data: agent, error: agentError } = await supabase
-      .from('agents')
-      .select('id, agent_name, tenant_id, hmac_secret')
-      .eq('agent_name', agentToken)
+    // Buscar agente via token (CORRIGIDO)
+    const { data: tokenData, error: tokenError } = await supabase
+      .from('agent_tokens')
+      .select(`
+        agent_id,
+        is_active,
+        agents (
+          id,
+          agent_name,
+          tenant_id,
+          hmac_secret,
+          status
+        )
+      `)
+      .eq('token', agentToken)
+      .eq('is_active', true)
       .single();
 
-    if (agentError || !agent) {
-      console.error('[submit-system-metrics] Agent not found:', agentToken);
+    if (tokenError || !tokenData || !tokenData.agents) {
+      console.error('[submit-system-metrics] Invalid agent token:', agentToken);
       return new Response(JSON.stringify({ error: 'Invalid agent token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const agent = tokenData.agents as any;
 
     // Validar HMAC se configurado
     if (agent.hmac_secret) {
