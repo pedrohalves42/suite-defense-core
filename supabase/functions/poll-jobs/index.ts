@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('Agente polling:', agent.agent_name)
+    console.log('[poll-jobs] Agente polling:', agent.agent_name)
 
     // Atualizar heartbeat e last_used_at do token
     await Promise.all([
@@ -91,8 +91,9 @@ Deno.serve(async (req) => {
         .eq('token', agentToken)
     ])
 
+    console.log('[poll-jobs] Fetching jobs for agent:', agent.agent_name)
     // Buscar jobs pendentes (máx 3)
-    const { data: jobs } = await supabase
+    const { data: jobs, error: jobsError } = await supabase
       .from('jobs')
       .select('*')
       .eq('agent_name', agent.agent_name)
@@ -100,16 +101,32 @@ Deno.serve(async (req) => {
       .order('created_at', { ascending: true })
       .limit(3)
 
+    if (jobsError) {
+      console.error('[poll-jobs] Error fetching jobs:', jobsError)
+      throw jobsError
+    }
+
+    console.log(`[poll-jobs] Found ${jobs?.length || 0} jobs`)
+
     // Marcar jobs como entregues
     if (jobs && jobs.length > 0) {
       const jobIds = jobs.map(j => j.id)
-      await supabase
+      console.log('[poll-jobs] Marking jobs as delivered:', jobIds)
+      
+      const { error: updateError } = await supabase
         .from('jobs')
         .update({ 
           status: 'delivered',
           delivered_at: new Date().toISOString()
         })
         .in('id', jobIds)
+
+      if (updateError) {
+        console.error('[poll-jobs] Error updating job status:', updateError)
+        throw updateError
+      }
+      
+      console.log('[poll-jobs] Jobs marked as delivered successfully')
     }
 
     // Retornar jobs

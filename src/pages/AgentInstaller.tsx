@@ -56,6 +56,51 @@ const AgentInstaller = () => {
     }
   };
 
+  const startConnectionMonitoring = (agentId: string) => {
+    let checkCount = 0;
+    const maxChecks = 12; // 2 minutes total (12 * 10 seconds)
+    
+    const checkInterval = setInterval(async () => {
+      checkCount++;
+      console.log(`[AgentInstaller] Connection check ${checkCount}/${maxChecks} for agent:`, agentId);
+      
+      try {
+        const { data: agent, error } = await supabase
+          .from('agents')
+          .select('last_heartbeat, status')
+          .eq('id', agentId)
+          .single();
+        
+        if (error) {
+          console.error('[AgentInstaller] Error checking agent:', error);
+          return;
+        }
+        
+        if (agent && agent.last_heartbeat) {
+          const heartbeatTime = new Date(agent.last_heartbeat);
+          const now = new Date();
+          const timeDiff = now.getTime() - heartbeatTime.getTime();
+          
+          // If heartbeat was received in the last 2 minutes
+          if (timeDiff < 120000) {
+            clearInterval(checkInterval);
+            setIsConnected(true);
+            toast.success("✅ Agente conectado com sucesso!");
+            console.log('[AgentInstaller] Agent connected successfully');
+          }
+        }
+        
+        if (checkCount >= maxChecks) {
+          clearInterval(checkInterval);
+          console.warn('[AgentInstaller] Connection monitoring timed out');
+          toast.warning("Agente instalado, mas ainda não conectado. Verifique os logs do agente.");
+        }
+      } catch (err) {
+        console.error('[AgentInstaller] Error in connection monitoring:', err);
+      }
+    }, 10000); // Check every 10 seconds
+  };
+
   const generateCredentialsWithRetry = async (retryCount = 0): Promise<void> => {
     if (!agentName.trim()) {
       toast.error("Nome do agente é obrigatório");
@@ -76,6 +121,12 @@ const AgentInstaller = () => {
       setEnrollmentKey(data.enrollmentKey);
       setCurrentStep(2);
       toast.success("Instalador gerado com sucesso!");
+      
+      // Start monitoring for agent connection
+      if (data.agentId) {
+        console.log('[AgentInstaller] Starting connection monitoring for agent:', data.agentId);
+        startConnectionMonitoring(data.agentId);
+      }
     } catch (error: any) {
       if (error?.message?.includes('Failed to fetch') && retryCount < 2) {
         await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)));

@@ -88,9 +88,17 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log('[submit-system-metrics] Parsing request body...');
     // Parse métricas
     const metrics: SystemMetrics = await req.json();
+    console.log('[submit-system-metrics] Received metrics:', JSON.stringify({
+      agent: agent.agent_name,
+      cpu: metrics.cpu_usage_percent,
+      memory: metrics.memory_usage_percent,
+      disk: metrics.disk_usage_percent
+    }));
 
+    console.log('[submit-system-metrics] Inserting metrics for agent:', agent.id);
     // Inserir métricas no banco
     const { error: insertError } = await supabase
       .from('agent_system_metrics')
@@ -121,11 +129,15 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    
+    console.log('[submit-system-metrics] Metrics inserted successfully');
 
+    console.log('[submit-system-metrics] Checking alert thresholds...');
     // Gerar alertas se thresholds ultrapassados
     const alerts = [];
 
     if (metrics.cpu_usage_percent && metrics.cpu_usage_percent > 90) {
+      console.log(`[submit-system-metrics] HIGH CPU alert: ${metrics.cpu_usage_percent}%`);
       alerts.push({
         tenant_id: agent.tenant_id,
         agent_id: agent.id,
@@ -138,6 +150,7 @@ Deno.serve(async (req) => {
     }
 
     if (metrics.memory_usage_percent && metrics.memory_usage_percent > 85) {
+      console.log(`[submit-system-metrics] HIGH MEMORY alert: ${metrics.memory_usage_percent}%`);
       alerts.push({
         tenant_id: agent.tenant_id,
         agent_id: agent.id,
@@ -150,6 +163,7 @@ Deno.serve(async (req) => {
     }
 
     if (metrics.disk_usage_percent && metrics.disk_usage_percent > 90) {
+      console.log(`[submit-system-metrics] HIGH DISK alert: ${metrics.disk_usage_percent}%`);
       alerts.push({
         tenant_id: agent.tenant_id,
         agent_id: agent.id,
@@ -167,7 +181,9 @@ Deno.serve(async (req) => {
         .insert(alerts);
 
       if (alertError) {
-        console.error('[submit-system-metrics] Alert insert error:', alertError);
+        console.error('[submit-system-metrics] Failed to insert alerts:', alertError);
+      } else {
+        console.log(`[submit-system-metrics] ${alerts.length} alerts inserted successfully`);
       }
     }
 

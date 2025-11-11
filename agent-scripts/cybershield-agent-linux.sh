@@ -5,6 +5,24 @@
 
 set -e
 
+# Validate critical parameters (will be set during installation)
+validate_parameters() {
+  if [[ -n "$AGENT_TOKEN" ]] && [[ ${#AGENT_TOKEN} -lt 20 ]]; then
+    echo "ERROR: AGENT_TOKEN appears to be invalid (too short)"
+    exit 1
+  fi
+  
+  if [[ -n "$HMAC_SECRET" ]] && [[ ${#HMAC_SECRET} -lt 32 ]]; then
+    echo "ERROR: HMAC_SECRET appears to be invalid (too short)"
+    exit 1
+  fi
+  
+  if [[ -n "$SERVER_URL" ]] && [[ -z "$SERVER_URL" ]]; then
+    echo "ERROR: SERVER_URL cannot be empty"
+    exit 1
+  fi
+}
+
 # Script constants
 readonly SCRIPT_VERSION="2.1.0"
 readonly MIN_BASH_VERSION=4
@@ -92,6 +110,9 @@ poll_jobs() {
 send_heartbeat() {
     log_info "Enviando heartbeat..."
     
+    local max_retries=3
+    local retry_count=0
+    
     # Coletar info do OS
     local os_type="linux"
     local os_version=$(cat /etc/os-release | grep "PRETTY_NAME" | cut -d'"' -f2 2>/dev/null || echo "Linux")
@@ -107,13 +128,23 @@ send_heartbeat() {
 EOF
 )
     
-    local response=$(secure_request "${SERVER_URL}/functions/v1/heartbeat" "POST" "$heartbeat_json")
+    while [ $retry_count -lt $max_retries ]; do
+        local response=$(secure_request "${SERVER_URL}/functions/v1/heartbeat" "POST" "$heartbeat_json" 2>&1)
+        
+        if echo "$response" | grep -q '"ok":true'; then
+            log_info "Heartbeat enviado com sucesso"
+            return 0
+        else
+            retry_count=$((retry_count + 1))
+            log_warn "Falha no heartbeat (tentativa $retry_count/$max_retries)"
+            if [ $retry_count -lt $max_retries ]; then
+                sleep $((2 * retry_count))
+            fi
+        fi
+    done
     
-    if echo "$response" | grep -q '"ok":true'; then
-        log_info "Heartbeat enviado com sucesso"
-    else
-        log_warn "Falha no heartbeat"
-    fi
+    log_error "Falha no heartbeat após $max_retries tentativas"
+    return 1
 }
 
 # Função para enviar métricas do sistema
@@ -434,36 +465,45 @@ verify_dependencies() {
 test_server_connectivity() {
     log_info "Testing server connectivity..."
     
+    local max_retries=3
+    local retry_count=0
+    
     local heartbeat_url="${SERVER_URL}/functions/v1/heartbeat"
     local timestamp=$(date +%s%3N)
     local nonce=$(uuidgen)
     local payload="${timestamp}:${nonce}:"
     local signature=$(echo -n "$payload" | openssl dgst -sha256 -hmac "$HMAC_SECRET" | awk '{print $2}')
     
-    local response=$(curl -s -w "\n%{http_code}" -X POST "$heartbeat_url" \
-        -H "X-Agent-Token: $AGENT_TOKEN" \
-        -H "X-HMAC-Signature: $signature" \
-        -H "X-Timestamp: $timestamp" \
-        -H "X-Nonce: $nonce" \
-        -H "Content-Type: application/json" 2>&1)
+    while [ $retry_count -lt $max_retries ]; do
+        local response=$(curl -s -w "\n%{http_code}" -X POST "$heartbeat_url" \
+            -H "X-Agent-Token: $AGENT_TOKEN" \
+            -H "X-HMAC-Signature: $signature" \
+            -H "X-Timestamp: $timestamp" \
+            -H "X-Nonce: $nonce" \
+            -H "Content-Type: application/json" 2>&1)
+        
+        local http_code=$(echo "$response" | tail -n1)
+        local body=$(echo "$response" | sed '$d')
+        
+        if [ "$http_code" = "200" ]; then
+            log_info "✓ Server connectivity successful"
+            return 0
+        else
+            retry_count=$((retry_count + 1))
+            log_warn "Connection attempt $retry_count/$max_retries failed (HTTP $http_code)"
+            if [ $retry_count -lt $max_retries ]; then
+                sleep $((2 * retry_count))
+            fi
+        fi
+    done
     
-    local http_code=$(echo "$response" | tail -n1)
-    local body=$(echo "$response" | sed '$d')
-    
-    if [ "$http_code" = "200" ]; then
-        log_info "✓ Server connectivity successful"
-        return 0
-    else
-        log_error "Server connectivity failed (HTTP $http_code)"
-        log_error "Response: $body"
-        log_error ""
-        log_error "Please verify:"
-        log_error "  1. Server URL is correct: $SERVER_URL"
-        log_error "  2. Agent token is valid: ${AGENT_TOKEN:0:10}..."
-        log_error "  3. HMAC secret is correct"
-        log_error "  4. Server is accessible from this machine"
-        exit 1
-    fi
+    log_error "✗ Server connectivity failed after $max_retries attempts"
+    log_error "Please verify:"
+    log_error "  1. Network connectivity"
+    log_error "  2. Server URL: $SERVER_URL"
+    log_error "  3. Agent credentials validity"
+    log_error "  4. Server is accessible from this machine"
+    return 1
 }
 
 create_directories() {
