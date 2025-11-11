@@ -248,6 +248,59 @@ test.describe('Windows Agent Installation E2E', () => {
 
     console.log('✓ Compatibilidade com Windows Server validada');
   });
+
+  test('11. Validar correções críticas - Parameter Validation', async () => {
+    expect(installScript).toBeTruthy();
+
+    // Verificar validação de parâmetros obrigatórios
+    expect(installScript).toContain('param(');
+    expect(installScript).toContain('Mandatory=$true');
+    expect(installScript).toContain('$AgentToken');
+    expect(installScript).toContain('$HmacSecret');
+    expect(installScript).toContain('$ServerUrl');
+
+    // Verificar validação de formato dos parâmetros
+    expect(installScript).toMatch(/if.*AgentToken.*-notmatch|if.*String.*IsNullOrWhiteSpace/i);
+    expect(installScript).toMatch(/if.*HmacSecret.*-notmatch|if.*String.*IsNullOrWhiteSpace/i);
+
+    console.log('✓ Validação de parâmetros implementada');
+  });
+
+  test('12. Validar correções críticas - Retry Logic', async () => {
+    // Verificar retry logic em Send-Heartbeat
+    expect(installScript).toContain('Send-Heartbeat');
+    expect(installScript).toMatch(/for.*\$attempt.*1\.\.\d+|while.*attempt.*maxAttempts/i);
+    expect(installScript).toMatch(/Start-Sleep.*\d+/);
+
+    // Verificar backoff exponencial ou linear
+    expect(installScript).toMatch(/Sleep.*attempt|Sleep.*\*/);
+
+    console.log('✓ Retry logic implementada em heartbeat');
+  });
+
+  test('13. Validar correções críticas - System Health Test', async () => {
+    // Verificar função Test-SystemHealth
+    expect(installScript).toContain('Test-SystemHealth');
+    
+    // Verificar retry em connectivity test
+    expect(installScript).toMatch(/Test.*connectivity|Test.*health/i);
+    expect(installScript).toMatch(/attempt.*connectivity/i);
+
+    console.log('✓ Test de system health com retry implementado');
+  });
+
+  test('14. Validar correções críticas - Error Logging', async () => {
+    // Verificar logging detalhado
+    expect(installScript).toContain('Write-Host');
+    expect(installScript).toMatch(/\[ERROR\]|\[ERRO\]/);
+    expect(installScript).toMatch(/\[INFO\]|\[SUCESSO\]/);
+    expect(installScript).toMatch(/\[WARNING\]|\[AVISO\]/);
+
+    // Verificar logs em arquivo
+    expect(installScript).toMatch(/Out-File.*log|Add-Content.*log/);
+
+    console.log('✓ Sistema de logging detalhado implementado');
+  });
 });
 
 test.describe('Agent Script Validation', () => {

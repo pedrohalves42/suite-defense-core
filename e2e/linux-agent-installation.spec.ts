@@ -220,4 +220,114 @@ test.describe('Linux Agent Installation E2E', () => {
     expect(scriptContent).toContain('systemctl status');
     expect(scriptContent).toContain('journalctl');
   });
+
+  test('should validate critical fixes - Parameter Validation', async ({ page }) => {
+    await page.goto('/installer');
+    await page.waitForSelector('text=Gerador de Instalador de Agente');
+    
+    const agentName = `test-linux-validation-${Date.now()}`;
+    await page.fill('input[placeholder*="servidor"]', agentName);
+    await page.click('button:has-text("Gerar Instalador")');
+    await page.waitForSelector('text=Instalador gerado com sucesso!');
+    
+    const downloadPromise = page.waitForEvent('download');
+    await page.click('button:has-text("Baixar Instalador Linux")');
+    const download = await downloadPromise;
+    
+    const path = await download.path();
+    const fs = require('fs');
+    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    
+    // Validate parameter validation function
+    expect(scriptContent).toContain('validate_parameters()');
+    expect(scriptContent).toMatch(/AGENT_TOKEN.*empty/);
+    expect(scriptContent).toMatch(/HMAC_SECRET.*empty/);
+    expect(scriptContent).toMatch(/SERVER_URL.*empty/);
+    
+    console.log('✓ Parameter validation implemented');
+  });
+
+  test('should validate critical fixes - Retry Logic in Heartbeat', async ({ page }) => {
+    await page.goto('/installer');
+    await page.waitForSelector('text=Gerador de Instalador de Agente');
+    
+    const agentName = `test-linux-retry-${Date.now()}`;
+    await page.fill('input[placeholder*="servidor"]', agentName);
+    await page.click('button:has-text("Gerar Instalador")');
+    await page.waitForSelector('text=Instalador gerado com sucesso!');
+    
+    const downloadPromise = page.waitForEvent('download');
+    await page.click('button:has-text("Baixar Instalador Linux")');
+    const download = await downloadPromise;
+    
+    const path = await download.path();
+    const fs = require('fs');
+    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    
+    // Validate retry logic in send_heartbeat
+    expect(scriptContent).toContain('send_heartbeat()');
+    expect(scriptContent).toMatch(/for.*attempt.*in.*1.*3|while.*attempt.*3/);
+    expect(scriptContent).toMatch(/sleep.*[0-9]+/);
+    
+    // Validate exponential backoff
+    expect(scriptContent).toMatch(/sleep.*attempt|\$\(\(.*attempt/);
+    
+    console.log('✓ Retry logic with backoff implemented in heartbeat');
+  });
+
+  test('should validate critical fixes - Server Connectivity Test', async ({ page }) => {
+    await page.goto('/installer');
+    await page.waitForSelector('text=Gerador de Instalador de Agente');
+    
+    const agentName = `test-linux-connectivity-${Date.now()}`;
+    await page.fill('input[placeholder*="servidor"]', agentName);
+    await page.click('button:has-text("Gerar Instalador")');
+    await page.waitForSelector('text=Instalador gerado com sucesso!');
+    
+    const downloadPromise = page.waitForEvent('download');
+    await page.click('button:has-text("Baixar Instalador Linux")');
+    const download = await downloadPromise;
+    
+    const path = await download.path();
+    const fs = require('fs');
+    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    
+    // Validate connectivity test with retry
+    expect(scriptContent).toContain('test_server_connectivity()');
+    expect(scriptContent).toMatch(/curl.*heartbeat/);
+    expect(scriptContent).toMatch(/for.*attempt|while.*attempt/);
+    expect(scriptContent).toMatch(/X-Agent-Token/);
+    
+    console.log('✓ Server connectivity test with retry implemented');
+  });
+
+  test('should validate critical fixes - HMAC Security', async ({ page }) => {
+    await page.goto('/installer');
+    await page.waitForSelector('text=Gerador de Instalador de Agente');
+    
+    const agentName = `test-linux-hmac-${Date.now()}`;
+    await page.fill('input[placeholder*="servidor"]', agentName);
+    await page.click('button:has-text("Gerar Instalador")');
+    await page.waitForSelector('text=Instalador gerado com sucesso!');
+    
+    const downloadPromise = page.waitForEvent('download');
+    await page.click('button:has-text("Baixar Instalador Linux")');
+    const download = await downloadPromise;
+    
+    const path = await download.path();
+    const fs = require('fs');
+    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    
+    // Validate HMAC generation
+    expect(scriptContent).toContain('generate_hmac_signature()');
+    expect(scriptContent).toContain('openssl dgst -sha256 -hmac');
+    expect(scriptContent).toMatch(/timestamp.*nonce/);
+    
+    // Validate secure request function
+    expect(scriptContent).toContain('secure_request()');
+    expect(scriptContent).toContain('X-HMAC-Signature');
+    expect(scriptContent).toContain('X-Timestamp');
+    
+    console.log('✓ Secure HMAC implementation validated');
+  });
 });
