@@ -64,9 +64,14 @@ export default function Login() {
           document.body.appendChild(script);
 
           script.onload = () => {
+            const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+            if (!siteKey) {
+              console.error('VITE_TURNSTILE_SITE_KEY not configured');
+              return;
+            }
             // @ts-ignore - Turnstile global
             window.turnstile?.render('#captcha-container', {
-              sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
+              sitekey: siteKey,
               callback: (token: string) => setCaptchaToken(token),
             });
           };
