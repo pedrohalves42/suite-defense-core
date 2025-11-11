@@ -241,20 +241,31 @@ Deno.serve(async (req) => {
 
     if (existingAgent) {
       agentId = existingAgent.id;
+      console.log(`[${requestId}] Re-enrolling existing agent:`, agentId);
       
-      // Update HMAC secret
-      await supabase
+      // Update HMAC secret for security
+      const { error: updateError } = await supabase
         .from('agents')
         .update({ hmac_secret: hmacSecret })
         .eq('id', agentId);
+      
+      if (updateError) {
+        console.error(`[${requestId}] Failed to update HMAC secret:`, updateError);
+        throw updateError;
+      }
 
       // Deactivate old tokens
-      await supabase
+      const { error: deactivateError } = await supabase
         .from('agent_tokens')
         .update({ is_active: false })
         .eq('agent_id', agentId);
+        
+      if (deactivateError) {
+        console.error(`[${requestId}] Failed to deactivate old tokens:`, deactivateError);
+      }
     } else {
       // Create new agent
+      console.log(`[${requestId}] Creating new agent:`, agentName);
       const { data: newAgent, error: agentError } = await supabase
         .from('agents')
         .insert({
@@ -266,7 +277,10 @@ Deno.serve(async (req) => {
         .select('id')
         .single();
 
-      if (agentError) throw agentError;
+      if (agentError) {
+        console.error(`[${requestId}] Failed to create agent:`, agentError);
+        throw agentError;
+      }
       agentId = newAgent.id;
     }
 
@@ -283,11 +297,19 @@ Deno.serve(async (req) => {
 
     if (tokenError) throw tokenError;
 
-    // Mark enrollment key as used
-    await supabase
+    // Link enrollment key to agent (trigger will handle the rest)
+    const { error: linkError } = await supabase
       .from('enrollment_keys')
-      .update({ current_uses: 1 })
+      .update({ 
+        agent_id: agentId,
+        used_by_agent: agentName,
+        used_at: new Date().toISOString()
+      })
       .eq('key', enrollmentKey);
+      
+    if (linkError) {
+      console.error(`[${requestId}] Failed to link enrollment key:`, linkError);
+    }
 
     const duration = Date.now() - startTime;
     console.log(`[${requestId}] [auto-generate-enrollment] ✅ Credentials generated successfully in ${duration}ms`, {

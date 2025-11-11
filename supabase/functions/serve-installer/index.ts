@@ -115,10 +115,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch agent token
+    // FASE 1 CORREÇÃO CRÍTICA: Fetch token from agent_tokens
     const { data: tokenData, error: tokenError } = await supabaseClient
       .from('agent_tokens')
-      .select('token, hmac_secret')
+      .select('token')
       .eq('agent_id', enrollmentData.agent_id)
       .eq('is_active', true)
       .single();
@@ -131,10 +131,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch agent info
+    // FASE 1 CORREÇÃO CRÍTICA: Fetch agent info AND hmac_secret from agents table
     const { data: agentData, error: agentError } = await supabaseClient
       .from('agents')
-      .select('agent_name, os_type')
+      .select('agent_name, os_type, hmac_secret')
       .eq('id', enrollmentData.agent_id)
       .single();
 
@@ -146,6 +146,15 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Validate credentials are present
+    if (!tokenData.token || !agentData.hmac_secret) {
+      console.error(`[${requestId}] Missing credentials: token=${!!tokenData.token}, hmac=${!!agentData.hmac_secret}`);
+      return new Response('Agent credentials incomplete', { 
+        status: 500,
+        headers: corsHeaders
+      });
+    }
+
     // Determine platform
     const platform = agentData.os_type || 'windows';
     console.log(`[${requestId}] Generating ${platform} installer for ${agentData.agent_name}`);
@@ -153,12 +162,21 @@ Deno.serve(async (req) => {
     // Select template
     let templateContent = platform === 'windows' ? WINDOWS_INSTALLER_TEMPLATE : LINUX_INSTALLER_TEMPLATE;
 
-    // Replace placeholders
+    // FASE 1 CORREÇÃO: Replace placeholders with validated credentials
     templateContent = templateContent
       .replace(/\{\{AGENT_TOKEN\}\}/g, tokenData.token)
-      .replace(/\{\{HMAC_SECRET\}\}/g, tokenData.hmac_secret || '')
+      .replace(/\{\{HMAC_SECRET\}\}/g, agentData.hmac_secret) // Fixed: from agents table
       .replace(/\{\{SERVER_URL\}\}/g, SUPABASE_URL)
       .replace(/\{\{TIMESTAMP\}\}/g, new Date().toISOString());
+
+    // Final validation: ensure no placeholders remain
+    if (templateContent.includes('{{')) {
+      console.error(`[${requestId}] Template still contains placeholders after replacement`);
+      return new Response('Installer generation failed: incomplete template', { 
+        status: 500,
+        headers: corsHeaders
+      });
+    }
 
     // Return script
     const fileName = platform === 'windows'
