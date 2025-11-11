@@ -20,14 +20,33 @@ export const FullNameSchema = z.string()
   .max(100, 'Nome muito longo')
   .regex(/^[a-zA-ZÀ-ÿ\s]+$/, 'Nome deve conter apenas letras e espaços');
 
+// Agent name schema - reusable and secure
+export const AgentNameSchema = z.string()
+  .trim()
+  .min(3, 'Nome do agente deve ter pelo menos 3 caracteres')
+  .max(64, 'Nome do agente deve ter no máximo 64 caracteres')
+  .regex(
+    /^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]$/,
+    'Nome do agente deve começar e terminar com letras ou números, e pode conter hífens e underscores'
+  )
+  .refine(name => {
+    const sqlPatterns = [/[;'"\\/]/, /(union|select|insert|update|delete|drop)/i, /(--|\*\/|\/\*)/, /[\x00-\x1F\x7F]/];
+    return !sqlPatterns.some(pattern => pattern.test(name));
+  }, 'Nome contém caracteres perigosos')
+  .refine(name => !/(.)\1{5,}/.test(name), 'Não pode ter mais de 5 caracteres repetidos')
+  .refine(name => {
+    const reserved = ['admin', 'root', 'system', 'null', 'undefined'];
+    return !reserved.includes(name.toLowerCase());
+  }, 'Nome reservado');
+
 // Existing schemas
 export const EnrollAgentSchema = z.object({
   enrollmentKey: z.string().length(19, 'Chave de enrollment deve ter formato XXXX-XXXX-XXXX-XXXX'),
-  agentName: z.string().min(3).max(64).regex(/^[A-Z0-9-]+$/, 'Nome do agente deve conter apenas letras maiúsculas, números e hífens'),
+  agentName: AgentNameSchema,
 });
 
 export const CreateJobSchema = z.object({
-  agentName: z.string().min(3).max(64).regex(/^[A-Z0-9-]+$/, 'Nome do agente inválido'),
+  agentName: AgentNameSchema,
   type: z.enum(['scan', 'update', 'report', 'config'], { errorMap: () => ({ message: 'Tipo de job inválido' }) }),
   payload: z.record(z.unknown()).optional(),
   approved: z.boolean().default(true),
@@ -65,47 +84,12 @@ export const AgentTokenSchema = z.string().uuid('Agent token deve ser um UUID v�
 
 // Auto-generate enrollment validation
 export const AutoGenerateEnrollmentSchema = z.object({
-  agentName: z.string()
-    .trim()
-    .min(3, 'Nome do agente deve ter pelo menos 3 caracteres')
-    .max(64, 'Nome do agente deve ter no máximo 64 caracteres')
-    .regex(
-      /^[A-Z0-9-]+$/,
-      'Nome do agente deve conter apenas letras maiúsculas, números e hífens'
-    )
-    .refine(name => {
-      // Block SQL injection patterns
-      const sqlPatterns = [
-        /(\bor\b|\band\b)/i,
-        /[;'"\\/]/,
-        /(union|select|insert|update|delete|drop|create|alter|exec|execute)/i,
-        /(--|\*\/|\/\*)/,
-        /[\x00-\x1F\x7F]/  // Control characters
-      ];
-      return !sqlPatterns.some(pattern => pattern.test(name));
-    }, 'Nome do agente contém caracteres inválidos ou potencialmente perigosos')
-    .refine(name => {
-      // Ensure reasonable length without excessive repetition
-      return !/(.)\1{5,}/.test(name);
-    }, 'Nome do agente não pode conter mais de 5 caracteres repetidos consecutivos')
-    .refine(name => {
-      // Block common reserved names
-      const reserved = ['ADMIN', 'ROOT', 'SYSTEM', 'NULL', 'UNDEFINED', 'TRUE', 'FALSE'];
-      return !reserved.includes(name.toUpperCase());
-    }, 'Nome do agente está reservado e não pode ser usado')
+  agentName: AgentNameSchema,
 });
 
 // Enhanced CreateJobSchema with additional security validations
 export const CreateJobSchemaEnhanced = z.object({
-  agentName: z.string()
-    .trim()
-    .min(3)
-    .max(64)
-    .regex(/^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]$/)
-    .refine(name => {
-      const sqlPatterns = [/[;'"\\/]/, /(union|select|insert|update|delete|drop)/i, /(--|\*\/|\/\*)/, /[\x00-\x1F\x7F]/];
-      return !sqlPatterns.some(pattern => pattern.test(name));
-    }, 'Nome do agente contém caracteres perigosos'),
+  agentName: AgentNameSchema,
   type: z.enum(['scan', 'update', 'report', 'config'], { errorMap: () => ({ message: 'Tipo de job inválido' }) }),
   payload: z.record(z.unknown()).optional().refine(payload => {
     if (!payload) return true;

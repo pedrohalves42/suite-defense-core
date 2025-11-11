@@ -1,5 +1,6 @@
 project_id = "iavbnmduxpxhwubqrzzn"
 
+# === Stripe Functions ===
 [functions.create-stripe-products]
 verify_jwt = true
 
@@ -15,17 +16,15 @@ verify_jwt = true
 [functions.stripe-webhook]
 verify_jwt = false
 
-[functions.reset-daily-quotas]
-verify_jwt = false
-
 [functions.sync-stripe-subscriptions]
 verify_jwt = false
 
+# === Agent Functions ===
 [functions.enroll-agent]
 verify_jwt = false
 
-[functions.create-job]
-verify_jwt = true
+[functions.heartbeat]
+verify_jwt = false
 
 [functions.poll-jobs]
 verify_jwt = false
@@ -33,42 +32,82 @@ verify_jwt = false
 [functions.ack-job]
 verify_jwt = false
 
+[functions.submit-system-metrics]
+verify_jwt = false
+
 [functions.upload-report]
 verify_jwt = false
 
-[functions.test-virustotal-integration]
+[functions.scan-virus]
+verify_jwt = false
+
+[functions.validate-agent-health]
 verify_jwt = true
 
-[functions.test-stripe-integration]
+# === Installation Functions ===
+[functions.auto-generate-enrollment]
 verify_jwt = true
 
-[functions.test-webhook]
+[functions.serve-installer]
+verify_jwt = false
+
+[functions.track-installation-event]
+verify_jwt = true
+
+# === Admin Functions ===
+[functions.create-job]
 verify_jwt = true
 
 [functions.list-users]
 verify_jwt = true
 
+[functions.list-all-users-admin]
+verify_jwt = true
+
 [functions.update-user-status]
+verify_jwt = true
+
+[functions.update-user-role]
+verify_jwt = true
+
+[functions.update-member-role]
+verify_jwt = true
+
+[functions.generate-enrollment-key]
+verify_jwt = true
+
+[functions.get-agent-dashboard-data]
 verify_jwt = true
 
 [functions.list-reports]
 verify_jwt = false
 
-[functions.generate-enrollment-key]
+[functions.check-tenant-quotas]
 verify_jwt = true
 
-[functions.send-alert-email]
-verify_jwt = false
-
-[functions.submit-system-metrics]
-verify_jwt = false
-
-[functions.get-agent-dashboard-data]
+[functions.api-tenant-features]
 verify_jwt = true
 
+[functions.api-tenant-info]
+verify_jwt = true
+
+[functions.api-tenant-stats]
+verify_jwt = true
+
+# === Monitoring Functions ===
 [functions.monitor-agent-health]
 verify_jwt = false
 schedule = "*/5 * * * *"
+
+[functions.monitor-thresholds]
+verify_jwt = false
+
+[functions.analyze-network-anomalies]
+verify_jwt = true
+
+# === Alert Functions ===
+[functions.send-alert-email]
+verify_jwt = false
 
 [functions.send-system-alert]
 verify_jwt = false
@@ -76,34 +115,14 @@ verify_jwt = false
 [functions.send-health-alert]
 verify_jwt = false
 
-[functions.analyze-network-anomalies]
-verify_jwt = true
-
-[functions.scan-virus]
+[functions.send-welcome-email]
 verify_jwt = false
 
+# === Auth Functions ===
 [functions.send-invite]
 verify_jwt = true
 
 [functions.accept-invite]
-verify_jwt = true
-
-[functions.update-user-role]
-verify_jwt = true
-
-[functions.auto-generate-enrollment]
-verify_jwt = true
-
-[functions.auto-quarantine]
-verify_jwt = false
-
-[functions.submit-contact]
-verify_jwt = false
-
-[functions.validate-agent-health]
-verify_jwt = true
-
-[functions.check-tenant-quotas]
 verify_jwt = true
 
 [functions.record-failed-login]
@@ -115,8 +134,29 @@ verify_jwt = false
 [functions.clear-failed-logins]
 verify_jwt = false
 
-[functions.serve-installer]
+[functions.test-internal-auth]
+verify_jwt = true
+
+# === Scheduled Functions ===
+[functions.reset-daily-quotas]
 verify_jwt = false
 
-[functions.list-all-users-admin]
+[functions.process-scheduled-jobs]
+verify_jwt = false
+
+[functions.auto-quarantine]
+verify_jwt = false
+
+# === Contact Functions ===
+[functions.submit-contact]
+verify_jwt = false
+
+# === Test Functions ===
+[functions.test-virustotal-integration]
+verify_jwt = true
+
+[functions.test-stripe-integration]
+verify_jwt = true
+
+[functions.test-webhook]
 verify_jwt = true
