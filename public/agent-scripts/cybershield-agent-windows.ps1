@@ -1,8 +1,11 @@
-# CyberShield Agent - Windows PowerShell Script v2.1.0 (Production Ready)
+# CyberShield Agent - Windows PowerShell Script v2.2.1 (Production Ready)
 # Compatible with: Windows Server 2012, 2012 R2, 2016, 2019, 2022, 2025
 # PowerShell Version: 3.0+
 
 #Requires -Version 3.0
+
+# Fix UTF-8 encoding for console output
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 param(
     [Parameter(Mandatory=$true)]
@@ -128,7 +131,7 @@ if ([string]::IsNullOrWhiteSpace($AgentToken) -or [string]::IsNullOrWhiteSpace($
 
 $ServerUrl = $ServerUrl.TrimEnd('/')
 
-Write-Log "=== CyberShield Agent v2.1.0 iniciado ===" "SUCCESS"
+Write-Log "=== CyberShield Agent v2.2.1 iniciado ===" "SUCCESS"
 Write-Log "Sistema: $osName" "INFO"
 Write-Log "PowerShell: $($PSVersionTable.PSVersion)" "INFO"
 Write-Log "Server URL: $ServerUrl" "INFO"
@@ -165,7 +168,12 @@ function Invoke-SecureRequest {
             $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
             $nonce = [guid]::NewGuid().ToString()
             
-            $bodyJson = if ($Body) { $Body | ConvertTo-Json -Compress } else { "{}" }
+            # Fix #4: Validar Body explicitamente antes de converter
+            if ($Body -ne $null -and $Body -is [hashtable]) {
+                $bodyJson = $Body | ConvertTo-Json -Compress
+            } else {
+                $bodyJson = "{}"
+            }
             $message = "${timestamp}:${nonce}:${bodyJson}"
             $signature = Get-HmacSignature -Message $message -Secret $HmacSecret
             
@@ -418,11 +426,12 @@ function Upload-Report {
     param([string]$JobId, [object]$Result)
     
     try {
+        # Fix #1: Passar hashtable diretamente, não JSON string
         $reportData = @{
             job_id = $JobId
             result = $Result
             timestamp = (Get-Date).ToString("o")
-        } | ConvertTo-Json -Depth 10
+        }
         
         $url = "$ServerUrl/functions/v1/upload-report"
         Invoke-SecureRequest -Url $url -Method "POST" -Body $reportData | Out-Null
@@ -528,10 +537,15 @@ function Send-SystemMetrics {
         $metricsUrl = "$ServerUrl/functions/v1/submit-system-metrics"
         $response = Invoke-SecureRequest -Url $metricsUrl -Method "POST" -Body $metrics
         
-        Write-Log "System metrics sent successfully (CPU: $($metrics.cpu_usage_percent)%, RAM: $($metrics.memory_usage_percent)%, Disk: $($metrics.disk_usage_percent)%)" "SUCCESS"
-        
-        if ($response -and $response.alerts_generated -gt 0) {
-            Write-Log "⚠️ $($response.alerts_generated) alert(s) generated" "WARN"
+        # Fix #5: Apenas logar sucesso se response não for null
+        if ($response) {
+            Write-Log "System metrics sent successfully (CPU: $($metrics.cpu_usage_percent)%, RAM: $($metrics.memory_usage_percent)%, Disk: $($metrics.disk_usage_percent)%)" "SUCCESS"
+            
+            if ($response.alerts_generated -and $response.alerts_generated -gt 0) {
+                Write-Log "⚠️ $($response.alerts_generated) alert(s) generated" "WARN"
+            }
+        } else {
+            Write-Log "Metrics request completed but no response received" "WARN"
         }
         
         return $response

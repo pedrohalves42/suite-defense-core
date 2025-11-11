@@ -1,14 +1,17 @@
 # CyberShield Agent - Windows Installation Script (FIXED)
 # Auto-generated: {{TIMESTAMP}}
-# Version: 2.2.0 - Corrigido para Windows 10/11
+# Version: 2.2.1 - Corrigido para Windows 10/11
 
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
 
 $ErrorActionPreference = "Stop"
 
+# Fix UTF-8 encoding for console output
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 Write-Host "==================================" -ForegroundColor Cyan
-Write-Host "CyberShield Agent Installer v2.2.0" -ForegroundColor Cyan
+Write-Host "CyberShield Agent Installer v2.2.1" -ForegroundColor Cyan
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -211,6 +214,16 @@ try {
         Write-Host ""
     }
 
+    # Fix #2: Código de validação pós-instalação DENTRO do try block
+    Write-Host ""
+    Write-Host "VALIDAÇÃO PÓS-INSTALAÇÃO (Opcional):" -ForegroundColor Cyan
+    Write-Host "  Para validar se o agente está funcionando 100%:" -ForegroundColor White
+    Write-Host "  1. Aguarde 2 minutos para o agente iniciar" -ForegroundColor White
+    Write-Host "  2. Execute: .\post-installation-validation.ps1" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Pressione Enter para sair..." -ForegroundColor Gray
+    Read-Host
+
 } catch {
     Write-Host ""
     Write-Host "==================================" -ForegroundColor Red
@@ -230,12 +243,3 @@ try {
     Read-Host "Pressione Enter para sair"
     exit 1
 }
-
-    Write-Host ""
-    Write-Host "VALIDAÇÃO PÓS-INSTALAÇÃO (Opcional):" -ForegroundColor Cyan
-    Write-Host "  Para validar se o agente está funcionando 100%:" -ForegroundColor White
-    Write-Host "  1. Aguarde 2 minutos para o agente iniciar" -ForegroundColor White
-    Write-Host "  2. Execute: .\post-installation-validation.ps1" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "Pressione Enter para sair..." -ForegroundColor Gray
-Read-Host
