@@ -629,6 +629,32 @@ $$AgentDir = "C:\\CyberShield"
 $$LogDir = "$$AgentDir\\logs"
 $$ScriptPath = "$$AgentDir\\agent.ps1"
 
+# Validação de privilégios administrativos
+Write-Host "[0/5] Validando permissões..." -ForegroundColor Yellow
+
+$$isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+
+if (-not $$isAdmin) {
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host "  ✗ ERRO: Privilégios Administrativos" -ForegroundColor Red
+    Write-Host "========================================" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Este script precisa ser executado como Administrador." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Como executar:" -ForegroundColor Cyan
+    Write-Host "  1. Clique com botão direito no arquivo .ps1" -ForegroundColor White
+    Write-Host "  2. Selecione 'Executar como Administrador'" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Ou execute no PowerShell Admin:" -ForegroundColor Cyan
+    Write-Host "  Start-Process powershell -Verb RunAs -ArgumentList '-ExecutionPolicy Bypass -File install.ps1'" -ForegroundColor Gray
+    Write-Host ""
+    Read-Host "Pressione ENTER para sair"
+    exit 1
+}
+
+Write-Host "      ✓ Privilégios de administrador confirmados" -ForegroundColor Green
+
 try {
     Write-Host "[1/5] Criando diretórios..." -ForegroundColor Yellow
     New-Item -ItemType Directory -Path $$AgentDir -Force | Out-Null
@@ -663,15 +689,43 @@ ${agentScriptContent}
         -Description "CyberShield Security Agent" \`
         -Force | Out-Null
     
-    Write-Host "      ✓ Tarefa agendada configurada" -ForegroundColor Green
+    Write-Host "      ✓ Tarefa registrada" -ForegroundColor Green
+    
+    # Validar que a tarefa foi criada
+    $$taskCreated = Get-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
+    if (-not $$taskCreated) {
+        throw "Falha ao criar tarefa agendada. Verifique se o Windows Task Scheduler está funcionando."
+    }
+    
+    Write-Host "      ✓ Tarefa validada no Task Scheduler" -ForegroundColor Green
     
     Write-Host "[4/5] Iniciando agente..." -ForegroundColor Yellow
     Start-ScheduledTask -TaskName "CyberShieldAgent"
     Start-Sleep -Seconds 2
     Write-Host "      ✓ Agente iniciado" -ForegroundColor Green
     
-    Write-Host "[5/5] Validando instalação..." -ForegroundColor Yellow
-    Start-Sleep -Seconds 5
+    Write-Host "[5/5] Testando conectividade..." -ForegroundColor Yellow
+    try {
+        $$testUrl = "$$ServerUrl/functions/v1/heartbeat"
+        $$testHeaders = @{
+            "X-Agent-Token" = $$AgentToken
+            "Content-Type" = "application/json"
+        }
+        
+        $$response = Invoke-WebRequest -Uri $$testUrl -Method POST -Headers $$testHeaders -TimeoutSec 10 -ErrorAction Stop
+        
+        if ($$response.StatusCode -eq 200) {
+            Write-Host "      ✓ Servidor acessível" -ForegroundColor Green
+        } else {
+            Write-Host "      ⚠ Servidor retornou status: $$($$response.StatusCode)" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "      ⚠ Não foi possível conectar ao servidor" -ForegroundColor Yellow
+        Write-Host "        Erro: $$($$_.Exception.Message)" -ForegroundColor Gray
+        Write-Host "        O agente tentará conectar automaticamente" -ForegroundColor Gray
+    }
+    
+    Start-Sleep -Seconds 3
     
     # Verificar se logs foram criados
     if (Test-Path "$$LogDir\\agent.log") {
@@ -713,10 +767,23 @@ catch {
     Write-Host ""
     Write-Host "Erro: $$_" -ForegroundColor Red
     Write-Host ""
-    Write-Host "Diagnóstico:" -ForegroundColor Yellow
-    Write-Host "  - Execute este script como Administrador" -ForegroundColor White
-    Write-Host "  - Verifique sua conexão com a internet" -ForegroundColor White
-    Write-Host "  - Verifique se a porta 443 está liberada" -ForegroundColor White
+    Write-Host "Stack Trace:" -ForegroundColor Yellow
+    Write-Host $$_.ScriptStackTrace -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Diagnóstico Detalhado:" -ForegroundColor Yellow
+    Write-Host "  ✓ Execute como Administrador" -ForegroundColor White
+    Write-Host "  ✓ Verifique conexão com internet" -ForegroundColor White
+    Write-Host "  ✓ Verifique se porta 443 está liberada no firewall" -ForegroundColor White
+    Write-Host "  ✓ Desabilite temporariamente o antivírus" -ForegroundColor White
+    Write-Host "  ✓ Verifique se Windows Task Scheduler está ativo:" -ForegroundColor White
+    Write-Host "     Get-Service -Name Schedule" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Logs salvos em: $$LogDir" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Para suporte, envie:" -ForegroundColor Yellow
+    Write-Host "  - Esta mensagem de erro" -ForegroundColor White
+    Write-Host "  - Arquivo de log (se existir): $$LogDir\\agent.log" -ForegroundColor White
+    Write-Host "  - Resultado de: Get-Service -Name Schedule" -ForegroundColor White
     Write-Host ""
     exit 1
 }`;
