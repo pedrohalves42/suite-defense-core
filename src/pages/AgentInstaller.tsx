@@ -121,6 +121,16 @@ const AgentInstaller = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      // Track download event
+      await supabase.functions.invoke('track-installation-event', {
+        body: {
+          agent_name: agentName.trim(),
+          event_type: 'downloaded',
+          platform: platform,
+          installation_method: 'download'
+        }
+      }).catch(err => console.error('Failed to track download event:', err));
+
       toast.success(`✅ Instalador gerado e baixado com sucesso!`, {
         description: `Arquivo: ${fileName}`
       });
@@ -171,6 +181,16 @@ const AgentInstaller = () => {
       setInstallCommand(command);
       setShowCopyPaste(true);
 
+      // Track generation event
+      await supabase.functions.invoke('track-installation-event', {
+        body: {
+          agent_name: agentName.trim(),
+          event_type: 'generated',
+          platform: platform,
+          installation_method: 'one_click'
+        }
+      }).catch(err => console.error('Failed to track generation event:', err));
+
       toast.success("Comando gerado com sucesso!", {
         description: "Copie e cole no servidor para instalar"
       });
@@ -185,8 +205,19 @@ const AgentInstaller = () => {
     }
   };
 
-  const copyToClipboard = () => {
+  const copyToClipboard = async () => {
     navigator.clipboard.writeText(installCommand);
+    
+    // Track copy event
+    await supabase.functions.invoke('track-installation-event', {
+      body: {
+        agent_name: agentName.trim(),
+        event_type: 'command_copied',
+        platform: platform,
+        installation_method: 'one_click'
+      }
+    }).catch(err => console.error('Failed to track copy event:', err));
+    
     toast.success("Comando copiado!", {
       description: "Cole no terminal do servidor"
     });

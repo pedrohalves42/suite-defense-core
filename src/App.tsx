@@ -48,6 +48,7 @@ import AuthDebug from "./pages/debug/AuthDebug";
 import SecurityDashboard from "./pages/admin/SecurityDashboard";
 import AgentMonitoringAdvanced from "./pages/AgentMonitoringAdvanced";
 import ExeBuild from "./pages/docs/ExeBuild";
+import InstallationAnalytics from "./pages/admin/InstallationAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,7 @@ const App = () => (
                 <Route path="audit-logs" element={<AuditLogs />} />
                 <Route path="security" element={<SecurityDashboard />} />
                 <Route path="settings" element={<Settings />} />
+                <Route path="installation-analytics" element={<InstallationAnalytics />} />
               </Route>
 
               {/* Super Admin Routes */}

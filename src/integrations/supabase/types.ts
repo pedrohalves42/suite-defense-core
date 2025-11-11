@@ -479,6 +479,76 @@ export type Database = {
         }
         Relationships: []
       }
+      installation_analytics: {
+        Row: {
+          agent_id: string | null
+          agent_name: string
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          installation_method: string | null
+          installation_time_seconds: number | null
+          ip_address: string | null
+          metadata: Json | null
+          platform: string
+          tenant_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name: string
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          installation_method?: string | null
+          installation_time_seconds?: number | null
+          ip_address?: string | null
+          metadata?: Json | null
+          platform: string
+          tenant_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          installation_method?: string | null
+          installation_time_seconds?: number | null
+          ip_address?: string | null
+          metadata?: Json | null
+          platform?: string
+          tenant_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installation_analytics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installation_analytics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installation_analytics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invites: {
         Row: {
           accepted_at: string | null
@@ -1448,6 +1518,24 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_enrollment_keys_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      installation_metrics_summary: {
+        Row: {
+          date: string | null
+          event_count: number | null
+          event_type: string | null
+          platform: string | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installation_analytics_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
