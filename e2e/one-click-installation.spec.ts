@@ -228,6 +228,68 @@ test.describe('One-Click Agent Installation', () => {
     console.log('Credentials validated:', { token, secretLength: secret.length });
   });
 
+  test('Windows installation command is fully functional', async ({ page, request }) => {
+    await page.goto('/installer');
+    
+    const agentName = `test-win-full-${Date.now()}`;
+    await page.fill('input[placeholder*="nome do agente"]', agentName);
+    await page.click('button:has-text("Windows")');
+    await page.click('button:has-text("Gerar Comando Rápido")');
+    
+    // Extract URL and fetch script
+    await page.waitForSelector('pre:has-text("irm")', { timeout: 10000 });
+    const commandText = await page.locator('pre:has-text("irm")').textContent();
+    const urlMatch = commandText?.match(/https:\/\/[^\s|]+/);
+    const installUrl = urlMatch![0];
+    
+    const response = await request.get(installUrl);
+    const scriptContent = await response.text();
+    
+    // Validate Windows script structure
+    expect(scriptContent).toContain('$AgentToken =');
+    expect(scriptContent).toContain('$HmacSecret =');
+    expect(scriptContent).toContain('$ServerUrl =');
+    expect(scriptContent).toContain('CyberShield Agent Installer');
+    expect(scriptContent).toContain('New-ScheduledTask');
+    expect(scriptContent).toContain('New-NetFirewallRule');
+    expect(scriptContent).not.toContain('{{AGENT_TOKEN}}');
+    expect(scriptContent).not.toContain('{{HMAC_SECRET}}');
+    expect(scriptContent).not.toContain('{{SERVER_URL}}');
+    
+    console.log('Windows script validated:', { size: scriptContent.length, agentName });
+  });
+
+  test('Linux installation command is fully functional', async ({ page, request }) => {
+    await page.goto('/installer');
+    
+    const agentName = `test-linux-full-${Date.now()}`;
+    await page.fill('input[placeholder*="nome do agente"]', agentName);
+    await page.click('button:has-text("Linux")');
+    await page.click('button:has-text("Gerar Comando Rápido")');
+    
+    // Extract URL and fetch script
+    await page.waitForSelector('pre:has-text("curl")', { timeout: 10000 });
+    const commandText = await page.locator('pre:has-text("curl")').textContent();
+    const urlMatch = commandText?.match(/https:\/\/[^\s|]+/);
+    const installUrl = urlMatch![0];
+    
+    const response = await request.get(installUrl);
+    const scriptContent = await response.text();
+    
+    // Validate Linux script structure
+    expect(scriptContent).toContain('AGENT_TOKEN=');
+    expect(scriptContent).toContain('HMAC_SECRET=');
+    expect(scriptContent).toContain('SERVER_URL=');
+    expect(scriptContent).toContain('CyberShield Agent');
+    expect(scriptContent).toContain('systemctl');
+    expect(scriptContent).toContain('chmod +x');
+    expect(scriptContent).not.toContain('{{AGENT_TOKEN}}');
+    expect(scriptContent).not.toContain('{{HMAC_SECRET}}');
+    expect(scriptContent).not.toContain('{{SERVER_URL}}');
+    
+    console.log('Linux script validated:', { size: scriptContent.length, agentName });
+  });
+
   test('Agent name validation prevents invalid characters', async ({ page }) => {
     await page.goto('/installer');
     
