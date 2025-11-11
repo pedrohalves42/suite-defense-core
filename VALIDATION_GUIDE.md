@@ -1,332 +1,271 @@
-# Guia de Validação do CyberShield Agent
+# ✅ Guia de Validação Completa - CyberShield
 
-## Visão Geral
+Checklist 100% para validar funcionalidade após correções.
 
-Este guia descreve o processo completo de validação da instalação e funcionamento do CyberShield Agent.
+## 📋 Checklist Rápido
 
-## Ferramentas de Validação
+- [ ] **Auth:** Signup, login, CAPTCHA, bloqueio IP
+- [ ] **Agents:** Instalação Windows/Linux, heartbeats
+- [ ] **Metrics:** Coletadas a cada 5min
+- [ ] **Jobs:** Criados, entregues, executados
+- [ ] **Security:** Rate limits, HMAC, validações
+- [ ] **Diagnostics:** Funções SQL operacionais
 
-### 1. Script PowerShell Automático
+---
 
-**Arquivo**: `tests/post-installation-validation.ps1`
+## 1️⃣ Autenticação
 
-Executa validação completa em 7 etapas + monitoramento contínuo.
-
-#### Uso
-
-```powershell
-# Validação padrão (3 minutos de monitoramento)
-.\tests\post-installation-validation.ps1
-
-# Validação estendida (5 minutos)
-.\tests\post-installation-validation.ps1 -TestDurationMinutes 5
+### Signup
+```sql
+-- Validar novo usuário
+SELECT 
+  u.email,
+  p.full_name,
+  t.name as tenant,
+  ur.role
+FROM auth.users u
+JOIN profiles p ON p.user_id = u.id
+JOIN user_roles ur ON ur.user_id = u.id
+JOIN tenants t ON t.id = ur.tenant_id
+WHERE u.email = 'pedrohalves42@gmail.com';
 ```
 
-#### O que é validado
+### Login + CAPTCHA
+- [ ] 1 erro: Mensagem
+- [ ] 3 erros: CAPTCHA
+- [ ] 5 erros: IP bloqueado 30min
 
-✅ Instalação dos arquivos  
-✅ Tarefa agendada configurada  
-✅ Regra de firewall ativa  
-✅ Arquivo de log criado e ativo  
-✅ Processo PowerShell rodando  
-✅ Heartbeats sendo enviados (a cada 60s)  
-✅ Métricas sendo coletadas (a cada 5min)  
+```sql
+-- Ver bloqueios
+SELECT * FROM ip_blocklist WHERE ip_address = 'SEU_IP';
 
-#### Resultados
+-- Ver tentativas
+SELECT * FROM failed_login_attempts 
+WHERE email = 'pedrohalves42@gmail.com' 
+ORDER BY created_at DESC LIMIT 5;
+```
 
-- **✓ 100% Aprovado**: Agente totalmente funcional
-- **⚠ Parcial**: Agente funciona mas precisa atenção
-- **✗ Falhou**: Agente não está funcionando
+---
 
-### 2. API de Health Check
+## 2️⃣ Agentes
 
-**Endpoint**: `/functions/v1/validate-agent-health`
+### Gerar Instalador
+```sql
+-- Verificar key criado
+SELECT * FROM enrollment_keys 
+ORDER BY created_at DESC LIMIT 1;
 
-Verifica a saúde de um agente específico via API.
+-- Verificar agente
+SELECT * FROM agents WHERE agent_name = 'TESTE-WIN-01';
 
-#### Uso
+-- Verificar token
+SELECT * FROM agent_tokens 
+WHERE agent_id = (SELECT id FROM agents WHERE agent_name = 'TESTE-WIN-01')
+AND is_active = true;
+```
 
+### Instalação Windows
+```powershell
+# Executar comando one-click
+irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/serve-installer?id=XXX | iex
+```
+
+**Validar:**
+- [ ] Pasta: `C:\ProgramData\CyberShield\`
+- [ ] Credenciais: `credentials.json`
+- [ ] Task: `CyberShield-Agent`
+- [ ] Heartbeat em 60s
+
+```sql
+-- Ver heartbeat
+SELECT 
+  agent_name,
+  status,
+  last_heartbeat,
+  os_type,
+  EXTRACT(EPOCH FROM (NOW() - last_heartbeat))::INTEGER / 60 AS minutes_ago
+FROM agents 
+WHERE agent_name = 'TESTE-WIN-01';
+
+-- Health check
+SELECT * FROM agents_health_view 
+WHERE agent_name = 'TESTE-WIN-01';
+```
+
+### Instalação Linux
 ```bash
-curl -X POST https://seu-projeto.supabase.co/functions/v1/validate-agent-health \
-  -H "Authorization: Bearer SEU_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"agentName": "SERVIDOR-01"}'
+curl -fsSL https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/serve-installer?id=XXX | sudo bash
+
+# Verificar serviço
+sudo systemctl status cybershield-agent
 ```
 
-#### Resposta
-
-```json
-{
-  "healthy": true,
-  "agentName": "SERVIDOR-01",
-  "score": 100,
-  "checks": {
-    "heartbeat": {
-      "healthy": true,
-      "lastSeen": "2025-01-11T14:30:00Z",
-      "ageMinutes": 2
-    },
-    "metrics": {
-      "healthy": true,
-      "lastSeen": "2025-01-11T14:28:00Z",
-      "ageMinutes": 4,
-      "latest": {
-        "cpu": 15.5,
-        "memory": 45.2,
-        "disk": 68.3
-      }
-    },
-    "alerts": {
-      "healthy": true,
-      "unacknowledgedCount": 0,
-      "recent": []
-    },
-    "agent": {
-      "status": "active",
-      "osType": "Windows",
-      "osVersion": "10.0.19045",
-      "hostname": "SRV-WEB-01",
-      "enrolledAt": "2025-01-11T14:00:00Z"
-    }
-  }
-}
+### Métricas (aguardar 5min)
+```sql
+-- Verificar métricas
+SELECT 
+  cpu_usage_percent,
+  memory_usage_percent,
+  disk_usage_percent,
+  collected_at
+FROM agent_system_metrics
+WHERE agent_id = (SELECT id FROM agents WHERE agent_name = 'TESTE-WIN-01')
+ORDER BY collected_at DESC LIMIT 5;
 ```
 
-### 3. Dashboard Web
+---
 
-Acesse `/admin/monitoring-advanced` para visualização em tempo real.
+## 3️⃣ Jobs
 
-#### Features
-
-- Status de todos os agentes
-- Heartbeat em tempo real
-- Métricas de sistema (CPU, RAM, Disco)
-- Alertas não reconhecidos
-- Gráficos de tendência
-
-## Fluxo de Validação Recomendado
-
-### Passo 1: Instalação
-
-```powershell
-# Execute o instalador como Administrador
-.\cybershield-installer-windows-AGENT-01.ps1
+### Criar Job
+```sql
+-- Job criado
+SELECT * FROM jobs 
+WHERE agent_name = 'TESTE-WIN-01' 
+ORDER BY created_at DESC LIMIT 1;
 ```
 
-### Passo 2: Aguarde 2 minutos
-
-Dê tempo para o agente:
-- Iniciar a tarefa agendada
-- Enviar primeiro heartbeat
-- Coletar primeiras métricas
-
-### Passo 3: Execute Validação
-
-```powershell
-# Baixe o script de validação
-Invoke-WebRequest -Uri "https://seu-projeto.com/validation.ps1" -OutFile "validation.ps1"
-
-# Execute
-.\validation.ps1
+### Job Entregue (60s)
+```sql
+-- Status "delivered"
+SELECT 
+  id, type, status, 
+  created_at, delivered_at
+FROM jobs 
+WHERE agent_name = 'TESTE-WIN-01' 
+ORDER BY created_at DESC;
 ```
 
-### Passo 4: Verifique Dashboard
-
-Acesse o dashboard web e confirme:
-- Agente aparece como "Online" (verde)
-- Última heartbeat < 5 minutos
-- Métricas sendo exibidas
-
-### Passo 5: Monitoramento Contínuo
-
-Configure alertas para:
-- Heartbeat não recebido > 10 minutos
-- Métricas não recebidas > 15 minutos
-- Uso alto de recursos (CPU > 90%, RAM > 90%, Disco > 95%)
-
-## Critérios de Aprovação
-
-### 🟢 100% Funcional
-
-- ✅ Todos os 7 testes passam
-- ✅ Heartbeat recebido nos últimos 5 minutos
-- ✅ Métricas recebidas nos últimos 10 minutos
-- ✅ Zero alertas críticos
-- ✅ Health Score = 100
-
-### 🟡 Funcional com Ressalvas
-
-- ✅ 5-6 testes passam
-- ✅ Heartbeat recebido nos últimos 15 minutos
-- ⚠️ Métricas podem estar atrasadas
-- ⚠️ Alguns alertas menores
-- 📊 Health Score = 60-99
-
-### 🔴 Não Funcional
-
-- ❌ Menos de 5 testes passam
-- ❌ Heartbeat > 15 minutos ou ausente
-- ❌ Métricas ausentes
-- ❌ Múltiplos alertas críticos
-- 📊 Health Score < 60
-
-## Troubleshooting
-
-### Problema: Nenhum heartbeat detectado
-
-**Diagnóstico:**
-```powershell
-# Verificar se tarefa está rodando
-Get-ScheduledTask -TaskName "CyberShield Agent"
-
-# Ver logs
-Get-Content C:\CyberShield\logs\agent.log -Tail 50
+### Job Concluído
+```sql
+-- Status "completed"
+SELECT 
+  id, type, status, 
+  created_at, delivered_at, completed_at
+FROM jobs 
+WHERE agent_name = 'TESTE-WIN-01' 
+ORDER BY created_at DESC;
 ```
 
-**Solução:**
-```powershell
-# Reiniciar tarefa
-Stop-ScheduledTask -TaskName "CyberShield Agent"
-Start-ScheduledTask -TaskName "CyberShield Agent"
+---
+
+## 4️⃣ Segurança
+
+### Rate Limiting
+```bash
+# Testar heartbeat: 3 req/min
+for i in {1..5}; do 
+  curl -X POST https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/heartbeat \
+    -H "X-Agent-Token: TOKEN";
+done
+# Espera: 3 OK, 2 Rate Limited (429)
 ```
 
-### Problema: Métricas não são enviadas
-
-**Diagnóstico:**
-```powershell
-# Testar coleta manual
-Get-CimInstance Win32_Processor
-Get-CimInstance Win32_OperatingSystem
+```sql
+SELECT * FROM rate_limits 
+WHERE identifier LIKE '%TESTE-WIN-01%' 
+ORDER BY window_start DESC;
 ```
 
-**Solução:**
-```powershell
-# Reinstalar agente
-# O script detectará instalação existente e substituirá
-.\cybershield-installer-windows-AGENT-01.ps1
+### HMAC Signature
+```bash
+# Testar inválido
+curl -X POST https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/heartbeat \
+  -H "X-Agent-Token: TOKEN" \
+  -H "X-HMAC-Signature: invalid"
+# Espera: 401 Unauthorized
 ```
 
-### Problema: Firewall bloqueando
-
-**Diagnóstico:**
-```powershell
-# Verificar regra de firewall
-Get-NetFirewallRule -DisplayName "CyberShield Agent"
+```sql
+-- Ver assinaturas usadas
+SELECT * FROM hmac_signatures 
+WHERE agent_name = 'TESTE-WIN-01' 
+ORDER BY used_at DESC LIMIT 10;
 ```
 
-**Solução:**
-```powershell
-# Recriar regra
-Remove-NetFirewallRule -DisplayName "CyberShield Agent"
-New-NetFirewallRule -DisplayName "CyberShield Agent" `
-    -Direction Outbound `
-    -Action Allow `
-    -Protocol TCP `
-    -RemotePort 443
+---
+
+## 5️⃣ Analytics
+
+```sql
+-- Installation events
+SELECT 
+  event_type,
+  platform,
+  agent_name,
+  created_at
+FROM installation_analytics
+WHERE tenant_id = 'SEU_TENANT_ID'
+ORDER BY created_at DESC LIMIT 20;
 ```
 
-### Problema: Erros no log
+---
 
-**Diagnóstico:**
-```powershell
-# Buscar erros críticos
-Select-String -Path "C:\CyberShield\logs\agent.log" -Pattern "ERROR|FATAL|CRITICAL"
+## 6️⃣ Stripe
+
+```sql
+-- Verificar subscription
+SELECT 
+  t.name,
+  sp.name as plan,
+  ts.status,
+  ts.device_quantity
+FROM tenant_subscriptions ts
+JOIN tenants t ON t.id = ts.tenant_id
+JOIN subscription_plans sp ON sp.id = ts.plan_id
+WHERE t.id = 'SEU_TENANT_ID';
+
+-- Features habilitadas
+SELECT feature_key, enabled, quota_limit
+FROM tenant_features
+WHERE tenant_id = 'SEU_TENANT_ID';
 ```
 
-**Solução:**
-- Anote a mensagem de erro específica
-- Verifique conectividade de rede
-- Confirme que token e HMAC secret estão corretos
-- Entre em contato com suporte se persistir
+---
 
-## Testes Automatizados (CI/CD)
+## 7️⃣ Diagnóstico
 
-### GitHub Actions
-
-```yaml
-name: Validate Agent Installation
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  validate:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      
-      - name: Install Agent
-        run: |
-          .\cybershield-installer-windows-TEST.ps1
-        shell: powershell
-      
-      - name: Wait for Agent Startup
-        run: Start-Sleep -Seconds 120
-        shell: powershell
-      
-      - name: Run Validation
-        run: |
-          $result = .\tests\post-installation-validation.ps1 -TestDurationMinutes 2
-          if ($LASTEXITCODE -ne 0) {
-            throw "Agent validation failed with exit code $LASTEXITCODE"
-          }
-        shell: powershell
-      
-      - name: Upload Logs
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: agent-logs
-          path: C:\CyberShield\logs\
+### Função `diagnose_agent_issues()`
+```sql
+-- Agente saudável
+SELECT * FROM diagnose_agent_issues('TESTE-WIN-01');
+-- Esperado: { "issue_type": "healthy" }
 ```
 
-## Métricas de Sucesso
-
-### SLA Targets
-
-- **Uptime**: > 99.9%
-- **Heartbeat Latency**: < 5 segundos
-- **Metrics Collection**: 100% de sucesso
-- **Alert Response Time**: < 2 minutos
-
-### KPIs
-
-- Taxa de instalação bem-sucedida: > 95%
-- Taxa de validação 100% aprovada: > 90%
-- Tempo médio para detecção de problemas: < 10 minutos
-- Tempo médio para resolução: < 1 hora
-
-## Suporte
-
-### Documentação Adicional
-
-- [README.md](./README.md) - Visão geral do projeto
-- [TESTING_GUIDE.md](./TESTING_GUIDE.md) - Guia de testes completo
-- [TROUBLESHOOTING_GUIDE.md](./TROUBLESHOOTING_GUIDE.md) - Solução de problemas
-
-### Contato
-
-- **Email**: gamehousetecnologia@gmail.com
-- **WhatsApp**: (34) 98443-2835
-- **Horário**: Segunda a Sexta, 9h-18h (GMT-3)
-
-### Logs para Suporte
-
-Ao abrir um ticket de suporte, inclua:
-
-```powershell
-# Coletar informações do sistema
-$info = @{
-    Hostname = $env:COMPUTERNAME
-    OS = (Get-CimInstance Win32_OperatingSystem).Caption
-    PSVersion = $PSVersionTable.PSVersion.ToString()
-    TaskStatus = (Get-ScheduledTask -TaskName "CyberShield Agent").State
-    LogTail = Get-Content C:\CyberShield\logs\agent.log -Tail 100
-}
-
-$info | ConvertTo-Json | Out-File diagnostic-report.json
+### View `agents_health_view`
+```sql
+SELECT 
+  agent_name,
+  health_status,
+  minutes_since_heartbeat
+FROM agents_health_view
+WHERE tenant_id = 'SEU_TENANT_ID';
 ```
 
-Envie o arquivo `diagnostic-report.json` junto com sua solicitação.
+---
+
+## 8️⃣ Cleanup
+
+```sql
+SELECT cleanup_old_data();
+```
+
+Valida remoção de:
+- Rate limits >1h
+- HMAC signatures >5min
+- Failed logins >24h
+- Métricas >30d
+
+---
+
+## 🚨 Troubleshooting
+
+Problemas? Consulte:
+1. **TROUBLESHOOTING_GUIDE.md** ← Guia completo
+2. **Logs:** Edge functions, console
+3. **SQL:** `SELECT * FROM diagnose_agent_issues('AGENTE')`
+
+---
+
+**Última atualização:** 2025-11-11  
+**Versão:** 2.0

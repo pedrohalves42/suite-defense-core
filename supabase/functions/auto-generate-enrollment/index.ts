@@ -7,14 +7,15 @@ import { checkRateLimit } from '../_shared/rate-limit.ts';
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
+  const startTime = Date.now();
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  console.log(`[${requestId}] [auto-generate-enrollment] Starting request`);
+
   try {
-    console.log(`[${requestId}] Starting auto-generate-enrollment`);
-    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -105,19 +106,32 @@ Deno.serve(async (req) => {
       });
     }
 
-    const body = await req.json();
-    console.log(`[${requestId}] Request body received`);
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      const errorMsg = e instanceof Error ? e.message : 'Invalid JSON';
+      console.error(`[${requestId}] [auto-generate-enrollment] Invalid JSON:`, errorMsg);
+      return handleValidationError('Invalid JSON in request body', { error: errorMsg }, requestId);
+    }
+
+    console.log(`[${requestId}] [auto-generate-enrollment] Body received:`, {
+      agentName: body?.agentName || 'MISSING'
+    });
 
     // Validate input with Zod
     const validation = AutoGenerateEnrollmentSchema.safeParse(body);
     
     if (!validation.success) {
-      console.error(`[${requestId}] Validation failed:`, validation.error.issues);
+      console.error(`[${requestId}] [auto-generate-enrollment] Validation error:`, {
+        errors: validation.error.issues,
+        receivedData: { agentName: body?.agentName || 'missing' }
+      });
       
       // Log security event for invalid input
       await logSecurityEvent({
         supabase,
-        tenantId: undefined, // Ainda não temos o tenant neste ponto
+        tenantId: undefined,
         userId: user.id,
         ipAddress,
         endpoint: 'auto-generate-enrollment',
@@ -132,7 +146,7 @@ Deno.serve(async (req) => {
         requestId
       });
       
-      return handleValidationError(validation.error);
+      return handleValidationError(validation.error, undefined, requestId);
     }
 
     const { agentName } = validation.data;
@@ -275,7 +289,12 @@ Deno.serve(async (req) => {
       .update({ current_uses: 1 })
       .eq('key', enrollmentKey);
 
-    console.log(`[${requestId}] Successfully generated credentials`);
+    const duration = Date.now() - startTime;
+    console.log(`[${requestId}] [auto-generate-enrollment] ✅ Credentials generated successfully in ${duration}ms`, {
+      agentName,
+      tenantId,
+      isExisting: !!existingAgent
+    });
     
     return new Response(
       JSON.stringify({
@@ -283,13 +302,16 @@ Deno.serve(async (req) => {
         agentToken,
         hmacSecret,
         expiresAt: tokenExpiresAt.toISOString(),
-        agentId, // Add agentId for connection monitoring
+        agentId,
+        requestId
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
   } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`[${requestId}] [auto-generate-enrollment] ❌ Error after ${duration}ms:`, error);
     return handleException(error, requestId, 'auto-generate-enrollment');
   }
 });
