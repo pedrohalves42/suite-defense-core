@@ -23,6 +23,15 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Parse body para obter OS info (se enviado)
+    let osInfo: { os_type?: string; os_version?: string; hostname?: string } = {}
+    try {
+      const body = await req.json()
+      osInfo = body || {}
+    } catch {
+      // Body vazio é OK para heartbeats legacy
+    }
+
     // Validar formato do token
     const tokenValidation = AgentTokenSchema.safeParse(agentToken)
     if (!tokenValidation.success) {
@@ -60,9 +69,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Rate limiting: 2 req/min (heartbeat a cada 60s + margem para retry)
+    // Rate limiting: 3 req/min (heartbeat a cada 60s + margem para retry)
     const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'heartbeat', {
-      maxRequests: 2,
+      maxRequests: 3,
       windowMinutes: 1,
       blockMinutes: 5,
     })
@@ -79,13 +88,25 @@ Deno.serve(async (req) => {
     
     console.log('[Heartbeat] Recebido de agente:', agent.agent_name)
 
-    // Atualizar last_heartbeat e status do agente
+    // Atualizar last_heartbeat, status e OS info (se fornecido)
+    const updateData: any = { 
+      last_heartbeat: new Date().toISOString(),
+      status: 'active'
+    }
+    
+    if (osInfo.os_type) {
+      updateData.os_type = osInfo.os_type
+    }
+    if (osInfo.os_version) {
+      updateData.os_version = osInfo.os_version
+    }
+    if (osInfo.hostname) {
+      updateData.hostname = osInfo.hostname
+    }
+
     const { error: updateError } = await supabase
       .from('agents')
-      .update({ 
-        last_heartbeat: new Date().toISOString(),
-        status: 'active'
-      })
+      .update(updateData)
       .eq('id', agent.id)
 
     if (updateError) {
