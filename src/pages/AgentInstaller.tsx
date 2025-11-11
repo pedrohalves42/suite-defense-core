@@ -1,54 +1,82 @@
 import { useState } from "react";
-import { Package, Download, Terminal, CheckCircle2, AlertCircle, FileText, Monitor, Server } from "lucide-react";
+import { Package, Download, Terminal, CheckCircle2, Monitor, Server, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 const AgentInstaller = () => {
-  const [isDownloading, setIsDownloading] = useState<string | null>(null);
+  const [agentName, setAgentName] = useState("");
+  const [platform, setPlatform] = useState<"windows" | "linux">("windows");
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const downloadFile = async (type: 'windows-template' | 'linux-template' | 'windows-agent' | 'linux-agent' | 'validation') => {
-    setIsDownloading(type);
+  const generateInstaller = async () => {
+    if (!agentName.trim()) {
+      toast.error("Por favor, informe o nome do agente");
+      return;
+    }
+
+    setIsGenerating(true);
+    
     try {
-      let filePath = '';
-      let fileName = '';
+      // 1. Gerar credenciais através do auto-generate-enrollment
+      toast.info("Gerando credenciais do agente...");
+      const { data: credentials, error: credError } = await supabase.functions.invoke(
+        'auto-generate-enrollment',
+        {
+          body: { agentName: agentName.trim() }
+        }
+      );
 
-      switch (type) {
-        case 'windows-template':
-          filePath = '/templates/install-windows-template.ps1';
-          fileName = 'install-windows-template.ps1';
-          break;
-        case 'linux-template':
-          filePath = '/templates/install-linux-template.sh';
-          fileName = 'install-linux-template.sh';
-          break;
-        case 'windows-agent':
-          filePath = '/agent-scripts/cybershield-agent-windows.ps1';
-          fileName = 'cybershield-agent-windows.ps1';
-          break;
-        case 'linux-agent':
-          filePath = '/agent-scripts/cybershield-agent-linux.sh';
-          fileName = 'cybershield-agent-linux.sh';
-          break;
-        case 'validation':
-          // Abre o link do GitHub para o script de validação
-          const validationUrl = 'https://raw.githubusercontent.com/seu-repo/main/tests/post-installation-validation.ps1';
-          window.open(validationUrl, '_blank');
-          toast.success("Link de validação aberto! Salve o arquivo no servidor.");
-          setIsDownloading(null);
-          return;
+      if (credError) throw credError;
+      if (!credentials) throw new Error("Nenhuma credencial foi retornada");
+
+      toast.success("Credenciais geradas com sucesso!");
+
+      // 2. Baixar template da plataforma
+      const templatePath = platform === 'windows' 
+        ? '/templates/install-windows-template.ps1'
+        : '/templates/install-linux-template.sh';
+      
+      const agentScriptPath = platform === 'windows'
+        ? '/agent-scripts/cybershield-agent-windows.ps1'
+        : '/agent-scripts/cybershield-agent-linux.sh';
+
+      toast.info("Baixando templates...");
+      const [templateResponse, agentScriptResponse] = await Promise.all([
+        fetch(templatePath),
+        fetch(agentScriptPath)
+      ]);
+
+      if (!templateResponse.ok || !agentScriptResponse.ok) {
+        throw new Error('Falha ao baixar templates');
       }
 
-      const response = await fetch(filePath);
-      if (!response.ok) throw new Error('Falha ao baixar arquivo');
+      let templateContent = await templateResponse.text();
+      const agentScriptContent = await agentScriptResponse.text();
 
-      const content = await response.text();
-      const blob = new Blob([content], { type: 'text/plain' });
+      // 3. Substituir placeholders no template
+      toast.info("Configurando instalador...");
+      templateContent = templateContent
+        .replace(/\{\{AGENT_TOKEN\}\}/g, credentials.agentToken)
+        .replace(/\{\{HMAC_SECRET\}\}/g, credentials.hmacSecret)
+        .replace(/\{\{SERVER_URL\}\}/g, SUPABASE_URL)
+        .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, agentScriptContent)
+        .replace(/\{\{TIMESTAMP\}\}/g, new Date().toISOString());
+
+      // 4. Criar arquivo para download
+      const fileName = platform === 'windows'
+        ? `install-${agentName}-windows.ps1`
+        : `install-${agentName}-linux.sh`;
+
+      const blob = new Blob([templateContent], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -58,347 +86,210 @@ const AgentInstaller = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success(`${fileName} baixado com sucesso!`);
-    } catch (error) {
-      console.error('Erro ao baixar arquivo:', error);
-      toast.error("Erro ao baixar arquivo");
+      toast.success(`✅ Instalador gerado e baixado com sucesso!`, {
+        description: `Arquivo: ${fileName}`
+      });
+
+      // Mostrar informações úteis
+      toast.info(`Agente ID: ${credentials.agentId}`, {
+        description: "Credenciais válidas até: " + new Date(credentials.expiresAt).toLocaleString(),
+        duration: 10000
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao gerar instalador:', error);
+      toast.error("Erro ao gerar instalador", {
+        description: error.message || "Tente novamente"
+      });
     } finally {
-      setIsDownloading(null);
+      setIsGenerating(false);
     }
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl space-y-6">
+    <div className="container mx-auto p-6 max-w-4xl space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Package className="h-10 w-10 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold">Instaladores CyberShield Agent</h1>
+          <h1 className="text-3xl font-bold">Gerador de Instaladores</h1>
           <p className="text-muted-foreground">
-            Baixe e configure os agentes de monitoramento para Windows e Linux
+            Crie instaladores prontos para usar com credenciais já configuradas
           </p>
         </div>
       </div>
 
-      {/* Alert de Informações Importantes */}
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Importante:</strong> Antes de instalar, você precisa configurar as credenciais do agente.
-          Os templates precisam ser editados com <code className="bg-muted px-1 py-0.5 rounded">AGENT_TOKEN</code>, <code className="bg-muted px-1 py-0.5 rounded">HMAC_SECRET</code> e <code className="bg-muted px-1 py-0.5 rounded">SERVER_URL</code>.
+      {/* Alert de Nova Funcionalidade */}
+      <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
+        <CheckCircle2 className="h-4 w-4 text-green-600" />
+        <AlertDescription className="text-green-800 dark:text-green-200">
+          <strong>✨ Novo:</strong> Agora o instalador é gerado automaticamente com credenciais já configuradas! 
+          Não é mais necessário editar placeholders manualmente.
         </AlertDescription>
       </Alert>
 
-      <Tabs defaultValue="windows" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="windows">
-            <Monitor className="h-4 w-4 mr-2" />
-            Windows
-          </TabsTrigger>
-          <TabsTrigger value="linux">
-            <Server className="h-4 w-4 mr-2" />
-            Linux
-          </TabsTrigger>
-          <TabsTrigger value="validation">
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Validação
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Windows Tab */}
-        <TabsContent value="windows" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Monitor className="h-5 w-5" />
-                Instalador Windows
-                <Badge variant="outline">PowerShell</Badge>
-              </CardTitle>
-              <CardDescription>
-                Compatível com Windows Server 2012+, Windows 10/11
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Template de Instalação */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Template de Instalação
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Script principal que instala e configura o agente no Windows
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => downloadFile('windows-template')}
-                    disabled={isDownloading === 'windows-template'}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    {isDownloading === 'windows-template' ? 'Baixando...' : 'Baixar Template'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Script do Agente */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Script do Agente
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Script que executa continuamente no servidor (heartbeats, métricas, jobs)
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => downloadFile('windows-agent')}
-                    disabled={isDownloading === 'windows-agent'}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    {isDownloading === 'windows-agent' ? 'Baixando...' : 'Baixar Agent'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Instruções */}
-              <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-3">
-                <h4 className="font-semibold flex items-center gap-2">
-                  <Terminal className="h-4 w-4" />
-                  Como Instalar:
-                </h4>
-                <ol className="text-sm space-y-2 list-decimal list-inside">
-                  <li>Baixe o <strong>Template de Instalação</strong></li>
-                  <li>Edite o template e substitua os placeholders:
-                    <ul className="ml-6 mt-1 space-y-1">
-                      <li><code className="bg-background px-1 py-0.5 rounded">{'{{AGENT_TOKEN}}'}</code> - Token único do agente</li>
-                      <li><code className="bg-background px-1 py-0.5 rounded">{'{{HMAC_SECRET}}'}</code> - Chave HMAC para autenticação</li>
-                      <li><code className="bg-background px-1 py-0.5 rounded">{'{{SERVER_URL}}'}</code> - URL do servidor: <code className="bg-background px-1 py-0.5 rounded">{SUPABASE_URL}</code></li>
-                    </ul>
-                  </li>
-                  <li>Copie o arquivo .ps1 editado para o servidor Windows</li>
-                  <li>Abra <strong>PowerShell como Administrador</strong></li>
-                  <li>Execute: <code className="bg-background px-1 py-0.5 rounded">.\install-windows-template.ps1</code></li>
-                  <li>Aguarde a conclusão da instalação</li>
-                </ol>
-              </div>
-
-              {/* Build EXE */}
-              <Alert>
-                <FileText className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Compilar para EXE:</strong> Para criar um instalador executável, veja o guia completo em <code className="bg-muted px-1 py-0.5 rounded">EXE_BUILD_INSTRUCTIONS.md</code>
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Linux Tab */}
-        <TabsContent value="linux" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Server className="h-5 w-5" />
-                Instalador Linux
-                <Badge variant="outline">Bash</Badge>
-              </CardTitle>
-              <CardDescription>
-                Compatível com Ubuntu, Debian, CentOS, RHEL
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Template de Instalação */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Template de Instalação
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Script principal que instala e configura o agente no Linux
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => downloadFile('linux-template')}
-                    disabled={isDownloading === 'linux-template'}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    {isDownloading === 'linux-template' ? 'Baixando...' : 'Baixar Template'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Script do Agente */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Script do Agente
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Script que executa continuamente no servidor (heartbeats, métricas, jobs)
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => downloadFile('linux-agent')}
-                    disabled={isDownloading === 'linux-agent'}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    {isDownloading === 'linux-agent' ? 'Baixando...' : 'Baixar Agent'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Instruções */}
-              <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-3">
-                <h4 className="font-semibold flex items-center gap-2">
-                  <Terminal className="h-4 w-4" />
-                  Como Instalar:
-                </h4>
-                <ol className="text-sm space-y-2 list-decimal list-inside">
-                  <li>Baixe o <strong>Template de Instalação</strong></li>
-                  <li>Edite o template e substitua os placeholders:
-                    <ul className="ml-6 mt-1 space-y-1">
-                      <li><code className="bg-background px-1 py-0.5 rounded">{'{{AGENT_TOKEN}}'}</code> - Token único do agente</li>
-                      <li><code className="bg-background px-1 py-0.5 rounded">{'{{HMAC_SECRET}}'}</code> - Chave HMAC para autenticação</li>
-                      <li><code className="bg-background px-1 py-0.5 rounded">{'{{SERVER_URL}}'}</code> - URL do servidor: <code className="bg-background px-1 py-0.5 rounded">{SUPABASE_URL}</code></li>
-                    </ul>
-                  </li>
-                  <li>Copie o arquivo .sh editado para o servidor Linux</li>
-                  <li>Dê permissão de execução: <code className="bg-background px-1 py-0.5 rounded">chmod +x install-linux-template.sh</code></li>
-                  <li>Execute como root: <code className="bg-background px-1 py-0.5 rounded">sudo ./install-linux-template.sh</code></li>
-                  <li>Aguarde a conclusão da instalação</li>
-                </ol>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Validation Tab */}
-        <TabsContent value="validation" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5" />
-                Script de Validação Pós-Instalação
-                <Badge variant="outline">Windows</Badge>
-              </CardTitle>
-              <CardDescription>
-                Valida se o agente está funcionando 100% após a instalação
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Script de Validação */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Script de Validação
-                    </h4>
-                    <p className="text-sm text-muted-foreground">
-                      Verifica instalação, heartbeats, métricas e funcionamento completo
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => downloadFile('validation')}
-                    disabled={isDownloading === 'validation'}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    {isDownloading === 'validation' ? 'Abrindo...' : 'Baixar Script'}
-                  </Button>
-                </div>
-              </div>
-
-              {/* O que o script verifica */}
-              <div className="p-4 bg-muted rounded-lg space-y-2">
-                <h4 className="font-semibold">✅ O que é validado:</h4>
-                <ul className="text-sm space-y-1 list-disc list-inside">
-                  <li>Instalação dos diretórios e arquivos</li>
-                  <li>Tarefa agendada no Windows (Task Scheduler)</li>
-                  <li>Regras de firewall</li>
-                  <li>Arquivo de log e crescimento ativo</li>
-                  <li>Processos PowerShell em execução</li>
-                  <li><strong>Heartbeats sendo enviados</strong> (60s)</li>
-                  <li><strong>Métricas do sistema</strong> (5min)</li>
-                </ul>
-              </div>
-
-              {/* Instruções */}
-              <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-3">
-                <h4 className="font-semibold flex items-center gap-2">
-                  <Terminal className="h-4 w-4" />
-                  Como Usar:
-                </h4>
-                <ol className="text-sm space-y-2 list-decimal list-inside">
-                  <li>Aguarde <strong>2 minutos</strong> após a instalação</li>
-                  <li>Baixe o script de validação</li>
-                  <li>Execute como <strong>Administrador</strong>:
-                    <br />
-                    <code className="bg-background px-1 py-0.5 rounded mt-1 inline-block">.\post-installation-validation.ps1</code>
-                  </li>
-                  <li>O script fará <strong>7 verificações</strong> + monitoramento de 3 minutos</li>
-                  <li>Resultado:
-                    <ul className="ml-6 mt-1 space-y-1">
-                      <li>✅ <strong>Exit Code 0</strong> = 100% funcionando</li>
-                      <li>⚠️ <strong>Exit Code 1</strong> = Parcialmente funcionando</li>
-                      <li>❌ <strong>Exit Code 2</strong> = Não funcionando</li>
-                    </ul>
-                  </li>
-                </ol>
-              </div>
-
-              {/* Documentação */}
-              <Alert>
-                <FileText className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Documentação completa:</strong> Veja <code className="bg-muted px-1 py-0.5 rounded">tests/README-validation.md</code> e <code className="bg-muted px-1 py-0.5 rounded">VALIDATION_GUIDE.md</code>
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Links Rápidos */}
+      {/* Formulário de Geração */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">📚 Documentação Adicional</CardTitle>
+          <CardTitle>Configurar Novo Agente</CardTitle>
+          <CardDescription>
+            Informe o nome do agente e escolha a plataforma para gerar o instalador
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Nome do Agente */}
+          <div className="space-y-2">
+            <Label htmlFor="agentName">Nome do Agente *</Label>
+            <Input
+              id="agentName"
+              placeholder="ex: servidor-web-01, backup-server, database-prod"
+              value={agentName}
+              onChange={(e) => setAgentName(e.target.value)}
+              disabled={isGenerating}
+            />
+            <p className="text-xs text-muted-foreground">
+              Use um nome descritivo para identificar facilmente o servidor
+            </p>
+          </div>
+
+          {/* Plataforma */}
+          <div className="space-y-3">
+            <Label>Plataforma *</Label>
+            <RadioGroup 
+              value={platform} 
+              onValueChange={(value) => setPlatform(value as "windows" | "linux")}
+              disabled={isGenerating}
+            >
+              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-accent">
+                <RadioGroupItem value="windows" id="windows" />
+                <Label htmlFor="windows" className="flex items-center gap-2 flex-1 cursor-pointer">
+                  <Monitor className="h-4 w-4" />
+                  <div>
+                    <div className="font-semibold">Windows</div>
+                    <div className="text-xs text-muted-foreground">
+                      Windows Server 2012+, Windows 10/11
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="ml-auto">PowerShell</Badge>
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-accent">
+                <RadioGroupItem value="linux" id="linux" />
+                <Label htmlFor="linux" className="flex items-center gap-2 flex-1 cursor-pointer">
+                  <Server className="h-4 w-4" />
+                  <div>
+                    <div className="font-semibold">Linux</div>
+                    <div className="text-xs text-muted-foreground">
+                      Ubuntu, Debian, CentOS, RHEL
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="ml-auto">Bash</Badge>
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {/* Botão de Gerar */}
+          <Button 
+            onClick={generateInstaller} 
+            disabled={isGenerating || !agentName.trim()}
+            className="w-full"
+            size="lg"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Gerando instalador...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Gerar e Baixar Instalador
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Instruções de Instalação */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Terminal className="h-4 w-4" />
+            Como Instalar o Agente
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {platform === "windows" ? (
+            <div className="space-y-3">
+              <h4 className="font-semibold text-sm">Passos para Windows:</h4>
+              <ol className="text-sm space-y-2 list-decimal list-inside">
+                <li>Clique em <strong>"Gerar e Baixar Instalador"</strong> acima</li>
+                <li>Copie o arquivo <code className="bg-muted px-1 py-0.5 rounded">.ps1</code> para o servidor Windows</li>
+                <li>Clique com botão direito no arquivo e selecione <strong>"Executar com PowerShell"</strong></li>
+                <li>Ou abra PowerShell como Administrador e execute:
+                  <code className="block bg-muted px-2 py-1 rounded mt-1">.\install-{agentName || 'agente'}-windows.ps1</code>
+                </li>
+                <li>Aguarde a conclusão da instalação (≈30 segundos)</li>
+                <li>O agente iniciará automaticamente e aparecerá no dashboard</li>
+              </ol>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h4 className="font-semibold text-sm">Passos para Linux:</h4>
+              <ol className="text-sm space-y-2 list-decimal list-inside">
+                <li>Clique em <strong>"Gerar e Baixar Instalador"</strong> acima</li>
+                <li>Copie o arquivo <code className="bg-muted px-1 py-0.5 rounded">.sh</code> para o servidor Linux</li>
+                <li>Dê permissão de execução:
+                  <code className="block bg-muted px-2 py-1 rounded mt-1">chmod +x install-{agentName || 'agente'}-linux.sh</code>
+                </li>
+                <li>Execute como root:
+                  <code className="block bg-muted px-2 py-1 rounded mt-1">sudo ./install-{agentName || 'agente'}-linux.sh</code>
+                </li>
+                <li>Aguarde a conclusão da instalação</li>
+                <li>O agente iniciará automaticamente e aparecerá no dashboard</li>
+              </ol>
+            </div>
+          )}
+
+          <Alert>
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertDescription>
+              <strong>✅ Pronto para usar:</strong> O instalador gerado já contém todas as credenciais necessárias.
+              Não é necessário editar nenhum arquivo ou configurar manualmente.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+
+      {/* O que acontece após a instalação */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">📊 O que acontece após a instalação?</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" className="h-auto py-3" asChild>
-              <a href="/EXE_BUILD_INSTRUCTIONS.md" target="_blank" rel="noopener noreferrer">
-                <div className="text-left">
-                  <div className="font-semibold">Build EXE Windows</div>
-                  <div className="text-xs text-muted-foreground">Como compilar o instalador</div>
-                </div>
-              </a>
-            </Button>
-            <Button variant="outline" className="h-auto py-3" asChild>
-              <a href="/VALIDATION_GUIDE.md" target="_blank" rel="noopener noreferrer">
-                <div className="text-left">
-                  <div className="font-semibold">Guia de Validação</div>
-                  <div className="text-xs text-muted-foreground">Troubleshooting completo</div>
-                </div>
-              </a>
-            </Button>
-            <Button variant="outline" className="h-auto py-3" asChild>
-              <a href="/INSTALLATION_GUIDE.md" target="_blank" rel="noopener noreferrer">
-                <div className="text-left">
-                  <div className="font-semibold">Guia de Instalação</div>
-                  <div className="text-xs text-muted-foreground">Documentação detalhada</div>
-                </div>
-              </a>
-            </Button>
-          </div>
+          <ul className="space-y-2 text-sm">
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+              <span>O agente envia <strong>heartbeats a cada 60 segundos</strong> confirmando que está online</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+              <span>Métricas do sistema (CPU, RAM, Disco) são coletadas <strong>a cada 5 minutos</strong></span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+              <span>O agente busca <strong>jobs pendentes</strong> para executar automaticamente</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+              <span>Alertas são gerados caso recursos do sistema ultrapassem limites (&gt;80% CPU/RAM/Disco)</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+              <span>Você pode visualizar tudo em tempo real no <strong>Dashboard de Monitoramento</strong></span>
+            </li>
+          </ul>
         </CardContent>
       </Card>
     </div>
