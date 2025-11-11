@@ -1616,6 +1616,26 @@ export type Database = {
           },
         ]
       }
+      installation_metrics_hourly: {
+        Row: {
+          avg_install_time: number | null
+          error_count: number | null
+          event_count: number | null
+          event_type: string | null
+          hour: string | null
+          platform: string | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installation_analytics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       installation_metrics_summary: {
         Row: {
           date: string | null
