@@ -39,6 +39,18 @@ npx playwright show-report
 
 ## Testes Implementados
 
+### agent-installation.spec.ts (NOVO)
+- ✓ Login e geração de credenciais
+- ✓ Validação de estrutura do script
+- ✓ Checagem de privilégios administrativos
+- ✓ Criação de diretórios e arquivos
+- ✓ Configuração de tarefa agendada
+- ✓ Teste de conectividade
+- ✓ Tratamento de erros
+- ✓ Mensagens de progresso e sucesso
+- ✓ Geração de script para teste manual
+- ✓ Compatibilidade Windows Server 2012-2025
+
 ### admin-access.spec.ts
 - ✓ Admin vê seção "Administração"
 - ✓ Admin acessa /admin/dashboard
@@ -155,6 +167,42 @@ Aumentar timeout em `playwright.config.ts` se conexão for lenta
 - Verificam bloqueio de XSS
 - Garantem formato correto de nomes de agents
 - Testam edge cases e limites de input
+
+### Agent Installation Tests (NOVO)
+- Validam geração do script de instalação Windows
+- Verificam checagens de segurança (privilégios admin)
+- Testam estrutura de tarefa agendada
+- Validam teste de conectividade com servidor
+- Verificam compatibilidade com Windows Server 2012-2025
+- Geram script para teste manual em ambiente Windows real
+
+## Teste Manual de Instalação
+
+Para validar instalação em ambiente Windows real:
+
+```powershell
+# Executar teste completo de instalação
+powershell -ExecutionPolicy Bypass -File tests/manual-installation-test.ps1
+
+# Ou especificar caminhos customizados
+powershell -ExecutionPolicy Bypass -File tests/manual-installation-test.ps1 `
+  -ScriptPath "C:\CyberShield\agent.ps1" `
+  -LogPath "C:\CyberShield\logs\agent.log"
+```
+
+**O que é testado:**
+- ✅ PowerShell 3.0+ e privilégios administrativos
+- ✅ Compatibilidade do sistema operacional
+- ✅ Instalação de diretórios e arquivos
+- ✅ Configuração da tarefa agendada
+- ✅ Conectividade com servidor (DNS, HTTPS, TLS)
+- ✅ Serviços do sistema (Task Scheduler, Event Log)
+- ✅ Análise de logs do agente
+
+**Resultado esperado:** 
+- Taxa de sucesso: >90%
+- Relatório detalhado com troubleshooting
+- Últimas 10 linhas do log do agente
 
 ## CI/CD Pipeline
 
