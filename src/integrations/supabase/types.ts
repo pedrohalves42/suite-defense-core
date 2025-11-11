@@ -390,6 +390,7 @@ export type Database = {
       }
       enrollment_keys: {
         Row: {
+          agent_id: string | null
           created_at: string
           created_by: string | null
           current_uses: number
@@ -404,6 +405,7 @@ export type Database = {
           used_by_agent: string | null
         }
         Insert: {
+          agent_id?: string | null
           created_at?: string
           created_by?: string | null
           current_uses?: number
@@ -418,6 +420,7 @@ export type Database = {
           used_by_agent?: string | null
         }
         Update: {
+          agent_id?: string | null
           created_at?: string
           created_by?: string | null
           current_uses?: number
@@ -432,6 +435,27 @@ export type Database = {
           used_by_agent?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "enrollment_keys_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -1667,6 +1691,7 @@ export type Database = {
       cleanup_old_metrics: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       cleanup_old_security_logs: { Args: never; Returns: undefined }
+      cleanup_orphaned_agents: { Args: never; Returns: number }
       current_user_tenant_id: { Args: never; Returns: string }
       diagnose_agent_issues: {
         Args: { p_agent_name: string }
