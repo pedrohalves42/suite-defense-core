@@ -53,6 +53,19 @@ Deno.serve(async (req) => {
       agentName: rawData?.agentName || 'MISSING'
     });
 
+    // FASE 1: Explicit check for missing enrollmentKey
+    if (!rawData?.enrollmentKey) {
+      console.error(`[${requestId}] [enroll-agent] Missing enrollmentKey in request`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'enrollmentKey is required',
+          code: 'MISSING_ENROLLMENT_KEY',
+          requestId 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const validation = EnrollAgentSchema.safeParse(rawData);
     if (!validation.success) {
       console.error(`[${requestId}] [enroll-agent] Validation error:`, {
@@ -76,57 +89,75 @@ Deno.serve(async (req) => {
       .single();
 
     if (keyError || !keyData) {
+      console.error(`[${requestId}] [enroll-agent] Invalid enrollment key: ${enrollmentKey}`);
       await createAuditLog({
         supabase,
         tenantId: 'unknown',
         action: 'agent_enrollment_failed',
         resourceType: 'agent',
         resourceId: agentName,
-        details: { reason: 'invalid_key' },
+        details: { reason: 'invalid_key', key: enrollmentKey },
         request: req,
         success: false,
       });
 
       return new Response(
-        JSON.stringify({ error: 'Chave de enrollment inválida' }),
+        JSON.stringify({ 
+          error: 'Chave de enrollment inválida ou não encontrada',
+          code: 'INVALID_ENROLLMENT_KEY',
+          requestId
+        }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Check expiration
     if (new Date(keyData.expires_at) < new Date()) {
+      console.error(`[${requestId}] [enroll-agent] Expired enrollment key: ${enrollmentKey}`);
       await createAuditLog({
         supabase,
         tenantId: keyData.tenant_id,
         action: 'agent_enrollment_failed',
         resourceType: 'agent',
         resourceId: agentName,
-        details: { reason: 'expired_key', key_id: keyData.id },
+        details: { reason: 'expired_key', key_id: keyData.id, expired_at: keyData.expires_at },
         request: req,
         success: false,
       });
 
       return new Response(
-        JSON.stringify({ error: 'Chave de enrollment expirada' }),
+        JSON.stringify({ 
+          error: 'Chave de enrollment expirada',
+          code: 'EXPIRED_ENROLLMENT_KEY',
+          expiredAt: keyData.expires_at,
+          requestId
+        }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Check usage limit
     if (keyData.max_uses !== null && keyData.current_uses >= keyData.max_uses) {
+      console.error(`[${requestId}] [enroll-agent] Key usage limit exceeded: ${enrollmentKey}`);
       await createAuditLog({
         supabase,
         tenantId: keyData.tenant_id,
         action: 'agent_enrollment_failed',
         resourceType: 'agent',
         resourceId: agentName,
-        details: { reason: 'max_uses_exceeded', key_id: keyData.id },
+        details: { reason: 'max_uses_exceeded', key_id: keyData.id, current: keyData.current_uses, max: keyData.max_uses },
         request: req,
         success: false,
       });
 
       return new Response(
-        JSON.stringify({ error: 'Limite de uso da chave atingido' }),
+        JSON.stringify({ 
+          error: 'Limite de uso da chave atingido',
+          code: 'KEY_USAGE_EXCEEDED',
+          currentUses: keyData.current_uses,
+          maxUses: keyData.max_uses,
+          requestId
+        }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
