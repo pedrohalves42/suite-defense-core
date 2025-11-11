@@ -5,7 +5,7 @@ import * as path from 'path';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://iavbnmduxpxhwubqrzzn.supabase.co';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || '***REMOVED***';
 
-test.describe('Agent Installation E2E', () => {
+test.describe('Windows Agent Installation E2E', () => {
   let authToken: string;
   let installScript: string;
   let agentName: string;
