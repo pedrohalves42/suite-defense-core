@@ -533,6 +533,30 @@ export type Database = {
           },
         ]
       }
+      ip_blocklist: {
+        Row: {
+          blocked_until: string
+          created_at: string
+          id: string
+          ip_address: string
+          reason: string
+        }
+        Insert: {
+          blocked_until: string
+          created_at?: string
+          id?: string
+          ip_address: string
+          reason: string
+        }
+        Update: {
+          blocked_until?: string
+          created_at?: string
+          id?: string
+          ip_address?: string
+          reason?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
           agent_name: string

@@ -38,6 +38,12 @@ Deno.serve(async (req) => {
       .delete()
       .eq('ip_address', ipAddress);
 
+    // Remover IP da blocklist
+    await supabaseAdmin
+      .from('ip_blocklist')
+      .delete()
+      .eq('ip_address', ipAddress);
+
     return new Response(
       JSON.stringify({ success: true }),
       {
