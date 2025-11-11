@@ -121,7 +121,7 @@ export const ContactForm = () => {
       console.error("Error submitting contact form:", error);
       toast({
         title: "Erro ao enviar",
-        description: "Tente novamente ou envie um email para contato@cybershield.com.br",
+        description: "Tente novamente ou envie um email para gamehousetecnologia@gmail.com",
         variant: "destructive",
       });
     } finally {
