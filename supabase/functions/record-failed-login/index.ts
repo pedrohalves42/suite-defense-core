@@ -47,18 +47,58 @@ Deno.serve(async (req) => {
         user_agent: userAgent || null,
       });
 
-    // Logar evento de segurança
-    await supabaseAdmin
-      .from('security_logs')
-      .insert({
-        ip_address: ipAddress,
-        endpoint: '/auth/login',
-        attack_type: 'brute_force',
-        severity: 'medium',
-        blocked: false,
-        details: { email, user_agent: userAgent },
-        user_agent: userAgent || null,
-      });
+    // Verificar se deve bloquear IP (5 tentativas em 1 hora)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count } = await supabaseAdmin
+      .from('failed_login_attempts')
+      .select('*', { count: 'exact', head: true })
+      .eq('ip_address', ipAddress)
+      .gte('created_at', oneHourAgo);
+
+    if (count && count >= 5) {
+      // Bloquear IP por 30 minutos
+      const blockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+      await supabaseAdmin
+        .from('ip_blocklist')
+        .upsert({
+          ip_address: ipAddress,
+          blocked_until: blockedUntil.toISOString(),
+          reason: 'Múltiplas tentativas de login falhadas',
+        }, {
+          onConflict: 'ip_address',
+        });
+
+      // Logar evento de segurança como bloqueado
+      await supabaseAdmin
+        .from('security_logs')
+        .insert({
+          ip_address: ipAddress,
+          endpoint: '/auth/login',
+          attack_type: 'brute_force',
+          severity: 'high',
+          blocked: true,
+          details: { 
+            email, 
+            user_agent: userAgent,
+            attempt_count: count,
+            blocked_until: blockedUntil.toISOString(),
+          },
+          user_agent: userAgent || null,
+        });
+    } else {
+      // Logar evento de segurança
+      await supabaseAdmin
+        .from('security_logs')
+        .insert({
+          ip_address: ipAddress,
+          endpoint: '/auth/login',
+          attack_type: 'brute_force',
+          severity: 'medium',
+          blocked: false,
+          details: { email, user_agent: userAgent },
+          user_agent: userAgent || null,
+        });
+    }
 
     return new Response(
       JSON.stringify({ success: true }),

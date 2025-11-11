@@ -411,7 +411,7 @@ const Landing = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">SSO/SAML integration</span>
+                  <span className="text-sm">Integração SSO/SAML</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
@@ -728,7 +728,7 @@ const Landing = () => {
               </AccordionTrigger>
               <AccordionContent className="text-muted-foreground">
                 Sim! Você pode fazer upgrade ou downgrade a qualquer momento. Ao fazer upgrade, você terá acesso imediato aos 
-                novos recursos e pagaremos proporcionalmente. No downgrade, o crédito é aplicado no próximo ciclo de cobrança. 
+                novos recursos com cobrança proporcional. No downgrade, o crédito é aplicado no próximo ciclo de cobrança. 
                 Não há taxas de mudança de plano ou penalidades.
               </AccordionContent>
             </AccordionItem>
@@ -740,7 +740,7 @@ const Landing = () => {
               <AccordionContent className="text-muted-foreground">
                 No plano Starter (máx 30 dispositivos), você será notificado ao se aproximar do limite e poderá fazer upgrade 
                 para o Pro. No plano Pro (máx 200 dispositivos), entraremos em contato para criar um plano Enterprise customizado. 
-                Você nunca será cobrado surpresas - sempre avisaremos antes de qualquer mudança necessária.
+                Você nunca receberá cobranças inesperadas - sempre avisaremos antes de qualquer mudança necessária.
               </AccordionContent>
             </AccordionItem>
 

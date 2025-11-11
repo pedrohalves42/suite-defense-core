@@ -270,6 +270,70 @@ src/pages/AgentInstaller.tsx         (Refatorado - usa templates)
 
 ---
 
+## 🎉 NOVAS CORREÇÕES IMPLEMENTADAS (11/11/2025)
+
+### ✅ **Correção 4: Erros de Português na Landing Page** - ✅ **CONCLUÍDO**
+**Arquivos:** 
+- `src/pages/Landing.tsx` (linhas 414, 731, 743)
+- `src/components/ContactForm.tsx` (linha 124)
+
+**Status:** ✅ CORRIGIDO
+
+**Mudanças Realizadas:**
+1. ✅ Linha 414: "SSO/SAML integration" → "Integração SSO/SAML"
+2. ✅ Linha 731: "pagaremos proporcionalmente" → "cobrança proporcional"
+3. ✅ Linha 743: "cobrado surpresas" → "receberá cobranças inesperadas"
+4. ✅ Linha 124: Email de contato corrigido para gamehousetecnologia@gmail.com
+
+**Resultado:** Landing page 100% em português brasileiro sem erros gramaticais.
+
+---
+
+### ✅ **Correção 5: Proteção Anti Brute-Force com CAPTCHA** - ✅ **CONCLUÍDO**
+**Arquivos:** 
+- Migration: tabelas `failed_login_attempts` e `ip_blocklist`
+- `supabase/functions/record-failed-login/index.ts`
+- `supabase/functions/check-failed-logins/index.ts`
+- `supabase/functions/clear-failed-logins/index.ts`
+- `src/pages/Login.tsx`
+
+**Status:** ✅ IMPLEMENTADO
+
+**Funcionalidades Implementadas:**
+1. ✅ **Tabelas de Tracking:**
+   - `failed_login_attempts`: rastreia todas as tentativas falhadas
+   - `ip_blocklist`: lista de IPs temporariamente bloqueados
+   - Índices otimizados para performance
+   - RLS habilitado (acesso apenas via edge functions)
+
+2. ✅ **Sistema de CAPTCHA:**
+   - Cloudflare Turnstile integrado
+   - CAPTCHA aparece após 3 tentativas falhadas
+   - Validação visual clara para o usuário
+   - Site key pública: 0x4AAAAAACAPH5mLazH9_Ahd
+
+3. ✅ **Bloqueio Automático de IP:**
+   - IP bloqueado por 30 minutos após 5 tentativas em 1 hora
+   - Mensagem clara ao usuário quando bloqueado
+   - Horário de desbloqueio exibido
+   - Sistema de cleanup automático (24 horas)
+
+4. ✅ **Logs de Segurança:**
+   - Tentativas normais: severidade "medium"
+   - IP bloqueado: severidade "high"
+   - Detalhes completos: email, user agent, contador de tentativas
+   - Integração com tabela security_logs existente
+
+5. ✅ **Limpeza Automática:**
+   - Função `cleanup_old_failed_attempts()` criada
+   - Remove registros com mais de 24 horas
+   - Remove IPs bloqueados expirados
+   - Execução via cron job (pendente configuração)
+
+**Resultado:** Sistema de login protegido contra ataques de força bruta com múltiplas camadas de defesa.
+
+---
+
 ### **FASE 2: CORREÇÕES DE SEGURANÇA**
 
 #### ✅ **Ação 2.1: Implementar Rate Limiting Efetivo para Login**

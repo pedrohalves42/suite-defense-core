@@ -32,6 +32,28 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Verificar se IP está bloqueado
+    const { data: blockedIp } = await supabaseAdmin
+      .from('ip_blocklist')
+      .select('blocked_until')
+      .eq('ip_address', ipAddress)
+      .gte('blocked_until', new Date().toISOString())
+      .single();
+
+    if (blockedIp) {
+      return new Response(
+        JSON.stringify({
+          blocked: true,
+          blockedUntil: blockedIp.blocked_until,
+          message: 'IP temporariamente bloqueado devido a múltiplas tentativas de login falhadas',
+        }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Buscar tentativas falhadas nas últimas 24h
     const { data: attempts, count } = await supabaseAdmin
       .from('failed_login_attempts')

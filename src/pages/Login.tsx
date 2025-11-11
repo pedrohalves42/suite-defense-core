@@ -41,6 +41,17 @@ export default function Login() {
       });
 
       if (!error && data) {
+        // Verificar se IP está bloqueado
+        if (data.blocked) {
+          toast({
+            variant: 'destructive',
+            title: 'Acesso temporariamente bloqueado',
+            description: `Seu IP foi bloqueado até ${new Date(data.blockedUntil).toLocaleString('pt-BR')} devido a múltiplas tentativas de login falhadas.`,
+            duration: 10000,
+          });
+          return;
+        }
+
         setRequiresCaptcha(data.requiresCaptcha);
         setAttemptCount(data.attemptCount);
         
@@ -64,7 +75,7 @@ export default function Login() {
     };
 
     checkFailedAttempts();
-  }, []);
+  }, [toast]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
