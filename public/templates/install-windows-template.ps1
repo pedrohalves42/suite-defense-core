@@ -231,5 +231,11 @@ try {
     exit 1
 }
 
-Write-Host "Pressione Enter para sair..." -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "VALIDAÇÃO PÓS-INSTALAÇÃO (Opcional):" -ForegroundColor Cyan
+    Write-Host "  Para validar se o agente está funcionando 100%:" -ForegroundColor White
+    Write-Host "  1. Aguarde 2 minutos para o agente iniciar" -ForegroundColor White
+    Write-Host "  2. Execute: .\post-installation-validation.ps1" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Pressione Enter para sair..." -ForegroundColor Gray
 Read-Host
