@@ -11,6 +11,82 @@ Os testes E2E de instalação validam o fluxo completo de geração e instalaç�
 - Tratamento de erros robusto
 - Compatibilidade com Windows Server 2012-2025
 
+## Linux Installation
+
+### Automated E2E Tests
+
+```bash
+# Run Linux installation tests
+npx playwright test e2e/linux-agent-installation.spec.ts
+
+# Run with UI
+npx playwright test e2e/linux-agent-installation.spec.ts --ui
+
+# Run specific test
+npx playwright test e2e/linux-agent-installation.spec.ts -g "should generate valid Linux installation script"
+```
+
+### Manual Testing on Linux
+
+#### Prerequisites
+- Ubuntu 18.04+, CentOS 7+, or Debian 9+
+- Root/sudo access
+- Internet connectivity
+
+#### Test Steps
+
+1. **Download the installer script**
+   ```bash
+   # From the web interface or use curl
+   curl -O https://your-server.com/path/to/cybershield-agent-linux.sh
+   ```
+
+2. **Make it executable**
+   ```bash
+   chmod +x cybershield-agent-linux.sh
+   ```
+
+3. **Run the installer**
+   ```bash
+   sudo bash cybershield-agent-linux.sh <AGENT_TOKEN> <HMAC_SECRET> <SERVER_URL> [POLL_INTERVAL]
+   ```
+
+4. **Verify installation**
+   ```bash
+   # Check service status
+   sudo systemctl status cybershield-agent
+   
+   # Check if service is enabled
+   sudo systemctl is-enabled cybershield-agent
+   
+   # View logs
+   sudo journalctl -u cybershield-agent -n 50
+   
+   # Check configuration
+   sudo cat /opt/cybershield/agent.conf
+   
+   # Verify directories
+   ls -la /opt/cybershield
+   ls -la /var/log/cybershield
+   ```
+
+5. **Test service operations**
+   ```bash
+   # Stop service
+   sudo systemctl stop cybershield-agent
+   
+   # Start service
+   sudo systemctl start cybershield-agent
+   
+   # Restart service
+   sudo systemctl restart cybershield-agent
+   
+   # View real-time logs
+   sudo journalctl -u cybershield-agent -f
+   ```
+
+## Windows Installation
+
 ## Executar Testes E2E
 
 ### Pré-requisitos
