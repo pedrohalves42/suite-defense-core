@@ -88,6 +88,94 @@ poll_jobs() {
     secure_request "${SERVER_URL}/functions/v1/poll-jobs" "GET"
 }
 
+# Função para enviar heartbeat
+send_heartbeat() {
+    log_info "Enviando heartbeat..."
+    
+    # Coletar info do OS
+    local os_type="linux"
+    local os_version=$(cat /etc/os-release | grep "PRETTY_NAME" | cut -d'"' -f2 2>/dev/null || echo "Linux")
+    local hostname=$(hostname)
+    
+    local heartbeat_json
+    heartbeat_json=$(cat <<EOF
+{
+  "os_type": "$os_type",
+  "os_version": "$os_version",
+  "hostname": "$hostname"
+}
+EOF
+)
+    
+    local response=$(secure_request "${SERVER_URL}/functions/v1/heartbeat" "POST" "$heartbeat_json")
+    
+    if echo "$response" | grep -q '"ok":true'; then
+        log_info "Heartbeat enviado com sucesso"
+    else
+        log_warn "Falha no heartbeat"
+    fi
+}
+
+# Função para enviar métricas do sistema
+send_system_metrics() {
+    log_info "Coletando e enviando métricas do sistema..."
+    
+    # CPU usage
+    local cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{printf "%.2f", 100 - $1}')
+    
+    # Memory info
+    local mem_info=$(free -m | awk 'NR==2{printf "%.2f %.2f %.2f %.2f", $2/1024, $3/1024, $4/1024, ($3/$2)*100}')
+    read -r mem_total mem_used mem_free mem_percent <<< "$mem_info"
+    
+    # Disk info
+    local disk_info=$(df -BG / | awk 'NR==2{gsub(/G/,""); printf "%.2f %.2f %.2f %.2f", $2, $3, $4, ($3/$2)*100}')
+    read -r disk_total disk_used disk_free disk_percent <<< "$disk_info"
+    
+    # CPU cores
+    local cpu_cores=$(nproc)
+    
+    # Uptime
+    local uptime_seconds=$(cat /proc/uptime | awk '{print int($1)}')
+    
+    # Last boot time
+    local last_boot=$(date -d "@$(($(date +%s) - $uptime_seconds))" --iso-8601=seconds)
+    
+    # Build JSON payload
+    local metrics_json
+    metrics_json=$(cat <<EOF
+{
+  "cpu_usage_percent": $cpu_usage,
+  "cpu_cores": $cpu_cores,
+  "memory_total_gb": $mem_total,
+  "memory_used_gb": $mem_used,
+  "memory_free_gb": $mem_free,
+  "memory_usage_percent": $mem_percent,
+  "disk_total_gb": $disk_total,
+  "disk_used_gb": $disk_used,
+  "disk_free_gb": $disk_free,
+  "disk_usage_percent": $disk_percent,
+  "uptime_seconds": $uptime_seconds,
+  "last_boot_time": "$last_boot"
+}
+EOF
+)
+    
+    # Send metrics
+    local response=$(secure_request "${SERVER_URL}/functions/v1/submit-system-metrics" "POST" "$metrics_json")
+    
+    if echo "$response" | grep -q '"success":true'; then
+        log_info "Métricas enviadas (CPU: ${cpu_usage}%, RAM: ${mem_percent}%, Disco: ${disk_percent}%)"
+        
+        # Check for alerts
+        local alerts=$(echo "$response" | jq -r '.alerts_generated // 0' 2>/dev/null || echo "0")
+        if [ "$alerts" -gt 0 ]; then
+            log_warn "⚠️ $alerts alerta(s) gerado(s)"
+        fi
+    else
+        log_warn "Falha ao enviar métricas"
+    fi
+}
+
 # Função para executar job
 execute_job() {
     local job_id="$1"
@@ -173,14 +261,35 @@ EOF
 # Função principal
 start_agent() {
     echo "==================================="
-    echo "CyberShield Agent v2.0 - Iniciando"
+    echo "CyberShield Agent v2.1.0 - Iniciando"
     echo "==================================="
     echo "Servidor: $SERVER_URL"
     echo "Intervalo: $POLL_INTERVAL segundos"
     echo "HMAC: Habilitado"
     echo ""
     
+    # Enviar heartbeat e métricas iniciais
+    send_heartbeat
+    send_system_metrics
+    
+    local heartbeat_counter=0
+    local metrics_counter=0
+    local heartbeat_interval=60
+    local metrics_interval=300  # 5 minutos
+    
     while true; do
+        # Heartbeat a cada 60 segundos
+        if [ $heartbeat_counter -ge $heartbeat_interval ]; then
+            send_heartbeat
+            heartbeat_counter=0
+        fi
+        
+        # Métricas a cada 5 minutos
+        if [ $metrics_counter -ge $metrics_interval ]; then
+            send_system_metrics
+            metrics_counter=0
+        fi
+        
         # Polling de jobs
         jobs=$(poll_jobs 2>/dev/null || echo "[]")
         
@@ -202,8 +311,10 @@ start_agent() {
             done
         fi
         
-        # Aguardar próximo polling
-        sleep $POLL_INTERVAL
+        # Aguardar e incrementar contadores
+        sleep 1
+        ((heartbeat_counter++))
+        ((metrics_counter++))
     done
 }
 
