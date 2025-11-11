@@ -300,4 +300,126 @@ test.describe('Load Testing - Multiple Agents', () => {
 
     expect(avgResponseTime).toBeLessThan(5000); // Média < 5 segundos
   });
+
+  test('6. Load Test - Concurrent system metrics submission', async ({ request }) => {
+    const startTime = Date.now();
+    const metricsPromises = [];
+
+    for (const agent of agents) {
+      const timestamp = Date.now().toString();
+      const metricsBody = JSON.stringify({
+        cpu_usage: Math.random() * 100,
+        memory_usage: Math.random() * 100,
+        disk_usage: Math.random() * 100,
+        network_in: Math.floor(Math.random() * 1000000),
+        network_out: Math.floor(Math.random() * 1000000),
+        uptime_seconds: Math.floor(Math.random() * 86400),
+      });
+      const hmacSignature = generateHmac(agent.hmacSecret, metricsBody, timestamp);
+
+      metricsPromises.push(
+        request.post(`${SUPABASE_URL}/functions/v1/submit-system-metrics`, {
+          headers: {
+            'X-Agent-Token': agent.agentToken,
+            'X-HMAC-Signature': hmacSignature,
+            'X-Timestamp': timestamp,
+            'Content-Type': 'application/json',
+          },
+          data: JSON.parse(metricsBody),
+        })
+      );
+    }
+
+    const responses = await Promise.all(metricsPromises);
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+
+    const successCount = responses.filter(r => r.ok()).length;
+    const failCount = responses.filter(r => !r.ok()).length;
+
+    console.log(`\n=== System Metrics Load Test ===`);
+    console.log(`Total agents: ${CONCURRENT_AGENTS}`);
+    console.log(`Success: ${successCount}`);
+    console.log(`Failed: ${failCount}`);
+    console.log(`Duration: ${duration}ms`);
+    console.log(`Avg response time: ${duration / CONCURRENT_AGENTS}ms`);
+
+    expect(successCount).toBeGreaterThan(CONCURRENT_AGENTS * 0.9); // 90% success rate
+  });
+
+  test('7. Sustained Load - Heartbeats + Metrics over 30 seconds', async ({ request }) => {
+    console.log(`\n=== Sustained Load Test (30s) ===`);
+    const testDuration = 30000; // 30 seconds
+    const intervalMs = 2000; // Every 2 seconds
+    const startTime = Date.now();
+    let totalRequests = 0;
+    let successfulRequests = 0;
+    let failedRequests = 0;
+
+    while (Date.now() - startTime < testDuration) {
+      const iterationPromises = [];
+
+      for (const agent of agents) {
+        const timestamp = Date.now().toString();
+        
+        // Heartbeat
+        const heartbeatBody = JSON.stringify({ status: 'active' });
+        const heartbeatHmac = generateHmac(agent.hmacSecret, heartbeatBody, timestamp);
+        iterationPromises.push(
+          request.post(`${SUPABASE_URL}/functions/v1/heartbeat`, {
+            headers: {
+              'X-Agent-Token': agent.agentToken,
+              'X-HMAC-Signature': heartbeatHmac,
+              'X-Timestamp': timestamp,
+              'Content-Type': 'application/json',
+            },
+            data: JSON.parse(heartbeatBody),
+          }).then(r => ({ ok: r.ok(), type: 'heartbeat' }))
+        );
+
+        // Metrics
+        const metricsBody = JSON.stringify({
+          cpu_usage: Math.random() * 100,
+          memory_usage: Math.random() * 100,
+          disk_usage: Math.random() * 100,
+        });
+        const metricsHmac = generateHmac(agent.hmacSecret, metricsBody, timestamp);
+        iterationPromises.push(
+          request.post(`${SUPABASE_URL}/functions/v1/submit-system-metrics`, {
+            headers: {
+              'X-Agent-Token': agent.agentToken,
+              'X-HMAC-Signature': metricsHmac,
+              'X-Timestamp': timestamp,
+              'Content-Type': 'application/json',
+            },
+            data: JSON.parse(metricsBody),
+          }).then(r => ({ ok: r.ok(), type: 'metrics' }))
+        );
+      }
+
+      const results = await Promise.all(iterationPromises);
+      totalRequests += results.length;
+      successfulRequests += results.filter(r => r.ok).length;
+      failedRequests += results.filter(r => !r.ok).length;
+
+      const elapsed = Date.now() - startTime;
+      console.log(`[${elapsed}ms] Requests: ${results.length}, Success: ${results.filter(r => r.ok).length}, Failed: ${results.filter(r => !r.ok).length}`);
+
+      // Wait before next iteration
+      await new Promise(resolve => setTimeout(resolve, intervalMs));
+    }
+
+    const totalDuration = Date.now() - startTime;
+    const successRate = (successfulRequests / totalRequests) * 100;
+
+    console.log(`\n=== Sustained Load Test Summary ===`);
+    console.log(`Duration: ${totalDuration}ms`);
+    console.log(`Total requests: ${totalRequests}`);
+    console.log(`Successful: ${successfulRequests}`);
+    console.log(`Failed: ${failedRequests}`);
+    console.log(`Success rate: ${successRate.toFixed(2)}%`);
+    console.log(`Requests/second: ${(totalRequests / (totalDuration / 1000)).toFixed(2)}`);
+
+    expect(successRate).toBeGreaterThan(80); // At least 80% success rate
+  });
 });

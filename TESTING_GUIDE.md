@@ -41,7 +41,35 @@ Valida ciclo de vida completo do agent:
 - ✓ Validação de HMAC
 - ✓ Rate limiting
 
-#### 3. **stripe-payment.spec.ts**
+#### 3. **agent-installation.spec.ts** ✨ ATUALIZADO
+Valida instalador Windows com correções críticas:
+- ✓ Geração de script via UI
+- ✓ Checagem de privilégios administrativos
+- ✓ Criação de diretórios e arquivos
+- ✓ Configuração de tarefa agendada
+- ✓ Teste de conectividade
+- ✓ Tratamento robusto de erros
+- ✓ Compatibilidade Windows Server
+- ✓ **NOVO: Validação de parâmetros obrigatórios**
+- ✓ **NOVO: Retry logic com backoff em Send-Heartbeat**
+- ✓ **NOVO: Test-SystemHealth com retry**
+- ✓ **NOVO: Sistema de logging detalhado ([ERROR], [INFO], [WARNING])**
+
+#### 4. **linux-agent-installation.spec.ts** ✨ ATUALIZADO
+Valida instalador Linux com correções críticas:
+- ✓ Geração de script com shebang correto
+- ✓ Informações essenciais do agent
+- ✓ Funções críticas (HMAC, heartbeat, etc.)
+- ✓ Configuração systemd
+- ✓ Compatibilidade de distribuição
+- ✓ Configurações de segurança
+- ✓ Workflow de instalação
+- ✓ **NOVO: Função validate_parameters()**
+- ✓ **NOVO: Retry logic (3 tentativas) com backoff em send_heartbeat**
+- ✓ **NOVO: test_server_connectivity() com retry**
+- ✓ **NOVO: HMAC seguro com openssl**
+
+#### 5. **stripe-payment.spec.ts**
 Valida fluxo de pagamento Stripe:
 - ✓ Criação de checkout session
 - ✓ Validação de limites de dispositivos
@@ -74,7 +102,7 @@ npx playwright test --project=chromium
 
 ## Testes de Carga
 
-### load-test.spec.ts
+### load-test.spec.ts ✨ EXPANDIDO
 
 Simula cenários de alta carga com múltiplos agents:
 
@@ -83,17 +111,34 @@ Simula cenários de alta carga com múltiplos agents:
 - 5 iterações de poll
 - Operações mistas (heartbeat + poll + create job)
 
+**Cenários de Teste:**
+1. **Setup**: Enrollment de 10 agents
+2. **Concurrent Heartbeats**: Todos os agents enviam heartbeat simultaneamente
+3. **Sequential Poll-Jobs**: 5 iterações com 1s de intervalo
+4. **Mixed Operations**: Heartbeat + poll + create job simultâneos
+5. **Response Time Analysis**: Análise detalhada de latência
+6. **✨ NOVO: System Metrics Load**: Envio simultâneo de métricas (CPU, RAM, Disk)
+7. **✨ NOVO: Sustained Load (30s)**: Heartbeats + métricas a cada 2s por 30 segundos
+
 **Métricas avaliadas:**
-- Tempo de resposta médio
-- Taxa de sucesso/falha
+- Tempo de resposta médio (< 5s esperado)
+- Taxa de sucesso/falha (> 80% esperado)
 - Throughput (ops/segundo)
 - Min/Max response time
+- **NOVO: Taxa de sucesso de métricas do sistema (> 90% esperado)**
+- **NOVO: Success rate sustentado durante carga contínua**
 
 ### Executar Testes de Carga
 
 ```bash
-# Testes de carga
+# Todos os testes de carga
 npx playwright test load-test
+
+# Teste específico de métricas
+npx playwright test load-test -g "System Metrics"
+
+# Teste de carga sustentada (30s)
+npx playwright test load-test -g "Sustained Load"
 
 # Com relatório detalhado
 npx playwright test load-test --reporter=html
@@ -261,8 +306,18 @@ npx playwright test
 # Executar testes específicos
 npx playwright test admin-access
 npx playwright test agent-flow
+npx playwright test agent-installation      # Windows
+npx playwright test linux-agent-installation # Linux
 npx playwright test stripe-payment
 npx playwright test load-test
+
+# Executar apenas validações de correções críticas
+npx playwright test agent-installation -g "críticas"
+npx playwright test linux-agent-installation -g "critical fixes"
+
+# Executar testes de carga específicos
+npx playwright test load-test -g "System Metrics"
+npx playwright test load-test -g "Sustained Load"
 
 # Modo interativo (UI)
 npx playwright test --ui
@@ -431,10 +486,45 @@ Para dúvidas sobre testes:
 
 ---
 
+## Resumo das Melhorias Recentes
+
+### ✅ Correções Críticas Implementadas e Testadas
+
+1. **Scripts de Instalação**
+   - ✅ Validação de parâmetros obrigatórios (Windows + Linux)
+   - ✅ Retry logic com backoff em heartbeats (3 tentativas)
+   - ✅ Testes de conectividade com retry
+   - ✅ Sistema de logging detalhado ([ERROR], [INFO], [WARNING])
+
+2. **Testes de Carga**
+   - ✅ Teste de envio de métricas do sistema (CPU, RAM, Disk, Network)
+   - ✅ Teste de carga sustentada (30s com heartbeats + métricas)
+   - ✅ Validação de success rate > 80-90%
+
+3. **Testes E2E de Instalação**
+   - ✅ 14 testes para instalador Windows (4 novos)
+   - ✅ 9 testes para instalador Linux (5 novos)
+   - ✅ Validação completa das correções críticas
+
+### 📊 Cobertura de Testes Atual
+
+- **Admin Access**: 3 testes
+- **Agent Flow**: 7 testes
+- **Windows Installation**: 14 testes ⬆️
+- **Linux Installation**: 9 testes ⬆️
+- **Stripe Payment**: 5 testes
+- **Input Validation**: 9 testes
+- **Load Testing**: 7 testes ⬆️
+
+**Total: 54 testes E2E automatizados**
+
+---
+
 ## Próximos Passos
 
 - [ ] Adicionar testes de integração com VirusTotal
 - [ ] Implementar testes de UI visual
 - [ ] Adicionar testes de acessibilidade
-- [ ] Expandir testes de carga para 100+ agents
+- [ ] Expandar testes de carga para 100+ agents
 - [ ] Integrar com ferramentas de monitoring
+- [ ] Adicionar testes de resiliência de rede (simular latência, packet loss)
