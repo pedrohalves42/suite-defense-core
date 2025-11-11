@@ -154,6 +154,35 @@ poll_jobs() {
     secure_request "\${SERVER_URL}/functions/v1/poll-jobs" "GET"
 }
 
+# Função para enviar heartbeat
+send_heartbeat() {
+    echo "[INFO] Enviando heartbeat..."
+    
+    # Coletar info do OS
+    local os_type="linux"
+    local os_version=$(cat /etc/os-release | grep "PRETTY_NAME" | cut -d'"' -f2)
+    local hostname=$(hostname)
+    
+    local heartbeat_json
+    heartbeat_json=$(cat <<EOF
+{
+  "os_type": "$os_type",
+  "os_version": "$os_version",
+  "hostname": "$hostname"
+}
+EOF
+)
+    
+    local url="\${SERVER_URL}/functions/v1/heartbeat"
+    local response=$(secure_request "$url" "POST" "$heartbeat_json")
+    
+    if echo "$response" | grep -q '"ok":true'; then
+        echo "[INFO] Heartbeat enviado com sucesso"
+    else
+        echo "[WARN] Falha no heartbeat"
+    fi
+}
+
 # Função para executar job
 execute_job() {
     local job_id="$1"
@@ -197,6 +226,67 @@ ack_job() {
     fi
 }
 
+# Função para enviar métricas do sistema
+send_system_metrics() {
+    echo "[INFO] Coletando e enviando métricas do sistema..."
+    
+    # CPU usage
+    cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\\([0-9.]*\\)%* id.*/\\1/" | awk '{printf "%.2f", 100 - $1}')
+    
+    # Memory info
+    mem_info=$(free -m | awk 'NR==2{printf "%.2f %.2f %.2f %.2f", $2/1024, $3/1024, $4/1024, ($3/$2)*100}')
+    read mem_total mem_used mem_free mem_percent <<< "$mem_info"
+    
+    # Disk info
+    disk_info=$(df -BG / | awk 'NR==2{gsub(/G/,""); printf "%.2f %.2f %.2f %.2f", $2, $3, $4, ($3/$2)*100}')
+    read disk_total disk_used disk_free disk_percent <<< "$disk_info"
+    
+    # CPU cores
+    cpu_cores=$(nproc)
+    
+    # Uptime
+    uptime_seconds=$(cat /proc/uptime | awk '{print int($1)}')
+    
+    # Last boot time
+    last_boot=$(date -d "@$(($(date +%s) - $uptime_seconds))" --iso-8601=seconds)
+    
+    # Build JSON payload
+    local metrics_json
+    metrics_json=$(cat <<EOF
+{
+  "cpu_usage_percent": $cpu_usage,
+  "cpu_cores": $cpu_cores,
+  "memory_total_gb": $mem_total,
+  "memory_used_gb": $mem_used,
+  "memory_free_gb": $mem_free,
+  "memory_usage_percent": $mem_percent,
+  "disk_total_gb": $disk_total,
+  "disk_used_gb": $disk_used,
+  "disk_free_gb": $disk_free,
+  "disk_usage_percent": $disk_percent,
+  "uptime_seconds": $uptime_seconds,
+  "last_boot_time": "$last_boot"
+}
+EOF
+)
+    
+    # Send metrics
+    local url="\${SERVER_URL}/functions/v1/submit-system-metrics"
+    local response=$(secure_request "$url" "POST" "$metrics_json")
+    
+    if echo "$response" | grep -q '"success":true'; then
+        echo "[INFO] Métricas enviadas (CPU: \${cpu_usage}%, RAM: \${mem_percent}%, Disco: \${disk_percent}%)"
+        
+        # Check for alerts
+        local alerts=$(echo "$response" | jq -r '.alerts_generated // 0')
+        if [ "$alerts" -gt 0 ]; then
+            echo "[WARN] ⚠️ $alerts alerta(s) gerado(s)"
+        fi
+    else
+        echo "[ERRO] Falha ao enviar métricas"
+    fi
+}
+
 # Função principal
 start_agent() {
     echo "==================================="
@@ -207,7 +297,28 @@ start_agent() {
     echo "HMAC: Habilitado"
     echo ""
     
+    # Enviar heartbeat e métricas iniciais
+    send_heartbeat
+    send_system_metrics
+    
+    local heartbeat_counter=0
+    local metrics_counter=0
+    local heartbeat_interval=60
+    local metrics_interval=300  # 5 minutos
+    
     while true; do
+        # Heartbeat a cada 60 segundos
+        if [ $heartbeat_counter -ge $heartbeat_interval ]; then
+            send_heartbeat
+            heartbeat_counter=0
+        fi
+        
+        # Métricas a cada 5 minutos
+        if [ $metrics_counter -ge $metrics_interval ]; then
+            send_system_metrics
+            metrics_counter=0
+        fi
+        
         jobs=$(poll_jobs 2>/dev/null || echo "[]")
         
         job_count=$(echo "$jobs" | jq 'length' 2>/dev/null || echo "0")
@@ -225,7 +336,9 @@ start_agent() {
             done
         fi
         
-        sleep $POLL_INTERVAL
+        sleep 1
+        ((heartbeat_counter++))
+        ((metrics_counter++))
     done
 }
 
@@ -423,12 +536,71 @@ function Send-Heartbeat {
     try {
         Write-Log "Sending heartbeat..." "DEBUG"
         $$heartbeatUrl = "$$ServerUrl/functions/v1/heartbeat"
-        $$response = Invoke-SecureRequest -Url $$heartbeatUrl -Method "POST" -Body @{}
+        
+        # Incluir informações do OS no heartbeat
+        $$os = Get-CimInstance Win32_OperatingSystem
+        $$body = @{
+            os_type = "windows"
+            os_version = $$os.Caption
+            hostname = $$env:COMPUTERNAME
+        }
+        
+        $$response = Invoke-SecureRequest -Url $$heartbeatUrl -Method "POST" -Body $$body
         Write-Log "Heartbeat sent successfully" "SUCCESS"
         return $$response
     }
     catch {
         Write-Log "Heartbeat error: $$_" "ERROR"
+        return $$null
+    }
+}
+
+#endregion
+
+#region System Metrics
+
+function Send-SystemMetrics {
+    try {
+        Write-Log "Collecting and sending system metrics..." "INFO"
+        
+        $$os = Get-CimInstance Win32_OperatingSystem
+        $$cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
+        $$disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
+        
+        # Calcular CPU usage
+        $$cpuUsage = (Get-Counter '\\Processor(_Total)\\% Processor Time' -SampleInterval 1 -MaxSamples 2 | 
+            Select-Object -ExpandProperty CounterSamples | 
+            Select-Object -Last 1).CookedValue
+        
+        $$metrics = @{
+            cpu_usage_percent = [math]::Round($$cpuUsage, 2)
+            cpu_name = $$cpu.Name
+            cpu_cores = $$cpu.NumberOfCores
+            memory_total_gb = [math]::Round($$os.TotalVisibleMemorySize/1MB, 2)
+            memory_used_gb = [math]::Round(($$os.TotalVisibleMemorySize - $$os.FreePhysicalMemory)/1MB, 2)
+            memory_free_gb = [math]::Round($$os.FreePhysicalMemory/1MB, 2)
+            memory_usage_percent = [math]::Round((($$os.TotalVisibleMemorySize - $$os.FreePhysicalMemory) / $$os.TotalVisibleMemorySize) * 100, 2)
+            disk_total_gb = [math]::Round($$disk.Size/1GB, 2)
+            disk_used_gb = [math]::Round(($$disk.Size - $$disk.FreeSpace)/1GB, 2)
+            disk_free_gb = [math]::Round($$disk.FreeSpace/1GB, 2)
+            disk_usage_percent = [math]::Round((($$disk.Size - $$disk.FreeSpace) / $$disk.Size) * 100, 2)
+            uptime_seconds = [int]((Get-Date) - $$os.LastBootUpTime).TotalSeconds
+            last_boot_time = $$os.LastBootUpTime.ToString("o")
+        }
+        
+        $$metricsUrl = "$$ServerUrl/functions/v1/submit-system-metrics"
+        $$response = Invoke-SecureRequest -Url $$metricsUrl -Method "POST" -Body $$metrics
+        
+        Write-Log "System metrics sent successfully (CPU: $$($$metrics.cpu_usage_percent)%, RAM: $$($$metrics.memory_usage_percent)%, Disk: $$($$metrics.disk_usage_percent)%)" "SUCCESS"
+        
+        if ($$response -and $$response.alerts_generated -gt 0) {
+            Write-Log "⚠️ $$($$response.alerts_generated) alert(s) generated" "WARN"
+        }
+        
+        return $$response
+    }
+    catch {
+        Write-Log "Failed to send system metrics: $$_" "ERROR"
         return $$null
     }
 }
@@ -700,15 +872,28 @@ function Start-Agent {
     Write-Log "Sending initial heartbeat..." "INFO"
     Send-Heartbeat | Out-Null
     
+    Write-Log "Sending initial system metrics..." "INFO"
+    Send-SystemMetrics | Out-Null
+    
     $$lastHeartbeat = Get-Date
+    $$lastMetrics = Get-Date
     $$heartbeatInterval = 60
+    $$metricsInterval = 300  # 5 minutos
     
     while ($$true) {
         try {
             $$now = Get-Date
+            
+            # Heartbeat a cada 60 segundos
             if (($$now - $$lastHeartbeat).TotalSeconds -ge $$heartbeatInterval) {
                 Send-Heartbeat | Out-Null
                 $$lastHeartbeat = $$now
+            }
+            
+            # Métricas de sistema a cada 5 minutos
+            if (($$now - $$lastMetrics).TotalSeconds -ge $$metricsInterval) {
+                Send-SystemMetrics | Out-Null
+                $$lastMetrics = $$now
             }
             
             Write-Log "Fetching new jobs..." "INFO"

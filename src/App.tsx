@@ -46,6 +46,7 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import AuthDebug from "./pages/debug/AuthDebug";
 import SecurityDashboard from "./pages/admin/SecurityDashboard";
+import AgentMonitoringAdvanced from "./pages/AgentMonitoringAdvanced";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +90,7 @@ const App = () => (
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="dashboard" element={<Dashboard />} />
+                <Route path="monitoring-advanced" element={<AgentMonitoringAdvanced />} />
                 <Route path="enrollment-keys" element={<EnrollmentKeys />} />
                 <Route path="users" element={<Users />} />
                 <Route path="tenants" element={<Tenants />} />

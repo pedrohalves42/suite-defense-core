@@ -198,7 +198,16 @@ function Send-Heartbeat {
     try {
         Write-Log "Sending heartbeat..." "DEBUG"
         $heartbeatUrl = "$ServerUrl/functions/v1/heartbeat"
-        $response = Invoke-SecureRequest -Url $heartbeatUrl -Method "POST" -Body @{}
+        
+        # Incluir informações do OS no heartbeat
+        $os = Get-CimInstance Win32_OperatingSystem
+        $body = @{
+            os_type = "windows"
+            os_version = $os.Caption
+            hostname = $env:COMPUTERNAME
+        }
+        
+        $response = Invoke-SecureRequest -Url $heartbeatUrl -Method "POST" -Body $body
         Write-Log "Heartbeat sent successfully" "SUCCESS"
         return $response
     }
@@ -448,6 +457,56 @@ function Ack-Job {
 
 #endregion
 
+#region System Metrics
+
+function Send-SystemMetrics {
+    try {
+        Write-Log "Collecting and sending system metrics..." "INFO"
+        
+        $os = Get-CimInstance Win32_OperatingSystem
+        $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
+        $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
+        
+        # Calcular CPU usage
+        $cpuUsage = (Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 1 -MaxSamples 2 | 
+            Select-Object -ExpandProperty CounterSamples | 
+            Select-Object -Last 1).CookedValue
+        
+        $metrics = @{
+            cpu_usage_percent = [math]::Round($cpuUsage, 2)
+            cpu_name = $cpu.Name
+            cpu_cores = $cpu.NumberOfCores
+            memory_total_gb = [math]::Round($os.TotalVisibleMemorySize/1MB, 2)
+            memory_used_gb = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory)/1MB, 2)
+            memory_free_gb = [math]::Round($os.FreePhysicalMemory/1MB, 2)
+            memory_usage_percent = [math]::Round((($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / $os.TotalVisibleMemorySize) * 100, 2)
+            disk_total_gb = [math]::Round($disk.Size/1GB, 2)
+            disk_used_gb = [math]::Round(($disk.Size - $disk.FreeSpace)/1GB, 2)
+            disk_free_gb = [math]::Round($disk.FreeSpace/1GB, 2)
+            disk_usage_percent = [math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 2)
+            uptime_seconds = [int]((Get-Date) - $os.LastBootUpTime).TotalSeconds
+            last_boot_time = $os.LastBootUpTime.ToString("o")
+        }
+        
+        $metricsUrl = "$ServerUrl/functions/v1/submit-system-metrics"
+        $response = Invoke-SecureRequest -Url $metricsUrl -Method "POST" -Body $metrics
+        
+        Write-Log "System metrics sent successfully (CPU: $($metrics.cpu_usage_percent)%, RAM: $($metrics.memory_usage_percent)%, Disk: $($metrics.disk_usage_percent)%)" "SUCCESS"
+        
+        if ($response -and $response.alerts_generated -gt 0) {
+            Write-Log "⚠️ $($response.alerts_generated) alert(s) generated" "WARN"
+        }
+        
+        return $response
+    }
+    catch {
+        Write-Log "Failed to send system metrics: $_" "ERROR"
+        return $null
+    }
+}
+
+#endregion
+
 #region System Health
 
 function Test-SystemHealth {
@@ -514,15 +573,28 @@ function Start-Agent {
     Write-Log "Sending initial heartbeat..." "INFO"
     Send-Heartbeat | Out-Null
     
+    Write-Log "Sending initial system metrics..." "INFO"
+    Send-SystemMetrics | Out-Null
+    
     $lastHeartbeat = Get-Date
+    $lastMetrics = Get-Date
     $heartbeatInterval = 60
+    $metricsInterval = 300  # 5 minutos
     
     while ($true) {
         try {
             $now = Get-Date
+            
+            # Heartbeat a cada 60 segundos
             if (($now - $lastHeartbeat).TotalSeconds -ge $heartbeatInterval) {
                 Send-Heartbeat | Out-Null
                 $lastHeartbeat = $now
+            }
+            
+            # Métricas de sistema a cada 5 minutos
+            if (($now - $lastMetrics).TotalSeconds -ge $metricsInterval) {
+                Send-SystemMetrics | Out-Null
+                $lastMetrics = $now
             }
             
             Write-Log "Fetching new jobs..." "INFO"
