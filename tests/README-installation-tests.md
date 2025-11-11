@@ -1,15 +1,20 @@
-# Testes de Instalação do Agente CyberShield
+# 🧪 Testes de Instalação do Agente CyberShield
 
-## Visão Geral
+## 📋 Visão Geral
 
-Os testes E2E de instalação validam o fluxo completo de geração e instalação do agente Windows, incluindo:
+Este guia cobre **três tipos de testes**:
 
-- Validação de privilégios administrativos
-- Criação de diretórios e arquivos
-- Configuração de tarefa agendada
-- Teste de conectividade com servidor
-- Tratamento de erros robusto
-- Compatibilidade com Windows Server 2012-2025
+1. **Testes E2E Automatizados** (Playwright) - Validam geração de instaladores
+2. **Testes de Validação em VM** (PowerShell/Bash) - Testam instalação real completa
+3. **Testes Manuais** - Verificação manual em ambiente real
+
+Os testes validam:
+- ✅ Geração de credenciais via dashboard
+- ✅ Instalação one-click (Windows/Linux)
+- ✅ Heartbeats e métricas
+- ✅ Execução de jobs
+- ✅ Operação contínua
+- ✅ Compatibilidade com Windows Server 2012-2025 e Linux
 
 ## Linux Installation
 
@@ -381,10 +386,97 @@ Os testes validam:
    - Adicionar ao pipeline de GitHub Actions
    - Executar automaticamente em cada commit
 
+---
+
+## 🔬 Testes de Validação em VM (Completos)
+
+### 📦 Windows - Teste Completo em VM
+
+Para testar a instalação completa do zero em uma VM Windows:
+
+```powershell
+# 1. Gerar instalação no dashboard (/installer)
+# 2. Copiar comando one-click gerado
+# 3. Executar em PowerShell Admin:
+irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/serve-installer/xyz... | iex
+
+# 4. Validar instalação automaticamente
+Invoke-WebRequest -Uri "https://seudominio.com/scripts/post-installation-validation.ps1" -OutFile "validation.ps1"
+.\validation.ps1 -TestDurationMinutes 3
+
+# 5. (Opcional) Teste completo de 5 minutos
+.\tests\windows-installation-test.ps1 `
+    -ServerUrl "https://iavbnmduxpxhwubqrzzn.supabase.co" `
+    -EnrollmentKey "seu-enrollment-key" `
+    -TestDuration 300
+```
+
+### 🐧 Linux - Teste Completo em VM
+
+Para testar a instalação completa do zero em uma VM Linux:
+
+```bash
+# 1. Gerar instalação no dashboard (/installer)
+# 2. Copiar comando one-click gerado
+# 3. Executar:
+curl -sL https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/serve-installer/abc... | sudo bash
+
+# 4. Verificar status
+sudo systemctl status cybershield-agent
+sudo tail -f /var/log/cybershield/agent.log
+
+# 5. (Opcional) Teste completo de 5 minutos
+wget https://raw.githubusercontent.com/.../linux-installation-test.sh
+chmod +x linux-installation-test.sh
+sudo ./linux-installation-test.sh \
+    -s "https://iavbnmduxpxhwubqrzzn.supabase.co" \
+    -k "seu-enrollment-key" \
+    -d 300
+```
+
+### 📊 Interpretação dos Resultados
+
+#### ✅ 100% Aprovado (Verde)
+```
+Tests Passed: 7 / 7 (100%)
+✓ INSTALLATION VALIDATION: PASSED
+```
+- Instalação perfeita, pronto para produção
+
+#### ⚠️ Aprovação Parcial (85-99%)
+```
+Tests Passed: 6 / 7 (85%)
+⚠ VALIDATION PARTIAL
+```
+- Funcionalidade básica OK, revisar componentes com falha
+
+#### ❌ Falha (<85%)
+```
+Tests Passed: 3 / 7 (42%)
+✗ INSTALLATION VALIDATION: FAILED
+```
+- Problemas críticos, não usar em produção
+
+### 🔧 Troubleshooting Específico de VM
+
+#### Windows VM
+- **Erro "Execution Policy"**: `Set-ExecutionPolicy Bypass -Scope Process`
+- **Firewall bloqueando**: Verificar `Get-NetFirewallRule -DisplayName "CyberShield*"`
+- **Tarefa não inicia**: `Start-ScheduledTask -TaskName "CyberShield Agent"`
+
+#### Linux VM
+- **Permissões**: Sempre usar `sudo`
+- **Dependências**: `sudo apt-get install -y curl jq openssl` (Ubuntu)
+- **Serviço não inicia**: `sudo journalctl -u cybershield-agent -n 100`
+
+---
+
 ## Suporte
 
 Para problemas ou dúvidas sobre os testes:
-- Revisar logs em `C:\CyberShield\logs\agent.log`
-- Verificar console do navegador (DevTools F12)
-- Consultar documentação: [docs/](../docs/)
-- Abrir issue no repositório
+- **Email**: gamehousetecnologia@gmail.com
+- **WhatsApp**: (34) 98443-2835
+- **Logs Windows**: `C:\CyberShield\logs\agent.log`
+- **Logs Linux**: `/var/log/cybershield/agent.log`
+- **Documentação**: [docs/](../docs/)
+- **Console DevTools**: F12 no navegador
