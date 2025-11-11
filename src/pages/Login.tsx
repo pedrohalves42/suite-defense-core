@@ -66,7 +66,7 @@ export default function Login() {
           script.onload = () => {
             // @ts-ignore - Turnstile global
             window.turnstile?.render('#captcha-container', {
-              sitekey: '0x4AAAAAACAPH5mLazH9_Ahd', // Site key público do Cloudflare Turnstile
+              sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
               callback: (token: string) => setCaptchaToken(token),
             });
           };
