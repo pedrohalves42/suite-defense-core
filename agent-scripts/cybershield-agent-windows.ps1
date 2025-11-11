@@ -18,6 +18,32 @@ param(
     [int]$PollInterval = 60
 )
 
+# Validate parameters
+if ([string]::IsNullOrWhiteSpace($AgentToken)) {
+    Write-Host "ERROR: AgentToken cannot be empty" -ForegroundColor Red
+    exit 1
+}
+
+if ([string]::IsNullOrWhiteSpace($HmacSecret)) {
+    Write-Host "ERROR: HmacSecret cannot be empty" -ForegroundColor Red
+    exit 1
+}
+
+if ([string]::IsNullOrWhiteSpace($ServerUrl)) {
+    Write-Host "ERROR: ServerUrl cannot be empty" -ForegroundColor Red
+    exit 1
+}
+
+if ($AgentToken.Length -lt 20) {
+    Write-Host "ERROR: AgentToken appears to be invalid (too short)" -ForegroundColor Red
+    exit 1
+}
+
+if ($HmacSecret.Length -lt 32) {
+    Write-Host "ERROR: HmacSecret appears to be invalid (too short)" -ForegroundColor Red
+    exit 1
+}
+
 # Validar versão do PowerShell
 if ($PSVersionTable.PSVersion.Major -lt 3) {
     Write-Host "ERRO: Este script requer PowerShell 3.0 ou superior" -ForegroundColor Red
@@ -195,26 +221,37 @@ function Invoke-SecureRequest {
 #region Heartbeat
 
 function Send-Heartbeat {
-    try {
-        Write-Log "Sending heartbeat..." "DEBUG"
-        $heartbeatUrl = "$ServerUrl/functions/v1/heartbeat"
-        
-        # Incluir informações do OS no heartbeat
-        $os = Get-CimInstance Win32_OperatingSystem
-        $body = @{
-            os_type = "windows"
-            os_version = $os.Caption
-            hostname = $env:COMPUTERNAME
+    $maxRetries = 3
+    $retryCount = 0
+    
+    while ($retryCount -lt $maxRetries) {
+        try {
+            Write-Log "Sending heartbeat..." "DEBUG"
+            $heartbeatUrl = "$ServerUrl/functions/v1/heartbeat"
+            
+            # Incluir informações do OS no heartbeat
+            $os = Get-CimInstance Win32_OperatingSystem
+            $body = @{
+                os_type = "windows"
+                os_version = $os.Caption
+                hostname = $env:COMPUTERNAME
+            }
+            
+            $response = Invoke-SecureRequest -Url $heartbeatUrl -Method "POST" -Body $body -MaxRetries 1
+            Write-Log "Heartbeat sent successfully" "SUCCESS"
+            return $response
         }
-        
-        $response = Invoke-SecureRequest -Url $heartbeatUrl -Method "POST" -Body $body
-        Write-Log "Heartbeat sent successfully" "SUCCESS"
-        return $response
+        catch {
+            $retryCount++
+            Write-Log "Heartbeat error (attempt $retryCount/$maxRetries): $_" "ERROR"
+            if ($retryCount -lt $maxRetries) {
+                Start-Sleep -Seconds (2 * $retryCount)
+            }
+        }
     }
-    catch {
-        Write-Log "Heartbeat error: $_" "ERROR"
-        return $null
-    }
+    
+    Write-Log "Failed to send heartbeat after $maxRetries attempts" "ERROR"
+    return $null
 }
 
 #endregion
@@ -518,16 +555,35 @@ function Test-SystemHealth {
         Write-Log "WARNING: PowerShell 5.1+ recommended" "WARN"
     }
     
-    try {
-        Write-Log "Testing server connectivity..." "INFO"
-        $testUrl = "$ServerUrl/functions/v1/poll-jobs"
-        $testResponse = Invoke-SecureRequest -Url $testUrl -Method "GET" -MaxRetries 2
-        Write-Log "Server connectivity: OK" "SUCCESS"
+    # Test server connectivity with retries
+    $maxRetries = 3
+    $connected = $false
+    
+    for ($i = 1; $i -le $maxRetries; $i++) {
+        try {
+            Write-Log "Testing server connectivity (attempt $i/$maxRetries)..." "INFO"
+            $testUrl = "$ServerUrl/functions/v1/poll-jobs"
+            $testResponse = Invoke-SecureRequest -Url $testUrl -Method "GET" -MaxRetries 1
+            Write-Log "Server connectivity: OK" "SUCCESS"
+            $connected = $true
+            break
+        }
+        catch {
+            Write-Log "Connection attempt $i failed: $_" "WARN"
+            if ($i -lt $maxRetries) {
+                $waitTime = 2 * $i
+                Write-Log "Waiting $waitTime seconds before retry..." "INFO"
+                Start-Sleep -Seconds $waitTime
+            }
+        }
     }
-    catch {
-        Write-Log "CRITICAL: Cannot connect to server" "ERROR"
-        Write-Log "URL tested: $testUrl" "ERROR"
-        Write-Log "Error: $_" "ERROR"
+    
+    if (-not $connected) {
+        Write-Log "CRITICAL: Cannot connect to server after $maxRetries attempts" "ERROR"
+        Write-Log "Please check:" "ERROR"
+        Write-Log "  1. Network connectivity" "ERROR"
+        Write-Log "  2. Server URL: $ServerUrl" "ERROR"
+        Write-Log "  3. Agent credentials validity" "ERROR"
         return $false
     }
     
