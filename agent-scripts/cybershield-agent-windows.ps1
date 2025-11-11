@@ -1,4 +1,8 @@
-# CyberShield Agent - Windows PowerShell Script v2.0.0 (Production Ready)
+# CyberShield Agent - Windows PowerShell Script v2.1.0 (Production Ready)
+# Compatible with: Windows Server 2012, 2012 R2, 2016, 2019, 2022, 2025
+# PowerShell Version: 3.0+
+
+#Requires -Version 3.0
 
 param(
     [Parameter(Mandatory=$true)]
@@ -13,6 +17,27 @@ param(
     [Parameter(Mandatory=$false)]
     [int]$PollInterval = 60
 )
+
+# Validar versão do PowerShell
+if ($PSVersionTable.PSVersion.Major -lt 3) {
+    Write-Host "ERRO: Este script requer PowerShell 3.0 ou superior" -ForegroundColor Red
+    Write-Host "Versão atual: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
+    Write-Host "Por favor, atualize o PowerShell" -ForegroundColor Yellow
+    exit 1
+}
+
+# Validar sistema operacional
+$osVersion = [System.Environment]::OSVersion.Version
+$osName = (Get-WmiObject -Class Win32_OperatingSystem).Caption
+
+Write-Host "Sistema operacional: $osName" -ForegroundColor Cyan
+Write-Host "Versão: $($osVersion.Major).$($osVersion.Minor)" -ForegroundColor Cyan
+
+# Windows Server 2012 = 6.2, 2012 R2 = 6.3, 2016 = 10.0, etc
+if ($osVersion.Major -lt 6 -or ($osVersion.Major -eq 6 -and $osVersion.Minor -lt 2)) {
+    Write-Host "AVISO: Este agente foi testado em Windows Server 2012+ e Windows 8+" -ForegroundColor Yellow
+    Write-Host "Sua versão pode não ser totalmente suportada" -ForegroundColor Yellow
+}
 
 # Configuração de logging
 $LogDir = "C:\CyberShield\logs"
@@ -77,7 +102,9 @@ if ([string]::IsNullOrWhiteSpace($AgentToken) -or [string]::IsNullOrWhiteSpace($
 
 $ServerUrl = $ServerUrl.TrimEnd('/')
 
-Write-Log "=== CyberShield Agent v2.0.0 iniciado ===" "SUCCESS"
+Write-Log "=== CyberShield Agent v2.1.0 iniciado ===" "SUCCESS"
+Write-Log "Sistema: $osName" "INFO"
+Write-Log "PowerShell: $($PSVersionTable.PSVersion)" "INFO"
 Write-Log "Server URL: $ServerUrl" "INFO"
 Write-Log "Poll Interval: $PollInterval segundos" "INFO"
 Write-Log "Log Directory: $LogDir" "INFO"

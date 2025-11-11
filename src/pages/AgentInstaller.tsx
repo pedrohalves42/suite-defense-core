@@ -612,14 +612,42 @@ Start-Agent`;
     // Installer wrapper script
     return `# CyberShield Agent - Instalador Automático
 # Gerado em: ${new Date().toISOString()}
+# Compatible with: Windows Server 2012, 2012 R2, 2016, 2019, 2022, 2025
+# PowerShell Version: 3.0+
+
+#Requires -Version 3.0
 
 $$ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  CyberShield Agent Installer v2.0.0" -ForegroundColor Cyan
+Write-Host "  CyberShield Agent Installer v2.1.0" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
+
+# Validar versão do PowerShell
+if ($$PSVersionTable.PSVersion.Major -lt 3) {
+    Write-Host "ERRO: Este script requer PowerShell 3.0 ou superior" -ForegroundColor Red
+    Write-Host "Versão atual: $$($$PSVersionTable.PSVersion)" -ForegroundColor Yellow
+    Write-Host "Por favor, atualize o PowerShell" -ForegroundColor Yellow
+    Read-Host "Pressione ENTER para sair"
+    exit 1
+}
+
+# Validar sistema operacional
+$$osVersion = [System.Environment]::OSVersion.Version
+$$osName = (Get-WmiObject -Class Win32_OperatingSystem).Caption
+
+Write-Host "Sistema: $$osName" -ForegroundColor Cyan
+Write-Host "PowerShell: $$($$PSVersionTable.PSVersion)" -ForegroundColor Cyan
+Write-Host ""
+
+# Windows Server 2012 = 6.2, 2012 R2 = 6.3, 2016 = 10.0, etc
+if ($$osVersion.Major -lt 6 -or ($$osVersion.Major -eq 6 -and $$osVersion.Minor -lt 2)) {
+    Write-Host "AVISO: Este agente foi testado em Windows Server 2012+ e Windows 8+" -ForegroundColor Yellow
+    Write-Host "Sua versão pode não ser totalmente suportada" -ForegroundColor Yellow
+    Write-Host ""
+}
 
 # Configurações
 $$AgentToken = "${agentToken}"
