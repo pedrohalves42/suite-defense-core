@@ -70,8 +70,8 @@ export const AutoGenerateEnrollmentSchema = z.object({
     .min(3, 'Nome do agente deve ter pelo menos 3 caracteres')
     .max(64, 'Nome do agente deve ter no máximo 64 caracteres')
     .regex(
-      /^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]$/,
-      'Nome do agente deve começar e terminar com letra ou número, e conter apenas letras, números, hífen e underscore'
+      /^[A-Z0-9-]+$/,
+      'Nome do agente deve conter apenas letras maiúsculas, números e hífens'
     )
     .refine(name => {
       // Block SQL injection patterns
@@ -90,8 +90,8 @@ export const AutoGenerateEnrollmentSchema = z.object({
     }, 'Nome do agente não pode conter mais de 5 caracteres repetidos consecutivos')
     .refine(name => {
       // Block common reserved names
-      const reserved = ['admin', 'root', 'system', 'null', 'undefined', 'true', 'false'];
-      return !reserved.includes(name.toLowerCase());
+      const reserved = ['ADMIN', 'ROOT', 'SYSTEM', 'NULL', 'UNDEFINED', 'TRUE', 'FALSE'];
+      return !reserved.includes(name.toUpperCase());
     }, 'Nome do agente está reservado e não pode ser usado')
 });
 

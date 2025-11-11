@@ -102,3 +102,12 @@ verify_jwt = false
 
 [functions.check-tenant-quotas]
 verify_jwt = true
+
+[functions.record-failed-login]
+verify_jwt = false
+
+[functions.check-failed-logins]
+verify_jwt = false
+
+[functions.clear-failed-logins]
+verify_jwt = false

@@ -283,6 +283,7 @@ Deno.serve(async (req) => {
         agentToken,
         hmacSecret,
         expiresAt: tokenExpiresAt.toISOString(),
+        agentId, // Add agentId for connection monitoring
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
