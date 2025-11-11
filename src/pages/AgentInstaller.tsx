@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Package, Download, Terminal, CheckCircle2, Monitor, Server, Loader2 } from "lucide-react";
+import { Package, Download, Terminal, CheckCircle2, Monitor, Server, Loader2, Copy } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,6 +16,8 @@ const AgentInstaller = () => {
   const [agentName, setAgentName] = useState("");
   const [platform, setPlatform] = useState<"windows" | "linux">("windows");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showCopyPaste, setShowCopyPaste] = useState(false);
+  const [installCommand, setInstallCommand] = useState("");
 
   const generateInstaller = async () => {
     if (!agentName.trim()) {
@@ -106,6 +108,58 @@ const AgentInstaller = () => {
     }
   };
 
+  const generateCopyPasteCommand = async () => {
+    if (!agentName.trim()) {
+      toast.error("Por favor, informe o nome do agente");
+      return;
+    }
+
+    setIsGenerating(true);
+    
+    try {
+      // Gerar credenciais e enrollment key
+      toast.info("Gerando link temporário...");
+      const { data: credentials, error: credError } = await supabase.functions.invoke(
+        'auto-generate-enrollment',
+        {
+          body: { agentName: agentName.trim() }
+        }
+      );
+
+      if (credError) throw credError;
+      if (!credentials) throw new Error("Nenhuma credencial foi retornada");
+
+      // Gerar comando copy-paste com o enrollment key
+      const installUrl = `${SUPABASE_URL}/functions/v1/serve-installer/${credentials.enrollmentKey}`;
+      
+      const command = platform === 'windows'
+        ? `irm ${installUrl} | iex`
+        : `curl -sL ${installUrl} | sudo bash`;
+
+      setInstallCommand(command);
+      setShowCopyPaste(true);
+
+      toast.success("Comando gerado com sucesso!", {
+        description: "Copie e cole no servidor para instalar"
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao gerar comando:', error);
+      toast.error("Erro ao gerar comando", {
+        description: error.message || "Tente novamente"
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(installCommand);
+    toast.success("Comando copiado!", {
+      description: "Cole no terminal do servidor"
+    });
+  };
+
   return (
     <div className="container mx-auto p-6 max-w-4xl space-y-6">
       {/* Header */}
@@ -189,25 +243,97 @@ const AgentInstaller = () => {
             </RadioGroup>
           </div>
 
-          {/* Botão de Gerar */}
-          <Button 
-            onClick={generateInstaller} 
-            disabled={isGenerating || !agentName.trim()}
-            className="w-full"
-            size="lg"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Gerando instalador...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                Gerar e Baixar Instalador
-              </>
-            )}
-          </Button>
+          {/* Botões de Gerar */}
+          <div className="space-y-3">
+            <Button 
+              onClick={generateInstaller} 
+              disabled={isGenerating || !agentName.trim()}
+              className="w-full"
+              size="lg"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Gerar e Baixar Instalador (.ps1/.sh)
+                </>
+              )}
+            </Button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Ou use instalação simplificada
+                </span>
+              </div>
+            </div>
+
+            <Button 
+              onClick={generateCopyPasteCommand} 
+              disabled={isGenerating || !agentName.trim()}
+              variant="outline"
+              className="w-full"
+              size="lg"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <Terminal className="h-4 w-4 mr-2" />
+                  Gerar Comando One-Click
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Comando Copy-Paste */}
+          {showCopyPaste && installCommand && (
+            <Alert className="border-primary bg-primary/5">
+              <Terminal className="h-4 w-4" />
+              <AlertDescription>
+                <div className="space-y-3">
+                  <div>
+                    <strong className="block mb-2">✨ Comando pronto para usar:</strong>
+                    <div className="relative">
+                      <pre className="bg-muted p-3 rounded text-sm overflow-x-auto">
+                        {installCommand}
+                      </pre>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="absolute top-2 right-2"
+                        onClick={copyToClipboard}
+                      >
+                        📋 Copiar
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-sm space-y-1">
+                    <p className="font-semibold">Como usar:</p>
+                    <ol className="list-decimal list-inside space-y-1 text-xs">
+                      <li>Copie o comando acima</li>
+                      <li>Abra {platform === 'windows' ? 'PowerShell como Administrador' : 'terminal como root'} no servidor</li>
+                      <li>Cole e pressione Enter</li>
+                      <li>Aguarde a instalação automática (≈30 segundos)</li>
+                    </ol>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      ⚠️ O link expira em 24 horas por segurança
+                    </p>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
@@ -290,6 +416,14 @@ const AgentInstaller = () => {
               <span>Você pode visualizar tudo em tempo real no <strong>Dashboard de Monitoramento</strong></span>
             </li>
           </ul>
+
+          <div className="mt-4 pt-4 border-t">
+            <Button variant="link" className="p-0 h-auto" asChild>
+              <a href="/docs/exe-build" target="_blank" rel="noopener noreferrer">
+                📖 Como compilar o instalador para EXE (Windows)
+              </a>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>

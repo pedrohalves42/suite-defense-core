@@ -47,6 +47,7 @@ import Privacy from "./pages/Privacy";
 import AuthDebug from "./pages/debug/AuthDebug";
 import SecurityDashboard from "./pages/admin/SecurityDashboard";
 import AgentMonitoringAdvanced from "./pages/AgentMonitoringAdvanced";
+import ExeBuild from "./pages/docs/ExeBuild";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +71,9 @@ const App = () => (
             <Route path="/checkout/cancel" element={<CheckoutCancel />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            
+            {/* Documentation Routes */}
+            <Route path="/docs/exe-build" element={<ExeBuild />} />
             
             {/* Debug Routes - Protected */}
             <Route path="/debug/auth" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />

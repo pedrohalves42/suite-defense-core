@@ -5,7 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Users, Activity } from 'lucide-react';
+import { Building2, Users, Activity, Loader2, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Tenant {
   id: string;
@@ -164,8 +165,26 @@ export default function SuperAdminTenants() {
 
   if (tenantsLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
+            <p className="text-muted-foreground">Carregando dados dos tenants...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!tenants || tenants.length === 0) {
+    return (
+      <div className="container mx-auto p-6">
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Nenhum tenant encontrado no sistema.
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -173,62 +192,72 @@ export default function SuperAdminTenants() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Tenant Management</h1>
-        <p className="text-muted-foreground">Manage all tenants and their subscription plans</p>
+        <h1 className="text-3xl font-bold mb-2">Gerenciamento de Tenants</h1>
+        <p className="text-muted-foreground">Visualize e gerencie todos os tenants e suas assinaturas</p>
       </div>
+
+      <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+        <AlertCircle className="h-4 w-4 text-blue-600" />
+        <AlertDescription className="text-blue-800 dark:text-blue-200">
+          <strong>Super Admin:</strong> Você tem acesso total para visualizar e modificar assinaturas de todos os tenants.
+        </AlertDescription>
+      </Alert>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tenants</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Tenants</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{tenants?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">Organizações ativas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {Object.values(userCounts || {}).reduce((a, b) => a + b, 0)}
             </div>
+            <p className="text-xs text-muted-foreground">Usuários em todos os tenants</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Agents</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Agentes</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {Object.values(agentCounts || {}).reduce((a, b) => a + b, 0)}
             </div>
+            <p className="text-xs text-muted-foreground">Agentes monitorando servidores</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>All Tenants</CardTitle>
-          <CardDescription>View and manage subscription plans for all tenants</CardDescription>
+          <CardTitle>Todos os Tenants</CardTitle>
+          <CardDescription>Visualize e altere os planos de assinatura de cada tenant</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Tenant Name</TableHead>
+                <TableHead>Nome do Tenant</TableHead>
                 <TableHead>Slug</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead>Users</TableHead>
-                <TableHead>Agents</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Change Plan</TableHead>
+                <TableHead>Plano Atual</TableHead>
+                <TableHead>Usuários</TableHead>
+                <TableHead>Agentes</TableHead>
+                <TableHead>Criado em</TableHead>
+                <TableHead>Alterar Plano</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -240,25 +269,30 @@ export default function SuperAdminTenants() {
                     {tenant.subscription ? (
                       getPlanBadge(tenant.subscription.subscription_plans.name)
                     ) : (
-                      <Badge variant="outline">No Plan</Badge>
+                      <Badge variant="outline">Sem Plano</Badge>
                     )}
                   </TableCell>
                   <TableCell>
-                    {tenant.user_count}/{tenant.subscription?.subscription_plans.max_users || 0}
+                    <span className={tenant.user_count > (tenant.subscription?.subscription_plans.max_users || 0) ? 'text-red-600 font-semibold' : ''}>
+                      {tenant.user_count}/{tenant.subscription?.subscription_plans.max_users || 0}
+                    </span>
                   </TableCell>
                   <TableCell>
-                    {tenant.agent_count}/{tenant.subscription?.subscription_plans.max_agents || 'unlimited'}
+                    <span className={tenant.agent_count > (tenant.subscription?.subscription_plans.max_agents || 999) ? 'text-red-600 font-semibold' : ''}>
+                      {tenant.agent_count}/{tenant.subscription?.subscription_plans.max_agents || 'ilimitado'}
+                    </span>
                   </TableCell>
-                  <TableCell>{new Date(tenant.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>{new Date(tenant.created_at).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell>
                     <Select
                       value={tenant.subscription?.plan_id}
                       onValueChange={(value) =>
                         updateSubscription.mutate({ tenantId: tenant.id, planId: value })
                       }
+                      disabled={updateSubscription.isPending}
                     >
                       <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Select plan" />
+                        <SelectValue placeholder="Selecionar" />
                       </SelectTrigger>
                       <SelectContent>
                         {plans?.map((plan) => (
