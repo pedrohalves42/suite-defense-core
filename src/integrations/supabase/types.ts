@@ -14,6 +14,97 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_system_metrics: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_system_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_system_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_system_metrics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_tokens: {
         Row: {
           agent_id: string
@@ -64,8 +155,11 @@ export type Database = {
           agent_name: string
           enrolled_at: string
           hmac_secret: string | null
+          hostname: string | null
           id: string
           last_heartbeat: string | null
+          os_type: string | null
+          os_version: string | null
           payload_hash: string | null
           status: string
           tenant_id: string
@@ -74,8 +168,11 @@ export type Database = {
           agent_name: string
           enrolled_at?: string
           hmac_secret?: string | null
+          hostname?: string | null
           id?: string
           last_heartbeat?: string | null
+          os_type?: string | null
+          os_version?: string | null
           payload_hash?: string | null
           status?: string
           tenant_id: string
@@ -84,8 +181,11 @@ export type Database = {
           agent_name?: string
           enrolled_at?: string
           hmac_secret?: string | null
+          hostname?: string | null
           id?: string
           last_heartbeat?: string | null
+          os_type?: string | null
+          os_version?: string | null
           payload_hash?: string | null
           status?: string
           tenant_id?: string
@@ -795,6 +895,85 @@ export type Database = {
         }
         Relationships: []
       }
+      system_alerts: {
+        Row: {
+          acknowledged: boolean | null
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          agent_id: string | null
+          alert_type: string
+          created_at: string
+          details: Json | null
+          email_sent: boolean | null
+          email_sent_at: string | null
+          id: string
+          message: string
+          resolved: boolean | null
+          resolved_at: string | null
+          severity: string
+          tenant_id: string
+          title: string
+        }
+        Insert: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          agent_id?: string | null
+          alert_type: string
+          created_at?: string
+          details?: Json | null
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          id?: string
+          message: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          severity: string
+          tenant_id: string
+          title: string
+        }
+        Update: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          agent_id?: string | null
+          alert_type?: string
+          created_at?: string
+          details?: Json | null
+          email_sent?: boolean | null
+          email_sent_at?: string | null
+          id?: string
+          message?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          severity?: string
+          tenant_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_alerts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_alerts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_features: {
         Row: {
           created_at: string
@@ -1261,6 +1440,7 @@ export type Database = {
       cleanup_expired_keys: { Args: never; Returns: undefined }
       cleanup_old_failed_attempts: { Args: never; Returns: undefined }
       cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
+      cleanup_old_metrics: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       cleanup_old_security_logs: { Args: never; Returns: undefined }
       current_user_tenant_id: { Args: never; Returns: string }
@@ -1271,6 +1451,23 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: undefined
+      }
+      get_latest_agent_metrics: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          agent_id: string
+          agent_name: string
+          cpu_usage_percent: number
+          disk_usage_percent: number
+          hostname: string
+          last_heartbeat: string
+          memory_usage_percent: number
+          metrics_age_minutes: number
+          os_type: string
+          os_version: string
+          status: string
+          uptime_seconds: number
+        }[]
       }
       has_role: {
         Args: {
