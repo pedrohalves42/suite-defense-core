@@ -4,21 +4,37 @@ import { AutoGenerateEnrollmentSchema } from '../_shared/validation.ts';
 import { handleException, handleValidationError } from '../_shared/error-handler.ts';
 import { logSecurityEvent, extractIpAddress, checkIpBlocklist } from '../_shared/security-log.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
   
+  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log(`[${requestId}] [auto-generate-enrollment] Starting request`);
-
+  // Top-level try-catch to ensure CORS headers are always returned
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    logger.info(`[${requestId}] Starting auto-generate-enrollment request`);
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      logger.error(`[${requestId}] Missing environment variables`, { supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey });
+      return new Response(JSON.stringify({ 
+        error: 'Server configuration error',
+        requestId 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
+    logger.debug(`[${requestId}] Supabase client initialized`);
 
     // Extract IP address for security logging and rate limiting
     const ipAddress = extractIpAddress(req);
@@ -83,10 +99,10 @@ Deno.serve(async (req) => {
 
     // Authenticate user
     const authHeader = req.headers.get('Authorization');
-    console.log(`[${requestId}] Auth header present:`, !!authHeader);
+    logger.debug(`[${requestId}] Auth header present:`, !!authHeader);
     
     if (!authHeader) {
-      console.error(`[${requestId}] Missing Authorization header`);
+      logger.warn(`[${requestId}] Missing Authorization header`);
       return new Response(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -96,10 +112,10 @@ Deno.serve(async (req) => {
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
-    console.log(`[${requestId}] User auth result:`, { userId: user?.id, authError: authError?.message });
+    logger.debug(`[${requestId}] User auth result`, { userId: user?.id, hasError: !!authError });
     
     if (authError || !user) {
-      console.error(`[${requestId}] Auth failed:`, authError);
+      logger.warn(`[${requestId}] Authentication failed`, authError);
       return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -109,21 +125,18 @@ Deno.serve(async (req) => {
     let body;
     try {
       body = await req.json();
+      logger.debug(`[${requestId}] Request body parsed`, { agentName: body?.agentName || 'MISSING' });
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : 'Invalid JSON';
-      console.error(`[${requestId}] [auto-generate-enrollment] Invalid JSON:`, errorMsg);
+      logger.error(`[${requestId}] Invalid JSON in request body`, e);
       return handleValidationError('Invalid JSON in request body', { error: errorMsg }, requestId);
     }
-
-    console.log(`[${requestId}] [auto-generate-enrollment] Body received:`, {
-      agentName: body?.agentName || 'MISSING'
-    });
 
     // Validate input with Zod
     const validation = AutoGenerateEnrollmentSchema.safeParse(body);
     
     if (!validation.success) {
-      console.error(`[${requestId}] [auto-generate-enrollment] Validation error:`, {
+      logger.warn(`[${requestId}] Validation failed`, {
         errors: validation.error.issues,
         receivedData: { agentName: body?.agentName || 'missing' }
       });
@@ -150,7 +163,7 @@ Deno.serve(async (req) => {
     }
 
     const { agentName } = validation.data;
-    console.log(`[${requestId}] Valid agent name:`, agentName);
+    logger.info(`[${requestId}] Valid agent name`, { agentName });
 
     // Generate enrollment key
     const generateKey = () => {
@@ -172,19 +185,19 @@ Deno.serve(async (req) => {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Get user's tenant - prefer admin role, then any role
-    console.log(`[${requestId}] Fetching tenant for user:`, user.id);
+    logger.debug(`[${requestId}] Fetching tenant for user`, { userId: user.id });
     const { data: userRoles, error: roleError } = await supabase
       .from('user_roles')
       .select('tenant_id, role')
       .eq('user_id', user.id);
 
-    console.log(`[${requestId}] User roles result:`, { 
+    logger.debug(`[${requestId}] User roles fetched`, { 
       rolesCount: userRoles?.length, 
-      roleError: roleError?.message 
+      hasError: !!roleError 
     });
 
     if (roleError || !userRoles || userRoles.length === 0) {
-      console.error(`[${requestId}] User tenant not found for user:`, user.id);
+      logger.error(`[${requestId}] User has no tenant association`, { userId: user.id, roleError });
       return new Response(JSON.stringify({ 
         error: 'Sua conta ainda não está associada a um tenant. Entre em contato com o administrador para configurar sua conta.' 
       }), {
@@ -197,14 +210,14 @@ Deno.serve(async (req) => {
     const adminRole = userRoles.find(r => r.role === 'admin');
     const tenantId = adminRole?.tenant_id || userRoles[0].tenant_id;
     
-    console.log(`[${requestId}] Selected tenant:`, { 
+    logger.info(`[${requestId}] Tenant selected`, { 
       tenantId, 
       isAdmin: !!adminRole,
       totalRoles: userRoles.length 
     });
 
     // Create enrollment key
-    console.log(`[${requestId}] Creating enrollment key:`, enrollmentKey);
+    logger.debug(`[${requestId}] Creating enrollment key`, { enrollmentKey });
     const { error: keyError } = await supabase
       .from('enrollment_keys')
       .insert({
@@ -219,11 +232,11 @@ Deno.serve(async (req) => {
       });
 
     if (keyError) {
-      console.error(`[${requestId}] Failed to create enrollment key:`, keyError);
+      logger.error(`[${requestId}] Failed to create enrollment key`, keyError);
       throw keyError;
     }
     
-    console.log(`[${requestId}] Enrollment key created successfully`);
+    logger.success(`[${requestId}] Enrollment key created successfully`);
 
     // Generate agent token and HMAC secret
     const agentToken = crypto.randomUUID();
@@ -241,7 +254,7 @@ Deno.serve(async (req) => {
 
     if (existingAgent) {
       agentId = existingAgent.id;
-      console.log(`[${requestId}] Re-enrolling existing agent:`, agentId);
+      logger.info(`[${requestId}] Re-enrolling existing agent`, { agentId });
       
       // Update HMAC secret for security
       const { error: updateError } = await supabase
@@ -250,7 +263,7 @@ Deno.serve(async (req) => {
         .eq('id', agentId);
       
       if (updateError) {
-        console.error(`[${requestId}] Failed to update HMAC secret:`, updateError);
+        logger.error(`[${requestId}] Failed to update HMAC secret`, updateError);
         throw updateError;
       }
 
@@ -261,11 +274,11 @@ Deno.serve(async (req) => {
         .eq('agent_id', agentId);
         
       if (deactivateError) {
-        console.error(`[${requestId}] Failed to deactivate old tokens:`, deactivateError);
+        logger.warn(`[${requestId}] Failed to deactivate old tokens`, deactivateError);
       }
     } else {
       // Create new agent
-      console.log(`[${requestId}] Creating new agent:`, agentName);
+      logger.info(`[${requestId}] Creating new agent`, { agentName });
       const { data: newAgent, error: agentError } = await supabase
         .from('agents')
         .insert({
@@ -280,7 +293,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (agentError || !newAgent) {
-        console.error(`[${requestId}] Failed to create agent:`, agentError);
+        logger.error(`[${requestId}] Failed to create agent`, agentError);
         throw agentError || new Error('Failed to create agent');
       }
       agentId = newAgent.id;
@@ -310,15 +323,11 @@ Deno.serve(async (req) => {
       .eq('key', enrollmentKey);
       
     if (linkError) {
-      console.error(`[${requestId}] Failed to link enrollment key:`, linkError);
+      logger.warn(`[${requestId}] Failed to link enrollment key`, linkError);
     }
 
     const duration = Date.now() - startTime;
-    console.log(`[${requestId}] [auto-generate-enrollment] ✅ Credentials generated successfully in ${duration}ms`, {
-      agentName,
-      tenantId,
-      isExisting: !!existingAgent
-    });
+    logger.success(`[${requestId}] Credentials generated successfully in ${duration}ms`);
     
     return new Response(
       JSON.stringify({
@@ -334,8 +343,20 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
+    // Catch all errors and ensure CORS headers are always included
     const duration = Date.now() - startTime;
-    console.error(`[${requestId}] [auto-generate-enrollment] ❌ Error after ${duration}ms:`, error);
-    return handleException(error, requestId, 'auto-generate-enrollment');
+    logger.error(`[${requestId}] Critical error after ${duration}ms`, error);
+    
+    return new Response(
+      JSON.stringify({
+        error: 'Internal server error',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        requestId
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   }
 });
