@@ -154,7 +154,8 @@ serve(async (req) => {
           .from("subscription_plans")
           .select("id")
           .eq("name", planName)
-          .single();
+          .limit(1)
+          .maybeSingle();
 
         if (!plan) {
           logStep("Plan not found", { planName });
@@ -192,7 +193,8 @@ serve(async (req) => {
           .from("tenant_subscriptions")
           .select("tenant_id, subscription_plans!inner(name)")
           .eq("stripe_subscription_id", subscription.id)
-          .single();
+          .limit(1)
+          .maybeSingle();
 
         type SubscriptionWithPlan = typeof existingSubscription & {
           subscription_plans: { name: string };
@@ -238,7 +240,8 @@ serve(async (req) => {
           .from("tenant_subscriptions")
           .select("tenant_id")
           .eq("stripe_subscription_id", subscription.id)
-          .single();
+          .limit(1)
+          .maybeSingle();
 
         if (!existingSubscription) break;
 
@@ -247,7 +250,8 @@ serve(async (req) => {
           .from("subscription_plans")
           .select("id")
           .eq("name", "free")
-          .single();
+          .limit(1)
+          .maybeSingle();
 
         if (freePlan) {
           await supabaseClient
