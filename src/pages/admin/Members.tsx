@@ -33,11 +33,19 @@ export default function Members() {
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['tenant-members', tenant?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('list-users');
+      // CORREÇÃO: Adicionar headers de autenticação explicitamente
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('list-users', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
       
       if (error) throw error;
       return data.users || [];
     },
+    enabled: !!tenant?.id,
   });
 
   // Buscar assinatura do tenant
@@ -76,7 +84,7 @@ export default function Members() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenant-members'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant-members', tenant?.id] });
       toast({
         title: 'Membro removido',
         description: 'O membro foi removido com sucesso do tenant.',
@@ -92,18 +100,24 @@ export default function Members() {
     },
   });
 
-  // CORREÇÃO: Tipagem melhorada com AppRole
+  // CORREÇÃO: Tipagem melhorada com AppRole e headers explícitos
   const updateRole = useMutation({
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
+      // CORREÇÃO: Adicionar headers de autenticação explicitamente
+      const { data: { session } } = await supabase.auth.getSession();
+      
       const { data, error } = await supabase.functions.invoke('update-user-role', {
         body: { userId, roles: [newRole] },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
       });
 
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenant-members'] });
+      queryClient.invalidateQueries({ queryKey: ['tenant-members', tenant?.id] });
       toast({
         title: 'Role atualizado',
         description: 'O role do membro foi atualizado com sucesso.',
