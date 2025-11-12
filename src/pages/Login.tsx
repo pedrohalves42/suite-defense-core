@@ -45,10 +45,11 @@ export default function Login() {
         if (data.blocked) {
           toast({
             variant: 'destructive',
-            title: 'Acesso temporariamente bloqueado',
-            description: `Seu IP foi bloqueado até ${new Date(data.blockedUntil).toLocaleString('pt-BR')} devido a múltiplas tentativas de login falhadas.`,
-            duration: 10000,
+            title: '🚨 Acesso Bloqueado - Proteção Anti-Brute-Force',
+            description: `Seu IP foi bloqueado até ${new Date(data.blockedUntil).toLocaleString('pt-BR')} (${data.attemptCount || 5}+ tentativas em 15 minutos). Contate o suporte se isso for um erro.`,
+            duration: 15000,
           });
+          setLoading(true); // Desabilitar interface
           return;
         }
 
@@ -239,11 +240,21 @@ export default function Login() {
           <TabsContent value="password">
             <form onSubmit={handleLogin}>
               <CardContent className="space-y-4">
+                {attemptCount > 0 && attemptCount < 3 && (
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      ⚠️ {attemptCount} tentativa{attemptCount > 1 ? 's' : ''} falhada{attemptCount > 1 ? 's' : ''} detectada{attemptCount > 1 ? 's' : ''}. 
+                      {3 - attemptCount} tentativa{3 - attemptCount > 1 ? 's' : ''} restante{3 - attemptCount > 1 ? 's' : ''} antes do CAPTCHA.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 {requiresCaptcha && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      Múltiplas tentativas de login detectadas. Complete o CAPTCHA para continuar.
+                      🔒 Proteção ativada: {attemptCount} tentativas falhadas. Complete o CAPTCHA para continuar.
+                      {attemptCount >= 5 && ' Próximo bloqueio automático após mais falhas!'}
                     </AlertDescription>
                   </Alert>
                 )}

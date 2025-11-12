@@ -47,17 +47,17 @@ Deno.serve(async (req) => {
         user_agent: userAgent || null,
       });
 
-    // Verificar se deve bloquear IP (5 tentativas em 1 hora)
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    // Verificar se deve bloquear IP (5 tentativas em 15 minutos - mais agressivo)
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
     const { count } = await supabaseAdmin
       .from('failed_login_attempts')
       .select('*', { count: 'exact', head: true })
       .eq('ip_address', ipAddress)
-      .gte('created_at', oneHourAgo);
+      .gte('created_at', fifteenMinutesAgo);
 
     if (count && count >= 5) {
-      // Bloquear IP por 30 minutos
-      const blockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+      // Bloquear IP por 1 hora (mais restritivo)
+      const blockedUntil = new Date(Date.now() + 60 * 60 * 1000);
       await supabaseAdmin
         .from('ip_blocklist')
         .upsert({
@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
           ip_address: ipAddress,
           endpoint: '/auth/login',
           attack_type: 'brute_force',
-          severity: 'high',
+          severity: 'critical',
           blocked: true,
           details: { 
             email, 
@@ -85,6 +85,24 @@ Deno.serve(async (req) => {
           },
           user_agent: userAgent || null,
         });
+
+      // Enviar alerta em tempo real para admins
+      try {
+        await supabaseAdmin.functions.invoke('send-brute-force-alert', {
+          headers: {
+            'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
+          },
+          body: {
+            ipAddress,
+            email,
+            attemptCount: count,
+            blockedUntil: blockedUntil.toISOString(),
+            userAgent,
+          }
+        });
+      } catch (alertError) {
+        console.error('[BRUTE-FORCE] Failed to send alert:', alertError);
+      }
     } else {
       // Logar evento de segurança
       await supabaseAdmin
