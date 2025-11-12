@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { handleException, corsHeaders } from '../_shared/error-handler.ts';
 import { z } from 'https://deno.land/x/zod@v3.23.8/mod.ts';
+import { getTenantIdForUser } from '../_shared/tenant.ts';
 
 const GenerateKeySchema = z.object({
   expiresInHours: z.number().positive().int(),
@@ -37,11 +38,18 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Checking role for user:`, user.id);
     
-    const { data: userRole, error: rolesError } = await supabaseClient
+    // Use service role to check permissions (handles multiple roles)
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    
+    const { data: userRole, error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .select('role, tenant_id')
       .eq('user_id', user.id)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     console.log(`[${requestId}] User role query result:`, { userRole, rolesError });
 
@@ -75,12 +83,7 @@ Deno.serve(async (req) => {
     const enrollmentKey = generateKey();
     const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString();
 
-    // Usar service role para inserir a chave
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
+    // Insert enrollment key using service role (already initialized above)
     const { data: keyData, error: insertError } = await supabaseAdmin
       .from('enrollment_keys')
       .insert({
