@@ -61,7 +61,8 @@ export default function AuthDebug() {
       const { data, error } = await supabase
         .from('tenants')
         .select('*')
-        .single();
+        .limit(1)
+        .maybeSingle();
       
       if (error) throw error;
       if (!data) throw new Error('Tenant não encontrado');
