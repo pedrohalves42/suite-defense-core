@@ -36,7 +36,9 @@ serve(async (req) => {
       .from("user_roles")
       .select("role")
       .eq("user_id", userData.user.id)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (roleData?.role !== "admin") throw new Error("Only admins can create Stripe products");
 

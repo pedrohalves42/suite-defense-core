@@ -87,7 +87,9 @@ Deno.serve(async (req) => {
         )
       `)
       .eq('tenant_id', tenantId)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!subscription) {
       return createErrorResponse(ErrorCode.BAD_REQUEST, 'Plano não encontrado', 400, requestId);
@@ -147,7 +149,9 @@ Deno.serve(async (req) => {
         status: 'pending',
       })
       .select()
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (inviteError) throw inviteError;
 

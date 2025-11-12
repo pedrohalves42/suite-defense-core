@@ -95,7 +95,9 @@ Deno.serve(async (req) => {
         tenant_id: tenantId,
       })
       .select()
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (insertError) {
       throw new Error('Failed to create enrollment key');

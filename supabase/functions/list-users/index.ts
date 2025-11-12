@@ -63,7 +63,9 @@ Deno.serve(async (req) => {
       .from('user_roles')
       .select('tenant_id')
       .eq('user_id', user.id)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     console.log(`[${requestId}] Tenant query result:`, { userRole, tenantError });
 
@@ -101,7 +103,9 @@ Deno.serve(async (req) => {
       .from('tenants')
       .select('id, name')
       .eq('id', userRole.tenant_id)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     // Get profiles
     const { data: profiles } = await supabaseAdmin

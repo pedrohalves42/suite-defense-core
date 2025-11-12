@@ -87,7 +87,9 @@ export default function Settings() {
           .from('tenant_settings')
           .insert({ tenant_id: tenant.id })
           .select()
-          .single();
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
         
         if (insertError) throw insertError;
         return newSettings;

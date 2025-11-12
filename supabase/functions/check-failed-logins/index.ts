@@ -38,7 +38,9 @@ Deno.serve(async (req) => {
       .select('blocked_until')
       .eq('ip_address', ipAddress)
       .gte('blocked_until', new Date().toISOString())
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (blockedIp) {
       return new Response(

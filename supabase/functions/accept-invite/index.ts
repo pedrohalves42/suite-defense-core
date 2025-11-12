@@ -44,7 +44,9 @@ Deno.serve(async (req) => {
       .select('*')
       .eq('token', inviteToken)
       .eq('status', 'pending')
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (inviteError || !invite) {
       return createErrorResponse(ErrorCode.NOT_FOUND, 'Convite não encontrado ou expirado', 404, requestId);

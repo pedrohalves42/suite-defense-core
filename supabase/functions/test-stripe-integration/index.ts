@@ -38,7 +38,9 @@ serve(async (req: Request) => {
       .from('user_roles')
       .select('role, tenant_id')
       .eq('user_id', user.id)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (roleError || !userRole || userRole.role !== 'admin') {
       await createAuditLog({

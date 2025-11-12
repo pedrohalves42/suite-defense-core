@@ -51,7 +51,9 @@ serve(async (req) => {
       .from("tenant_subscriptions")
       .select("stripe_customer_id")
       .eq("tenant_id", tenantId)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!subscription?.stripe_customer_id) {
       throw new Error("No Stripe customer found. Please create a subscription first.");

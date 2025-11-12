@@ -79,7 +79,9 @@ export default function AgentTest() {
           payload: { test: true, timestamp: new Date().toISOString() }
         }])
         .select()
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (jobError) throw new Error(`Erro ao criar job: ${jobError.message}`);
 
@@ -109,7 +111,9 @@ export default function AgentTest() {
           .from("jobs")
           .select("status, delivered_at")
           .eq("id", job.id)
-          .single();
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         if (updatedJob?.status === "delivered" || updatedJob?.delivered_at) {
           polled = true;
@@ -188,7 +192,9 @@ export default function AgentTest() {
           .from("jobs")
           .select("status, completed_at")
           .eq("id", job.id)
-          .single();
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         if (updatedJob?.status === "completed" && updatedJob?.completed_at) {
           acked = true;

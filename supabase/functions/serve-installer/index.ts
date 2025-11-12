@@ -89,7 +89,9 @@ Deno.serve(async (req) => {
       .from('enrollment_keys')
       .select('agent_id, is_active, expires_at, tenant_id')
       .eq('key', enrollmentKey)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (enrollmentError || !enrollmentData) {
       console.log(`[${requestId}] Invalid enrollment key: ${enrollmentError?.message}`);
@@ -121,7 +123,9 @@ Deno.serve(async (req) => {
       .select('token')
       .eq('agent_id', enrollmentData.agent_id)
       .eq('is_active', true)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (tokenError || !tokenData) {
       console.log(`[${requestId}] Agent token not found: ${tokenError?.message}`);
@@ -136,7 +140,9 @@ Deno.serve(async (req) => {
       .from('agents')
       .select('agent_name, os_type, hmac_secret')
       .eq('id', enrollmentData.agent_id)
-      .single();
+      .order('enrolled_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (agentError || !agentData) {
       console.log(`[${requestId}] Agent not found: ${agentError?.message}`);

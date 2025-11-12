@@ -39,7 +39,9 @@ export default function PlanUpgrade() {
           )
         `)
         .eq('tenant_id', tenant.id)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (error) throw error;
       return data as CurrentSubscription;
