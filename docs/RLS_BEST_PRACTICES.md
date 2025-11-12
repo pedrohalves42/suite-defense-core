@@ -242,5 +242,66 @@ If you encounter recursion errors:
 
 ---
 
+## 🔄 Multiple Roles Handling
+
+### Problem: Users with Multiple Roles
+
+When a user has multiple roles (e.g., `admin` + `super_admin`), using `.single()` in queries to `user_roles` causes **PGRST116 errors**.
+
+### Solution: Use Helper Functions in Edge Functions
+
+```typescript
+// ❌ WRONG - Fails with multiple roles
+const { data: userRole } = await supabase
+  .from('user_roles')
+  .select('tenant_id')
+  .eq('user_id', user.id)
+  .single(); // 💥 Error if user has 2+ roles
+
+// ✅ CORRECT - Use shared helper
+import { getTenantIdForUser } from '../_shared/tenant.ts';
+
+const tenantId = await getTenantIdForUser(supabase, user.id);
+if (!tenantId) {
+  throw new Error('Tenant not found');
+}
+```
+
+### Solution: Use `useTenant()` Hook in React
+
+```typescript
+// ❌ WRONG - Direct query with .single()
+const { data: userRole } = await supabase
+  .from('user_roles')
+  .select('tenant_id')
+  .eq('user_id', user.id)
+  .single();
+
+// ✅ CORRECT - Use useTenant hook
+import { useTenant } from '@/hooks/useTenant';
+
+const { tenant, loading } = useTenant();
+
+// Use tenant?.id in queries
+const { data } = useQuery({
+  queryKey: ['data', tenant?.id],
+  queryFn: async () => { /* ... */ },
+  enabled: !!tenant?.id,
+});
+```
+
+### Available Helper Functions
+
+| Function | Purpose | Location |
+|----------|---------|----------|
+| `getTenantIdForUser(supabase, userId)` | Get user's tenant ID | `_shared/tenant.ts` |
+| `verifyUserTenant(supabase, userId, tenantId)` | Verify tenant membership | `_shared/tenant.ts` |
+
+**See:** `docs/MULTIPLE_ROLES_HANDLING.md` for detailed guide.
+
+---
+
 **Last Updated:** 2025-01-17  
-**Related Migration:** `fix_rls_infinite_recursion.sql`
+**Related Migration:** `fix_rls_infinite_recursion.sql`  
+**Related Docs:** `MULTIPLE_ROLES_HANDLING.md`
+

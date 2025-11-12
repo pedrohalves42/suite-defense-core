@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
+import { getTenantIdForUser } from '../_shared/tenant.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -31,14 +32,10 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get user's tenant
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .single()
+    // Get user's tenant using helper (handles multiple roles)
+    const tenantId = await getTenantIdForUser(supabase, user.id)
 
-    if (!userRole) {
+    if (!tenantId) {
       return new Response(
         JSON.stringify({ error: 'User not associated with any tenant' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -59,7 +56,7 @@ Deno.serve(async (req) => {
       .from('agents')
       .select('*')
       .eq('agent_name', agentName)
-      .eq('tenant_id', userRole.tenant_id)
+      .eq('tenant_id', tenantId)
       .single()
 
     if (agentError || !agent) {

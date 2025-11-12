@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { z } from 'https://deno.land/x/zod@v3.23.8/mod.ts';
 import { handleException, handleValidationError, createErrorResponse, ErrorCode, corsHeaders } from '../_shared/error-handler.ts';
 import { createAuditLog } from '../_shared/audit.ts';
+import { getTenantIdForUser } from '../_shared/tenant.ts';
 
 const UpdateRoleSchema = z.object({
   user_role_id: z.string().uuid(),
@@ -58,14 +59,10 @@ Deno.serve(async (req) => {
 
     const { user_role_id, new_role } = validation.data;
 
-    // Buscar tenant do admin
-    const { data: adminRole } = await supabaseAdmin
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .single();
+    // Get admin's tenant using helper (handles multiple roles)
+    const adminTenantId = await getTenantIdForUser(supabaseAdmin, user.id);
 
-    if (!adminRole?.tenant_id) {
+    if (!adminTenantId) {
       return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
     }
 
@@ -81,7 +78,7 @@ Deno.serve(async (req) => {
     }
 
     // Verificar se o membro pertence ao mesmo tenant
-    if (targetRole.tenant_id !== adminRole.tenant_id) {
+    if (targetRole.tenant_id !== adminTenantId) {
       return createErrorResponse(ErrorCode.FORBIDDEN, 'Membro não pertence ao seu tenant', 403, requestId);
     }
 
@@ -101,7 +98,7 @@ Deno.serve(async (req) => {
     await createAuditLog({
       supabase: supabaseAdmin,
       userId: user.id,
-      tenantId: adminRole.tenant_id,
+      tenantId: adminTenantId,
       action: 'member_role_updated',
       resourceType: 'user_role',
       resourceId: user_role_id,

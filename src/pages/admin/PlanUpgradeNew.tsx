@@ -57,7 +57,12 @@ export default function PlanUpgradeNew() {
     },
     onSuccess: (data) => {
       if (data.url) {
-        window.open(data.url, '_blank');
+        toast({
+          title: 'Redirecionando para o checkout',
+          description: 'Você será redirecionado para completar o pagamento.',
+        });
+        // Redirect in the same tab for better UX (avoids popup blockers)
+        window.location.href = data.url;
       }
     },
     onError: (error: any) => {
@@ -78,7 +83,12 @@ export default function PlanUpgradeNew() {
     },
     onSuccess: (data) => {
       if (data.url) {
-        window.open(data.url, '_blank');
+        toast({
+          title: 'Redirecionando para o portal',
+          description: 'Você será redirecionado para gerenciar sua assinatura.',
+        });
+        // Redirect in the same tab for better UX
+        window.location.href = data.url;
       }
     },
     onError: (error: any) => {

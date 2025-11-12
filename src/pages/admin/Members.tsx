@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
+import { useTenant } from '@/hooks/useTenant';
 
 interface Member {
   id: string;
@@ -48,6 +49,7 @@ export default function Members() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { tenant, loading: tenantLoading } = useTenant();
   const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
 
   // Buscar membros do tenant via edge function
@@ -63,18 +65,9 @@ export default function Members() {
 
   // Buscar assinatura do tenant
   const { data: subscription } = useQuery({
-    queryKey: ['tenant-subscription'],
+    queryKey: ['tenant-subscription', tenant?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Não autorizado');
-
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!userRole) throw new Error('Tenant não encontrado');
+      if (!tenant?.id) throw new Error('Tenant não encontrado');
 
       const { data, error } = await supabase
         .from('tenant_subscriptions')
@@ -84,12 +77,13 @@ export default function Members() {
             max_users
           )
         `)
-        .eq('tenant_id', userRole.tenant_id)
+        .eq('tenant_id', tenant.id)
         .single();
 
       if (error) throw error;
       return data as Subscription;
     },
+    enabled: !!tenant?.id,
   });
 
   // Remover membro
@@ -216,7 +210,7 @@ export default function Members() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {(isLoading || tenantLoading) ? (
             <p className="text-center text-muted-foreground py-8">Carregando...</p>
           ) : members.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">

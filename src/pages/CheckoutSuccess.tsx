@@ -33,13 +33,25 @@ export default function CheckoutSuccess() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-muted p-4 rounded-lg space-y-2">
-            <p className="text-sm text-muted-foreground">
-              <strong>Período de Trial:</strong> 30 dias gratuitos
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Você não será cobrado durante o período de teste. Após o término, sua cobrança será automática.
-            </p>
+          <div className="bg-muted p-4 rounded-lg space-y-3">
+            <div>
+              <p className="text-sm font-medium mb-1">✨ Período de Trial</p>
+              <p className="text-sm text-muted-foreground">
+                30 dias gratuitos para testar todos os recursos
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-1">💳 Próximos Passos</p>
+              <p className="text-sm text-muted-foreground">
+                Você não será cobrado durante o período de teste. Após o término, sua cobrança será automática mensalmente.
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium mb-1">🔧 Gerenciar Assinatura</p>
+              <p className="text-sm text-muted-foreground">
+                Você pode cancelar ou modificar sua assinatura a qualquer momento através do portal do cliente.
+              </p>
+            </div>
           </div>
           
           {sessionId && (
@@ -58,9 +70,16 @@ export default function CheckoutSuccess() {
             <Button 
               variant="outline" 
               className="w-full"
-              onClick={() => navigate('/admin/plan-upgrade')}
+              onClick={() => navigate('/admin/subscriptions')}
             >
-              Ver Minha Assinatura
+              Gerenciar Assinatura
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full text-sm"
+              onClick={() => navigate('/admin/agent-installer')}
+            >
+              Instalar Agentes
             </Button>
           </div>
         </CardContent>
