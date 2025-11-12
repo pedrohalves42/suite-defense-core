@@ -38,7 +38,9 @@ Deno.serve(async (req) => {
       .select('agent_id, agents!inner(agent_name, hmac_secret)')
       .eq('token', agentToken)
       .eq('is_active', true)
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     if (!token?.agents) {
       return new Response(
@@ -105,7 +107,9 @@ Deno.serve(async (req) => {
       .from('jobs')
       .select('*')
       .eq('id', validatedJobId)
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     if (fetchError || !existingJob) {
       console.error('[ACK] Job não encontrado:', validatedJobId, fetchError)
@@ -143,7 +147,9 @@ Deno.serve(async (req) => {
       .eq('id', validatedJobId)
       .eq('agent_name', agent.agent_name)
       .select()
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     if (updateError) {
       console.error('[ACK] Erro ao atualizar job:', updateError)

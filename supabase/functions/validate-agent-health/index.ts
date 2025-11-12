@@ -57,7 +57,9 @@ Deno.serve(async (req) => {
       .select('*')
       .eq('agent_name', agentName)
       .eq('tenant_id', tenantId)
-      .single()
+      .order('enrolled_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     if (agentError || !agent) {
       return new Response(
@@ -83,7 +85,7 @@ Deno.serve(async (req) => {
       .eq('agent_id', agent.id)
       .order('collected_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
     const lastMetrics = metrics?.collected_at ? new Date(metrics.collected_at) : null
     const metricsHealthy = lastMetrics

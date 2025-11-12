@@ -38,7 +38,9 @@ Deno.serve(async (req) => {
       .select('agent_id, agents!inner(agent_name, hmac_secret)')
       .eq('token', agentToken)
       .eq('is_active', true)
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     if (!token?.agents) {
       return new Response(

@@ -31,7 +31,9 @@ export async function verifyHmacSignature(
     .from('hmac_signatures')
     .select('id')
     .eq('signature', signature)
-    .single();
+    .order('used_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (usedSignature) {
     return { valid: false, error: 'Assinatura já utilizada (replay attack detectado)' };
