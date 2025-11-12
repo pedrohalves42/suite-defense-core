@@ -450,7 +450,7 @@ Deno.serve(async (req) => {
         enrollmentKey,
         agentToken,
         hmacSecret,
-        expiresAt: tokenExpiresAt.toISOString(),
+        expiresAt: expiresAt.toISOString(),
         agentId,
         requestId
       }),
