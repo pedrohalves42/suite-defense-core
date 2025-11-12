@@ -8,6 +8,9 @@ export const useSuperAdmin = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // CORREÇÃO: Flag para prevenir race condition
+    let isCancelled = false;
+
     const checkSuperAdmin = async () => {
       if (authLoading) {
         setLoading(true);
@@ -26,16 +29,31 @@ export const useSuperAdmin = () => {
         });
 
         if (error) throw error;
-        setIsSuperAdmin(data === true);
+        
+        // CORREÇÃO: Só atualiza se não foi cancelado
+        if (!isCancelled) {
+          setIsSuperAdmin(data === true);
+        }
       } catch (error) {
-        console.error('Error checking super admin status:', error);
-        setIsSuperAdmin(false);
+        if (import.meta.env.DEV) {
+          console.error('Error checking super admin status:', error);
+        }
+        if (!isCancelled) {
+          setIsSuperAdmin(false);
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
     checkSuperAdmin();
+
+    // CORREÇÃO: Cleanup para prevenir memory leak
+    return () => {
+      isCancelled = true;
+    };
   }, [user, authLoading]);
 
   return { isSuperAdmin, loading };

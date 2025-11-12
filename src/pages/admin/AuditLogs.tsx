@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useDebounce } from '@/hooks/useDebounce';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -15,8 +16,11 @@ const ITEMS_PER_PAGE = 20;
 export default function AuditLogs() {
   const [page, setPage] = useState(0);
   const [actionFilter, setActionFilter] = useState('all');
-  const [userFilter, setUserFilter] = useState('all'); // CORREÇÃO: Iniciar com 'all' para evitar uncontrolled
-  const [searchTerm, setSearchTerm] = useState('');
+  const [userFilter, setUserFilter] = useState('all');
+  const [searchInput, setSearchInput] = useState('');
+  
+  // CORREÇÃO: Debounce no search para reduzir queries (500ms)
+  const searchTerm = useDebounce(searchInput, 500);
 
   const { data: logs, isLoading } = useQuery({
     queryKey: ['audit-logs', page, actionFilter, userFilter, searchTerm],
@@ -106,9 +110,9 @@ export default function AuditLogs() {
             <div>
               <Input
                 placeholder="Buscar por ação ou recurso..."
-                value={searchTerm}
+                value={searchInput}
                 onChange={(e) => {
-                  setSearchTerm(e.target.value);
+                  setSearchInput(e.target.value);
                   setPage(0);
                 }}
               />

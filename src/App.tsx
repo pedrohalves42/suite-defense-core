@@ -50,16 +50,16 @@ import AgentMonitoringAdvanced from "./pages/AgentMonitoringAdvanced";
 import ExeBuild from "./pages/docs/ExeBuild";
 import InstallationAnalytics from "./pages/admin/InstallationAnalytics";
 
-const queryClient = new QueryClient();
+// CORREÇÃO: QueryClient já está inicializado no src/main.tsx
+// Remover duplicação para manter configurações otimizadas
 
 const App = () => (
   <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <CookieConsent />
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <CookieConsent />
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
@@ -123,9 +123,8 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+      </BrowserRouter>
+    </TooltipProvider>
   </ErrorBoundary>
 );
 

@@ -4,7 +4,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 
 export const AppSidebar = () => {
   const { isAdmin } = useIsAdmin();
@@ -14,7 +14,7 @@ export const AppSidebar = () => {
     return saved === 'true';
   });
 
-  console.log('[AppSidebar] isAdmin:', isAdmin, 'isSuperAdmin:', isSuperAdmin);
+  // CORREÇÃO: Logger removido em produção
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', collapsed.toString());
@@ -22,7 +22,8 @@ export const AppSidebar = () => {
     window.dispatchEvent(new Event('sidebar-toggle'));
   }, [collapsed]);
 
-  const menuItems = [
+  // CORREÇÃO: Memoizar arrays para evitar re-renders desnecessários
+  const menuItems = useMemo(() => [
     { icon: Home, label: 'Dashboard', to: '/dashboard', end: true },
     { icon: Server, label: 'Monitoramento', to: '/monitoring' },
     { icon: Server, label: 'Gerenciar Agentes', to: '/agents' },
@@ -32,9 +33,9 @@ export const AppSidebar = () => {
     { icon: Package, label: 'Instalador', to: '/installer' },
     { icon: FileDown, label: 'Exportar Dados', to: '/export' },
     { icon: TestTube, label: 'Teste de Agentes', to: '/agent-test' },
-  ];
+  ], []);
 
-  const adminItems = [
+  const adminItems = useMemo(() => [
     { icon: Home, label: 'Dashboard', to: '/admin/dashboard', end: true },
     { icon: Activity, label: 'Monitoramento RT', to: '/admin/monitoring-advanced' },
     { icon: Package, label: 'Instalador Agentes', to: '/admin/agent-installer' },
@@ -51,12 +52,12 @@ export const AppSidebar = () => {
     { icon: AlertTriangle, label: 'Segurança', to: '/admin/security' },
     { icon: ScrollText, label: 'Logs', to: '/admin/audit-logs' },
     { icon: Settings, label: 'Configurações', to: '/admin/settings' },
-  ];
+  ], []);
 
-  const superAdminItems = [
+  const superAdminItems = useMemo(() => [
     { icon: Crown, label: 'Gerenciar Tenants', to: '/super-admin/tenants', end: true },
     { icon: BarChart3, label: 'Métricas Globais', to: '/super-admin/metrics' },
-  ];
+  ], []);
 
   return (
     <aside
