@@ -117,12 +117,14 @@ export default function Members() {
 
   // Atualizar role do membro
   const updateRole = useMutation({
-    mutationFn: async ({ userRoleId, newRole }: { userRoleId: string; newRole: string }) => {
-      const { error } = await supabase.functions.invoke('update-member-role', {
-        body: { user_role_id: userRoleId, new_role: newRole },
+    mutationFn: async ({ userId, newRole }: { userId: string; newRole: string }) => {
+      // CORREÇÃO: Chamar função correta com parâmetros corretos
+      const { data, error } = await supabase.functions.invoke('update-user-role', {
+        body: { userId, roles: [newRole] },
       });
 
       if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant-members'] });
@@ -244,10 +246,11 @@ export default function Members() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Select
-                      value={member.role}
+                      value={member.role || 'viewer'}
                       onValueChange={(newRole) =>
-                        updateRole.mutate({ userRoleId: member.id, newRole })
+                        updateRole.mutate({ userId: member.user_id, newRole })
                       }
+                      disabled={updateRole.isPending}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />

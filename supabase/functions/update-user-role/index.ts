@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { corsHeaders } from '../_shared/error-handler.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { logger } from '../_shared/logger.ts'; // CORREÇÃO: Adicionar logger
 
 // Validation schema
 const UpdateRoleSchema = z.object({
@@ -64,11 +65,11 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
-      console.error('Authentication failed:', authError);
+      logger.error('Authentication failed', authError); // CORREÇÃO: Usar logger
       return createError('UNAUTHORIZED', 'Authentication required', requestId, 401);
     }
 
-    console.log(`[${requestId}] Checking role for user:`, user.id);
+    logger.info(`[${requestId}] Checking role for user: ${user.id}`); // CORREÇÃO: Usar logger
     
     // Check if user is admin and get tenant
     const { data: actorRole, error: roleError } = await supabaseAdmin
@@ -77,15 +78,15 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    console.log(`[${requestId}] Actor role query result:`, { actorRole, roleError });
+    logger.debug(`[${requestId}] Actor role query result`, { actorRole, roleError }); // CORREÇÃO: Usar logger
 
     if (roleError) {
-      console.error(`[${requestId}] Error fetching actor role:`, roleError);
+      logger.error(`[${requestId}] Error fetching actor role`, roleError); // CORREÇÃO: Usar logger
       return createError('INTERNAL', 'Internal server error', requestId, 500);
     }
 
     if (!actorRole || actorRole.role !== 'admin') {
-      console.warn(`[${requestId}] User ${user.id} is not admin, role:`, actorRole?.role);
+      logger.warn(`[${requestId}] User ${user.id} is not admin, role: ${actorRole?.role}`); // CORREÇÃO: Usar logger
       // Audit failed attempt
       await supabaseAdmin.from('audit_logs').insert({
         tenant_id: actorRole?.tenant_id || null,
@@ -139,7 +140,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (targetError) {
-      console.error('Error fetching target user:', targetError);
+      logger.error('Error fetching target user', targetError); // CORREÇÃO: Usar logger
       return createError('INTERNAL', 'Internal server error', requestId, 500);
     }
 
@@ -185,7 +186,7 @@ serve(async (req) => {
         .eq('tenant_id', actorTenantId);
 
       if (countError) {
-        console.error('Error counting admins:', countError);
+        logger.error('Error counting admins', countError); // CORREÇÃO: Usar logger
         return createError('INTERNAL', 'Internal server error', requestId, 500);
       }
 
@@ -206,7 +207,7 @@ serve(async (req) => {
       .eq('user_id', userId);
 
     if (updateError) {
-      console.error('Error updating role:', updateError);
+      logger.error('Error updating role', updateError); // CORREÇÃO: Usar logger
       return createError('INTERNAL', 'Failed to update user role', requestId, 500);
     }
 
@@ -244,7 +245,7 @@ serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Unexpected error in update-user-role:', error);
+    logger.error('Unexpected error in update-user-role', error); // CORREÇÃO: Usar logger
     
     return createError(
       'INTERNAL',
