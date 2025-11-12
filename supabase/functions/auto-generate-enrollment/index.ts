@@ -77,61 +77,85 @@ Deno.serve(async (req) => {
     // Extract IP address for security logging and rate limiting
     const ipAddress = extractIpAddress(req);
 
-    // Check if IP is in blocklist (multiple failed attempts)
-    const ipBlockCheck = await checkIpBlocklist(supabase, ipAddress, 'auto-generate-enrollment', 60);
-    if (ipBlockCheck.blocked) {
-      await logSecurityEvent({
-        supabase,
-        ipAddress,
-        endpoint: 'auto-generate-enrollment',
-        attackType: 'brute_force',
-        severity: 'high',
-        blocked: true,
-        details: {
-          reason: ipBlockCheck.reason,
-          resetAt: ipBlockCheck.resetAt
-        },
-        userAgent: req.headers.get('user-agent') || undefined,
-        requestId
-      });
+    // Check if IP is in blocklist (non-blocking for better UX)
+    try {
+      const ipBlockCheck = await checkIpBlocklist(supabase, ipAddress, 'auto-generate-enrollment', 60);
+      if (ipBlockCheck.blocked) {
+        await logSecurityEvent({
+          supabase,
+          ipAddress,
+          endpoint: 'auto-generate-enrollment',
+          attackType: 'brute_force',
+          severity: 'high',
+          blocked: true,
+          details: {
+            reason: ipBlockCheck.reason,
+            resetAt: ipBlockCheck.resetAt
+          },
+          userAgent: req.headers.get('user-agent') || undefined,
+          requestId
+        });
 
-      return new Response(JSON.stringify({ 
-        error: ipBlockCheck.reason,
-        resetAt: ipBlockCheck.resetAt
-      }), {
-        status: 429,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+        return new Response(JSON.stringify({ 
+          error: 'Too many requests',
+          message: ipBlockCheck.reason,
+          resetAt: ipBlockCheck.resetAt,
+          requestId,
+          timestamp: new Date().toISOString()
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } catch (blocklistError: any) {
+      logger.warn(`[${requestId}] IP blocklist check failed (non-blocking)`, blocklistError.message);
+      // Continue - blocklist issues shouldn't block enrollment
     }
 
     // Rate limiting por IP (prevenir brute force)
-    const rateLimitResult = await checkRateLimit(supabase, ipAddress, 'auto-generate-enrollment', {
-      maxRequests: 10, // Máximo 10 enrollment keys por IP por hora
-      windowMinutes: 60,
-      blockMinutes: 120, // Bloquear por 2 horas se exceder
-    });
-
-    if (!rateLimitResult.allowed) {
-      await logSecurityEvent({
-        supabase,
-        ipAddress,
-        endpoint: 'auto-generate-enrollment',
-        attackType: 'rate_limit',
-        severity: 'medium',
-        blocked: true,
-        details: {
-          resetAt: rateLimitResult.resetAt
-        },
-        userAgent: req.headers.get('user-agent') || undefined,
-        requestId
+    try {
+      const rateLimitResult = await checkRateLimit(supabase, ipAddress, 'auto-generate-enrollment', {
+        maxRequests: 10, // Máximo 10 enrollment keys por IP por hora
+        windowMinutes: 60,
+        blockMinutes: 120, // Bloquear por 2 horas se exceder
       });
 
+      if (!rateLimitResult.allowed) {
+        await logSecurityEvent({
+          supabase,
+          ipAddress,
+          endpoint: 'auto-generate-enrollment',
+          attackType: 'rate_limit',
+          severity: 'medium',
+          blocked: true,
+          details: {
+            resetAt: rateLimitResult.resetAt
+          },
+          userAgent: req.headers.get('user-agent') || undefined,
+          requestId
+        });
+
+        return new Response(
+          JSON.stringify({ 
+            error: 'Rate limit exceeded',
+            message: 'Too many enrollment key creation attempts. Please try again later.',
+            resetAt: rateLimitResult.resetAt,
+            requestId,
+            timestamp: new Date().toISOString()
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } catch (rateLimitError: any) {
+      logger.error(`[${requestId}] Rate limit check failed`, rateLimitError.message);
       return new Response(
         JSON.stringify({ 
-          error: 'Rate limit excedido. Muitas tentativas de criação de enrollment keys',
-          resetAt: rateLimitResult.resetAt 
+          error: 'Rate limit check failed',
+          message: rateLimitError.message || 'Unable to verify rate limit',
+          requestId,
+          timestamp: new Date().toISOString()
         }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -141,7 +165,12 @@ Deno.serve(async (req) => {
     
     if (!authHeader) {
       logger.warn(`[${requestId}] Missing Authorization header`);
-      return new Response(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }), {
+      return new Response(JSON.stringify({ 
+        error: 'Authentication required',
+        message: 'Authorization header is missing. Please log in again.',
+        requestId,
+        timestamp: new Date().toISOString()
+      }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -154,7 +183,12 @@ Deno.serve(async (req) => {
     
     if (authError || !user) {
       logger.warn(`[${requestId}] Authentication failed`, authError);
-      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token' }), {
+      return new Response(JSON.stringify({ 
+        error: 'Invalid authentication',
+        message: authError?.message || 'Your session has expired. Please log in again.',
+        requestId,
+        timestamp: new Date().toISOString()
+      }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -237,7 +271,11 @@ Deno.serve(async (req) => {
     if (roleError || !userRoles || userRoles.length === 0) {
       logger.error(`[${requestId}] User has no tenant association`, { userId: user.id, roleError });
       return new Response(JSON.stringify({ 
-        error: 'Sua conta ainda não está associada a um tenant. Entre em contato com o administrador para configurar sua conta.' 
+        error: 'No tenant association',
+        message: 'Your account is not associated with any organization. Please contact your administrator.',
+        details: roleError?.message,
+        requestId,
+        timestamp: new Date().toISOString()
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -271,7 +309,13 @@ Deno.serve(async (req) => {
 
     if (keyError) {
       logger.error(`[${requestId}] Failed to create enrollment key`, keyError);
-      throw keyError;
+      
+      // Map known DB errors
+      if (keyError.code === '23505') { // Unique violation
+        throw new Error('Enrollment key already exists. This is unexpected. Please try again.');
+      }
+      
+      throw new Error(`Failed to create enrollment key: ${keyError.message}`);
     }
     
     logger.success(`[${requestId}] Enrollment key created successfully`);
@@ -330,7 +374,19 @@ Deno.serve(async (req) => {
 
       if (agentError || !newAgent) {
         logger.error(`[${requestId}] Failed to create agent`, agentError);
-        throw agentError || new Error('Failed to create agent');
+        
+        // Map known DB errors to user-friendly messages
+        if (agentError?.code === '23505') { // Unique violation
+          throw new Error(`Agent name "${agentName}" is already registered. Please choose a different name.`);
+        }
+        if (agentError?.code === '23502') { // Not null violation
+          throw new Error('Missing required fields for agent creation. Please contact support.');
+        }
+        if (agentError?.code === '42703') { // Undefined column
+          throw new Error('Database schema error. The agents table may be missing required columns. Please contact support.');
+        }
+        
+        throw new Error(`Failed to create agent: ${agentError?.message || 'Unknown database error'}`);
       }
       agentId = newAgent.id;
     }
@@ -346,7 +402,16 @@ Deno.serve(async (req) => {
         is_active: true,
       });
 
-    if (tokenError) throw tokenError;
+    if (tokenError) {
+      logger.error(`[${requestId}] Failed to create agent token`, tokenError);
+      
+      // Map known DB errors
+      if (tokenError.code === '23505') {
+        throw new Error('Agent token already exists. Please try again.');
+      }
+      
+      throw new Error(`Failed to create agent token: ${tokenError.message}`);
+    }
 
     // Link enrollment key to agent (trigger will handle the rest)
     const { error: linkError } = await supabase
@@ -378,16 +443,24 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     // Catch all errors and ensure CORS headers are always included
     const duration = Date.now() - startTime;
     logger.error(`[${requestId}] Critical error after ${duration}ms`, error);
     
+    // Extract detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const errorDetails = error?.details || error?.hint || undefined;
+    const errorCode = error?.code || undefined;
+    
     return new Response(
       JSON.stringify({
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-        requestId
+        message: errorMessage,
+        details: errorDetails,
+        code: errorCode,
+        requestId,
+        timestamp: new Date().toISOString()
       }),
       {
         status: 500,
