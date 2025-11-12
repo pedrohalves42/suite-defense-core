@@ -1,5 +1,121 @@
 # ⚠️ Problemas Conhecidos - CyberShield
 
+---
+
+## ✅ PROBLEMAS RESOLVIDOS - Fase 1-5 (2025-11-12)
+
+### 1. Edge Functions - Erros 500 ✅
+**Status:** RESOLVIDO
+
+**Correções aplicadas:**
+- `update-user-role`: Agora aceita `userId` OU `user_id` para compatibilidade
+- `auto-generate-enrollment`: Error handling já implementado com logger estruturado
+- Ambas funções agora usam `logger.ts` (não console.log direto)
+
+---
+
+### 2. Erro 403 no PATCH /user_roles ✅
+**Status:** RESOLVIDO
+
+**Causa raiz:** Frontend tentava fazer PATCH direto na tabela `user_roles` via PostgREST, violando RLS.
+
+**Correção aplicada:**
+- Criado RPC `update_user_role_rpc` com SECURITY DEFINER
+- Edge Function `update-user-role` continua sendo o proxy seguro
+- Frontend agora envia headers `Authorization` explicitamente:
+
+```typescript
+const { data: { session } } = await supabase.auth.getSession();
+
+await supabase.functions.invoke('update-user-role', {
+  body: { userId, roles: [newRole] },
+  headers: {
+    Authorization: `Bearer ${session?.access_token}`,
+  },
+});
+```
+
+**Função RPC criada:**
+```sql
+public.update_user_role_rpc(
+  p_user_id uuid, 
+  p_new_role app_role
+) RETURNS jsonb
+```
+
+---
+
+### 3. Erro 400 no JOIN audit_logs + profiles ✅
+**Status:** RESOLVIDO
+
+**Causa raiz:** Faltava foreign key entre `audit_logs` e `profiles`.
+
+**Correção aplicada:**
+- Adicionada coluna `actor_id` em `audit_logs`
+- Criada foreign key: `audit_logs.actor_id -> profiles.user_id`
+- Queries agora usam: `profiles:profiles!audit_logs_actor_id_fkey(full_name)`
+
+**Migration executada:**
+```sql
+ALTER TABLE public.audit_logs ADD COLUMN actor_id uuid;
+ALTER TABLE public.audit_logs ADD CONSTRAINT audit_logs_actor_id_fkey
+  FOREIGN KEY (actor_id) REFERENCES public.profiles(user_id) ON DELETE SET NULL;
+```
+
+---
+
+### 4. React Warnings - Select Uncontrolled ✅
+**Status:** JÁ ESTAVA CORRETO
+
+**Verificação:**
+- `SafeSelect.tsx` já implementa controle correto de estado
+- Nunca passa `value=""` vazio aos `SelectItem`
+- Sempre tem fallback: `value || options[0]?.value || ''`
+
+---
+
+### 5. Frontend - Headers de Autenticação ✅
+**Status:** RESOLVIDO
+
+**Correções aplicadas em `Members.tsx`:**
+
+1. **Query `list-users` agora envia token:**
+```typescript
+const { data: { session } } = await supabase.auth.getSession();
+await supabase.functions.invoke('list-users', {
+  headers: { Authorization: `Bearer ${session?.access_token}` }
+});
+```
+
+2. **Mutation `update-user-role` agora envia token**
+
+3. **Cache keys incluem `tenant.id`:**
+```typescript
+queryKey: ['tenant-members', tenant?.id]
+```
+
+---
+
+### 6. Boas Práticas Implementadas ✅
+
+**Estrutura de error handling:**
+- ✅ Try/catch em todas Edge Functions
+- ✅ Validação com Zod
+- ✅ Status codes corretos (400, 401, 403, 500)
+- ✅ Logger estruturado (`logger.ts`)
+
+**Segurança:**
+- ✅ RPC com SECURITY DEFINER para bypass controlado de RLS
+- ✅ Edge Functions como proxy seguro
+- ✅ Headers de autenticação explícitos
+- ✅ Audit logs com `actor_id`
+
+**Performance:**
+- ✅ Cache keys corretos com `tenant.id`
+- ✅ Invalidação de cache precisa
+
+---
+
 ## TypeScript Strict Mode Ativado
 
 **Status:** ⏳ Erros esperados - Correção gradual em andamento

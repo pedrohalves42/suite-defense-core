@@ -1731,6 +1731,13 @@ export type Database = {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }
         Returns: undefined
       }
+      update_user_role_rpc: {
+        Args: {
+          p_new_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "operator" | "viewer" | "super_admin"
