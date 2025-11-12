@@ -4,6 +4,7 @@ import { EnrollAgentSchema } from '../_shared/validation.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { checkQuotaAvailable } from '../_shared/quota.ts';
+import { logger } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -13,7 +14,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log(`[${requestId}] [enroll-agent] Starting enrollment request`);
+  logger.info(`[${requestId}] Starting enrollment request`);
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -44,18 +45,18 @@ Deno.serve(async (req) => {
       rawData = await req.json();
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : 'Invalid JSON';
-      console.error(`[${requestId}] [enroll-agent] Invalid JSON:`, errorMsg);
+      logger.error(`[${requestId}] Invalid JSON`, e);
       return handleValidationError('Invalid JSON in request body', { error: errorMsg }, requestId);
     }
 
-    console.log(`[${requestId}] [enroll-agent] Body received:`, {
+    logger.debug(`[${requestId}] Enrollment request received`, {
       hasEnrollmentKey: !!rawData?.enrollmentKey,
       agentName: rawData?.agentName || 'MISSING'
     });
 
     // FASE 1: Explicit check for missing enrollmentKey
     if (!rawData?.enrollmentKey) {
-      console.error(`[${requestId}] [enroll-agent] Missing enrollmentKey in request`);
+      logger.warn(`[${requestId}] Missing enrollmentKey in request`);
       return new Response(
         JSON.stringify({ 
           error: 'enrollmentKey is required',
@@ -68,12 +69,10 @@ Deno.serve(async (req) => {
 
     const validation = EnrollAgentSchema.safeParse(rawData);
     if (!validation.success) {
-      console.error(`[${requestId}] [enroll-agent] Validation error:`, {
-        errors: validation.error.issues,
-        receivedData: {
-          enrollmentKey: rawData?.enrollmentKey ? 'present' : 'missing',
-          agentName: rawData?.agentName || 'missing'
-        }
+      logger.warn(`[${requestId}] Validation error`, {
+        errors: validation.error.issues.length,
+        hasKey: !!rawData?.enrollmentKey,
+        hasName: !!rawData?.agentName
       });
       return handleValidationError(validation.error, undefined, requestId);
     }
@@ -91,7 +90,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (keyError || !keyData) {
-      console.error(`[${requestId}] [enroll-agent] Invalid enrollment key: ${enrollmentKey}`);
+      logger.warn(`[${requestId}] Invalid enrollment key`);
       await createAuditLog({
         supabase,
         tenantId: 'unknown',
@@ -115,7 +114,7 @@ Deno.serve(async (req) => {
 
     // Check expiration
     if (new Date(keyData.expires_at) < new Date()) {
-      console.error(`[${requestId}] [enroll-agent] Expired enrollment key: ${enrollmentKey}`);
+      logger.warn(`[${requestId}] Expired enrollment key`);
       await createAuditLog({
         supabase,
         tenantId: keyData.tenant_id,
@@ -140,7 +139,7 @@ Deno.serve(async (req) => {
 
     // Check usage limit
     if (keyData.max_uses !== null && keyData.current_uses >= keyData.max_uses) {
-      console.error(`[${requestId}] [enroll-agent] Key usage limit exceeded: ${enrollmentKey}`);
+      logger.warn(`[${requestId}] Key usage limit exceeded`);
       await createAuditLog({
         supabase,
         tenantId: keyData.tenant_id,
@@ -274,11 +273,8 @@ Deno.serve(async (req) => {
     });
 
     const duration = Date.now() - startTime;
-    console.log(`[${requestId}] [enroll-agent] ✅ Enrollment completed successfully in ${duration}ms`, {
-      agentName,
-      tenantId: keyData.tenant_id,
-      isNew: !existingAgent
-    });
+    logger.debug(`[${requestId}] Enrollment completed`, { duration, isNew: !existingAgent });
+    logger.success(`[${requestId}] Agent enrolled successfully`);
 
     return new Response(
       JSON.stringify({
@@ -291,7 +287,7 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error(`[${requestId}] [enroll-agent] ❌ Error after ${duration}ms:`, error);
+    logger.error(`[${requestId}] Enrollment failed after ${duration}ms`, error);
     return handleException(error, requestId, 'enroll-agent');
   }
 });

@@ -12,8 +12,6 @@ export const useAuth = () => {
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       // Check for clock skew
       if (error?.message?.includes('issued in the future')) {
-        console.warn('[Auth] Clock skew detected:', error.message);
-        
         // Extract timestamps from error message
         const match = error.message.match(/(\d+)\s+(\d+)\s+(\d+)/);
         if (match) {
