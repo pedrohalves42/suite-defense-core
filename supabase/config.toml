@@ -76,6 +76,9 @@ verify_jwt = true
 [functions.generate-enrollment-key]
 verify_jwt = true
 
+[functions.cleanup-expired-enrollment-keys]
+verify_jwt = false
+
 [functions.get-agent-dashboard-data]
 verify_jwt = true
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,53 @@ import { Plus, Copy, XCircle, ChevronLeft, ChevronRight, TrendingUp, Key, Users,
 import { format, subDays } from 'date-fns';
 
 const ITEMS_PER_PAGE = 10;
+
+const CountdownTimer = ({ expiresAt }: { expiresAt: string }) => {
+  const [timeRemaining, setTimeRemaining] = useState('');
+  const [colorClass, setColorClass] = useState('text-green-600');
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const now = new Date();
+      const expiry = new Date(expiresAt);
+      const diff = expiry.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        setTimeRemaining('Expirado');
+        setColorClass('text-muted-foreground');
+        return;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (hours > 12) {
+        setTimeRemaining(`${hours}h ${minutes}m`);
+        setColorClass('text-green-600');
+      } else if (hours >= 1) {
+        setTimeRemaining(`${hours}h ${minutes}m`);
+        setColorClass('text-yellow-600');
+      } else if (minutes > 0) {
+        setTimeRemaining(`${minutes}m`);
+        setColorClass('text-red-600');
+      } else {
+        setTimeRemaining('< 1m');
+        setColorClass('text-red-600');
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000); // Atualiza a cada minuto
+
+    return () => clearInterval(interval);
+  }, [expiresAt]);
+
+  return (
+    <span className={`font-medium ${colorClass}`}>
+      {timeRemaining}
+    </span>
+  );
+};
 
 export default function EnrollmentKeys() {
   const { toast } = useToast();
@@ -354,7 +401,12 @@ export default function EnrollmentKeys() {
                           <TableCell>{key.creator_name || '-'}</TableCell>
                           <TableCell className="text-sm">{format(new Date(key.created_at), 'dd/MM/yy HH:mm')}</TableCell>
                           <TableCell className="text-sm">{key.used_at ? format(new Date(key.used_at), 'dd/MM/yy HH:mm') : '-'}</TableCell>
-                          <TableCell className="text-sm">{format(new Date(key.expires_at), 'dd/MM/yy HH:mm')}</TableCell>
+                          <TableCell className="text-sm">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-muted-foreground">{format(new Date(key.expires_at), 'dd/MM/yy HH:mm')}</span>
+                              <CountdownTimer expiresAt={key.expires_at} />
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right space-x-2">
                             <Button 
                               size="sm" 
