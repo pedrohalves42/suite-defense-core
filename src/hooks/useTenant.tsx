@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -13,47 +13,35 @@ interface Tenant {
 
 export const useTenant = () => {
   const { user } = useAuth();
-  const [tenant, setTenant] = useState<Tenant | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchTenant = async () => {
-      if (!user) {
-        setTenant(null);
-        setLoading(false);
-        return;
-      }
+  const { data: tenant = null, isLoading: loading } = useQuery<Tenant | null>({
+    queryKey: ['tenant', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
 
-      try {
-        // Get user's tenant_id from user_roles
-        const { data: userRole, error: roleError } = await supabase
-          .from('user_roles')
-          .select('tenant_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
+      // Get user's tenant_id from user_roles
+      const { data: userRole, error: roleError } = await supabase
+        .from('user_roles')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-        if (roleError) throw roleError;
+      if (roleError) throw roleError;
+      if (!userRole?.tenant_id) return null;
 
-        if (userRole?.tenant_id) {
-          // Get tenant details
-          const { data: tenantData, error: tenantError } = await supabase
-            .from('tenants')
-            .select('*')
-            .eq('id', userRole.tenant_id)
-            .maybeSingle();
+      // Get tenant details
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('id', userRole.tenant_id)
+        .maybeSingle();
 
-          if (tenantError) throw tenantError;
-          setTenant(tenantData);
-        }
-      } catch (error) {
-        console.error('Error fetching tenant:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTenant();
-  }, [user]);
+      if (tenantError) throw tenantError;
+      return tenantData;
+    },
+    enabled: !!user,
+    staleTime: 10 * 60 * 1000, // 10 minutes - tenant data rarely changes (APEX optimization)
+  });
 
   return { tenant, loading };
 };
