@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-import { z } from 'https://deno.land/x/zod@v3.23.8/mod.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 import { handleException, handleValidationError, createErrorResponse, ErrorCode, corsHeaders } from '../_shared/error-handler.ts';
 import { createAuditLog } from '../_shared/audit.ts';
 import { getTenantIdForUser } from '../_shared/tenant.ts';
