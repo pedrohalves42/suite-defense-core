@@ -64,7 +64,9 @@ Deno.serve(async (req) => {
       .select('id')
       .eq('tenant_id', tenantId)
       .eq('agent_name', event.agent_name)
-      .single();
+      .order('enrolled_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     // Insert analytics event
     const { error: insertError } = await supabase

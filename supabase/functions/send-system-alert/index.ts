@@ -49,7 +49,9 @@ Deno.serve(async (req) => {
       .from('tenant_settings')
       .select('*')
       .eq('tenant_id', tenantId)
-      .single();
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!settings) {
       console.error('Tenant settings not found for:', tenantId);

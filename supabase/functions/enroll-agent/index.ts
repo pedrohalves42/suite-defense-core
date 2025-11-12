@@ -86,7 +86,9 @@ Deno.serve(async (req) => {
       .select('*')
       .eq('key', enrollmentKey)
       .eq('is_active', true)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (keyError || !keyData) {
       console.error(`[${requestId}] [enroll-agent] Invalid enrollment key: ${enrollmentKey}`);
@@ -167,7 +169,9 @@ Deno.serve(async (req) => {
       .from('agents')
       .select('id')
       .eq('agent_name', agentName)
-      .single();
+      .order('enrolled_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     // Only check quota for new agents (not re-enrollments)
     if (!existingAgent) {
@@ -229,7 +233,10 @@ Deno.serve(async (req) => {
         agent_name: agentName,
         hmac_secret: hmacSecret,
         status: 'active',
-      }).select('id').single();
+      }).select('id')
+      .order('enrolled_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
       
       agentId = newAgent!.id;
     }

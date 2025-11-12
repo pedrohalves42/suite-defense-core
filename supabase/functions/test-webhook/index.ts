@@ -38,7 +38,9 @@ serve(async (req: Request) => {
       .from('user_roles')
       .select('role, tenant_id')
       .eq('user_id', user.id)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (roleError || !userRole || userRole.role !== 'admin') {
       await createAuditLog({
@@ -62,7 +64,9 @@ serve(async (req: Request) => {
       .from('tenant_settings')
       .select('alert_webhook_url, enable_webhook_alerts')
       .eq('tenant_id', userRole.tenant_id)
-      .single();
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (settingsError || !settings) {
       await createAuditLog({

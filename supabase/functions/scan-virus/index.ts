@@ -164,7 +164,9 @@ Deno.serve(async (req) => {
       .select('agent_id, agents!inner(agent_name, hmac_secret, tenant_id)')
       .eq('token', agentToken)
       .eq('is_active', true)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!token?.agents) {
       return new Response(
@@ -269,7 +271,7 @@ Deno.serve(async (req) => {
       .gte('scanned_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
       .order('scanned_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (existingScan) {
       return new Response(
@@ -325,7 +327,9 @@ Deno.serve(async (req) => {
         virustotal_permalink: scanResult.permalink,
       })
       .select()
-      .single();
+      .order('scanned_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (scanError) {
       console.error('[SCAN-VIRUS] Error storing scan result:', scanError);

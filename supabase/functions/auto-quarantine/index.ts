@@ -61,7 +61,9 @@ serve(async (req: Request) => {
       .from('agents')
       .select('tenant_id')
       .eq('agent_name', agent_name)
-      .single();
+      .order('enrolled_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (agentError || !agent) {
       console.error('[AUTO-QUARANTINE] Agent not found:', agentError);
@@ -75,7 +77,9 @@ serve(async (req: Request) => {
       .from('tenant_settings')
       .select('enable_auto_quarantine')
       .eq('tenant_id', tenant_id)
-      .single();
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!settings?.enable_auto_quarantine) {
       console.log('[AUTO-QUARANTINE] Auto-quarantine disabled for tenant');
@@ -100,7 +104,9 @@ serve(async (req: Request) => {
         status: 'quarantined'
       })
       .select()
-      .single();
+      .order('quarantined_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (quarantineError) {
       console.error('[AUTO-QUARANTINE] Error creating quarantine record:', quarantineError);

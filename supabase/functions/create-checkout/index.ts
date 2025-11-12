@@ -58,7 +58,9 @@ serve(async (req) => {
       .from("tenant_subscriptions")
       .select("stripe_subscription_id, status")
       .eq("tenant_id", tenantId)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (existingSubscription?.stripe_subscription_id && existingSubscription?.status === "active") {
       logStep("Active subscription exists", { subscriptionId: existingSubscription.stripe_subscription_id });
@@ -70,7 +72,9 @@ serve(async (req) => {
       .from("subscription_plans")
       .select("stripe_price_id, max_devices, price_per_device")
       .eq("name", planName)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!plan?.stripe_price_id) throw new Error("Plan not found or not configured");
     if (deviceQuantity < 1 || deviceQuantity > plan.max_devices) {

@@ -71,7 +71,9 @@ Deno.serve(async (req) => {
       .from('user_roles')
       .select('user_id, tenant_id, role')
       .eq('id', user_role_id)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (targetError || !targetRole) {
       return createErrorResponse(ErrorCode.NOT_FOUND, 'Membro não encontrado', 404, requestId);

@@ -275,11 +275,13 @@ Deno.serve(async (req) => {
           status: 'pending',
         })
         .select('id')
-        .single();
+        .order('enrolled_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (agentError) {
+      if (agentError || !newAgent) {
         console.error(`[${requestId}] Failed to create agent:`, agentError);
-        throw agentError;
+        throw agentError || new Error('Failed to create agent');
       }
       agentId = newAgent.id;
     }

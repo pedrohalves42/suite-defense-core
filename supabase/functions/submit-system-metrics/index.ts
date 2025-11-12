@@ -57,7 +57,9 @@ Deno.serve(async (req) => {
       `)
       .eq('token', agentToken)
       .eq('is_active', true)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (tokenError || !tokenData || !tokenData.agents) {
       console.error('[submit-system-metrics] Invalid agent token:', agentToken);

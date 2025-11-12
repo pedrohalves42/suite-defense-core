@@ -83,7 +83,7 @@ export default function Tenants() {
 
       const slug = newTenantName.toLowerCase().replace(/\s+/g, '-') + '-' + crypto.randomUUID().substring(0, 8);
 
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('tenants')
         .insert({
           name: newTenantName,
@@ -91,7 +91,9 @@ export default function Tenants() {
           owner_user_id: user.id,
         })
         .select()
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (error) throw error;
       return data;

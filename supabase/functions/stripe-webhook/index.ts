@@ -154,6 +154,7 @@ serve(async (req) => {
           .from("subscription_plans")
           .select("id")
           .eq("name", planName)
+          .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
@@ -193,6 +194,7 @@ serve(async (req) => {
           .from("tenant_subscriptions")
           .select("tenant_id, subscription_plans!inner(name)")
           .eq("stripe_subscription_id", subscription.id)
+          .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
@@ -240,6 +242,7 @@ serve(async (req) => {
           .from("tenant_subscriptions")
           .select("tenant_id")
           .eq("stripe_subscription_id", subscription.id)
+          .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 
@@ -250,6 +253,7 @@ serve(async (req) => {
           .from("subscription_plans")
           .select("id")
           .eq("name", "free")
+          .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle();
 

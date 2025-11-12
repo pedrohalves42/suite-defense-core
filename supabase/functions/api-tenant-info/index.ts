@@ -63,7 +63,9 @@ Deno.serve(async (req) => {
       .from('tenants')
       .select('id, name, slug, created_at, updated_at')
       .eq('id', authResult.tenantId!)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (error) throw error;
 

@@ -37,7 +37,9 @@ Deno.serve(async (req) => {
       .from('user_roles')
       .select('tenant_id')
       .eq('user_id', user.id)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     const { data: hasAdminRole } = await supabaseAdmin.rpc('has_role', { _user_id: user.id, _role: 'admin' });
 
@@ -126,7 +128,9 @@ Deno.serve(async (req) => {
       .from('jobs')
       .insert(jobData)
       .select()
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
       
     if (insertError) throw insertError;
 

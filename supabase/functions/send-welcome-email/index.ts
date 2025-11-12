@@ -41,14 +41,18 @@ Deno.serve(async (req) => {
         .from('user_roles')
         .select('tenant_id')
         .eq('user_id', userId)
-        .single();
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (userRole?.tenant_id) {
         const { data: tenant } = await supabaseAdmin
           .from('tenants')
           .select('name')
           .eq('id', userRole.tenant_id)
-          .single();
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
         
         if (tenant?.name) {
           tenantName = tenant.name;

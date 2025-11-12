@@ -63,7 +63,9 @@ serve(async (req) => {
         )
       `)
       .eq("tenant_id", tenantId)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     type SubscriptionWithPlan = typeof subscription & {
       subscription_plans: {

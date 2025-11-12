@@ -67,7 +67,9 @@ Deno.serve(async (req) => {
           .from('tenant_settings')
           .select('*')
           .eq('tenant_id', agent.tenant_id)
-          .single();
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         if (settings?.enable_email_alerts && settings?.alert_email) {
           await supabase.functions.invoke('send-alert-email', {
@@ -112,7 +114,9 @@ Deno.serve(async (req) => {
           .from('tenant_settings')
           .select('*')
           .eq('tenant_id', tenantId)
-          .single();
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         if (settings?.enable_email_alerts && settings?.alert_email) {
           await supabase.functions.invoke('send-alert-email', {

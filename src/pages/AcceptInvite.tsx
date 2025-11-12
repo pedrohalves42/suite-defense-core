@@ -43,7 +43,9 @@ export default function AcceptInvite() {
           .select('*')
           .eq('token', token)
           .eq('status', 'pending')
-          .single();
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
         if (error || !data) {
           toast({ title: 'Convite não encontrado ou expirado', variant: 'destructive' });
