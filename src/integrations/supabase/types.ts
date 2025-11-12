@@ -1650,15 +1650,7 @@ export type Database = {
           platform: string | null
           tenant_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       installation_metrics_summary: {
         Row: {
