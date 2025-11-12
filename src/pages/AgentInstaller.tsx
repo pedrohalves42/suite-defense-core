@@ -50,6 +50,8 @@ const AgentInstaller = () => {
     agentId?: string;
     expiresAt?: string;
   } | null>(null);
+  const [healthStatus, setHealthStatus] = useState<any>(null);
+  const [isTestingHealth, setIsTestingHealth] = useState(false);
 
   // Validação em tempo real do nome do agente
   useEffect(() => {
@@ -71,6 +73,29 @@ const AgentInstaller = () => {
   }, [agentName]);
 
   const isNameValid = agentName.length >= 3 && agentName.length <= 50 && !/[^a-zA-Z0-9\-_]/.test(agentName);
+
+  const testBackendHealth = async () => {
+    setIsTestingHealth(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('auto-generate-enrollment', {
+        method: 'GET'
+      });
+      
+      if (error) throw error;
+      setHealthStatus(data);
+      toast.success("Backend conectado!", {
+        description: `Status: ${data?.status || 'ok'}`
+      });
+    } catch (error: any) {
+      console.error('Health check error:', error);
+      toast.error("Erro de conexão", {
+        description: error?.message || "Backend não está respondendo"
+      });
+      setHealthStatus({ error: error?.message });
+    } finally {
+      setIsTestingHealth(false);
+    }
+  };
 
   const generateInstaller = async () => {
     if (!isNameValid) {
@@ -159,12 +184,21 @@ const AgentInstaller = () => {
         description: `Arquivo: ${fileName}`
       });
 
-    } catch (error: unknown) {
-      // CORREÇÃO: Melhor tipagem de erro
-      const errorMessage = error instanceof Error ? error.message : "Tente novamente";
+    } catch (error: any) {
       console.error('Erro ao gerar instalador:', error);
+      
+      // Extract detailed error information
+      const errorMessage = error?.message || "Erro desconhecido";
+      const requestId = error?.context?.requestId;
+      const details = error?.context?.details;
+      
+      let description = errorMessage;
+      if (requestId) description += ` (ID: ${requestId})`;
+      if (details) description += `\n${details}`;
+      
       toast.error("Erro ao gerar instalador", {
-        description: errorMessage
+        description,
+        duration: 6000
       });
     } finally {
       setIsGenerating(false);
@@ -220,12 +254,21 @@ const AgentInstaller = () => {
         description: "Copie e cole no servidor para instalar"
       });
 
-    } catch (error: unknown) {
-      // CORREÇÃO: Melhor tipagem de erro
-      const errorMessage = error instanceof Error ? error.message : "Tente novamente";
+    } catch (error: any) {
       console.error('Erro ao gerar comando:', error);
+      
+      // Extract detailed error information
+      const errorMessage = error?.message || "Erro desconhecido";
+      const requestId = error?.context?.requestId;
+      const details = error?.context?.details;
+      
+      let description = errorMessage;
+      if (requestId) description += ` (ID: ${requestId})`;
+      if (details) description += `\n${details}`;
+      
       toast.error("Erro ao gerar comando", {
-        description: errorMessage
+        description,
+        duration: 6000
       });
     } finally {
       setIsGenerating(false);
@@ -410,9 +453,39 @@ const AgentInstaller = () => {
                 </Alert>
               )}
 
+              {/* Health Check Button */}
+              <div className="mb-4">
+                <Button 
+                  onClick={testBackendHealth}
+                  disabled={isTestingHealth}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  {isTestingHealth ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                      Testando...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="h-3 w-3 mr-2" />
+                      Testar Conexão Backend
+                    </>
+                  )}
+                </Button>
+                {healthStatus && (
+                  <Alert className={`mt-2 ${healthStatus.error ? 'border-red-500 bg-red-50' : 'border-green-500 bg-green-50'}`}>
+                    <AlertDescription className="text-xs font-mono">
+                      {JSON.stringify(healthStatus, null, 2)}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+
               {/* Botões de Gerar */}
               <div className="space-y-3">
-                <Button 
+                <Button
                   onClick={generateCopyPasteCommand} 
                   disabled={isGenerating || !isNameValid}
                   className="w-full"
