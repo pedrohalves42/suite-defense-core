@@ -77,7 +77,10 @@ export default function AgentManagement() {
       setAgentToDelete(null);
     },
     onError: (error) => {
-      console.error('Error deleting agent:', error);
+      // CORREÇÃO: Logger condicional apenas em DEV
+      if (import.meta.env.DEV) {
+        console.error('Error deleting agent:', error);
+      }
       toast.error('Erro ao excluir agente');
     },
   });
@@ -108,7 +111,10 @@ export default function AgentManagement() {
       setAgentToDisable(null);
     },
     onError: (error) => {
-      console.error('Error updating agent:', error);
+      // CORREÇÃO: Logger condicional apenas em DEV
+      if (import.meta.env.DEV) {
+        console.error('Error updating agent:', error);
+      }
       toast.error('Erro ao atualizar agente');
     },
   });
