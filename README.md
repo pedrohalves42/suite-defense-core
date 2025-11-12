@@ -1,5 +1,43 @@
 # Welcome to your Lovable project
 
+## 🔧 Pré-requisitos
+
+Antes de iniciar, certifique-se de ter instalado:
+
+- **Node.js** >= 18.0.0 - [Download](https://nodejs.org/)
+- **npm** >= 9.0.0 (vem com Node.js)
+
+Para verificar as versões instaladas:
+
+```bash
+node --version
+npm --version
+```
+
+## 🚀 Instalação Rápida
+
+```bash
+# 1. Clone o repositório
+git clone <YOUR_GIT_URL>
+cd <YOUR_PROJECT_NAME>
+
+# 2. Instale dependências
+npm install
+
+# 3. Configure variáveis de ambiente
+cp .env.example .env
+# Edite .env com suas credenciais do Supabase
+
+# 4. Execute em modo desenvolvimento
+npm run dev
+```
+
+Acesse: http://localhost:8080
+
+📖 **Documentação completa:** [SETUP.md](SETUP.md)
+
+---
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/affc1ab5-463f-41f7-ae33-f788e864f6ee
