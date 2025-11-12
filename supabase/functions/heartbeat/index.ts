@@ -3,6 +3,7 @@ import { AgentTokenSchema } from '../_shared/validation.ts'
 import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
+import { logger } from '../_shared/logger.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -88,7 +89,8 @@ Deno.serve(async (req) => {
       )
     }
     
-    console.log('[Heartbeat] Recebido de agente:', agent.agent_name)
+    logger.debug('Heartbeat received', { agentName: agent.agent_name })
+    logger.info('Heartbeat received successfully')
 
     // Atualizar last_heartbeat, status e OS info (se fornecido)
     const updateData: any = { 
@@ -112,7 +114,7 @@ Deno.serve(async (req) => {
       .eq('id', agent.id)
 
     if (updateError) {
-      console.error('[Heartbeat] Erro ao atualizar agente:', updateError)
+      logger.error('Failed to update agent heartbeat', updateError)
       return new Response(
         JSON.stringify({ error: 'Erro ao atualizar heartbeat' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -125,7 +127,7 @@ Deno.serve(async (req) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('token', agentToken)
 
-    console.log('[Heartbeat] Agente atualizado com sucesso:', agent.agent_name)
+    logger.success('Agent heartbeat updated successfully')
 
     return new Response(
       JSON.stringify({ 

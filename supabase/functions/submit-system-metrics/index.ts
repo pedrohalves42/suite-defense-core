@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+import { logger } from '../_shared/logger.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -62,7 +63,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (tokenError || !tokenData || !tokenData.agents) {
-      console.error('[submit-system-metrics] Invalid agent token:', agentToken);
+      logger.warn('Invalid agent token');
       return new Response(JSON.stringify({ error: 'Invalid agent token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -103,17 +104,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('[submit-system-metrics] Parsing request body...');
+    logger.debug('Parsing metrics request');
     // Parse métricas
     const metrics: SystemMetrics = await req.json();
-    console.log('[submit-system-metrics] Received metrics:', JSON.stringify({
-      agent: agent.agent_name,
+    logger.debug('Received metrics', {
       cpu: metrics.cpu_usage_percent,
       memory: metrics.memory_usage_percent,
       disk: metrics.disk_usage_percent
-    }));
+    });
 
-    console.log('[submit-system-metrics] Inserting metrics for agent:', agent.id);
+    logger.debug('Inserting metrics into database');
     // Inserir métricas no banco
     const { error: insertError } = await supabase
       .from('agent_system_metrics')
@@ -138,21 +138,21 @@ Deno.serve(async (req) => {
       });
 
     if (insertError) {
-      console.error('[submit-system-metrics] Insert error:', insertError);
+      logger.error('Failed to insert metrics', insertError);
       return new Response(JSON.stringify({ error: 'Failed to store metrics' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
     
-    console.log('[submit-system-metrics] Metrics inserted successfully');
+    logger.success('Metrics stored successfully');
 
-    console.log('[submit-system-metrics] Checking alert thresholds...');
+    logger.debug('Checking alert thresholds');
     // Gerar alertas se thresholds ultrapassados
     const alerts = [];
 
     if (metrics.cpu_usage_percent && metrics.cpu_usage_percent > 90) {
-      console.log(`[submit-system-metrics] HIGH CPU alert: ${metrics.cpu_usage_percent}%`);
+      logger.info('High CPU usage detected');
       alerts.push({
         tenant_id: agent.tenant_id,
         agent_id: agent.id,
@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
     }
 
     if (metrics.memory_usage_percent && metrics.memory_usage_percent > 85) {
-      console.log(`[submit-system-metrics] HIGH MEMORY alert: ${metrics.memory_usage_percent}%`);
+      logger.info('High memory usage detected');
       alerts.push({
         tenant_id: agent.tenant_id,
         agent_id: agent.id,
@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
     }
 
     if (metrics.disk_usage_percent && metrics.disk_usage_percent > 90) {
-      console.log(`[submit-system-metrics] HIGH DISK alert: ${metrics.disk_usage_percent}%`);
+      logger.info('High disk usage detected');
       alerts.push({
         tenant_id: agent.tenant_id,
         agent_id: agent.id,
@@ -196,13 +196,13 @@ Deno.serve(async (req) => {
         .insert(alerts);
 
       if (alertError) {
-        console.error('[submit-system-metrics] Failed to insert alerts:', alertError);
+        logger.error('Failed to insert alerts', alertError);
       } else {
-        console.log(`[submit-system-metrics] ${alerts.length} alerts inserted successfully`);
+        logger.info(`${alerts.length} alerts generated`);
       }
     }
 
-    console.log(`[submit-system-metrics] ✅ Metrics stored for ${agent.agent_name}, ${alerts.length} alerts generated`);
+    logger.success(`Metrics processed, ${alerts.length} alerts generated`);
 
     return new Response(
       JSON.stringify({ 
@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[submit-system-metrics] Error:', error);
+    logger.error('Metrics submission failed', error);
     return new Response(
       JSON.stringify({ error: 'Internal server error' }), 
       {

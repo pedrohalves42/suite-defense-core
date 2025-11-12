@@ -111,15 +111,12 @@ export default function Login() {
       return;
     }
 
-    console.log('[Login] Tentando login com senha para:', validation.data.email);
-
     const { error } = await supabase.auth.signInWithPassword({
       email: validation.data.email,
       password: validation.data.password,
     });
 
     if (error) {
-      console.error('[Login] Erro no login:', error.message, 'Código:', error.status);
       
       // Registrar tentativa falhada com audit log
       try {
@@ -158,8 +155,6 @@ export default function Login() {
         description,
       });
     } else {
-      console.log('[Login] Login bem-sucedido');
-      
       // Limpar tentativas falhadas
       await supabase.functions.invoke('clear-failed-logins', {
         body: {},
@@ -190,8 +185,6 @@ export default function Login() {
       return;
     }
 
-    console.log('[Login] Enviando link mágico para:', email);
-
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
@@ -200,14 +193,12 @@ export default function Login() {
     });
 
     if (error) {
-      console.error('[Login] Erro ao enviar link mágico:', error.message);
       toast({
         variant: 'destructive',
         title: 'Erro ao enviar link',
         description: 'Não foi possível enviar o email. Tente novamente.',
       });
     } else {
-      console.log('[Login] Link mágico enviado com sucesso');
       setMagicLinkSent(true);
       toast({
         title: 'Email enviado!',
