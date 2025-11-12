@@ -15,6 +15,44 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Health check endpoint
+  if (req.method === 'GET' && new URL(req.url).pathname.endsWith('/health')) {
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      
+      const healthy = !!(supabaseUrl && supabaseKey);
+      
+      return new Response(
+        JSON.stringify({
+          status: healthy ? 'healthy' : 'unhealthy',
+          timestamp: new Date().toISOString(),
+          service: 'auto-generate-enrollment',
+          checks: {
+            env_vars: healthy,
+            supabase_url: !!supabaseUrl,
+            service_role_key: !!supabaseKey
+          }
+        }),
+        {
+          status: healthy ? 200 : 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    } catch (error) {
+      return new Response(
+        JSON.stringify({
+          status: 'unhealthy',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }),
+        {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+  }
+
   // Top-level try-catch to ensure CORS headers are always returned
   try {
     logger.info(`[${requestId}] Starting auto-generate-enrollment request`);

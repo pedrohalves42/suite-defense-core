@@ -14,6 +14,31 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
+// Retry with exponential backoff: 2s, 4s, 8s
+const retryWithBackoff = async <T,>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  initialDelay = 2000
+): Promise<T> => {
+  let lastError: any;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      
+      if (attempt < maxRetries - 1) {
+        const delay = initialDelay * Math.pow(2, attempt);
+        toast.info(`Tentativa ${attempt + 1}/${maxRetries} falhou. Tentando novamente em ${delay/1000}s...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+};
+
 const AgentInstaller = () => {
   const [agentName, setAgentName] = useState("");
   const [platform, setPlatform] = useState<"windows" | "linux">("windows");
@@ -56,13 +81,12 @@ const AgentInstaller = () => {
     setIsGenerating(true);
     
     try {
-      // 1. Gerar credenciais através do auto-generate-enrollment
+      // 1. Gerar credenciais através do auto-generate-enrollment com retry
       toast.info("Gerando credenciais do agente...");
-      const { data: credentials, error: credError } = await supabase.functions.invoke(
-        'auto-generate-enrollment',
-        {
+      const { data: credentials, error: credError } = await retryWithBackoff(
+        () => supabase.functions.invoke('auto-generate-enrollment', {
           body: { agentName: agentName.trim() }
-        }
+        })
       );
 
       if (credError) throw credError;
@@ -154,13 +178,12 @@ const AgentInstaller = () => {
     setIsGenerating(true);
     
     try {
-      // Gerar credenciais e enrollment key
+      // Gerar credenciais e enrollment key com retry
       toast.info("Gerando link temporário...");
-      const { data: credentials, error: credError } = await supabase.functions.invoke(
-        'auto-generate-enrollment',
-        {
+      const { data: credentials, error: credError } = await retryWithBackoff(
+        () => supabase.functions.invoke('auto-generate-enrollment', {
           body: { agentName: agentName.trim() }
-        }
+        })
       );
 
       if (credError) throw credError;
