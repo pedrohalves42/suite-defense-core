@@ -15,8 +15,8 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Health check endpoint
-  if (req.method === 'GET' && new URL(req.url).pathname.endsWith('/health')) {
+  // Health check endpoint - ANY GET request is treated as health check
+  if (req.method === 'GET') {
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL');
       const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -51,6 +51,21 @@ Deno.serve(async (req) => {
         }
       );
     }
+  }
+
+  // Method validation - only POST is allowed for enrollment operations
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({
+        error: 'Method not allowed',
+        message: `HTTP ${req.method} is not supported. Use POST for enrollment or GET for health checks.`,
+        timestamp: new Date().toISOString()
+      }),
+      {
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Allow': 'GET, POST, OPTIONS' },
+      }
+    );
   }
 
   // Top-level try-catch to ensure CORS headers are always returned
