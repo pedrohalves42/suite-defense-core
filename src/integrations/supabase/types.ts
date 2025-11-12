@@ -1640,18 +1640,6 @@ export type Database = {
           },
         ]
       }
-      installation_metrics_hourly: {
-        Row: {
-          avg_install_time: number | null
-          error_count: number | null
-          event_count: number | null
-          event_type: string | null
-          hour: string | null
-          platform: string | null
-          tenant_id: string | null
-        }
-        Relationships: []
-      }
       installation_metrics_summary: {
         Row: {
           date: string | null
