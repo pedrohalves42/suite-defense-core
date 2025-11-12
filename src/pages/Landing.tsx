@@ -7,13 +7,10 @@ import { Navbar } from "@/components/Navbar";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-
 const Landing = () => {
   const whatsappLink = "https://wa.me/5534984432835?text=Olá!%20Gostaria%20de%20conhecer%20o%20CyberShield";
   const [deviceCount, setDeviceCount] = useState<number>(10);
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <Navbar />
       <WhatsAppButton />
 
@@ -59,22 +56,13 @@ const Landing = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-              <Button
-                asChild
-                size="lg"
-                className="text-lg h-14 px-8"
-              >
+              <Button asChild size="lg" className="text-lg h-14 px-8">
                 <Link to="/signup">
                   Começar Trial Grátis
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="text-lg h-14 px-8 bg-green-600 hover:bg-green-700 text-white border-green-600"
-              >
+              <Button asChild size="lg" variant="outline" className="text-lg h-14 px-8 bg-green-600 hover:bg-green-700 text-white border-green-600">
                 <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                   <MessageCircle className="mr-2 h-5 w-5" />
                   Falar no WhatsApp
@@ -116,7 +104,7 @@ const Landing = () => {
               <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
                 <span className="text-3xl">⚡</span>
               </div>
-              <h3 className="text-xl font-bold mb-3">Aja em Segundos</h3>
+              <h3 className="text-xl font-bold mb-3">Haja em Segundos</h3>
               <p className="text-muted-foreground">
                 Resposta em tempo real para proteger seus ativos digitais
               </p>
@@ -463,15 +451,7 @@ const Landing = () => {
                 Quantos dispositivos você tem?
               </label>
               <div className="max-w-md mx-auto">
-                <Input
-                  id="device-count"
-                  type="number"
-                  min="1"
-                  max="200"
-                  value={deviceCount}
-                  onChange={(e) => setDeviceCount(Math.max(1, Math.min(200, parseInt(e.target.value) || 1)))}
-                  className="text-center text-2xl h-16 font-bold"
-                />
+                <Input id="device-count" type="number" min="1" max="200" value={deviceCount} onChange={e => setDeviceCount(Math.max(1, Math.min(200, parseInt(e.target.value) || 1)))} className="text-center text-2xl h-16 font-bold" />
                 <p className="text-sm text-muted-foreground text-center mt-2">
                   Entre 1 e 200 dispositivos
                 </p>
@@ -480,17 +460,12 @@ const Landing = () => {
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Starter Calculation */}
-              <div className={`p-6 rounded-xl border-2 transition-all ${
-                deviceCount <= 30 
-                  ? 'border-primary bg-primary/5' 
-                  : 'border-border bg-muted/30 opacity-60'
-              }`}>
+              <div className={`p-6 rounded-xl border-2 transition-all ${deviceCount <= 30 ? 'border-primary bg-primary/5' : 'border-border bg-muted/30 opacity-60'}`}>
                 <div className="flex items-center gap-2 mb-4">
                   <Zap className="w-5 h-5 text-primary" />
                   <h3 className="text-xl font-bold">Starter</h3>
                 </div>
-                {deviceCount <= 30 ? (
-                  <>
+                {deviceCount <= 30 ? <>
                     <div className="mb-4">
                       <div className="text-4xl font-bold text-primary mb-1">
                         R$ {(deviceCount * 30).toLocaleString('pt-BR')}
@@ -513,13 +488,10 @@ const Landing = () => {
                         <span>Suporte por email</span>
                       </li>
                     </ul>
-                  </>
-                ) : (
-                  <div className="text-muted-foreground">
+                  </> : <div className="text-muted-foreground">
                     <p className="font-semibold mb-2">Limite excedido</p>
                     <p className="text-sm">O plano Starter suporta até 30 dispositivos.</p>
-                  </div>
-                )}
+                  </div>}
               </div>
 
               {/* Pro Calculation */}
@@ -527,11 +499,9 @@ const Landing = () => {
                 <div className="flex items-center gap-2 mb-4">
                   <Crown className="w-5 h-5 text-primary" />
                   <h3 className="text-xl font-bold">Pro</h3>
-                  {deviceCount > 30 && (
-                    <span className="ml-auto text-xs bg-accent text-accent-foreground px-2 py-1 rounded-full font-bold">
+                  {deviceCount > 30 && <span className="ml-auto text-xs bg-accent text-accent-foreground px-2 py-1 rounded-full font-bold">
                       RECOMENDADO
-                    </span>
-                  )}
+                    </span>}
                 </div>
                 <div className="mb-4">
                   <div className="text-4xl font-bold text-primary mb-1">
@@ -854,12 +824,7 @@ const Landing = () => {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-lg h-14 px-8"
-              asChild
-            >
+            <Button size="lg" variant="outline" className="text-lg h-14 px-8" asChild>
               <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
                 <MessageCircle className="mr-2 h-5 w-5" />
                 Agendar Demo
@@ -942,8 +907,6 @@ const Landing = () => {
           </div>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Landing;
