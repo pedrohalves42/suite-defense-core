@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { getTenantIdForUser } from "../_shared/tenant.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,21 +40,17 @@ serve(async (req) => {
     if (userError || !userData.user?.email) throw new Error("User not authenticated");
     logStep("User authenticated", { userId: userData.user.id, email: userData.user.email });
 
-    // Get tenant_id
-    const { data: userRole } = await supabaseClient
-      .from("user_roles")
-      .select("tenant_id")
-      .eq("user_id", userData.user.id)
-      .single();
+    // Get tenant_id using helper (handles multiple roles)
+    const tenantId = await getTenantIdForUser(supabaseClient, userData.user.id);
 
-    if (!userRole) throw new Error("Tenant not found");
-    logStep("Tenant found", { tenantId: userRole.tenant_id });
+    if (!tenantId) throw new Error("Tenant not found");
+    logStep("Tenant found", { tenantId });
 
     // Get Stripe customer ID
     const { data: subscription } = await supabaseClient
       .from("tenant_subscriptions")
       .select("stripe_customer_id")
-      .eq("tenant_id", userRole.tenant_id)
+      .eq("tenant_id", tenantId)
       .single();
 
     if (!subscription?.stripe_customer_id) {
