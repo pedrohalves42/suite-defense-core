@@ -26,9 +26,11 @@ export async function checkQuotaAvailable(
       .select('enabled, quota_limit, quota_used')
       .eq('tenant_id', tenantId)
       .eq('feature_key', featureKey)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (error) {
+    if (error || !feature) {
       // If feature doesn't exist, assume no quota limit (allowed)
       console.log(`[QUOTA] Feature ${featureKey} not found for tenant ${tenantId}, allowing by default`);
       return { allowed: true };

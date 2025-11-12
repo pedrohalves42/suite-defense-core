@@ -27,7 +27,9 @@ export async function checkRateLimit(
     .select('*')
     .eq('identifier', identifier)
     .eq('endpoint', endpoint)
-    .single();
+    .order('window_start', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   if (existing?.blocked_until && new Date(existing.blocked_until) > now) {
     return {
