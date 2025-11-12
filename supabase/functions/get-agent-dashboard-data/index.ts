@@ -31,12 +31,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar tenant do usuário
+    // Buscar tenant do usuário (limit 1 pois usuário pode ter múltiplos roles no mesmo tenant)
     const { data: userRole } = await supabase
       .from('user_roles')
       .select('tenant_id')
       .eq('user_id', user.id)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
     if (!userRole) {
       return new Response(JSON.stringify({ error: 'No tenant found' }), {
