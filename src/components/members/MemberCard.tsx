@@ -2,22 +2,8 @@ import { Shield, User, Eye, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SafeSelect } from '@/components/SafeSelect';
-
-export type AppRole = 'admin' | 'operator' | 'viewer';
-
-export const APP_ROLES: AppRole[] = ['admin', 'operator', 'viewer'];
-
-interface Member {
-  id: string;
-  user_id: string;
-  role: AppRole;
-  tenant_id?: string;  // CORREÇÃO: Tornar opcional para compatibilidade
-  created_at: string;
-  profiles: {
-    full_name: string | null;
-  } | null;
-  email?: string;
-}
+import { AppRole, APP_ROLES } from '@/types/roles';
+import { Member } from '@/types/user';
 
 interface MemberCardProps {
   member: Member;

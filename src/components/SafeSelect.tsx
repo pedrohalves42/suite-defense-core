@@ -27,6 +27,15 @@ export const SafeSelect: React.FC<SafeSelectProps> = ({
   className,
   disabled = false
 }) => {
+  // CORREÇÃO: Guard para options vazias
+  if (!options || options.length === 0) {
+    return (
+      <div className={className}>
+        <span className="text-sm text-muted-foreground">{placeholder || 'Sem opções'}</span>
+      </div>
+    );
+  }
+
   // SEGURANÇA: Garantir que value nunca seja undefined
   const safeValue = value || options[0]?.value || '';
   

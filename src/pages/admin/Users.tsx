@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,9 @@ import { ChevronLeft, ChevronRight, Mail, UserCheck, UserX } from 'lucide-react'
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AppRole, isValidRole, assertValidRole } from '@/types/roles';
+import { UserWithDetails } from '@/types/user';
+import { getRoleBadgeVariant, getUserStatusVariant, getUserStatusText } from '@/lib/badges';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -22,7 +25,8 @@ export default function Users() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<any>(null);
+  // CORREÇÃO: Tipagem adequada em vez de any
+  const [selectedUser, setSelectedUser] = useState<UserWithDetails | null>(null);
 
   const { data: usersData, isLoading } = useQuery({
     queryKey: ['admin-users'],
@@ -43,26 +47,34 @@ export default function Users() {
     },
   });
 
-  // Filter and paginate on frontend
-  const filteredUsers = usersData?.filter((user: any) => {
-    const matchesSearch = !searchTerm || 
-      user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    return matchesSearch && matchesRole;
-  }) || [];
+  // CORREÇÃO: Memoização de filtros complexos para performance
+  const filteredUsers = useMemo(() => {
+    if (!usersData) return [];
+    
+    return (usersData as UserWithDetails[]).filter((user) => {
+      const matchesSearch = !searchTerm || 
+        user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+      return matchesSearch && matchesRole;
+    });
+  }, [usersData, searchTerm, roleFilter]);
 
-  const paginatedUsers = filteredUsers.slice(
-    page * ITEMS_PER_PAGE,
-    (page + 1) * ITEMS_PER_PAGE
-  );
+  const paginatedUsers = useMemo(() => {
+    return filteredUsers.slice(
+      page * ITEMS_PER_PAGE,
+      (page + 1) * ITEMS_PER_PAGE
+    );
+  }, [filteredUsers, page]);
 
   const totalCount = filteredUsers.length;
 
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
 
   const updateRole = useMutation({
-    mutationFn: async ({ userId, newRole }: { userId: string; newRole: 'admin' | 'operator' | 'viewer' }) => {
+    mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
+      // CORREÇÃO: Validação de role em runtime
+      assertValidRole(newRole, 'newRole');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
@@ -135,14 +147,7 @@ export default function Users() {
     },
   });
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'admin': return 'default';
-      case 'operator': return 'secondary';
-      case 'viewer': return 'outline';
-      default: return 'outline';
-    }
-  };
+  // CORREÇÃO: Função movida para src/lib/badges.ts (centralizada)
 
   const handleStatusChange = (user: any) => {
     setSelectedUser(user);
@@ -226,7 +231,7 @@ export default function Users() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedUsers.map((user: any) => (
+                {paginatedUsers.map((user) => (
                   <TableRow key={user.user_id}>
                     <TableCell>{user.full_name || '-'}</TableCell>
                     <TableCell>{user.email}</TableCell>
@@ -239,8 +244,8 @@ export default function Users() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={user.is_active ? 'default' : 'secondary'}>
-                        {user.is_active ? 'Ativo' : 'Inativo'}
+                      <Badge variant={getUserStatusVariant(user.is_active)}>
+                        {getUserStatusText(user.is_active)}
                       </Badge>
                     </TableCell>
                     <TableCell>{format(new Date(user.created_at), 'dd/MM/yyyy')}</TableCell>
@@ -248,12 +253,15 @@ export default function Users() {
                       <div className="flex items-center justify-end gap-2">
                         <Select
                           value={user.role}
-                          onValueChange={(value) => 
-                            updateRole.mutate({ 
-                              userId: user.user_id, 
-                              newRole: value as 'admin' | 'operator' | 'viewer' 
-                            })
-                          }
+                          onValueChange={(value) => {
+                            // CORREÇÃO: Validação antes de mutation
+                            if (isValidRole(value)) {
+                              updateRole.mutate({ 
+                                userId: user.user_id, 
+                                newRole: value 
+                              });
+                            }
+                          }}
                         >
                           <SelectTrigger className="w-32">
                             <SelectValue />

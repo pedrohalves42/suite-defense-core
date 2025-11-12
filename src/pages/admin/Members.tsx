@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { UserPlus, Users, Crown } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -18,26 +18,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
-import { MemberCard, type AppRole } from '@/components/members/MemberCard';
-
-interface Member {
-  id: string;
-  user_id: string;
-  role: string;
-  tenant_id: string;
-  created_at: string;
-  profiles: {
-    full_name: string | null;
-  } | null;
-  email?: string;
-}
-
-interface Subscription {
-  subscription_plans: {
-    name: string;
-    max_users: number;
-  };
-}
+import { MemberCard } from '@/components/members/MemberCard';
+import { AppRole } from '@/types/roles';
+import { Member, TenantSubscription } from '@/types/user';
 
 export default function Members() {
   const { toast } = useToast();
@@ -46,9 +29,9 @@ export default function Members() {
   const { tenant, loading: tenantLoading } = useTenant();
   const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
 
-  // Buscar membros do tenant via edge function
+  // CORREÇÃO: Cache key com tenant.id para invalidação correta
   const { data: members = [], isLoading } = useQuery({
-    queryKey: ['tenant-members'],
+    queryKey: ['tenant-members', tenant?.id],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('list-users');
       
@@ -77,7 +60,7 @@ export default function Members() {
         .maybeSingle();
 
       if (error) throw error;
-      return data as Subscription;
+      return data as TenantSubscription;
     },
     enabled: !!tenant?.id,
   });
@@ -134,8 +117,6 @@ export default function Members() {
       });
     },
   });
-
-  // CORREÇÃO: Função getRoleBadge movida para MemberCard component
 
   const currentUsersCount = members.length;
   const maxUsers = subscription?.subscription_plans.max_users || 0;
@@ -197,9 +178,9 @@ export default function Members() {
               {members.map((member) => (
                 <MemberCard
                   key={member.id}
-                  member={member as any}  // CORREÇÃO: Conversão de tipo temporária
+                  member={member}
                   onRoleChange={(userId, newRole) => updateRole.mutate({ userId, newRole })}
-                  onRemove={(m) => setMemberToRemove(m as any)}
+                  onRemove={(m) => setMemberToRemove(m)}
                   isUpdating={updateRole.isPending}
                 />
               ))}

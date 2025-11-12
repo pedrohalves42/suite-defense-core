@@ -21,9 +21,7 @@ export const AGENT_NAME_REGEX = /^[a-zA-Z0-9\-_]+$/;
 export const CACHE_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutos
 export const CACHE_GC_TIME_MS = 10 * 60 * 1000; // 10 minutos
 
-// Roles do Sistema
-export const APP_ROLES = ['admin', 'operator', 'viewer'] as const;
-export type AppRole = typeof APP_ROLES[number];
+// CORREÇÃO: Roles movidos para src/types/roles.ts (centralizado)
 
 // Feature Flags (se necessário)
 export const FEATURES = {

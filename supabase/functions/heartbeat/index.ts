@@ -24,8 +24,14 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Parse body para obter OS info (se enviado)
-    let osInfo: { os_type?: string; os_version?: string; hostname?: string } = {}
+    // CORREÇÃO: Interface explícita para OS info
+    interface OSInfo {
+      os_type?: string;
+      os_version?: string;
+      hostname?: string;
+    }
+
+    let osInfo: OSInfo = {}
     try {
       const body = await req.json()
       osInfo = body || {}
@@ -59,7 +65,13 @@ Deno.serve(async (req) => {
       )
     }
 
-    const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents
+    // CORREÇÃO: Schema garante agents como objeto único com tipagem explícita
+    const agent = token.agents as unknown as { 
+      id: string; 
+      agent_name: string; 
+      hmac_secret: string | null; 
+      status: string;
+    }
     
     // Verificar HMAC se configurado
     if (agent.hmac_secret) {
@@ -92,8 +104,16 @@ Deno.serve(async (req) => {
     logger.debug('Heartbeat received', { agentName: agent.agent_name })
     logger.info('Heartbeat received successfully')
 
-    // Atualizar last_heartbeat, status e OS info (se fornecido)
-    const updateData: any = { 
+    // CORREÇÃO: Interface explícita em vez de any
+    interface AgentUpdate {
+      last_heartbeat: string;
+      status: string;
+      os_type?: string;
+      os_version?: string;
+      hostname?: string;
+    }
+
+    const updateData: AgentUpdate = { 
       last_heartbeat: new Date().toISOString(),
       status: 'active'
     }

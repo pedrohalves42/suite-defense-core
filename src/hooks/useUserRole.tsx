@@ -57,7 +57,10 @@ export const useUserRole = () => {
 
         setRole(null);
       } catch (error) {
-        console.error('[useUserRole] Error checking user role:', error);
+        // CORREÇÃO: Logger condicional apenas em DEV
+        if (import.meta.env.DEV) {
+          console.error('[useUserRole] Error checking user role:', error);
+        }
         setRole(null);
       } finally {
         setLoading(false);
