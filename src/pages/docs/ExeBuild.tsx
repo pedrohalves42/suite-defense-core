@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { logger } from "@/lib/logger";
 
 const ExeBuild = () => {
   const [content, setContent] = useState("");
@@ -14,7 +15,7 @@ const ExeBuild = () => {
         const text = await response.text();
         setContent(text);
       } catch (error) {
-        console.error("Erro ao carregar documentação:", error);
+        logger.error("Erro ao carregar documentação", error);
         setContent("# Erro ao carregar documentação\n\nPor favor, tente novamente mais tarde.");
       } finally {
         setIsLoading(false);

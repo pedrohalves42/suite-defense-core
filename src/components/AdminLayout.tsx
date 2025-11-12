@@ -4,21 +4,19 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
+import { logger } from '@/lib/logger';
 
 export const AdminLayout = () => {
   const { isAdmin, loading } = useIsAdmin();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // CORREÇÃO: Logger condicional apenas em DEV
   useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('[AdminLayout] Admin check:', { 
-        userId: user?.id, 
-        isAdmin, 
-        loading 
-      });
-    }
+    logger.debug('Admin check', { 
+      userId: user?.id, 
+      isAdmin, 
+      loading 
+    });
     
     if (!loading && !isAdmin) {
       toast({

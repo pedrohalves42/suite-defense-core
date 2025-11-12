@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/lib/logger";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -87,7 +88,7 @@ const AgentInstaller = () => {
         description: `Status: ${data?.status || 'ok'}`
       });
     } catch (error: any) {
-      console.error('Health check error:', error);
+      logger.error('Health check error', error);
       toast.error("Erro de conexão", {
         description: error?.message || "Backend não está respondendo"
       });
@@ -178,14 +179,14 @@ const AgentInstaller = () => {
           platform: platform,
           installation_method: 'download'
         }
-      }).catch(err => console.error('Failed to track download event:', err));
+      }).catch(err => logger.error('Failed to track download event', err));
 
       toast.success(`✅ Instalador gerado e baixado com sucesso!`, {
         description: `Arquivo: ${fileName}`
       });
 
     } catch (error: any) {
-      console.error('Erro ao gerar instalador:', error);
+      logger.error('Erro ao gerar instalador', error);
       
       // Extract detailed error information
       const errorMessage = error?.message || "Erro desconhecido";
@@ -248,14 +249,14 @@ const AgentInstaller = () => {
           platform: platform,
           installation_method: 'one_click'
         }
-      }).catch(err => console.error('Failed to track generation event:', err));
+      }).catch(err => logger.error('Failed to track generation event', err));
 
       toast.success("Comando gerado com sucesso!", {
         description: "Copie e cole no servidor para instalar"
       });
 
     } catch (error: any) {
-      console.error('Erro ao gerar comando:', error);
+      logger.error('Erro ao gerar comando', error);
       
       // Extract detailed error information
       const errorMessage = error?.message || "Erro desconhecido";
@@ -286,7 +287,7 @@ const AgentInstaller = () => {
         platform: platform,
         installation_method: 'one_click'
       }
-    }).catch(err => console.error('Failed to track copy event:', err));
+    }).catch(err => logger.error('Failed to track copy event', err));
     
     toast.success("Comando copiado!", {
       description: "Cole no terminal do servidor"

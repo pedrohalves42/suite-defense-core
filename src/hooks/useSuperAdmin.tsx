@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { logger } from '@/lib/logger';
 
 export const useSuperAdmin = () => {
   const { user, loading: authLoading } = useAuth();
@@ -35,9 +36,7 @@ export const useSuperAdmin = () => {
           setIsSuperAdmin(data === true);
         }
       } catch (error) {
-        if (import.meta.env.DEV) {
-          console.error('Error checking super admin status:', error);
-        }
+        logger.error('Error checking super admin status', error);
         if (!isCancelled) {
           setIsSuperAdmin(false);
         }
