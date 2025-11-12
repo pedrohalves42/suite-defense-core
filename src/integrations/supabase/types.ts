@@ -334,6 +334,7 @@ export type Database = {
       audit_logs: {
         Row: {
           action: string
+          actor_id: string | null
           created_at: string
           details: Json | null
           id: string
@@ -347,6 +348,7 @@ export type Database = {
         }
         Insert: {
           action: string
+          actor_id?: string | null
           created_at?: string
           details?: Json | null
           id?: string
@@ -360,6 +362,7 @@ export type Database = {
         }
         Update: {
           action?: string
+          actor_id?: string | null
           created_at?: string
           details?: Json | null
           id?: string
@@ -372,6 +375,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "audit_logs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "audit_logs_tenant_id_fkey"
             columns: ["tenant_id"]
