@@ -14,6 +14,121 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_builds: {
+        Row: {
+          agent_id: string
+          build_completed_at: string | null
+          build_duration_seconds: number | null
+          build_log: Json | null
+          build_started_at: string | null
+          build_status: string
+          created_at: string
+          created_by: string | null
+          download_expires_at: string | null
+          download_url: string | null
+          enrollment_key_id: string | null
+          error_message: string | null
+          exe_version: string | null
+          file_path: string | null
+          file_size_bytes: number | null
+          github_run_id: string | null
+          id: string
+          ps1_version: string | null
+          ps2exe_version: string | null
+          sha256_hash: string | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          build_completed_at?: string | null
+          build_duration_seconds?: number | null
+          build_log?: Json | null
+          build_started_at?: string | null
+          build_status?: string
+          created_at?: string
+          created_by?: string | null
+          download_expires_at?: string | null
+          download_url?: string | null
+          enrollment_key_id?: string | null
+          error_message?: string | null
+          exe_version?: string | null
+          file_path?: string | null
+          file_size_bytes?: number | null
+          github_run_id?: string | null
+          id?: string
+          ps1_version?: string | null
+          ps2exe_version?: string | null
+          sha256_hash?: string | null
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          build_completed_at?: string | null
+          build_duration_seconds?: number | null
+          build_log?: Json | null
+          build_started_at?: string | null
+          build_status?: string
+          created_at?: string
+          created_by?: string | null
+          download_expires_at?: string | null
+          download_url?: string | null
+          enrollment_key_id?: string | null
+          error_message?: string | null
+          exe_version?: string | null
+          file_path?: string | null
+          file_size_bytes?: number | null
+          github_run_id?: string | null
+          id?: string
+          ps1_version?: string | null
+          ps2exe_version?: string | null
+          sha256_hash?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_builds_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_builds_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_builds_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_builds_enrollment_key_id_fkey"
+            columns: ["enrollment_key_id"]
+            isOneToOne: false
+            referencedRelation: "enrollment_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_builds_enrollment_key_id_fkey"
+            columns: ["enrollment_key_id"]
+            isOneToOne: false
+            referencedRelation: "enrollment_keys_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_builds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_system_metrics: {
         Row: {
           agent_id: string

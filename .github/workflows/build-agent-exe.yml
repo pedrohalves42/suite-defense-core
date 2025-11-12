@@ -1,0 +1,123 @@
+name: Build Agent EXE
+
+on:
+  repository_dispatch:
+    types: [build-agent-exe]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Install ps2exe
+        shell: pwsh
+        run: |
+          Install-Module -Name ps2exe -Force -Scope CurrentUser -ErrorAction Stop
+          Write-Host "✓ ps2exe installed successfully"
+      
+      - name: Compile PS1 to EXE
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          
+          # Extract payload from webhook
+          $ps1Content = '${{ github.event.client_payload.ps1_content }}'
+          $outputName = '${{ github.event.client_payload.output_name }}'
+          $version = '${{ github.event.client_payload.version }}'
+          $buildId = '${{ github.event.client_payload.build_id }}'
+          $callbackUrl = '${{ github.event.client_payload.callback_url }}'
+          $callbackToken = '${{ github.event.client_payload.callback_token }}'
+          
+          Write-Host "Build ID: $buildId"
+          Write-Host "Output: $outputName"
+          
+          # Save PS1 to temp file
+          $ps1Path = "temp_installer.ps1"
+          $ps1Content | Out-File -FilePath $ps1Path -Encoding UTF8
+          Write-Host "✓ PS1 content saved"
+          
+          # Compile to EXE
+          try {
+            ps2exe -InputFile $ps1Path `
+                   -OutputFile $outputName `
+                   -Title "CyberShield Agent Installer" `
+                   -Company "CyberShield" `
+                   -Version $version `
+                   -requireAdmin `
+                   -noConsole:$false `
+                   -ErrorAction Stop
+            
+            Write-Host "✓ EXE compiled successfully"
+          } catch {
+            Write-Error "Failed to compile: $_"
+            
+            # Send failure callback
+            $failurePayload = @{
+              build_id = $buildId
+              error = $_.Exception.Message
+              github_run_id = '${{ github.run_id }}'
+            } | ConvertTo-Json -Compress
+            
+            try {
+              Invoke-RestMethod -Uri $callbackUrl `
+                -Method POST `
+                -Body $failurePayload `
+                -ContentType "application/json" `
+                -Headers @{ Authorization = "Bearer $callbackToken" } `
+                -ErrorAction Stop
+            } catch {
+              Write-Warning "Failed to send failure callback: $_"
+            }
+            
+            exit 1
+          }
+          
+          # Calculate hash
+          $hash = (Get-FileHash $outputName -Algorithm SHA256).Hash.ToLower()
+          $size = (Get-Item $outputName).Length
+          
+          Write-Host "✓ Hash: $hash"
+          Write-Host "✓ Size: $size bytes"
+          
+          # Convert to Base64
+          $bytes = [System.IO.File]::ReadAllBytes($outputName)
+          $base64 = [Convert]::ToBase64String($bytes)
+          
+          Write-Host "✓ EXE converted to Base64 (length: $($base64.Length))"
+          
+          # Call callback webhook
+          $payload = @{
+            build_id = $buildId
+            exe_binary_base64 = $base64
+            sha256 = $hash
+            size_bytes = $size
+            github_run_id = '${{ github.run_id }}'
+          } | ConvertTo-Json -Compress
+          
+          try {
+            $response = Invoke-RestMethod -Uri $callbackUrl `
+              -Method POST `
+              -Body $payload `
+              -ContentType "application/json" `
+              -Headers @{ Authorization = "Bearer $callbackToken" } `
+              -TimeoutSec 60 `
+              -ErrorAction Stop
+            
+            Write-Host "✓ Callback sent successfully"
+            Write-Host "Response: $($response | ConvertTo-Json)"
+          } catch {
+            Write-Error "Failed to send callback: $_"
+            exit 1
+          }
+      
+      - name: Cleanup
+        if: always()
+        shell: pwsh
+        run: |
+          Remove-Item "temp_installer.ps1" -Force -ErrorAction SilentlyContinue
+          Remove-Item "CyberShield-Agent-*.exe" -Force -ErrorAction SilentlyContinue
+          Write-Host "✓ Cleanup completed"

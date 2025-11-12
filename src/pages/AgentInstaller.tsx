@@ -64,6 +64,14 @@ const AgentInstaller = () => {
   const [isTestingHealth, setIsTestingHealth] = useState(false);
   const [circuitBreakerOpen, setCircuitBreakerOpen] = useState(false);
 
+  // EXE Build states
+  const [exeBuildStatus, setExeBuildStatus] = useState<'idle' | 'building' | 'completed' | 'failed'>('idle');
+  const [exeBuildId, setExeBuildId] = useState<string | null>(null);
+  const [exeDownloadUrl, setExeDownloadUrl] = useState<string | null>(null);
+  const [exeSha256, setExeSha256] = useState<string | null>(null);
+  const [exeFileSize, setExeFileSize] = useState<number | null>(null);
+  const [lastEnrollmentKey, setLastEnrollmentKey] = useState<string | null>(null);
+
   // Monitor circuit breaker state
   useEffect(() => {
     const interval = setInterval(() => {
@@ -151,6 +159,9 @@ const AgentInstaller = () => {
         agentId: credentials.agentId,
         expiresAt: credentials.expiresAt
       });
+
+      // Armazenar enrollment key para uso posterior
+      setLastEnrollmentKey(credentials.enrollmentKey);
 
       toast.success("Credenciais geradas com sucesso!");
 
@@ -269,6 +280,9 @@ const AgentInstaller = () => {
         expiresAt: credentials.expiresAt
       });
 
+      // Armazenar enrollment key para uso posterior
+      setLastEnrollmentKey(credentials.enrollmentKey);
+
       // Gerar comando copy-paste com o enrollment key
       const installUrl = `${SUPABASE_URL}/functions/v1/serve-installer/${credentials.enrollmentKey}`;
       
@@ -330,6 +344,92 @@ const AgentInstaller = () => {
     toast.success("Comando copiado!", {
       description: "Cole no terminal do servidor"
     });
+  };
+
+  const handleBuildExe = async () => {
+    if (!isNameValid || !lastEnrollmentKey) {
+      toast.error('Gere as credenciais primeiro clicando em "Generate Installer" ou "Generate Command"');
+      return;
+    }
+
+    setExeBuildStatus('building');
+    setExeBuildId(null);
+    setExeDownloadUrl(null);
+    setExeSha256(null);
+    setExeFileSize(null);
+    toast.info('Iniciando build do instalador EXE... Aguarde 2-3 minutos');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('build-agent-exe', {
+        body: {
+          agent_name: agentName.trim(),
+          enrollment_key: lastEnrollmentKey
+        }
+      });
+
+      if (error) throw error;
+
+      const { build_id } = data;
+      setExeBuildId(build_id);
+
+      logger.info('Build initiated', { build_id, agent_name: agentName.trim() });
+
+      // Start polling for build status (every 5 seconds)
+      let pollAttempts = 0;
+      const maxPollAttempts = 60; // 5 min timeout (60 * 5s)
+      
+      const pollInterval = setInterval(async () => {
+        pollAttempts++;
+        
+        if (pollAttempts > maxPollAttempts) {
+          clearInterval(pollInterval);
+          setExeBuildStatus('failed');
+          toast.error('Timeout: Build demorou mais de 5 minutos');
+          return;
+        }
+
+        try {
+          const { data: buildData, error: pollError } = await supabase
+            .from('agent_builds')
+            .select('build_status, download_url, sha256_hash, file_size_bytes, error_message, build_duration_seconds')
+            .eq('id', build_id)
+            .single();
+
+          if (pollError) {
+            logger.error('Polling error', pollError);
+            return;
+          }
+
+          logger.info('Poll attempt', { attempt: pollAttempts, status: buildData.build_status });
+
+          if (buildData.build_status === 'completed') {
+            clearInterval(pollInterval);
+            setExeBuildStatus('completed');
+            setExeDownloadUrl(buildData.download_url);
+            setExeSha256(buildData.sha256_hash);
+            setExeFileSize(buildData.file_size_bytes);
+            
+            const duration = buildData.build_duration_seconds || 0;
+            toast.success(`✅ EXE gerado com sucesso em ${duration}s!`, {
+              description: 'Clique em Download para baixar o instalador'
+            });
+          } else if (buildData.build_status === 'failed') {
+            clearInterval(pollInterval);
+            setExeBuildStatus('failed');
+            toast.error(`Falha ao gerar EXE: ${buildData.error_message || 'Unknown error'}`);
+          }
+        } catch (pollErr) {
+          logger.error('Poll exception', pollErr);
+        }
+      }, 5000); // Poll every 5 seconds
+
+    } catch (error: any) {
+      logger.error('Build EXE failed', error);
+      setExeBuildStatus('failed');
+      
+      const errorMessage = error?.message || 'Erro desconhecido';
+      toast.error(`Erro ao gerar EXE: ${errorMessage}`);
+    }
   };
 
   // CORREÇÃO: Função removida - não é utilizada no código
@@ -627,6 +727,120 @@ const AgentInstaller = () => {
                         </AlertDescription>
                       </Alert>
                     </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* EXE Build Card */}
+          <Card className="border-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                Gerar Instalador EXE (One-Click Build)
+              </CardTitle>
+              <CardDescription>
+                Compile o instalador PowerShell em um executável Windows (.exe) pronto para distribuição
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200">
+                <Shield className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
+                  <strong>Build Automatizado:</strong> O instalador será compilado em um ambiente seguro GitHub Actions.
+                  O processo leva aproximadamente 2-3 minutos.
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex items-center gap-4">
+                <Button
+                  onClick={handleBuildExe}
+                  disabled={exeBuildStatus === 'building' || !lastEnrollmentKey}
+                  className="flex items-center gap-2"
+                  size="lg"
+                >
+                  {exeBuildStatus === 'building' ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Gerando EXE...
+                    </>
+                  ) : (
+                    <>
+                      <Package className="h-4 w-4" />
+                      Gerar Instalador EXE
+                    </>
+                  )}
+                </Button>
+
+                {exeBuildStatus === 'completed' && exeDownloadUrl && (
+                  <Button
+                    onClick={() => window.open(exeDownloadUrl, '_blank')}
+                    variant="default"
+                    className="flex items-center gap-2"
+                    size="lg"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download EXE
+                  </Button>
+                )}
+
+                {exeBuildStatus === 'failed' && (
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span className="text-sm font-medium">Falha no build</span>
+                  </div>
+                )}
+              </div>
+
+              {!lastEnrollmentKey && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Você precisa gerar as credenciais primeiro clicando em "Generate Installer" ou "Generate Command" acima.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {exeSha256 && (
+                <div className="rounded-lg bg-muted p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium">Hash SHA256 (para validação):</div>
+                    <FileCheck className="h-4 w-4 text-green-600" />
+                  </div>
+                  <code className="text-xs break-all block font-mono">{exeSha256}</code>
+                  {exeFileSize && (
+                    <div className="text-xs text-muted-foreground">
+                      Tamanho: {(exeFileSize / 1024 / 1024).toFixed(2)} MB
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {exeBuildStatus === 'building' && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-center gap-2 text-sm text-primary">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Build em progresso... Isso pode levar 2-3 minutos.</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    O instalador está sendo compilado em um ambiente seguro GitHub Actions. 
+                    Você será notificado quando concluir.
+                  </p>
+                  {exeBuildId && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Build ID: <code className="font-mono">{exeBuildId}</code>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {exeBuildStatus === 'completed' && (
+                <Alert className="bg-green-50 dark:bg-green-950 border-green-200">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800 dark:text-green-200">
+                    <strong>✅ Build Concluído!</strong> O instalador EXE está pronto para download.
+                    O link expira em 24 horas.
                   </AlertDescription>
                 </Alert>
               )}
