@@ -205,44 +205,25 @@ serve(async (req) => {
       }
     }
 
-    // Update user role
-    const { error: updateError } = await supabaseAdmin
-      .from('user_roles')
-      .update({ role: newRole })
-      .eq('user_id', userId);
+    // FASE 6: Usar RPC SECURITY DEFINER em vez de update direto
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin
+      .rpc('update_user_role_rpc', {
+        p_user_id: userId,
+        p_new_role: newRole
+      });
 
-    if (updateError) {
-      logger.error('Error updating role', updateError); // CORREÇÃO: Usar logger
+    if (rpcError) {
+      logger.error('RPC error', rpcError);
       return createError('INTERNAL', 'Failed to update user role', requestId, 500);
     }
 
-    // Create audit log with diff
-    const diffJson = {
-      before: { roles: [currentRole] },
-      after: { roles: [newRole] },
-    };
-
-    await supabaseAdmin.from('audit_logs').insert({
-      tenant_id: actorTenantId,
-      user_id: user.id,
-      action: 'update_role',
-      resource_type: 'user',
-      resource_id: userId,
-      success: true,
-      details: diffJson,
-      ip_address: req.headers.get('x-forwarded-for'),
-      user_agent: req.headers.get('user-agent'),
-    });
+    logger.info(`[${requestId}] Role updated successfully via RPC`, { userId, newRole, rpcResult });
 
     return new Response(
       JSON.stringify({
         updated: true,
         message: 'User role updated successfully',
-        data: {
-          userId,
-          previousRole: currentRole,
-          newRole,
-        },
+        data: rpcResult,
       }),
       {
         status: 200,

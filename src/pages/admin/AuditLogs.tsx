@@ -25,10 +25,10 @@ export default function AuditLogs() {
   const { data: logs, isLoading } = useQuery({
     queryKey: ['audit-logs', page, actionFilter, userFilter, searchTerm],
     queryFn: async () => {
-      // CORREÇÃO: Buscar logs sem join complexo (evita erro 400)
+      // FASE 6: Usar foreign key audit_logs_actor_id_fkey para join correto
       let query = supabase
         .from('audit_logs')
-        .select('*', { count: 'exact' })
+        .select('*, actor:profiles!audit_logs_actor_id_fkey(full_name)', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
 
@@ -37,7 +37,7 @@ export default function AuditLogs() {
       }
 
       if (userFilter && userFilter !== 'all') {
-        query = query.eq('user_id', userFilter);
+        query = query.eq('actor_id', userFilter);
       }
 
       if (searchTerm) {
@@ -47,31 +47,7 @@ export default function AuditLogs() {
       const { data: logsData, error, count } = await query;
       if (error) throw error;
 
-      // CORREÇÃO: Buscar profiles separadamente para evitar problemas de join
-      const userIds = [...new Set(
-        logsData?.map(log => log.user_id).filter(Boolean) || []
-      )];
-
-      if (userIds.length === 0) {
-        return { data: logsData?.map(log => ({ ...log, profiles: null })), count };
-      }
-
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, full_name')
-        .in('user_id', userIds);
-
-      // CORREÇÃO: Merge profiles com logs
-      const profilesMap = new Map(
-        profilesData?.map(p => [p.user_id, p]) || []
-      );
-
-      const enrichedLogs = logsData?.map(log => ({
-        ...log,
-        profiles: log.user_id ? profilesMap.get(log.user_id) : null
-      }));
-
-      return { data: enrichedLogs, count };
+      return { data: logsData, count };
     },
   });
 
@@ -185,7 +161,7 @@ export default function AuditLogs() {
                       <TableCell className="text-sm">
                         {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss')}
                       </TableCell>
-                      <TableCell>{log.profiles?.full_name || 'Sistema'}</TableCell>
+                      <TableCell>{log.actor?.full_name || 'Sistema'}</TableCell>
                       <TableCell className="font-mono text-xs">{log.action}</TableCell>
                       <TableCell>
                         <div className="text-sm">
