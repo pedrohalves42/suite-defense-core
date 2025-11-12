@@ -15,15 +15,16 @@ const ITEMS_PER_PAGE = 20;
 export default function AuditLogs() {
   const [page, setPage] = useState(0);
   const [actionFilter, setActionFilter] = useState('all');
-  const [userFilter, setUserFilter] = useState('');
+  const [userFilter, setUserFilter] = useState('all'); // CORREÇÃO: Iniciar com 'all' para evitar uncontrolled
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data: logs, isLoading } = useQuery({
     queryKey: ['audit-logs', page, actionFilter, userFilter, searchTerm],
     queryFn: async () => {
+      // CORREÇÃO: Buscar logs sem join complexo (evita erro 400)
       let query = supabase
         .from('audit_logs')
-        .select('*, profiles(full_name)', { count: 'exact' })
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
 
@@ -31,7 +32,7 @@ export default function AuditLogs() {
         query = query.eq('action', actionFilter);
       }
 
-      if (userFilter) {
+      if (userFilter && userFilter !== 'all') {
         query = query.eq('user_id', userFilter);
       }
 
@@ -39,10 +40,34 @@ export default function AuditLogs() {
         query = query.or(`action.ilike.%${searchTerm}%,resource_type.ilike.%${searchTerm}%`);
       }
 
-      const { data, error, count } = await query;
+      const { data: logsData, error, count } = await query;
       if (error) throw error;
 
-      return { data, count };
+      // CORREÇÃO: Buscar profiles separadamente para evitar problemas de join
+      const userIds = [...new Set(
+        logsData?.map(log => log.user_id).filter(Boolean) || []
+      )];
+
+      if (userIds.length === 0) {
+        return { data: logsData?.map(log => ({ ...log, profiles: null })), count };
+      }
+
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', userIds);
+
+      // CORREÇÃO: Merge profiles com logs
+      const profilesMap = new Map(
+        profilesData?.map(p => [p.user_id, p]) || []
+      );
+
+      const enrichedLogs = logsData?.map(log => ({
+        ...log,
+        profiles: log.user_id ? profilesMap.get(log.user_id) : null
+      }));
+
+      return { data: enrichedLogs, count };
     },
   });
 
@@ -114,7 +139,7 @@ export default function AuditLogs() {
                   <SelectValue placeholder="Todos os usuários" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os usuários</SelectItem>
+                  <SelectItem value="all">Todos os usuários</SelectItem>
                   {users?.map((user) => (
                     <SelectItem key={user.user_id} value={user.user_id}>
                       {user.full_name || user.user_id}
