@@ -48,27 +48,22 @@ export default function Members() {
     enabled: !!tenant?.id,
   });
 
-  // Buscar assinatura do tenant
+  // Buscar assinatura do tenant - CORREÇÃO: usar check-subscription Edge Function
   const { data: subscription } = useQuery({
-    queryKey: ['tenant-subscription', tenant?.id],
+    queryKey: ['subscription', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) throw new Error('Tenant não encontrado');
 
-      const { data, error } = await supabase
-        .from('tenant_subscriptions')
-        .select(`
-          subscription_plans (
-            name,
-            max_users
-          )
-        `)
-        .eq('tenant_id', tenant.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('check-subscription', {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
 
       if (error) throw error;
-      return data as TenantSubscription;
+      return data; // { subscribed, plan_name, device_quantity, status, features }
     },
     enabled: !!tenant?.id,
   });
@@ -133,8 +128,9 @@ export default function Members() {
   });
 
   const currentUsersCount = members.length;
-  const maxUsers = subscription?.subscription_plans.max_users || 0;
-  const planName = subscription?.subscription_plans.name || 'free';
+  // CORREÇÃO: Usar dados corretos da subscription
+  const maxUsers = subscription?.features?.max_users?.quota_limit || subscription?.device_quantity || 0;
+  const planName = subscription?.plan_name || 'free';
 
   return (
     <div className="space-y-6">
