@@ -5,8 +5,8 @@ import { createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const GITHUB_TOKEN = Deno.env.get('GITHUB_TOKEN');
-const GITHUB_REPO = Deno.env.get('GITHUB_REPO'); // e.g., "username/repo"
+const BUILD_GH_TOKEN = Deno.env.get('BUILD_GH_TOKEN');
+const BUILD_GH_REPOSITORY = Deno.env.get('BUILD_GH_REPOSITORY'); // e.g., "username/repo"
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -204,12 +204,12 @@ Write-Host "Timestamp: {{TIMESTAMP}}" -ForegroundColor Gray
     logger.info('Build record created', { requestId, build_id: buildRecord.id });
 
     // 8. Trigger GitHub Actions workflow
-    if (!GITHUB_TOKEN || !GITHUB_REPO) {
+    if (!BUILD_GH_TOKEN || !BUILD_GH_REPOSITORY) {
       await serviceRoleClient
         .from('agent_builds')
         .update({
           build_status: 'failed',
-          error_message: 'GitHub integration not configured (GITHUB_TOKEN or GITHUB_REPO missing)',
+          error_message: 'GitHub integration not configured (BUILD_GH_TOKEN or BUILD_GH_REPOSITORY missing)',
           build_completed_at: new Date().toISOString()
         })
         .eq('id', buildRecord.id);
@@ -217,11 +217,11 @@ Write-Host "Timestamp: {{TIMESTAMP}}" -ForegroundColor Gray
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Build service not configured', 500, requestId);
     }
 
-    const githubWorkflowUrl = `https://api.github.com/repos/${GITHUB_REPO}/dispatches`;
+    const githubWorkflowUrl = `https://api.github.com/repos/${BUILD_GH_REPOSITORY}/dispatches`;
     const githubResponse = await fetch(githubWorkflowUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${GITHUB_TOKEN}`,
+        'Authorization': `Bearer ${BUILD_GH_TOKEN}`,
         'Content-Type': 'application/json',
         'Accept': 'application/vnd.github.v3+json'
       },
