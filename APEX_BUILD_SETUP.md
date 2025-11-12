@@ -139,8 +139,21 @@ Após gerar o `.exe` com sucesso:
 
 1. **Testar instalação:** Execute o `.exe` em uma VM limpa
 2. **Validar funcionalidades:** Login, dashboard, agentes, etc.
-3. **Gerar relatório:** Use o template em `Relatorio_APEX_BUILD.md` (a ser criado)
-4. **Assinatura digital:** Adquirir certificado Code Signing (produção)
+3. **Gerar relatório:** Preencha o template em `Relatorio_APEX_BUILD.md`
+4. **Configurar auto-update:** Siga instruções em `AUTO_UPDATE_SETUP.md`
+5. **Assinatura digital:** Adquirir certificado Code Signing (produção)
+
+---
+
+## 🔄 Auto-Update
+
+O sistema de auto-update já está implementado com **electron-updater**.
+
+Para configurar:
+1. Leia `AUTO_UPDATE_SETUP.md` para instruções completas
+2. Configure GitHub Personal Access Token
+3. Edite `electron-builder.yml` com seu owner/repo
+4. Faça build com `--publish always`
 
 ---
 
