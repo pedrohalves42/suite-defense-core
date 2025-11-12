@@ -5,15 +5,18 @@ import { corsHeaders } from '../_shared/error-handler.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts'; // CORREÇÃO: Adicionar logger
 
-// Validation schema
+// CORREÇÃO: Aceitar userId OU user_id para compatibilidade
 const UpdateRoleSchema = z.object({
-  userId: z.string().uuid('Invalid user ID format'),
+  userId: z.string().uuid('Invalid user ID format').optional(),
+  user_id: z.string().uuid('Invalid user ID format').optional(),
   roles: z.array(z.enum(['admin', 'operator', 'viewer']))
     .min(1, 'At least one role is required')
     .max(3, 'Maximum of 3 roles')
     .refine((roles) => new Set(roles).size === roles.length, {
       message: 'Roles must be unique',
     }),
+}).refine(data => data.userId || data.user_id, {
+  message: 'Either userId or user_id is required'
 });
 
 interface ErrorResponse {
@@ -130,7 +133,9 @@ serve(async (req) => {
       return createError('BAD_REQUEST', errorMessage, requestId, 400);
     }
 
-    const { userId, roles: newRoles } = validationResult.data;
+    // CORREÇÃO: Suportar ambos os formatos
+    const { userId: userIdCamel, user_id: userIdSnake, roles: newRoles } = validationResult.data;
+    const userId = userIdCamel || userIdSnake!;
 
     // Check if target user exists and is in the same tenant
     const { data: targetUserRole, error: targetError } = await supabaseAdmin
