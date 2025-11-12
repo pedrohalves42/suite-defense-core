@@ -1,0 +1,27 @@
+appId: com.cybershield.app
+productName: CyberShield
+directories:
+  output: electron/dist
+  buildResources: electron/resources
+files:
+  - electron/**/*
+  - "!electron/dist/**/*"
+  - "!electron/scripts/**/*"
+  - package.json
+extraFiles: []
+win:
+  target:
+    - nsis
+  artifactName: ${productName}-${version}-win-x64.${ext}
+  icon: electron/resources/icon.ico
+nsis:
+  oneClick: true
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: false
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: CyberShield
+afterPack: ./electron/scripts/afterPack.js
+compression: normal
