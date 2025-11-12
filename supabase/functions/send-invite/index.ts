@@ -4,6 +4,7 @@ import { handleException, handleValidationError, createErrorResponse, ErrorCode,
 import { createAuditLog } from '../_shared/audit.ts';
 import { EmailSchema } from '../_shared/validation.ts';
 import { Resend } from 'https://esm.sh/resend@4.0.0';
+import { getTenantIdForUser } from '../_shared/tenant.ts';
 
 // Validation schema for invite
 const InviteSchema = z.object({
@@ -70,14 +71,10 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.FORBIDDEN, 'Acesso negado', 403, requestId);
     }
 
-    // Get user's tenant
-    const { data: userRole } = await supabaseAdmin
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .single();
+    // Get user's tenant using helper (handles multiple roles)
+    const tenantId = await getTenantIdForUser(supabaseAdmin, user.id);
 
-    if (!userRole?.tenant_id) {
+    if (!tenantId) {
       return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
     }
 
@@ -89,7 +86,7 @@ Deno.serve(async (req) => {
           max_users
         )
       `)
-      .eq('tenant_id', userRole.tenant_id)
+      .eq('tenant_id', tenantId)
       .single();
 
     if (!subscription) {
@@ -100,7 +97,7 @@ Deno.serve(async (req) => {
     const { count: currentUsersCount } = await supabaseAdmin
       .from('user_roles')
       .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', userRole.tenant_id);
+      .eq('tenant_id', tenantId);
 
     const maxUsers = (subscription.subscription_plans as any).max_users;
 
@@ -144,7 +141,7 @@ Deno.serve(async (req) => {
         email,
         role,
         token: inviteToken,
-        tenant_id: userRole.tenant_id,
+        tenant_id: tenantId,
         invited_by: user.id,
         expires_at: expiresAt.toISOString(),
         status: 'pending',
@@ -181,11 +178,11 @@ Deno.serve(async (req) => {
     await createAuditLog({
       supabase: supabaseAdmin,
       userId: user.id,
-      tenantId: userRole.tenant_id,
+      tenantId: tenantId,
       action: 'invite_sent',
       resourceType: 'invite',
       resourceId: invite.id,
-      details: { email, role, tenant_id: userRole.tenant_id },
+      details: { email, role, tenant_id: tenantId },
       request: req,
       success: true,
     });
