@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { UserPlus, Users, Crown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, UserPlus, Shield, Eye, Settings as SettingsIcon } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,15 +16,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
+import { MemberCard, type AppRole } from '@/components/members/MemberCard';
 
 interface Member {
   id: string;
@@ -115,10 +109,9 @@ export default function Members() {
     },
   });
 
-  // Atualizar role do membro
+  // CORREÇÃO: Tipagem melhorada com AppRole
   const updateRole = useMutation({
-    mutationFn: async ({ userId, newRole }: { userId: string; newRole: string }) => {
-      // CORREÇÃO: Chamar função correta com parâmetros corretos
+    mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
       const { data, error } = await supabase.functions.invoke('update-user-role', {
         body: { userId, roles: [newRole] },
       });
@@ -142,28 +135,7 @@ export default function Members() {
     },
   });
 
-  const getRoleBadge = (role: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'outline'> = {
-      admin: 'default',
-      operator: 'secondary',
-      viewer: 'outline',
-    };
-
-    const icons: Record<string, any> = {
-      admin: Shield,
-      operator: SettingsIcon,
-      viewer: Eye,
-    };
-
-    const Icon = icons[role] || Eye;
-
-    return (
-      <Badge variant={variants[role] || 'outline'} className="gap-1">
-        <Icon className="h-3 w-3" />
-        {role}
-      </Badge>
-    );
-  };
+  // CORREÇÃO: Função getRoleBadge movida para MemberCard component
 
   const currentUsersCount = members.length;
   const maxUsers = subscription?.subscription_plans.max_users || 0;
@@ -223,54 +195,13 @@ export default function Members() {
           ) : (
             <div className="space-y-4">
               {members.map((member) => (
-                <div
+                <MemberCard
                   key={member.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <p className="font-medium">
-                          {member.profiles?.full_name || 'Sem nome'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {member.email}
-                        </p>
-                      </div>
-                      {getRoleBadge(member.role)}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Adicionado em{' '}
-                      {new Date(member.created_at).toLocaleDateString('pt-BR')}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Select
-                      value={member.role || 'viewer'}
-                      onValueChange={(newRole) =>
-                        updateRole.mutate({ userId: member.user_id, newRole })
-                      }
-                      disabled={updateRole.isPending}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="operator">Operator</SelectItem>
-                        <SelectItem value="viewer">Viewer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setMemberToRemove(member)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+                  member={member as any}  // CORREÇÃO: Conversão de tipo temporária
+                  onRoleChange={(userId, newRole) => updateRole.mutate({ userId, newRole })}
+                  onRemove={(m) => setMemberToRemove(m as any)}
+                  isUpdating={updateRole.isPending}
+                />
               ))}
             </div>
           )}

@@ -10,27 +10,24 @@ export const AdminLayout = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // CORREÇÃO: Logger condicional apenas em DEV
   useEffect(() => {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('[AdminLayout] 🔍 VERIFICAÇÃO DE ACESSO ADMIN');
-    console.log('[AdminLayout] User ID:', user?.id);
-    console.log('[AdminLayout] User Email:', user?.email);
-    console.log('[AdminLayout] isAdmin:', isAdmin);
-    console.log('[AdminLayout] loading:', loading);
-    console.log('[AdminLayout] Permitir acesso?', !loading && isAdmin);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    if (import.meta.env.DEV) {
+      console.log('[AdminLayout] Admin check:', { 
+        userId: user?.id, 
+        isAdmin, 
+        loading 
+      });
+    }
     
     if (!loading && !isAdmin) {
-      console.warn('[AdminLayout] ⛔ BLOQUEANDO ACESSO - isAdmin é false');
       toast({
         title: "Acesso Negado",
         description: "Você não tem permissões de administrador.",
         variant: "destructive"
       });
-    } else if (!loading && isAdmin) {
-      console.log('[AdminLayout] ✅ ACESSO PERMITIDO - isAdmin é true');
     }
-  }, [user, isAdmin, loading]);
+  }, [user, isAdmin, loading, toast]);
 
   if (loading) {
     return (
@@ -42,11 +39,8 @@ export const AdminLayout = () => {
   }
 
   if (!isAdmin) {
-    console.warn('[AdminLayout] ⛔ REDIRECIONANDO - User is not admin');
     return <Navigate to="/dashboard" replace />;
   }
-
-  console.log('[AdminLayout] 🎉 RENDERIZANDO CONTEÚDO ADMIN');
 
   return (
     <div className="p-6 max-w-7xl mx-auto">

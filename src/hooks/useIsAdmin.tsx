@@ -8,6 +8,9 @@ export const useIsAdmin = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // CORREÇÃO: Flag para prevenir race condition
+    let isCancelled = false;
+
     const checkAdmin = async () => {
       // Aguarda a autenticação finalizar antes de decidir
       if (authLoading) {
@@ -31,15 +34,27 @@ export const useIsAdmin = () => {
           throw error;
         }
         
-        setIsAdmin(data === true);
+        // CORREÇÃO: Só atualiza se não foi cancelado
+        if (!isCancelled) {
+          setIsAdmin(data === true);
+        }
       } catch (error) {
-        setIsAdmin(false);
+        if (!isCancelled) {
+          setIsAdmin(false);
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
     checkAdmin();
+
+    // CORREÇÃO: Cleanup para prevenir memory leak
+    return () => {
+      isCancelled = true;
+    };
   }, [user, authLoading]);
 
   return { isAdmin, loading };

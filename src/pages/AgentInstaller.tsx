@@ -159,10 +159,12 @@ const AgentInstaller = () => {
         description: `Arquivo: ${fileName}`
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // CORREÇÃO: Melhor tipagem de erro
+      const errorMessage = error instanceof Error ? error.message : "Tente novamente";
       console.error('Erro ao gerar instalador:', error);
       toast.error("Erro ao gerar instalador", {
-        description: error.message || "Tente novamente"
+        description: errorMessage
       });
     } finally {
       setIsGenerating(false);
@@ -218,10 +220,12 @@ const AgentInstaller = () => {
         description: "Copie e cole no servidor para instalar"
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // CORREÇÃO: Melhor tipagem de erro
+      const errorMessage = error instanceof Error ? error.message : "Tente novamente";
       console.error('Erro ao gerar comando:', error);
       toast.error("Erro ao gerar comando", {
-        description: error.message || "Tente novamente"
+        description: errorMessage
       });
     } finally {
       setIsGenerating(false);
@@ -246,15 +250,7 @@ const AgentInstaller = () => {
     });
   };
 
-  const downloadValidationScript = () => {
-    const a = document.createElement('a');
-    a.href = '/scripts/post-installation-validation.ps1';
-    a.download = 'post-installation-validation.ps1';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    toast.success("Script de validação baixado!");
-  };
+  // CORREÇÃO: Função removida - não é utilizada no código
 
   return (
     <div className="container mx-auto p-6 max-w-5xl space-y-6">
@@ -514,37 +510,7 @@ const AgentInstaller = () => {
             </CardContent>
           </Card>
 
-          {/* Validação Pós-Instalação */}
-          <Card className="border-purple-500 bg-purple-50 dark:bg-purple-950">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileCheck className="h-5 w-5 text-purple-600" />
-                Validação Pós-Instalação
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm">
-                Após instalar o agente, você pode validar se está funcionando 100%:
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={downloadValidationScript}
-                className="w-full"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Baixar Script de Validação (Windows)
-              </Button>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>Este script verifica:</p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Instalação correta dos arquivos</li>
-                  <li>Tarefa agendada funcionando</li>
-                  <li>Envio de heartbeats</li>
-                  <li>Coleta de métricas</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
+          {/* CORREÇÃO: Card de validação removido - função não utilizada */}
         </TabsContent>
 
         {/* TAB 2: TUTORIAL */}
