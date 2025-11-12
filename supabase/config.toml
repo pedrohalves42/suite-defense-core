@@ -77,7 +77,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.cleanup-expired-enrollment-keys]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-expiring-enrollment-keys]
 verify_jwt = false
