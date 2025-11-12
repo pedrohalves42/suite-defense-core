@@ -764,6 +764,50 @@ export type Database = {
           },
         ]
       }
+      performance_metrics: {
+        Row: {
+          created_at: string
+          duration_ms: number
+          error_message: string | null
+          function_name: string
+          id: string
+          metadata: Json | null
+          operation_type: string
+          status_code: number | null
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          duration_ms: number
+          error_message?: string | null
+          function_name: string
+          id?: string
+          metadata?: Json | null
+          operation_type: string
+          status_code?: number | null
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number
+          error_message?: string | null
+          function_name?: string
+          id?: string
+          metadata?: Json | null
+          operation_type?: string
+          status_code?: number | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_metrics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1682,6 +1726,7 @@ export type Database = {
       cleanup_old_failed_attempts: { Args: never; Returns: undefined }
       cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_old_metrics: { Args: never; Returns: undefined }
+      cleanup_old_performance_metrics: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       cleanup_old_security_logs: { Args: never; Returns: undefined }
       cleanup_orphaned_agents: { Args: never; Returns: number }

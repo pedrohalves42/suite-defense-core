@@ -6,23 +6,26 @@ import { logSecurityEvent, extractIpAddress, checkIpBlocklist } from '../_shared
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
+import { withAPM } from '../_shared/apm.ts';
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
-
-  try {
-    return await withTimeout(async () => await handleRequest(req, requestId, startTime), {
-      timeoutMs: 25000,
-      timeoutMessage: 'Auto-generate enrollment request timeout'
-    });
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('timeout')) {
-      logger.error('Request timeout in auto-generate-enrollment', { requestId });
-      return createTimeoutResponse(corsHeaders);
+  
+  return withAPM('auto-generate-enrollment', 'edge_function', async () => {
+    try {
+      return await withTimeout(async () => await handleRequest(req, requestId, startTime), {
+        timeoutMs: 25000,
+        timeoutMessage: 'Auto-generate enrollment request timeout'
+      });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('timeout')) {
+        logger.error('Request timeout in auto-generate-enrollment', { requestId });
+        return createTimeoutResponse(corsHeaders);
+      }
+      throw error;
     }
-    throw error;
-  }
+  }, { metadata: { request_id: requestId } });
 });
 
 async function handleRequest(req: Request, requestId: string, startTime: number) {
