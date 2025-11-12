@@ -405,6 +405,7 @@ export type Database = {
           created_by: string | null
           current_uses: number
           description: string | null
+          expiration_notified_at: string | null
           expires_at: string
           id: string
           is_active: boolean
@@ -420,6 +421,7 @@ export type Database = {
           created_by?: string | null
           current_uses?: number
           description?: string | null
+          expiration_notified_at?: string | null
           expires_at: string
           id?: string
           is_active?: boolean
@@ -435,6 +437,7 @@ export type Database = {
           created_by?: string | null
           current_uses?: number
           description?: string | null
+          expiration_notified_at?: string | null
           expires_at?: string
           id?: string
           is_active?: boolean
