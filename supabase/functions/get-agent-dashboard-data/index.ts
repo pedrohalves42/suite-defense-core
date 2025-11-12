@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { getTenantIdForUser } from '../_shared/tenant.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -31,15 +32,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar tenant do usuário (limit 1 pois usuário pode ter múltiplos roles no mesmo tenant)
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .limit(1)
-      .maybeSingle();
+    // Buscar tenant do usuário usando helper (lida com múltiplos roles)
+    const tenantId = await getTenantIdForUser(supabase, user.id);
 
-    if (!userRole) {
+    if (!tenantId) {
       return new Response(JSON.stringify({ error: 'No tenant found' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -48,7 +44,7 @@ Deno.serve(async (req) => {
 
     // Buscar dados consolidados usando a função do banco
     const { data: agentsWithMetrics, error: metricsError } = await supabase
-      .rpc('get_latest_agent_metrics', { p_tenant_id: userRole.tenant_id });
+      .rpc('get_latest_agent_metrics', { p_tenant_id: tenantId });
 
     if (metricsError) {
       console.error('[get-agent-dashboard-data] Metrics error:', metricsError);
@@ -62,7 +58,7 @@ Deno.serve(async (req) => {
     const { data: recentAlerts, error: alertsError } = await supabase
       .from('system_alerts')
       .select('*')
-      .eq('tenant_id', userRole.tenant_id)
+      .eq('tenant_id', tenantId)
       .eq('acknowledged', false)
       .order('created_at', { ascending: false })
       .limit(50);
