@@ -12,8 +12,17 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
+import { CircuitBreaker, CircuitState } from "@/lib/circuit-breaker";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+// Circuit Breaker for auto-generate-enrollment
+const enrollmentCircuitBreaker = new CircuitBreaker({
+  failureThreshold: 3,
+  successThreshold: 2,
+  timeout: 60000, // 1 minute
+  name: 'auto-generate-enrollment'
+});
 
 // Retry with exponential backoff: 2s, 4s, 8s
 const retryWithBackoff = async <T,>(
@@ -53,6 +62,17 @@ const AgentInstaller = () => {
   } | null>(null);
   const [healthStatus, setHealthStatus] = useState<any>(null);
   const [isTestingHealth, setIsTestingHealth] = useState(false);
+  const [circuitBreakerOpen, setCircuitBreakerOpen] = useState(false);
+
+  // Monitor circuit breaker state
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const state = enrollmentCircuitBreaker.getState();
+      setCircuitBreakerOpen(state === CircuitState.OPEN);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Validação em tempo real do nome do agente
   useEffect(() => {
@@ -107,12 +127,21 @@ const AgentInstaller = () => {
     setIsGenerating(true);
     
     try {
-      // 1. Gerar credenciais através do auto-generate-enrollment com retry
+      // 1. Gerar credenciais através do auto-generate-enrollment com retry e circuit breaker
       toast.info("Gerando credenciais do agente...");
+      
+      // Check circuit breaker state
+      const circuitState = enrollmentCircuitBreaker.getState();
+      if (circuitState === CircuitState.OPEN) {
+        throw new Error('Backend temporariamente indisponível. Aguarde alguns instantes e tente novamente.');
+      }
+
       const { data: credentials, error: credError } = await retryWithBackoff(
-        () => supabase.functions.invoke('auto-generate-enrollment', {
-          body: { agentName: agentName.trim() }
-        })
+        () => enrollmentCircuitBreaker.execute(() => 
+          supabase.functions.invoke('auto-generate-enrollment', {
+            body: { agentName: agentName.trim() }
+          })
+        )
       );
 
       if (credError) throw credError;
@@ -215,12 +244,21 @@ const AgentInstaller = () => {
     setIsGenerating(true);
     
     try {
-      // Gerar credenciais e enrollment key com retry
+      // Gerar credenciais e enrollment key com retry e circuit breaker
       toast.info("Gerando link temporário...");
+      
+      // Check circuit breaker state
+      const circuitState = enrollmentCircuitBreaker.getState();
+      if (circuitState === CircuitState.OPEN) {
+        throw new Error('Backend temporariamente indisponível. Aguarde alguns instantes e tente novamente.');
+      }
+
       const { data: credentials, error: credError } = await retryWithBackoff(
-        () => supabase.functions.invoke('auto-generate-enrollment', {
-          body: { agentName: agentName.trim() }
-        })
+        () => enrollmentCircuitBreaker.execute(() =>
+          supabase.functions.invoke('auto-generate-enrollment', {
+            body: { agentName: agentName.trim() }
+          })
+        )
       );
 
       if (credError) throw credError;
@@ -319,6 +357,17 @@ const AgentInstaller = () => {
           Credenciais são geradas automaticamente e configuradas no instalador.
         </AlertDescription>
       </Alert>
+
+      {/* Circuit Breaker Alert */}
+      {circuitBreakerOpen && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>⚠️ Backend Temporariamente Indisponível:</strong> O sistema detectou múltiplas falhas.
+            Aguarde alguns instantes antes de tentar novamente. O serviço será restaurado automaticamente.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Tabs defaultValue="generator" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">

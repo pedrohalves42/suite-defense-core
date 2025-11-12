@@ -5,10 +5,27 @@ import { handleException, handleValidationError } from '../_shared/error-handler
 import { logSecurityEvent, extractIpAddress, checkIpBlocklist } from '../_shared/security-log.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
+import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
+
+  try {
+    return await withTimeout(async () => await handleRequest(req, requestId, startTime), {
+      timeoutMs: 25000,
+      timeoutMessage: 'Auto-generate enrollment request timeout'
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('timeout')) {
+      logger.error('Request timeout in auto-generate-enrollment', { requestId });
+      return createTimeoutResponse(corsHeaders);
+    }
+    throw error;
+  }
+});
+
+async function handleRequest(req: Request, requestId: string, startTime: number) {
   
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -483,4 +500,4 @@ Deno.serve(async (req) => {
       }
     );
   }
-});
+}
