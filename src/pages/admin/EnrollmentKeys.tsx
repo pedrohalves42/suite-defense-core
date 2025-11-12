@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ import { format, subDays } from 'date-fns';
 
 const ITEMS_PER_PAGE = 10;
 
-const CountdownTimer = ({ expiresAt }: { expiresAt: string }) => {
+const CountdownTimer = memo(({ expiresAt }: { expiresAt: string }) => {
   const [timeRemaining, setTimeRemaining] = useState('');
   const [colorClass, setColorClass] = useState('text-green-600');
 
@@ -73,7 +73,7 @@ const CountdownTimer = ({ expiresAt }: { expiresAt: string }) => {
       {timeRemaining}
     </span>
   );
-};
+});
 
 export default function EnrollmentKeys() {
   const { toast } = useToast();
