@@ -326,8 +326,6 @@ Deno.serve(async (req) => {
           status: 'pending',
         })
         .select('id')
-        .order('enrolled_at', { ascending: false })
-        .limit(1)
         .maybeSingle();
 
       if (agentError || !newAgent) {
