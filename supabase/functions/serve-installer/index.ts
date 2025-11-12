@@ -44,12 +44,28 @@ Write-Host "✓ Diretórios criados" -ForegroundColor Green
 # 3. Baixar script do agente
 $agentUrl = "{{SERVER_URL}}/agent-scripts/cybershield-agent-windows.ps1"
 $agentPath = "$InstallDir\\cybershield-agent.ps1"
+$expectedHash = "{{AGENT_HASH}}"
 
 Write-Host "Baixando agente de $agentUrl..." -ForegroundColor Gray
 try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Invoke-WebRequest -Uri $agentUrl -OutFile $agentPath -UseBasicParsing -ErrorAction Stop
-    Write-Host "✓ Agente baixado para $agentPath" -ForegroundColor Green
+    
+    # Validar hash SHA256
+    Write-Host "Validando integridade do arquivo..." -ForegroundColor Gray
+    $actualHash = (Get-FileHash -Path $agentPath -Algorithm SHA256).Hash.ToLower()
+    
+    if ($actualHash -ne $expectedHash) {
+        Write-Host "✗ ERRO CRÍTICO: Hash SHA256 não corresponde!" -ForegroundColor Red
+        Write-Host "  Esperado: $expectedHash" -ForegroundColor Yellow
+        Write-Host "  Obtido:   $actualHash" -ForegroundColor Yellow
+        Write-Host "  POSSÍVEL ATAQUE OU DOWNLOAD CORROMPIDO!" -ForegroundColor Red
+        Remove-Item $agentPath -Force
+        Read-Host "Pressione Enter para sair"
+        exit 1
+    }
+    
+    Write-Host "✓ Agente baixado e validado (hash OK)" -ForegroundColor Green
 } catch {
     Write-Host "✗ Falha no download: $_" -ForegroundColor Red
     Read-Host "Pressione Enter para sair"
@@ -277,6 +293,35 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Calculate SHA256 hash of agent script for integrity validation
+    const agentScriptUrl = `${SUPABASE_URL}/agent-scripts/cybershield-agent-windows.ps1`;
+    console.log(`[${requestId}] Fetching agent script to calculate hash: ${agentScriptUrl}`);
+    
+    let agentScriptHash = '';
+    try {
+      const agentScriptResponse = await fetch(agentScriptUrl);
+      if (!agentScriptResponse.ok) {
+        throw new Error(`Failed to fetch agent script: ${agentScriptResponse.status}`);
+      }
+      
+      const agentScriptContent = await agentScriptResponse.text();
+      
+      // Generate SHA256 hash
+      const encoder = new TextEncoder();
+      const data = encoder.encode(agentScriptContent);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      agentScriptHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      console.log(`[${requestId}] Agent script hash calculated: ${agentScriptHash}`);
+    } catch (hashError) {
+      console.error(`[${requestId}] Failed to calculate agent script hash:`, hashError);
+      return new Response('Failed to generate secure installer', { 
+        status: 500,
+        headers: corsHeaders
+      });
+    }
+
     // Validate credentials are present
     if (!tokenData.token || !agentData.hmac_secret) {
       console.error(`[${requestId}] Missing credentials: token=${!!tokenData.token}, hmac=${!!agentData.hmac_secret}`);
@@ -298,6 +343,7 @@ Deno.serve(async (req) => {
       .replace(/\{\{AGENT_TOKEN\}\}/g, tokenData.token)
       .replace(/\{\{HMAC_SECRET\}\}/g, agentData.hmac_secret) // Fixed: from agents table
       .replace(/\{\{SERVER_URL\}\}/g, SUPABASE_URL)
+      .replace(/\{\{AGENT_HASH\}\}/g, agentScriptHash) // NEW: Hash for integrity validation
       .replace(/\{\{TIMESTAMP\}\}/g, new Date().toISOString());
 
     // Final validation: ensure no placeholders remain
