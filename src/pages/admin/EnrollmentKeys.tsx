@@ -6,13 +6,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, Copy, XCircle, ChevronLeft, ChevronRight, TrendingUp, Key, Users, Clock } from 'lucide-react';
+import { Plus, Copy, XCircle, ChevronLeft, ChevronRight, TrendingUp, Key, Users, Clock, Trash, Loader2 } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 
 const ITEMS_PER_PAGE = 10;
@@ -75,6 +86,8 @@ export default function EnrollmentKeys() {
   const [page, setPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
 
   const { data: keys, isLoading } = useQuery({
     queryKey: ['enrollment-keys', page, searchTerm, statusFilter],
@@ -204,6 +217,41 @@ export default function EnrollmentKeys() {
     toast({ title: 'Chave copiada!' });
   };
 
+  const runManualCleanup = async () => {
+    setIsCleaningUp(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke(
+        'cleanup-expired-enrollment-keys',
+        {
+          headers: {
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+        }
+      );
+
+      if (error) throw error;
+
+      toast({
+        title: "Limpeza concluída!",
+        description: `${data.deleted_count} chaves expiradas foram removidas.`
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['enrollment-keys'] });
+      queryClient.invalidateQueries({ queryKey: ['enrollment-keys-stats'] });
+      setShowCleanupDialog(false);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao executar limpeza",
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsCleaningUp(false);
+    }
+  };
+
   if (roleLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -219,59 +267,99 @@ export default function EnrollmentKeys() {
           <h2 className="text-3xl font-bold">Chaves de Enrollment</h2>
           <p className="text-muted-foreground">Gerencie as chaves para registro de novos agentes</p>
         </div>
-        {canWrite && (
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Chave
-              </Button>
-            </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Criar Nova Chave</DialogTitle>
-              <DialogDescription>
-                Configure os parâmetros para a nova chave de enrollment
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label>Expira em (horas)</Label>
-                <Input 
-                  type="number" 
-                  value={expiresInHours}
-                  onChange={(e) => setExpiresInHours(e.target.value)}
-                  min="1"
-                />
-              </div>
-              <div>
-                <Label>Usos máximos</Label>
-                <Input 
-                  type="number" 
-                  value={maxUses}
-                  onChange={(e) => setMaxUses(e.target.value)}
-                  min="1"
-                />
-              </div>
-              <div>
-                <Label>Descrição</Label>
-                <Textarea 
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Descrição opcional..."
-                />
-              </div>
-              <Button 
-                onClick={() => createKey.mutate()} 
-                disabled={createKey.isPending}
-                className="w-full"
-              >
-                Criar Chave
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-        )}
+        <div className="flex gap-2">
+          {canWrite && (
+            <>
+              <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline">
+                    <Trash className="h-4 w-4 mr-2" />
+                    Limpar Expiradas
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar Limpeza Manual</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação irá remover permanentemente todas as enrollment keys que:
+                      <ul className="list-disc ml-5 mt-2 space-y-1">
+                        <li>Expiraram há mais de 48 horas</li>
+                        <li>Estão marcadas como inativas</li>
+                      </ul>
+                      <br />
+                      Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isCleaningUp}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={runManualCleanup} disabled={isCleaningUp}>
+                      {isCleaningUp ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Limpando...
+                        </>
+                      ) : (
+                        "Confirmar Limpeza"
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nova Chave
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Criar Nova Chave</DialogTitle>
+                    <DialogDescription>
+                      Configure os parâmetros para a nova chave de enrollment
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label>Expira em (horas)</Label>
+                      <Input 
+                        type="number" 
+                        value={expiresInHours}
+                        onChange={(e) => setExpiresInHours(e.target.value)}
+                        min="1"
+                      />
+                    </div>
+                    <div>
+                      <Label>Usos máximos</Label>
+                      <Input 
+                        type="number" 
+                        value={maxUses}
+                        onChange={(e) => setMaxUses(e.target.value)}
+                        min="1"
+                      />
+                    </div>
+                    <div>
+                      <Label>Descrição</Label>
+                      <Textarea 
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder="Descrição opcional..."
+                      />
+                    </div>
+                    <Button 
+                      onClick={() => createKey.mutate()} 
+                      disabled={createKey.isPending}
+                      className="w-full"
+                    >
+                      Criar Chave
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
