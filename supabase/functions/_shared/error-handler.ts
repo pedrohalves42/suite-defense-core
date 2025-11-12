@@ -1,6 +1,6 @@
 // Enhanced error handler with standardized responses
 export { corsHeaders } from './cors.ts';
-import { ZodError } from 'https://deno.land/x/zod@v3.23.8/mod.ts';
+import { ZodError } from 'https://esm.sh/zod@3.23.8';
 
 export interface StandardError {
   error: {

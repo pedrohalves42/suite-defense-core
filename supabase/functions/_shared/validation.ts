@@ -1,4 +1,4 @@
-import { z } from 'https://deno.land/x/zod@v3.23.8/mod.ts';
+import { z } from 'https://esm.sh/zod@3.23.8';
 
 // Auth validation schemas
 export const EmailSchema = z.string()
