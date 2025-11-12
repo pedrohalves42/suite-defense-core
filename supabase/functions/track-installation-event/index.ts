@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { getTenantIdForUser } from '../_shared/tenant.ts';
 
 interface InstallationEvent {
   agent_name: string;
@@ -40,14 +41,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get tenant_id from user_roles
-    const { data: userRole, error: roleError } = await supabase
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .single();
+    // Get tenant_id using helper (handles multiple roles)
+    const tenantId = await getTenantIdForUser(supabase, user.id);
 
-    if (roleError || !userRole) {
+    if (!tenantId) {
       return new Response(
         JSON.stringify({ error: 'User has no tenant' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -65,7 +62,7 @@ Deno.serve(async (req) => {
     const { data: agent } = await supabase
       .from('agents')
       .select('id')
-      .eq('tenant_id', userRole.tenant_id)
+      .eq('tenant_id', tenantId)
       .eq('agent_name', event.agent_name)
       .single();
 
@@ -73,7 +70,7 @@ Deno.serve(async (req) => {
     const { error: insertError } = await supabase
       .from('installation_analytics')
       .insert({
-        tenant_id: userRole.tenant_id,
+        tenant_id: tenantId,
         agent_id: agent?.id || null,
         agent_name: event.agent_name,
         event_type: event.event_type,

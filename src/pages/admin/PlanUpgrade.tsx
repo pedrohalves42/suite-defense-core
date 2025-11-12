@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Zap, Crown } from 'lucide-react';
+import { useTenant } from '@/hooks/useTenant';
 
 interface Plan {
   id: string;
@@ -18,20 +19,13 @@ interface CurrentSubscription {
 }
 
 export default function PlanUpgrade() {
+  const { tenant, loading: tenantLoading } = useTenant();
+
   // Buscar plano atual
-  const { data: currentSubscription } = useQuery({
-    queryKey: ['current-subscription'],
+  const { data: currentSubscription, isLoading: subscriptionLoading } = useQuery({
+    queryKey: ['current-subscription', tenant?.id],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Não autorizado');
-
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!userRole) throw new Error('Tenant não encontrado');
+      if (!tenant?.id) throw new Error('Tenant não encontrado');
 
       const { data, error } = await supabase
         .from('tenant_subscriptions')
@@ -44,12 +38,13 @@ export default function PlanUpgrade() {
             max_scans_per_month
           )
         `)
-        .eq('tenant_id', userRole.tenant_id)
+        .eq('tenant_id', tenant.id)
         .single();
 
       if (error) throw error;
       return data as CurrentSubscription;
     },
+    enabled: !!tenant?.id,
   });
 
   // Buscar todos os planos disponíveis
@@ -118,6 +113,14 @@ export default function PlanUpgrade() {
       ],
     },
   };
+
+  if (tenantLoading || subscriptionLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Carregando planos...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

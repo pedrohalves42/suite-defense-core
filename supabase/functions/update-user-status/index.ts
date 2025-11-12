@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { z } from 'https://deno.land/x/zod@v3.23.8/mod.ts';
 import { handleException, handleValidationError, createErrorResponse, ErrorCode, corsHeaders } from '../_shared/error-handler.ts';
 import { createAuditLog } from '../_shared/audit.ts';
+import { getTenantIdForUser, verifyUserTenant } from '../_shared/tenant.ts';
 
 const UpdateStatusSchema = z.object({
   user_id: z.string().uuid({ message: 'ID de usuário inválido' }),
@@ -72,21 +73,17 @@ Deno.serve(async (req) => {
 
     const { user_id, is_active } = validation.data;
 
-    // Get user's tenant
-    const { data: adminTenant } = await supabaseAdmin
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .single();
+    // Get admin's tenant using helper (handles multiple roles)
+    const adminTenantId = await getTenantIdForUser(supabaseAdmin, user.id);
 
-    // Verify target user is in same tenant
-    const { data: targetUserRole } = await supabaseAdmin
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user_id)
-      .single();
+    if (!adminTenantId) {
+      return createErrorResponse(ErrorCode.FORBIDDEN, 'Tenant do admin não encontrado', 403, requestId);
+    }
 
-    if (!targetUserRole || targetUserRole.tenant_id !== adminTenant?.tenant_id) {
+    // Verify target user belongs to same tenant
+    const isInSameTenant = await verifyUserTenant(supabaseAdmin, user_id, adminTenantId);
+
+    if (!isInSameTenant) {
       return createErrorResponse(ErrorCode.FORBIDDEN, 'Usuário não encontrado no seu tenant', 403, requestId);
     }
 
@@ -113,7 +110,7 @@ Deno.serve(async (req) => {
     await createAuditLog({
       supabase: supabaseAdmin,
       userId: user.id,
-      tenantId: adminTenant?.tenant_id,
+      tenantId: adminTenantId,
       action: is_active ? 'user_activated' : 'user_deactivated',
       resourceType: 'user',
       resourceId: user_id,
