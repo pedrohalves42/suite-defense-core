@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {  Activity, AlertCircle, CheckCircle, Clock, Cpu, HardDrive, MemoryStick, Monitor, Search, XCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 interface AgentMetrics {
   id: string;
@@ -73,7 +74,7 @@ export default function AgentMonitoringAdvanced() {
       setAgents(data.agents);
       setAlerts(data.recent_alerts);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      logger.error('Error fetching dashboard data', error);
       toast({
         title: 'Erro',
         description: 'Falha ao carregar dados do dashboard',
@@ -139,7 +140,7 @@ export default function AgentMonitoringAdvanced() {
       
       fetchDashboardData();
     } catch (error) {
-      console.error('Error acknowledging alert:', error);
+      logger.error('Error acknowledging alert', error);
       toast({
         title: 'Erro',
         description: 'Falha ao reconhecer alerta',

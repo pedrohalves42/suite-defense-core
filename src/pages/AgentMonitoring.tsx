@@ -8,6 +8,7 @@ import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useTenant } from "@/hooks/useTenant";
+import { logger } from "@/lib/logger";
 
 interface Agent {
   id: string;
@@ -130,7 +131,7 @@ const AgentMonitoring = () => {
           table: 'agents'
         },
         (payload) => {
-          console.log('[Realtime] Agent change:', payload);
+          logger.debug('Agent change', { payload });
           
           if (payload.eventType === 'INSERT') {
             setAgents(prev => [payload.new as Agent, ...prev]);
@@ -154,7 +155,7 @@ const AgentMonitoring = () => {
           table: 'jobs'
         },
         (payload) => {
-          console.log('[Realtime] Job change:', payload);
+          logger.debug('Job change', { payload });
           
           if (payload.eventType === 'INSERT') {
             setRecentJobs(prev => [payload.new as Job, ...prev].slice(0, 10));

@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Shield, Mail, AlertCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { logger } from '@/lib/logger';
 
 const loginSchema = z.object({
   email: z.string()
@@ -67,7 +68,7 @@ export default function Login() {
           script.onload = () => {
             const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
             if (!siteKey) {
-              console.error('VITE_TURNSTILE_SITE_KEY not configured');
+              logger.error('VITE_TURNSTILE_SITE_KEY not configured');
               return;
             }
             // @ts-ignore - Turnstile global
@@ -124,7 +125,7 @@ export default function Login() {
           body: { email: validation.data.email },
         });
       } catch (recordError) {
-        console.error('Failed to record login attempt:', recordError);
+        logger.error('Failed to record login attempt', recordError);
       }
 
       // Incrementar contador e verificar se precisa de CAPTCHA

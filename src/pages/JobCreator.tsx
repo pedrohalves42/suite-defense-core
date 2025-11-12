@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 interface Agent {
   id: string;
@@ -82,7 +83,7 @@ const JobCreator = () => {
       if (error) throw error;
       setAgents(data || []);
     } catch (error) {
-      console.error("Erro ao carregar agentes:", error);
+      logger.error("Erro ao carregar agentes", error);
       toast.error("Erro ao carregar lista de agentes");
     }
   };
@@ -98,7 +99,7 @@ const JobCreator = () => {
       if (error) throw error;
       setRecentJobs(data || []);
     } catch (error) {
-      console.error("Erro ao carregar jobs:", error);
+      logger.error("Erro ao carregar jobs", error);
     }
   };
 
@@ -195,7 +196,7 @@ const JobCreator = () => {
       // Reload jobs
       loadJobs();
     } catch (error: any) {
-      console.error("Erro ao criar job:", error);
+      logger.error("Erro ao criar job", error);
       toast.error(error.message || "Erro ao criar job");
     } finally {
       setLoading(false);

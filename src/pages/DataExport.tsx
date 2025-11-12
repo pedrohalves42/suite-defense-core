@@ -12,6 +12,7 @@ import { Download, FileSpreadsheet, FileText, Calendar, CheckCircle, Loader2 } f
 import { format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
+import { logger } from '@/lib/logger';
 
 type ExportType = 'agents' | 'scans' | 'jobs' | 'quarantine' | 'audit_logs';
 type DateRange = '7' | '30' | '90' | 'all';
@@ -224,7 +225,7 @@ export default function DataExport() {
 
       toast.success(`${data.length} registros exportados com sucesso!`);
     } catch (error) {
-      console.error('Error exporting data:', error);
+      logger.error('Error exporting data', error);
       toast.error('Erro ao exportar dados');
     } finally {
       setIsExporting(false);

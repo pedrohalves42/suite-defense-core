@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const passwordSchema = z.object({
   password: z
@@ -79,7 +80,7 @@ const UpdatePassword = () => {
           variant: 'destructive',
         });
       } else {
-        console.error('Error updating password:', error);
+        logger.error('Error updating password', error);
         toast({
           title: 'Erro',
           description: 'Ocorreu um erro ao atualizar sua senha',

@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Shield, Loader2 } from "lucide-react";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const ContactFormSchema = z.object({
   name: z.string()
@@ -89,7 +90,7 @@ export const ContactForm = () => {
       });
 
       if (error) {
-        console.error("Error submitting contact form:", error);
+        logger.error("Error submitting contact form", error);
         
         // Handle rate limit error
         if (error.message?.includes('429') || error.message?.includes('Rate limit')) {
@@ -118,7 +119,7 @@ export const ContactForm = () => {
         message: "",
       });
     } catch (error) {
-      console.error("Error submitting contact form:", error);
+      logger.error("Error submitting contact form", error);
       toast({
         title: "Erro ao enviar",
         description: "Tente novamente ou envie um email para gamehousetecnologia@gmail.com",

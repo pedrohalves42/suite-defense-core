@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { logger } from '@/lib/logger';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -77,10 +78,7 @@ export default function AgentManagement() {
       setAgentToDelete(null);
     },
     onError: (error) => {
-      // CORREÇÃO: Logger condicional apenas em DEV
-      if (import.meta.env.DEV) {
-        console.error('Error deleting agent:', error);
-      }
+      logger.error('Error deleting agent', error);
       toast.error('Erro ao excluir agente');
     },
   });
@@ -111,10 +109,7 @@ export default function AgentManagement() {
       setAgentToDisable(null);
     },
     onError: (error) => {
-      // CORREÇÃO: Logger condicional apenas em DEV
-      if (import.meta.env.DEV) {
-        console.error('Error updating agent:', error);
-      }
+      logger.error('Error updating agent', error);
       toast.error('Erro ao atualizar agente');
     },
   });

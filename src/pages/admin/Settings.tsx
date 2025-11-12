@@ -12,6 +12,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { logger } from '@/lib/logger';
 
 interface TenantSettings {
   id: string;
@@ -177,7 +178,7 @@ export default function Settings() {
         });
       }
     } catch (error) {
-      console.error('Error testing VirusTotal:', error);
+      logger.error('Error testing VirusTotal', error);
       setVirusTotalTestResult({
         success: false,
         message: error instanceof Error ? error.message : 'Erro desconhecido'
@@ -213,7 +214,7 @@ export default function Settings() {
         });
       }
     } catch (error) {
-      console.error('Error testing Stripe:', error);
+      logger.error('Error testing Stripe', error);
       setStripeTestResult({
         success: false,
         message: error instanceof Error ? error.message : 'Erro desconhecido'
@@ -249,7 +250,7 @@ export default function Settings() {
         });
       }
     } catch (error) {
-      console.error('Error testing webhook:', error);
+      logger.error('Error testing webhook', error);
       setWebhookTestResult({
         success: false,
         message: error instanceof Error ? error.message : 'Erro desconhecido'

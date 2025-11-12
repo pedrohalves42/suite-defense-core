@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { logger } from '@/lib/logger';
 
 type UserRole = 'admin' | 'operator' | 'viewer' | null;
 
@@ -57,10 +58,7 @@ export const useUserRole = () => {
 
         setRole(null);
       } catch (error) {
-        // CORREÇÃO: Logger condicional apenas em DEV
-        if (import.meta.env.DEV) {
-          console.error('[useUserRole] Error checking user role:', error);
-        }
+        logger.error('Error checking user role', error);
         setRole(null);
       } finally {
         setLoading(false);

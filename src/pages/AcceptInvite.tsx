@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Shield, Loader2, AlertCircle } from 'lucide-react';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const passwordSchema = z.string()
   .min(8, 'Senha deve ter pelo menos 8 caracteres')
@@ -61,7 +62,7 @@ export default function AcceptInvite() {
 
         setInvite(data);
       } catch (error) {
-        console.error('Error fetching invite:', error);
+        logger.error('Error fetching invite', error);
         toast({ title: 'Erro ao carregar convite', variant: 'destructive' });
         navigate('/login');
       } finally {
@@ -139,7 +140,7 @@ export default function AcceptInvite() {
       toast({ title: 'Conta criada com sucesso!' });
       navigate('/dashboard');
     } catch (error: any) {
-      console.error('Error accepting invite:', error);
+      logger.error('Error accepting invite', error);
       toast({ 
         title: 'Erro ao criar conta', 
         description: error.message,

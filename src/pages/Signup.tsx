@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Shield } from 'lucide-react';
+import { logger } from '@/lib/logger';
 
 const signupSchema = z.object({
   email: z.string()
@@ -78,7 +79,7 @@ export default function Signup() {
           },
         });
       } catch (emailError) {
-        console.error('Failed to send welcome email:', emailError);
+        logger.error('Failed to send welcome email', emailError);
         // Don't block signup if email fails
       }
     }

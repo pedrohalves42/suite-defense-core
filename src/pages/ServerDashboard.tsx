@@ -13,6 +13,7 @@ import { useOnboarding } from "@/hooks/useOnboarding";
 import { Progress } from "@/components/ui/progress";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Line, LineChart as RechartsLineChart, Bar, BarChart as RechartsBarChart, Pie, PieChart as RechartsPieChart, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip } from "recharts";
+import { logger } from "@/lib/logger";
 
 interface Agent {
   id: string;
@@ -152,7 +153,7 @@ const ServerDashboard = () => {
       if (scansRes.data) setVirusScans(scansRes.data);
       if (logsRes.data) setAuditLogs(logsRes.data);
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+      logger.error("Erro ao carregar dados", error);
       toast.error("Erro ao carregar dados do dashboard");
     } finally {
       setLoading(false);
