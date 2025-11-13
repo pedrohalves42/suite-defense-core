@@ -457,19 +457,21 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FASE 2: Calculate SHA256 hash of agent script for integrity validation
-    const agentScriptUrl = `${SUPABASE_URL}/agent-scripts/cybershield-agent-windows.ps1`;
-    console.log(`[${requestId}] Fetching agent script to calculate hash: ${agentScriptUrl}`);
+    // FASE 2: Read agent script from local file system and calculate SHA256 hash
+    console.log(`[${requestId}] Reading agent script from local filesystem`);
     
     let agentScriptHash = '';
     let agentScriptContent = '';
     try {
-      const agentScriptResponse = await fetch(agentScriptUrl);
-      if (!agentScriptResponse.ok) {
-        throw new Error(`Failed to fetch agent script: ${agentScriptResponse.status}`);
-      }
+      // Read the agent script from the public directory (relative to function root)
+      const scriptPath = new URL('../../public/agent-scripts/cybershield-agent-windows.ps1', import.meta.url).pathname;
+      console.log(`[${requestId}] Script path: ${scriptPath}`);
       
-      agentScriptContent = await agentScriptResponse.text();
+      agentScriptContent = await Deno.readTextFile(scriptPath);
+      
+      if (!agentScriptContent || agentScriptContent.length < 1000) {
+        throw new Error(`Agent script content is empty or too small: ${agentScriptContent.length} bytes`);
+      }
       
       // Generate SHA256 hash
       const encoder = new TextEncoder();
@@ -478,9 +480,9 @@ Deno.serve(async (req) => {
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       agentScriptHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
       
-      console.log(`[${requestId}] Agent script hash calculated: ${agentScriptHash}`);
+      console.log(`[${requestId}] Agent script loaded: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
     } catch (hashError) {
-      console.error(`[${requestId}] Failed to calculate agent script hash:`, hashError);
+      console.error(`[${requestId}] Failed to read agent script:`, hashError);
       return new Response('Failed to generate secure installer', { 
         status: 500,
         headers: corsHeaders
