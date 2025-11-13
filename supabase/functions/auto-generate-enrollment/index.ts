@@ -369,7 +369,10 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
 
     // Generate agent token and HMAC secret
     const agentToken = crypto.randomUUID();
-    const hmacSecret = crypto.randomUUID();
+    // Generate 64-character hex string for HMAC secret (required by DB CHECK constraint)
+    const hmacSecret = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
 
     // Check if agent exists
     const { data: existingAgent } = await supabase
