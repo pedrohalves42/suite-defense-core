@@ -609,6 +609,7 @@ export type Database = {
           email: string | null
           id: string
           ip_address: string
+          tenant_id: string | null
           user_agent: string | null
         }
         Insert: {
@@ -616,6 +617,7 @@ export type Database = {
           email?: string | null
           id?: string
           ip_address: string
+          tenant_id?: string | null
           user_agent?: string | null
         }
         Update: {
@@ -623,9 +625,18 @@ export type Database = {
           email?: string | null
           id?: string
           ip_address?: string
+          tenant_id?: string | null
           user_agent?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "failed_login_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hmac_signatures: {
         Row: {

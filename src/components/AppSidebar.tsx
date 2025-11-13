@@ -41,6 +41,10 @@ export const AppSidebar = () => {
     { icon: Package, label: 'Instalador Agentes', to: '/admin/agent-installer' },
     { icon: BarChart3, label: 'Analytics Instalação', to: '/admin/installation-analytics' },
     { icon: Users, label: 'Membros', to: '/admin/members' },
+    { icon: Mail, label: 'Convites Tenant', to: '/admin/tenant/invites' },
+    { icon: AlertTriangle, label: 'Segurança Tenant', to: '/admin/tenant/security' },
+    { icon: ScrollText, label: 'Logs Tenant', to: '/admin/tenant/logs' },
+    { icon: Settings, label: 'Config Tenant', to: '/admin/tenant/settings' },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
     { icon: Activity, label: 'Assinaturas', to: '/admin/subscriptions' },
   ], []);

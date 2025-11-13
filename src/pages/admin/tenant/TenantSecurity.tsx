@@ -30,9 +30,24 @@ export default function TenantSecurity() {
     enabled: !!tenant?.id,
   });
 
-  // Note: failed_login_attempts table has no tenant_id column
-  // Only super admins can view this data globally
-  const failedLogins: any[] = [];
+  // Fetch failed login attempts for tenant
+  const { data: failedLogins } = useQuery({
+    queryKey: ["tenant-failed-logins", tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      
+      const { data, error } = await supabase
+        .from("failed_login_attempts")
+        .select("id, email, ip_address, user_agent, created_at")
+        .eq("tenant_id", tenant.id)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!tenant?.id,
+  });
 
   // Count active agents
   const { data: agentStats } = useQuery<{ total: number; active: number; offline: number }>({
