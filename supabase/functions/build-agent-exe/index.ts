@@ -54,13 +54,18 @@ Deno.serve(async (req) => {
 
   try {
     return await withTimeout(async () => {
+      // ⚡ FASE 1.2: LOGS EXPLÍCITOS NO INÍCIO
+      logger.info(`[${requestId}] ========== BUILD REQUEST START ==========`);
+      logger.info(`[${requestId}] Method: ${req.method}`);
+      logger.info(`[${requestId}] GitHub Token Present: ${!!BUILD_GH_TOKEN}`);
+      logger.info(`[${requestId}] GitHub Repository: ${BUILD_GH_REPOSITORY || 'NOT SET'}`);
+      
       // 1. Validate environment variables
       const supabaseUrl = Deno.env.get('SUPABASE_URL');
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
       if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('[build-agent-exe] CRITICAL: Missing environment variables', {
-        requestId,
+      logger.error(`[${requestId}] CRITICAL: Missing Supabase environment variables`, {
         hasUrl: !!supabaseUrl,
         hasKey: !!supabaseServiceKey
       });
@@ -626,15 +631,28 @@ try {
 
     // Try repository_dispatch first
     try {
-      logger.info('Attempting repository_dispatch trigger', { requestId, build_id: buildRecord.id });
+      logger.info(`[${requestId}] ⚡ FASE 3: Preparando GitHub dispatch`, {
+        build_id: buildRecord.id,
+        repository: BUILD_GH_REPOSITORY,
+        hasToken: !!BUILD_GH_TOKEN,
+        tokenLength: BUILD_GH_TOKEN?.length || 0
+      });
       
       const dispatchUrl = `https://api.github.com/repos/${BUILD_GH_REPOSITORY}/dispatches`;
+      
+      logger.info(`[${requestId}] Enviando repository_dispatch para GitHub`, {
+        url: dispatchUrl,
+        event_type: 'build-agent-exe'
+      });
+      
       const dispatchResponse = await fetch(dispatchUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${BUILD_GH_TOKEN}`,
           'Content-Type': 'application/json',
-          'Accept': 'application/vnd.github.v3+json'
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'CyberShield-Agent-Builder',
+          'X-GitHub-Api-Version': '2022-11-28'
         },
         body: JSON.stringify({
           event_type: 'build-agent-exe',
@@ -645,20 +663,49 @@ try {
       if (dispatchResponse.ok || dispatchResponse.status === 204) {
         triggerSuccess = true;
         triggerMethod = 'repository_dispatch';
-        logger.info('repository_dispatch succeeded', { requestId, build_id: buildRecord.id });
+        logger.success(`[${requestId}] ✅ GitHub dispatch SUCESSO`, {
+          build_id: buildRecord.id,
+          status: dispatchResponse.status,
+          method: 'repository_dispatch'
+        });
       } else {
         const errorText = await dispatchResponse.text();
-        logger.warn('repository_dispatch failed, trying workflow_dispatch fallback', { 
-          error: errorText, 
+        logger.error(`[${requestId}] ❌ GitHub dispatch FALHOU`, { 
           status: dispatchResponse.status,
-          requestId 
+          statusText: dispatchResponse.statusText,
+          error: errorText, 
+          headers: Object.fromEntries(dispatchResponse.headers)
         });
+        
+        // ⚡ FASE 3: Marcar build como failed imediatamente
+        await serviceRoleClient
+          .from('agent_builds')
+          .update({
+            build_status: 'failed',
+            build_completed_at: new Date().toISOString(),
+            error_message: `GitHub dispatch failed (${dispatchResponse.status}): ${errorText}`
+          })
+          .eq('id', buildRecord.id);
+          
+        logger.warn(`[${requestId}] Tentando fallback para workflow_dispatch...`);
       }
-    } catch (dispatchError) {
-      logger.warn('repository_dispatch exception, trying workflow_dispatch fallback', { 
-        error: dispatchError, 
-        requestId 
+    } catch (dispatchError: any) {
+      logger.error(`[${requestId}] ❌ repository_dispatch exception`, { 
+        error: dispatchError.message,
+        stack: dispatchError.stack
       });
+      
+      // ⚡ FASE 3: Marcar build como failed imediatamente
+      await serviceRoleClient
+        .from('agent_builds')
+        .update({
+          build_status: 'failed',
+          build_completed_at: new Date().toISOString(),
+          error_message: `GitHub dispatch exception: ${dispatchError.message}`
+        })
+        .eq('id', buildRecord.id);
+        
+      logger.warn(`[${requestId}] Tentando fallback para workflow_dispatch...`);
     }
 
     // Fallback to workflow_dispatch if repository_dispatch failed
