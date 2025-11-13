@@ -1,8 +1,8 @@
-# CyberShield Agent - Windows PowerShell Script v2.2.1 (Production Ready)
-# Compatible with: Windows Server 2012, 2012 R2, 2016, 2019, 2022, 2025
-# PowerShell Version: 3.0+
+# CyberShield Agent - Windows PowerShell Script v3.0.0-APEX
+# Compatible with: Windows Server 2012 R2+, Windows 8.1+
+# PowerShell Version: 5.1+ (required for advanced security features)
 
-#Requires -Version 3.0
+#Requires -Version 5.1
 
 # Fix UTF-8 encoding for console output
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -48,10 +48,10 @@ if ($HmacSecret.Length -lt 32) {
 }
 
 # Validar versão do PowerShell
-if ($PSVersionTable.PSVersion.Major -lt 3) {
-    Write-Host "ERRO: Este script requer PowerShell 3.0 ou superior" -ForegroundColor Red
+if ($PSVersionTable.PSVersion.Major -lt 5) {
+    Write-Host "ERRO: Este script requer PowerShell 5.1 ou superior (APEX)" -ForegroundColor Red
     Write-Host "Versão atual: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
-    Write-Host "Por favor, atualize o PowerShell" -ForegroundColor Yellow
+    Write-Host "Por favor, atualize o PowerShell para versão 5.1+" -ForegroundColor Yellow
     exit 1
 }
 
@@ -131,7 +131,7 @@ if ([string]::IsNullOrWhiteSpace($AgentToken) -or [string]::IsNullOrWhiteSpace($
 
 $ServerUrl = $ServerUrl.TrimEnd('/')
 
-Write-Log "=== CyberShield Agent v2.2.1 iniciado ===" "SUCCESS"
+Write-Log "=== CyberShield Agent v3.0.0-APEX iniciado ===" "SUCCESS"
 Write-Log "Sistema: $osName" "INFO"
 Write-Log "PowerShell: $($PSVersionTable.PSVersion)" "INFO"
 Write-Log "Server URL: $ServerUrl" "INFO"
