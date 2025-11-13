@@ -1,4 +1,4 @@
-import { Resend } from "npm:resend@3.5.0";
+import { Resend } from "https://esm.sh/resend@3.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 
 const corsHeaders = {
