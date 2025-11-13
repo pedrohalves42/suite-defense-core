@@ -71,6 +71,9 @@ verify_jwt = false
 [functions.track-installation-event]
 verify_jwt = true
 
+[functions.post-installation-telemetry]
+verify_jwt = false
+
 # === Admin Functions ===
 [functions.create-job]
 verify_jwt = true
