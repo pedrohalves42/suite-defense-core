@@ -76,22 +76,50 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent credentials incomplete', 500, requestId);
     }
 
-    // 6. Read agent script (try local first, fallback to public URL)
+    // 6. Fetch agent script - Storage first, then public directory fallback
     let agentScriptContent = '';
+    
     try {
-      const scriptPath = new URL('../_shared/agent-script-windows.ps1', import.meta.url).pathname;
-      agentScriptContent = await Deno.readTextFile(scriptPath);
-      console.log(`[${requestId}] Agent script loaded from local file: ${agentScriptContent.length} bytes`);
-    } catch (readError) {
-      console.warn(`[${requestId}] Failed to read local agent script, fetching from storage:`, readError);
+      // Try fetching from Supabase Storage first (primary source)
+      const storageUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
+      console.log(`[${requestId}] Attempting storage fetch: ${storageUrl}`);
+      const storageResponse = await fetch(storageUrl);
       
-      const storageScriptUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
-      const response = await fetch(storageScriptUrl);
-      if (!response.ok) {
-        return createErrorResponse(ErrorCode.INTERNAL_ERROR, `Failed to fetch agent script from storage: ${response.status}`, 500, requestId);
+      if (storageResponse.ok) {
+        agentScriptContent = await storageResponse.text();
+        console.log(`[${requestId}] Successfully fetched from storage (${agentScriptContent.length} bytes)`);
+      } else {
+        throw new Error(`Storage fetch failed: ${storageResponse.status}`);
       }
-      agentScriptContent = await response.text();
-      console.log(`[${requestId}] Agent script fetched from storage: ${agentScriptContent.length} bytes`);
+    } catch (storageError) {
+      console.warn(`[${requestId}] Storage fetch failed, trying public directory:`, storageError);
+      
+      // Fallback to public directory via HTTP
+      const publicUrl = `${Deno.env.get('SUPABASE_URL')}/agent-scripts/cybershield-agent-windows.ps1`;
+      console.log(`[${requestId}] Attempting public directory fetch: ${publicUrl}`);
+      
+      try {
+        const publicResponse = await fetch(publicUrl);
+        
+        if (!publicResponse.ok) {
+          throw new Error(`Public fetch failed: ${publicResponse.status}`);
+        }
+        
+        agentScriptContent = await publicResponse.text();
+        console.log(`[${requestId}] Successfully fetched from public directory (${agentScriptContent.length} bytes)`);
+      } catch (publicError) {
+        console.error(`[${requestId}] All agent script sources failed:`, {
+          storageError: storageError instanceof Error ? storageError.message : String(storageError),
+          publicError: publicError instanceof Error ? publicError.message : String(publicError)
+        });
+        
+        return createErrorResponse(
+          ErrorCode.INTERNAL_ERROR,
+          'Agent script not available from any source',
+          503,
+          requestId
+        );
+      }
     }
     
     if (!agentScriptContent || agentScriptContent.length < 1000) {

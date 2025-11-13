@@ -27,7 +27,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Read the source file from public directory via HTTP
+    // Create Supabase client with service role
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseServiceKey) {
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY not configured');
+    }
+    
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.74.0');
+    const supabase = createClient(SUPABASE_URL, supabaseServiceKey);
+
+    // Fetch the source script from public directory via HTTP
     const sourceUrl = `${SUPABASE_URL}/agent-scripts/cybershield-agent-windows.ps1`;
     console.log(`[${requestId}] Fetching source script from: ${sourceUrl}`);
     
@@ -60,31 +69,36 @@ Deno.serve(async (req) => {
       preview: sourceContent.substring(0, 100)
     });
 
-    // Read current _shared version for comparison
+    // Check current Storage version for comparison
     let currentHash = '';
     let needsUpdate = true;
     
     try {
-      const sharedPath = new URL('../_shared/agent-script-windows.ps1', import.meta.url).pathname;
-      const currentContent = await Deno.readTextFile(sharedPath);
+      const storageUrl = `${SUPABASE_URL}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
+      const storageResponse = await fetch(storageUrl);
       
-      const currentData = encoder.encode(currentContent);
-      const currentHashBuffer = await crypto.subtle.digest('SHA-256', currentData);
-      const currentHashArray = Array.from(new Uint8Array(currentHashBuffer));
-      currentHash = currentHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      
-      needsUpdate = (currentHash !== sourceHash);
-      console.log(`[${requestId}] Current _shared script hash: ${currentHash}`);
+      if (storageResponse.ok) {
+        const currentContent = await storageResponse.text();
+        const currentData = encoder.encode(currentContent);
+        const currentHashBuffer = await crypto.subtle.digest('SHA-256', currentData);
+        const currentHashArray = Array.from(new Uint8Array(currentHashBuffer));
+        currentHash = currentHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        needsUpdate = (currentHash !== sourceHash);
+        console.log(`[${requestId}] Current storage script hash: ${currentHash}`);
+      } else {
+        console.log(`[${requestId}] No existing storage script, will upload`);
+      }
     } catch (error) {
-      console.log(`[${requestId}] No existing _shared script or read error, will create new`);
+      console.log(`[${requestId}] Error checking storage, will upload:`, error);
     }
 
     if (!needsUpdate) {
-      console.log(`[${requestId}] Scripts are already in sync, no update needed`);
+      console.log(`[${requestId}] Storage script is already up to date`);
       return new Response(
         JSON.stringify({
           success: true,
-          message: 'Scripts already in sync',
+          message: 'Storage script already in sync',
           sourceHash,
           currentHash,
           size: sourceContent.length,
@@ -97,18 +111,26 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Write updated content to _shared directory
-    const sharedPath = new URL('../_shared/agent-script-windows.ps1', import.meta.url).pathname;
-    await Deno.writeTextFile(sharedPath, sourceContent);
+    // Upload updated content to Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('agent-installers')
+      .upload('cybershield-agent-windows.ps1', sourceContent, {
+        contentType: 'text/plain; charset=utf-8',
+        upsert: true
+      });
     
-    console.log(`[${requestId}] Successfully synchronized agent script`);
-    console.log(`[${requestId}] Old hash: ${currentHash || 'none'}`);
+    if (uploadError) {
+      throw new Error(`Storage upload failed: ${uploadError.message}`);
+    }
+    
+    console.log(`[${requestId}] Successfully synchronized agent script to storage`);
+    console.log(`[${requestId}] Previous hash: ${currentHash || 'none'}`);
     console.log(`[${requestId}] New hash: ${sourceHash}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Agent script synchronized successfully',
+        message: 'Agent script synchronized to storage successfully',
         previousHash: currentHash || null,
         newHash: sourceHash,
         size: sourceContent.length,

@@ -457,65 +457,77 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FASE 2: Read agent script from _shared directory and calculate SHA256 hash
-    console.log(`[${requestId}] Reading agent script from _shared directory`);
+    // FASE 2: Fetch agent script - Storage first, then public directory fallback
+    console.log(`[${requestId}] Fetching agent script from storage`);
     
     let agentScriptHash = '';
     let agentScriptContent = '';
+    
     try {
-      // Read the agent script from the _shared directory (accessible to Edge Functions)
-      const scriptPath = new URL('../_shared/agent-script-windows.ps1', import.meta.url).pathname;
-      console.log(`[${requestId}] Script path: ${scriptPath}`);
+      // Try fetching from Supabase Storage first (primary source)
+      const storageUrl = `${SUPABASE_URL}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
+      console.log(`[${requestId}] Attempting storage fetch: ${storageUrl}`);
+      const storageResponse = await fetch(storageUrl);
       
-      agentScriptContent = await Deno.readTextFile(scriptPath);
-      
-      if (!agentScriptContent || agentScriptContent.length < 1000) {
-        throw new Error(`Agent script content is empty or too small: ${agentScriptContent.length} bytes`);
+      if (storageResponse.ok) {
+        agentScriptContent = await storageResponse.text();
+        console.log(`[${requestId}] Successfully fetched from storage (${agentScriptContent.length} bytes)`);
+      } else {
+        throw new Error(`Storage fetch failed: ${storageResponse.status}`);
       }
+    } catch (storageError) {
+      console.warn(`[${requestId}] Storage fetch failed, trying public directory:`, storageError);
       
-      // Generate SHA256 hash
-      const encoder = new TextEncoder();
-      const data = encoder.encode(agentScriptContent);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      agentScriptHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      // Fallback to public directory via HTTP
+      const publicUrl = `${SUPABASE_URL}/agent-scripts/cybershield-agent-windows.ps1`;
+      console.log(`[${requestId}] Attempting public directory fetch: ${publicUrl}`);
       
-      console.log(`[${requestId}] Agent script loaded: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
-    } catch (hashError) {
-      console.warn(`[${requestId}] Failed to read local agent script, fetching from storage:`, hashError);
-      
-      // Fallback: fetch from Supabase Storage (public bucket)
       try {
-        const storageScriptUrl = `${SUPABASE_URL}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
-        console.log(`[${requestId}] Fetching from storage: ${storageScriptUrl}`);
+        const publicResponse = await fetch(publicUrl);
         
-        const response = await fetch(storageScriptUrl);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        if (!publicResponse.ok) {
+          throw new Error(`Public fetch failed: ${publicResponse.status}`);
         }
         
-        agentScriptContent = await response.text();
-        
-        if (!agentScriptContent || agentScriptContent.length < 1000) {
-          throw new Error(`Downloaded script is too small: ${agentScriptContent.length} bytes`);
-        }
-        
-        // Generate SHA256 hash
-        const encoder = new TextEncoder();
-        const data = encoder.encode(agentScriptContent);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        agentScriptHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        
-        console.log(`[${requestId}] Agent script fetched from storage: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
-      } catch (fetchError) {
-        console.error(`[${requestId}] Failed to fetch agent script from storage:`, fetchError);
-        return new Response('Failed to generate secure installer - agent script not available', { 
-          status: 500,
-          headers: corsHeaders
+        agentScriptContent = await publicResponse.text();
+        console.log(`[${requestId}] Successfully fetched from public directory (${agentScriptContent.length} bytes)`);
+      } catch (publicError) {
+        console.error(`[${requestId}] All agent script sources failed:`, {
+          storageError: storageError instanceof Error ? storageError.message : String(storageError),
+          publicError: publicError instanceof Error ? publicError.message : String(publicError)
         });
+        
+        return new Response(
+          'Failed to generate secure installer - agent script not available from any source',
+          {
+            status: 503,
+            headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+          }
+        );
       }
     }
+    
+    // Validate script content
+    if (!agentScriptContent || agentScriptContent.length < 1000) {
+      console.error(`[${requestId}] Agent script validation failed: size=${agentScriptContent.length}`);
+      return new Response(
+        'Failed to generate secure installer - invalid agent script content',
+        {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+        }
+      );
+    }
+    
+    // Generate SHA256 hash of the script
+    const encoder = new TextEncoder();
+    const data = encoder.encode(agentScriptContent);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    agentScriptHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    console.log(`[${requestId}] Agent script loaded: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
+
 
     // Validate credentials are present
     if (!tokenData.token || !agentData.hmac_secret) {

@@ -17,18 +17,38 @@ Deno.serve(async (req) => {
     // Create Supabase client with service role
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Read the agent script from the repo (this file should be bundled with the function)
-    const scriptPath = new URL('../_shared/agent-script-windows.ps1', import.meta.url).pathname;
+    // Fetch the agent script from public directory via HTTP
+    const publicUrl = `${SUPABASE_URL}/agent-scripts/cybershield-agent-windows.ps1`;
+    console.log(`[${requestId}] Fetching script from: ${publicUrl}`);
+    
     let scriptContent: string;
     
     try {
-      scriptContent = await Deno.readTextFile(scriptPath);
-    } catch (readError) {
-      console.error(`[${requestId}] Failed to read agent script:`, readError);
+      const response = await fetch(publicUrl);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      scriptContent = await response.text();
+      
+      // Validate script content
+      if (!scriptContent || scriptContent.length < 1000) {
+        throw new Error(`Script too small: ${scriptContent.length} bytes`);
+      }
+      
+      if (!scriptContent.includes('CyberShield Agent')) {
+        throw new Error('Invalid script content - missing CyberShield Agent signature');
+      }
+      
+      console.log(`[${requestId}] Successfully fetched script (${scriptContent.length} bytes)`);
+    } catch (fetchError) {
+      console.error(`[${requestId}] Failed to fetch agent script:`, fetchError);
       return new Response(
         JSON.stringify({ 
-          error: 'Agent script file not found in function bundle',
-          message: 'The agent script must be present in _shared/ directory',
+          error: 'Failed to fetch agent script',
+          message: fetchError instanceof Error ? fetchError.message : 'Unknown error',
+          source: publicUrl,
           requestId
         }),
         { 
