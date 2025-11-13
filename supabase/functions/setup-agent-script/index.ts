@@ -17,46 +17,30 @@ Deno.serve(async (req) => {
     // Create Supabase client with service role
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Fetch the agent script from public directory via HTTP
-    const publicUrl = `${SUPABASE_URL}/agent-scripts/cybershield-agent-windows.ps1`;
-    console.log(`[${requestId}] Fetching script from: ${publicUrl}`);
+    // FASE 1 CRÍTICO: Use inline agent script
+    console.log(`[${requestId}] Using inline agent script`);
+    const { getAgentScriptWindows, validateAgentScript } = await import('../_shared/agent-script-windows-content.ts');
+    const scriptContent = getAgentScriptWindows();
     
-    let scriptContent: string;
-    
-    try {
-      const response = await fetch(publicUrl);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      scriptContent = await response.text();
-      
-      // Validate script content
-      if (!scriptContent || scriptContent.length < 1000) {
-        throw new Error(`Script too small: ${scriptContent.length} bytes`);
-      }
-      
-      if (!scriptContent.includes('CyberShield Agent')) {
-        throw new Error('Invalid script content - missing CyberShield Agent signature');
-      }
-      
-      console.log(`[${requestId}] Successfully fetched script (${scriptContent.length} bytes)`);
-    } catch (fetchError) {
-      console.error(`[${requestId}] Failed to fetch agent script:`, fetchError);
+    if (!validateAgentScript(scriptContent)) {
+      console.error(`[${requestId}] CRITICAL: Inline script validation failed`);
       return new Response(
-        JSON.stringify({ 
-          error: 'Failed to fetch agent script',
-          message: fetchError instanceof Error ? fetchError.message : 'Unknown error',
-          source: publicUrl,
+        JSON.stringify({
+          error: 'Agent script validation failed',
+          message: 'Inline script content is invalid or corrupted',
           requestId
         }),
-        { 
-          status: 500,
+        {
+          status: 503,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
+    
+    console.log(`[${requestId}] Agent script validated`, { 
+      size: scriptContent.length,
+      sizeKB: (scriptContent.length / 1024).toFixed(2)
+    });
 
     // Upload to storage bucket
     const { data, error } = await supabase.storage
@@ -82,11 +66,8 @@ Deno.serve(async (req) => {
     }
 
     // Calculate hash for verification
-    const encoder = new TextEncoder();
-    const contentData = encoder.encode(scriptContent);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', contentData);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const { calculateScriptHash } = await import('../_shared/agent-script-windows-content.ts');
+    const hash = await calculateScriptHash(scriptContent);
 
     console.log(`[${requestId}] Agent script uploaded successfully`);
     console.log(`[${requestId}] Size: ${scriptContent.length} bytes`);

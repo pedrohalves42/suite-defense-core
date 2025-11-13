@@ -125,69 +125,14 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent credentials incomplete', 500, requestId);
     }
 
-    // 6. Fetch agent script with comprehensive logging
-    logger.info('Fetching agent script', { requestId });
-    let agentScriptContent = '';
+    // FASE 1 CRÍTICO: Use inline agent script (always available)
+    logger.info('Using inline agent script', { requestId });
     
-    try {
-      // Priority 1: Try Supabase Storage
-      const storageUrl = `${supabaseUrl}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
-      logger.debug('Attempt 1: Fetching from Supabase Storage', { requestId, storageUrl });
-      
-      const storageResponse = await fetch(storageUrl);
-      
-      if (storageResponse.ok) {
-        agentScriptContent = await storageResponse.text();
-        logger.info('SUCCESS: Script loaded from Storage', { 
-          requestId,
-          size: agentScriptContent.length,
-          sizeKB: (agentScriptContent.length / 1024).toFixed(2)
-        });
-      } else {
-        logger.warn('Storage fetch failed', { requestId, status: storageResponse.status });
-        throw new Error(`Storage unavailable: ${storageResponse.status}`);
-      }
-    } catch (storageError) {
-      logger.debug('Attempt 2: Trying public directory fallback', { requestId });
-      
-      // Fallback to public directory via HTTP
-      const publicUrl = `${supabaseUrl}/agent-scripts/cybershield-agent-windows.ps1`;
-      logger.debug('Public URL', { requestId, publicUrl });
-      
-      try {
-        const publicResponse = await fetch(publicUrl);
-        
-        if (!publicResponse.ok) {
-          throw new Error(`Public fetch failed: ${publicResponse.status}`);
-        }
-        
-        agentScriptContent = await publicResponse.text();
-        logger.info('SUCCESS: Using public directory fallback', { 
-          requestId,
-          size: agentScriptContent.length,
-          sizeKB: (agentScriptContent.length / 1024).toFixed(2)
-        });
-      } catch (publicError) {
-        logger.error('CRITICAL: All agent script sources failed', { 
-          requestId,
-          storageError: storageError instanceof Error ? storageError.message : String(storageError),
-          publicError: publicError instanceof Error ? publicError.message : String(publicError)
-        });
-        
-        return createErrorResponse(
-          ErrorCode.INTERNAL_ERROR,
-          'Agent script not available from any source',
-          503,
-          requestId
-        );
-      }
-    }
+    const { getAgentScriptWindows, validateAgentScript, calculateScriptHash } = await import('../_shared/agent-script-windows-content.ts');
+    const agentScriptContent = getAgentScriptWindows();
     
-    if (!agentScriptContent || agentScriptContent.length < 1000) {
-      logger.error('CRITICAL: Invalid script content', { 
-        requestId,
-        size: agentScriptContent?.length || 0 
-      });
+    if (!validateAgentScript(agentScriptContent)) {
+      logger.error('CRITICAL: Inline script validation failed', { requestId });
       return createErrorResponse(
         ErrorCode.INTERNAL_ERROR,
         'Agent script content is invalid',
@@ -196,12 +141,9 @@ Deno.serve(async (req) => {
       );
     }
     
-    // Calculate hash for validation
-    const encoder = new TextEncoder();
-    const data = encoder.encode(agentScriptContent);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const agentScriptHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const agentScriptHash = await calculateScriptHash(agentScriptContent);
+    
+    logger.success(`Agent script validated: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
 
     // ✅ FASE 1: Windows Installer Template APEX v3.0.0 (FULL SYNC with install-windows-template.ps1)
     const WINDOWS_INSTALLER_TEMPLATE = `# CyberShield Agent - Windows Installation Script v3.0.0-APEX
