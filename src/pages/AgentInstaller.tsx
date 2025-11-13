@@ -438,8 +438,8 @@ const AgentInstaller = () => {
     }
   };
 
-  // FASE 4: Download and validate PS1 SHA256
-  const downloadAndVerifyPs1 = async (enrollmentKey: string) => {
+  // FASE 4: Download and validate PS1/SH SHA256
+  const downloadAndVerifyScript = async (enrollmentKey: string, platform: 'windows' | 'linux') => {
     if (!enrollmentKey) {
       toast.error("Enrollment key não disponível");
       return;
@@ -448,7 +448,8 @@ const AgentInstaller = () => {
     setIsValidatingPs1(true);
 
     try {
-      toast.info("🔒 Baixando script e verificando integridade...", { duration: Infinity });
+      const scriptType = platform === 'windows' ? '.PS1' : '.SH';
+      toast.info(`🔒 Baixando script ${scriptType} e verificando integridade...`, { duration: Infinity });
 
       const installUrl = `${SUPABASE_URL}/functions/v1/serve-installer/${enrollmentKey}`;
       const response = await fetch(installUrl);
@@ -465,8 +466,8 @@ const AgentInstaller = () => {
       const serverSize = parseInt(response.headers.get('X-Script-Size') || '0', 10);
 
       if (!serverHash) {
-        toast.warning("⚠️ Aviso: Hash SHA256 não fornecido pelo servidor. Download continuará sem validação.");
-        logger.warn('Server did not provide X-Script-SHA256 header');
+        toast.warning(`⚠️ Aviso: Hash SHA256 não fornecido pelo servidor. Download ${scriptType} continuará sem validação.`);
+        logger.warn('Server did not provide X-Script-SHA256 header', { platform });
       }
 
       // Calculate SHA256 of downloaded script
@@ -478,16 +479,17 @@ const AgentInstaller = () => {
       // Compare hashes
       if (serverHash && calculatedHash.toLowerCase() !== serverHash.toLowerCase()) {
         toast.dismiss();
-        toast.error("❌ FALHA DE SEGURANÇA: Hash SHA256 do script não corresponde!", {
+        toast.error(`❌ FALHA DE SEGURANÇA: Hash SHA256 do script ${scriptType} não corresponde!`, {
           description: `Esperado: ${serverHash.slice(0, 16)}...\nRecebido: ${calculatedHash.slice(0, 16)}...`,
           duration: Infinity,
         });
 
-        logger.error('PS1 SHA256 mismatch detected', {
+        logger.error(`${scriptType} SHA256 mismatch detected`, {
           expected: serverHash,
           calculated: calculatedHash,
           enrollmentKey,
           scriptSize: arrayBuffer.byteLength,
+          platform,
         });
 
         await supabase.functions.invoke('record-security-event', {
@@ -500,6 +502,7 @@ const AgentInstaller = () => {
               expected_hash: serverHash,
               calculated_hash: calculatedHash,
               script_size: arrayBuffer.byteLength,
+              platform,
             }
           }
         }).catch(err => logger.warn('Failed to record security event', err));
@@ -510,7 +513,7 @@ const AgentInstaller = () => {
 
       // Validation successful
       toast.dismiss();
-      toast.success("✅ Integridade verificada com sucesso!", {
+      toast.success(`✅ Integridade ${scriptType} verificada com sucesso!`, {
         description: `SHA256: ${calculatedHash.slice(0, 16)}... (${(arrayBuffer.byteLength / 1024).toFixed(2)} KB)`,
         duration: 5000,
       });
@@ -518,26 +521,28 @@ const AgentInstaller = () => {
       setPs1Sha256(calculatedHash);
       setPs1SizeBytes(arrayBuffer.byteLength);
 
-      logger.info('PS1 SHA256 validation successful', {
+      logger.info(`${scriptType} SHA256 validation successful`, {
         hash: calculatedHash,
         size: arrayBuffer.byteLength,
         enrollmentKey,
+        platform,
       });
 
       // Initiate download
       const url = window.URL.createObjectURL(scriptBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `cybershield-installer-${agentName}.ps1`;
+      const extension = platform === 'windows' ? 'ps1' : 'sh';
+      a.download = `cybershield-installer-${agentName}.${extension}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      toast.success("📥 Script baixado com sucesso");
+      toast.success(`📥 Script ${scriptType} baixado com sucesso`);
 
     } catch (error: any) {
-      logger.error('PS1 download/validation error', error);
+      logger.error(`${platform.toUpperCase()} script download/validation error`, error);
       toast.error("Erro ao baixar/validar script", {
         description: error.message,
       });
@@ -555,8 +560,8 @@ const AgentInstaller = () => {
       const credentials = await generateCredentials();
       if (!credentials) return;
 
-      // FASE 4: Use downloadAndVerifyPs1 which handles everything
-      await downloadAndVerifyPs1(credentials.enrollmentKey);
+      // FASE 4: Use downloadAndVerifyScript (suporta Windows e Linux)
+      await downloadAndVerifyScript(credentials.enrollmentKey, platform);
 
       await supabase.functions.invoke('track-installation-event', {
         body: {
@@ -926,7 +931,7 @@ const AgentInstaller = () => {
               </Alert>
 
               <Button 
-                onClick={() => lastEnrollmentKey ? downloadAndVerifyPs1(lastEnrollmentKey) : generateInstaller()} 
+                onClick={() => lastEnrollmentKey ? downloadAndVerifyScript(lastEnrollmentKey, platform) : generateInstaller()} 
                 disabled={!isNameValid || isGenerating || isValidatingPs1 || circuitBreakerOpen}
                 className="w-full"
               >
@@ -943,7 +948,7 @@ const AgentInstaller = () => {
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-2" />
-                    Baixar Script (.PS1) com Validação SHA256
+                    Baixar Script {platform === 'windows' ? '(.PS1)' : '(.SH)'} com Validação SHA256
                   </>
                 )}
               </Button>
@@ -967,7 +972,7 @@ const AgentInstaller = () => {
                     </Button>
                   </p>
                   <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                    ✅ Integridade verificada ({(ps1SizeBytes! / 1024).toFixed(2)} KB)
+                    ✅ Integridade verificada ({(ps1SizeBytes! / 1024).toFixed(2)} KB) - {platform === 'windows' ? 'Windows PowerShell' : 'Linux Bash'}
                   </p>
                 </div>
               )}

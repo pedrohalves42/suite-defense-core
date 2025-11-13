@@ -2,14 +2,14 @@
 
 ## 📋 Visão Geral
 
-Todos os scripts de instalação (.PS1 e .SH) do CyberShield Agent passam por validação SHA256 end-to-end para garantir integridade e prevenir ataques MITM (Man-in-the-Middle), corrupção de dados e execução de código malicioso.
+Todos os scripts de instalação **Windows (.PS1) e Linux (.SH)** do CyberShield Agent passam por validação SHA256 end-to-end para garantir integridade e prevenir ataques MITM (Man-in-the-Middle), corrupção de dados e execução de código malicioso.
 
 ## 🏗️ Arquitetura de Validação
 
 ### Componentes
 
 1. **Backend: `serve-installer` Edge Function**
-   - Gera o script de instalação completo
+   - Gera o script de instalação completo (Windows ou Linux)
    - Calcula o hash SHA256 do script final
    - Persiste o hash no banco de dados (`enrollment_keys.installer_sha256`)
    - Retorna o hash no header HTTP `X-Script-SHA256`
@@ -19,7 +19,7 @@ Todos os scripts de instalação (.PS1 e .SH) do CyberShield Agent passam por va
    - Permite que o frontend tenha conhecimento prévio do hash esperado
 
 3. **Frontend: `AgentInstaller.tsx`**
-   - Baixa o script via `serve-installer`
+   - Baixa o script via `serve-installer` (Windows .PS1 ou Linux .SH)
    - Extrai o hash do header `X-Script-SHA256`
    - Calcula o SHA256 local usando Web Crypto API
    - Compara os hashes
@@ -45,9 +45,9 @@ sequenceDiagram
     participant Database
     participant WebCrypto
 
-    User->>Frontend: Click "Baixar Script (.PS1)"
+    User->>Frontend: Click "Baixar Script (.PS1/.SH)"
     Frontend->>serve-installer: GET /serve-installer/{enrollmentKey}
-    serve-installer->>serve-installer: Gera script completo
+    serve-installer->>serve-installer: Gera script completo (Windows ou Linux)
     serve-installer->>serve-installer: Calcula SHA256(script)
     serve-installer->>Database: Persiste hash + size + timestamp
     serve-installer->>Frontend: Response + Header X-Script-SHA256
@@ -65,9 +65,9 @@ sequenceDiagram
 
 **Passo a Passo:**
 
-1. Usuário clica em "Baixar Script (.PS1) com Validação SHA256"
+1. Usuário clica em "Baixar Script (.PS1/.SH) com Validação SHA256"
 2. Frontend chama `serve-installer` via fetch
-3. Backend gera script, calcula SHA256 e persiste no DB
+3. Backend gera script (Windows ou Linux), calcula SHA256 e persiste no DB
 4. Backend retorna script com header `X-Script-SHA256: <hash>`
 5. Frontend extrai hash do header
 6. Frontend calcula SHA256 do script baixado usando `crypto.subtle.digest`
@@ -79,11 +79,13 @@ sequenceDiagram
 
 ### One-Click Command (Sem Validação) ⚠️
 
+**Windows PowerShell:**
 ```bash
-# Windows PowerShell
 irm https://api.cybershield.com/functions/v1/serve-installer/{key} | iex
+```
 
-# Linux Bash
+**Linux Bash:**
+```bash
 curl -sL https://api.cybershield.com/functions/v1/serve-installer/{key} | sudo bash
 ```
 
