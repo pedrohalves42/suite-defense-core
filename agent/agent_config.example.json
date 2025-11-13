@@ -1,0 +1,11 @@
+{
+  "agent_name": "CHANGE_ME",
+  "agent_token": "CHANGE_ME",
+  "hmac_secret": "CHANGE_ME_64_HEX_CHARS",
+  "server_url": "https://iavbnmduxpxhwubqrzzn.supabase.co",
+  "heartbeat_interval": 60,
+  "poll_interval": 30,
+  "max_retries": 3,
+  "retry_backoff": 2,
+  "request_timeout": 30
+}
