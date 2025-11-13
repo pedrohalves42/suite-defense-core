@@ -51,6 +51,7 @@ import ExeBuild from "./pages/docs/ExeBuild";
 import InstallationAnalytics from "./pages/admin/InstallationAnalytics";
 import SubscriptionAnalytics from "./pages/admin/SubscriptionAnalytics";
 import StripeSetup from "./pages/admin/StripeSetup";
+import AgentDiagnostics from "./pages/admin/AgentDiagnostics";
 
 // CORREÇÃO: QueryClient já está inicializado no src/main.tsx
 // Remover duplicação para manter configurações otimizadas
@@ -115,6 +116,7 @@ const App = () => (
                 <Route index element={<SuperAdminTenants />} />
                 <Route path="tenants" element={<SuperAdminTenants />} />
                 <Route path="metrics" element={<SuperAdminMetrics />} />
+                <Route path="diagnostics" element={<AgentDiagnostics />} />
                 <Route path="subscription-analytics" element={<SubscriptionAnalytics />} />
                 <Route path="stripe-setup" element={<StripeSetup />} />
                 <Route path="users" element={<Users />} />
