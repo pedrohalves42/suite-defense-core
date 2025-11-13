@@ -30,16 +30,20 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError || !userData.user) throw new Error("Unauthorized");
 
-    // Check if user is admin
-    const { data: roleData } = await supabaseClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userData.user.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Check if user is admin using RPC
+    const { data: isAdmin, error: roleError } = await supabaseClient.rpc('has_role', {
+      _user_id: userData.user.id,
+      _role: 'admin'
+    });
 
-    if (roleData?.role !== "admin") throw new Error("Only admins can create Stripe products");
+    if (roleError) {
+      console.error('[CREATE-STRIPE-PRODUCTS] Role check error:', roleError);
+      throw new Error('Failed to verify admin permissions');
+    }
+
+    if (!isAdmin) {
+      throw new Error("Only admins can create Stripe products");
+    }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
