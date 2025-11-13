@@ -103,6 +103,9 @@ const AgentInstaller = () => {
   const [agentNameError, setAgentNameError] = useState("");
   const [isCheckingName, setIsCheckingName] = useState(false);
   
+  // FASE 1.1: Health check do GitHub
+  const [githubHealthy, setGithubHealthy] = useState<boolean | null>(null);
+  
   // Step 2: Generation states
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastEnrollmentKey, setLastEnrollmentKey] = useState<string | null>(null);
@@ -160,6 +163,33 @@ const AgentInstaller = () => {
     
     return () => clearInterval(interval);
   }, [circuitBreakerOpen, enrollmentCircuitBreaker]);
+
+  // FASE 1.1: Health Check do GitHub ao carregar
+  useEffect(() => {
+    const checkGithubHealth = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('build-agent-exe', {
+          method: 'GET'
+        });
+        
+        if (error) throw error;
+        
+        const healthy = data?.checks?.github_token && data?.checks?.github_repo;
+        setGithubHealthy(healthy);
+        
+        if (!healthy) {
+          logger.warn('[Health Check] GitHub não configurado corretamente', data);
+        } else {
+          logger.info('[Health Check] GitHub configurado e pronto');
+        }
+      } catch (error) {
+        logger.error('[Health Check] Erro ao verificar GitHub', error);
+        setGithubHealthy(false);
+      }
+    };
+    
+    checkGithubHealth();
+  }, []);
 
   // Solicitar permissão para notificações
   useEffect(() => {
