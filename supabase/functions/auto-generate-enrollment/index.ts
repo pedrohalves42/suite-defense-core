@@ -492,15 +492,28 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
     const duration = Date.now() - startTime;
     logger.success(`[${requestId}] Successfully generated credentials for agent ${agentName} in ${duration}ms`);
     
-    // ✅ FASE 1.2: Return credentials com expiresAt correto (enrollment key, não token)
+    // FASE 3: Buscar installer hash (será populado por serve-installer)
+    const { data: enrollmentData, error: enrollmentError } = await supabase
+      .from('enrollment_keys')
+      .select('installer_sha256, installer_size_bytes')
+      .eq('key', enrollmentKey)
+      .maybeSingle();
+
+    if (enrollmentError) {
+      logger.warn(`[${requestId}] Could not fetch installer hash`, { error: enrollmentError.message });
+    }
+    
+    // FASE 3: Return credentials with installer SHA256 info
     return new Response(
       JSON.stringify({
         enrollmentKey,
         agentToken,
         hmacSecret,
-        expiresAt: expiresAt.toISOString(), // ✅ CORRIGIDO: enrollment key expiration (24h)
-        tokenExpiresAt: tokenExpiresAt.toISOString(), // Token expiration (1 year) para referência
+        expiresAt: expiresAt.toISOString(),
+        tokenExpiresAt: tokenExpiresAt.toISOString(),
         agentId,
+        installerSha256: enrollmentData?.installer_sha256 || null,
+        installerSizeBytes: enrollmentData?.installer_size_bytes || null,
         requestId,
         timestamp: new Date().toISOString()
       }),

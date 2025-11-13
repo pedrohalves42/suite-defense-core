@@ -526,6 +526,9 @@ export type Database = {
           expiration_notified_at: string | null
           expires_at: string
           id: string
+          installer_generated_at: string | null
+          installer_sha256: string | null
+          installer_size_bytes: number | null
           is_active: boolean
           key: string
           max_uses: number
@@ -542,6 +545,9 @@ export type Database = {
           expiration_notified_at?: string | null
           expires_at: string
           id?: string
+          installer_generated_at?: string | null
+          installer_sha256?: string | null
+          installer_size_bytes?: number | null
           is_active?: boolean
           key: string
           max_uses?: number
@@ -558,6 +564,9 @@ export type Database = {
           expiration_notified_at?: string | null
           expires_at?: string
           id?: string
+          installer_generated_at?: string | null
+          installer_sha256?: string | null
+          installer_size_bytes?: number | null
           is_active?: boolean
           key?: string
           max_uses?: number
