@@ -118,6 +118,10 @@ verify_jwt = true
 verify_jwt = false
 schedule = "*/10 * * * *"
 
+[functions.build-watchdog]
+verify_jwt = false
+schedule = "*/5 * * * *"
+
 [functions.get-agent-dashboard-data]
 verify_jwt = true
 

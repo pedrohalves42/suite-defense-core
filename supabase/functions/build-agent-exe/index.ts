@@ -3,6 +3,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { WINDOWS_INSTALLER_TEMPLATE } from '../_shared/installer-template.ts';
 import { createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
+import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -52,11 +53,12 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // 1. Validate environment variables
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    return await withTimeout(async () => {
+      // 1. Validate environment variables
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+      if (!supabaseUrl || !supabaseServiceKey) {
       console.error('[build-agent-exe] CRITICAL: Missing environment variables', {
         requestId,
         hasUrl: !!supabaseUrl,
@@ -731,20 +733,24 @@ try {
       actions_url: githubActionsUrl
     });
 
-    // 9. Return async response
-    return new Response(JSON.stringify({
-      success: true,
-      build_id: buildRecord.id,
-      status: 'building',
-      message: 'Build iniciado. Aguarde 2-3 minutos.',
-      estimated_completion: new Date(Date.now() + 180000).toISOString(), // +3 min
-      github_actions_url: githubActionsUrl
-    }), {
-      status: 202, // Accepted
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
+      // 9. Return async response
+      return new Response(JSON.stringify({
+        success: true,
+        build_id: buildRecord.id,
+        status: 'building',
+        message: 'Build iniciado. Aguarde 2-3 minutos.',
+        estimated_completion: new Date(Date.now() + 180000).toISOString(), // +3 min
+        github_actions_url: githubActionsUrl
+      }), {
+        status: 202, // Accepted
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }, { timeoutMs: 25000 });
 
   } catch (error) {
+    if (error instanceof Error && error.message === 'Request timeout') {
+      return createTimeoutResponse(corsHeaders);
+    }
     logger.error('Build request failed', { error, requestId });
     return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Build process failed', 500, requestId);
   }
