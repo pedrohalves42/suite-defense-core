@@ -82,6 +82,9 @@ verify_jwt = true
 [functions.check-expiring-enrollment-keys]
 verify_jwt = false
 
+[functions.check-agent-name-availability]
+verify_jwt = true
+
 [functions.get-agent-dashboard-data]
 verify_jwt = true
 

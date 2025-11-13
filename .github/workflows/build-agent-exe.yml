@@ -13,11 +13,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      - name: Cache ps2exe module
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~\Documents\PowerShell\Modules\ps2exe
+            ~\AppData\Local\Microsoft\Windows\PowerShell\PowerShellGet
+          key: ${{ runner.os }}-ps2exe-${{ hashFiles('**/*.ps1') }}
+          restore-keys: |
+            ${{ runner.os }}-ps2exe-
+      
       - name: Install ps2exe
         shell: pwsh
         run: |
-          Install-Module -Name ps2exe -Force -Scope CurrentUser -ErrorAction Stop
-          Write-Host "✓ ps2exe installed successfully"
+          if (Get-Module -ListAvailable -Name ps2exe) {
+            Write-Host "✓ ps2exe already cached"
+          } else {
+            Install-Module -Name ps2exe -Force -Scope CurrentUser -ErrorAction Stop
+            Write-Host "✓ ps2exe installed successfully"
+          }
       
       - name: Compile PS1 to EXE
         shell: pwsh

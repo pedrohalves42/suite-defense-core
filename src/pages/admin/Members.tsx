@@ -150,9 +150,10 @@ export default function Members() {
       <Card>
         <CardHeader>
           <CardTitle>Informações da Assinatura</CardTitle>
-          <CardDescription>
-            Plano atual: <Badge variant="secondary">{planName}</Badge>
-          </CardDescription>
+          <CardDescription>Detalhes do seu plano e limites</CardDescription>
+          <div className="mt-2">
+            <Badge variant="secondary">{planName}</Badge>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-4">
