@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
       limit: 12,
     });
 
-    const formattedInvoices = invoices.data.map(inv => ({
+    const formattedInvoices = invoices.data.map((inv: any) => ({
       id: inv.id,
       number: inv.number,
       amount_due: inv.amount_due,

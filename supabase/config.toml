@@ -13,10 +13,21 @@ verify_jwt = true
 [functions.customer-portal]
 verify_jwt = true
 
+[functions.list-invoices]
+verify_jwt = true
+
 [functions.stripe-webhook]
 verify_jwt = false
 
 [functions.sync-stripe-subscriptions]
+verify_jwt = false
+
+# === Trial Period Functions ===
+[functions.check-trial-expiration]
+verify_jwt = false
+schedule = "0 */12 * * *"
+
+[functions.send-trial-reminder]
 verify_jwt = false
 
 # === Agent Functions ===
