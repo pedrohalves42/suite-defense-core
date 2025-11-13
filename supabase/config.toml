@@ -186,6 +186,11 @@ verify_jwt = false
 [functions.submit-contact]
 verify_jwt = false
 
+# === Monitoring Functions (FASE 4.1) ===
+[functions.monitor-slow-operations]
+verify_jwt = false
+schedule = "*/5 * * * *"
+
 # === Test Functions ===
 [functions.test-virustotal-integration]
 verify_jwt = true

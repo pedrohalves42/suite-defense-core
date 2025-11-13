@@ -34,7 +34,14 @@ npm run dev
 
 Acesse: http://localhost:8080
 
-📖 **Documentação completa:** [SETUP.md](SETUP.md)
+## 📖 Documentação Técnica
+
+Para informações detalhadas sobre arquitetura e troubleshooting:
+
+- 📐 [Arquitetura do Instalador](docs/INSTALLER_ARCHITECTURE.md) - Fluxo completo, componentes e segurança
+- 🔧 [Guia de Troubleshooting](docs/TROUBLESHOOTING_INSTALLER.md) - Soluções para problemas comuns
+- 🛡️ [Arquitetura de Segurança](docs/SECURITY_ARCHITECTURE.md) - RLS, HMAC, SHA256
+- 📋 [Setup Completo](SETUP.md) - Instalação e configuração detalhadas
 
 ---
 
