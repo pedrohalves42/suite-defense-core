@@ -87,7 +87,7 @@ export async function callEdgeFunction<T = any>(
 
     const data = await response.json();
     
-    logger.success(`[${requestId}] Edge Function executada com sucesso`);
+    logger.info(`[${requestId}] Edge Function executada com sucesso`);
     
     return data as T;
   } catch (error: any) {
