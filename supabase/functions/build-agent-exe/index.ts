@@ -203,7 +203,7 @@ Write-Host "Timestamp: {{TIMESTAMP}}" -ForegroundColor Gray
 
     logger.info('Build record created', { requestId, build_id: buildRecord.id });
 
-    // 8. Trigger GitHub Actions workflow
+    // 8. Trigger GitHub Actions workflow with fallback
     if (!BUILD_GH_TOKEN || !BUILD_GH_REPOSITORY) {
       await serviceRoleClient
         .from('agent_builds')
@@ -217,36 +217,101 @@ Write-Host "Timestamp: {{TIMESTAMP}}" -ForegroundColor Gray
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Build service not configured', 500, requestId);
     }
 
-    const githubWorkflowUrl = `https://api.github.com/repos/${BUILD_GH_REPOSITORY}/dispatches`;
-    const githubResponse = await fetch(githubWorkflowUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${BUILD_GH_TOKEN}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/vnd.github.v3+json'
-      },
-      body: JSON.stringify({
-        event_type: 'build-agent-exe',
-        client_payload: {
-          ps1_content: installerContent,
-          output_name: `CyberShield-Agent-${agent_name}-${Date.now()}.exe`,
-          version: '2.2.1',
-          build_id: buildRecord.id,
-          callback_url: `${SUPABASE_URL}/functions/v1/build-callback`,
-          callback_token: SUPABASE_SERVICE_ROLE_KEY
-        }
-      })
-    });
+    const githubActionsUrl = `https://github.com/${BUILD_GH_REPOSITORY}/actions`;
+    const workflowPayload = {
+      ps1_content: installerContent,
+      output_name: `CyberShield-Agent-${agent_name}-${Date.now()}.exe`,
+      version: '2.2.1',
+      build_id: buildRecord.id,
+      callback_url: `${SUPABASE_URL}/functions/v1/build-callback`,
+      callback_token: SUPABASE_SERVICE_ROLE_KEY
+    };
 
-    if (!githubResponse.ok) {
-      const errorText = await githubResponse.text();
-      logger.error('GitHub workflow trigger failed', { error: errorText, requestId });
+    let triggerSuccess = false;
+    let triggerMethod = '';
+
+    // Try repository_dispatch first
+    try {
+      logger.info('Attempting repository_dispatch trigger', { requestId, build_id: buildRecord.id });
       
+      const dispatchUrl = `https://api.github.com/repos/${BUILD_GH_REPOSITORY}/dispatches`;
+      const dispatchResponse = await fetch(dispatchUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${BUILD_GH_TOKEN}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify({
+          event_type: 'build-agent-exe',
+          client_payload: workflowPayload
+        })
+      });
+
+      if (dispatchResponse.ok || dispatchResponse.status === 204) {
+        triggerSuccess = true;
+        triggerMethod = 'repository_dispatch';
+        logger.info('repository_dispatch succeeded', { requestId, build_id: buildRecord.id });
+      } else {
+        const errorText = await dispatchResponse.text();
+        logger.warn('repository_dispatch failed, trying workflow_dispatch fallback', { 
+          error: errorText, 
+          status: dispatchResponse.status,
+          requestId 
+        });
+      }
+    } catch (dispatchError) {
+      logger.warn('repository_dispatch exception, trying workflow_dispatch fallback', { 
+        error: dispatchError, 
+        requestId 
+      });
+    }
+
+    // Fallback to workflow_dispatch if repository_dispatch failed
+    if (!triggerSuccess) {
+      try {
+        logger.info('Attempting workflow_dispatch trigger', { requestId, build_id: buildRecord.id });
+        
+        const workflowUrl = `https://api.github.com/repos/${BUILD_GH_REPOSITORY}/actions/workflows/build-agent-exe.yml/dispatches`;
+        const workflowResponse = await fetch(workflowUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${BUILD_GH_TOKEN}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json'
+          },
+          body: JSON.stringify({
+            ref: 'main',
+            inputs: {
+              ps1_content: installerContent,
+              output_name: workflowPayload.output_name,
+              version: workflowPayload.version,
+              build_id: workflowPayload.build_id,
+              callback_url: workflowPayload.callback_url,
+              callback_token: workflowPayload.callback_token
+            }
+          })
+        });
+
+        if (workflowResponse.ok || workflowResponse.status === 204) {
+          triggerSuccess = true;
+          triggerMethod = 'workflow_dispatch';
+          logger.info('workflow_dispatch succeeded', { requestId, build_id: buildRecord.id });
+        } else {
+          const errorText = await workflowResponse.text();
+          logger.error('workflow_dispatch also failed', { error: errorText, requestId });
+        }
+      } catch (workflowError) {
+        logger.error('workflow_dispatch exception', { error: workflowError, requestId });
+      }
+    }
+
+    if (!triggerSuccess) {
       await serviceRoleClient
         .from('agent_builds')
         .update({
           build_status: 'failed',
-          error_message: `GitHub API error: ${errorText}`,
+          error_message: 'Both repository_dispatch and workflow_dispatch failed. Check GitHub Actions configuration.',
           build_completed_at: new Date().toISOString()
         })
         .eq('id', buildRecord.id);
@@ -254,7 +319,25 @@ Write-Host "Timestamp: {{TIMESTAMP}}" -ForegroundColor Gray
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Failed to trigger build', 500, requestId);
     }
 
-    logger.info('GitHub workflow triggered successfully', { requestId, build_id: buildRecord.id });
+    // Save GitHub Actions URL for monitoring
+    await serviceRoleClient
+      .from('agent_builds')
+      .update({
+        github_run_url: githubActionsUrl,
+        build_log: [{ 
+          timestamp: new Date().toISOString(), 
+          message: `Build triggered via ${triggerMethod}`,
+          url: githubActionsUrl
+        }]
+      })
+      .eq('id', buildRecord.id);
+
+    logger.info('GitHub workflow triggered successfully', { 
+      requestId, 
+      build_id: buildRecord.id,
+      method: triggerMethod,
+      actions_url: githubActionsUrl
+    });
 
     // 9. Return async response
     return new Response(JSON.stringify({
@@ -262,7 +345,8 @@ Write-Host "Timestamp: {{TIMESTAMP}}" -ForegroundColor Gray
       build_id: buildRecord.id,
       status: 'building',
       message: 'Build iniciado. Aguarde 2-3 minutos.',
-      estimated_completion: new Date(Date.now() + 180000).toISOString() // +3 min
+      estimated_completion: new Date(Date.now() + 180000).toISOString(), // +3 min
+      github_actions_url: githubActionsUrl
     }), {
       status: 202, // Accepted
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
