@@ -457,14 +457,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FASE 2: Read agent script from local file system and calculate SHA256 hash
-    console.log(`[${requestId}] Reading agent script from local filesystem`);
+    // FASE 2: Read agent script from _shared directory and calculate SHA256 hash
+    console.log(`[${requestId}] Reading agent script from _shared directory`);
     
     let agentScriptHash = '';
     let agentScriptContent = '';
     try {
-      // Read the agent script from the public directory (relative to function root)
-      const scriptPath = new URL('../../public/agent-scripts/cybershield-agent-windows.ps1', import.meta.url).pathname;
+      // Read the agent script from the _shared directory (accessible to Edge Functions)
+      const scriptPath = new URL('../_shared/agent-script-windows.ps1', import.meta.url).pathname;
       console.log(`[${requestId}] Script path: ${scriptPath}`);
       
       agentScriptContent = await Deno.readTextFile(scriptPath);
