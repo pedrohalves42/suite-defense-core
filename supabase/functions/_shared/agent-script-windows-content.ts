@@ -66,8 +66,19 @@ if (\$PSVersionTable.PSVersion.Major -lt 3) {
 \$osVersion = [System.Environment]::OSVersion.Version
 \$osName = (Get-WmiObject -Class Win32_OperatingSystem).Caption
 
-Write-Host "Sistema operacional: \$osName" -ForegroundColor Cyan
-Write-Host "Versão: \$(\$osVersion.Major).\$(\$osVersion.Minor)" -ForegroundColor Cyan
+# ✅ FASE 2: DIAGNÓSTICO DE INICIALIZAÇÃO DETALHADO
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "CyberShield Agent v3.0.0 Iniciando..." -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Timestamp: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor White
+Write-Host "OS: \$osName" -ForegroundColor White
+Write-Host "PowerShell: \$(\$PSVersionTable.PSVersion)" -ForegroundColor White
+Write-Host "AgentToken: \$(\$AgentToken.Substring(0,20))..." -ForegroundColor White
+Write-Host "HmacSecret Length: \$(\$HmacSecret.Length) chars" -ForegroundColor White
+Write-Host "ServerUrl: \$ServerUrl" -ForegroundColor White
+Write-Host "PollInterval: \$PollInterval segundos" -ForegroundColor White
+Write-Host "Log Directory: \$LogDir" -ForegroundColor White
+Write-Host "========================================" -ForegroundColor Cyan
 
 # Windows Server 2012 = 6.2, 2012 R2 = 6.3, 2016 = 10.0, etc
 if (\$osVersion.Major -lt 6 -or (\$osVersion.Major -eq 6 -and \$osVersion.Minor -lt 2)) {
@@ -85,6 +96,20 @@ if (\$osVersion.Major -lt 6 -or (\$osVersion.Major -eq 6 -and \$osVersion.Minor 
 if (-not (Test-Path \$LogDir)) {
     New-Item -ItemType Directory -Path \$LogDir -Force | Out-Null
 }
+
+# ✅ FASE 2: Log de inicialização ANTES das funções
+Write-Log "========================================" "INFO"
+Write-Log "CyberShield Agent v3.0.0 Iniciando..." "INFO"
+Write-Log "========================================" "INFO"
+Write-Log "Timestamp: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" "INFO"
+Write-Log "OS: \$osName" "INFO"
+Write-Log "PowerShell: \$(\$PSVersionTable.PSVersion)" "INFO"
+Write-Log "AgentToken: \$(\$AgentToken.Substring(0,20))..." "INFO"
+Write-Log "HmacSecret Length: \$(\$HmacSecret.Length) chars" "INFO"
+Write-Log "ServerUrl: \$ServerUrl" "INFO"
+Write-Log "PollInterval: \$PollInterval segundos" "INFO"
+Write-Log "Log Directory: \$LogDir" "INFO"
+Write-Log "========================================" "INFO"
 
 #region Funções de Logging
 
@@ -249,35 +274,51 @@ function Invoke-SecureRequest {
 #region Heartbeat
 
 function Send-Heartbeat {
-    param([bool]\$IsInitialBoot = \$false)
+    Write-Log "Enviando heartbeat..." "DEBUG"
+    
+    \$url = "\$ServerUrl/functions/v1/heartbeat"
+    \$headers = @{
+        'X-Agent-Token' = \$AgentToken
+        'Content-Type' = 'application/json'
+    }
+    
+    \$body = @{
+        os_type = (Get-WmiObject Win32_OperatingSystem).Caption
+        os_version = [System.Environment]::OSVersion.Version.ToString()
+        hostname = [System.Net.Dns]::GetHostName()
+    }
+    
+    \$bodyJson = \$body | ConvertTo-Json -Compress
+    
+    # ✅ FASE 2: Gerar HMAC com logging detalhado
+    Write-Log "  Gerando assinatura HMAC..." "DEBUG"
+    \$hmacHeaders = Get-HmacSignature -Body \$bodyJson
+    foreach (\$key in \$hmacHeaders.Keys) {
+        \$headers[\$key] = \$hmacHeaders[\$key]
+    }
+    Write-Log "  HMAC Headers: X-Request-Id=\$(\$headers['X-Request-Id']), X-Timestamp=\$(\$headers['X-Timestamp'])" "DEBUG"
     
     try {
-        \$maxRetries = if (\$IsInitialBoot) { 5 } else { 3 }
-        
-        \$body = @{
-            os_type = "windows"
-            os_version = \$osName
-            hostname = \$env:COMPUTERNAME
-            agent_version = "2.2.1"
-        }
-        
-        \$uri = "\$ServerUrl/functions/v1/heartbeat"
-        
-        \$response = Invoke-SecureRequest -Uri \$uri -Method "POST" -Body \$body -MaxRetries \$maxRetries
+        \$response = Invoke-SecureRequest -Url \$url -Method POST -Headers \$headers -Body \$bodyJson
         
         if (\$response.StatusCode -eq 200) {
-            if (\$IsInitialBoot) {
-                Write-Log "Heartbeat inicial enviado com sucesso" "SUCCESS"
-            } else {
-                Write-Log "Heartbeat enviado com sucesso" "DEBUG"
-            }
+            Write-Log "✓ Heartbeat enviado com sucesso" "SUCCESS"
             return \$true
+        } elseif (\$response.StatusCode -eq 401) {
+            Write-Log "✗ Heartbeat REJEITADO: Autenticação falhou (401)" "ERROR"
+            Write-Log "  Verifique AgentToken e HmacSecret" "ERROR"
+            return \$false
+        } elseif (\$response.StatusCode -eq 429) {
+            Write-Log "⚠ Rate limit excedido (429) - aguardando..." "WARN"
+            return \$false
         } else {
-            Write-Log "Heartbeat falhou: Status \$(\$response.StatusCode)" "WARN"
+            Write-Log "✗ Heartbeat falhou: HTTP \$(\$response.StatusCode)" "WARN"
+            Write-Log "  Response: \$(\$response.Content)" "DEBUG"
             return \$false
         }
     } catch {
-        Write-Log "Erro ao enviar heartbeat: \$(\$_.Exception.Message)" "ERROR"
+        Write-Log "✗ Erro ao enviar heartbeat: \$(\$_.Exception.Message)" "ERROR"
+        Write-Log "  Stack: \$(\$_.ScriptStackTrace)" "DEBUG"
         return \$false
     }
 }
@@ -453,42 +494,91 @@ function Send-SystemMetrics {
 #region Health Check
 
 function Test-SystemHealth {
-    Write-Log "Executando verificação de saúde do sistema..." "INFO"
+    Write-Log "🔍 Teste de Sistema - DIAGNÓSTICO COMPLETO" "INFO"
     
-    # Verificar versão do PowerShell
-    if (\$PSVersionTable.PSVersion.Major -lt 3) {
-        Write-Log "Versão do PowerShell incompatível: \$(\$PSVersionTable.PSVersion)" "ERROR"
+    # ✅ FASE 2: Validação completa com retry no heartbeat
+    # 1. Validar PowerShell
+    Write-Log "  [1/5] Validando PowerShell \$(\$PSVersionTable.PSVersion.Major).\$(\$PSVersionTable.PSVersion.Minor)..." "INFO"
+    if (\$PSVersionTable.PSVersion.Major -lt 5) {
+        Write-Log "  ✗ PowerShell muito antigo! Requer 5.1+" "ERROR"
+        return \$false
+    }
+    Write-Log "  ✓ PowerShell OK" "SUCCESS"
+    
+    # 2. Testar conectividade básica
+    Write-Log "  [2/5] Testando conectividade DNS..." "INFO"
+    \$dnsTest = Test-Connection -ComputerName "google.com" -Count 1 -Quiet -ErrorAction SilentlyContinue
+    if (\$dnsTest) {
+        Write-Log "  ✓ DNS OK" "SUCCESS"
+    } else {
+        Write-Log "  ✗ DNS FALHOU - Sem conectividade internet" "ERROR"
         return \$false
     }
     
-    # Verificar conectividade com o servidor
+    # 3. Testar conexão com servidor
+    Write-Log "  [3/5] Testando conectividade com servidor backend..." "INFO"
+    \$serverHost = \$ServerUrl -replace "https://","" -replace "/.*",""
     try {
-        \$testUri = "\$ServerUrl/functions/v1/heartbeat"
-        \$testResponse = Invoke-WebRequest -Uri \$testUri -Method HEAD -TimeoutSec 10 -UseBasicParsing
-        Write-Log "Conectividade com servidor: OK" "SUCCESS"
-    } catch {
-        Write-Log "Falha na conectividade com servidor: \$(\$_.Exception.Message)" "ERROR"
-        return \$false
-    }
-    
-    # Verificar recursos do sistema
-    try {
-        \$memory = Get-WmiObject Win32_OperatingSystem
-        \$freeMemoryMB = [math]::Round(\$memory.FreePhysicalMemory / 1024, 2)
-        if (\$freeMemoryMB -lt 100) {
-            Write-Log "AVISO: Memória disponível baixa: \$freeMemoryMB MB" "WARN"
+        \$tcpTest = Test-NetConnection -ComputerName \$serverHost -Port 443 -WarningAction SilentlyContinue
+        if (\$tcpTest.TcpTestSucceeded) {
+            Write-Log "  ✓ Conectividade TCP:443 OK para \$serverHost" "SUCCESS"
+        } else {
+            Write-Log "  ✗ Não foi possível conectar em \$serverHost:443" "ERROR"
+            Write-Log "    Firewall pode estar bloqueando" "WARN"
+            return \$false
         }
+    } catch {
+        Write-Log "  ✗ Erro ao testar conectividade: \$_" "ERROR"
+        return \$false
+    }
+    
+    # 4. Testar endpoint de heartbeat com retry
+    Write-Log "  [4/5] Testando endpoint /heartbeat..." "INFO"
+    \$maxRetries = 5
+    \$retryCount = 0
+    \$heartbeatSuccess = \$false
+    
+    while (\$retryCount -lt \$maxRetries -and -not \$heartbeatSuccess) {
+        \$retryCount++
+        Write-Log "    Tentativa \$retryCount/\$maxRetries de enviar heartbeat inicial..." "INFO"
         
-        \$disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
-        \$freeSpaceGB = [math]::Round(\$disk.FreeSpace / 1GB, 2)
-        if (\$freeSpaceGB -lt 1) {
-            Write-Log "AVISO: Espaço em disco baixo: \$freeSpaceGB GB" "WARN"
+        \$result = Send-Heartbeat
+        if (\$result) {
+            Write-Log "  ✓ Heartbeat inicial enviado com SUCESSO!" "SUCCESS"
+            \$heartbeatSuccess = \$true
+        } else {
+            Write-Log "    ✗ Heartbeat falhou" "WARN"
+            if (\$retryCount -lt \$maxRetries) {
+                \$backoff = [math]::Pow(2, \$retryCount)
+                Write-Log "    Aguardando \$backoff segundos antes de retry..." "INFO"
+                Start-Sleep -Seconds \$backoff
+            }
         }
-    } catch {
-        Write-Log "Erro ao verificar recursos: \$(\$_.Exception.Message)" "WARN"
     }
     
-    Write-Log "Verificação de saúde concluída" "SUCCESS"
+    if (-not \$heartbeatSuccess) {
+        Write-Log "  ✗ FALHA CRÍTICA: Não foi possível enviar heartbeat após \$maxRetries tentativas" "ERROR"
+        Write-Log "  Possíveis causas:" "ERROR"
+        Write-Log "    1. Credenciais inválidas (AgentToken ou HmacSecret)" "ERROR"
+        Write-Log "    2. Rate limiting ativo no servidor" "ERROR"
+        Write-Log "    3. Endpoint /heartbeat offline ou com erro" "ERROR"
+        return \$false
+    }
+    
+    # 5. Validar recursos do sistema
+    Write-Log "  [5/5] Validando recursos do sistema..." "INFO"
+    \$cpu = (Get-WmiObject Win32_Processor).LoadPercentage
+    \$mem = Get-WmiObject Win32_OperatingSystem
+    \$memUsedPercent = [math]::Round(((\$mem.TotalVisibleMemorySize - \$mem.FreePhysicalMemory) / \$mem.TotalVisibleMemorySize) * 100, 2)
+    
+    Write-Log "    CPU Usage: \$cpu%" "INFO"
+    Write-Log "    Memory Usage: \$memUsedPercent%" "INFO"
+    Write-Log "  ✓ Sistema OK" "SUCCESS"
+    
+    Write-Log "========================================" "SUCCESS"
+    Write-Log "✅ AGENTE INICIALIZADO COM SUCESSO!" "SUCCESS"
+    Write-Log "========================================" "SUCCESS"
+    
     return \$true
 }
 
@@ -497,22 +587,26 @@ function Test-SystemHealth {
 #region Loop Principal do Agente
 
 function Start-Agent {
-    Write-Log "=== Agent iniciado ===" "SUCCESS"
+    Write-Log "=== Starting Agent Loop ===" "SUCCESS"
+    Write-Log "Press Ctrl+C to stop" "INFO"
     
-    # Verificação inicial de saúde
+    Write-Log "Running initial health check..." "INFO"
     if (-not (Test-SystemHealth)) {
-        Write-Log "Verificação de saúde falhou. Abortando." "ERROR"
-        return
+        Write-Log "CRITICAL: Health check failed. Cannot start agent." "ERROR"
+        Write-Log "Please fix the issues above before continuing." "ERROR"
+        Write-Log "Troubleshooting:" "ERROR"
+        Write-Log "  1. Verifique conectividade: Test-NetConnection -Port 443" "ERROR"
+        Write-Log "  2. Valide credenciais no dashboard" "ERROR"
+        Write-Log "  3. Verifique firewall: Get-NetFirewallRule -DisplayName 'CyberShield Agent'" "ERROR"
+        exit 1
     }
     
-    # Enviar heartbeat inicial
-    \$heartbeatSuccess = Send-Heartbeat -IsInitialBoot \$true
-    if (-not \$heartbeatSuccess) {
-        Write-Log "Falha no heartbeat inicial. Continuando mesmo assim..." "WARN"
-    }
+    Write-Log "✅ Health check PASSOU - Agent está pronto para operar" "SUCCESS"
+    Write-Log "Sending initial heartbeat..." "INFO"
+    Send-Heartbeat | Out-Null
     
-    # Enviar métricas iniciais
-    Send-SystemMetrics
+    Write-Log "Sending initial system metrics..." "INFO"
+    Send-SystemMetrics | Out-Null
     
     # Contadores para intervalos
     \$heartbeatInterval = 60
