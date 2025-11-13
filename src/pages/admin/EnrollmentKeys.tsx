@@ -89,17 +89,18 @@ export default function EnrollmentKeys() {
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
 
+  // FASE 1.3: Usar view segura com máscara ao invés de tabela direta
   const { data: keys, isLoading } = useQuery({
     queryKey: ['enrollment-keys', page, searchTerm, statusFilter],
     queryFn: async () => {
       let query = supabase
-        .from('enrollment_keys')
+        .from('enrollment_keys_safe')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
 
       if (searchTerm) {
-        query = query.or(`description.ilike.%${searchTerm}%,key.ilike.%${searchTerm}%`);
+        query = query.or(`description.ilike.%${searchTerm}%,key_masked.ilike.%${searchTerm}%`);
       }
 
       if (statusFilter !== 'all') {
@@ -478,7 +479,8 @@ export default function EnrollmentKeys() {
                       
                       return (
                         <TableRow key={key.id}>
-                          <TableCell className="font-mono text-sm">{key.key}</TableCell>
+                          {/* FASE 1.3: Mostrar chave mascarada ao invés da chave completa */}
+                          <TableCell className="font-mono text-sm">{key.key_masked}</TableCell>
                           <TableCell className="max-w-[200px] truncate">{key.description || '-'}</TableCell>
                           <TableCell>
                             <Badge variant={key.is_active && !isExpired && !isMaxUsed ? 'default' : 'secondary'}>
@@ -496,14 +498,7 @@ export default function EnrollmentKeys() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right space-x-2">
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              onClick={() => copyToClipboard(key.key)}
-                              title="Copiar chave"
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
+                            {/* FASE 1.3: REMOVIDO botão de copiar - chave não pode ser copiada via frontend */}
                             {canWrite && key.is_active && (
                               <Button 
                                 size="sm" 

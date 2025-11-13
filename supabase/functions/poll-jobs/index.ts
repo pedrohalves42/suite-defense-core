@@ -50,16 +50,28 @@ Deno.serve(async (req) => {
     }
 
     const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents
-
-    // Verificar HMAC se configurado
-    if (agent.hmac_secret) {
-      const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
-      if (!hmacResult.valid) {
-        return new Response(
-          JSON.stringify({ error: hmacResult.error }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+ 
+    // FASE 1.2: HMAC OBRIGATÓRIO - Agora hmac_secret é NOT NULL
+    if (!agent.hmac_secret) {
+      console.error('[poll-jobs] CRITICAL SECURITY: Agent without HMAC secret:', agent.agent_name)
+      return new Response(
+        JSON.stringify({ error: 'HMAC secret not configured for agent' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Verificar HMAC (obrigatório)
+    const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
+    if (!hmacResult.valid) {
+      console.warn('[poll-jobs] HMAC verification failed:', {
+        agent: agent.agent_name,
+        error: hmacResult.error,
+        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
+      })
+      return new Response(
+        JSON.stringify({ error: hmacResult.error }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     // Rate limiting
