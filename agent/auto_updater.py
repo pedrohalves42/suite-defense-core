@@ -52,11 +52,11 @@ class AutoUpdater:
         try:
             logger.info(f"🔍 Verificando atualizações... (versão atual: {self.current_version})")
             
-            # Buscar última versão disponível
+            # Buscar última versão disponível via REST API
             url = f"{self.config.server_url}/rest/v1/agent_versions"
             headers = {
-                "apikey": self.config.agent_token,
-                "Authorization": f"Bearer {self.config.agent_token}"
+                "apikey": self.config.supabase_anon_key,
+                "Authorization": f"Bearer {self.config.supabase_anon_key}"
             }
             params = {
                 "platform": f"eq.{self.platform}",
@@ -298,21 +298,59 @@ class AutoUpdater:
     def _health_check(self) -> bool:
         """
         Verifica se o executável atualizado está funcionando
+        Inclui testes de configuração e conectividade com backend
         
         Returns:
             True se OK, False se houver problemas
         """
         try:
-            # Verificar se o arquivo existe e é executável
+            # 1. Verificar se o arquivo existe e é executável
             if not self.current_exe.exists():
+                logger.error("❌ Health check: executável não encontrado")
                 return False
             
-            # Verificar permissões (Linux)
+            # 2. Verificar permissões (Linux)
             if self.platform == "linux" and not os.access(self.current_exe, os.X_OK):
+                logger.error("❌ Health check: executável sem permissão de execução")
                 return False
             
-            # TODO: Adicionar verificações mais robustas aqui
-            # Por exemplo, executar o agente com --version e verificar saída
+            # 3. Verificar configuração básica
+            if not self.config.agent_name or not self.config.hmac_secret:
+                logger.error("❌ Health check: configuração inválida")
+                return False
+            
+            # 4. Testar conectividade com backend (heartbeat test)
+            try:
+                from hmac_utils import generate_hmac_headers
+                
+                heartbeat_url = f"{self.config.server_url}/functions/v1/heartbeat"
+                body = '{"test_mode": true}'
+                
+                headers = {
+                    'X-Agent-Token': self.config.agent_token,
+                    'Content-Type': 'application/json',
+                    **generate_hmac_headers(self.config.hmac_secret, body)
+                }
+                
+                response = requests.post(
+                    heartbeat_url,
+                    headers=headers,
+                    data=body,
+                    timeout=10
+                )
+                
+                if response.status_code not in [200, 201]:
+                    logger.error(f"❌ Health check: backend retornou {response.status_code}")
+                    return False
+                
+                logger.info("✅ Health check: backend conectado com sucesso")
+                
+            except requests.exceptions.Timeout:
+                logger.error("❌ Health check: timeout ao conectar backend")
+                return False
+            except requests.exceptions.RequestException as e:
+                logger.error(f"❌ Health check: erro ao conectar backend - {e}")
+                return False
             
             return True
             
