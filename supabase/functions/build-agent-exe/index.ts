@@ -203,7 +203,7 @@ Write-Host "Timestamp: {{TIMESTAMP}}" -ForegroundColor Gray
 
     logger.info('Build record created', { requestId, build_id: buildRecord.id });
 
-    // 8. Trigger GitHub Actions workflow with fallback
+    // 8. Test GitHub API connectivity first
     if (!BUILD_GH_TOKEN || !BUILD_GH_REPOSITORY) {
       await serviceRoleClient
         .from('agent_builds')
@@ -217,9 +217,39 @@ Write-Host "Timestamp: {{TIMESTAMP}}" -ForegroundColor Gray
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Build service not configured', 500, requestId);
     }
 
+    // Test GitHub API connectivity
+    try {
+      const testResponse = await fetch(
+        `https://api.github.com/repos/${BUILD_GH_REPOSITORY}/actions/workflows`,
+        { headers: { Authorization: `Bearer ${BUILD_GH_TOKEN}` } }
+      );
+
+      if (!testResponse.ok) {
+        throw new Error(`GitHub API unreachable: ${testResponse.status}`);
+      }
+      logger.info('GitHub API connectivity test passed', { requestId });
+    } catch (ghError) {
+      logger.error('GitHub API connectivity test failed', { error: ghError, requestId });
+      await serviceRoleClient
+        .from('agent_builds')
+        .update({
+          build_status: 'failed',
+          error_message: `GitHub API unreachable: ${ghError}`,
+          build_completed_at: new Date().toISOString()
+        })
+        .eq('id', buildRecord.id);
+        
+      return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'GitHub API unreachable', 500, requestId);
+    }
+
+    // Convert PS1 to Base64 to avoid GitHub Actions payload issues
+    const ps1Encoder = new TextEncoder();
+    const ps1Bytes = ps1Encoder.encode(installerContent);
+    const ps1Base64 = btoa(String.fromCharCode(...ps1Bytes));
+
     const githubActionsUrl = `https://github.com/${BUILD_GH_REPOSITORY}/actions`;
     const workflowPayload = {
-      ps1_content: installerContent,
+      ps1_content_base64: ps1Base64,
       output_name: `CyberShield-Agent-${agent_name}-${Date.now()}.exe`,
       version: '2.2.1',
       build_id: buildRecord.id,
