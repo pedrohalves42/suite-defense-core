@@ -53,6 +53,7 @@ import SubscriptionAnalytics from "./pages/admin/SubscriptionAnalytics";
 import StripeSetup from "./pages/admin/StripeSetup";
 import AgentDiagnostics from "./pages/admin/AgentDiagnostics.tsx";
 import AgentTroubleshooting from "./pages/admin/AgentTroubleshooting";
+import BuildHealthDashboard from "./pages/admin/BuildHealthDashboard";
 import TenantInvites from "./pages/admin/tenant/TenantInvites";
 import TenantSecurity from "./pages/admin/tenant/TenantSecurity";
 import TenantLogs from "./pages/admin/tenant/TenantLogs";
@@ -136,6 +137,8 @@ const App = () => (
                 <Route path="security" element={<SecurityDashboard />} />
                 <Route path="audit-logs" element={<AuditLogs />} />
                 <Route path="settings" element={<Settings />} />
+                <Route path="agent-troubleshooting" element={<AgentTroubleshooting />} />
+                <Route path="build-health" element={<BuildHealthDashboard />} />
               </Route>
             </Route>
             
