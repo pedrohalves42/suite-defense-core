@@ -9,25 +9,81 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  const requestId = crypto.randomUUID();
+  
+  logger.info('[check-agent-name-availability] Function started', { 
+    timestamp: new Date().toISOString(), 
+    requestId,
+    method: req.method 
+  });
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Health check endpoint
+  if (req.method === 'GET') {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
+    const healthy = !!(supabaseUrl && supabaseServiceKey && anonKey);
+    
+    return new Response(
+      JSON.stringify({
+        status: healthy ? 'healthy' : 'unhealthy',
+        timestamp: new Date().toISOString(),
+        service: 'check-agent-name-availability',
+        checks: {
+          env_vars: healthy,
+          supabase_url: !!supabaseUrl,
+          service_role_key: !!supabaseServiceKey,
+          anon_key: !!anonKey
+        }
+      }),
+      {
+        status: healthy ? 200 : 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      logger.error('Missing Authorization header');
+    // Validate environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseKey || !supabaseServiceKey) {
+      logger.error('[check-agent-name-availability] CRITICAL: Missing environment variables', {
+        requestId,
+        hasUrl: !!supabaseUrl,
+        hasAnonKey: !!supabaseKey,
+        hasServiceKey: !!supabaseServiceKey
+      });
       return new Response(
         JSON.stringify({ 
           available: false,
-          reason: 'Não autorizado - faça login novamente' 
+          reason: 'Erro de configuração do servidor',
+          requestId
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      logger.error('[check-agent-name-availability] Missing Authorization header', { requestId });
+      return new Response(
+        JSON.stringify({ 
+          available: false,
+          reason: 'Não autorizado - faça login novamente',
+          requestId
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: {
         headers: { Authorization: authHeader },
