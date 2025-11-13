@@ -76,10 +76,13 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent credentials incomplete', 500, requestId);
     }
 
-    // 6. Generate PS1 content from serve-installer template
-    const agentScriptUrl = `${SUPABASE_URL}/agent-scripts/cybershield-agent-windows.ps1`;
-    const agentScriptResponse = await fetch(agentScriptUrl);
-    const agentScriptContent = await agentScriptResponse.text();
+    // 6. Read agent script from local file system
+    const scriptPath = new URL('../../public/agent-scripts/cybershield-agent-windows.ps1', import.meta.url).pathname;
+    const agentScriptContent = await Deno.readTextFile(scriptPath);
+    
+    if (!agentScriptContent || agentScriptContent.length < 1000) {
+      return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent script content is invalid', 500, requestId);
+    }
     
     // Calculate hash for validation
     const encoder = new TextEncoder();
