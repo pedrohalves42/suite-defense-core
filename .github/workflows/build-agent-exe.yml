@@ -69,40 +69,61 @@ jobs:
             exit 1
           }
           
-          # Compile to EXE
-          try {
-            ps2exe -InputFile $ps1Path `
-                   -OutputFile $outputName `
-                   -Title "CyberShield Agent Installer" `
-                   -Company "CyberShield" `
-                   -Version $version `
-                   -requireAdmin `
-                   -noConsole:$false `
-                   -ErrorAction Stop
-            
-            Write-Host "✓ EXE compiled successfully"
-          } catch {
-            Write-Error "Failed to compile: $_"
-            
-            # Send failure callback
-            $failurePayload = @{
-              build_id = $buildId
-              error = $_.Exception.Message
-              github_run_id = '${{ github.run_id }}'
-            } | ConvertTo-Json -Compress
+          # Compile to EXE with retry logic
+          $maxAttempts = 3
+          $attempt = 0
+          $success = $false
+          
+          while ($attempt -lt $maxAttempts -and -not $success) {
+            $attempt++
+            Write-Host "Compilation attempt $attempt of $maxAttempts..."
             
             try {
-              Invoke-RestMethod -Uri $callbackUrl `
-                -Method POST `
-                -Body $failurePayload `
-                -ContentType "application/json" `
-                -Headers @{ Authorization = "Bearer $callbackToken" } `
-                -ErrorAction Stop
+              ps2exe -InputFile $ps1Path `
+                     -OutputFile $outputName `
+                     -Title "CyberShield Agent Installer" `
+                     -Company "CyberShield" `
+                     -Version $version `
+                     -requireAdmin `
+                     -noConsole:$false `
+                     -ErrorAction Stop
+              
+              if (Test-Path $outputName) {
+                Write-Host "✓ EXE compiled successfully on attempt $attempt"
+                $success = $true
+              } else {
+                throw "EXE file was not generated"
+              }
             } catch {
-              Write-Warning "Failed to send failure callback: $_"
+              Write-Warning "Attempt $attempt failed: $_"
+              
+              if ($attempt -eq $maxAttempts) {
+                Write-Error "Failed after $maxAttempts attempts"
+                
+                # Send failure callback
+                $failurePayload = @{
+                  build_id = $buildId
+                  error = $_.Exception.Message
+                  attempts = $attempt
+                  github_run_id = '${{ github.run_id }}'
+                } | ConvertTo-Json -Compress
+                
+                try {
+                  Invoke-RestMethod -Uri $callbackUrl `
+                    -Method POST `
+                    -Body $failurePayload `
+                    -ContentType "application/json" `
+                    -Headers @{ Authorization = "Bearer $callbackToken" } `
+                    -ErrorAction Stop
+                } catch {
+                  Write-Warning "Failed to send failure callback: $_"
+                }
+                
+                exit 1
+              }
+              
+              Start-Sleep -Seconds (5 * $attempt)
             }
-            
-            exit 1
           }
           
           # Calculate hash

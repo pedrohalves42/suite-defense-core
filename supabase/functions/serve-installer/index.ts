@@ -135,9 +135,9 @@ try {
     Write-InstallLog "[4/8] Baixando script do agente..."
     
     # Conteúdo do script do agente (embedded)
-    $AgentContent = @'
+$AgentContent = @"
 {{AGENT_SCRIPT_CONTENT}}
-'@
+"@
 
     # Salvar script do agente
     Set-Content -Path $AgentScript -Value $AgentContent -Encoding UTF8 -Force
