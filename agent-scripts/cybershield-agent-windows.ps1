@@ -90,6 +90,20 @@ if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 }
 
+# ✅ FASE 2: Log de inicialização ANTES das funções
+Write-Log "========================================" "INFO"
+Write-Log "CyberShield Agent v3.0.0 Iniciando..." "INFO"
+Write-Log "========================================" "INFO"
+Write-Log "Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" "INFO"
+Write-Log "OS: $osName" "INFO"
+Write-Log "PowerShell: $($PSVersionTable.PSVersion)" "INFO"
+Write-Log "AgentToken: $($AgentToken.Substring(0,20))..." "INFO"
+Write-Log "HmacSecret Length: $($HmacSecret.Length) chars" "INFO"
+Write-Log "ServerUrl: $ServerUrl" "INFO"
+Write-Log "PollInterval: $PollInterval segundos" "INFO"
+Write-Log "Log Directory: $LogDir" "INFO"
+Write-Log "========================================" "INFO"
+
 #region Funções de Logging
 
 function Write-Log {
@@ -648,9 +662,14 @@ function Start-Agent {
     if (-not (Test-SystemHealth)) {
         Write-Log "CRITICAL: Health check failed. Cannot start agent." "ERROR"
         Write-Log "Please fix the issues above before continuing." "ERROR"
+        Write-Log "Troubleshooting:" "ERROR"
+        Write-Log "  1. Verifique conectividade: Test-NetConnection -Port 443" "ERROR"
+        Write-Log "  2. Valide credenciais no dashboard" "ERROR"
+        Write-Log "  3. Verifique firewall: Get-NetFirewallRule -DisplayName 'CyberShield Agent'" "ERROR"
         exit 1
     }
     
+    Write-Log "✅ Health check PASSOU - Agent está pronto para operar" "SUCCESS"
     Write-Log "Sending initial heartbeat..." "INFO"
     Send-Heartbeat | Out-Null
     
