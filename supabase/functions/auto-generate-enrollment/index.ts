@@ -29,6 +29,11 @@ Deno.serve(async (req) => {
 });
 
 async function handleRequest(req: Request, requestId: string, startTime: number) {
+  // ⚡ FASE 1.2: LOGS EXPLÍCITOS NO INÍCIO
+  logger.info(`[${requestId}] ========== REQUEST START ==========`);
+  logger.info(`[${requestId}] Method: ${req.method}`);
+  logger.info(`[${requestId}] URL: ${req.url}`);
+  logger.info(`[${requestId}] Headers: ${JSON.stringify(Object.fromEntries(req.headers))}`);
   
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -88,9 +93,9 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
     );
   }
 
-  // Top-level try-catch to ensure CORS headers are always returned
+    // Top-level try-catch to ensure CORS headers are always returned
   try {
-    logger.info(`[${requestId}] Starting auto-generate-enrollment request`, {
+    logger.info(`[${requestId}] Processing POST request for auto-generate-enrollment`, {
       timestamp: new Date().toISOString()
     });
 

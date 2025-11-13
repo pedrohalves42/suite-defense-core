@@ -72,7 +72,11 @@ export const logger = {
   /**
    * Success level - logs operation completion
    */
-  success: (message: string) => {
-    console.log(`[SUCCESS] ${message}`);
+  success: (message: string, data?: any) => {
+    if (isDev || forceLogging) {
+      console.log(`[SUCCESS] ${message}`, data);
+    } else {
+      console.log(`[SUCCESS] ${message}`);
+    }
   }
 };
