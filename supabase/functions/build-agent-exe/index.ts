@@ -12,14 +12,63 @@ const BUILD_GH_REPOSITORY = Deno.env.get('BUILD_GH_REPOSITORY'); // e.g., "usern
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   
+  console.log('[build-agent-exe] Function started', { 
+    timestamp: new Date().toISOString(), 
+    requestId,
+    method: req.method 
+  });
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Health check endpoint
+  if (req.method === 'GET') {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const ghToken = Deno.env.get('BUILD_GH_TOKEN');
+    const ghRepo = Deno.env.get('BUILD_GH_REPOSITORY');
+    
+    const healthy = !!(supabaseUrl && supabaseServiceKey && ghToken && ghRepo);
+    
+    return new Response(
+      JSON.stringify({
+        status: healthy ? 'healthy' : 'unhealthy',
+        timestamp: new Date().toISOString(),
+        service: 'build-agent-exe',
+        checks: {
+          env_vars: healthy,
+          supabase_url: !!supabaseUrl,
+          service_role_key: !!supabaseServiceKey,
+          github_token: !!ghToken,
+          github_repo: !!ghRepo
+        }
+      }),
+      {
+        status: healthy ? 200 : 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+
   try {
-    // 1. Authentication
+    // 1. Validate environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('[build-agent-exe] CRITICAL: Missing environment variables', {
+        requestId,
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseServiceKey
+      });
+      return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Server configuration error', 503, requestId);
+    }
+
+    // 2. Authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      logger.warn('Missing authorization header', { requestId });
       return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Authentication required', 401, requestId);
     }
 
