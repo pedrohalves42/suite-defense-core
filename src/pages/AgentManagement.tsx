@@ -44,35 +44,43 @@ export default function AgentManagement() {
   const [selectedAgentLogs, setSelectedAgentLogs] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const { data: agents, isLoading } = useQuery({
+  const { data: agents, isLoading } = useQuery<Agent[]>({
     queryKey: ['agents', tenant?.id, statusFilter],
     queryFn: async () => {
       if (!tenant?.id) return [];
 
       let query = supabase.from('agents').select('*').eq('tenant_id', tenant.id);
-      if (statusFilter !== 'all') query = query.eq('status', statusFilter);
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
 
-      const { data, error } = await query.order('enrolled_at', { ascending: false });
-      if (error) throw error;
-      return data as Agent[];
+      const result = await query.order('enrolled_at', { ascending: false });
+      if (result.error) throw result.error;
+      return (result.data || []) as Agent[];
     },
     enabled: !!tenant?.id,
   });
 
-  const { data: installationLogs, isLoading: isLoadingLogs } = useQuery({
+  const { data: installationLogs, isLoading: isLoadingLogs } = useQuery<any[] | null>({
     queryKey: ['installation-logs', selectedAgentLogs],
     queryFn: async () => {
       if (!selectedAgentLogs) return null;
-      const { data, error } = await supabase.from('installation_analytics').select('*').eq('agent_id', selectedAgentLogs).order('created_at', { ascending: false }).limit(20);
-      if (error) throw error;
-      return data;
+      
+      const result = await supabase
+        .from('installation_analytics')
+        .select('*')
+        .eq('agent_id', selectedAgentLogs)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      
+      if (result.error) throw result.error;
+      return result.data;
     },
     enabled: !!selectedAgentLogs,
   });
 
   const deleteAgentMutation = useMutation({
     mutationFn: async (agentId: string) => {
-      // Delete agent tokens first
       const { error: tokenError } = await supabase
         .from('agent_tokens')
         .delete()
@@ -80,7 +88,6 @@ export default function AgentManagement() {
 
       if (tokenError) throw tokenError;
 
-      // Delete the agent
       const { error } = await supabase
         .from('agents')
         .delete()
@@ -96,44 +103,6 @@ export default function AgentManagement() {
     onError: (error) => {
       logger.error('Error deleting agent', error);
       toast.error('Erro ao excluir agente');
-    },
-  });
-
-  const forceDeleteAgentMutation = useMutation({
-    mutationFn: async (agentId: string) => {
-      await supabase.from('jobs').delete().eq('agent_id', agentId);
-      await supabase.from('agent_system_metrics').delete().eq('agent_id', agentId);
-      await supabase.from('installation_analytics').delete().eq('agent_id', agentId);
-      await supabase.from('agent_tokens').delete().eq('agent_id', agentId);
-      await supabase.from('enrollment_keys').delete().eq('agent_id', agentId);
-      const { error } = await supabase.from('agents').delete().eq('id', agentId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success('Agente e dados excluídos');
-      setAgentToForceDelete(null);
-    },
-    onError: (error) => {
-      logger.error('Force delete error', error);
-      toast.error('Erro ao excluir');
-    },
-  });
-
-  const editAgentMutation = useMutation({
-    mutationFn: async ({ agentId, newName }: { agentId: string; newName: string }) => {
-      if (!newName || newName.trim().length < 3) throw new Error('Nome inválido');
-      const { error } = await supabase.from('agents').update({ agent_name: newName.trim() }).eq('id', agentId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success('Nome atualizado');
-      setAgentToEdit(null);
-      setEditedName('');
-    },
-    onError: (error) => {
-      toast.error(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     },
   });
 
