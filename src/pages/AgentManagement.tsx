@@ -100,9 +100,53 @@ export default function AgentManagement() {
       toast.success('Agente excluído com sucesso');
       setAgentToDelete(null);
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       logger.error('Error deleting agent', error);
       toast.error('Erro ao excluir agente');
+    },
+  });
+
+  const forceDeleteAgentMutation = useMutation({
+    mutationFn: async (agentId: string) => {
+      try {
+        await supabase.from('jobs').delete().match({ agent_id: agentId });
+        await supabase.from('agent_system_metrics').delete().match({ agent_id: agentId });
+        await supabase.from('installation_analytics').delete().match({ agent_id: agentId });
+        await supabase.from('agent_tokens').delete().match({ agent_id: agentId });
+        await supabase.from('enrollment_keys').delete().match({ agent_id: agentId });
+      } catch (err) {
+        logger.warn('Erro ao deletar dados relacionados (continuando)', err);
+      }
+      
+      const { error } = await supabase.from('agents').delete().match({ id: agentId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      toast.success('Agente e dados excluídos');
+      setAgentToForceDelete(null);
+    },
+    onError: (error: unknown) => {
+      logger.error('Force delete error', error);
+      toast.error('Erro ao excluir');
+    },
+  });
+
+  const editAgentMutation = useMutation({
+    mutationFn: async ({ agentId, newName }: { agentId: string; newName: string }) => {
+      if (!newName || newName.trim().length < 3) throw new Error('Nome inválido');
+      const { error } = await supabase.from('agents').update({ agent_name: newName.trim() }).eq('id', agentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      toast.success('Nome atualizado');
+      setAgentToEdit(null);
+      setEditedName('');
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error(`Erro: ${message}`);
     },
   });
 

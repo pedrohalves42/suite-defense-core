@@ -131,12 +131,14 @@ jobs:
             }
           }
           
-          # Calculate hash
-          $hash = (Get-FileHash $outputName -Algorithm SHA256).Hash.ToLower()
+          # FASE 3: Validação completa
+          if (-not (Test-Path $outputName)) { throw "EXE not found" }
           $size = (Get-Item $outputName).Length
-          
-          Write-Host "✓ Hash: $hash"
-          Write-Host "✓ Size: $size bytes"
+          if ($size -lt 500KB) { throw "EXE too small (<500KB)" }
+          $hash = (Get-FileHash $outputName -Algorithm SHA256).Hash.ToLower()
+          $fileBytes = [System.IO.File]::ReadAllBytes($outputName)
+          if ($fileBytes[0] -ne 77 -or $fileBytes[1] -ne 90) { throw "Invalid EXE header" }
+          Write-Host "✓ Validation passed - Hash: $hash, Size: $size bytes"
           
           # Convert to Base64
           $bytes = [System.IO.File]::ReadAllBytes($outputName)
