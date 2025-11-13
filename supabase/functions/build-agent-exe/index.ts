@@ -76,8 +76,8 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent credentials incomplete', 500, requestId);
     }
 
-    // 6. Read agent script from local file system
-    const scriptPath = new URL('../../public/agent-scripts/cybershield-agent-windows.ps1', import.meta.url).pathname;
+    // 6. Read agent script from _shared directory
+    const scriptPath = new URL('../_shared/agent-script-windows.ps1', import.meta.url).pathname;
     const agentScriptContent = await Deno.readTextFile(scriptPath);
     
     if (!agentScriptContent || agentScriptContent.length < 1000) {
