@@ -25,7 +25,7 @@ jobs:
           $ErrorActionPreference = "Stop"
           
           # Extract payload from webhook
-          $ps1Content = '${{ github.event.client_payload.ps1_content }}'
+          $ps1Base64 = '${{ github.event.client_payload.ps1_content_base64 }}'
           $outputName = '${{ github.event.client_payload.output_name }}'
           $version = '${{ github.event.client_payload.version }}'
           $buildId = '${{ github.event.client_payload.build_id }}'
@@ -35,10 +35,16 @@ jobs:
           Write-Host "Build ID: $buildId"
           Write-Host "Output: $outputName"
           
-          # Save PS1 to temp file
+          # Decode Base64 and save PS1 to temp file
           $ps1Path = "temp_installer.ps1"
-          $ps1Content | Out-File -FilePath $ps1Path -Encoding UTF8
-          Write-Host "✓ PS1 content saved"
+          try {
+            $ps1Bytes = [Convert]::FromBase64String($ps1Base64)
+            [System.IO.File]::WriteAllBytes($ps1Path, $ps1Bytes)
+            Write-Host "✓ PS1 content decoded from Base64 and saved"
+          } catch {
+            Write-Error "Failed to decode Base64 PS1 content: $_"
+            exit 1
+          }
           
           # Compile to EXE
           try {

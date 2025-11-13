@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
-import { Package, Download, Terminal, CheckCircle2, Monitor, Server, Loader2, Copy, AlertTriangle, Shield, Clock, FileCheck, BookOpen, HelpCircle, Zap } from "lucide-react";
+import { Package, Download, Terminal, CheckCircle2, Loader2, Copy, AlertTriangle, Shield, Clock, FileCheck, BookOpen, HelpCircle, Zap, ExternalLink, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
@@ -20,11 +21,11 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const enrollmentCircuitBreaker = new CircuitBreaker({
   failureThreshold: 3,
   successThreshold: 2,
-  timeout: 60000, // 1 minute
+  timeout: 60000,
   name: 'auto-generate-enrollment'
 });
 
-// Retry with exponential backoff: 2s, 4s, 8s
+// Retry with exponential backoff
 const retryWithBackoff = async <T,>(
   fn: () => Promise<T>,
   maxRetries = 3,
@@ -50,40 +51,42 @@ const retryWithBackoff = async <T,>(
 };
 
 const AgentInstaller = () => {
+  // Step 1: Configuration
   const [agentName, setAgentName] = useState("");
   const [platform, setPlatform] = useState<"windows" | "linux">("windows");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showCopyPaste, setShowCopyPaste] = useState(false);
-  const [installCommand, setInstallCommand] = useState("");
   const [agentNameError, setAgentNameError] = useState("");
+  
+  // Step 2: Generation states
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [lastEnrollmentKey, setLastEnrollmentKey] = useState<string | null>(null);
+  const [installCommand, setInstallCommand] = useState("");
   const [previewCredentials, setPreviewCredentials] = useState<{
     agentId?: string;
     expiresAt?: string;
   } | null>(null);
-  const [healthStatus, setHealthStatus] = useState<any>(null);
-  const [isTestingHealth, setIsTestingHealth] = useState(false);
-  const [circuitBreakerOpen, setCircuitBreakerOpen] = useState(false);
-
-  // EXE Build states
+  
+  // Step 3: EXE Build states
   const [exeBuildStatus, setExeBuildStatus] = useState<'idle' | 'building' | 'completed' | 'failed'>('idle');
   const [exeBuildId, setExeBuildId] = useState<string | null>(null);
   const [exeDownloadUrl, setExeDownloadUrl] = useState<string | null>(null);
   const [exeSha256, setExeSha256] = useState<string | null>(null);
   const [exeFileSize, setExeFileSize] = useState<number | null>(null);
-  const [lastEnrollmentKey, setLastEnrollmentKey] = useState<string | null>(null);
   const [githubActionsUrl, setGithubActionsUrl] = useState<string | null>(null);
+  const [pollAttempts, setPollAttempts] = useState(0);
+  
+  // Circuit breaker monitoring
+  const [circuitBreakerOpen, setCircuitBreakerOpen] = useState(false);
 
-  // Monitor circuit breaker state
+  // Monitor circuit breaker
   useEffect(() => {
     const interval = setInterval(() => {
       const state = enrollmentCircuitBreaker.getState();
       setCircuitBreakerOpen(state === CircuitState.OPEN);
     }, 1000);
-
     return () => clearInterval(interval);
   }, []);
 
-  // Validação em tempo real do nome do agente
+  // Real-time agent name validation
   useEffect(() => {
     if (!agentName) {
       setAgentNameError("");
@@ -104,69 +107,115 @@ const AgentInstaller = () => {
 
   const isNameValid = agentName.length >= 3 && agentName.length <= 50 && !/[^a-zA-Z0-9\-_]/.test(agentName);
 
-  const testBackendHealth = async () => {
-    setIsTestingHealth(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('auto-generate-enrollment', {
-        method: 'GET'
-      });
+  // Smart timeout for builds (3 min warning)
+  useEffect(() => {
+    if (exeBuildStatus === 'building') {
+      const timeout = setTimeout(() => {
+        toast.error('Build timeout - verifique GitHub Actions', {
+          description: 'O build demorou mais de 3 minutos',
+          action: githubActionsUrl ? {
+            label: 'Ver Logs',
+            onClick: () => window.open(githubActionsUrl, '_blank')
+          } : undefined
+        });
+        setExeBuildStatus('failed');
+      }, 180000); // 3 min
       
-      if (error) throw error;
-      setHealthStatus(data);
-      toast.success("Backend conectado!", {
-        description: `Status: ${data?.status || 'ok'}`
+      return () => clearTimeout(timeout);
+    }
+  }, [exeBuildStatus, githubActionsUrl]);
+
+  // Browser notification on completion
+  useEffect(() => {
+    if (exeBuildStatus === 'completed' && 'Notification' in window && Notification.permission === 'granted') {
+      new Notification('CyberShield', {
+        body: 'Instalador EXE pronto para download!',
+        requireInteraction: true
       });
+    }
+  }, [exeBuildStatus]);
+
+  const generateCredentials = async () => {
+    if (!isNameValid) {
+      toast.error("Nome do agente inválido");
+      return null;
+    }
+
+    const circuitState = enrollmentCircuitBreaker.getState();
+    if (circuitState === CircuitState.OPEN) {
+      throw new Error('Backend temporariamente indisponível. Aguarde alguns instantes.');
+    }
+
+    const { data: credentials, error: credError } = await retryWithBackoff(
+      () => enrollmentCircuitBreaker.execute(() => 
+        supabase.functions.invoke('auto-generate-enrollment', {
+          body: { agentName: agentName.trim() }
+        })
+      )
+    );
+
+    if (credError) throw credError;
+    if (!credentials) throw new Error("Nenhuma credencial retornada");
+
+    setPreviewCredentials({
+      agentId: credentials.agentId,
+      expiresAt: credentials.expiresAt
+    });
+    setLastEnrollmentKey(credentials.enrollmentKey);
+
+    return credentials;
+  };
+
+  const generateCopyPasteCommand = async () => {
+    setIsGenerating(true);
+    
+    try {
+      toast.info("Gerando comando one-click...");
+      const credentials = await generateCredentials();
+      if (!credentials) return;
+
+      const installUrl = `${SUPABASE_URL}/functions/v1/serve-installer/${credentials.enrollmentKey}`;
+      const command = platform === 'windows'
+        ? `irm ${installUrl} | iex`
+        : `curl -sL ${installUrl} | sudo bash`;
+
+      setInstallCommand(command);
+
+      await supabase.functions.invoke('track-installation-event', {
+        body: {
+          agent_name: agentName.trim(),
+          event_type: 'generated',
+          platform: platform,
+          installation_method: 'one_click'
+        }
+      }).catch(err => logger.error('Failed to track event', err));
+
+      toast.success("✅ Comando gerado!", {
+        description: "Copie e execute no servidor"
+      });
+
     } catch (error: any) {
-      logger.error('Health check error', error);
-      toast.error("Erro de conexão", {
-        description: error?.message || "Backend não está respondendo"
-      });
-      setHealthStatus({ error: error?.message });
+      logger.error('Generate command error', error);
+      const errorMessage = error?.message || "Erro desconhecido";
+      const requestId = error?.context?.requestId;
+      
+      let description = errorMessage;
+      if (requestId) description += ` (ID: ${requestId})`;
+      
+      toast.error("Erro ao gerar comando", { description, duration: 6000 });
     } finally {
-      setIsTestingHealth(false);
+      setIsGenerating(false);
     }
   };
 
   const generateInstaller = async () => {
-    if (!isNameValid) {
-      toast.error("Nome do agente inválido");
-      return;
-    }
-
     setIsGenerating(true);
     
     try {
-      // 1. Gerar credenciais através do auto-generate-enrollment com retry e circuit breaker
-      toast.info("Gerando credenciais do agente...");
-      
-      // Check circuit breaker state
-      const circuitState = enrollmentCircuitBreaker.getState();
-      if (circuitState === CircuitState.OPEN) {
-        throw new Error('Backend temporariamente indisponível. Aguarde alguns instantes e tente novamente.');
-      }
+      toast.info("Gerando instalador para download...");
+      const credentials = await generateCredentials();
+      if (!credentials) return;
 
-      const { data: credentials, error: credError } = await retryWithBackoff(
-        () => enrollmentCircuitBreaker.execute(() => 
-          supabase.functions.invoke('auto-generate-enrollment', {
-            body: { agentName: agentName.trim() }
-          })
-        )
-      );
-
-      if (credError) throw credError;
-      if (!credentials) throw new Error("Nenhuma credencial foi retornada");
-
-      setPreviewCredentials({
-        agentId: credentials.agentId,
-        expiresAt: credentials.expiresAt
-      });
-
-      // Armazenar enrollment key para uso posterior
-      setLastEnrollmentKey(credentials.enrollmentKey);
-
-      toast.success("Credenciais geradas com sucesso!");
-
-      // 2. Baixar template da plataforma
       const templatePath = platform === 'windows' 
         ? '/templates/install-windows-template.ps1'
         : '/templates/install-linux-template.sh';
@@ -175,7 +224,6 @@ const AgentInstaller = () => {
         ? '/agent-scripts/cybershield-agent-windows.ps1'
         : '/agent-scripts/cybershield-agent-linux.sh';
 
-      toast.info("Baixando templates...");
       const [templateResponse, agentScriptResponse] = await Promise.all([
         fetch(templatePath),
         fetch(agentScriptPath)
@@ -188,8 +236,6 @@ const AgentInstaller = () => {
       let templateContent = await templateResponse.text();
       const agentScriptContent = await agentScriptResponse.text();
 
-      // 3. Substituir placeholders no template
-      toast.info("Configurando instalador...");
       templateContent = templateContent
         .replace(/\{\{AGENT_TOKEN\}\}/g, credentials.agentToken)
         .replace(/\{\{HMAC_SECRET\}\}/g, credentials.hmacSecret)
@@ -197,7 +243,6 @@ const AgentInstaller = () => {
         .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, agentScriptContent)
         .replace(/\{\{TIMESTAMP\}\}/g, new Date().toISOString());
 
-      // 4. Criar arquivo para download
       const fileName = platform === 'windows'
         ? `install-${agentName}-windows.ps1`
         : `install-${agentName}-linux.sh`;
@@ -212,7 +257,6 @@ const AgentInstaller = () => {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      // Track download event
       await supabase.functions.invoke('track-installation-event', {
         body: {
           agent_name: agentName.trim(),
@@ -220,136 +264,27 @@ const AgentInstaller = () => {
           platform: platform,
           installation_method: 'download'
         }
-      }).catch(err => logger.error('Failed to track download event', err));
+      }).catch(err => logger.error('Failed to track event', err));
 
-      toast.success(`✅ Instalador gerado e baixado com sucesso!`, {
-        description: `Arquivo: ${fileName}`
-      });
+      toast.success(`✅ Instalador baixado: ${fileName}`);
 
     } catch (error: any) {
-      logger.error('Erro ao gerar instalador', error);
-      
-      // Extract detailed error information
+      logger.error('Generate installer error', error);
       const errorMessage = error?.message || "Erro desconhecido";
       const requestId = error?.context?.requestId;
-      const details = error?.context?.details;
       
       let description = errorMessage;
       if (requestId) description += ` (ID: ${requestId})`;
-      if (details) description += `\n${details}`;
       
-      toast.error("Erro ao gerar instalador", {
-        description,
-        duration: 6000
-      });
+      toast.error("Erro ao gerar instalador", { description, duration: 6000 });
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const generateCopyPasteCommand = async () => {
-    if (!isNameValid) {
-      toast.error("Nome do agente inválido");
-      return;
-    }
-
-    setIsGenerating(true);
-    
-    try {
-      // Gerar credenciais e enrollment key com retry e circuit breaker
-      toast.info("Gerando link temporário...");
-      
-      // Check circuit breaker state
-      const circuitState = enrollmentCircuitBreaker.getState();
-      if (circuitState === CircuitState.OPEN) {
-        throw new Error('Backend temporariamente indisponível. Aguarde alguns instantes e tente novamente.');
-      }
-
-      const { data: credentials, error: credError } = await retryWithBackoff(
-        () => enrollmentCircuitBreaker.execute(() =>
-          supabase.functions.invoke('auto-generate-enrollment', {
-            body: { agentName: agentName.trim() }
-          })
-        )
-      );
-
-      if (credError) throw credError;
-      if (!credentials) throw new Error("Nenhuma credencial foi retornada");
-
-      setPreviewCredentials({
-        agentId: credentials.agentId,
-        expiresAt: credentials.expiresAt
-      });
-
-      // Armazenar enrollment key para uso posterior
-      setLastEnrollmentKey(credentials.enrollmentKey);
-
-      // Gerar comando copy-paste com o enrollment key
-      const installUrl = `${SUPABASE_URL}/functions/v1/serve-installer/${credentials.enrollmentKey}`;
-      
-      const command = platform === 'windows'
-        ? `irm ${installUrl} | iex`
-        : `curl -sL ${installUrl} | sudo bash`;
-
-      setInstallCommand(command);
-      setShowCopyPaste(true);
-
-      // Track generation event
-      await supabase.functions.invoke('track-installation-event', {
-        body: {
-          agent_name: agentName.trim(),
-          event_type: 'generated',
-          platform: platform,
-          installation_method: 'one_click'
-        }
-      }).catch(err => logger.error('Failed to track generation event', err));
-
-      toast.success("Comando gerado com sucesso!", {
-        description: "Copie e cole no servidor para instalar"
-      });
-
-    } catch (error: any) {
-      logger.error('Erro ao gerar comando', error);
-      
-      // Extract detailed error information
-      const errorMessage = error?.message || "Erro desconhecido";
-      const requestId = error?.context?.requestId;
-      const details = error?.context?.details;
-      
-      let description = errorMessage;
-      if (requestId) description += ` (ID: ${requestId})`;
-      if (details) description += `\n${details}`;
-      
-      toast.error("Erro ao gerar comando", {
-        description,
-        duration: 6000
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const copyToClipboard = async () => {
-    navigator.clipboard.writeText(installCommand);
-    
-    // Track copy event
-    await supabase.functions.invoke('track-installation-event', {
-      body: {
-        agent_name: agentName.trim(),
-        event_type: 'command_copied',
-        platform: platform,
-        installation_method: 'one_click'
-      }
-    }).catch(err => logger.error('Failed to track copy event', err));
-    
-    toast.success("Comando copiado!", {
-      description: "Cole no terminal do servidor"
-    });
   };
 
   const handleBuildExe = async () => {
     if (!isNameValid || !lastEnrollmentKey) {
-      toast.error('Gere as credenciais primeiro clicando em "Generate Installer" ou "Generate Command"');
+      toast.error('Gere credenciais primeiro (clique em "Gerar Comando" ou "Baixar Script")');
       return;
     }
 
@@ -359,7 +294,9 @@ const AgentInstaller = () => {
     setExeSha256(null);
     setExeFileSize(null);
     setGithubActionsUrl(null);
-    toast.info('Iniciando build do instalador EXE... Aguarde 2-3 minutos');
+    setPollAttempts(0);
+    
+    toast.info('🚀 Iniciando build do EXE... Aguarde 2-3 minutos');
 
     try {
       const { data, error } = await supabase.functions.invoke('build-agent-exe', {
@@ -377,14 +314,15 @@ const AgentInstaller = () => {
 
       logger.info('Build initiated', { build_id, agent_name: agentName.trim(), github_actions_url });
 
-      // Start polling for build status (every 5 seconds)
-      let pollAttempts = 0;
-      const maxPollAttempts = 60; // 5 min timeout (60 * 5s)
+      // Poll for build status
+      let attempts = 0;
+      const maxAttempts = 60; // 5 min timeout
       
       const pollInterval = setInterval(async () => {
-        pollAttempts++;
+        attempts++;
+        setPollAttempts(attempts);
         
-        if (pollAttempts > maxPollAttempts) {
+        if (attempts > maxAttempts) {
           clearInterval(pollInterval);
           setExeBuildStatus('failed');
           toast.error('Timeout: Build demorou mais de 5 minutos');
@@ -403,12 +341,11 @@ const AgentInstaller = () => {
             return;
           }
 
-          // Update GitHub Actions URL if available
           if (buildData.github_run_url && !githubActionsUrl) {
             setGithubActionsUrl(buildData.github_run_url);
           }
 
-          logger.info('Poll attempt', { attempt: pollAttempts, status: buildData.build_status });
+          logger.info('Poll attempt', { attempt: attempts, status: buildData.build_status });
 
           if (buildData.build_status === 'completed') {
             clearInterval(pollInterval);
@@ -418,25 +355,23 @@ const AgentInstaller = () => {
             setExeFileSize(buildData.file_size_bytes);
             
             const duration = buildData.build_duration_seconds || 0;
-            toast.success(`✅ EXE gerado com sucesso em ${duration}s!`, {
-              description: 'Clique em Download para baixar o instalador'
+            toast.success(`✅ EXE gerado em ${duration}s!`, {
+              description: 'Clique em Download para baixar'
             });
           } else if (buildData.build_status === 'failed') {
             clearInterval(pollInterval);
             setExeBuildStatus('failed');
-            toast.error(`Falha ao gerar EXE: ${buildData.error_message || 'Unknown error'}`);
+            toast.error(`Falha: ${buildData.error_message || 'Erro desconhecido'}`);
           }
         } catch (pollErr) {
           logger.error('Poll exception', pollErr);
         }
-      }, 5000); // Poll every 5 seconds
+      }, 5000);
 
     } catch (error: any) {
       logger.error('Build EXE failed', error);
       setExeBuildStatus('failed');
-      
-      const errorMessage = error?.message || 'Erro desconhecido';
-      toast.error(`Erro ao gerar EXE: ${errorMessage}`);
+      toast.error(`Erro ao gerar EXE: ${error?.message || 'Erro desconhecido'}`);
     }
   };
 
@@ -451,35 +386,46 @@ const AgentInstaller = () => {
 
       if (error) {
         logger.error('Manual refresh error', error);
-        toast.error('Erro ao atualizar status do build');
+        toast.error('Erro ao atualizar status');
         return;
       }
 
-      // Update GitHub Actions URL if available
-      if (buildData.github_run_url && !githubActionsUrl) {
-        setGithubActionsUrl(buildData.github_run_url);
-      }
+      if (buildData.github_run_url) setGithubActionsUrl(buildData.github_run_url);
 
       if (buildData.build_status === 'completed') {
         setExeBuildStatus('completed');
         setExeDownloadUrl(buildData.download_url);
         setExeSha256(buildData.sha256_hash);
         setExeFileSize(buildData.file_size_bytes);
-        const duration = buildData.build_duration_seconds || 0;
-        toast.success(`✅ EXE gerado com sucesso em ${duration}s!`);
+        toast.success(`✅ EXE pronto!`);
       } else if (buildData.build_status === 'failed') {
         setExeBuildStatus('failed');
-        toast.error(`Falha ao gerar EXE: ${buildData.error_message || 'Unknown error'}`);
+        toast.error(`Falha: ${buildData.error_message}`);
       } else {
         toast.info('Build ainda em execução...');
       }
     } catch (e) {
-      logger.error('Manual refresh exception', e);
+      logger.error('Refresh exception', e);
     }
   };
 
+  const copyToClipboard = async () => {
+    await navigator.clipboard.writeText(installCommand);
+    
+    await supabase.functions.invoke('track-installation-event', {
+      body: {
+        agent_name: agentName.trim(),
+        event_type: 'command_copied',
+        platform: platform,
+        installation_method: 'one_click'
+      }
+    }).catch(err => logger.error('Failed to track copy', err));
+    
+    toast.success("✅ Comando copiado!");
+  };
+
   return (
-    <div className="container mx-auto p-6 max-w-5xl space-y-6">
+    <div className="container mx-auto p-6 max-w-5xl space-y-8">
       {/* Header */}
       <div className="flex items-center gap-4">
         <div className="p-3 bg-primary/10 rounded-lg">
@@ -488,717 +434,378 @@ const AgentInstaller = () => {
         <div>
           <h1 className="text-3xl font-bold">Gerador de Instaladores CyberShield</h1>
           <p className="text-muted-foreground">
-            Instalação simplificada em 1 comando - sem configuração manual
+            Instalação simplificada em 3 passos - sem configuração manual
           </p>
         </div>
       </div>
 
-      {/* Alert de Nova Funcionalidade */}
-      <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-        <Zap className="h-4 w-4 text-green-600" />
-        <AlertDescription className="text-green-800 dark:text-green-200">
-          <strong>✨ Instalação One-Click:</strong> Agora você pode instalar o agente em 1 comando! 
-          Credenciais são geradas automaticamente e configuradas no instalador.
-        </AlertDescription>
-      </Alert>
-
-      {/* Circuit Breaker Alert */}
+      {/* Circuit Breaker Warning */}
       {circuitBreakerOpen && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Backend Temporariamente Indisponível</AlertTitle>
           <AlertDescription>
-            <strong>⚠️ Backend Temporariamente Indisponível:</strong> O sistema detectou múltiplas falhas.
-            Aguarde alguns instantes antes de tentar novamente. O serviço será restaurado automaticamente.
+            O sistema está em modo de proteção devido a múltiplas falhas. Aguarde alguns instantes e tente novamente.
           </AlertDescription>
         </Alert>
       )}
 
-      <Tabs defaultValue="generator" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="generator">
-            <Zap className="h-4 w-4 mr-2" />
-            Gerar Instalador
-          </TabsTrigger>
-          <TabsTrigger value="tutorial">
-            <BookOpen className="h-4 w-4 mr-2" />
-            Tutorial
-          </TabsTrigger>
-          <TabsTrigger value="faq">
-            <HelpCircle className="h-4 w-4 mr-2" />
-            FAQ
-          </TabsTrigger>
-        </TabsList>
+      {/* STEP 1: Configure Agent */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge variant="outline" className="rounded-full w-8 h-8 flex items-center justify-center">1</Badge>
+            Configurar Agente
+          </CardTitle>
+          <CardDescription>
+            Defina um nome único e escolha a plataforma
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="agentName">Nome do Agente</Label>
+            <Input
+              id="agentName"
+              placeholder="ex: servidor-web-01"
+              value={agentName}
+              onChange={(e) => setAgentName(e.target.value)}
+              disabled={isGenerating || exeBuildStatus === 'building'}
+            />
+            {agentNameError && (
+              <p className={`text-sm ${agentNameError.startsWith('✓') ? 'text-green-600' : 'text-destructive'}`}>
+                {agentNameError}
+              </p>
+            )}
+          </div>
 
-        {/* TAB 1: GERADOR */}
-        <TabsContent value="generator" className="space-y-6">
-          {/* Pré-requisitos */}
-          <Card className="border-blue-500 bg-blue-50 dark:bg-blue-950">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-blue-600" />
-                Pré-requisitos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
-                  <p className="font-semibold">Windows:</p>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>• Windows Server 2012+ ou Windows 10/11</li>
-                    <li>• PowerShell 5.1 ou superior</li>
-                    <li>• Privilégios de Administrador</li>
-                    <li>• Conexão com a internet</li>
-                  </ul>
-                </div>
-                <div className="space-y-2">
-                  <p className="font-semibold">Linux:</p>
-                  <ul className="space-y-1 text-muted-foreground">
-                    <li>• Ubuntu 18.04+, Debian 10+, CentOS 7+</li>
-                    <li>• Bash 4.0 ou superior</li>
-                    <li>• Acesso root (sudo)</li>
-                    <li>• Conexão com a internet</li>
-                  </ul>
-                </div>
+          <div className="space-y-2">
+            <Label>Plataforma</Label>
+            <RadioGroup value={platform} onValueChange={(v: any) => setPlatform(v)} disabled={isGenerating || exeBuildStatus === 'building'}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="windows" id="windows" />
+                <Label htmlFor="windows" className="cursor-pointer">Windows (PowerShell)</Label>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Formulário de Geração */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurar Novo Agente</CardTitle>
-              <CardDescription>
-                Informe o nome do agente e escolha a plataforma
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Nome do Agente com Validação */}
-              <div className="space-y-2">
-                <Label htmlFor="agentName">Nome do Agente *</Label>
-                <Input
-                  id="agentName"
-                  placeholder="ex: servidor-web-01, backup-server, database-prod"
-                  value={agentName}
-                  onChange={(e) => setAgentName(e.target.value)}
-                  disabled={isGenerating}
-                  className={agentNameError.includes("❌") ? "border-red-500" : agentNameError.includes("✓") ? "border-green-500" : ""}
-                />
-                {agentNameError && (
-                  <p className={`text-xs ${agentNameError.includes("❌") ? "text-red-600" : agentNameError.includes("⚠️") ? "text-yellow-600" : "text-green-600"}`}>
-                    {agentNameError}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Use apenas letras, números, hífens (-) e underscores (_)
-                </p>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="linux" id="linux" />
+                <Label htmlFor="linux" className="cursor-pointer">Linux (Bash)</Label>
               </div>
+            </RadioGroup>
+          </div>
 
-              {/* Plataforma */}
-              <div className="space-y-3">
-                <Label>Plataforma *</Label>
-                <RadioGroup 
-                  value={platform} 
-                  onValueChange={(value) => setPlatform(value as "windows" | "linux")}
-                  disabled={isGenerating}
-                >
-                  <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-accent transition-colors">
-                    <RadioGroupItem value="windows" id="windows" />
-                    <Label htmlFor="windows" className="flex items-center gap-2 flex-1 cursor-pointer">
-                      <Monitor className="h-4 w-4" />
-                      <div>
-                        <div className="font-semibold">Windows</div>
-                        <div className="text-xs text-muted-foreground">
-                          Windows Server 2012+, Windows 10/11
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="ml-auto">PowerShell</Badge>
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-accent transition-colors">
-                    <RadioGroupItem value="linux" id="linux" />
-                    <Label htmlFor="linux" className="flex items-center gap-2 flex-1 cursor-pointer">
-                      <Server className="h-4 w-4" />
-                      <div>
-                        <div className="font-semibold">Linux</div>
-                        <div className="text-xs text-muted-foreground">
-                          Ubuntu, Debian, CentOS, RHEL
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="ml-auto">Bash</Badge>
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
+          {previewCredentials && (
+            <Alert>
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertTitle>Credenciais Geradas</AlertTitle>
+              <AlertDescription className="space-y-1 text-xs">
+                <div>Agent ID: <code className="bg-muted px-1 rounded">{previewCredentials.agentId?.slice(0, 16)}...</code></div>
+                <div>Expira em: <code className="bg-muted px-1 rounded">{new Date(previewCredentials.expiresAt!).toLocaleString()}</code></div>
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
 
-              {/* Preview de Credenciais */}
-              {previewCredentials && (
-                <Alert className="border-primary">
-                  <Shield className="h-4 w-4" />
-                  <AlertDescription>
-                    <div className="space-y-1">
-                      <p className="font-semibold">Credenciais Geradas:</p>
-                      <p className="text-xs font-mono">Agent ID: {previewCredentials.agentId}</p>
-                      <p className="text-xs flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Expira em: {new Date(previewCredentials.expiresAt!).toLocaleString()}
-                      </p>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
+      {/* STEP 2: Choose Installation Method */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Badge variant="outline" className="rounded-full w-8 h-8 flex items-center justify-center">2</Badge>
+            Escolher Método de Instalação
+          </CardTitle>
+          <CardDescription>
+            Selecione como deseja instalar o agente no servidor
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="one-click" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="one-click">
+                <Zap className="h-4 w-4 mr-2" />
+                Comando One-Click
+              </TabsTrigger>
+              <TabsTrigger value="download">
+                <Download className="h-4 w-4 mr-2" />
+                Baixar Script
+              </TabsTrigger>
+              <TabsTrigger value="exe-build">
+                <FileCheck className="h-4 w-4 mr-2" />
+                Build EXE
+              </TabsTrigger>
+            </TabsList>
 
-              {/* Health Check Button */}
-              <div className="mb-4">
-                <Button 
-                  onClick={testBackendHealth}
-                  disabled={isTestingHealth}
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                >
-                  {isTestingHealth ? (
-                    <>
-                      <Loader2 className="h-3 w-3 mr-2 animate-spin" />
-                      Testando...
-                    </>
-                  ) : (
-                    <>
-                      <Shield className="h-3 w-3 mr-2" />
-                      Testar Conexão Backend
-                    </>
-                  )}
-                </Button>
-                {healthStatus && (
-                  <Alert className={`mt-2 ${healthStatus.error ? 'border-red-500 bg-red-50' : 'border-green-500 bg-green-50'}`}>
-                    <AlertDescription className="text-xs font-mono">
-                      {JSON.stringify(healthStatus, null, 2)}
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-
-              {/* Botões de Gerar */}
-              <div className="space-y-3">
-                <Button
-                  onClick={generateCopyPasteCommand} 
-                  disabled={isGenerating || !isNameValid}
-                  className="w-full"
-                  size="lg"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Gerando...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="h-4 w-4 mr-2" />
-                      Gerar Comando One-Click (Recomendado)
-                    </>
-                  )}
-                </Button>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                      Ou baixe o instalador
-                    </span>
-                  </div>
-                </div>
-
-                <Button 
-                  onClick={generateInstaller} 
-                  disabled={isGenerating || !isNameValid}
-                  variant="outline"
-                  className="w-full"
-                  size="lg"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Gerando...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="h-4 w-4 mr-2" />
-                      Baixar Instalador (.ps1/.sh)
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* EXE Build Section */}
-              <div className="rounded-lg border border-primary/20 p-4 space-y-4">
-                <div>
-                  <div className="text-base font-semibold flex items-center gap-2">
-                    <Package className="h-5 w-5 text-primary" />
-                    Gerar Instalador EXE (One-Click Build)
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Compile o instalador PowerShell em um executável Windows (.exe) pronto para distribuição.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-4 flex-wrap">
-                  <Button
-                    onClick={handleBuildExe}
-                    disabled={exeBuildStatus === 'building' || !lastEnrollmentKey}
-                    className="flex items-center gap-2"
-                    size="lg"
-                  >
-                    {exeBuildStatus === 'building' ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Gerando EXE...
-                      </>
-                    ) : (
-                      <>
-                        <Package className="h-4 w-4" />
-                        Gerar Instalador EXE
-                      </>
-                    )}
-                  </Button>
-
-                  {exeBuildStatus === 'completed' && exeDownloadUrl && (
-                    <Button
-                      onClick={() => window.open(exeDownloadUrl, '_blank')}
-                      variant="default"
-                      className="flex items-center gap-2"
-                      size="lg"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download EXE ({exeFileSize ? `${(exeFileSize / 1024 / 1024).toFixed(1)} MB` : ''})
-                    </Button>
-                  )}
-
-                  {exeBuildStatus === 'failed' && (
-                    <div className="flex items-center gap-2 text-destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span className="text-sm font-medium">Falha no build</span>
-                    </div>
-                  )}
-                </div>
-
-                {!lastEnrollmentKey && (
-                  <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>
-                      Você precisa gerar as credenciais primeiro clicando em "Generate Installer" ou "Generate Command" acima.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* Status em andamento + botão de atualização manual */}
-                {exeBuildStatus === 'building' && (
-                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-sm text-primary">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Build em progresso... Isso pode levar 2-3 minutos.</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      O instalador está sendo compilado em um ambiente seguro GitHub Actions. Você será notificado quando concluir.
-                    </p>
-                    {exeBuildId && (
-                      <p className="text-xs text-muted-foreground">
-                        Build ID: <code className="font-mono">{exeBuildId}</code>
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Button onClick={refreshBuildStatus} variant="outline" size="sm">
-                        <Shield className="h-3 w-3 mr-2" />
-                        Atualizar status agora
-                      </Button>
-                      {githubActionsUrl && (
-                        <Button 
-                          onClick={() => window.open(githubActionsUrl, '_blank')}
-                          variant="outline" 
-                          size="sm"
-                          className="flex items-center gap-2"
-                        >
-                          <Terminal className="h-3 w-3" />
-                          Ver logs no GitHub Actions
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Detalhes quando concluído */}
-                {exeSha256 && (
-                  <div className="rounded-lg bg-muted p-4 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-medium">Hash SHA256 (para validação):</div>
-                      <FileCheck className="h-4 w-4 text-green-600" />
-                    </div>
-                    <code className="text-xs break-all block font-mono">{exeSha256}</code>
-                    {exeFileSize && (
-                      <div className="text-xs text-muted-foreground">
-                        Tamanho: {(exeFileSize / 1024 / 1024).toFixed(2)} MB
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {exeBuildStatus === 'completed' && (
-                  <Alert className="bg-green-50 dark:bg-green-950 border-green-200">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800 dark:text-green-200">
-                      <strong>✅ Build Concluído!</strong> O instalador EXE está pronto para download. O link expira em 24 horas.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-
-              {/* Comando Copy-Paste */}
-              {showCopyPaste && installCommand && (
-                <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-                  <Terminal className="h-4 w-4 text-green-600" />
-                  <AlertDescription>
-                    <div className="space-y-3">
-                      <div>
-                        <strong className="block mb-2 text-green-800 dark:text-green-200">
-                          ✨ Comando pronto para usar:
-                        </strong>
-                        <div className="relative">
-                          <pre className="bg-muted p-3 rounded text-sm overflow-x-auto font-mono">
-                            {installCommand}
-                          </pre>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="absolute top-2 right-2"
-                            onClick={copyToClipboard}
-                          >
-                            <Copy className="h-4 w-4 mr-1" />
-                            Copiar
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="text-sm space-y-2">
-                        <p className="font-semibold">Como usar:</p>
-                        <ol className="list-decimal list-inside space-y-1 text-xs">
-                          <li>Copie o comando acima</li>
-                          <li>Abra {platform === 'windows' ? 'PowerShell como Administrador' : 'terminal como root'} no servidor</li>
-                          <li>Cole e pressione Enter</li>
-                          <li>Aguarde a instalação automática (≈30 segundos)</li>
-                        </ol>
-                      </div>
-                      <Alert className="bg-yellow-50 dark:bg-yellow-950 border-yellow-500">
-                        <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                        <AlertDescription className="text-xs text-yellow-800 dark:text-yellow-200">
-                          <strong>Segurança:</strong> O link expira em 24 horas. Não compartilhe este comando.
-                        </AlertDescription>
-                      </Alert>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-
-
-          {/* CORREÇÃO: Card de validação removido - função não utilizada */}
-        </TabsContent>
-
-        {/* TAB 2: TUTORIAL */}
-        <TabsContent value="tutorial" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tutorial Passo-a-Passo</CardTitle>
-              <CardDescription>
-                Siga este guia para instalar o agente sem erros
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    1
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-2">Configure o Agente</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Na aba "Gerar Instalador", informe um nome descritivo para o agente (ex: servidor-web-01) e selecione a plataforma (Windows ou Linux).
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    2
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-2">Gere o Comando One-Click (Recomendado)</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Clique em "Gerar Comando One-Click" para obter um comando pronto para copiar e colar. Este é o método mais fácil e rápido.
-                    </p>
-                    <Alert className="mt-2 bg-green-50 dark:bg-green-950 border-green-500">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <AlertDescription className="text-xs">
-                        <strong>Vantagem:</strong> Instalação em 1 comando, sem downloads ou edição de arquivos.
-                      </AlertDescription>
-                    </Alert>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    3
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-2">Execute no Servidor</h3>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Copie o comando gerado e execute no servidor de destino:
-                    </p>
-                    <div className="bg-muted p-3 rounded text-xs space-y-2">
-                      <p><strong>Windows:</strong> Abra PowerShell como Administrador e cole o comando</p>
-                      <p><strong>Linux:</strong> Abra terminal como root (sudo) e cole o comando</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold">
-                    4
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-2">Aguarde a Instalação</h3>
-                    <p className="text-sm text-muted-foreground">
-                      O processo leva aproximadamente 30 segundos. Você verá mensagens de progresso no terminal.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
-                    ✓
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-2">Verifique no Dashboard</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Após alguns segundos, o agente aparecerá no Dashboard de Monitoramento enviando heartbeats e métricas.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
+            <TabsContent value="one-click" className="space-y-4 mt-4">
               <Alert>
-                <BookOpen className="h-4 w-4" />
-                <AlertDescription className="space-y-2">
-                  <p className="font-semibold">Documentação Adicional:</p>
-                  <div className="flex flex-col gap-1 text-sm">
-                    <Button variant="link" className="p-0 h-auto justify-start" asChild>
-                      <a href="/docs/exe-build" target="_blank" rel="noopener noreferrer">
-                        📖 Como compilar instalador para EXE (Windows)
-                      </a>
-                    </Button>
-                  </div>
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Instalação Instantânea</AlertTitle>
+                <AlertDescription>
+                  Gere um comando temporário que instala o agente automaticamente. Válido por 24h.
                 </AlertDescription>
               </Alert>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        {/* TAB 3: FAQ */}
-        <TabsContent value="faq" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Perguntas Frequentes (FAQ)</CardTitle>
-              <CardDescription>
-                Respostas para dúvidas comuns sobre instalação e uso
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="faq-1">
-                  <AccordionTrigger>Como instalar sem ser técnico?</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm mb-2">Use o método "Comando One-Click":</p>
-                    <ol className="list-decimal list-inside text-sm space-y-1 ml-2">
-                      <li>Preencha o nome do agente</li>
-                      <li>Clique em "Gerar Comando One-Click"</li>
-                      <li>Copie o comando que aparece</li>
-                      <li>No servidor, clique com botão direito no PowerShell/Terminal e selecione "Colar"</li>
-                      <li>Pressione Enter e aguarde</li>
-                    </ol>
-                    <p className="text-sm mt-2 text-muted-foreground">
-                      Não precisa editar arquivos ou entender código!
-                    </p>
-                  </AccordionContent>
-                </AccordionItem>
+              <Button 
+                onClick={generateCopyPasteCommand} 
+                disabled={!isNameValid || isGenerating || circuitBreakerOpen}
+                className="w-full"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Terminal className="h-4 w-4 mr-2" />
+                    Gerar Comando
+                  </>
+                )}
+              </Button>
 
-                <AccordionItem value="faq-2">
-                  <AccordionTrigger>O que fazer se der erro na instalação?</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="text-sm space-y-2">
-                      <p><strong>1. Verifique privilégios:</strong></p>
-                      <ul className="list-disc list-inside ml-4">
-                        <li>Windows: Execute como Administrador</li>
-                        <li>Linux: Use sudo ou root</li>
-                      </ul>
-                      <p><strong>2. Verifique conectividade:</strong></p>
-                      <ul className="list-disc list-inside ml-4">
-                        <li>Teste: <code className="bg-muted px-1">ping google.com</code></li>
-                        <li>Firewall pode estar bloqueando</li>
-                      </ul>
-                      <p><strong>3. Verifique PowerShell (Windows):</strong></p>
-                      <ul className="list-disc list-inside ml-4">
-                        <li>Execute: <code className="bg-muted px-1">$PSVersionTable</code></li>
-                        <li>Versão deve ser 5.1 ou superior</li>
-                      </ul>
-                      <p className="mt-2">
-                        <strong>Ainda com problemas?</strong> Contate o suporte:
-                      </p>
-                      <ul className="list-disc list-inside ml-4">
-                        <li>Email: gamehousetecnologia@gmail.com</li>
-                        <li>WhatsApp: (34) 98443-2835</li>
-                      </ul>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
+              {installCommand && (
+                <div className="space-y-2">
+                  <Label>Comando de Instalação</Label>
+                  <div className="flex gap-2">
+                    <Input value={installCommand} readOnly className="font-mono text-xs" />
+                    <Button onClick={copyToClipboard} variant="outline" size="icon">
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Cole este comando no terminal do servidor como administrador
+                  </p>
+                </div>
+              )}
+            </TabsContent>
 
-                <AccordionItem value="faq-3">
-                  <AccordionTrigger>Como validar se o agente está funcionando?</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="text-sm space-y-2">
-                      <p><strong>Método 1: Dashboard (Recomendado)</strong></p>
-                      <ul className="list-disc list-inside ml-4">
-                        <li>Acesse Dashboard de Monitoramento</li>
-                        <li>Verifique se o agente aparece com status "online"</li>
-                        <li>Confirme heartbeats e métricas sendo recebidos</li>
-                      </ul>
-                      <p><strong>Método 2: Script de Validação (Windows)</strong></p>
-                      <ul className="list-disc list-inside ml-4">
-                        <li>Baixe o script de validação na aba "Gerar Instalador"</li>
-                        <li>Execute: <code className="bg-muted px-1">.\post-installation-validation.ps1</code></li>
-                        <li>Aguarde o relatório completo de testes</li>
-                      </ul>
-                      <p><strong>Método 3: Logs Manuais</strong></p>
-                      <ul className="list-disc list-inside ml-4">
-                        <li>Windows: <code className="bg-muted px-1">Get-Content C:\CyberShield\logs\agent.log -Tail 50</code></li>
-                        <li>Linux: <code className="bg-muted px-1">tail -f /opt/cybershield/logs/agent.log</code></li>
-                      </ul>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
+            <TabsContent value="download" className="space-y-4 mt-4">
+              <Alert>
+                <Download className="h-4 w-4" />
+                <AlertTitle>Download Manual</AlertTitle>
+                <AlertDescription>
+                  Baixe o script de instalação completo para executar manualmente no servidor.
+                </AlertDescription>
+              </Alert>
 
-                <AccordionItem value="faq-4">
-                  <AccordionTrigger>O link do comando expira?</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm mb-2">
-                      Sim, por segurança o link expira em <strong>24 horas</strong>.
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Se você precisar instalar depois de 24h, basta gerar um novo comando. 
-                      Isso evita que links antigos sejam usados indevidamente.
-                    </p>
-                  </AccordionContent>
-                </AccordionItem>
+              <Button 
+                onClick={generateInstaller} 
+                disabled={!isNameValid || isGenerating || circuitBreakerOpen}
+                className="w-full"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar Script {platform === 'windows' ? '.ps1' : '.sh'}
+                  </>
+                )}
+              </Button>
+            </TabsContent>
 
-                <AccordionItem value="faq-5">
-                  <AccordionTrigger>Posso usar o mesmo comando em vários servidores?</AccordionTrigger>
-                  <AccordionContent>
-                    <p className="text-sm mb-2">
-                      <strong>Não recomendado.</strong> Cada servidor deve ter seu próprio agente com nome único.
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Gere um comando separado para cada servidor com nomes descritivos diferentes 
-                      (ex: web-01, web-02, database-01). Isso facilita identificação e gerenciamento.
-                    </p>
-                  </AccordionContent>
-                </AccordionItem>
+            <TabsContent value="exe-build" className="space-y-4 mt-4">
+              <Alert>
+                <FileCheck className="h-4 w-4" />
+                <AlertTitle>Build Automático de EXE</AlertTitle>
+                <AlertDescription>
+                  Gera um instalador Windows .exe através do GitHub Actions. Processo leva 2-3 minutos.
+                </AlertDescription>
+              </Alert>
 
-                <AccordionItem value="faq-6">
-                  <AccordionTrigger>Quanto tempo leva a instalação?</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="text-sm space-y-2">
-                      <p><strong>Tempo médio: 30 segundos</strong></p>
-                      <p>Etapas:</p>
-                      <ul className="list-disc list-inside ml-4 space-y-1">
-                        <li>Download do agente: ~5 segundos</li>
-                        <li>Configuração de segurança: ~10 segundos</li>
-                        <li>Criação de tarefas/serviços: ~10 segundos</li>
-                        <li>Primeiro heartbeat: ~5 segundos</li>
-                      </ul>
-                      <p className="text-muted-foreground mt-2">
-                        Pode variar conforme velocidade da internet e recursos do servidor.
-                      </p>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
+              <Button 
+                onClick={handleBuildExe} 
+                disabled={!isNameValid || !lastEnrollmentKey || exeBuildStatus === 'building' || circuitBreakerOpen}
+                className="w-full"
+              >
+                {exeBuildStatus === 'building' ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Buildando... ({pollAttempts}/60)
+                  </>
+                ) : (
+                  <>
+                    <FileCheck className="h-4 w-4 mr-2" />
+                    Build EXE no GitHub Actions
+                  </>
+                )}
+              </Button>
 
-                <AccordionItem value="faq-7">
-                  <AccordionTrigger>Como desinstalar o agente?</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="text-sm space-y-2">
-                      <p><strong>Windows:</strong></p>
-                      <code className="block bg-muted p-2 rounded">
-                        Unregister-ScheduledTask -TaskName "CyberShield Agent" -Confirm:$false<br/>
-                        Remove-Item -Path "C:\CyberShield" -Recurse -Force
-                      </code>
-                      <p><strong>Linux:</strong></p>
-                      <code className="block bg-muted p-2 rounded">
-                        sudo systemctl stop cybershield-agent<br/>
-                        sudo systemctl disable cybershield-agent<br/>
-                        sudo rm -rf /opt/cybershield
-                      </code>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              {!lastEnrollmentKey && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    Gere as credenciais primeiro usando "Gerar Comando" ou "Baixar Script"
+                  </AlertDescription>
+                </Alert>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
 
-      {/* O que acontece após a instalação */}
-      <Card className="border-primary">
+      {/* STEP 3: Track Build Status */}
+      {exeBuildStatus !== 'idle' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Badge variant="outline" className="rounded-full w-8 h-8 flex items-center justify-center">3</Badge>
+              Status do Build
+            </CardTitle>
+            <CardDescription>
+              Acompanhe o progresso da geração do executável
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {exeBuildStatus === 'building' && (
+              <div className="space-y-3">
+                <Progress value={(pollAttempts / 60) * 100} className="h-2" />
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Tentativa {pollAttempts}/60 (timeout em {Math.max(0, 5 - Math.floor(pollAttempts / 12))} min)
+                  </span>
+                  <Button onClick={refreshBuildStatus} variant="ghost" size="sm">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Atualizar
+                  </Button>
+                </div>
+
+                {githubActionsUrl && (
+                  <Alert>
+                    <Shield className="h-4 w-4" />
+                    <AlertTitle>Build em Progresso</AlertTitle>
+                    <AlertDescription className="space-y-2">
+                      <p>O instalador está sendo compilado no GitHub Actions.</p>
+                      <Button onClick={() => window.open(githubActionsUrl, '_blank')} variant="outline" size="sm">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Ver Logs no GitHub Actions
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {pollAttempts > 20 && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Build Demorando Mais Que o Esperado</AlertTitle>
+                    <AlertDescription>
+                      O build geralmente leva 2-3 minutos. Verifique os logs do GitHub Actions para detalhes.
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            )}
+
+            {exeBuildStatus === 'completed' && (
+              <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertTitle className="text-green-800 dark:text-green-200">Build Concluído!</AlertTitle>
+                <AlertDescription className="space-y-3">
+                  <div className="space-y-1 text-sm text-green-700 dark:text-green-300">
+                    <div>SHA256: <code className="bg-green-100 dark:bg-green-900 px-1 rounded text-xs">{exeSha256?.slice(0, 16)}...</code></div>
+                    <div>Tamanho: <code className="bg-green-100 dark:bg-green-900 px-1 rounded text-xs">{(exeFileSize! / 1024 / 1024).toFixed(2)} MB</code></div>
+                  </div>
+                  <Button onClick={() => window.open(exeDownloadUrl!, '_blank')} className="w-full">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Instalador EXE
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {exeBuildStatus === 'failed' && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Build Falhou</AlertTitle>
+                <AlertDescription className="space-y-2">
+                  <p>Ocorreu um erro durante a compilação do executável.</p>
+                  {githubActionsUrl && (
+                    <Button onClick={() => window.open(githubActionsUrl, '_blank')} variant="outline" size="sm">
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Ver Logs de Erro
+                    </Button>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tutorial Section */}
+      <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-primary" />
-            O que acontece após a instalação?
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5" />
+            Tutorial Rápido
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 gap-4 text-sm">
-            <div className="space-y-2">
-              <p className="font-semibold">Monitoramento Automático:</p>
-              <ul className="space-y-1 text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  Heartbeats a cada 60 segundos
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  Métricas (CPU/RAM/Disco) a cada 5 minutos
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  Alertas automáticos se recursos &gt; 80%
-                </li>
-              </ul>
-            </div>
-            <div className="space-y-2">
-              <p className="font-semibold">Recursos Disponíveis:</p>
-              <ul className="space-y-1 text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  Dashboard em tempo real
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  Execução remota de jobs
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
-                  Histórico de atividades e logs
-                </li>
-              </ul>
-            </div>
-          </div>
+          <Accordion type="single" collapsible>
+            <AccordionItem value="tutorial">
+              <AccordionTrigger>Como instalar o agente?</AccordionTrigger>
+              <AccordionContent className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Badge className="rounded-full">1</Badge>
+                    <div>
+                      <p className="font-medium">Configure o nome e plataforma</p>
+                      <p className="text-sm text-muted-foreground">Escolha um nome único (ex: servidor-web-01)</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Badge className="rounded-full">2</Badge>
+                    <div>
+                      <p className="font-medium">Escolha o método de instalação</p>
+                      <p className="text-sm text-muted-foreground">One-Click é o mais rápido, EXE é o mais portável</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Badge className="rounded-full">3</Badge>
+                    <div>
+                      <p className="font-medium">Execute no servidor</p>
+                      <p className="text-sm text-muted-foreground">Abra PowerShell/Bash como Admin e cole o comando</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Badge className="rounded-full">4</Badge>
+                    <div>
+                      <p className="font-medium">Aguarde a confirmação</p>
+                      <p className="text-sm text-muted-foreground">O agente aparecerá na lista de agentes em até 1 minuto</p>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="faq-methods">
+              <AccordionTrigger>Qual método de instalação escolher?</AccordionTrigger>
+              <AccordionContent className="space-y-3">
+                <div>
+                  <p className="font-medium">Comando One-Click</p>
+                  <p className="text-sm text-muted-foreground">✅ Mais rápido | ⚠️ Requer internet no servidor</p>
+                </div>
+                <div>
+                  <p className="font-medium">Baixar Script</p>
+                  <p className="text-sm text-muted-foreground">✅ Funciona offline | ⚠️ Requer copiar arquivo manualmente</p>
+                </div>
+                <div>
+                  <p className="font-medium">Build EXE</p>
+                  <p className="text-sm text-muted-foreground">✅ Executável portável | ⚠️ Leva 2-3 minutos para gerar</p>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="faq-security">
+              <AccordionTrigger>É seguro?</AccordionTrigger>
+              <AccordionContent>
+                <p className="text-sm text-muted-foreground">
+                  Sim! O instalador valida o SHA256 do script antes de executar, protegendo contra ataques MITM.
+                  As credenciais expiram em 24h e são únicas para cada agente.
+                </p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </CardContent>
       </Card>
     </div>
