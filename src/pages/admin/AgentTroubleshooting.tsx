@@ -27,12 +27,50 @@ export default function AgentTroubleshooting() {
   const { data: problematicAgents, isLoading, refetch } = useQuery({
     queryKey: ["problematic-agents"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .rpc("get_problematic_agents")
-        .returns<ProblematicAgent[]>();
+      // Buscar agentes em pending sem heartbeat há mais de 5 minutos
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      
+      const { data: agents, error: agentsError } = await supabase
+        .from('agents')
+        .select('id, agent_name, status, enrolled_at, last_heartbeat')
+        .eq('status', 'pending')
+        .is('last_heartbeat', null)
+        .lt('enrolled_at', fiveMinutesAgo)
+        .order('enrolled_at', { ascending: false });
 
-      if (error) throw error;
-      return data || [];
+      if (agentsError) throw agentsError;
+      if (!agents) return [];
+
+      // Buscar telemetria de instalação para esses agentes
+      const agentIds = agents.map(a => a.id);
+      if (agentIds.length === 0) return [];
+
+      const { data: analytics } = await supabase
+        .from('installation_analytics')
+        .select('agent_id, metadata')
+        .eq('event_type', 'post_installation')
+        .in('agent_id', agentIds);
+
+      // Combinar dados
+      const result: ProblematicAgent[] = agents.map(agent => {
+        const agentAnalytics = analytics?.find(a => a.agent_id === agent.id);
+        const minutesSince = Math.floor((Date.now() - new Date(agent.enrolled_at).getTime()) / 60000);
+        
+        const metadata = agentAnalytics?.metadata as any || {};
+        
+        return {
+          id: agent.id,
+          agent_name: agent.agent_name,
+          status: agent.status,
+          created_at: agent.enrolled_at,
+          minutes_since_creation: minutesSince,
+          installation_success: metadata?.success ?? null,
+          network_connectivity: metadata?.network_tests?.health_check_passed ?? null,
+          metadata: metadata
+        };
+      });
+
+      return result;
     },
     refetchInterval: 30000, // Atualizar a cada 30s
   });
