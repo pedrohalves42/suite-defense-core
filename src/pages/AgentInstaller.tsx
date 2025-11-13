@@ -106,6 +106,15 @@ const AgentInstaller = () => {
   // FASE 1.1: Health check do GitHub
   const [githubHealthy, setGithubHealthy] = useState<boolean | null>(null);
   
+  // FASE 2.2: Estados de progresso detalhado
+  const [buildProgress, setBuildProgress] = useState({
+    preparing: false,
+    dispatching: false,
+    compiling: false,
+    uploading: false,
+    completed: false
+  });
+  
   // Step 2: Generation states
   const [isGenerating, setIsGenerating] = useState(false);
   const [lastEnrollmentKey, setLastEnrollmentKey] = useState<string | null>(null);
@@ -697,6 +706,43 @@ const AgentInstaller = () => {
     }
   };
 
+  // FASE 2.1: Gerar credenciais + build EXE em um clique
+  const handleGenerateExeDirectly = async () => {
+    if (!isNameValid) {
+      toast.error('Informe um nome válido para o agente');
+      return;
+    }
+
+    // FASE 1.1: Verificar health do GitHub
+    if (githubHealthy === false) {
+      toast.error('❌ GitHub não configurado. Contate o administrador.');
+      return;
+    }
+
+    try {
+      // FASE 2.2: Progresso - Preparando
+      setBuildProgress({ preparing: true, dispatching: false, compiling: false, uploading: false, completed: false });
+      toast.info('🔐 Gerando credenciais...');
+      
+      // Se não tem enrollment_key, gerar automaticamente
+      if (!lastEnrollmentKey) {
+        const credentials = await generateCredentials();
+        if (!credentials) {
+          setBuildProgress({ preparing: false, dispatching: false, compiling: false, uploading: false, completed: false });
+          return;
+        }
+      }
+
+      // Iniciar build EXE
+      await handleBuildExe();
+    } catch (error: any) {
+      logger.error('[Build] Erro ao gerar instalador', error);
+      toast.error(`Erro: ${error.message}`);
+      setExeBuildStatus('idle');
+      setBuildProgress({ preparing: false, dispatching: false, compiling: false, uploading: false, completed: false });
+    }
+  };
+
   const handleBuildExe = async () => {
     if (!isNameValid || !lastEnrollmentKey) {
       toast.error('Gere credenciais primeiro (clique em "Gerar Comando" ou "Baixar Script")');
@@ -1190,31 +1236,55 @@ const AgentInstaller = () => {
                 </AlertDescription>
               </Alert>
 
+              {/* FASE 1.1: Alerta de GitHub não configurado */}
+              {githubHealthy === false && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>GitHub Não Configurado</AlertTitle>
+                  <AlertDescription>
+                    O build automático requer configuração do GitHub. Contate o administrador do sistema.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* FASE 2.1: Botão simplificado - gera credenciais + build em um clique */}
               <Button 
-                onClick={handleBuildExe} 
-                disabled={!isNameValid || !lastEnrollmentKey || exeBuildStatus === 'building' || circuitBreakerOpen}
+                onClick={handleGenerateExeDirectly} 
+                disabled={!isNameValid || exeBuildStatus === 'building' || circuitBreakerOpen || githubHealthy === false}
                 className="w-full"
+                size="lg"
               >
                 {exeBuildStatus === 'building' ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Buildando... ({pollAttempts}/60)
+                    Compilando... ({pollAttempts}/60)
                   </>
                 ) : (
                   <>
-                    <FileCheck className="h-4 w-4 mr-2" />
-                    Build EXE no GitHub Actions
+                    <Zap className="h-5 w-5 mr-2" />
+                    Gerar Instalador EXE (2-3 minutos)
                   </>
                 )}
               </Button>
+              
+              <p className="text-sm text-muted-foreground text-center">
+                Gera automaticamente credenciais e compila instalador executável
+              </p>
 
-              {!lastEnrollmentKey && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    Gere as credenciais primeiro usando "Gerar Comando" ou "Baixar Script"
-                  </AlertDescription>
-                </Alert>
+              {/* Opção avançada: build manual (para quem já tem credenciais) */}
+              {lastEnrollmentKey && exeBuildStatus !== 'building' && (
+                <div className="mt-4 p-3 border rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground mb-2">Opção Avançada:</p>
+                  <Button 
+                    onClick={handleBuildExe} 
+                    disabled={!isNameValid || !lastEnrollmentKey || circuitBreakerOpen}
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                  >
+                    Rebuildar EXE com credenciais existentes
+                  </Button>
+                </div>
               )}
             </TabsContent>
           </Tabs>
@@ -1236,31 +1306,89 @@ const AgentInstaller = () => {
           <CardContent className="space-y-4">
             {exeBuildStatus === 'building' && (
               <div className="space-y-3">
-                <Progress value={(pollAttempts / 60) * 100} className="h-2" />
+                {/* FASE 2.2: UI de progresso detalhado */}
+                <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/30">
+                  <CardContent className="pt-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">1. Preparando build</span>
+                      {buildProgress.preparing ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">2. Enviando para GitHub Actions</span>
+                      {buildProgress.dispatching ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      ) : buildProgress.preparing ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                      ) : (
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">3. Compilando PS1 → EXE</span>
+                      {buildProgress.compiling ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      ) : buildProgress.dispatching ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600 animate-pulse" />
+                      ) : (
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">4. Fazendo upload para storage</span>
+                      {buildProgress.uploading ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      ) : buildProgress.compiling ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                      ) : (
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">5. Finalizando</span>
+                      {buildProgress.completed ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    
+                    <Progress value={(pollAttempts / 60) * 100} className="mt-4" />
+                    <p className="text-xs text-center text-muted-foreground">
+                      Progresso: {pollAttempts}/60 verificações ({Math.round((pollAttempts / 60) * 100)}%)
+                      {retryCount > 0 && ` • Retry ${retryCount}/${MAX_RETRIES}`}
+                    </p>
+                    
+                    {githubActionsUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => window.open(githubActionsUrl, '_blank')}
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Ver build no GitHub Actions
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+                
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
-                    Tentativa {pollAttempts}/60 (timeout em {Math.max(0, 5 - Math.floor(pollAttempts / 12))} min)
-                    {retryCount > 0 && ` • Retry ${retryCount}/${MAX_RETRIES}`}
+                    Timeout em {Math.max(0, 5 - Math.floor(pollAttempts / 12))} min
                   </span>
                   <Button onClick={refreshBuildStatus} variant="ghost" size="sm">
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Atualizar
                   </Button>
                 </div>
-
-                {githubActionsUrl && (
-                  <Alert>
-                    <Shield className="h-4 w-4" />
-                    <AlertTitle>Build em Progresso</AlertTitle>
-                    <AlertDescription className="space-y-2">
-                      <p>O instalador está sendo compilado no GitHub Actions.</p>
-                      <Button onClick={() => window.open(githubActionsUrl, '_blank')} variant="outline" size="sm">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Ver Logs no GitHub Actions
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                )}
 
                 {pollAttempts > 20 && (
                   <Alert variant="destructive">
@@ -1269,8 +1397,63 @@ const AgentInstaller = () => {
                     <AlertDescription>
                       O build geralmente leva 2-3 minutos. Verifique os logs do GitHub Actions para detalhes.
                     </AlertDescription>
+              </Alert>
+            )}
+            
+            {/* FASE 4: Card de fallback manual */}
+            {(exeBuildStatus !== 'building' && exeBuildStatus !== 'completed') && (
+              <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
+                    <AlertTriangle className="h-5 w-5" />
+                    Build Falhando? Compile Manualmente
+                  </CardTitle>
+                  <CardDescription>
+                    Se o build automático não funcionar, você pode compilar o instalador localmente
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <ol className="list-decimal list-inside space-y-2 text-sm">
+                    <li>
+                      Baixe o script PS1 na aba "Download Manual" acima
+                    </li>
+                    <li>
+                      Instale ps2exe no PowerShell (como admin):
+                      <code className="block mt-1 p-2 bg-white dark:bg-gray-900 rounded text-xs font-mono">
+                        Install-Module -Name ps2exe -Force
+                      </code>
+                    </li>
+                    <li>
+                      Compile para EXE:
+                      <code className="block mt-1 p-2 bg-white dark:bg-gray-900 rounded text-xs font-mono">
+                        ps2exe -InputFile installer.ps1 -OutputFile installer.exe -requireAdmin
+                      </code>
+                    </li>
+                    <li>
+                      Execute o installer.exe como administrador no servidor Windows
+                    </li>
+                  </ol>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => window.open('/docs/BUILD_WINDOWS_INSTALLER.md', '_blank')}
+                  >
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    Ver guia completo de compilação manual
+                  </Button>
+                  
+                  <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                    <HelpCircle className="h-4 w-4 text-blue-600" />
+                    <AlertTitle className="text-blue-800 dark:text-blue-200">Dica</AlertTitle>
+                    <AlertDescription className="text-blue-700 dark:text-blue-300 text-xs">
+                      A compilação manual é útil para ambientes offline ou com restrições de firewall que bloqueiam GitHub Actions.
+                    </AlertDescription>
                   </Alert>
-                )}
+                </CardContent>
+              </Card>
+            )}
               </div>
             )}
 
