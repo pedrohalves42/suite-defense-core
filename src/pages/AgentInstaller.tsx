@@ -228,6 +228,87 @@ const AgentInstaller = () => {
     }
   }, [exeBuildStatus, exeDownloadUrl, agentName, exeBuildId]);
 
+  // Função para baixar e verificar integridade SHA256 do EXE
+  const downloadAndVerifyExe = async () => {
+    if (!exeDownloadUrl || !exeSha256) {
+      toast.error("Informações de download incompletas");
+      return;
+    }
+
+    try {
+      toast.info("🔒 Baixando e verificando integridade...", { duration: Infinity });
+
+      // Download do arquivo
+      const response = await fetch(exeDownloadUrl);
+      if (!response.ok) throw new Error("Falha ao baixar arquivo");
+
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+
+      // Calcular SHA256 do arquivo baixado
+      const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const calculatedHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      // Comparar hashes
+      if (calculatedHash.toLowerCase() !== exeSha256.toLowerCase()) {
+        toast.dismiss();
+        toast.error("❌ FALHA DE SEGURANÇA: Hash SHA256 não corresponde!", {
+          description: `Esperado: ${exeSha256.slice(0, 16)}...\nRecebido: ${calculatedHash.slice(0, 16)}...`,
+          duration: Infinity,
+        });
+
+        // Log de segurança
+        logger.error('SHA256 mismatch detected', {
+          expected: exeSha256,
+          calculated: calculatedHash,
+          buildId: exeBuildId,
+          agentName
+        });
+
+        // Enviar alerta de segurança
+        await supabase.functions.invoke('send-security-alert', {
+          body: {
+            alertType: 'integrity_failure',
+            severity: 'critical',
+            details: {
+              expected_hash: exeSha256,
+              calculated_hash: calculatedHash,
+              build_id: exeBuildId,
+              agent_name: agentName,
+              download_url: exeDownloadUrl
+            }
+          }
+        }).catch(err => logger.error('Failed to send security alert', err));
+
+        return;
+      }
+
+      // Hash válido - prosseguir com download
+      toast.dismiss();
+      toast.success("✅ Integridade verificada! Iniciando download...");
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cybershield-agent-${agentName}.exe`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("📥 Download concluído com segurança!");
+
+    } catch (error: any) {
+      toast.dismiss();
+      toast.error("Erro ao verificar integridade", {
+        description: error.message,
+        duration: 6000
+      });
+      logger.error('Download verification error', error);
+    }
+  };
+
   const generateCredentials = async () => {
     if (!isNameValid) {
       toast.error("Nome do agente inválido");
@@ -834,15 +915,39 @@ const AgentInstaller = () => {
             {exeBuildStatus === 'completed' && (
               <Alert id="exe-download" className="border-green-500 bg-green-50 dark:bg-green-950">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <AlertTitle className="text-green-800 dark:text-green-200">✅ Build Concluído!</AlertTitle>
+                <AlertTitle className="text-green-800 dark:text-green-200">✅ Build Concluído com Segurança!</AlertTitle>
                 <AlertDescription className="space-y-3">
-                  <div className="space-y-1 text-sm text-green-700 dark:text-green-300">
-                    <div>SHA256: <code className="bg-green-100 dark:bg-green-900 px-1 rounded text-xs">{exeSha256?.slice(0, 16)}...</code></div>
-                    <div>Tamanho: <code className="bg-green-100 dark:bg-green-900 px-1 rounded text-xs">{(exeFileSize! / 1024 / 1024).toFixed(2)} MB</code></div>
+                  <div className="space-y-2 p-3 bg-green-100 dark:bg-green-900 rounded-md">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-green-800 dark:text-green-200">🔒 Verificação de Integridade</span>
+                      <Badge variant="outline" className="bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 border-green-400">
+                        SHA-256
+                      </Badge>
+                    </div>
+                    <div className="space-y-1 text-xs text-green-700 dark:text-green-300 font-mono">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate">{exeSha256?.slice(0, 32)}...</span>
+                        <Button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(exeSha256!);
+                            toast.success("Hash copiado!");
+                          }}
+                          variant="ghost" 
+                          size="sm"
+                          className="h-6 px-2"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <div>Tamanho: <strong>{(exeFileSize! / 1024 / 1024).toFixed(2)} MB</strong></div>
+                    </div>
+                    <p className="text-xs text-green-600 dark:text-green-400 italic">
+                      ✓ O download será validado automaticamente antes da instalação
+                    </p>
                   </div>
-                  <Button onClick={() => window.open(exeDownloadUrl!, '_blank')} className="w-full">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Instalador EXE
+                  <Button onClick={downloadAndVerifyExe} className="w-full bg-green-600 hover:bg-green-700">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Download Seguro com Validação SHA-256
                   </Button>
                 </AlertDescription>
               </Alert>
