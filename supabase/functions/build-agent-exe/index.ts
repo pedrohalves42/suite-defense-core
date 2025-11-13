@@ -629,83 +629,101 @@ try {
     let triggerSuccess = false;
     let triggerMethod = '';
 
-    // Try repository_dispatch first
-    try {
-      logger.info(`[${requestId}] ⚡ FASE 3: Preparando GitHub dispatch`, {
-        build_id: buildRecord.id,
-        repository: BUILD_GH_REPOSITORY,
-        hasToken: !!BUILD_GH_TOKEN,
-        tokenLength: BUILD_GH_TOKEN?.length || 0
-      });
-      
-      const dispatchUrl = `https://api.github.com/repos/${BUILD_GH_REPOSITORY}/dispatches`;
-      
-      logger.info(`[${requestId}] Enviando repository_dispatch para GitHub`, {
-        url: dispatchUrl,
-        event_type: 'build-agent-exe'
-      });
-      
-      const dispatchResponse = await fetch(dispatchUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${BUILD_GH_TOKEN}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'CyberShield-Agent-Builder',
-          'X-GitHub-Api-Version': '2022-11-28'
-        },
-        body: JSON.stringify({
-          event_type: 'build-agent-exe',
-          client_payload: workflowPayload
-        })
-      });
+    // ⚡ FASE 1.3: Retry automático com exponential backoff
+    const maxDispatchRetries = 3;
+    let dispatchAttempt = 0;
+    let lastError = '';
 
-      if (dispatchResponse.ok || dispatchResponse.status === 204) {
-        triggerSuccess = true;
-        triggerMethod = 'repository_dispatch';
-        logger.success(`[${requestId}] ✅ GitHub dispatch SUCESSO`, {
+    // Try repository_dispatch with retry
+    while (!triggerSuccess && dispatchAttempt < maxDispatchRetries) {
+      dispatchAttempt++;
+      
+      try {
+        logger.info(`[${requestId}] ⚡ FASE 1.3: GitHub dispatch (tentativa ${dispatchAttempt}/${maxDispatchRetries})`, {
           build_id: buildRecord.id,
-          status: dispatchResponse.status,
-          method: 'repository_dispatch'
-        });
-      } else {
-        const errorText = await dispatchResponse.text();
-        logger.error(`[${requestId}] ❌ GitHub dispatch FALHOU`, { 
-          status: dispatchResponse.status,
-          statusText: dispatchResponse.statusText,
-          error: errorText, 
-          headers: Object.fromEntries(dispatchResponse.headers)
+          repository: BUILD_GH_REPOSITORY,
+          hasToken: !!BUILD_GH_TOKEN,
+          tokenLength: BUILD_GH_TOKEN?.length || 0
         });
         
-        // ⚡ FASE 3: Marcar build como failed imediatamente
-        await serviceRoleClient
-          .from('agent_builds')
-          .update({
-            build_status: 'failed',
-            build_completed_at: new Date().toISOString(),
-            error_message: `GitHub dispatch failed (${dispatchResponse.status}): ${errorText}`
+        const dispatchUrl = `https://api.github.com/repos/${BUILD_GH_REPOSITORY}/dispatches`;
+        
+        logger.info(`[${requestId}] Enviando repository_dispatch para GitHub`, {
+          url: dispatchUrl,
+          event_type: 'build-agent-exe',
+          attempt: dispatchAttempt
+        });
+        
+        const dispatchResponse = await fetch(dispatchUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${BUILD_GH_TOKEN}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'CyberShield-Agent-Builder',
+            'X-GitHub-Api-Version': '2022-11-28'
+          },
+          body: JSON.stringify({
+            event_type: 'build-agent-exe',
+            client_payload: workflowPayload
           })
-          .eq('id', buildRecord.id);
+        });
+
+        if (dispatchResponse.ok || dispatchResponse.status === 204) {
+          triggerSuccess = true;
+          triggerMethod = 'repository_dispatch';
+          logger.success(`[${requestId}] ✅ GitHub dispatch SUCESSO na tentativa ${dispatchAttempt}`, {
+            build_id: buildRecord.id,
+            status: dispatchResponse.status,
+            method: 'repository_dispatch',
+            attempts: dispatchAttempt
+          });
+          break;
+        } else {
+          const errorText = await dispatchResponse.text();
+          lastError = `Status ${dispatchResponse.status}: ${errorText}`;
+          logger.warn(`[${requestId}] ⚠ Tentativa ${dispatchAttempt} falhou`, { 
+            status: dispatchResponse.status,
+            statusText: dispatchResponse.statusText,
+            error: errorText
+          });
           
-        logger.warn(`[${requestId}] Tentando fallback para workflow_dispatch...`);
+          // Se não for a última tentativa, aguardar antes de retry (exponential backoff)
+          if (dispatchAttempt < maxDispatchRetries) {
+            const backoffMs = 2000 * dispatchAttempt; // 2s, 4s, 6s
+            logger.info(`[${requestId}] Aguardando ${backoffMs}ms antes do próximo retry...`);
+            await new Promise(resolve => setTimeout(resolve, backoffMs));
+          }
+        }
+      } catch (dispatchError: any) {
+        lastError = dispatchError.message;
+        logger.error(`[${requestId}] ❌ repository_dispatch exception (tentativa ${dispatchAttempt})`, { 
+          error: dispatchError.message,
+          stack: dispatchError.stack
+        });
+        
+        // Se não for a última tentativa, aguardar antes de retry
+        if (dispatchAttempt < maxDispatchRetries) {
+          const backoffMs = 2000 * dispatchAttempt;
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+        }
       }
-    } catch (dispatchError: any) {
-      logger.error(`[${requestId}] ❌ repository_dispatch exception`, { 
-        error: dispatchError.message,
-        stack: dispatchError.stack
-      });
+    }
+
+    // Se todas as tentativas falharam, marcar como failed
+    if (!triggerSuccess) {
+      logger.error(`[${requestId}] ❌ Todas as ${maxDispatchRetries} tentativas de dispatch falharam`);
       
-      // ⚡ FASE 3: Marcar build como failed imediatamente
       await serviceRoleClient
         .from('agent_builds')
         .update({
           build_status: 'failed',
           build_completed_at: new Date().toISOString(),
-          error_message: `GitHub dispatch exception: ${dispatchError.message}`
+          error_message: `GitHub dispatch failed after ${maxDispatchRetries} attempts: ${lastError}`
         })
         .eq('id', buildRecord.id);
-        
-      logger.warn(`[${requestId}] Tentando fallback para workflow_dispatch...`);
+      
+      logger.info(`[${requestId}] Tentando fallback para workflow_dispatch...`);
     }
 
     // Fallback to workflow_dispatch if repository_dispatch failed
