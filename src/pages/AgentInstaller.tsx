@@ -74,11 +74,11 @@ const AgentInstaller = () => {
   const [ps1SizeBytes, setPs1SizeBytes] = useState<number | null>(null);
   const [isValidatingPs1, setIsValidatingPs1] = useState(false);
   
-  // FASE 2.2: Circuit Breaker moved to component state
+  // FASE 2.2: Circuit Breaker - Ajustado para ser mais tolerante
   const [enrollmentCircuitBreaker] = useState(() => new CircuitBreaker({
-    failureThreshold: 3,
+    failureThreshold: 5,        // ✅ Aumentado de 3 para 5 (mais tolerante)
     successThreshold: 2,
-    timeout: 60000,
+    timeout: 30000,             // ✅ Reduzido de 60s para 30s (mais ágil)
     name: 'auto-generate-enrollment'
   }));
   const [circuitBreakerOpen, setCircuitBreakerOpen] = useState(false);
@@ -788,9 +788,21 @@ const AgentInstaller = () => {
       {circuitBreakerOpen && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Backend Temporariamente Indisponível</AlertTitle>
-          <AlertDescription>
-            O sistema está em modo de proteção devido a múltiplas falhas. Aguarde alguns instantes e tente novamente.
+          <AlertTitle>Circuit Breaker Ativo</AlertTitle>
+          <AlertDescription className="flex items-center justify-between gap-4">
+            <span>Backend temporariamente indisponível. Tentativas sendo bloqueadas para proteção.</span>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => {
+                enrollmentCircuitBreaker.reset();
+                toast.success("Circuit breaker resetado manualmente");
+                logger.info('Circuit breaker manually reset by user');
+              }}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Resetar Bloqueio
+            </Button>
           </AlertDescription>
         </Alert>
       )}
