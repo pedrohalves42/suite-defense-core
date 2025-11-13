@@ -37,6 +37,9 @@ verify_jwt = true
 verify_jwt = true
 
 # === Agent Functions ===
+[functions.sync-agent-script]
+verify_jwt = false
+
 [functions.enroll-agent]
 verify_jwt = false
 
