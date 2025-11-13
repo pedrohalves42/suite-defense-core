@@ -52,6 +52,7 @@ import InstallationAnalytics from "./pages/admin/InstallationAnalytics";
 import SubscriptionAnalytics from "./pages/admin/SubscriptionAnalytics";
 import StripeSetup from "./pages/admin/StripeSetup";
 import AgentDiagnostics from "./pages/admin/AgentDiagnostics.tsx";
+import AgentTroubleshooting from "./pages/admin/AgentTroubleshooting";
 import TenantInvites from "./pages/admin/tenant/TenantInvites";
 import TenantSecurity from "./pages/admin/tenant/TenantSecurity";
 import TenantLogs from "./pages/admin/tenant/TenantLogs";

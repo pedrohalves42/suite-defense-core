@@ -59,8 +59,19 @@ if ($PSVersionTable.PSVersion.Major -lt 5) {
 $osVersion = [System.Environment]::OSVersion.Version
 $osName = (Get-WmiObject -Class Win32_OperatingSystem).Caption
 
-Write-Host "Sistema operacional: $osName" -ForegroundColor Cyan
-Write-Host "Versão: $($osVersion.Major).$($osVersion.Minor)" -ForegroundColor Cyan
+# ✅ FASE 2: DIAGNÓSTICO DE INICIALIZAÇÃO DETALHADO
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "CyberShield Agent v3.0.0 Iniciando..." -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor White
+Write-Host "OS: $osName" -ForegroundColor White
+Write-Host "PowerShell: $($PSVersionTable.PSVersion)" -ForegroundColor White
+Write-Host "AgentToken: $($AgentToken.Substring(0,20))..." -ForegroundColor White
+Write-Host "HmacSecret Length: $($HmacSecret.Length) chars" -ForegroundColor White
+Write-Host "ServerUrl: $ServerUrl" -ForegroundColor White
+Write-Host "PollInterval: $PollInterval segundos" -ForegroundColor White
+Write-Host "Log Directory: $LogDir" -ForegroundColor White
+Write-Host "========================================" -ForegroundColor Cyan
 
 # Windows Server 2012 = 6.2, 2012 R2 = 6.3, 2016 = 10.0, etc
 if ($osVersion.Major -lt 6 -or ($osVersion.Major -eq 6 -and $osVersion.Minor -lt 2)) {
