@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { logger } from '@/lib/logger';
 import {
@@ -20,7 +22,7 @@ import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Server, Trash2, Power, PowerOff, CheckCircle, XCircle, Clock, Activity } from 'lucide-react';
+import { Server, Trash2, Power, PowerOff, CheckCircle, XCircle, Clock, Activity, Edit, FileText, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
 
 interface Agent {
   id: string;
@@ -36,22 +38,36 @@ export default function AgentManagement() {
   const queryClient = useQueryClient();
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
   const [agentToDisable, setAgentToDisable] = useState<Agent | null>(null);
+  const [agentToEdit, setAgentToEdit] = useState<Agent | null>(null);
+  const [editedName, setEditedName] = useState('');
+  const [agentToForceDelete, setAgentToForceDelete] = useState<Agent | null>(null);
+  const [selectedAgentLogs, setSelectedAgentLogs] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { data: agents, isLoading } = useQuery({
-    queryKey: ['agents', tenant?.id],
+    queryKey: ['agents', tenant?.id, statusFilter],
     queryFn: async () => {
       if (!tenant?.id) return [];
 
-      const { data, error } = await supabase
-        .from('agents')
-        .select('*')
-        .eq('tenant_id', tenant.id)
-        .order('enrolled_at', { ascending: false });
+      let query = supabase.from('agents').select('*').eq('tenant_id', tenant.id);
+      if (statusFilter !== 'all') query = query.eq('status', statusFilter);
 
+      const { data, error } = await query.order('enrolled_at', { ascending: false });
       if (error) throw error;
       return data as Agent[];
     },
     enabled: !!tenant?.id,
+  });
+
+  const { data: installationLogs, isLoading: isLoadingLogs } = useQuery({
+    queryKey: ['installation-logs', selectedAgentLogs],
+    queryFn: async () => {
+      if (!selectedAgentLogs) return null;
+      const { data, error } = await supabase.from('installation_analytics').select('*').eq('agent_id', selectedAgentLogs).order('created_at', { ascending: false }).limit(20);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedAgentLogs,
   });
 
   const deleteAgentMutation = useMutation({
@@ -80,6 +96,44 @@ export default function AgentManagement() {
     onError: (error) => {
       logger.error('Error deleting agent', error);
       toast.error('Erro ao excluir agente');
+    },
+  });
+
+  const forceDeleteAgentMutation = useMutation({
+    mutationFn: async (agentId: string) => {
+      await supabase.from('jobs').delete().eq('agent_id', agentId);
+      await supabase.from('agent_system_metrics').delete().eq('agent_id', agentId);
+      await supabase.from('installation_analytics').delete().eq('agent_id', agentId);
+      await supabase.from('agent_tokens').delete().eq('agent_id', agentId);
+      await supabase.from('enrollment_keys').delete().eq('agent_id', agentId);
+      const { error } = await supabase.from('agents').delete().eq('id', agentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      toast.success('Agente e dados excluídos');
+      setAgentToForceDelete(null);
+    },
+    onError: (error) => {
+      logger.error('Force delete error', error);
+      toast.error('Erro ao excluir');
+    },
+  });
+
+  const editAgentMutation = useMutation({
+    mutationFn: async ({ agentId, newName }: { agentId: string; newName: string }) => {
+      if (!newName || newName.trim().length < 3) throw new Error('Nome inválido');
+      const { error } = await supabase.from('agents').update({ agent_name: newName.trim() }).eq('id', agentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      toast.success('Nome atualizado');
+      setAgentToEdit(null);
+      setEditedName('');
+    },
+    onError: (error) => {
+      toast.error(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     },
   });
 

@@ -45,6 +45,53 @@ const retryWithBackoff = async <T,>(
   throw lastError;
 };
 
+/**
+ * Valida a integridade do instalador comparando SHA256
+ */
+const validateInstallerIntegrity = async (
+  blob: Blob, 
+  expectedSha256: string
+): Promise<boolean> => {
+  try {
+    logger.info('[SHA256] Iniciando validação de integridade', {
+      expectedSha256,
+      blobSize: blob.size
+    });
+    
+    const arrayBuffer = await blob.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    logger.info('[SHA256] Hash calculado', {
+      calculated: hashHex,
+      expected: expectedSha256,
+      match: hashHex === expectedSha256
+    });
+    
+    if (hashHex !== expectedSha256) {
+      logger.error('[SHA256] MISMATCH DETECTADO!', {
+        calculated: hashHex,
+        expected: expectedSha256
+      });
+      
+      toast.error(
+        '🚨 ERRO DE SEGURANÇA: Hash SHA256 não corresponde! O instalador pode estar corrompido.',
+        { duration: 8000 }
+      );
+      
+      return false;
+    }
+    
+    toast.success('✅ Integridade do instalador validada com sucesso!');
+    return true;
+  } catch (error) {
+    logger.error('[SHA256] Erro ao validar hash', error);
+    toast.error(`Erro ao validar SHA256: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
+    return false;
+  }
+};
+
 const AgentInstaller = () => {
   // Connectivity & Retry hooks
   const { isOnline } = useOnlineStatus();
@@ -1028,6 +1075,33 @@ const AgentInstaller = () => {
                   Baixe o script de instalação completo para executar manualmente no servidor.
                 </AlertDescription>
               </Alert>
+
+              {lastEnrollmentKey && (
+                <Card className="border-green-200 bg-green-50 dark:bg-green-950/30 dark:border-green-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-green-600" />
+                      Segurança Validada
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="text-xs space-y-1">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                        <span>SHA256 será validado automaticamente</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                        <span>Download bloqueado se hash não corresponder</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                        <span>Integridade verificada em tempo real</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <Button 
                 onClick={() => lastEnrollmentKey ? downloadAndVerifyScript(lastEnrollmentKey, platform) : generateInstaller()} 
