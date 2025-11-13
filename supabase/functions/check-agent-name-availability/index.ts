@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { getTenantIdForUser } from '../_shared/tenant.ts';
+import { logger } from '../_shared/logger.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,9 +16,12 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('Missing Authorization header');
+      logger.error('Missing Authorization header');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ 
+          available: false,
+          reason: 'Não autorizado - faça login novamente' 
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -32,33 +37,35 @@ serve(async (req) => {
     // Get authenticated user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
-      console.error('Auth error:', userError?.message);
+      logger.error('Auth error', userError);
       return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
+        JSON.stringify({ 
+          available: false,
+          reason: 'Não autorizado - faça login novamente' 
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get user's tenant_id
-    const { data: userRole, error: roleError } = await supabase
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .single();
+    // Get user's tenant_id (handles multiple roles in same tenant)
+    const tenantId = await getTenantIdForUser(supabase, user.id);
 
-    if (roleError || !userRole) {
-      console.error('Failed to get user tenant:', roleError?.message);
+    if (!tenantId) {
+      logger.error('Failed to get user tenant - user has no tenant assigned', { userId: user.id });
       return new Response(
-        JSON.stringify({ error: 'Failed to determine tenant' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          available: false,
+          reason: 'Usuário não possui tenant atribuído' 
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const { agentName } = await req.json();
-    const tenantId = userRole.tenant_id;
 
+    // Validação de tamanho mínimo
     if (!agentName || agentName.length < 3) {
-      console.log('Invalid agent name length:', agentName);
+      logger.debug('Invalid agent name length', { agentName });
       return new Response(
         JSON.stringify({ 
           available: false, 
@@ -68,7 +75,32 @@ serve(async (req) => {
       );
     }
 
-    console.log('Checking agent name availability:', { agentName, tenantId });
+    // Validação de caracteres permitidos (alfanuméricos, hífen, underscore)
+    const validNameRegex = /^[a-zA-Z0-9_-]+$/;
+    if (!validNameRegex.test(agentName)) {
+      logger.debug('Invalid agent name characters', { agentName });
+      return new Response(
+        JSON.stringify({ 
+          available: false, 
+          reason: 'Nome pode conter apenas letras, números, hífen e underscore' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validação de tamanho máximo
+    if (agentName.length > 50) {
+      logger.debug('Agent name too long', { agentName });
+      return new Response(
+        JSON.stringify({ 
+          available: false, 
+          reason: 'Nome deve ter no máximo 50 caracteres' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    logger.info('Checking agent name availability', { agentName, tenantId });
 
     // Verificar se já existe (using service role for query)
     const supabaseAdmin = createClient(
@@ -84,7 +116,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (error) {
-      console.error('Error checking agent name:', error.message, error);
+      logger.error('Error checking agent name', { error: error.message, agentName, tenantId });
       return new Response(
         JSON.stringify({ 
           available: false,
@@ -95,7 +127,7 @@ serve(async (req) => {
     }
 
     const isAvailable = !existingAgent;
-    console.log('Agent name check result:', { agentName, tenantId, isAvailable });
+    logger.info('Agent name check result', { agentName, tenantId, isAvailable });
 
     return new Response(
       JSON.stringify({ 
@@ -106,8 +138,8 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in check-agent-name-availability:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Unexpected error in check-agent-name-availability', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     return new Response(
       JSON.stringify({ 
         available: false,

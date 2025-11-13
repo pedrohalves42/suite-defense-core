@@ -462,13 +462,14 @@ Deno.serve(async (req) => {
     console.log(`[${requestId}] Fetching agent script to calculate hash: ${agentScriptUrl}`);
     
     let agentScriptHash = '';
+    let agentScriptContent = '';
     try {
       const agentScriptResponse = await fetch(agentScriptUrl);
       if (!agentScriptResponse.ok) {
         throw new Error(`Failed to fetch agent script: ${agentScriptResponse.status}`);
       }
       
-      const agentScriptContent = await agentScriptResponse.text();
+      agentScriptContent = await agentScriptResponse.text();
       
       // Generate SHA256 hash
       const encoder = new TextEncoder();
