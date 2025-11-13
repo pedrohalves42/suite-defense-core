@@ -69,19 +69,31 @@ Deno.serve(async (req) => {
     const agent = token.agents as unknown as { 
       id: string; 
       agent_name: string; 
-      hmac_secret: string | null; 
+      hmac_secret: string; 
       status: string;
     }
     
-    // Verificar HMAC se configurado
-    if (agent.hmac_secret) {
-      const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
-      if (!hmacResult.valid) {
-        return new Response(
-          JSON.stringify({ error: hmacResult.error }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
+    // FASE 1.2: HMAC OBRIGATÓRIO - Agora hmac_secret é NOT NULL
+    if (!agent.hmac_secret) {
+      logger.error('CRITICAL SECURITY: Agent without HMAC secret', { agentName: agent.agent_name })
+      return new Response(
+        JSON.stringify({ error: 'HMAC secret not configured for agent' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Verificar HMAC (obrigatório)
+    const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
+    if (!hmacResult.valid) {
+      logger.warn('HMAC verification failed', { 
+        agentName: agent.agent_name, 
+        error: hmacResult.error,
+        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
+      })
+      return new Response(
+        JSON.stringify({ error: hmacResult.error }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     // Rate limiting: 3 req/min (heartbeat a cada 60s + margem para retry)
