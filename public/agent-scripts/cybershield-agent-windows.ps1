@@ -79,14 +79,6 @@ if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 }
 
-# ✅ FASE 2.1: FORÇAR LOG INICIAL ANTES DE VALIDAÇÃO
-Write-Log "=== AGENTE INICIADO ===" "INFO"
-Write-Log "AgentToken Length: $($AgentToken.Length)" "INFO"
-Write-Log "HmacSecret Length: $($HmacSecret.Length)" "INFO"
-Write-Log "ServerUrl: $ServerUrl" "INFO"
-Write-Log "PowerShell Version: $($PSVersionTable.PSVersion)" "INFO"
-Write-Log "OS: $((Get-WmiObject Win32_OperatingSystem).Caption)" "INFO"
-
 #region Funções de Logging
 
 function Write-Log {
