@@ -4,6 +4,7 @@ import { logger } from '../_shared/logger.ts';
 import { WINDOWS_INSTALLER_TEMPLATE } from '../_shared/installer-template.ts';
 import { createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
+import { BuildTelemetry } from '../_shared/build-telemetry.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -54,6 +55,9 @@ Deno.serve(async (req) => {
 
   try {
     return await withTimeout(async () => {
+      // 📊 Initialize telemetry (will be updated after build record creation)
+      let telemetry: BuildTelemetry | null = null;
+      
       // ⚡ FASE 1.2: LOGS EXPLÍCITOS NO INÍCIO
       logger.info(`[${requestId}] ========== BUILD REQUEST START ==========`);
       logger.info(`[${requestId}] Method: ${req.method}`);
@@ -569,15 +573,32 @@ try {
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Failed to create build', 500, requestId);
     }
 
+    // 📊 Initialize telemetry with build_id
+    telemetry = new BuildTelemetry(buildRecord.id, requestId);
+    telemetry.info('Build record created', { 
+      agent_name,
+      tenant_id: enrollmentData.tenant_id,
+      enrollment_key_id: enrollmentData.id
+    });
+    
     logger.info('Build record created', { requestId, build_id: buildRecord.id });
 
     // 8. Test GitHub API connectivity first
+    telemetry?.startStep('github_validation', {
+      has_token: !!BUILD_GH_TOKEN,
+      repository: BUILD_GH_REPOSITORY
+    });
+    
     if (!BUILD_GH_TOKEN || !BUILD_GH_REPOSITORY) {
+      const errorMsg = 'GitHub integration not configured (BUILD_GH_TOKEN or BUILD_GH_REPOSITORY missing)';
+      telemetry?.failStep('github_validation', errorMsg);
+      telemetry?.failBuild(errorMsg);
+      
       await serviceRoleClient
         .from('agent_builds')
         .update({
           build_status: 'failed',
-          error_message: 'GitHub integration not configured (BUILD_GH_TOKEN or BUILD_GH_REPOSITORY missing)',
+          error_message: errorMsg,
           build_completed_at: new Date().toISOString()
         })
         .eq('id', buildRecord.id);
@@ -595,8 +616,15 @@ try {
       if (!testResponse.ok) {
         throw new Error(`GitHub API unreachable: ${testResponse.status}`);
       }
+      
+      telemetry?.completeStep('github_validation', {
+        status_code: testResponse.status
+      });
       logger.info('GitHub API connectivity test passed', { requestId });
     } catch (ghError) {
+      telemetry?.failStep('github_validation', ghError as Error);
+      telemetry?.failBuild(ghError as Error);
+      
       logger.error('GitHub API connectivity test failed', { error: ghError, requestId });
       await serviceRoleClient
         .from('agent_builds')
@@ -611,9 +639,18 @@ try {
     }
 
     // ✅ FASE 3.2: Converter PS1 para Base64 (Deno-safe UTF-8)
+    telemetry?.startStep('encode_installer', {
+      installer_size_bytes: installerContent.length
+    });
+    
     const ps1Encoder = new TextEncoder();
     const ps1Bytes = ps1Encoder.encode(installerContent);
     const ps1Base64 = btoa(String.fromCharCode.apply(null, Array.from(ps1Bytes)));
+    
+    telemetry?.completeStep('encode_installer', {
+      base64_size_bytes: ps1Base64.length,
+      compression_ratio: (ps1Base64.length / installerContent.length).toFixed(2)
+    });
 
     const githubActionsUrl = `https://github.com/${BUILD_GH_REPOSITORY}/actions`;
     // ✅ FASE 3.1: Update version to 3.0.0-APEX
@@ -637,6 +674,12 @@ try {
     // Try repository_dispatch with retry
     while (!triggerSuccess && dispatchAttempt < maxDispatchRetries) {
       dispatchAttempt++;
+      
+      telemetry?.startStep(`github_dispatch_attempt_${dispatchAttempt}`, {
+        attempt: dispatchAttempt,
+        max_retries: maxDispatchRetries,
+        method: 'repository_dispatch'
+      });
       
       try {
         logger.info(`[${requestId}] ⚡ FASE 1.3: GitHub dispatch (tentativa ${dispatchAttempt}/${maxDispatchRetries})`, {
@@ -672,6 +715,12 @@ try {
         if (dispatchResponse.ok || dispatchResponse.status === 204) {
           triggerSuccess = true;
           triggerMethod = 'repository_dispatch';
+          
+          telemetry?.completeStep(`github_dispatch_attempt_${dispatchAttempt}`, {
+            success: true,
+            status_code: dispatchResponse.status
+          });
+          
           logger.success(`[${requestId}] ✅ GitHub dispatch SUCESSO na tentativa ${dispatchAttempt}`, {
             build_id: buildRecord.id,
             status: dispatchResponse.status,
@@ -691,12 +740,19 @@ try {
           // Se não for a última tentativa, aguardar antes de retry (exponential backoff)
           if (dispatchAttempt < maxDispatchRetries) {
             const backoffMs = 2000 * dispatchAttempt; // 2s, 4s, 6s
+            telemetry?.info(`Exponential backoff: ${backoffMs}ms`, { attempt: dispatchAttempt });
             logger.info(`[${requestId}] Aguardando ${backoffMs}ms antes do próximo retry...`);
             await new Promise(resolve => setTimeout(resolve, backoffMs));
           }
         }
       } catch (dispatchError: any) {
         lastError = dispatchError.message;
+        
+        telemetry?.failStep(`github_dispatch_attempt_${dispatchAttempt}`, dispatchError, {
+          attempt: dispatchAttempt,
+          will_retry: dispatchAttempt < maxDispatchRetries
+        });
+        
         logger.error(`[${requestId}] ❌ repository_dispatch exception (tentativa ${dispatchAttempt})`, { 
           error: dispatchError.message,
           stack: dispatchError.stack
@@ -712,6 +768,11 @@ try {
 
     // Se todas as tentativas falharam, marcar como failed
     if (!triggerSuccess) {
+      telemetry?.warn('All repository_dispatch attempts failed, trying workflow_dispatch fallback', {
+        total_attempts: maxDispatchRetries,
+        last_error: lastError
+      });
+      
       logger.error(`[${requestId}] ❌ Todas as ${maxDispatchRetries} tentativas de dispatch falharam`);
       
       await serviceRoleClient
@@ -728,6 +789,8 @@ try {
 
     // Fallback to workflow_dispatch if repository_dispatch failed
     if (!triggerSuccess) {
+      telemetry?.startStep('workflow_dispatch_fallback');
+      
       try {
         logger.info('Attempting workflow_dispatch trigger', { requestId, build_id: buildRecord.id });
         
@@ -755,22 +818,38 @@ try {
         if (workflowResponse.ok || workflowResponse.status === 204) {
           triggerSuccess = true;
           triggerMethod = 'workflow_dispatch';
+          
+          telemetry?.completeStep('workflow_dispatch_fallback', {
+            success: true,
+            status_code: workflowResponse.status
+          });
+          
           logger.info('workflow_dispatch succeeded', { requestId, build_id: buildRecord.id });
         } else {
           const errorText = await workflowResponse.text();
+          telemetry?.failStep('workflow_dispatch_fallback', `Status ${workflowResponse.status}: ${errorText}`);
           logger.error('workflow_dispatch also failed', { error: errorText, requestId });
         }
       } catch (workflowError) {
+        telemetry?.failStep('workflow_dispatch_fallback', workflowError as Error);
         logger.error('workflow_dispatch exception', { error: workflowError, requestId });
       }
     }
 
     if (!triggerSuccess) {
+      const errorMessage = 'Both repository_dispatch and workflow_dispatch failed. Check GitHub Actions configuration.';
+      
+      telemetry?.failBuild(errorMessage, {
+        repository_dispatch_attempts: maxDispatchRetries,
+        workflow_dispatch_attempted: true,
+        last_error: lastError
+      });
+      
       await serviceRoleClient
         .from('agent_builds')
         .update({
           build_status: 'failed',
-          error_message: 'Both repository_dispatch and workflow_dispatch failed. Check GitHub Actions configuration.',
+          error_message: errorMessage,
           build_completed_at: new Date().toISOString()
         })
         .eq('id', buildRecord.id);
@@ -779,6 +858,8 @@ try {
     }
 
     // Save GitHub Actions URL for monitoring
+    telemetry?.startStep('update_build_record');
+    
     await serviceRoleClient
       .from('agent_builds')
       .update({
@@ -790,6 +871,13 @@ try {
         }]
       })
       .eq('id', buildRecord.id);
+    
+    telemetry?.completeStep('update_build_record');
+    telemetry?.completeBuild({
+      trigger_method: triggerMethod,
+      github_actions_url: githubActionsUrl,
+      total_dispatch_attempts: dispatchAttempt
+    });
 
     logger.info('GitHub workflow triggered successfully', { 
       requestId, 
