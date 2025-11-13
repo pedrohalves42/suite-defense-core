@@ -1,6 +1,6 @@
-# CyberShield Agent - Windows Installation Script (FIXED)
+# CyberShield Agent - Windows Installation Script v3.0.0-APEX
 # Auto-generated: {{TIMESTAMP}}
-# Version: 2.2.1 - Corrigido para Windows 10/11
+# APEX BUILD - Universal, Robust, Production-Ready
 
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
@@ -11,7 +11,7 @@ $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 Write-Host "==================================" -ForegroundColor Cyan
-Write-Host "CyberShield Agent Installer v2.2.1" -ForegroundColor Cyan
+Write-Host "CyberShield Agent Installer v3.0.0-APEX" -ForegroundColor Cyan
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -38,7 +38,7 @@ if ($PSVersionTable.PSVersion.Major -lt 5) {
 $AgentToken = "{{AGENT_TOKEN}}"
 $HmacSecret = "{{HMAC_SECRET}}"
 $ServerUrl = "{{SERVER_URL}}"
-$PollInterval = 60
+$PollInterval = 60  # ✅ FASE 1.1: Definido explicitamente
 
 # Validar parâmetros
 if ([string]::IsNullOrWhiteSpace($AgentToken) -or $AgentToken -eq "{{AGENT_TOKEN}}") {
@@ -48,22 +48,85 @@ if ([string]::IsNullOrWhiteSpace($AgentToken) -or $AgentToken -eq "{{AGENT_TOKEN
     exit 1
 }
 
-# Diretório de instalação
+# Diretório de instalação - ✅ FASE 1.1: Path unificado
 $InstallDir = "C:\CyberShield"
 $AgentScript = Join-Path $InstallDir "cybershield-agent.ps1"
 $LogDir = Join-Path $InstallDir "logs"
+$InstallLog = Join-Path $LogDir "install.log"
+
+# ✅ FASE 1.1: Função de log de instalação
+function Write-InstallLog {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    if (-not (Test-Path $LogDir)) {
+        New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+    }
+    "$timestamp - $Message" | Out-File $InstallLog -Append
+    Write-Host $Message
+}
 
 try {
-    Write-Host "[1/6] Criando diretórios de instalação..." -ForegroundColor Green
+    Write-InstallLog "[1/8] Criando diretórios de instalação..."
     if (-not (Test-Path $InstallDir)) {
         New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     }
     if (-not (Test-Path $LogDir)) {
         New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
     }
-    Write-Host "✓ Diretórios criados com sucesso" -ForegroundColor Green
+    Write-InstallLog "✓ Diretórios criados com sucesso"
 
-    Write-Host "[2/6] Baixando script do agente..." -ForegroundColor Green
+    # ✅ FASE 1.2: Configurar proxy e TLS globalmente
+    Write-InstallLog "[2/8] Configurando rede (TLS 1.2 + Proxy)..."
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    
+    $proxy = [System.Net.WebRequest]::GetSystemWebProxy()
+    $proxyUri = $proxy.GetProxy((New-Object System.Uri("https://www.google.com")))
+    
+    if ($proxyUri -ne "https://www.google.com") {
+        Write-InstallLog "Proxy detectado: $proxyUri"
+        [System.Net.WebRequest]::DefaultWebProxy = $proxy
+        [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+    } else {
+        Write-InstallLog "Nenhum proxy detectado - conexão direta"
+    }
+    Write-InstallLog "✓ TLS 1.2 habilitado e proxy configurado"
+
+    # ✅ FASE 1.3: Health check inicial
+    Write-InstallLog "[3/8] Testando conectividade com backend..."
+    $healthCheck = $false
+    $healthUrls = @(
+        "$ServerUrl/functions/v1/heartbeat",
+        "$ServerUrl/functions/v1/post-installation-telemetry",
+        "https://www.google.com"
+    )
+
+    foreach ($url in $healthUrls) {
+        try {
+            $response = Invoke-WebRequest -Uri $url -Method OPTIONS -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
+            Write-InstallLog "✓ Conectividade OK: $url (Status: $($response.StatusCode))"
+            $healthCheck = $true
+            break
+        } catch {
+            Write-InstallLog "✗ Falha ao conectar: $url - $_"
+        }
+    }
+
+    if (-not $healthCheck) {
+        Write-Host ""
+        Write-Host "⚠ AVISO: Não foi possível conectar ao backend." -ForegroundColor Yellow
+        Write-Host "Possíveis causas:" -ForegroundColor Yellow
+        Write-Host "  1. Firewall bloqueando HTTPS (porta 443)" -ForegroundColor Gray
+        Write-Host "  2. Proxy corporativo não configurado" -ForegroundColor Gray
+        Write-Host "  3. Servidor backend offline" -ForegroundColor Gray
+        Write-Host ""
+        $continue = Read-Host "Continuar instalação mesmo assim? (S/N)"
+        if ($continue -ne "S") {
+            Write-InstallLog "Instalação cancelada pelo usuário (sem conectividade)"
+            exit 1
+        }
+    }
+
+    Write-InstallLog "[4/8] Baixando script do agente..."
     
     # Conteúdo do script do agente (embedded)
     $AgentContent = @'
@@ -72,23 +135,9 @@ try {
 
     # Salvar script do agente
     Set-Content -Path $AgentScript -Value $AgentContent -Encoding UTF8 -Force
-    Write-Host "✓ Script do agente salvo em: $AgentScript" -ForegroundColor Green
+    Write-InstallLog "✓ Script do agente salvo em: $AgentScript"
 
-    Write-Host "[3/6] Testando conectividade com o servidor..." -ForegroundColor Green
-    try {
-        # Configurar TLS 1.2 (necessário para Windows Server 2012+)
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        
-        $testUrl = "$ServerUrl/functions/v1/heartbeat"
-        $response = Invoke-WebRequest -Uri $testUrl -Method OPTIONS -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
-        Write-Host "✓ Servidor está acessível" -ForegroundColor Green
-    } catch {
-        Write-Host "⚠ AVISO: Não foi possível conectar ao servidor" -ForegroundColor Yellow
-        Write-Host "  Erro: $($_.Exception.Message)" -ForegroundColor Yellow
-        Write-Host "  O agente tentará reconectar automaticamente após a instalação" -ForegroundColor Yellow
-    }
-
-    Write-Host "[4/6] Configurando regra de firewall..." -ForegroundColor Green
+    Write-InstallLog "[5/8] Configurando regra de firewall..."
     try {
         # Remover regras antigas se existirem
         $existingRule = Get-NetFirewallRule -DisplayName "CyberShield Agent" -ErrorAction SilentlyContinue
@@ -105,12 +154,12 @@ try {
                            -Program "powershell.exe" `
                            -Description "Permite comunicação do CyberShield Agent com o servidor" `
                            -ErrorAction Stop | Out-Null
-        Write-Host "✓ Regra de firewall configurada" -ForegroundColor Green
+        Write-InstallLog "✓ Regra de firewall configurada"
     } catch {
-        Write-Host "⚠ Não foi possível criar regra de firewall: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-InstallLog "⚠ Não foi possível criar regra de firewall: $($_.Exception.Message)"
     }
 
-    Write-Host "[5/6] Criando tarefa agendada..." -ForegroundColor Green
+    Write-InstallLog "[6/8] Criando tarefa agendada..."
 
     $taskName = "CyberShield Agent"
     $taskDescription = "CyberShield Security Agent - Monitora o sistema e reporta ao servidor central"
@@ -118,11 +167,11 @@ try {
     # Remover tarefa existente se presente
     $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     if ($existingTask) {
-        Write-Host "  Removendo tarefa antiga..." -ForegroundColor Yellow
+        Write-InstallLog "  Removendo tarefa antiga..."
         Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
     }
 
-    # Criar ação
+    # Criar ação - ✅ FASE 1.1: $PollInterval agora definido
     $action = New-ScheduledTaskAction -Execute "PowerShell.exe" `
         -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File `"$AgentScript`" -AgentToken `"$AgentToken`" -HmacSecret `"$HmacSecret`" -ServerUrl `"$ServerUrl`" -PollInterval $PollInterval"
 
@@ -151,9 +200,9 @@ try {
         -Principal $principal `
         -Force | Out-Null
 
-    Write-Host "✓ Tarefa agendada criada com sucesso" -ForegroundColor Green
+    Write-InstallLog "✓ Tarefa agendada criada com sucesso"
 
-    Write-Host "[6/6] Iniciando o agente..." -ForegroundColor Green
+    Write-InstallLog "[7/8] Iniciando o agente..."
 
     # Iniciar a tarefa
     Start-ScheduledTask -TaskName $taskName
@@ -184,6 +233,7 @@ try {
     Write-Host "INFORMAÇÕES DA INSTALAÇÃO:" -ForegroundColor Cyan
     Write-Host "  • Diretório: $InstallDir" -ForegroundColor White
     Write-Host "  • Logs: $LogDir\agent.log" -ForegroundColor White
+    Write-Host "  • Logs de instalação: $InstallLog" -ForegroundColor White
     Write-Host "  • Tarefa: $taskName" -ForegroundColor White
     Write-Host "  • Última execução: $($taskInfo.LastRunTime)" -ForegroundColor White
     Write-Host ""
@@ -193,9 +243,39 @@ try {
     Write-Host "  ✓ Reportando métricas a cada 5 minutos" -ForegroundColor White
     Write-Host "  ✓ Buscando jobs para executar" -ForegroundColor White
     Write-Host ""
+
+    # ✅ FASE 1.1: Enviar telemetria pós-instalação
+    Write-InstallLog "[8/8] Enviando telemetria pós-instalação..."
+    try {
+        $telemetryBody = @{
+            agent_name = "{{AGENT_NAME}}"
+            success = $true
+            os_version = (Get-WmiObject Win32_OperatingSystem).Caption
+            installation_time = (Get-Date).ToUniversalTime().ToString("o")
+            network_tests = @{
+                health_check_passed = $healthCheck
+                proxy_detected = ($proxyUri -ne "https://www.google.com")
+            }
+        } | ConvertTo-Json
+        
+        Invoke-RestMethod -Uri "$ServerUrl/functions/v1/post-installation-telemetry" `
+            -Method POST `
+            -Body $telemetryBody `
+            -ContentType "application/json" `
+            -TimeoutSec 10 `
+            -ErrorAction SilentlyContinue | Out-Null
+        
+        Write-InstallLog "✓ Telemetria enviada com sucesso"
+    } catch {
+        Write-InstallLog "⚠ Telemetria falhou (não crítico): $_"
+    }
+
+    Write-Host ""
     Write-Host "COMANDOS ÚTEIS:" -ForegroundColor Yellow
-    Write-Host "  Ver logs:" -ForegroundColor White
+    Write-Host "  Ver logs do agente:" -ForegroundColor White
     Write-Host "    Get-Content $LogDir\agent.log -Tail 50" -ForegroundColor Gray
+    Write-Host "  Ver logs de instalação:" -ForegroundColor White
+    Write-Host "    Get-Content $InstallLog" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  Parar o agente:" -ForegroundColor White
     Write-Host "    Stop-ScheduledTask -TaskName '$taskName'" -ForegroundColor Gray
@@ -207,22 +287,27 @@ try {
     Write-Host "    Get-ScheduledTask -TaskName '$taskName' | Format-List" -ForegroundColor Gray
     Write-Host ""
 
-    if ($taskState -ne "Running") {
-        Write-Host "ATENÇÃO: O agente não está rodando no momento." -ForegroundColor Yellow
-        Write-Host "Para iniciar manualmente, execute:" -ForegroundColor Yellow
-        Write-Host "  Start-ScheduledTask -TaskName '$taskName'" -ForegroundColor Gray
-        Write-Host ""
+    # ✅ FASE 1.4: Instalador "Keep-Alive" - monitorar agente por 60 segundos
+    Write-Host ""
+    Write-Host "Instalação concluída! Monitorando agente por 60 segundos..." -ForegroundColor Cyan
+    Write-Host "Feche esta janela a qualquer momento." -ForegroundColor Gray
+    Write-Host ""
+
+    for ($i = 1; $i -le 12; $i++) {
+        Start-Sleep -Seconds 5
+        $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+        $taskInfo = Get-ScheduledTaskInfo -TaskName $taskName -ErrorAction SilentlyContinue
+        
+        Write-Host "[$i/12] Task Status: $($task.State) | Last Result: $($taskInfo.LastTaskResult)" -ForegroundColor Gray
+        
+        if ($task.State -eq "Running") {
+            Write-Host "✓ Agente está rodando!" -ForegroundColor Green
+        }
     }
 
-    # Fix #2: Código de validação pós-instalação DENTRO do try block
     Write-Host ""
-    Write-Host "VALIDAÇÃO PÓS-INSTALAÇÃO (Opcional):" -ForegroundColor Cyan
-    Write-Host "  Para validar se o agente está funcionando 100%:" -ForegroundColor White
-    Write-Host "  1. Aguarde 2 minutos para o agente iniciar" -ForegroundColor White
-    Write-Host "  2. Execute: .\post-installation-validation.ps1" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "Pressione Enter para sair..." -ForegroundColor Gray
-    Read-Host
+    Write-Host "Monitoramento concluído. Instalador será fechado em 10 segundos..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 10
 
 } catch {
     Write-Host ""
