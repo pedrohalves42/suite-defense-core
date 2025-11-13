@@ -242,10 +242,10 @@ Write-Host "Timestamp: {{TIMESTAMP}}" -ForegroundColor Gray
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'GitHub API unreachable', 500, requestId);
     }
 
-    // Convert PS1 to Base64 to avoid GitHub Actions payload issues
+    // ✅ FASE 3.2: Converter PS1 para Base64 (Deno-safe UTF-8)
     const ps1Encoder = new TextEncoder();
     const ps1Bytes = ps1Encoder.encode(installerContent);
-    const ps1Base64 = btoa(String.fromCharCode(...ps1Bytes));
+    const ps1Base64 = btoa(String.fromCharCode.apply(null, Array.from(ps1Bytes)));
 
     const githubActionsUrl = `https://github.com/${BUILD_GH_REPOSITORY}/actions`;
     const workflowPayload = {

@@ -25,23 +25,23 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const { agentName, telemetry } = await req.json();
-    logStep("Received telemetry", { agentName, telemetry });
+    const { agent_name, success, os_version, installation_time, network_tests, firewall_status, proxy_detected, errors } = await req.json();
+    logStep("Received telemetry", { agent_name, success, network_tests });
 
-    if (!agentName) {
-      throw new Error("agentName is required");
+    if (!agent_name) {
+      throw new Error("agent_name is required");
     }
 
     // Buscar agente
     const { data: agent, error: agentError } = await supabaseClient
       .from("agents")
       .select("*")
-      .eq("agent_name", agentName)
+      .eq("agent_name", agent_name)
       .maybeSingle();
 
     if (agentError) throw agentError;
     if (!agent) {
-      logStep("Agent not found", { agentName });
+      logStep("Agent not found", { agent_name });
       return new Response(
         JSON.stringify({ error: "Agent not found" }),
         {
@@ -51,23 +51,25 @@ serve(async (req) => {
       );
     }
 
-    // Registrar telemetria de instalação
+    // ✅ FASE 5.1: Registrar telemetria EXPANDIDA de instalação
     const telemetryData = {
       agent_id: agent.id,
       tenant_id: agent.tenant_id,
       event_type: "post_installation",
-      success: telemetry?.success || false,
-      error_message: telemetry?.error || null,
-      network_connectivity: telemetry?.network_test || null,
-      dns_resolution: telemetry?.dns_test || null,
-      api_connectivity: telemetry?.api_test || null,
+      success: success || false,
+      error_message: errors ? JSON.stringify(errors) : null,
+      network_connectivity: network_tests?.health_check_passed || null,
+      dns_resolution: network_tests?.dns_test || null,
+      api_connectivity: network_tests?.api_test || null,
       os_info: {
         type: agent.os_type,
-        version: agent.os_version,
+        version: os_version || agent.os_version,
         hostname: agent.hostname,
       },
-      installation_method: telemetry?.method || "unknown",
-      timestamp: new Date().toISOString(),
+      installation_method: "windows_ps1",
+      firewall_status: firewall_status || "unknown",
+      proxy_detected: proxy_detected || false,
+      timestamp: installation_time || new Date().toISOString(),
     };
 
     const { error: insertError } = await supabaseClient
@@ -79,10 +81,10 @@ serve(async (req) => {
     logStep("Telemetry saved", { agentId: agent.id });
 
     // Se houver falha, criar alerta
-    if (!telemetry?.success) {
+    if (!success) {
       logStep("Installation failed, creating alert", {
-        agentName,
-        error: telemetry?.error,
+        agent_name,
+        errors,
       });
 
       // Buscar admin do tenant para notificar

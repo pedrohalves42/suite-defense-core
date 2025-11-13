@@ -79,6 +79,14 @@ if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 }
 
+# ✅ FASE 2.1: FORÇAR LOG INICIAL ANTES DE VALIDAÇÃO
+Write-Log "=== AGENTE INICIADO ===" "INFO"
+Write-Log "AgentToken Length: $($AgentToken.Length)" "INFO"
+Write-Log "HmacSecret Length: $($HmacSecret.Length)" "INFO"
+Write-Log "ServerUrl: $ServerUrl" "INFO"
+Write-Log "PowerShell Version: $($PSVersionTable.PSVersion)" "INFO"
+Write-Log "OS: $((Get-WmiObject Win32_OperatingSystem).Caption)" "INFO"
+
 #region Funções de Logging
 
 function Write-Log {
@@ -124,16 +132,36 @@ function Write-Log {
 
 #region Configurações
 
-if ([string]::IsNullOrWhiteSpace($AgentToken) -or [string]::IsNullOrWhiteSpace($HmacSecret) -or [string]::IsNullOrWhiteSpace($ServerUrl)) {
-    Write-Log "Parâmetros obrigatórios ausentes" "ERROR"
+# ✅ FASE 2.2: Configurar TLS 1.2 e proxy globalmente
+Write-Log "Configurando rede..." "INFO"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+$proxy = [System.Net.WebRequest]::GetSystemWebProxy()
+[System.Net.WebRequest]::DefaultWebProxy = $proxy
+[System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+
+Write-Log "TLS 1.2 habilitado" "SUCCESS"
+
+# ✅ FASE 2.1: Validação APÓS LOG INICIAL
+if ([string]::IsNullOrWhiteSpace($AgentToken)) {
+    Write-Log "FATAL: AgentToken vazio" "ERROR"
+    exit 1
+}
+
+if ([string]::IsNullOrWhiteSpace($HmacSecret)) {
+    Write-Log "FATAL: HmacSecret vazio" "ERROR"
+    exit 1
+}
+
+if ([string]::IsNullOrWhiteSpace($ServerUrl)) {
+    Write-Log "FATAL: ServerUrl vazio" "ERROR"
     exit 1
 }
 
 $ServerUrl = $ServerUrl.TrimEnd('/')
 
-Write-Log "=== CyberShield Agent v2.2.1 iniciado ===" "SUCCESS"
+Write-Log "=== CyberShield Agent v3.0.0-APEX iniciado ===" "SUCCESS"
 Write-Log "Sistema: $osName" "INFO"
-Write-Log "PowerShell: $($PSVersionTable.PSVersion)" "INFO"
 Write-Log "Server URL: $ServerUrl" "INFO"
 Write-Log "Poll Interval: $PollInterval segundos" "INFO"
 Write-Log "Log Directory: $LogDir" "INFO"
@@ -229,12 +257,20 @@ function Invoke-SecureRequest {
 #region Heartbeat
 
 function Send-Heartbeat {
-    $maxRetries = 3
+    param(
+        [switch]$IsBootHeartbeat  # ✅ FASE 2.3: NOVO PARÂMETRO
+    )
+    
+    $maxRetries = $IsBootHeartbeat ? 5 : 3  # Mais retries no boot
     $retryCount = 0
     
     while ($retryCount -lt $maxRetries) {
         try {
-            Write-Log "Sending heartbeat..." "DEBUG"
+            if ($IsBootHeartbeat) {
+                Write-Log "🔥 ENVIANDO HEARTBEAT DE BOOT (crítico)" "INFO"
+            } else {
+                Write-Log "Sending heartbeat..." "DEBUG"
+            }
             $heartbeatUrl = "$ServerUrl/functions/v1/heartbeat"
             
             # Incluir informações do OS no heartbeat
