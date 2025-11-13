@@ -1,16 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import { validateAgentScript } from '../_shared/agent-script-validator.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-
-// Validate agent script on startup (non-fatal - will fetch from public URL at runtime)
-const scriptValidation = await validateAgentScript();
-if (!scriptValidation.valid) {
-  console.warn('[STARTUP] Agent script validation failed (will fetch at runtime):', scriptValidation.error);
-} else {
-  console.log('[STARTUP] Agent script validated:', scriptValidation.details);
-}
 
 // Windows Installer v3.0.0-APEX - Universal, Robust, Production-Ready
 const WINDOWS_INSTALLER_TEMPLATE = `# CyberShield Agent - Windows Installation Script v3.0.0-APEX
@@ -491,14 +482,14 @@ Deno.serve(async (req) => {
       
       console.log(`[${requestId}] Agent script loaded: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
     } catch (hashError) {
-      console.warn(`[${requestId}] Failed to read local agent script, fetching from public URL:`, hashError);
+      console.warn(`[${requestId}] Failed to read local agent script, fetching from storage:`, hashError);
       
-      // Fallback: fetch from public URL
+      // Fallback: fetch from Supabase Storage (public bucket)
       try {
-        const publicScriptUrl = `${SUPABASE_URL}/agent-scripts/cybershield-agent-windows.ps1`;
-        console.log(`[${requestId}] Fetching from: ${publicScriptUrl}`);
+        const storageScriptUrl = `${SUPABASE_URL}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
+        console.log(`[${requestId}] Fetching from storage: ${storageScriptUrl}`);
         
-        const response = await fetch(publicScriptUrl);
+        const response = await fetch(storageScriptUrl);
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
@@ -516,10 +507,10 @@ Deno.serve(async (req) => {
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         agentScriptHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         
-        console.log(`[${requestId}] Agent script fetched from public URL: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
+        console.log(`[${requestId}] Agent script fetched from storage: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
       } catch (fetchError) {
-        console.error(`[${requestId}] Failed to fetch agent script from public URL:`, fetchError);
-        return new Response('Failed to generate secure installer', { 
+        console.error(`[${requestId}] Failed to fetch agent script from storage:`, fetchError);
+        return new Response('Failed to generate secure installer - agent script not available', { 
           status: 500,
           headers: corsHeaders
         });

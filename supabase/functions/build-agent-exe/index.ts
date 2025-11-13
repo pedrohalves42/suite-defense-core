@@ -3,15 +3,6 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { WINDOWS_INSTALLER_TEMPLATE } from '../_shared/installer-template.ts';
 import { createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
-import { validateAgentScript } from '../_shared/agent-script-validator.ts';
-
-// Validate agent script on startup (non-fatal - will fetch from public URL at runtime)
-const scriptValidation = await validateAgentScript();
-if (!scriptValidation.valid) {
-  console.warn('[STARTUP] Agent script validation failed (will fetch at runtime):', scriptValidation.error);
-} else {
-  console.log('[STARTUP] Agent script validated:', scriptValidation.details);
-}
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -92,15 +83,15 @@ Deno.serve(async (req) => {
       agentScriptContent = await Deno.readTextFile(scriptPath);
       console.log(`[${requestId}] Agent script loaded from local file: ${agentScriptContent.length} bytes`);
     } catch (readError) {
-      console.warn(`[${requestId}] Failed to read local agent script, fetching from public URL:`, readError);
+      console.warn(`[${requestId}] Failed to read local agent script, fetching from storage:`, readError);
       
-      const publicScriptUrl = `${Deno.env.get('SUPABASE_URL')}/agent-scripts/cybershield-agent-windows.ps1`;
-      const response = await fetch(publicScriptUrl);
+      const storageScriptUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
+      const response = await fetch(storageScriptUrl);
       if (!response.ok) {
-        return createErrorResponse(ErrorCode.INTERNAL_ERROR, `Failed to fetch agent script: ${response.status}`, 500, requestId);
+        return createErrorResponse(ErrorCode.INTERNAL_ERROR, `Failed to fetch agent script from storage: ${response.status}`, 500, requestId);
       }
       agentScriptContent = await response.text();
-      console.log(`[${requestId}] Agent script fetched from public URL: ${agentScriptContent.length} bytes`);
+      console.log(`[${requestId}] Agent script fetched from storage: ${agentScriptContent.length} bytes`);
     }
     
     if (!agentScriptContent || agentScriptContent.length < 1000) {
