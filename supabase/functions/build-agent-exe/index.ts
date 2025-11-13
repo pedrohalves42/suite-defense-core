@@ -125,27 +125,34 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent credentials incomplete', 500, requestId);
     }
 
-    // 6. Fetch agent script - Storage first, then public directory fallback
+    // 6. Fetch agent script with comprehensive logging
+    logger.info('Fetching agent script', { requestId });
     let agentScriptContent = '';
     
     try {
-      // Try fetching from Supabase Storage first (primary source)
-      const storageUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
-      console.log(`[${requestId}] Attempting storage fetch: ${storageUrl}`);
+      // Priority 1: Try Supabase Storage
+      const storageUrl = `${supabaseUrl}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
+      logger.debug('Attempt 1: Fetching from Supabase Storage', { requestId, storageUrl });
+      
       const storageResponse = await fetch(storageUrl);
       
       if (storageResponse.ok) {
         agentScriptContent = await storageResponse.text();
-        console.log(`[${requestId}] Successfully fetched from storage (${agentScriptContent.length} bytes)`);
+        logger.info('SUCCESS: Script loaded from Storage', { 
+          requestId,
+          size: agentScriptContent.length,
+          sizeKB: (agentScriptContent.length / 1024).toFixed(2)
+        });
       } else {
-        throw new Error(`Storage fetch failed: ${storageResponse.status}`);
+        logger.warn('Storage fetch failed', { requestId, status: storageResponse.status });
+        throw new Error(`Storage unavailable: ${storageResponse.status}`);
       }
     } catch (storageError) {
-      console.warn(`[${requestId}] Storage fetch failed, trying public directory:`, storageError);
+      logger.debug('Attempt 2: Trying public directory fallback', { requestId });
       
       // Fallback to public directory via HTTP
-      const publicUrl = `${Deno.env.get('SUPABASE_URL')}/agent-scripts/cybershield-agent-windows.ps1`;
-      console.log(`[${requestId}] Attempting public directory fetch: ${publicUrl}`);
+      const publicUrl = `${supabaseUrl}/agent-scripts/cybershield-agent-windows.ps1`;
+      logger.debug('Public URL', { requestId, publicUrl });
       
       try {
         const publicResponse = await fetch(publicUrl);
@@ -155,9 +162,14 @@ Deno.serve(async (req) => {
         }
         
         agentScriptContent = await publicResponse.text();
-        console.log(`[${requestId}] Successfully fetched from public directory (${agentScriptContent.length} bytes)`);
+        logger.info('SUCCESS: Using public directory fallback', { 
+          requestId,
+          size: agentScriptContent.length,
+          sizeKB: (agentScriptContent.length / 1024).toFixed(2)
+        });
       } catch (publicError) {
-        console.error(`[${requestId}] All agent script sources failed:`, {
+        logger.error('CRITICAL: All agent script sources failed', { 
+          requestId,
           storageError: storageError instanceof Error ? storageError.message : String(storageError),
           publicError: publicError instanceof Error ? publicError.message : String(publicError)
         });
@@ -172,7 +184,16 @@ Deno.serve(async (req) => {
     }
     
     if (!agentScriptContent || agentScriptContent.length < 1000) {
-      return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent script content is invalid', 500, requestId);
+      logger.error('CRITICAL: Invalid script content', { 
+        requestId,
+        size: agentScriptContent?.length || 0 
+      });
+      return createErrorResponse(
+        ErrorCode.INTERNAL_ERROR,
+        'Agent script content is invalid',
+        503,
+        requestId
+      );
     }
     
     // Calculate hash for validation
