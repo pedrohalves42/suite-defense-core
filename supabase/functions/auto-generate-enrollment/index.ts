@@ -438,7 +438,9 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         logger.error(`[${requestId}] Failed to create agent`, { 
           error: agentError?.message,
           code: agentError?.code,
-          details: agentError?.details 
+          details: agentError?.details,
+          agentName,
+          tenantId
         });
         
         // Mapear códigos de erro SQL para mensagens user-friendly
@@ -457,9 +459,41 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
           userMessage = `Agent name "${agentName}" is already in use.`;
         }
         
-        throw new Error(userMessage);
+        await logSecurityEvent({
+          supabase,
+          tenantId,
+          userId: user.id,
+          ipAddress,
+          endpoint: 'auto_generate_enrollment',
+          attackType: 'unauthorized',
+          severity: 'critical',
+          blocked: true,
+          details: { 
+            error: agentError?.message,
+            code: agentError?.code,
+            agentName,
+            userMessage
+          },
+          requestId
+        });
+        
+        return new Response(
+          JSON.stringify({ 
+            error: userMessage, 
+            details: agentError?.message,
+            code: agentError?.code,
+            requestId,
+            timestamp: new Date().toISOString()
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
       agentId = newAgent.id;
+      
+      logger.success(`[${requestId}] Agent created successfully - ${agentName} (${agentId})`);
     }
 
     // Create agent token
