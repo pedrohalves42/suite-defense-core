@@ -24,8 +24,8 @@ interface Plan {
 
 export default function PlanUpgradeNew() {
   const { toast } = useToast();
-  const { subscription, refetch: refetchSubscription } = useSubscription();
-  const { tenant } = useTenant();
+  const { subscription, isLoading: subscriptionLoading, refetch: refetchSubscription } = useSubscription();
+  const { tenant, loading: tenantLoading } = useTenant();
   const [deviceQuantities, setDeviceQuantities] = useState<Record<string, number>>({
     starter: 1,
     pro: 1,
@@ -193,6 +193,17 @@ export default function PlanUpgradeNew() {
     const quantity = deviceQuantities[planName] || 1;
     return formatPrice(plan.price_per_device * quantity);
   };
+
+  if (tenantLoading || subscriptionLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-3">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Carregando planos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

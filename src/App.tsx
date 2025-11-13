@@ -98,34 +98,33 @@ const App = () => (
               <Route path="/agents" element={<AgentManagement />} />
               <Route path="/export" element={<DataExport />} />
               
-              {/* Admin Routes */}
+              {/* Admin Routes (Tenant-specific) */}
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="agent-installer" element={<AgentInstaller />} />
                 <Route path="monitoring-advanced" element={<AgentMonitoringAdvanced />} />
-                <Route path="enrollment-keys" element={<EnrollmentKeys />} />
-                <Route path="users" element={<Users />} />
-                <Route path="tenants" element={<Tenants />} />
-                <Route path="features" element={<TenantFeatures />} />
-                <Route path="api-keys" element={<ApiKeys />} />
-                <Route path="invites" element={<Invites />} />
                 <Route path="members" element={<Members />} />
                 <Route path="plan-upgrade" element={<PlanUpgrade />} />
                 <Route path="subscriptions" element={<Subscriptions />} />
-                <Route path="subscription-analytics" element={<SubscriptionAnalytics />} />
-                <Route path="stripe-setup" element={<StripeSetup />} />
-                <Route path="audit-logs" element={<AuditLogs />} />
-                <Route path="security" element={<SecurityDashboard />} />
-                <Route path="settings" element={<Settings />} />
                 <Route path="installation-analytics" element={<InstallationAnalytics />} />
               </Route>
 
-              {/* Super Admin Routes */}
+              {/* Super Admin Routes (System-wide) */}
               <Route path="/super-admin" element={<SuperAdminLayout />}>
                 <Route index element={<SuperAdminTenants />} />
                 <Route path="tenants" element={<SuperAdminTenants />} />
                 <Route path="metrics" element={<SuperAdminMetrics />} />
+                <Route path="subscription-analytics" element={<SubscriptionAnalytics />} />
+                <Route path="stripe-setup" element={<StripeSetup />} />
+                <Route path="users" element={<Users />} />
+                <Route path="features" element={<TenantFeatures />} />
+                <Route path="api-keys" element={<ApiKeys />} />
+                <Route path="enrollment-keys" element={<EnrollmentKeys />} />
+                <Route path="invites" element={<Invites />} />
+                <Route path="security" element={<SecurityDashboard />} />
+                <Route path="audit-logs" element={<AuditLogs />} />
+                <Route path="settings" element={<Settings />} />
               </Route>
             </Route>
             

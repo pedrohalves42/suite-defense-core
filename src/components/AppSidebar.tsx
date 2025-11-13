@@ -43,22 +43,21 @@ export const AppSidebar = () => {
     { icon: Users, label: 'Membros', to: '/admin/members' },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
     { icon: Activity, label: 'Assinaturas', to: '/admin/subscriptions' },
-    { icon: BarChart3, label: 'Analytics Subs', to: '/admin/subscription-analytics' },
-    { icon: CreditCard, label: 'Config Stripe', to: '/admin/stripe-setup' },
-    { icon: Users, label: 'Usuários', to: '/admin/users' },
-    { icon: Package, label: 'Tenants', to: '/admin/tenants' },
-    { icon: Shield, label: 'Features', to: '/admin/features' },
-    { icon: Key, label: 'Chaves', to: '/admin/enrollment-keys' },
-    { icon: Key, label: 'API Keys', to: '/admin/api-keys' },
-    { icon: Mail, label: 'Convites', to: '/admin/invites' },
-    { icon: AlertTriangle, label: 'Segurança', to: '/admin/security' },
-    { icon: ScrollText, label: 'Logs', to: '/admin/audit-logs' },
-    { icon: Settings, label: 'Configurações', to: '/admin/settings' },
   ], []);
 
   const superAdminItems = useMemo(() => [
-    { icon: Crown, label: 'Gerenciar Tenants', to: '/super-admin/tenants', end: true },
+    { icon: Package, label: 'Gerenciar Tenants', to: '/super-admin/tenants', end: true },
     { icon: BarChart3, label: 'Métricas Globais', to: '/super-admin/metrics' },
+    { icon: BarChart3, label: 'Analytics Subs', to: '/super-admin/subscription-analytics' },
+    { icon: CreditCard, label: 'Config Stripe', to: '/super-admin/stripe-setup' },
+    { icon: Users, label: 'Todos Usuários', to: '/super-admin/users' },
+    { icon: Shield, label: 'Features', to: '/super-admin/features' },
+    { icon: Key, label: 'Chaves API', to: '/super-admin/api-keys' },
+    { icon: Key, label: 'Enrollment Keys', to: '/super-admin/enrollment-keys' },
+    { icon: Mail, label: 'Convites', to: '/super-admin/invites' },
+    { icon: AlertTriangle, label: 'Segurança', to: '/super-admin/security' },
+    { icon: ScrollText, label: 'Logs', to: '/super-admin/audit-logs' },
+    { icon: Settings, label: 'Configurações', to: '/super-admin/settings' },
   ], []);
 
   return (
