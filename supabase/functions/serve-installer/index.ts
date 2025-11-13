@@ -508,6 +508,8 @@ Deno.serve(async (req) => {
       .replace(/\{\{HMAC_SECRET\}\}/g, agentData.hmac_secret)
       .replace(/\{\{SERVER_URL\}\}/g, SUPABASE_URL)
       .replace(/\{\{AGENT_HASH\}\}/g, agentScriptHash)
+      .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, agentScriptContent)
+      .replace(/\{\{AGENT_NAME\}\}/g, agentData.agent_name)
       .replace(/\{\{TIMESTAMP\}\}/g, new Date().toISOString());
 
     // Final validation: ensure no placeholders remain
