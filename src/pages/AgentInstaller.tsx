@@ -69,6 +69,11 @@ const AgentInstaller = () => {
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 2;
   
+  // FASE 4: PS1 SHA256 validation states
+  const [ps1Sha256, setPs1Sha256] = useState<string | null>(null);
+  const [ps1SizeBytes, setPs1SizeBytes] = useState<number | null>(null);
+  const [isValidatingPs1, setIsValidatingPs1] = useState(false);
+  
   // FASE 2.2: Circuit Breaker moved to component state
   const [enrollmentCircuitBreaker] = useState(() => new CircuitBreaker({
     failureThreshold: 3,
@@ -433,6 +438,115 @@ const AgentInstaller = () => {
     }
   };
 
+  // FASE 4: Download and validate PS1 SHA256
+  const downloadAndVerifyPs1 = async (enrollmentKey: string) => {
+    if (!enrollmentKey) {
+      toast.error("Enrollment key não disponível");
+      return;
+    }
+
+    setIsValidatingPs1(true);
+
+    try {
+      toast.info("🔒 Baixando script e verificando integridade...", { duration: Infinity });
+
+      const installUrl = `${SUPABASE_URL}/functions/v1/serve-installer/${enrollmentKey}`;
+      const response = await fetch(installUrl);
+      
+      if (!response.ok) {
+        throw new Error(`Falha ao baixar script: ${response.status}`);
+      }
+
+      const scriptContent = await response.text();
+      const scriptBlob = new Blob([scriptContent], { type: 'text/plain' });
+
+      // Extract hash from HTTP header
+      const serverHash = response.headers.get('X-Script-SHA256');
+      const serverSize = parseInt(response.headers.get('X-Script-Size') || '0', 10);
+
+      if (!serverHash) {
+        toast.warning("⚠️ Aviso: Hash SHA256 não fornecido pelo servidor. Download continuará sem validação.");
+        logger.warn('Server did not provide X-Script-SHA256 header');
+      }
+
+      // Calculate SHA256 of downloaded script
+      const arrayBuffer = await scriptBlob.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const calculatedHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      // Compare hashes
+      if (serverHash && calculatedHash.toLowerCase() !== serverHash.toLowerCase()) {
+        toast.dismiss();
+        toast.error("❌ FALHA DE SEGURANÇA: Hash SHA256 do script não corresponde!", {
+          description: `Esperado: ${serverHash.slice(0, 16)}...\nRecebido: ${calculatedHash.slice(0, 16)}...`,
+          duration: Infinity,
+        });
+
+        logger.error('PS1 SHA256 mismatch detected', {
+          expected: serverHash,
+          calculated: calculatedHash,
+          enrollmentKey,
+          scriptSize: arrayBuffer.byteLength,
+        });
+
+        await supabase.functions.invoke('record-security-event', {
+          body: {
+            event_type: 'sha256_mismatch',
+            severity: 'critical',
+            resource_type: 'installer_script',
+            resource_id: enrollmentKey,
+            details: {
+              expected_hash: serverHash,
+              calculated_hash: calculatedHash,
+              script_size: arrayBuffer.byteLength,
+            }
+          }
+        }).catch(err => logger.warn('Failed to record security event', err));
+
+        setIsValidatingPs1(false);
+        return;
+      }
+
+      // Validation successful
+      toast.dismiss();
+      toast.success("✅ Integridade verificada com sucesso!", {
+        description: `SHA256: ${calculatedHash.slice(0, 16)}... (${(arrayBuffer.byteLength / 1024).toFixed(2)} KB)`,
+        duration: 5000,
+      });
+
+      setPs1Sha256(calculatedHash);
+      setPs1SizeBytes(arrayBuffer.byteLength);
+
+      logger.info('PS1 SHA256 validation successful', {
+        hash: calculatedHash,
+        size: arrayBuffer.byteLength,
+        enrollmentKey,
+      });
+
+      // Initiate download
+      const url = window.URL.createObjectURL(scriptBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cybershield-installer-${agentName}.ps1`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("📥 Script baixado com sucesso");
+
+    } catch (error: any) {
+      logger.error('PS1 download/validation error', error);
+      toast.error("Erro ao baixar/validar script", {
+        description: error.message,
+      });
+    } finally {
+      setIsValidatingPs1(false);
+      toast.dismiss();
+    }
+  };
+
   const generateInstaller = async () => {
     setIsGenerating(true);
     
@@ -441,46 +555,8 @@ const AgentInstaller = () => {
       const credentials = await generateCredentials();
       if (!credentials) return;
 
-      const templatePath = platform === 'windows' 
-        ? '/templates/install-windows-template.ps1'
-        : '/templates/install-linux-template.sh';
-      
-      const agentScriptPath = platform === 'windows'
-        ? '/agent-scripts/cybershield-agent-windows.ps1'
-        : '/agent-scripts/cybershield-agent-linux.sh';
-
-      const [templateResponse, agentScriptResponse] = await Promise.all([
-        fetch(templatePath),
-        fetch(agentScriptPath)
-      ]);
-
-      if (!templateResponse.ok || !agentScriptResponse.ok) {
-        throw new Error('Falha ao baixar templates');
-      }
-
-      let templateContent = await templateResponse.text();
-      const agentScriptContent = await agentScriptResponse.text();
-
-      templateContent = templateContent
-        .replace(/\{\{AGENT_TOKEN\}\}/g, credentials.agentToken)
-        .replace(/\{\{HMAC_SECRET\}\}/g, credentials.hmacSecret)
-        .replace(/\{\{SERVER_URL\}\}/g, SUPABASE_URL)
-        .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, agentScriptContent)
-        .replace(/\{\{TIMESTAMP\}\}/g, new Date().toISOString());
-
-      const fileName = platform === 'windows'
-        ? `install-${agentName}-windows.ps1`
-        : `install-${agentName}-linux.sh`;
-
-      const blob = new Blob([templateContent], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // FASE 4: Use downloadAndVerifyPs1 which handles everything
+      await downloadAndVerifyPs1(credentials.enrollmentKey);
 
       await supabase.functions.invoke('track-installation-event', {
         body: {
@@ -490,8 +566,6 @@ const AgentInstaller = () => {
           installation_method: 'download'
         }
       }).catch(err => logger.error('Failed to track event', err));
-
-      toast.success(`✅ Instalador baixado: ${fileName}`);
 
     } catch (error: any) {
       logger.error('Generate installer error', error);
@@ -852,11 +926,16 @@ const AgentInstaller = () => {
               </Alert>
 
               <Button 
-                onClick={generateInstaller} 
-                disabled={!isNameValid || isGenerating || circuitBreakerOpen}
+                onClick={() => lastEnrollmentKey ? downloadAndVerifyPs1(lastEnrollmentKey) : generateInstaller()} 
+                disabled={!isNameValid || isGenerating || isValidatingPs1 || circuitBreakerOpen}
                 className="w-full"
               >
-                {isGenerating ? (
+                {isValidatingPs1 ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verificando Integridade...
+                  </>
+                ) : isGenerating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Gerando...
@@ -864,10 +943,34 @@ const AgentInstaller = () => {
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-2" />
-                    Baixar Script {platform === 'windows' ? '.ps1' : '.sh'}
+                    Baixar Script (.PS1) com Validação SHA256
                   </>
                 )}
               </Button>
+
+              {ps1Sha256 && (
+                <div className="mt-2 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-md">
+                  <p className="text-sm text-green-800 dark:text-green-200 font-mono flex items-center justify-between">
+                    <span className="flex items-center">
+                      <Shield className="mr-2 h-4 w-4" />
+                      SHA256: {ps1Sha256.slice(0, 16)}...{ps1Sha256.slice(-16)}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(ps1Sha256);
+                        toast.success("Hash copiado");
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </p>
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                    ✅ Integridade verificada ({(ps1SizeBytes! / 1024).toFixed(2)} KB)
+                  </p>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="exe-build" className="space-y-4 mt-4">

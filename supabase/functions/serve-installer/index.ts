@@ -457,7 +457,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Calculate SHA256 hash of agent script for integrity validation
+    // FASE 2: Calculate SHA256 hash of agent script for integrity validation
     const agentScriptUrl = `${SUPABASE_URL}/agent-scripts/cybershield-agent-windows.ps1`;
     console.log(`[${requestId}] Fetching agent script to calculate hash: ${agentScriptUrl}`);
     
@@ -502,12 +502,12 @@ Deno.serve(async (req) => {
     // Select template
     let templateContent = platform === 'windows' ? WINDOWS_INSTALLER_TEMPLATE : LINUX_INSTALLER_TEMPLATE;
 
-    // FASE 1 CORREÇÃO: Replace placeholders with validated credentials
+    // FASE 2: Replace placeholders with validated credentials
     templateContent = templateContent
       .replace(/\{\{AGENT_TOKEN\}\}/g, tokenData.token)
-      .replace(/\{\{HMAC_SECRET\}\}/g, agentData.hmac_secret) // Fixed: from agents table
+      .replace(/\{\{HMAC_SECRET\}\}/g, agentData.hmac_secret)
       .replace(/\{\{SERVER_URL\}\}/g, SUPABASE_URL)
-      .replace(/\{\{AGENT_HASH\}\}/g, agentScriptHash) // NEW: Hash for integrity validation
+      .replace(/\{\{AGENT_HASH\}\}/g, agentScriptHash)
       .replace(/\{\{TIMESTAMP\}\}/g, new Date().toISOString());
 
     // Final validation: ensure no placeholders remain
@@ -519,6 +519,36 @@ Deno.serve(async (req) => {
       });
     }
 
+    // FASE 2: Calculate SHA256 hash of complete installer script
+    const installerEncoder = new TextEncoder();
+    const installerData = installerEncoder.encode(templateContent);
+    const installerHashBuffer = await crypto.subtle.digest('SHA-256', installerData);
+    const installerHashArray = Array.from(new Uint8Array(installerHashBuffer));
+    const installerSha256 = installerHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const installerSizeBytes = installerData.length;
+
+    console.log(`[${requestId}] Installer SHA256: ${installerSha256}, Size: ${installerSizeBytes} bytes`);
+
+    // FASE 2: Persist installer hash to database
+    try {
+      const { error: updateError } = await supabaseClient
+        .from('enrollment_keys')
+        .update({
+          installer_sha256: installerSha256,
+          installer_size_bytes: installerSizeBytes,
+          installer_generated_at: new Date().toISOString()
+        })
+        .eq('key', enrollmentKey);
+
+      if (updateError) {
+        console.error(`[${requestId}] Failed to persist installer hash:`, updateError);
+      } else {
+        console.log(`[${requestId}] Installer hash persisted to database`);
+      }
+    } catch (dbError) {
+      console.error(`[${requestId}] Database error persisting hash:`, dbError);
+    }
+
     // Return script
     const fileName = platform === 'windows'
       ? `install-${agentData.agent_name}-windows.ps1`
@@ -527,11 +557,16 @@ Deno.serve(async (req) => {
     const duration = Date.now() - startTime;
     console.log(`[${requestId}] Completed successfully in ${duration}ms`);
 
+    // FASE 2: Return script with SHA256 in header
     return new Response(templateContent, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'text/plain; charset=utf-8',
         'Content-Disposition': `attachment; filename="${fileName}"`,
+        'X-Script-SHA256': installerSha256,
+        'X-Script-Size': installerSizeBytes.toString(),
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
       },
     });
 
