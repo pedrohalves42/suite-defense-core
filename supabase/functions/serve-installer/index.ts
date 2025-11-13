@@ -527,16 +527,20 @@ Deno.serve(async (req) => {
       
       if (storageResponse.ok) {
         agentScriptContent = await storageResponse.text();
-        console.log(`[${requestId}] Successfully fetched from storage (${agentScriptContent.length} bytes)`);
+        console.log(`[${requestId}] SUCCESS: Script loaded from Storage`, { 
+          size: agentScriptContent.length,
+          sizeKB: (agentScriptContent.length / 1024).toFixed(2)
+        });
       } else {
-        throw new Error(`Storage fetch failed: ${storageResponse.status}`);
+        console.warn(`[${requestId}] Storage fetch failed`, { status: storageResponse.status });
+        throw new Error(`Storage unavailable: ${storageResponse.status}`);
       }
     } catch (storageError) {
-      console.warn(`[${requestId}] Storage fetch failed, trying public directory:`, storageError);
+      console.log(`[${requestId}] Attempt 2: Trying public directory fallback`);
       
       // Fallback to public directory via HTTP
       const publicUrl = `${SUPABASE_URL}/agent-scripts/cybershield-agent-windows.ps1`;
-      console.log(`[${requestId}] Attempting public directory fetch: ${publicUrl}`);
+      console.log(`[${requestId}] Public URL`, { publicUrl });
       
       try {
         const publicResponse = await fetch(publicUrl);
@@ -546,9 +550,12 @@ Deno.serve(async (req) => {
         }
         
         agentScriptContent = await publicResponse.text();
-        console.log(`[${requestId}] Successfully fetched from public directory (${agentScriptContent.length} bytes)`);
+        console.log(`[${requestId}] SUCCESS: Using public directory fallback`, { 
+          size: agentScriptContent.length,
+          sizeKB: (agentScriptContent.length / 1024).toFixed(2)
+        });
       } catch (publicError) {
-        console.error(`[${requestId}] All agent script sources failed:`, {
+        console.error(`[${requestId}] CRITICAL: All agent script sources failed:`, {
           storageError: storageError instanceof Error ? storageError.message : String(storageError),
           publicError: publicError instanceof Error ? publicError.message : String(publicError)
         });
