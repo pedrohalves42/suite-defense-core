@@ -74,6 +74,30 @@ export default function PlanUpgradeNew() {
     },
   });
 
+  // Setup Stripe products (one-time setup)
+  const setupStripeProducts = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('create-stripe-products');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: '✅ Produtos criados no Stripe!',
+        description: `Starter: ${data.products.starter.price_id}\nPro: ${data.products.pro.price_id}`,
+      });
+      // Refetch plans to get updated stripe_price_id
+      window.location.reload();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Erro ao criar produtos',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Open customer portal
   const openPortal = useMutation({
     mutationFn: async () => {
@@ -172,6 +196,40 @@ export default function PlanUpgradeNew() {
 
   return (
     <div className="space-y-6">
+      {/* Setup Card - Only show if stripe_price_id is missing */}
+      {allPlans.some(plan => !plan.stripe_price_id && ['starter', 'pro'].includes(plan.name)) && (
+        <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
+              <Zap className="h-5 w-5" />
+              Configuração Necessária
+            </CardTitle>
+            <CardDescription className="text-yellow-700 dark:text-yellow-300">
+              Os planos ainda não estão conectados ao Stripe. Clique abaixo para criar os produtos automaticamente.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => setupStripeProducts.mutate()}
+              disabled={setupStripeProducts.isPending}
+              className="w-full"
+            >
+              {setupStripeProducts.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Criando produtos no Stripe...
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4 mr-2" />
+                  Configurar Produtos Stripe Agora
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <div>
         <h1 className="text-3xl font-bold">Planos e Preços</h1>
         <p className="text-muted-foreground mt-1">

@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       product: starterProduct.id,
       unit_amount: 3000, // R$ 30.00
       currency: "brl",
-      recurring: { interval: "month", trial_period_days: 30 },
+      recurring: { interval: "month" },
     });
 
     // Create Pro Product
@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
       product: proProduct.id,
       unit_amount: 5000, // R$ 50.00
       currency: "brl",
-      recurring: { interval: "month", trial_period_days: 30 },
+      recurring: { interval: "month" },
     });
 
     // Update database with price IDs
