@@ -4,6 +4,7 @@
  */
 
 const isDev = Deno.env.get('ENVIRONMENT') === 'development';
+const forceLogging = Deno.env.get('FORCE_LOGGING') === 'true'; // Enable production logs
 
 /**
  * Sanitize sensitive data for production logging
@@ -25,19 +26,19 @@ function sanitize(data: any): any {
 
 export const logger = {
   /**
-   * Debug level - only logs in development
+   * Debug level - only logs in development or when forced
    */
   debug: (message: string, data?: any) => {
-    if (isDev) {
+    if (isDev || forceLogging) {
       console.log(`[DEBUG] ${message}`, data);
     }
   },
 
   /**
-   * Info level - logs generic message in production, detailed in dev
+   * Info level - logs generic message in production, detailed in dev or forced
    */
   info: (message: string, data?: any) => {
-    if (isDev) {
+    if (isDev || forceLogging) {
       console.log(`[INFO] ${message}`, data);
     } else {
       console.log(`[INFO] ${message}`);
