@@ -71,6 +71,9 @@ verify_jwt = false
 [functions.auto-generate-enrollment]
 verify_jwt = true
 
+[functions.setup-agent-script]
+verify_jwt = false
+
 [functions.serve-installer]
 verify_jwt = false
 
