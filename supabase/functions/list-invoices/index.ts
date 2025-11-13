@@ -28,30 +28,45 @@ Deno.serve(async (req) => {
     // Get tenant subscription
     const { data: subscription } = await supabaseClient
       .from("tenant_subscriptions")
-      .select("stripe_customer_id, tenant_id")
+      .select("stripe_customer_id")
       .eq("tenant_id", await getTenantId(supabaseClient, userData.user.id))
       .maybeSingle();
 
     if (!subscription?.stripe_customer_id) {
-      throw new Error("No Stripe customer found");
+      return new Response(
+        JSON.stringify({ invoices: [] }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
     }
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
 
-    const origin = req.headers.get("origin") || Deno.env.get("SUPABASE_URL");
-    const session = await stripe.billingPortal.sessions.create({
+    const invoices = await stripe.invoices.list({
       customer: subscription.stripe_customer_id,
-      return_url: `${origin}/admin/subscriptions`,
+      limit: 12,
     });
 
+    const formattedInvoices = invoices.data.map(inv => ({
+      id: inv.id,
+      number: inv.number,
+      amount_due: inv.amount_due,
+      amount_paid: inv.amount_paid,
+      currency: inv.currency,
+      status: inv.status,
+      created: inv.created,
+      due_date: inv.due_date,
+      hosted_invoice_url: inv.hosted_invoice_url,
+      invoice_pdf: inv.invoice_pdf,
+    }));
+
     return new Response(
-      JSON.stringify({ url: session.url }),
+      JSON.stringify({ invoices: formattedInvoices }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
-    console.error("[CUSTOMER-PORTAL] Error:", error);
+    console.error("[LIST-INVOICES] Error:", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
