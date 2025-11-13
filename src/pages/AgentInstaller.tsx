@@ -55,6 +55,7 @@ const AgentInstaller = () => {
   const [agentName, setAgentName] = useState("");
   const [platform, setPlatform] = useState<"windows" | "linux">("windows");
   const [agentNameError, setAgentNameError] = useState("");
+  const [isCheckingName, setIsCheckingName] = useState(false);
   
   // Step 2: Generation states
   const [isGenerating, setIsGenerating] = useState(false);
@@ -73,6 +74,8 @@ const AgentInstaller = () => {
   const [exeFileSize, setExeFileSize] = useState<number | null>(null);
   const [githubActionsUrl, setGithubActionsUrl] = useState<string | null>(null);
   const [pollAttempts, setPollAttempts] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 2;
   
   // Circuit breaker monitoring
   const [circuitBreakerOpen, setCircuitBreakerOpen] = useState(false);
@@ -86,7 +89,14 @@ const AgentInstaller = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Real-time agent name validation
+  // Solicitar permissão para notificações
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Real-time agent name validation with availability check
   useEffect(() => {
     if (!agentName) {
       setAgentNameError("");
@@ -96,44 +106,127 @@ const AgentInstaller = () => {
     const invalidChars = /[^a-zA-Z0-9\-_]/;
     if (invalidChars.test(agentName)) {
       setAgentNameError("❌ Use apenas letras, números, hífens e underscores");
-    } else if (agentName.length < 3) {
-      setAgentNameError("⚠️ Mínimo de 3 caracteres");
-    } else if (agentName.length > 50) {
-      setAgentNameError("⚠️ Máximo de 50 caracteres");
-    } else {
-      setAgentNameError("✓ Nome válido");
+      return;
     }
+
+    if (agentName.length < 3) {
+      setAgentNameError("❌ Nome deve ter pelo menos 3 caracteres");
+      return;
+    }
+
+    if (agentName.length > 50) {
+      setAgentNameError("❌ Máximo de 50 caracteres");
+      return;
+    }
+
+    // Debounce para verificar disponibilidade
+    const timer = setTimeout(async () => {
+      setIsCheckingName(true);
+      
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        // Buscar tenant_id do usuário
+        const { data: userRole } = await supabase
+          .from('user_roles')
+          .select('tenant_id')
+          .eq('user_id', user?.id)
+          .maybeSingle();
+
+        const { data, error } = await supabase.functions.invoke(
+          'check-agent-name-availability',
+          {
+            body: { 
+              agentName, 
+              tenantId: userRole?.tenant_id 
+            },
+            headers: {
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+          }
+        );
+
+        if (error) throw error;
+
+        if (!data.available) {
+          setAgentNameError(`❌ ${data.reason}`);
+        } else {
+          setAgentNameError('✅ Nome disponível');
+        }
+      } catch (err) {
+        console.error('Erro ao verificar nome:', err);
+        setAgentNameError('');
+      } finally {
+        setIsCheckingName(false);
+      }
+    }, 800); // 800ms debounce
+
+    return () => clearTimeout(timer);
   }, [agentName]);
 
-  const isNameValid = agentName.length >= 3 && agentName.length <= 50 && !/[^a-zA-Z0-9\-_]/.test(agentName);
+  const isNameValid = agentName.length >= 3 && agentName.length <= 50 && !/[^a-zA-Z0-9\-_]/.test(agentName) && !agentNameError.startsWith('❌');
 
-  // Smart timeout for builds (3 min warning)
+  // Smart timeout para builds
   useEffect(() => {
-    if (exeBuildStatus === 'building') {
+    if (exeBuildStatus === 'building' && exeBuildId) {
       const timeout = setTimeout(() => {
-        toast.error('Build timeout - verifique GitHub Actions', {
-          description: 'O build demorou mais de 3 minutos',
-          action: githubActionsUrl ? {
-            label: 'Ver Logs',
-            onClick: () => window.open(githubActionsUrl, '_blank')
-          } : undefined
+        toast.error('⚠️ Build Timeout', {
+          description: 'Build está demorando mais que o esperado. Verifique os logs do GitHub Actions.',
+          duration: 10000,
         });
         setExeBuildStatus('failed');
-      }, 180000); // 3 min
+        setRetryCount(0);
+      }, 300000); // 5 minutos
       
       return () => clearTimeout(timeout);
     }
-  }, [exeBuildStatus, githubActionsUrl]);
+  }, [exeBuildStatus, exeBuildId]);
 
-  // Browser notification on completion
+  // Monitorar conclusão de build e enviar notificação
   useEffect(() => {
-    if (exeBuildStatus === 'completed' && 'Notification' in window && Notification.permission === 'granted') {
-      new Notification('CyberShield', {
-        body: 'Instalador EXE pronto para download!',
-        requireInteraction: true
+    if (exeBuildStatus === 'completed' && exeDownloadUrl) {
+      // Notificação browser
+      if (Notification.permission === 'granted') {
+        const notification = new Notification('🎉 Build EXE Concluído!', {
+          body: `${agentName} está pronto para download`,
+          icon: '/favicon.ico',
+          tag: `build-${exeBuildId}`,
+          requireInteraction: true,
+        });
+
+        notification.onclick = () => {
+          window.focus();
+          const element = document.getElementById('exe-download');
+          element?.scrollIntoView({ behavior: 'smooth' });
+          notification.close();
+        };
+      }
+
+      // Piscar título da página
+      let flash = true;
+      const titleInterval = setInterval(() => {
+        document.title = flash ? '✅ EXE Pronto! | CyberShield' : 'CyberShield Agent Installer';
+        flash = !flash;
+      }, 1000);
+
+      // Parar após 10 segundos ou quando usuário focar a página
+      const stopFlashing = () => {
+        clearInterval(titleInterval);
+        document.title = 'CyberShield Agent Installer';
+        document.removeEventListener('visibilitychange', stopFlashing);
+      };
+      
+      setTimeout(stopFlashing, 10000);
+      document.addEventListener('visibilitychange', stopFlashing);
+
+      // Toast persistente
+      toast.success('✅ EXE Pronto para Download!', {
+        description: 'Seu instalador está pronto',
+        duration: 30000,
       });
     }
-  }, [exeBuildStatus]);
+  }, [exeBuildStatus, exeDownloadUrl, agentName, exeBuildId]);
 
   const generateCredentials = async () => {
     if (!isNameValid) {
@@ -314,7 +407,7 @@ const AgentInstaller = () => {
 
       logger.info('Build initiated', { build_id, agent_name: agentName.trim(), github_actions_url });
 
-      // Poll for build status
+      // Poll for build status with retry logic
       let attempts = 0;
       const maxAttempts = 60; // 5 min timeout
       
@@ -324,8 +417,24 @@ const AgentInstaller = () => {
         
         if (attempts > maxAttempts) {
           clearInterval(pollInterval);
-          setExeBuildStatus('failed');
-          toast.error('Timeout: Build demorou mais de 5 minutos');
+          
+          // Retry automático
+          if (retryCount < MAX_RETRIES) {
+            toast.warning('⚠️ Build timeout', {
+              description: `Tentando novamente (${retryCount + 1}/${MAX_RETRIES}) em 30s...`,
+              duration: 5000,
+            });
+            
+            setTimeout(async () => {
+              setRetryCount(prev => prev + 1);
+              setPollAttempts(0);
+              await handleBuildExe();
+            }, 30000);
+          } else {
+            setExeBuildStatus('failed');
+            toast.error('Timeout: Build demorou mais de 5 minutos após múltiplas tentativas');
+            setRetryCount(0);
+          }
           return;
         }
 
@@ -353,6 +462,7 @@ const AgentInstaller = () => {
             setExeDownloadUrl(buildData.download_url);
             setExeSha256(buildData.sha256_hash);
             setExeFileSize(buildData.file_size_bytes);
+            setRetryCount(0);
             
             const duration = buildData.build_duration_seconds || 0;
             toast.success(`✅ EXE gerado em ${duration}s!`, {
@@ -360,8 +470,24 @@ const AgentInstaller = () => {
             });
           } else if (buildData.build_status === 'failed') {
             clearInterval(pollInterval);
-            setExeBuildStatus('failed');
-            toast.error(`Falha: ${buildData.error_message || 'Erro desconhecido'}`);
+            
+            // Retry automático
+            if (retryCount < MAX_RETRIES) {
+              toast.warning('⚠️ Build falhou', {
+                description: `Tentando novamente (${retryCount + 1}/${MAX_RETRIES}) em 30s...`,
+                duration: 5000,
+              });
+              
+              setTimeout(async () => {
+                setRetryCount(prev => prev + 1);
+                setPollAttempts(0);
+                await handleBuildExe();
+              }, 30000);
+            } else {
+              setExeBuildStatus('failed');
+              toast.error(`Falha: ${buildData.error_message || 'Erro desconhecido'} após múltiplas tentativas`);
+              setRetryCount(0);
+            }
           }
         } catch (pollErr) {
           logger.error('Poll exception', pollErr);
@@ -464,15 +590,23 @@ const AgentInstaller = () => {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="agentName">Nome do Agente</Label>
-            <Input
-              id="agentName"
-              placeholder="ex: servidor-web-01"
-              value={agentName}
-              onChange={(e) => setAgentName(e.target.value)}
-              disabled={isGenerating || exeBuildStatus === 'building'}
-            />
+            <div className="relative">
+              <Input
+                id="agentName"
+                placeholder="ex: servidor-web-01"
+                value={agentName}
+                onChange={(e) => setAgentName(e.target.value)}
+                disabled={isGenerating || exeBuildStatus === 'building'}
+                className={agentNameError && agentNameError.startsWith('❌') ? 'border-red-500' : ''}
+              />
+              {isCheckingName && (
+                <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
+            </div>
             {agentNameError && (
-              <p className={`text-sm ${agentNameError.startsWith('✓') ? 'text-green-600' : 'text-destructive'}`}>
+              <p className={`text-sm mt-1 ${
+                agentNameError.startsWith('✅') ? 'text-green-600' : 'text-red-600'
+              }`}>
                 {agentNameError}
               </p>
             )}
@@ -663,6 +797,7 @@ const AgentInstaller = () => {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
                     Tentativa {pollAttempts}/60 (timeout em {Math.max(0, 5 - Math.floor(pollAttempts / 12))} min)
+                    {retryCount > 0 && ` • Retry ${retryCount}/${MAX_RETRIES}`}
                   </span>
                   <Button onClick={refreshBuildStatus} variant="ghost" size="sm">
                     <RefreshCw className="h-4 w-4 mr-2" />
@@ -697,9 +832,9 @@ const AgentInstaller = () => {
             )}
 
             {exeBuildStatus === 'completed' && (
-              <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
+              <Alert id="exe-download" className="border-green-500 bg-green-50 dark:bg-green-950">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <AlertTitle className="text-green-800 dark:text-green-200">Build Concluído!</AlertTitle>
+                <AlertTitle className="text-green-800 dark:text-green-200">✅ Build Concluído!</AlertTitle>
                 <AlertDescription className="space-y-3">
                   <div className="space-y-1 text-sm text-green-700 dark:text-green-300">
                     <div>SHA256: <code className="bg-green-100 dark:bg-green-900 px-1 rounded text-xs">{exeSha256?.slice(0, 16)}...</code></div>
@@ -718,13 +853,30 @@ const AgentInstaller = () => {
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Build Falhou</AlertTitle>
                 <AlertDescription className="space-y-2">
-                  <p>Ocorreu um erro durante a compilação do executável.</p>
+                  <p>
+                    {retryCount > 0 
+                      ? `Falhou após ${retryCount} tentativa(s) automática(s)` 
+                      : 'Ocorreu um erro durante a compilação do executável.'
+                    }
+                  </p>
                   {githubActionsUrl && (
                     <Button onClick={() => window.open(githubActionsUrl, '_blank')} variant="outline" size="sm">
                       <ExternalLink className="h-4 w-4 mr-2" />
                       Ver Logs de Erro
                     </Button>
                   )}
+                  <Button
+                    onClick={() => {
+                      setRetryCount(0);
+                      setPollAttempts(0);
+                      handleBuildExe();
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                  >
+                    Tentar Novamente
+                  </Button>
                 </AlertDescription>
               </Alert>
             )}
