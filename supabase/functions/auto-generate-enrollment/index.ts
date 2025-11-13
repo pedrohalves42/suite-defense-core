@@ -147,15 +147,20 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       // Continue - blocklist issues shouldn't block enrollment
     }
 
-    // Rate limiting por IP (prevenir brute force)
+    // ✅ FASE 1.3: Rate limiting ajustado para melhor UX (wrap em try/catch)
     try {
       const rateLimitResult = await checkRateLimit(supabase, ipAddress, 'auto-generate-enrollment', {
-        maxRequests: 10, // Máximo 10 enrollment keys por IP por hora
-        windowMinutes: 60,
-        blockMinutes: 120, // Bloquear por 2 horas se exceder
+        maxRequests: 20, // Aumentado para 20 enrollment keys por minuto
+        windowMinutes: 1, // Janela de 1 minuto
+        blockMinutes: 2, // Bloquear por apenas 2 minutos se exceder
       });
 
       if (!rateLimitResult.allowed) {
+        logger.warn(`[${requestId}] Rate limit exceeded for IP ${ipAddress}`, { 
+          resetAt: rateLimitResult.resetAt,
+          remainingRequests: rateLimitResult.remainingRequests 
+        });
+        
         await logSecurityEvent({
           supabase,
           ipAddress,
@@ -173,7 +178,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         return new Response(
           JSON.stringify({ 
             error: 'Rate limit exceeded',
-            message: 'Too many enrollment key creation attempts. Please try again later.',
+            message: 'Too many enrollment key creation attempts. Please wait 2 minutes and try again.',
             resetAt: rateLimitResult.resetAt,
             requestId,
             timestamp: new Date().toISOString()
@@ -182,16 +187,8 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         );
       }
     } catch (rateLimitError: any) {
-      logger.error(`[${requestId}] Rate limit check failed`, rateLimitError.message);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Rate limit check failed',
-          message: rateLimitError.message || 'Unable to verify rate limit',
-          requestId,
-          timestamp: new Date().toISOString()
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      logger.warn(`[${requestId}] Rate limit check failed (non-blocking)`, rateLimitError.message);
+      // Continue - rate limit issues shouldn't block enrollment for legitimate admins
     }
 
     // Authenticate user
@@ -229,14 +226,29 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       });
     }
 
+    // ✅ FASE 1.2: Parse request body com error handling melhorado
     let body;
     try {
       body = await req.json();
-      logger.debug(`[${requestId}] Request body parsed`, { agentName: body?.agentName || 'MISSING' });
-    } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : 'Invalid JSON';
-      logger.error(`[${requestId}] Invalid JSON in request body`, e);
-      return handleValidationError('Invalid JSON in request body', { error: errorMsg }, requestId);
+      logger.debug(`[${requestId}] Request body parsed successfully`, { 
+        hasAgentName: !!body?.agent_name,
+        hasOsType: !!body?.os_type 
+      });
+    } catch (parseError: any) {
+      logger.error(`[${requestId}] JSON parse error`, { 
+        error: parseError.message,
+        contentType: req.headers.get('content-type')
+      });
+      return new Response(JSON.stringify({ 
+        error: 'Invalid request body',
+        message: 'Request body must be valid JSON',
+        details: parseError.message,
+        requestId,
+        timestamp: new Date().toISOString()
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Validate input with Zod
@@ -396,32 +408,44 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
     } else {
       // Create new agent
       logger.info(`[${requestId}] Creating new agent`, { agentName });
-      const { data: newAgent, error: agentError } = await supabase
+    // ✅ FASE 1.2: Create agent record com enrolled_at sempre definido
+    const { data: newAgent, error: agentError } = await supabase
         .from('agents')
         .insert({
           agent_name: agentName,
           tenant_id: tenantId,
           hmac_secret: hmacSecret,
           status: 'pending',
+          enrolled_at: new Date().toISOString(), // ✅ Garantir enrolled_at sempre definido
         })
         .select('id')
         .maybeSingle();
 
+      // ✅ FASE 1.2: Error handling com mapeamento SQL -> mensagens user-friendly
       if (agentError || !newAgent) {
-        logger.error(`[${requestId}] Failed to create agent`, agentError);
+        logger.error(`[${requestId}] Failed to create agent`, { 
+          error: agentError?.message,
+          code: agentError?.code,
+          details: agentError?.details 
+        });
         
-        // Map known DB errors to user-friendly messages
-        if (agentError?.code === '23505') { // Unique violation
-          throw new Error(`Agent name "${agentName}" is already registered. Please choose a different name.`);
-        }
-        if (agentError?.code === '23502') { // Not null violation
-          throw new Error('Missing required fields for agent creation. Please contact support.');
-        }
-        if (agentError?.code === '42703') { // Undefined column
-          throw new Error('Database schema error. The agents table may be missing required columns. Please contact support.');
+        // Mapear códigos de erro SQL para mensagens user-friendly
+        let userMessage = 'Failed to create agent';
+        if (agentError?.code === '23505') {
+          userMessage = `Agent name "${agentName}" already exists. Please choose a different name.`;
+        } else if (agentError?.code === '23503') {
+          userMessage = 'Invalid tenant ID or foreign key constraint violation.';
+        } else if (agentError?.code === '23514') {
+          userMessage = 'Agent data validation failed. Please check your input.';
+        } else if (agentError?.code === '23502') {
+          userMessage = 'Missing required fields for agent creation. Please contact support.';
+        } else if (agentError?.code === '42703') {
+          userMessage = 'Database schema error. The agents table may be missing required columns. Please contact support.';
+        } else if (agentError?.message?.includes('unique')) {
+          userMessage = `Agent name "${agentName}" is already in use.`;
         }
         
-        throw new Error(`Failed to create agent: ${agentError?.message || 'Unknown database error'}`);
+        throw new Error(userMessage);
       }
       agentId = newAgent.id;
     }
@@ -438,11 +462,14 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       });
 
     if (tokenError) {
-      logger.error(`[${requestId}] Failed to create agent token`, tokenError);
+      logger.error(`[${requestId}] Failed to create agent token`, { 
+        error: tokenError.message,
+        agentId 
+      });
       
       // Map known DB errors
       if (tokenError.code === '23505') {
-        throw new Error('Agent token already exists. Please try again.');
+        throw new Error('A token collision occurred. Please try again.');
       }
       
       throw new Error(`Failed to create agent token: ${tokenError.message}`);
@@ -463,44 +490,38 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
     }
 
     const duration = Date.now() - startTime;
-    logger.success(`[${requestId}] Credentials generated successfully in ${duration}ms`);
+    logger.success(`[${requestId}] Successfully generated credentials for agent ${agentName} in ${duration}ms`);
     
+    // ✅ FASE 1.2: Return credentials com expiresAt correto (enrollment key, não token)
     return new Response(
       JSON.stringify({
         enrollmentKey,
         agentToken,
         hmacSecret,
-        expiresAt: expiresAt.toISOString(),
+        expiresAt: expiresAt.toISOString(), // ✅ CORRIGIDO: enrollment key expiration (24h)
+        tokenExpiresAt: tokenExpiresAt.toISOString(), // Token expiration (1 year) para referência
         agentId,
-        requestId
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  } catch (error: any) {
-    // Catch all errors and ensure CORS headers are always included
-    const duration = Date.now() - startTime;
-    logger.error(`[${requestId}] Critical error after ${duration}ms`, error);
-    
-    // Extract detailed error information
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    const errorDetails = error?.details || error?.hint || undefined;
-    const errorCode = error?.code || undefined;
-    
-    return new Response(
-      JSON.stringify({
-        error: 'Internal server error',
-        message: errorMessage,
-        details: errorDetails,
-        code: errorCode,
         requestId,
         timestamp: new Date().toISOString()
       }),
       {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
+  } catch (error: any) {
+    // ✅ FASE 1.2: Final error handler sempre inclui requestId e detalhes
+    const duration = Date.now() - startTime;
+    logger.error(`[${requestId}] Unexpected error in auto-generate-enrollment after ${duration}ms: ${error.message}`);
+    
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error',
+      message: error.message || 'An unexpected error occurred. Please try again or contact support.',
+      requestId, // ✅ Sempre incluir requestId
+      timestamp: new Date().toISOString()
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 }

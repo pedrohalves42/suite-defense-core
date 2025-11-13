@@ -155,6 +155,10 @@ function Write-InstallLog {
     Write-Host $Message
 }
 
+$installStartTime = Get-Date
+
+$installStartTime = Get-Date
+
 try {
     Write-InstallLog "[1/8] Criando diretórios de instalação..."
     if (-not (Test-Path $InstallDir)) {
@@ -181,8 +185,8 @@ try {
     }
     Write-InstallLog "✓ TLS 1.2 habilitado e proxy configurado"
 
-    # ✅ FASE 1.3: Health check inicial
-    Write-InstallLog "[3/8] Testando conectividade com backend..."
+    # ✅ FASE 1.3: Health check inicial com retry mechanism
+    Write-InstallLog "[3/8] Testando conectividade com backend (até 3 tentativas)..."
     $healthCheck = $false
     $healthUrls = @(
         "$ServerUrl/functions/v1/heartbeat",
@@ -190,14 +194,37 @@ try {
         "https://www.google.com"
     )
 
+    $maxRetries = 3
+    $retryDelay = 2 # segundos
+
     foreach ($url in $healthUrls) {
-        try {
-            $response = Invoke-WebRequest -Uri $url -Method OPTIONS -TimeoutSec 5 -UseBasicParsing -ErrorAction Stop
-            Write-InstallLog "✓ Conectividade OK: $url (Status: $($response.StatusCode))"
-            $healthCheck = $true
+        $retryCount = 0
+        $success = $false
+        
+        while ($retryCount -lt $maxRetries -and -not $success) {
+            try {
+                if ($retryCount -gt 0) {
+                    Write-InstallLog "Tentativa $($retryCount + 1) de $maxRetries para $url"
+                    Start-Sleep -Seconds $retryDelay
+                }
+                $response = Invoke-WebRequest -Uri $url -Method GET -TimeoutSec 10 -UseBasicParsing
+                if ($response.StatusCode -eq 200) {
+                    Write-InstallLog "✓ Conectividade verificada: $url"
+                    $healthCheck = $true
+                    $success = $true
+                    break
+                }
+            } catch {
+                $retryCount++
+                Write-InstallLog "✗ Tentativa $retryCount falhou: $url - $($_.Exception.Message)"
+                if ($retryCount -ge $maxRetries) {
+                    Write-InstallLog "✗ Todas as tentativas falharam para: $url"
+                }
+            }
+        }
+        
+        if ($success) {
             break
-        } catch {
-            Write-InstallLog "✗ Falha ao conectar: $url - $_"
         }
     }
 
