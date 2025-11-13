@@ -52,6 +52,10 @@ import InstallationAnalytics from "./pages/admin/InstallationAnalytics";
 import SubscriptionAnalytics from "./pages/admin/SubscriptionAnalytics";
 import StripeSetup from "./pages/admin/StripeSetup";
 import AgentDiagnostics from "./pages/admin/AgentDiagnostics.tsx";
+import TenantInvites from "./pages/admin/tenant/TenantInvites";
+import TenantSecurity from "./pages/admin/tenant/TenantSecurity";
+import TenantLogs from "./pages/admin/tenant/TenantLogs";
+import TenantSettings from "./pages/admin/tenant/TenantSettings";
 
 // CORREÇÃO: QueryClient já está inicializado no src/main.tsx
 // Remover duplicação para manter configurações otimizadas
@@ -109,6 +113,10 @@ const App = () => (
                 <Route path="plan-upgrade" element={<PlanUpgrade />} />
                 <Route path="subscriptions" element={<Subscriptions />} />
                 <Route path="installation-analytics" element={<InstallationAnalytics />} />
+                <Route path="tenant/invites" element={<TenantInvites />} />
+                <Route path="tenant/security" element={<TenantSecurity />} />
+                <Route path="tenant/logs" element={<TenantLogs />} />
+                <Route path="tenant/settings" element={<TenantSettings />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
