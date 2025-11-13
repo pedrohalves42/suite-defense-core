@@ -71,6 +71,7 @@ const AgentInstaller = () => {
   const [exeSha256, setExeSha256] = useState<string | null>(null);
   const [exeFileSize, setExeFileSize] = useState<number | null>(null);
   const [lastEnrollmentKey, setLastEnrollmentKey] = useState<string | null>(null);
+  const [githubActionsUrl, setGithubActionsUrl] = useState<string | null>(null);
 
   // Monitor circuit breaker state
   useEffect(() => {
@@ -357,6 +358,7 @@ const AgentInstaller = () => {
     setExeDownloadUrl(null);
     setExeSha256(null);
     setExeFileSize(null);
+    setGithubActionsUrl(null);
     toast.info('Iniciando build do instalador EXE... Aguarde 2-3 minutos');
 
     try {
@@ -369,10 +371,11 @@ const AgentInstaller = () => {
 
       if (error) throw error;
 
-      const { build_id } = data;
+      const { build_id, github_actions_url } = data;
       setExeBuildId(build_id);
+      setGithubActionsUrl(github_actions_url || null);
 
-      logger.info('Build initiated', { build_id, agent_name: agentName.trim() });
+      logger.info('Build initiated', { build_id, agent_name: agentName.trim(), github_actions_url });
 
       // Start polling for build status (every 5 seconds)
       let pollAttempts = 0;
@@ -391,13 +394,18 @@ const AgentInstaller = () => {
         try {
           const { data: buildData, error: pollError } = await supabase
             .from('agent_builds')
-            .select('build_status, download_url, sha256_hash, file_size_bytes, error_message, build_duration_seconds')
+            .select('build_status, download_url, sha256_hash, file_size_bytes, error_message, build_duration_seconds, github_run_url')
             .eq('id', build_id)
             .single();
 
           if (pollError) {
             logger.error('Polling error', pollError);
             return;
+          }
+
+          // Update GitHub Actions URL if available
+          if (buildData.github_run_url && !githubActionsUrl) {
+            setGithubActionsUrl(buildData.github_run_url);
           }
 
           logger.info('Poll attempt', { attempt: pollAttempts, status: buildData.build_status });
@@ -437,7 +445,7 @@ const AgentInstaller = () => {
     try {
       const { data: buildData, error } = await supabase
         .from('agent_builds')
-        .select('build_status, download_url, sha256_hash, file_size_bytes, error_message, build_duration_seconds')
+        .select('build_status, download_url, sha256_hash, file_size_bytes, error_message, build_duration_seconds, github_run_url')
         .eq('id', exeBuildId)
         .single();
 
@@ -445,6 +453,11 @@ const AgentInstaller = () => {
         logger.error('Manual refresh error', error);
         toast.error('Erro ao atualizar status do build');
         return;
+      }
+
+      // Update GitHub Actions URL if available
+      if (buildData.github_run_url && !githubActionsUrl) {
+        setGithubActionsUrl(buildData.github_run_url);
       }
 
       if (buildData.build_status === 'completed') {
@@ -793,11 +806,22 @@ const AgentInstaller = () => {
                         Build ID: <code className="font-mono">{exeBuildId}</code>
                       </p>
                     )}
-                    <div>
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Button onClick={refreshBuildStatus} variant="outline" size="sm">
                         <Shield className="h-3 w-3 mr-2" />
                         Atualizar status agora
                       </Button>
+                      {githubActionsUrl && (
+                        <Button 
+                          onClick={() => window.open(githubActionsUrl, '_blank')}
+                          variant="outline" 
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <Terminal className="h-3 w-3" />
+                          Ver logs no GitHub Actions
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}

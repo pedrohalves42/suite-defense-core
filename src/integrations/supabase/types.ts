@@ -32,6 +32,7 @@ export type Database = {
           file_path: string | null
           file_size_bytes: number | null
           github_run_id: string | null
+          github_run_url: string | null
           id: string
           ps1_version: string | null
           ps2exe_version: string | null
@@ -55,6 +56,7 @@ export type Database = {
           file_path?: string | null
           file_size_bytes?: number | null
           github_run_id?: string | null
+          github_run_url?: string | null
           id?: string
           ps1_version?: string | null
           ps2exe_version?: string | null
@@ -78,6 +80,7 @@ export type Database = {
           file_path?: string | null
           file_size_bytes?: number | null
           github_run_id?: string | null
+          github_run_url?: string | null
           id?: string
           ps1_version?: string | null
           ps2exe_version?: string | null
