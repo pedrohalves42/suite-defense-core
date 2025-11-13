@@ -249,24 +249,27 @@ function Invoke-SecureRequest {
 #region Heartbeat
 
 function Send-Heartbeat {
-    param(
-        [switch]$IsBootHeartbeat  # ✅ FASE 2.3: NOVO PARÂMETRO
-    )
+    param([switch]$IsBootHeartbeat)
     
-    $maxRetries = $IsBootHeartbeat ? 5 : 3  # Mais retries no boot
+    $maxRetries = if ($IsBootHeartbeat) { 5 } else { 3 }
     $retryCount = 0
     
     while ($retryCount -lt $maxRetries) {
         try {
             if ($IsBootHeartbeat) {
-                Write-Log "🔥 ENVIANDO HEARTBEAT DE BOOT (crítico)" "INFO"
+                Write-Log "  Preparando heartbeat inicial..." "DEBUG"
             } else {
-                Write-Log "Sending heartbeat..." "DEBUG"
+                Write-Log "  Preparando heartbeat..." "DEBUG"
             }
+            
             $heartbeatUrl = "$ServerUrl/functions/v1/heartbeat"
+            Write-Log "    Endpoint: $heartbeatUrl" "DEBUG"
             
             # Incluir informações do OS no heartbeat
             $os = Get-CimInstance Win32_OperatingSystem
+            Write-Log "    OS: $($os.Caption)" "DEBUG"
+            Write-Log "    Hostname: $env:COMPUTERNAME" "DEBUG"
+            
             $body = @{
                 os_type = "windows"
                 os_version = $os.Caption
@@ -274,12 +277,19 @@ function Send-Heartbeat {
             }
             
             $response = Invoke-SecureRequest -Url $heartbeatUrl -Method "POST" -Body $body -MaxRetries 1
-            Write-Log "Heartbeat sent successfully" "SUCCESS"
+            
+            if ($IsBootHeartbeat) {
+                Write-Log "    ✓ Heartbeat inicial aceito pelo servidor" "SUCCESS"
+            } else {
+                Write-Log "    ✓ Heartbeat OK" "DEBUG"
+            }
+            
             return $response
         }
         catch {
             $retryCount++
-            Write-Log "Heartbeat error (attempt $retryCount/$maxRetries): $_" "ERROR"
+            Write-Log "    ✗ Heartbeat erro (tentativa $retryCount/$maxRetries): $_" "ERROR"
+            Write-Log "    Stack: $($_.ScriptStackTrace)" "DEBUG"
             if ($retryCount -lt $maxRetries) {
                 Start-Sleep -Seconds (2 * $retryCount)
             }
@@ -589,55 +599,122 @@ function Send-SystemMetrics {
 #region System Health
 
 function Test-SystemHealth {
-    Write-Log "=== Starting System Health Check ===" "INFO"
+    Write-Log "========================================" "INFO"
+    Write-Log "🔍 DIAGNÓSTICO COMPLETO DE SISTEMA" "INFO"
+    Write-Log "========================================" "INFO"
     
-    $psVersion = $PSVersionTable.PSVersion
-    Write-Log "PowerShell Version: $psVersion" "INFO"
-    if ($psVersion.Major -lt 5) {
-        Write-Log "WARNING: PowerShell 5.1+ recommended" "WARN"
+    # 1. Validar PowerShell
+    Write-Log "  [1/6] Validando PowerShell..." "INFO"
+    if ($PSVersionTable.PSVersion.Major -lt 3) {
+        Write-Log "  ✗ PowerShell muito antigo! Requer 3.0+" "ERROR"
+        return $false
+    }
+    Write-Log "  ✓ PowerShell $($PSVersionTable.PSVersion) OK" "SUCCESS"
+    
+    # 2. Testar conectividade DNS
+    Write-Log "  [2/6] Testando conectividade DNS..." "INFO"
+    try {
+        $dnsTest = Test-Connection -ComputerName "google.com" -Count 1 -Quiet -ErrorAction Stop
+        if ($dnsTest) {
+            Write-Log "  ✓ DNS OK - Internet acessível" "SUCCESS"
+        } else {
+            Write-Log "  ✗ DNS FALHOU - Sem internet" "ERROR"
+            return $false
+        }
+    } catch {
+        Write-Log "  ✗ Erro DNS: $_" "ERROR"
+        return $false
     }
     
-    # Test server connectivity with retries
-    $maxRetries = 3
-    $connected = $false
+    # 3. Extrair hostname do ServerUrl
+    Write-Log "  [3/6] Extraindo hostname do servidor..." "INFO"
+    $serverHost = $ServerUrl -replace "https://","" -replace "http://","" -replace "/.*",""
+    Write-Log "  Hostname: $serverHost" "INFO"
     
-    for ($i = 1; $i -le $maxRetries; $i++) {
-        try {
-            Write-Log "Testing server connectivity (attempt $i/$maxRetries)..." "INFO"
-            $testUrl = "$ServerUrl/functions/v1/poll-jobs"
-            $testResponse = Invoke-SecureRequest -Url $testUrl -Method "GET" -MaxRetries 1
-            Write-Log "Server connectivity: OK" "SUCCESS"
-            $connected = $true
-            break
+    # 4. Testar conexão TCP com servidor backend
+    Write-Log "  [4/6] Testando conectividade TCP:443 com $serverHost..." "INFO"
+    try {
+        $tcpTest = Test-NetConnection -ComputerName $serverHost -Port 443 -WarningAction SilentlyContinue -ErrorAction Stop
+        if ($tcpTest.TcpTestSucceeded) {
+            Write-Log "  ✓ Conectividade TCP:443 OK" "SUCCESS"
+        } else {
+            Write-Log "  ✗ TCP:443 falhou - Firewall pode estar bloqueando" "ERROR"
+            Write-Log "    Verifique regras de firewall para $serverHost:443" "WARN"
+            return $false
         }
-        catch {
-            Write-Log "Connection attempt $i failed: $_" "WARN"
-            if ($i -lt $maxRetries) {
-                $waitTime = 2 * $i
-                Write-Log "Waiting $waitTime seconds before retry..." "INFO"
-                Start-Sleep -Seconds $waitTime
+    } catch {
+        Write-Log "  ✗ Erro ao testar TCP: $_" "ERROR"
+        return $false
+    }
+    
+    # 5. Testar recursos do sistema
+    Write-Log "  [5/6] Verificando recursos do sistema..." "INFO"
+    try {
+        $memory = Get-WmiObject Win32_OperatingSystem
+        $freeMemoryMB = [math]::Round($memory.FreePhysicalMemory / 1024, 2)
+        Write-Log "    Memória livre: $freeMemoryMB MB" "INFO"
+        
+        if ($freeMemoryMB -lt 100) {
+            Write-Log "    ⚠ AVISO: Memória disponível baixa" "WARN"
+        }
+        
+        $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
+        $freeSpaceGB = [math]::Round($disk.FreeSpace / 1GB, 2)
+        Write-Log "    Espaço livre C:: $freeSpaceGB GB" "INFO"
+        
+        if ($freeSpaceGB -lt 1) {
+            Write-Log "    ⚠ AVISO: Espaço em disco baixo" "WARN"
+        }
+    } catch {
+        Write-Log "    ⚠ Não foi possível verificar recursos: $_" "WARN"
+    }
+    
+    # 6. RETRY DE HEARTBEAT COM BACKOFF EXPONENCIAL
+    Write-Log "  [6/6] Tentando enviar heartbeat inicial..." "INFO"
+    $maxRetries = 5
+    $retryCount = 0
+    $heartbeatSuccess = $false
+    
+    while ($retryCount -lt $maxRetries -and -not $heartbeatSuccess) {
+        $retryCount++
+        Write-Log "    Tentativa $retryCount/$maxRetries..." "INFO"
+        
+        $result = Send-Heartbeat -IsBootHeartbeat
+        if ($result) {
+            Write-Log "  ✓ Heartbeat inicial enviado com SUCESSO!" "SUCCESS"
+            $heartbeatSuccess = $true
+        } else {
+            Write-Log "    ✗ Heartbeat falhou" "WARN"
+            
+            if ($retryCount -lt $maxRetries) {
+                $backoffSeconds = [math]::Pow(2, $retryCount)
+                Write-Log "    Aguardando $backoffSeconds segundos antes de retry..." "INFO"
+                Start-Sleep -Seconds $backoffSeconds
             }
         }
     }
     
-    if (-not $connected) {
-        Write-Log "CRITICAL: Cannot connect to server after $maxRetries attempts" "ERROR"
-        Write-Log "Please check:" "ERROR"
-        Write-Log "  1. Network connectivity" "ERROR"
-        Write-Log "  2. Server URL: $ServerUrl" "ERROR"
-        Write-Log "  3. Agent credentials validity" "ERROR"
+    if (-not $heartbeatSuccess) {
+        Write-Log "========================================" "ERROR"
+        Write-Log "✗ FALHA CRÍTICA: Heartbeat não enviado após $maxRetries tentativas" "ERROR"
+        Write-Log "========================================" "ERROR"
+        Write-Log "Possíveis causas:" "ERROR"
+        Write-Log "  1. Credenciais inválidas (AgentToken ou HmacSecret)" "ERROR"
+        Write-Log "  2. Rate limiting ativo no servidor" "ERROR"
+        Write-Log "  3. Endpoint /heartbeat offline ou com erro" "ERROR"
+        Write-Log "  4. Firewall corporativo bloqueando HTTPS" "ERROR"
+        Write-Log "" "ERROR"
+        Write-Log "SOLUÇÃO:" "WARN"
+        Write-Log "  - Verifique os logs do servidor backend" "WARN"
+        Write-Log "  - Valide as credenciais no dashboard" "WARN"
+        Write-Log "  - Teste conectividade: Test-NetConnection $serverHost -Port 443" "WARN"
         return $false
     }
     
-    try {
-        Write-Log "Testing heartbeat endpoint..." "INFO"
-        $heartbeatResponse = Send-Heartbeat
-        if ($heartbeatResponse) {
-            Write-Log "Heartbeat: OK" "SUCCESS"
-        } else {
-            Write-Log "Heartbeat: FAILED (non-critical)" "WARN"
-        }
-    }
+    Write-Log "========================================" "SUCCESS"
+    Write-Log "✅ AGENTE INICIALIZADO COM SUCESSO!" "SUCCESS"
+    Write-Log "========================================" "SUCCESS"
+    return $true
     catch {
         Write-Log "Heartbeat test error: $_" "WARN"
     }
