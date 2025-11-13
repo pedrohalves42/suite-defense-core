@@ -13,6 +13,7 @@ class AgentConfig:
     agent_token: str
     hmac_secret: str
     server_url: str
+    supabase_anon_key: str  # NOVO: anon key para REST API do Supabase
     heartbeat_interval: int = 60  # segundos
     poll_interval: int = 30  # segundos
     max_retries: int = 3
@@ -55,7 +56,7 @@ def load_config(config_path: str) -> AgentConfig:
         data = json.load(f)
     
     # Validar campos obrigatórios
-    required_fields = ['agent_name', 'agent_token', 'hmac_secret', 'server_url']
+    required_fields = ['agent_name', 'agent_token', 'hmac_secret', 'server_url', 'supabase_anon_key']
     missing = [field for field in required_fields if field not in data]
     if missing:
         raise ValueError(f"Campos obrigatórios faltando no config: {', '.join(missing)}")
@@ -71,6 +72,7 @@ def create_default_config(config_path: str):
         "agent_token": "CHANGE_ME",
         "hmac_secret": "CHANGE_ME_64_HEX_CHARS",
         "server_url": "https://your-server.supabase.co",
+        "supabase_anon_key": "CHANGE_ME_SUPABASE_ANON_KEY",
         "heartbeat_interval": 60,
         "poll_interval": 30,
         "max_retries": 3,

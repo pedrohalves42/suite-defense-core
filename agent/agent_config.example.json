@@ -3,6 +3,7 @@
   "agent_token": "CHANGE_ME",
   "hmac_secret": "CHANGE_ME_64_HEX_CHARS",
   "server_url": "https://iavbnmduxpxhwubqrzzn.supabase.co",
+  "supabase_anon_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhdmJubWR1eHB4aHd1YnFyenpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NzkzMzIsImV4cCI6MjA3NTQ1NTMzMn0.79Bg6lX-ArhDGLeaUN7MPgChv4FQNJ_KcjdMa5IerWk",
   "heartbeat_interval": 60,
   "poll_interval": 30,
   "max_retries": 3,
