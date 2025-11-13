@@ -30,6 +30,9 @@ schedule = "0 */12 * * *"
 [functions.send-trial-reminder]
 verify_jwt = false
 
+[functions.subscription-analytics]
+verify_jwt = true
+
 # === Agent Functions ===
 [functions.enroll-agent]
 verify_jwt = false

@@ -49,6 +49,7 @@ import SecurityDashboard from "./pages/admin/SecurityDashboard";
 import AgentMonitoringAdvanced from "./pages/AgentMonitoringAdvanced";
 import ExeBuild from "./pages/docs/ExeBuild";
 import InstallationAnalytics from "./pages/admin/InstallationAnalytics";
+import SubscriptionAnalytics from "./pages/admin/SubscriptionAnalytics";
 
 // CORREÇÃO: QueryClient já está inicializado no src/main.tsx
 // Remover duplicação para manter configurações otimizadas
@@ -111,6 +112,7 @@ const App = () => (
                 <Route path="members" element={<Members />} />
                 <Route path="plan-upgrade" element={<PlanUpgrade />} />
                 <Route path="subscriptions" element={<Subscriptions />} />
+                <Route path="subscription-analytics" element={<SubscriptionAnalytics />} />
                 <Route path="audit-logs" element={<AuditLogs />} />
                 <Route path="security" element={<SecurityDashboard />} />
                 <Route path="settings" element={<Settings />} />
