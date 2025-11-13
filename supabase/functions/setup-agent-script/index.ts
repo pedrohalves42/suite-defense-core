@@ -1,0 +1,107 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { corsHeaders } from '../_shared/cors.ts';
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+Deno.serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const requestId = crypto.randomUUID();
+  console.log(`[${requestId}] Setup agent script in storage`);
+
+  try {
+    // Create Supabase client with service role
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Read the agent script from the repo (this file should be bundled with the function)
+    const scriptPath = new URL('../_shared/agent-script-windows.ps1', import.meta.url).pathname;
+    let scriptContent: string;
+    
+    try {
+      scriptContent = await Deno.readTextFile(scriptPath);
+    } catch (readError) {
+      console.error(`[${requestId}] Failed to read agent script:`, readError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Agent script file not found in function bundle',
+          message: 'The agent script must be present in _shared/ directory',
+          requestId
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Upload to storage bucket
+    const { data, error } = await supabase.storage
+      .from('agent-installers')
+      .upload('cybershield-agent-windows.ps1', scriptContent, {
+        contentType: 'text/plain',
+        upsert: true
+      });
+
+    if (error) {
+      console.error(`[${requestId}] Storage upload failed:`, error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to upload to storage',
+          details: error.message,
+          requestId
+        }),
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Calculate hash for verification
+    const encoder = new TextEncoder();
+    const contentData = encoder.encode(scriptContent);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', contentData);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    console.log(`[${requestId}] Agent script uploaded successfully`);
+    console.log(`[${requestId}] Size: ${scriptContent.length} bytes`);
+    console.log(`[${requestId}] SHA256: ${hash}`);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: 'Agent script uploaded to storage successfully',
+        size: scriptContent.length,
+        sha256: hash,
+        path: data.path,
+        publicUrl: `${SUPABASE_URL}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`,
+        requestId,
+        timestamp: new Date().toISOString()
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+
+  } catch (error) {
+    console.error(`[${requestId}] Setup failed:`, error);
+    return new Response(
+      JSON.stringify({
+        error: 'Setup failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        requestId,
+        timestamp: new Date().toISOString()
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+});
