@@ -33,6 +33,9 @@ verify_jwt = false
 [functions.subscription-analytics]
 verify_jwt = true
 
+[functions.stripe-health-check]
+verify_jwt = true
+
 # === Agent Functions ===
 [functions.enroll-agent]
 verify_jwt = false
