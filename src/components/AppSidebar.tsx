@@ -43,6 +43,7 @@ export const AppSidebar = () => {
     { icon: Users, label: 'Membros', to: '/admin/members' },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
     { icon: Activity, label: 'Assinaturas', to: '/admin/subscriptions' },
+    { icon: BarChart3, label: 'Analytics Subs', to: '/admin/subscription-analytics' },
     { icon: Users, label: 'Usuários', to: '/admin/users' },
     { icon: Package, label: 'Tenants', to: '/admin/tenants' },
     { icon: Shield, label: 'Features', to: '/admin/features' },
