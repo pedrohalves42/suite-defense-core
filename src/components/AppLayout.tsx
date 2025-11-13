@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { AppSidebar } from '@/components/AppSidebar';
 import { TopBar } from '@/components/TopBar';
 import { NotificationSystem } from '@/components/NotificationSystem';
+import { ConnectivityIndicator } from '@/components/ConnectivityIndicator';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +31,7 @@ export const AppLayout = () => {
   return (
     <div className="min-h-screen bg-background">
       <NotificationSystem />
+      <ConnectivityIndicator />
       <AppSidebar />
       <div className={cn('transition-all duration-300', collapsed ? 'pl-16' : 'pl-60')}>
         <TopBar />
