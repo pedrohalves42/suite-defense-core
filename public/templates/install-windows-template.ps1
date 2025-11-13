@@ -244,47 +244,156 @@ try {
     Write-Host "  ✓ Buscando jobs para executar" -ForegroundColor White
     Write-Host ""
 
-    # ✅ FASE 1.1: Enviar telemetria pós-instalação
-    Write-InstallLog "[8/8] Enviando telemetria pós-instalação..."
+    # ✅ FASE 2: Enviar telemetria EXPANDIDA pós-instalação
+    Write-InstallLog "[8/10] Enviando telemetria DETALHADA pós-instalação..."
     try {
+        # Validar se tarefa agendada foi criada e está rodando
+        $taskExists = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+        $taskIsRunning = ($taskExists -and $taskExists.State -eq "Running")
+        
+        # Validar se script do agente existe
+        $scriptExists = Test-Path $AgentScript
+        $scriptSize = if ($scriptExists) { (Get-Item $AgentScript).Length } else { 0 }
+        
+        # Testar conectividade detalhada
+        $telemetryTests = @{
+            health_check_passed = $healthCheck
+            proxy_detected = ($proxyUri -ne "https://www.google.com")
+            dns_test = (Test-Connection -ComputerName "google.com" -Count 1 -Quiet -ErrorAction SilentlyContinue)
+            api_test = try {
+                $testResponse = Invoke-RestMethod -Uri "$ServerUrl/functions/v1/heartbeat" `
+                    -Method GET -TimeoutSec 5 -ErrorAction Stop
+                $true
+            } catch { $false }
+        }
+        
         $telemetryBody = @{
             agent_name = "{{AGENT_NAME}}"
             success = $true
             os_version = (Get-WmiObject Win32_OperatingSystem).Caption
             installation_time = (Get-Date).ToUniversalTime().ToString("o")
-            network_tests = @{
-                health_check_passed = $healthCheck
-                proxy_detected = ($proxyUri -ne "https://www.google.com")
-            }
-        } | ConvertTo-Json
+            network_tests = $telemetryTests
+            firewall_status = if (Get-NetFirewallRule -DisplayName "CyberShield Agent" -ErrorAction SilentlyContinue) { "configured" } else { "not_configured" }
+            task_created = ($taskExists -ne $null)
+            task_running = $taskIsRunning
+            script_exists = $scriptExists
+            script_size_bytes = $scriptSize
+            powershell_version = "$($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)"
+        } | ConvertTo-Json -Depth 10
         
         Invoke-RestMethod -Uri "$ServerUrl/functions/v1/post-installation-telemetry" `
             -Method POST `
             -Body $telemetryBody `
             -ContentType "application/json" `
-            -TimeoutSec 10 `
-            -ErrorAction SilentlyContinue | Out-Null
+            -TimeoutSec 15 `
+            -ErrorAction Stop | Out-Null
         
-        Write-InstallLog "✓ Telemetria enviada com sucesso"
+        Write-InstallLog "✓ Telemetria EXPANDIDA enviada com sucesso"
     } catch {
-        Write-InstallLog "⚠ Telemetria falhou (não crítico): $_"
+        Write-InstallLog "⚠ Telemetria falhou: $($_.Exception.Message)"
+        Write-InstallLog "   Stack: $($_.ScriptStackTrace)"
     }
 
+    # ✅ FASE 2: Validação Pós-Instalação com Retry
+    Write-InstallLog "[9/10] Validando inicialização do agente (aguardando 15s)..."
+    Start-Sleep -Seconds 15
+    
+    $validationAttempts = 0
+    $maxAttempts = 3
+    $agentInitialized = $false
+    
+    while ($validationAttempts -lt $maxAttempts -and -not $agentInitialized) {
+        $validationAttempts++
+        Write-InstallLog "  Tentativa $validationAttempts/$maxAttempts de validação..."
+        
+        # Verificar se log do agente foi criado
+        if (Test-Path "$LogDir\agent.log") {
+            $logContent = Get-Content "$LogDir\agent.log" -Tail 20 -ErrorAction SilentlyContinue
+            
+            if ($logContent -match "Heartbeat sent successfully|AGENTE INICIALIZADO COM SUCESSO") {
+                Write-InstallLog "  ✓ Agente iniciou e está operacional!"
+                $agentInitialized = $true
+            } elseif ($logContent -match "ERROR|ERRO|CRITICAL") {
+                Write-InstallLog "  ✗ Agente iniciou mas reportou ERROS:"
+                $logContent | Where-Object { $_ -match "ERROR|ERRO|CRITICAL" } | ForEach-Object {
+                    Write-InstallLog "    $_"
+                }
+                break
+            }
+        }
+        
+        if (-not $agentInitialized -and $validationAttempts -lt $maxAttempts) {
+            Start-Sleep -Seconds 10
+        }
+    }
+    
+    if (-not $agentInitialized) {
+        Write-Host ""
+        Write-Host "⚠ AVISO: Não foi possível confirmar inicialização do agente" -ForegroundColor Yellow
+        Write-Host "Verifique os logs manualmente:" -ForegroundColor Yellow
+        Write-Host "  Get-Content $LogDir\agent.log -Tail 50" -ForegroundColor Gray
+        Write-Host ""
+    }
+
+    # ✅ FASE 2: DIAGNÓSTICO FINAL DE INSTALAÇÃO
+    Write-InstallLog "[10/10] DIAGNÓSTICO FINAL DE INSTALAÇÃO..."
+    
+    $diagnosticReport = @"
+
+========================================
+RELATÓRIO DE DIAGNÓSTICO
+========================================
+Timestamp: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+
+INSTALAÇÃO:
+  ✓ Diretório criado: $InstallDir
+  ✓ Script do agente: $AgentScript ($(if (Test-Path $AgentScript) { "OK" } else { "FALTANDO" }))
+  ✓ Logs: $LogDir
+
+TAREFA AGENDADA:
+  Nome: $taskName
+  Estado: $(if ($task) { $task.State } else { "NÃO ENCONTRADA" })
+  Última execução: $($taskInfo.LastRunTime)
+  Próxima execução: $($taskInfo.NextRunTime)
+
+FIREWALL:
+  Regra: $(if (Get-NetFirewallRule -DisplayName "CyberShield Agent" -ErrorAction SilentlyContinue) { "CONFIGURADA" } else { "NÃO CONFIGURADA" })
+
+CONECTIVIDADE:
+  Health Check: $(if ($healthCheck) { "SUCESSO" } else { "FALHOU" })
+  DNS: $(if (Test-Connection google.com -Count 1 -Quiet -ErrorAction SilentlyContinue) { "OK" } else { "FALHOU" })
+  Proxy: $(if ($proxyUri -ne "https://www.google.com") { "DETECTADO: $proxyUri" } else { "NÃO DETECTADO" })
+
+AGENTE:
+  Log existe: $(Test-Path "$LogDir\agent.log")
+  Inicializado: $(if ($agentInitialized) { "SIM ✓" } else { "VERIFICAÇÃO FALHOU ✗" })
+
+TROUBLESHOOTING:
+  1. Ver logs do agente:
+     Get-Content $LogDir\agent.log -Tail 50
+  
+  2. Ver logs de instalação:
+     Get-Content $InstallLog
+  
+  3. Verificar tarefa:
+     Get-ScheduledTask -TaskName "$taskName" | Format-List
+  
+  4. Testar conectividade:
+     Test-NetConnection -ComputerName $($ServerUrl -replace "https://","" -replace "/.*","") -Port 443
+
+========================================
+"@
+    
+    Write-Host $diagnosticReport
+    Write-InstallLog $diagnosticReport
+    
     Write-Host ""
-    Write-Host "COMANDOS ÚTEIS:" -ForegroundColor Yellow
-    Write-Host "  Ver logs do agente:" -ForegroundColor White
-    Write-Host "    Get-Content $LogDir\agent.log -Tail 50" -ForegroundColor Gray
-    Write-Host "  Ver logs de instalação:" -ForegroundColor White
-    Write-Host "    Get-Content $InstallLog" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "  Parar o agente:" -ForegroundColor White
-    Write-Host "    Stop-ScheduledTask -TaskName '$taskName'" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "  Iniciar o agente:" -ForegroundColor White
-    Write-Host "    Start-ScheduledTask -TaskName '$taskName'" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "  Status da tarefa:" -ForegroundColor White
-    Write-Host "    Get-ScheduledTask -TaskName '$taskName' | Format-List" -ForegroundColor Gray
+    if ($agentInitialized) {
+        Write-Host "✅ INSTALAÇÃO CONCLUÍDA E VALIDADA!" -ForegroundColor Green
+    } else {
+        Write-Host "⚠️  INSTALAÇÃO CONCLUÍDA MAS VALIDAÇÃO INCOMPLETA" -ForegroundColor Yellow
+        Write-Host "Por favor, verifique os logs acima para troubleshooting" -ForegroundColor Yellow
+    }
     Write-Host ""
 
     # ✅ FASE 1.4: Instalador "Keep-Alive" - monitorar agente por 60 segundos

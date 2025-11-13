@@ -25,8 +25,22 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-    const { agent_name, success, os_version, installation_time, network_tests, firewall_status, proxy_detected, errors } = await req.json();
-    logStep("Received telemetry", { agent_name, success, network_tests });
+  const {
+    agent_name,
+    success,
+    os_version,
+    installation_time,
+    network_tests,
+    firewall_status,
+    proxy_detected,
+    errors,
+    task_created,          // ✅ FASE 2: NOVO
+    task_running,          // ✅ FASE 2: NOVO
+    script_exists,         // ✅ FASE 2: NOVO
+    script_size_bytes,     // ✅ FASE 2: NOVO
+    powershell_version     // ✅ FASE 2: NOVO
+  } = await req.json();
+  logStep("Received telemetry", { agent_name, success, network_tests, task_created, task_running });
 
     if (!agent_name) {
       throw new Error("agent_name is required");
@@ -51,26 +65,33 @@ serve(async (req) => {
       );
     }
 
-    // ✅ FASE 5.1: Registrar telemetria EXPANDIDA de instalação
-    const telemetryData = {
-      agent_id: agent.id,
-      tenant_id: agent.tenant_id,
-      event_type: "post_installation",
-      success: success || false,
-      error_message: errors ? JSON.stringify(errors) : null,
-      network_connectivity: network_tests?.health_check_passed || null,
-      dns_resolution: network_tests?.dns_test || null,
-      api_connectivity: network_tests?.api_test || null,
-      os_info: {
-        type: agent.os_type,
-        version: os_version || agent.os_version,
-        hostname: agent.hostname,
-      },
-      installation_method: "windows_ps1",
-      firewall_status: firewall_status || "unknown",
-      proxy_detected: proxy_detected || false,
-      timestamp: installation_time || new Date().toISOString(),
-    };
+  // ✅ FASE 2: Registrar telemetria EXPANDIDA de instalação
+  const telemetryData = {
+    agent_id: agent.id,
+    tenant_id: agent.tenant_id,
+    event_type: "post_installation",
+    success: success || false,
+    error_message: errors ? JSON.stringify(errors) : null,
+    network_connectivity: network_tests?.health_check_passed || null,
+    dns_resolution: network_tests?.dns_test || null,
+    api_connectivity: network_tests?.api_test || null,
+    os_info: {
+      type: agent.os_type,
+      version: os_version || agent.os_version,
+      hostname: agent.hostname,
+      powershell_version: powershell_version || null  // ✅ FASE 2: NOVO
+    },
+    installation_method: "windows_ps1",
+    firewall_status: firewall_status || "unknown",
+    proxy_detected: proxy_detected || false,
+    metadata: {                                       // ✅ FASE 2: NOVO
+      task_created: task_created,
+      task_running: task_running,
+      script_exists: script_exists,
+      script_size_bytes: script_size_bytes
+    },
+    timestamp: installation_time || new Date().toISOString(),
+  };
 
     const { error: insertError } = await supabaseClient
       .from("installation_analytics")
