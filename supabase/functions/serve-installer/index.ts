@@ -1,7 +1,16 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { validateAgentScript } from '../_shared/agent-script-validator.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+
+// Validate agent script on startup
+const scriptValidation = await validateAgentScript();
+if (!scriptValidation.valid) {
+  console.error('[CRITICAL] Agent script validation failed:', scriptValidation.error);
+  throw new Error(`serve-installer startup failed: ${scriptValidation.error}`);
+}
+console.log('[STARTUP] Agent script validated:', scriptValidation.details);
 
 // Windows Installer v3.0.0-APEX - Universal, Robust, Production-Ready
 const WINDOWS_INSTALLER_TEMPLATE = `# CyberShield Agent - Windows Installation Script v3.0.0-APEX

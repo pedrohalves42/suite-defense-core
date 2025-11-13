@@ -3,6 +3,15 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { WINDOWS_INSTALLER_TEMPLATE } from '../_shared/installer-template.ts';
 import { createErrorResponse, ErrorCode } from '../_shared/error-handler.ts';
+import { validateAgentScript } from '../_shared/agent-script-validator.ts';
+
+// Validate agent script on startup
+const scriptValidation = await validateAgentScript();
+if (!scriptValidation.valid) {
+  console.error('[CRITICAL] Agent script validation failed:', scriptValidation.error);
+  throw new Error(`build-agent-exe startup failed: ${scriptValidation.error}`);
+}
+console.log('[STARTUP] Agent script validated:', scriptValidation.details);
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

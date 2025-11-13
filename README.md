@@ -40,6 +40,7 @@ Para informações detalhadas sobre arquitetura e troubleshooting:
 
 - 📐 [Arquitetura do Instalador](docs/INSTALLER_ARCHITECTURE.md) - Fluxo completo, componentes e segurança
 - 🔧 [Guia de Troubleshooting](docs/TROUBLESHOOTING_INSTALLER.md) - Soluções para problemas comuns
+- 🔄 [Sincronização do Script do Agente](docs/AGENT_SCRIPT_SYNC.md) - Sistema automático de atualização
 - 🛡️ [Arquitetura de Segurança](docs/SECURITY_ARCHITECTURE.md) - RLS, HMAC, SHA256
 - 📋 [Setup Completo](SETUP.md) - Instalação e configuração detalhadas
 
