@@ -114,6 +114,10 @@ verify_jwt = false
 [functions.check-agent-name-availability]
 verify_jwt = true
 
+[functions.cleanup-stuck-builds]
+verify_jwt = false
+schedule = "*/10 * * * *"
+
 [functions.get-agent-dashboard-data]
 verify_jwt = true
 
