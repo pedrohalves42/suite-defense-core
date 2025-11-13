@@ -1,0 +1,187 @@
+name: Build Python Agent
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'agent/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Agent version (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd agent
+          pip install -r requirements.txt
+
+      - name: Build Windows executable
+        run: |
+          cd agent
+          python build.py
+
+      - name: Calculate SHA256
+        id: hash
+        shell: powershell
+        run: |
+          $hash = (Get-FileHash -Path "agent/dist/cybershield-agent.exe" -Algorithm SHA256).Hash
+          echo "sha256=$hash" >> $env:GITHUB_OUTPUT
+          $size = (Get-Item "agent/dist/cybershield-agent.exe").Length
+          echo "size=$size" >> $env:GITHUB_OUTPUT
+
+      - name: Upload to Supabase Storage
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VERSION: ${{ github.event.inputs.version || '1.0.0' }}
+        shell: powershell
+        run: |
+          $version = $env:VERSION
+          $file = "agent/dist/cybershield-agent.exe"
+          $bucket = "agent-installers"
+          $path = "agents/windows/cybershield-agent-$version.exe"
+          
+          # Upload file
+          $headers = @{
+            "Authorization" = "Bearer $env:SUPABASE_SERVICE_ROLE_KEY"
+            "apikey" = "$env:SUPABASE_SERVICE_ROLE_KEY"
+          }
+          
+          $uploadUrl = "$env:SUPABASE_URL/storage/v1/object/$bucket/$path"
+          
+          Invoke-RestMethod -Uri $uploadUrl -Method POST -Headers $headers -InFile $file -ContentType "application/octet-stream"
+          
+          echo "✅ Uploaded to: $uploadUrl"
+
+      - name: Create version metadata
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VERSION: ${{ github.event.inputs.version || '1.0.0' }}
+          SHA256: ${{ steps.hash.outputs.sha256 }}
+          SIZE: ${{ steps.hash.outputs.size }}
+        shell: powershell
+        run: |
+          $body = @{
+            version = $env:VERSION
+            platform = "windows"
+            sha256 = $env:SHA256
+            size_bytes = [int]$env:SIZE
+            download_url = "$env:SUPABASE_URL/storage/v1/object/public/agent-installers/agents/windows/cybershield-agent-$env:VERSION.exe"
+            is_latest = $true
+          } | ConvertTo-Json
+          
+          $headers = @{
+            "Authorization" = "Bearer $env:SUPABASE_SERVICE_ROLE_KEY"
+            "apikey" = "$env:SUPABASE_SERVICE_ROLE_KEY"
+            "Content-Type" = "application/json"
+          }
+          
+          Invoke-RestMethod -Uri "$env:SUPABASE_URL/rest/v1/agent_versions" -Method POST -Headers $headers -Body $body
+          
+          echo "✅ Version metadata created"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cybershield-agent-windows
+          path: agent/dist/cybershield-agent.exe
+          retention-days: 90
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd agent
+          pip install -r requirements.txt
+
+      - name: Build Linux executable
+        run: |
+          cd agent
+          python build.py
+
+      - name: Calculate SHA256
+        id: hash
+        run: |
+          hash=$(sha256sum agent/dist/cybershield-agent | awk '{print $1}')
+          echo "sha256=$hash" >> $GITHUB_OUTPUT
+          size=$(stat -c%s agent/dist/cybershield-agent)
+          echo "size=$size" >> $GITHUB_OUTPUT
+
+      - name: Upload to Supabase Storage
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VERSION: ${{ github.event.inputs.version || '1.0.0' }}
+        run: |
+          version=$VERSION
+          file="agent/dist/cybershield-agent"
+          bucket="agent-installers"
+          path="agents/linux/cybershield-agent-$version"
+          
+          curl -X POST \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            --data-binary "@$file" \
+            "$SUPABASE_URL/storage/v1/object/$bucket/$path"
+          
+          echo "✅ Uploaded to: $SUPABASE_URL/storage/v1/object/$bucket/$path"
+
+      - name: Create version metadata
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VERSION: ${{ github.event.inputs.version || '1.0.0' }}
+          SHA256: ${{ steps.hash.outputs.sha256 }}
+          SIZE: ${{ steps.hash.outputs.size }}
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"version\":\"$VERSION\",\"platform\":\"linux\",\"sha256\":\"$SHA256\",\"size_bytes\":$SIZE,\"download_url\":\"$SUPABASE_URL/storage/v1/object/public/agent-installers/agents/linux/cybershield-agent-$VERSION\",\"is_latest\":true}" \
+            "$SUPABASE_URL/rest/v1/agent_versions"
+          
+          echo "✅ Version metadata created"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cybershield-agent-linux
+          path: agent/dist/cybershield-agent
+          retention-days: 90
+
+  notify:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send notification
+        run: |
+          echo "🎉 Build completed successfully!"
+          echo "Version: ${{ github.event.inputs.version || '1.0.0' }}"
+          echo "Artifacts uploaded to Supabase Storage"

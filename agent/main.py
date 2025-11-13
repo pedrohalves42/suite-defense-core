@@ -15,6 +15,7 @@ from config import AgentConfig, load_config
 from heartbeat_sender import HeartbeatSender
 from job_poller import JobPoller
 from logger_config import setup_logging
+from auto_updater import AutoUpdater
 
 # Versão do agente
 AGENT_VERSION = "1.0.0"
@@ -30,16 +31,24 @@ class CyberShieldAgent:
         # Componentes
         self.heartbeat_sender: Optional[HeartbeatSender] = None
         self.job_poller: Optional[JobPoller] = None
+        self.auto_updater: Optional[AutoUpdater] = None
         
         # Threads
         self.heartbeat_thread: Optional[Thread] = None
         self.poller_thread: Optional[Thread] = None
+        self.update_thread: Optional[Thread] = None
     
     def start(self):
         """Inicia o agente"""
         self.logger.info(f"🚀 CyberShield Agent v{AGENT_VERSION} iniciando...")
         self.logger.info(f"Agent Name: {self.config.agent_name}")
         self.logger.info(f"Server URL: {self.config.server_url}")
+        
+        # Verificar atualizações ao iniciar
+        self.auto_updater = AutoUpdater(self.config)
+        if self.auto_updater.update_if_available():
+            # Se atualizou, o processo será reiniciado
+            return
         
         # Inicializar componentes
         self.heartbeat_sender = HeartbeatSender(
@@ -62,9 +71,15 @@ class CyberShieldAgent:
             name="PollerThread",
             daemon=True
         )
+        self.update_thread = Thread(
+            target=self._periodic_update_check,
+            name="UpdateThread",
+            daemon=True
+        )
         
         self.heartbeat_thread.start()
         self.poller_thread.start()
+        self.update_thread.start()
         
         self.logger.info("✅ Agente iniciado com sucesso")
         
@@ -76,6 +91,21 @@ class CyberShieldAgent:
             self.logger.info("Interrupção do usuário detectada")
             self.stop()
     
+    def _periodic_update_check(self):
+        """Verifica atualizações periodicamente (a cada 6 horas)"""
+        while not self.stop_event.is_set():
+            try:
+                # Esperar 6 horas
+                self.stop_event.wait(timeout=6 * 60 * 60)
+                
+                if not self.stop_event.is_set():
+                    self.logger.info("🔍 Verificação periódica de atualizações...")
+                    if self.auto_updater.update_if_available():
+                        # Se atualizou, o processo será reiniciado
+                        return
+            except Exception as e:
+                self.logger.error(f"❌ Erro na verificação periódica: {e}")
+    
     def stop(self):
         """Para o agente gracefully"""
         self.logger.info("🛑 Parando agente...")
@@ -86,6 +116,8 @@ class CyberShieldAgent:
             self.heartbeat_thread.join(timeout=5)
         if self.poller_thread and self.poller_thread.is_alive():
             self.poller_thread.join(timeout=5)
+        if self.update_thread and self.update_thread.is_alive():
+            self.update_thread.join(timeout=5)
         
         self.logger.info("✅ Agente parado")
         sys.exit(0)
