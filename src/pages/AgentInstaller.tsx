@@ -74,11 +74,11 @@ const AgentInstaller = () => {
   const [ps1SizeBytes, setPs1SizeBytes] = useState<number | null>(null);
   const [isValidatingPs1, setIsValidatingPs1] = useState(false);
   
-  // FASE 2.2: Circuit Breaker - Ajustado para ser mais tolerante
+  // FASE 3: Circuit Breaker - Ajustado conforme plano definitivo
   const [enrollmentCircuitBreaker] = useState(() => new CircuitBreaker({
-    failureThreshold: 5,        // ✅ Aumentado de 3 para 5 (mais tolerante)
-    successThreshold: 2,
-    timeout: 30000,             // ✅ Reduzido de 60s para 30s (mais ágil)
+    failureThreshold: 10,       // ✅ FASE 3: Aumentado de 5 para 10 (mais tolerante)
+    successThreshold: 3,        // ✅ FASE 3: Aumentado de 2 para 3 (mais estável)
+    timeout: 60000,             // ✅ FASE 3: Aumentado para 60s (eliminar timeouts prematuros)
     name: 'auto-generate-enrollment'
   }));
   const [circuitBreakerOpen, setCircuitBreakerOpen] = useState(false);

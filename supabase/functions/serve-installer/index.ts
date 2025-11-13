@@ -365,13 +365,68 @@ fi
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
+  
+  console.log('[serve-installer] Function started', { 
+    timestamp: new Date().toISOString(), 
+    requestId,
+    method: req.method 
+  });
 
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Health check endpoint
+  if (req.method === 'GET' && new URL(req.url).pathname === '/serve-installer') {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    const healthy = !!(supabaseUrl && supabaseServiceKey);
+    
+    return new Response(
+      JSON.stringify({
+        status: healthy ? 'healthy' : 'unhealthy',
+        timestamp: new Date().toISOString(),
+        service: 'serve-installer',
+        checks: {
+          env_vars: healthy,
+          supabase_url: !!supabaseUrl,
+          service_role_key: !!supabaseServiceKey
+        }
+      }),
+      {
+        status: healthy ? 200 : 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+
+  // Validate environment variables
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('[serve-installer] CRITICAL: Missing environment variables', {
+      requestId,
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseServiceKey
+    });
+    return new Response(
+      JSON.stringify({
+        error: 'Server configuration error',
+        details: 'Missing required environment variables',
+        timestamp: new Date().toISOString(),
+        requestId
+      }),
+      {
+        status: 503,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+
   try {
-    console.log(`[${requestId}] ${req.method} ${req.url} - Started`);
+    console.log(`[${requestId}] Processing request - ${req.method} ${req.url}`);
 
     const url = new URL(req.url);
     const enrollmentKey = url.pathname.split('/').pop();
@@ -457,16 +512,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FASE 2: Fetch agent script - Storage first, then public directory fallback
-    console.log(`[${requestId}] Fetching agent script from storage`);
+    // FASE 2: Fetch agent script with comprehensive logging
+    console.log(`[${requestId}] Fetching agent script...`);
     
     let agentScriptHash = '';
     let agentScriptContent = '';
     
     try {
-      // Try fetching from Supabase Storage first (primary source)
+      // Priority 1: Try Supabase Storage
       const storageUrl = `${SUPABASE_URL}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
-      console.log(`[${requestId}] Attempting storage fetch: ${storageUrl}`);
+      console.log(`[${requestId}] Attempt 1: Fetching from Supabase Storage`, { storageUrl });
+      
       const storageResponse = await fetch(storageUrl);
       
       if (storageResponse.ok) {

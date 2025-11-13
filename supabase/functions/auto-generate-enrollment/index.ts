@@ -90,23 +90,32 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
 
   // Top-level try-catch to ensure CORS headers are always returned
   try {
-    logger.info(`[${requestId}] Starting auto-generate-enrollment request`);
+    logger.info(`[${requestId}] Starting auto-generate-enrollment request`, {
+      timestamp: new Date().toISOString()
+    });
 
+    // Validate environment variables explicitly
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseKey) {
-      logger.error(`[${requestId}] Missing environment variables`, { supabaseUrl: !!supabaseUrl, supabaseKey: !!supabaseKey });
+      logger.error(`[${requestId}] CRITICAL: Missing environment variables`, { 
+        hasUrl: !!supabaseUrl, 
+        hasKey: !!supabaseKey 
+      });
       return new Response(JSON.stringify({ 
         error: 'Server configuration error',
-        requestId 
+        details: 'Missing required environment variables',
+        requestId,
+        timestamp: new Date().toISOString()
       }), {
-        status: 500,
+        status: 503,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
     
     const supabase = createClient(supabaseUrl, supabaseKey);
+    logger.debug(`[${requestId}] Supabase client initialized`);
     logger.debug(`[${requestId}] Supabase client initialized`);
 
     // Extract IP address for security logging and rate limiting
