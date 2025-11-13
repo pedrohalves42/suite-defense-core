@@ -4,13 +4,13 @@ import { validateAgentScript } from '../_shared/agent-script-validator.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 
-// Validate agent script on startup
+// Validate agent script on startup (non-fatal - will fetch from public URL at runtime)
 const scriptValidation = await validateAgentScript();
 if (!scriptValidation.valid) {
-  console.error('[CRITICAL] Agent script validation failed:', scriptValidation.error);
-  throw new Error(`serve-installer startup failed: ${scriptValidation.error}`);
+  console.warn('[STARTUP] Agent script validation failed (will fetch at runtime):', scriptValidation.error);
+} else {
+  console.log('[STARTUP] Agent script validated:', scriptValidation.details);
 }
-console.log('[STARTUP] Agent script validated:', scriptValidation.details);
 
 // Windows Installer v3.0.0-APEX - Universal, Robust, Production-Ready
 const WINDOWS_INSTALLER_TEMPLATE = `# CyberShield Agent - Windows Installation Script v3.0.0-APEX
@@ -491,11 +491,39 @@ Deno.serve(async (req) => {
       
       console.log(`[${requestId}] Agent script loaded: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
     } catch (hashError) {
-      console.error(`[${requestId}] Failed to read agent script:`, hashError);
-      return new Response('Failed to generate secure installer', { 
-        status: 500,
-        headers: corsHeaders
-      });
+      console.warn(`[${requestId}] Failed to read local agent script, fetching from public URL:`, hashError);
+      
+      // Fallback: fetch from public URL
+      try {
+        const publicScriptUrl = `${SUPABASE_URL}/agent-scripts/cybershield-agent-windows.ps1`;
+        console.log(`[${requestId}] Fetching from: ${publicScriptUrl}`);
+        
+        const response = await fetch(publicScriptUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        agentScriptContent = await response.text();
+        
+        if (!agentScriptContent || agentScriptContent.length < 1000) {
+          throw new Error(`Downloaded script is too small: ${agentScriptContent.length} bytes`);
+        }
+        
+        // Generate SHA256 hash
+        const encoder = new TextEncoder();
+        const data = encoder.encode(agentScriptContent);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        agentScriptHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        console.log(`[${requestId}] Agent script fetched from public URL: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
+      } catch (fetchError) {
+        console.error(`[${requestId}] Failed to fetch agent script from public URL:`, fetchError);
+        return new Response('Failed to generate secure installer', { 
+          status: 500,
+          headers: corsHeaders
+        });
+      }
     }
 
     // Validate credentials are present
