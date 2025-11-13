@@ -146,65 +146,73 @@ const AgentInstaller = () => {
       if (!isMounted) return;
       
       setIsCheckingName(true);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
       
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          logger.warn('No active session during agent name validation');
+      const checkNameWithRetry = async (retries = 2): Promise<void> => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (!session) {
+            logger.warn('No active session during agent name validation');
+            if (isMounted) {
+              setAgentNameError('❌ Sessão expirada. Faça login novamente.');
+              setIsCheckingName(false);
+            }
+            return;
+          }
+
+          if (abortController.signal.aborted || !isMounted) return;
+
+          const { data, error } = await supabase.functions.invoke(
+            'check-agent-name-availability',
+            {
+              body: { agentName },
+              headers: {
+                Authorization: `Bearer ${session?.access_token}`,
+              },
+              signal: controller.signal
+            }
+          );
+
+          clearTimeout(timeoutId);
+
+          if (abortController.signal.aborted || !isMounted) return;
+
+          if (error) throw error;
+
           if (isMounted) {
-            setAgentNameError('❌ Sessão expirada. Faça login novamente.');
+            if (!data.available) {
+              setAgentNameError(`❌ ${data.reason || 'Nome indisponível'}`);
+            } else {
+              setAgentNameError('✅ Nome disponível');
+            }
+          }
+        } catch (err: any) {
+          if (err.name === 'AbortError') {
+            logger.warn('Agent name check timeout');
+            if (isMounted) {
+              setAgentNameError('⏱️ Timeout - tente novamente');
+            }
+          } else if (retries > 0) {
+            logger.info('Retrying agent name check', { retriesLeft: retries });
+            await new Promise(r => setTimeout(r, 1000 * (3 - retries))); // exponential backoff
+            return checkNameWithRetry(retries - 1);
+          } else {
+            if (abortController.signal.aborted || !isMounted) return;
+            logger.error('Agent name validation error', { error: err, agentName });
+            if (isMounted) {
+              setAgentNameError('❌ Erro ao validar - verifique sua conexão');
+            }
+          }
+        } finally {
+          if (isMounted) {
             setIsCheckingName(false);
           }
-          return;
         }
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        // Buscar tenant_id do usuário
-        const { data: userRole } = await supabase
-          .from('user_roles')
-          .select('tenant_id')
-          .eq('user_id', user?.id)
-          .maybeSingle();
+      };
 
-        if (abortController.signal.aborted || !isMounted) return;
-
-        const { data, error } = await supabase.functions.invoke(
-          'check-agent-name-availability',
-          {
-            body: { 
-              agentName, 
-              tenantId: userRole?.tenant_id 
-            },
-            headers: {
-              Authorization: `Bearer ${session?.access_token}`,
-            },
-          }
-        );
-
-        if (abortController.signal.aborted || !isMounted) return;
-
-        if (error) {
-          logger.error('Agent name validation error', { error, agentName });
-          throw error;
-        }
-
-        if (!data.available) {
-          setAgentNameError(`❌ ${data.reason}`);
-        } else {
-          setAgentNameError('✅ Nome disponível');
-        }
-      } catch (err: any) {
-        if (abortController.signal.aborted || !isMounted) return;
-        
-        logger.error('Erro ao verificar nome do agente', { error: err, agentName });
-        setAgentNameError('⚠️ Erro ao validar nome');
-      } finally {
-        if (isMounted) {
-          setIsCheckingName(false);
-        }
-      }
+      await checkNameWithRetry();
     }, 800); // 800ms debounce
 
     // FASE 2.1: Cleanup to prevent memory leaks and race conditions
