@@ -17,14 +17,6 @@ import { CircuitBreaker, CircuitState } from "@/lib/circuit-breaker";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
-// Circuit Breaker for auto-generate-enrollment
-const enrollmentCircuitBreaker = new CircuitBreaker({
-  failureThreshold: 3,
-  successThreshold: 2,
-  timeout: 60000,
-  name: 'auto-generate-enrollment'
-});
-
 // Retry with exponential backoff
 const retryWithBackoff = async <T,>(
   fn: () => Promise<T>,
@@ -77,17 +69,38 @@ const AgentInstaller = () => {
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 2;
   
-  // Circuit breaker monitoring
+  // FASE 2.2: Circuit Breaker moved to component state
+  const [enrollmentCircuitBreaker] = useState(() => new CircuitBreaker({
+    failureThreshold: 3,
+    successThreshold: 2,
+    timeout: 60000,
+    name: 'auto-generate-enrollment'
+  }));
   const [circuitBreakerOpen, setCircuitBreakerOpen] = useState(false);
 
-  // Monitor circuit breaker
+  // FASE 2.2: Monitor circuit breaker with logging
   useEffect(() => {
     const interval = setInterval(() => {
       const state = enrollmentCircuitBreaker.getState();
-      setCircuitBreakerOpen(state === CircuitState.OPEN);
+      const wasOpen = circuitBreakerOpen;
+      const isNowOpen = state === CircuitState.OPEN;
+      
+      setCircuitBreakerOpen(isNowOpen);
+      
+      // Log state changes
+      if (!wasOpen && isNowOpen) {
+        logger.warn('Circuit breaker ABERTO - backend temporariamente indisponível', {
+          circuitName: 'auto-generate-enrollment'
+        });
+      } else if (wasOpen && !isNowOpen) {
+        logger.info('Circuit breaker FECHADO - backend disponível novamente', {
+          circuitName: 'auto-generate-enrollment'
+        });
+      }
     }, 1000);
+    
     return () => clearInterval(interval);
-  }, []);
+  }, [circuitBreakerOpen, enrollmentCircuitBreaker]);
 
   // Solicitar permissão para notificações
   useEffect(() => {
@@ -96,7 +109,7 @@ const AgentInstaller = () => {
     }
   }, []);
 
-  // Real-time agent name validation with availability check
+  // FASE 2.1: Real-time agent name validation with AbortController and race condition prevention
   useEffect(() => {
     if (!agentName) {
       setAgentNameError("");
@@ -119,12 +132,28 @@ const AgentInstaller = () => {
       return;
     }
 
+    // FASE 2.1: AbortController to prevent race conditions
+    const abortController = new AbortController();
+    let isMounted = true;
+
     // Debounce para verificar disponibilidade
     const timer = setTimeout(async () => {
+      if (!isMounted) return;
+      
       setIsCheckingName(true);
       
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          logger.warn('No active session during agent name validation');
+          if (isMounted) {
+            setAgentNameError('❌ Sessão expirada. Faça login novamente.');
+            setIsCheckingName(false);
+          }
+          return;
+        }
+        
         const { data: { user } } = await supabase.auth.getUser();
         
         // Buscar tenant_id do usuário
@@ -133,6 +162,8 @@ const AgentInstaller = () => {
           .select('tenant_id')
           .eq('user_id', user?.id)
           .maybeSingle();
+
+        if (abortController.signal.aborted || !isMounted) return;
 
         const { data, error } = await supabase.functions.invoke(
           'check-agent-name-availability',
@@ -147,22 +178,36 @@ const AgentInstaller = () => {
           }
         );
 
-        if (error) throw error;
+        if (abortController.signal.aborted || !isMounted) return;
+
+        if (error) {
+          logger.error('Agent name validation error', { error, agentName });
+          throw error;
+        }
 
         if (!data.available) {
           setAgentNameError(`❌ ${data.reason}`);
         } else {
           setAgentNameError('✅ Nome disponível');
         }
-      } catch (err) {
-        console.error('Erro ao verificar nome:', err);
-        setAgentNameError('');
+      } catch (err: any) {
+        if (abortController.signal.aborted || !isMounted) return;
+        
+        logger.error('Erro ao verificar nome do agente', { error: err, agentName });
+        setAgentNameError('⚠️ Erro ao validar nome');
       } finally {
-        setIsCheckingName(false);
+        if (isMounted) {
+          setIsCheckingName(false);
+        }
       }
     }, 800); // 800ms debounce
 
-    return () => clearTimeout(timer);
+    // FASE 2.1: Cleanup to prevent memory leaks and race conditions
+    return () => {
+      isMounted = false;
+      abortController.abort();
+      clearTimeout(timer);
+    };
   }, [agentName]);
 
   const isNameValid = agentName.length >= 3 && agentName.length <= 50 && !/[^a-zA-Z0-9\-_]/.test(agentName) && !agentNameError.startsWith('❌');
@@ -330,6 +375,12 @@ const AgentInstaller = () => {
 
     if (credError) throw credError;
     if (!credentials) throw new Error("Nenhuma credencial retornada");
+
+    // FASE 2.2: Reset circuit breaker após sucesso
+    logger.info('Credenciais geradas com sucesso - resetting circuit breaker', {
+      agentName: agentName.trim(),
+      circuitState: enrollmentCircuitBreaker.getState()
+    });
 
     setPreviewCredentials({
       agentId: credentials.agentId,

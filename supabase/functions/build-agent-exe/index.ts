@@ -355,30 +355,86 @@ try {
     Write-Host "  • Última execução: $($taskInfo.LastRunTime)" -ForegroundColor White
     Write-Host ""
 
-    # ✅ FASE 1.5: Enviar telemetria pós-instalação
-    Write-InstallLog "[8/8] Enviando telemetria pós-instalação..."
-    try {
-        $telemetryBody = @{
-            agent_name = "{{AGENT_NAME}}"
-            success = $true
-            os_version = (Get-WmiObject Win32_OperatingSystem).Caption
-            installation_time = (Get-Date).ToUniversalTime().ToString("o")
-            network_tests = @{
-                health_check_passed = $healthCheck
-                proxy_detected = ($proxyUri -ne "https://www.google.com")
+    # ✅ FASE 1.5: Validação pós-instalação + Telemetria com Retry
+    Write-InstallLog "[8/10] Validando instalação..."
+    
+    # Validar que Scheduled Task foi criada (FASE 1.1)
+    Write-Host "🔍 Validando Scheduled Task..." -ForegroundColor Cyan
+    $taskExists = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+    if (-not $taskExists) {
+        Write-Host "❌ CRÍTICO: Scheduled Task '$taskName' não foi criada!" -ForegroundColor Red
+        Write-InstallLog "❌ Validação falhou: Scheduled Task não encontrada"
+        $taskValidation = $false
+    } else {
+        Write-Host "✅ Scheduled Task validada" -ForegroundColor Green
+        Write-InstallLog "✓ Scheduled Task validada"
+        $taskValidation = $true
+    }
+    
+    # Validar que processo do agente está rodando (FASE 1.1)
+    Write-InstallLog "[9/10] Validando processo do agente..."
+    Write-Host "🔍 Validando processo do agente..." -ForegroundColor Cyan
+    Start-Sleep -Seconds 5  # Aguardar agente iniciar
+    $agentProcess = Get-Process -Name "powershell" -ErrorAction SilentlyContinue | Where-Object {
+        $_.CommandLine -like "*cybershield-agent-windows.ps1*"
+    }
+    if (-not $agentProcess) {
+        Write-Host "⚠️ Processo do agente não detectado imediatamente (pode estar iniciando via Scheduled Task)" -ForegroundColor Yellow
+        Write-InstallLog "⚠ Processo não detectado imediatamente"
+        $processValidation = $false
+    } else {
+        Write-Host "✅ Processo do agente validado (PID: $($agentProcess.Id))" -ForegroundColor Green
+        Write-InstallLog "✓ Processo validado (PID: $($agentProcess.Id))"
+        $processValidation = $true
+    }
+    
+    # ✅ FASE 1.5: Enviar telemetria pós-instalação com Retry (FASE 1.1)
+    Write-InstallLog "[10/10] Enviando telemetria pós-instalação..."
+    $telemetryBody = @{
+        agent_name = "{{AGENT_NAME}}"
+        success = $true
+        os_version = (Get-WmiObject Win32_OperatingSystem).Caption
+        installation_time = (Get-Date).ToUniversalTime().ToString("o")
+        network_tests = @{
+            health_check_passed = $healthCheck
+            proxy_detected = ($proxyUri -ne "https://www.google.com")
+        }
+        validation = @{
+            task_validated = $taskValidation
+            process_validated = $processValidation
+        }
+    } | ConvertTo-Json
+    
+    # Retry mechanism for telemetry (FASE 1.1 - 3 attempts with exponential backoff)
+    $telemetrySent = $false
+    $maxRetries = 3
+    for ($i = 1; $i -le $maxRetries; $i++) {
+        try {
+            Write-Host "📡 Enviando telemetria (tentativa $i/$maxRetries)..." -ForegroundColor Cyan
+            Invoke-RestMethod -Uri "$ServerUrl/functions/v1/post-installation-telemetry" \`
+                -Method POST \`
+                -Body $telemetryBody \`
+                -ContentType "application/json" \`
+                -TimeoutSec 10 \`
+                -ErrorAction Stop | Out-Null
+            Write-Host "✅ Telemetria enviada com sucesso" -ForegroundColor Green
+            Write-InstallLog "✓ Telemetria enviada com sucesso"
+            $telemetrySent = $true
+            break
+        } catch {
+            $waitTime = [math]::Pow(2, $i)  # Exponential backoff: 2s, 4s, 8s
+            Write-Host "⚠️ Tentativa $i falhou: $_" -ForegroundColor Yellow
+            Write-InstallLog "⚠ Telemetria tentativa $i falhou: $_"
+            if ($i -lt $maxRetries) {
+                Write-Host "⏳ Aguardando $waitTime segundos antes de retentar..." -ForegroundColor Yellow
+                Start-Sleep -Seconds $waitTime
             }
-        } | ConvertTo-Json
-        
-        Invoke-RestMethod -Uri "$ServerUrl/functions/v1/post-installation-telemetry" \`
-            -Method POST \`
-            -Body $telemetryBody \`
-            -ContentType "application/json" \`
-            -TimeoutSec 10 \`
-            -ErrorAction SilentlyContinue | Out-Null
-        
-        Write-InstallLog "✓ Telemetria enviada com sucesso"
-    } catch {
-        Write-InstallLog "⚠ Telemetria falhou (não crítico): $_"
+        }
+    }
+    
+    if (-not $telemetrySent) {
+        Write-Host "⚠️ Falha ao enviar telemetria após $maxRetries tentativas (não crítico)" -ForegroundColor Yellow
+        Write-InstallLog "⚠ Falha ao enviar telemetria após $maxRetries tentativas"
     }
 
     Write-Host ""
