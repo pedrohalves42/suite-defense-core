@@ -512,69 +512,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FASE 2: Fetch agent script with comprehensive logging
-    console.log(`[${requestId}] Fetching agent script...`);
+    // FASE 1 CRÍTICO: Use inline agent script (always available)
+    console.log(`[${requestId}] Using inline agent script`);
     
-    let agentScriptHash = '';
-    let agentScriptContent = '';
+    const { getAgentScriptWindows, validateAgentScript, calculateScriptHash } = await import('../_shared/agent-script-windows-content.ts');
+    const agentScriptContent = getAgentScriptWindows();
     
-    try {
-      // Priority 1: Try Supabase Storage
-      const storageUrl = `${SUPABASE_URL}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
-      console.log(`[${requestId}] Attempt 1: Fetching from Supabase Storage`, { storageUrl });
-      
-      const storageResponse = await fetch(storageUrl);
-      
-      if (storageResponse.ok) {
-        agentScriptContent = await storageResponse.text();
-        console.log(`[${requestId}] SUCCESS: Script loaded from Storage`, { 
-          size: agentScriptContent.length,
-          sizeKB: (agentScriptContent.length / 1024).toFixed(2)
-        });
-      } else {
-        console.warn(`[${requestId}] Storage fetch failed`, { status: storageResponse.status });
-        throw new Error(`Storage unavailable: ${storageResponse.status}`);
-      }
-    } catch (storageError) {
-      console.log(`[${requestId}] Attempt 2: Trying public directory fallback`);
-      
-      // Fallback to public directory via HTTP
-      const publicUrl = `${SUPABASE_URL}/agent-scripts/cybershield-agent-windows.ps1`;
-      console.log(`[${requestId}] Public URL`, { publicUrl });
-      
-      try {
-        const publicResponse = await fetch(publicUrl);
-        
-        if (!publicResponse.ok) {
-          throw new Error(`Public fetch failed: ${publicResponse.status}`);
-        }
-        
-        agentScriptContent = await publicResponse.text();
-        console.log(`[${requestId}] SUCCESS: Using public directory fallback`, { 
-          size: agentScriptContent.length,
-          sizeKB: (agentScriptContent.length / 1024).toFixed(2)
-        });
-      } catch (publicError) {
-        console.error(`[${requestId}] CRITICAL: All agent script sources failed:`, {
-          storageError: storageError instanceof Error ? storageError.message : String(storageError),
-          publicError: publicError instanceof Error ? publicError.message : String(publicError)
-        });
-        
-        return new Response(
-          'Failed to generate secure installer - agent script not available from any source',
-          {
-            status: 503,
-            headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
-          }
-        );
-      }
-    }
-    
-    // Validate script content
-    if (!agentScriptContent || agentScriptContent.length < 1000) {
-      console.error(`[${requestId}] Agent script validation failed: size=${agentScriptContent.length}`);
+    if (!validateAgentScript(agentScriptContent)) {
+      console.error(`[${requestId}] CRITICAL: Inline script validation failed`);
       return new Response(
-        'Failed to generate secure installer - invalid agent script content',
+        'Failed to generate secure installer - inline script validation failed',
         {
           status: 503,
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
@@ -582,14 +529,13 @@ Deno.serve(async (req) => {
       );
     }
     
-    // Generate SHA256 hash of the script
-    const encoder = new TextEncoder();
-    const data = encoder.encode(agentScriptContent);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    agentScriptHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const agentScriptHash = await calculateScriptHash(agentScriptContent);
     
-    console.log(`[${requestId}] Agent script loaded: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
+    console.log(`[${requestId}] Agent script validated successfully`, { 
+      size: agentScriptContent.length,
+      sizeKB: (agentScriptContent.length / 1024).toFixed(2),
+      hash: agentScriptHash
+    });
 
 
     // Validate credentials are present
