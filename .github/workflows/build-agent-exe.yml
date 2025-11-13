@@ -20,9 +20,11 @@ jobs:
     
     steps:
       - name: Checkout repository
+        timeout-minutes: 2
         uses: actions/checkout@v4
       
       - name: Cache ps2exe module
+        timeout-minutes: 2
         uses: actions/cache@v3
         with:
           path: |
@@ -33,6 +35,7 @@ jobs:
             ${{ runner.os }}-ps2exe-
       
       - name: Install ps2exe
+        timeout-minutes: 3
         shell: pwsh
         run: |
           if (Get-Module -ListAvailable -Name ps2exe) {
@@ -43,6 +46,7 @@ jobs:
           }
       
       - name: Compile PS1 to EXE
+        timeout-minutes: 8
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -114,6 +118,7 @@ jobs:
                     -Body $failurePayload `
                     -ContentType "application/json" `
                     -Headers @{ Authorization = "Bearer $callbackToken" } `
+                    -TimeoutSec 30 `
                     -ErrorAction Stop
                 } catch {
                   Write-Warning "Failed to send failure callback: $_"

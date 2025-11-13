@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 
@@ -426,12 +427,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log(`[${requestId}] Processing request - ${req.method} ${req.url}`);
+    return await withTimeout(async () => {
+      console.log(`[${requestId}] Processing request - ${req.method} ${req.url}`);
 
-    const url = new URL(req.url);
-    const enrollmentKey = url.pathname.split('/').pop();
+      const url = new URL(req.url);
+      const enrollmentKey = url.pathname.split('/').pop();
 
-    if (!enrollmentKey) {
+      if (!enrollmentKey) {
       console.log(`[${requestId}] Missing enrollment key`);
       return new Response('Enrollment key is required', { 
         status: 400,
@@ -611,20 +613,24 @@ Deno.serve(async (req) => {
     const duration = Date.now() - startTime;
     console.log(`[${requestId}] Completed successfully in ${duration}ms`);
 
-    // FASE 2: Return script with SHA256 in header
-    return new Response(templateContent, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${fileName}"`,
-        'X-Script-SHA256': installerSha256,
-        'X-Script-Size': installerSizeBytes.toString(),
-        'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'DENY',
-      },
-    });
+      // FASE 2: Return script with SHA256 in header
+      return new Response(templateContent, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Disposition': `attachment; filename="${fileName}"`,
+          'X-Script-SHA256': installerSha256,
+          'X-Script-Size': installerSizeBytes.toString(),
+          'X-Content-Type-Options': 'nosniff',
+          'X-Frame-Options': 'DENY',
+        },
+      });
+    }, { timeoutMs: 25000 });
 
   } catch (error) {
+    if (error instanceof Error && error.message === 'Request timeout') {
+      return createTimeoutResponse(corsHeaders);
+    }
     const duration = Date.now() - startTime;
     console.error(`[${requestId}] Failed after ${duration}ms:`, error);
     return new Response(
