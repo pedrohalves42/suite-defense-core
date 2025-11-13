@@ -44,45 +44,52 @@ class AutoUpdater:
     
     def check_for_updates(self) -> Optional[Dict[str, Any]]:
         """
-        Verifica se há atualizações disponíveis
+        Verifica se há atualizações disponíveis via Edge Function dedicada
         
         Returns:
             Dict com informações da atualização ou None se não houver
         """
         try:
+            import json
+            from hmac_utils import generate_hmac_headers
+            
             logger.info(f"🔍 Verificando atualizações... (versão atual: {self.current_version})")
             
-            # Buscar última versão disponível via REST API
-            url = f"{self.config.server_url}/rest/v1/agent_versions"
+            # Usar Edge Function dedicada ao invés de REST API
+            url = f"{self.config.server_url}/functions/v1/check-agent-updates"
+            
+            # Preparar body vazio (necessário para HMAC)
+            body = json.dumps({})
+            
+            # Gerar headers HMAC para autenticação
             headers = {
-                "apikey": self.config.supabase_anon_key,
-                "Authorization": f"Bearer {self.config.supabase_anon_key}"
-            }
-            params = {
-                "platform": f"eq.{self.platform}",
-                "is_latest": "eq.true",
-                "select": "*",
-                "limit": "1"
+                'X-Agent-Token': self.config.agent_token,
+                'Content-Type': 'application/json',
+                **generate_hmac_headers(self.config.hmac_secret, body)
             }
             
-            response = requests.get(url, headers=headers, params=params, timeout=30)
+            response = requests.post(url, headers=headers, data=body, timeout=30)
             response.raise_for_status()
             
-            versions = response.json()
-            if not versions:
-                logger.info("✅ Nenhuma versão disponível no servidor")
+            data = response.json()
+            
+            # Verificar se há atualização disponível
+            if not data.get('has_update'):
+                logger.info("✅ Nenhuma atualização disponível")
                 return None
             
-            latest = versions[0]
-            latest_version = latest['version']
-            
+            # Comparar versões
+            latest_version = data['version']
             if self._is_newer_version(latest_version, self.current_version):
                 logger.info(f"🆕 Nova versão disponível: {latest_version}")
-                return latest
+                return data
             else:
                 logger.info(f"✅ Versão atual ({self.current_version}) está atualizada")
                 return None
                 
+        except requests.exceptions.RequestException as e:
+            logger.error(f"❌ Erro ao verificar atualizações (rede): {e}")
+            return None
         except Exception as e:
             logger.error(f"❌ Erro ao verificar atualizações: {e}")
             return None
