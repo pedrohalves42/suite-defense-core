@@ -16,6 +16,14 @@ Deno.serve(async (req) => {
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    
+    // Validate key format
+    if (!stripeKey.startsWith('sk_test_') && !stripeKey.startsWith('sk_live_')) {
+      throw new Error(
+        "STRIPE_SECRET_KEY must be a Secret Key starting with 'sk_test_' or 'sk_live_'. " +
+        "Restricted keys (rk_*) are not supported. Please update your secret in Supabase Dashboard."
+      );
+    }
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",

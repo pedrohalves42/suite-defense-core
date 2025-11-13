@@ -109,6 +109,15 @@ Deno.serve(async (req) => {
       };
       response.overall_status = 'down';
       response.recommendations.push('🔴 Configure STRIPE_SECRET_KEY nos secrets do projeto');
+    } else if (!stripeKey.startsWith('sk_test_') && !stripeKey.startsWith('sk_live_')) {
+      logStep("Invalid Stripe key format", { prefix: stripeKey.substring(0, 3) });
+      response.checks.stripe_api = {
+        status: 'error',
+        message: 'Chave inválida: deve começar com sk_test_ ou sk_live_ (não use Restricted Keys)'
+      };
+      response.overall_status = 'down';
+      response.recommendations.push('🔴 Atualize STRIPE_SECRET_KEY para uma Secret Key válida (sk_test_* ou sk_live_*)');
+      response.recommendations.push('📘 Restricted Keys (rk_*) não têm permissões suficientes');
     } else {
       try {
         const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
