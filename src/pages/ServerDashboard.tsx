@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Line, LineChart as RechartsLineChart, Bar, BarChart as RechartsBarChart, Pie, PieChart as RechartsPieChart, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip } from "recharts";
 import { logger } from "@/lib/logger";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 interface Agent {
   id: string;
@@ -88,6 +89,7 @@ const ServerDashboard = () => {
   const navigate = useNavigate();
   const { showOnboarding, completeOnboarding } = useOnboarding();
   const { isAdmin } = useIsAdmin();
+  const { isOnline } = useOnlineStatus();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
@@ -100,7 +102,15 @@ const ServerDashboard = () => {
 
   useEffect(() => {
     loadDashboardData();
-    const interval = setInterval(loadDashboardData, 10000);
+    
+    // Only poll when online
+    const interval = setInterval(() => {
+      if (isOnline) {
+        loadDashboardData();
+      } else {
+        logger.info('[ServerDashboard] Pausing polling - offline');
+      }
+    }, 10000);
     
     // Realtime subscription para agentes
     const agentsChannel = supabase

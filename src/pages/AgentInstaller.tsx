@@ -14,6 +14,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/lib/logger";
 import { CircuitBreaker, CircuitState } from "@/lib/circuit-breaker";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useRetryFetch } from "@/hooks/useRetryFetch";
+import { storage } from "@/lib/storage";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -43,6 +46,10 @@ const retryWithBackoff = async <T,>(
 };
 
 const AgentInstaller = () => {
+  // Connectivity & Retry hooks
+  const { isOnline } = useOnlineStatus();
+  const { retryFetch, isRetrying } = useRetryFetch();
+
   // Step 1: Configuration
   const [agentName, setAgentName] = useState("");
   const [platform, setPlatform] = useState<"windows" | "linux">("windows");
@@ -111,6 +118,25 @@ const AgentInstaller = () => {
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
+    }
+  }, []);
+
+  // FASE 1: Recuperar build em progresso do localStorage
+  useEffect(() => {
+    const savedBuild = storage.get<{ build_id: string; agent_name: string; started_at: number }>('current-build');
+    
+    if (savedBuild && Date.now() - savedBuild.started_at < 15 * 60 * 1000) {
+      logger.info('[Recovery] Build em progresso detectado', savedBuild);
+      toast.info('Recuperando build em progresso...', {
+        description: `Agente: ${savedBuild.agent_name}`
+      });
+      
+      setExeBuildId(savedBuild.build_id);
+      setAgentName(savedBuild.agent_name);
+      setExeBuildStatus('building');
+      
+      // Continuar polling
+      // A lógica de polling será acionada automaticamente quando exeBuildId for definido
     }
   }, []);
 
@@ -600,6 +626,12 @@ const AgentInstaller = () => {
       return;
     }
 
+    // Check connectivity before starting
+    if (!isOnline) {
+      toast.error('Sem conexão com a internet. Verifique sua conexão e tente novamente.');
+      return;
+    }
+
     setExeBuildStatus('building');
     setExeBuildId(null);
     setExeDownloadUrl(null);
@@ -611,26 +643,49 @@ const AgentInstaller = () => {
     toast.info('🚀 Iniciando build do EXE... Aguarde 2-3 minutos');
 
     try {
-      const { data, error } = await supabase.functions.invoke('build-agent-exe', {
-        body: {
-          agent_name: agentName.trim(),
-          enrollment_key: lastEnrollmentKey
+      const buildResult = await retryFetch(async () => {
+        const { data, error } = await supabase.functions.invoke('build-agent-exe', {
+          body: {
+            agent_name: agentName.trim(),
+            enrollment_key: lastEnrollmentKey
+          }
+        });
+
+        if (error) throw error;
+        return data;
+      }, {
+        maxRetries: 3,
+        shouldRetry: (error) => {
+          // Retry on network errors
+          return error.message?.includes('Failed to fetch') || 
+                 error.message?.includes('Network request failed');
         }
       });
 
-      if (error) throw error;
-
-      const { build_id, github_actions_url } = data;
+      const { build_id, github_actions_url } = buildResult;
       setExeBuildId(build_id);
       setGithubActionsUrl(github_actions_url || null);
 
+      // Save to localStorage for recovery
+      storage.set('current-build', { 
+        build_id, 
+        agent_name: agentName.trim(),
+        started_at: Date.now() 
+      }, 30 * 60 * 1000); // 30min expiry
+
       logger.info('Build initiated', { build_id, agent_name: agentName.trim(), github_actions_url });
 
-      // Poll for build status with retry logic
+      // Poll for build status with offline awareness
       let attempts = 0;
       const maxAttempts = 60; // 5 min timeout
       
       const pollInterval = setInterval(async () => {
+        // Pause polling if offline
+        if (!isOnline) {
+          logger.warn('Pausing build polling - offline');
+          return;
+        }
+
         attempts++;
         setPollAttempts(attempts);
         
@@ -653,6 +708,7 @@ const AgentInstaller = () => {
             setExeBuildStatus('failed');
             toast.error('Timeout: Build demorou mais de 5 minutos após múltiplas tentativas');
             setRetryCount(0);
+            storage.remove('current-build');
           }
           return;
         }
@@ -682,6 +738,7 @@ const AgentInstaller = () => {
             setExeSha256(buildData.sha256_hash);
             setExeFileSize(buildData.file_size_bytes);
             setRetryCount(0);
+            storage.remove('current-build');
             
             const duration = buildData.build_duration_seconds || 0;
             toast.success(`✅ EXE gerado em ${duration}s!`, {
@@ -689,6 +746,7 @@ const AgentInstaller = () => {
             });
           } else if (buildData.build_status === 'failed') {
             clearInterval(pollInterval);
+            storage.remove('current-build');
             
             // Retry automático
             if (retryCount < MAX_RETRIES) {
@@ -803,6 +861,27 @@ const AgentInstaller = () => {
               <RefreshCw className="h-4 w-4 mr-2" />
               Resetar Bloqueio
             </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* FASE 1: Connectivity & Retry Status */}
+      {!isOnline && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Sem Conexão</AlertTitle>
+          <AlertDescription>
+            Você está offline. Polling de builds pausado. Aguardando reconexão...
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {isRetrying && isOnline && (
+        <Alert>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertTitle>Tentando Reconectar</AlertTitle>
+          <AlertDescription>
+            Houve uma falha na conexão. Tentando novamente automaticamente...
           </AlertDescription>
         </Alert>
       )}
