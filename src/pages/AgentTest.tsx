@@ -325,17 +325,19 @@ export default function AgentTest() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Confirmar Limpeza de Dados</AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2">
-                <p>Esta ação irá remover permanentemente:</p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>Todos os agentes</li>
-                  <li>Todos os tokens de agente</li>
-                  <li>Todos os eventos de telemetria</li>
-                  <li>Todas as métricas de sistema</li>
-                  <li>Chaves de enrollment usadas</li>
-                </ul>
-                <p className="font-semibold mt-4">Os usuários serão mantidos.</p>
-                <p className="text-destructive">Esta ação não pode ser desfeita.</p>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2">
+                  <p>Esta ação irá remover permanentemente:</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>Todos os agentes</li>
+                    <li>Todos os tokens de agente</li>
+                    <li>Todos os eventos de telemetria</li>
+                    <li>Todas as métricas de sistema</li>
+                    <li>Chaves de enrollment usadas</li>
+                  </ul>
+                  <p className="font-semibold mt-4">Os usuários serão mantidos.</p>
+                  <p className="text-destructive">Esta ação não pode ser desfeita.</p>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
