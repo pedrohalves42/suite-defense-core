@@ -100,6 +100,25 @@ const ServerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<number>(0);
 
+  // Buscar mapeamento de tenant_id → tenant_name
+  const [tenantNames, setTenantNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const loadTenantNames = async () => {
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('id, name');
+      
+      if (!error && data) {
+        const map: Record<string, string> = {};
+        data.forEach(t => map[t.id] = t.name);
+        setTenantNames(map);
+      }
+    };
+    
+    loadTenantNames();
+  }, []);
+
   useEffect(() => {
     loadDashboardData();
     
@@ -421,7 +440,9 @@ const ServerDashboard = () => {
                 {Object.entries(agentsByTenant).map(([tenant, count]) => (
                   <div key={tenant} className="p-3 bg-secondary/30 rounded-lg border border-border">
                     <p className="text-xs text-muted-foreground">Tenant</p>
-                    <p className="font-mono font-semibold text-foreground">{tenant}</p>
+                    <p className="font-semibold text-foreground">
+                      {tenantNames[tenant] || `${tenant.slice(0, 8)}...`}
+                    </p>
                     <p className="text-sm text-muted-foreground mt-1">{count} agente(s)</p>
                   </div>
                 ))}

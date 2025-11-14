@@ -84,20 +84,32 @@ export default function SuperAdminTenants() {
     },
   });
 
-  // Fetch user counts per tenant
+  // Fetch user counts per tenant (COUNT DISTINCT user_id)
   const { data: userCounts } = useQuery({
     queryKey: ['super-admin-user-counts'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_roles')
-        .select('tenant_id');
+        .select('tenant_id, user_id');
       
       if (error) throw error;
       
-      const counts: Record<string, number> = {};
+      // Usar Map<tenant_id, Set<user_id>> para contar usuários únicos
+      const uniqueUsers = new Map<string, Set<string>>();
+      
       data.forEach((row) => {
-        counts[row.tenant_id] = (counts[row.tenant_id] || 0) + 1;
+        if (!uniqueUsers.has(row.tenant_id)) {
+          uniqueUsers.set(row.tenant_id, new Set());
+        }
+        uniqueUsers.get(row.tenant_id)!.add(row.user_id);
       });
+      
+      // Converter para objeto { tenant_id: count }
+      const counts: Record<string, number> = {};
+      uniqueUsers.forEach((userSet, tenantId) => {
+        counts[tenantId] = userSet.size;
+      });
+      
       return counts;
     },
   });
@@ -273,9 +285,11 @@ export default function SuperAdminTenants() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <span className={tenant.user_count > (tenant.subscription?.subscription_plans.max_users || 0) ? 'text-red-600 font-semibold' : ''}>
-                      {tenant.user_count}/{tenant.subscription?.subscription_plans.max_users || 0}
-                    </span>
+                    <div className="flex items-center gap-2" title="Usuários únicos com acesso ao tenant (independente de quantas roles possuem)">
+                      <span className={tenant.user_count > (tenant.subscription?.subscription_plans.max_users || 0) ? 'text-red-600 font-semibold' : ''}>
+                        {tenant.user_count}/{tenant.subscription?.subscription_plans.max_users || 0}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <span className={tenant.agent_count > (tenant.subscription?.subscription_plans.max_agents || 999) ? 'text-red-600 font-semibold' : ''}>
