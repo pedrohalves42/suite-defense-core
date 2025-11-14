@@ -305,6 +305,23 @@ serve(async (req) => {
       success: success
     });
 
+    // FASE 1: Rastrear first_heartbeat esperado após instalação
+    if (success && metadata?.installation_complete) {
+      await supabaseClient
+        .from('installation_analytics')
+        .insert({
+          tenant_id: agent.tenant_id,
+          agent_id: agent.id,
+          agent_name: agent.agent_name,
+          event_type: 'awaiting_first_heartbeat',
+          platform: platform || 'windows',
+          success: true,
+          metadata: {
+            installation_timestamp: new Date().toISOString(),
+            expected_heartbeat_within_seconds: 120
+          }
+        });
+
     // Handle failed installations by notifying admins (optional)
     if (!success) {
       console.log(`[${requestId}] Installation failed, checking for admin notification`, {
