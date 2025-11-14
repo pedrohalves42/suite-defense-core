@@ -51,7 +51,24 @@ serve(async (req) => {
 
     // Parse query parameters
     const url = new URL(req.url);
-    const hoursBack = parseInt(url.searchParams.get("hours_back") || "24");
+    const hoursBackRaw = url.searchParams.get("hours_back") || "24";
+    const hoursBack = parseInt(hoursBackRaw);
+
+    // Validate hours_back parameter
+    if (isNaN(hoursBack) || hoursBack < 1 || hoursBack > 720) {
+      console.error(`[${requestId}] Invalid hours_back: ${hoursBackRaw}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid hours_back parameter. Must be between 1 and 720 (30 days).",
+          request_id: requestId
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400
+        }
+      );
+    }
 
     console.log(`[${requestId}] Fetching metrics for tenant ${tenantId}, hours_back: ${hoursBack}`);
 

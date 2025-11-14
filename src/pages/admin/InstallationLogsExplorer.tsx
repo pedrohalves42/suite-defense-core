@@ -19,6 +19,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ErrorState } from "@/components/ErrorState";
+import { exportToCSV } from "@/lib/csv-export";
+import { toast } from "sonner";
 
 export default function InstallationLogsExplorer() {
   const [filters, setFilters] = useState({
@@ -31,7 +34,7 @@ export default function InstallationLogsExplorer() {
     dateTo: '',
   });
 
-  const { data: logs, isLoading } = useInstallationLogs({
+  const { data: logs, isLoading, isError, error: errorData, refetch } = useInstallationLogs({
     agentName: filters.agentName || undefined,
     eventType: filters.eventType !== 'all' ? filters.eventType : undefined,
     success: filters.success !== 'all' ? filters.success === 'true' : undefined,
@@ -80,12 +83,61 @@ export default function InstallationLogsExplorer() {
     );
   }
 
+  if (isError) {
+    return (
+      <div className="container mx-auto p-6">
+        <ErrorState 
+          error={errorData!} 
+          onRetry={refetch}
+          title="Erro ao Carregar Logs de Instalação"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Explorador de Logs de Instalação</h1>
-        <p className="text-muted-foreground">Busca avançada e análise de logs do pipeline de instalação</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Explorador de Logs de Instalação</h1>
+          <p className="text-muted-foreground">Busca avançada e análise de logs do pipeline de instalação</p>
+        </div>
+        <Button
+          onClick={() => {
+            if (!logs || logs.length === 0) {
+              toast.error('Nenhum log para exportar');
+              return;
+            }
+            
+            exportToCSV(
+              logs.map(log => ({
+                agent_name: log.agent_name,
+                event_type: log.event_type,
+                success: log.success ? 'Sim' : 'Não',
+                platform: log.platform,
+                error_message: log.error_message || '',
+                created_at: format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR }),
+              })),
+              'installation-logs',
+              [
+                { key: 'agent_name', label: 'Nome do Agente' },
+                { key: 'event_type', label: 'Tipo de Evento' },
+                { key: 'success', label: 'Sucesso' },
+                { key: 'platform', label: 'Plataforma' },
+                { key: 'error_message', label: 'Mensagem de Erro' },
+                { key: 'created_at', label: 'Data/Hora' },
+              ]
+            );
+            
+            toast.success(`${logs.length} logs exportados com sucesso`);
+          }}
+          variant="outline"
+          className="gap-2"
+        >
+          <Download className="h-4 w-4" />
+          Exportar CSV ({logs?.length || 0} logs)
+        </Button>
       </div>
 
       {/* Filters */}

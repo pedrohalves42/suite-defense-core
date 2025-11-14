@@ -14,12 +14,15 @@ export function useAgentLifecycle(tenantId: string | undefined) {
         .eq('tenant_id', tenantId)
         .order('enrolled_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) throw new Error(`Erro ao buscar agentes: ${error.message}`);
 
       // Transform AgentLifecycleState to DashboardAgentCard
       return (data as AgentLifecycleState[]).map(transformToCard);
     },
     enabled: !!tenantId,
+    staleTime: 30000, // Cache por 30s
+    retry: 2, // Tentar 2 vezes antes de falhar
+    retryDelay: 1000, // Esperar 1s entre tentativas
   });
 }
 
@@ -99,11 +102,16 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
         body: { tenant_id: tenantId, hours_back: hoursBack }
       });
 
-      if (error) throw error;
+      if (error) throw new Error(`Erro ao buscar métricas: ${error.message}`);
+      if (!data?.success) throw new Error(data?.error || 'Erro desconhecido');
+      
       return data.metrics;
     },
     enabled: !!tenantId,
     refetchInterval: 60000, // Refetch every minute
+    staleTime: 30000, // Cache por 30s
+    retry: 2, // Tentar 2 vezes antes de falhar
+    retryDelay: 1000, // Esperar 1s entre tentativas
   });
 }
 
