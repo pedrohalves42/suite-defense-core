@@ -71,8 +71,23 @@ export default function Tenants() {
         throw new Error(error.error || 'Failed to fetch users');
       }
       
-      const users = await response.json();
-      return users;
+      const rawUsers = await response.json();
+      
+      // Agrupar roles por usuário
+      const groupedMap = new Map<string, User>();
+      
+      rawUsers.forEach((user: User) => {
+        if (groupedMap.has(user.user_id)) {
+          // Usuário já existe, adicionar role
+          const existing = groupedMap.get(user.user_id)!;
+          existing.role = `${existing.role}, ${user.role}`;
+        } else {
+          // Primeiro registro do usuário
+          groupedMap.set(user.user_id, { ...user });
+        }
+      });
+      
+      return Array.from(groupedMap.values());
     },
   });
 
