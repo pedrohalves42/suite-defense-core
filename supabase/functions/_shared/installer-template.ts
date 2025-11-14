@@ -76,13 +76,14 @@ try {
         $env:HTTPS_PROXY = $proxyUri
     }
     
-    # Health check
+    # Health check - using public endpoint
     Write-InstallLog "Performing backend health check..."
     try {
-        $healthCheck = Invoke-WebRequest -Uri "$SERVER_URL/functions/v1/heartbeat" -Method GET -TimeoutSec 10 -UseBasicParsing
+        $healthCheck = Invoke-WebRequest -Uri "$SERVER_URL/functions/v1/auto-generate-enrollment" -Method GET -TimeoutSec 10 -UseBasicParsing
         Write-InstallLog "✅ Backend is reachable (Status: $($healthCheck.StatusCode))"
     } catch {
         Write-InstallLog "⚠️ Health check failed: $($_.Exception.Message)" "WARN"
+        Write-InstallLog "⚠️ This is non-critical - installation will continue" "WARN"
     }
     
     # Save agent script
@@ -150,8 +151,21 @@ $AgentScriptContentBlock = @"
     
     Start-Sleep -Seconds 3
     
-    $taskInfo = Get-ScheduledTask -TaskName $taskName
-    Write-InstallLog "✅ Agent task status: $($taskInfo.State)"
+    $taskInfo = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+    if ($taskInfo) {
+        Write-InstallLog "✅ Agent task status: $($taskInfo.State)"
+        
+        if ($taskInfo.State -eq "Ready") {
+            Write-InstallLog "✅ Task is ready to run"
+        } elseif ($taskInfo.State -eq "Running") {
+            Write-InstallLog "✅ Task is already running"
+        } else {
+            Write-InstallLog "⚠️ Task state: $($taskInfo.State)" "WARN"
+        }
+    } else {
+        Write-InstallLog "⚠️ Could not verify task status" "WARN"
+        Write-InstallLog "Run manually: Start-ScheduledTask -TaskName '$taskName'" "INFO"
+    }
     
     # Send post-installation telemetry
     Write-InstallLog "Sending installation telemetry..."
@@ -159,7 +173,6 @@ $AgentScriptContentBlock = @"
         $telemetryBody = @{
             event = "agent_installed"
             platform = "windows"
-            agent_name = "{{AGENT_NAME}}"
             installation_method = "installer_script"
         } | ConvertTo-Json
         
@@ -210,14 +223,37 @@ $AgentScriptContentBlock = @"
     Write-InstallLog "Installation log saved to: $LogFile"
     
 } catch {
-    Write-InstallLog "=" * 70 "ERROR"
-    Write-InstallLog "❌ Installation failed!" "ERROR"
-    Write-InstallLog "Error: $($_.Exception.Message)" "ERROR"
-    Write-InstallLog "StackTrace: $($_.ScriptStackTrace)" "ERROR"
-    Write-InstallLog "=" * 70 "ERROR"
-    Write-InstallLog ""
-    Write-InstallLog "📞 Contact support: support@cybershield.com" "ERROR"
-    Write-InstallLog "📄 Log file: $LogFile" "ERROR"
+    Write-Host ""
+    Write-Host "=" * 70 -ForegroundColor Red
+    Write-Host "❌ INSTALLATION FAILED!" -ForegroundColor Red
+    Write-Host "=" * 70 -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Error Details:" -ForegroundColor Yellow
+    Write-Host "  Message: $($_.Exception.Message)" -ForegroundColor White
+    Write-Host "  Line: $($_.InvocationInfo.ScriptLineNumber)" -ForegroundColor White
+    Write-Host "  Command: $($_.InvocationInfo.Line.Trim())" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Stack Trace:" -ForegroundColor Yellow
+    Write-Host $_.ScriptStackTrace -ForegroundColor Gray
+    Write-Host ""
+    
+    # Log detailed error
+    if (Test-Path $LogDir) {
+        Write-InstallLog "FATAL ERROR: $($_.Exception.Message)" "ERROR"
+        Write-InstallLog "Line: $($_.InvocationInfo.ScriptLineNumber)" "ERROR"
+        Write-InstallLog "StackTrace: $($_.ScriptStackTrace)" "ERROR"
+    }
+    
+    Write-Host "Troubleshooting Steps:" -ForegroundColor Cyan
+    Write-Host "  1. Check logs: Get-Content '$LogFile'" -ForegroundColor White
+    Write-Host "  2. Verify admin privileges: ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)" -ForegroundColor White
+    Write-Host "  3. Test network: Test-NetConnection -ComputerName iavbnmduxpxhwubqrzzn.supabase.co -Port 443" -ForegroundColor White
+    Write-Host "  4. Contact support: gamehousetecnologia@gmail.com" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Log file saved to: $LogFile" -ForegroundColor Gray
+    Write-Host ""
+    
+    Read-Host "Press Enter to exit"
     exit 1
 }
 `;
