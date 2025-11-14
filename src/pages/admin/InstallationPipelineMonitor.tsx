@@ -26,14 +26,17 @@ import {
   ResponsiveContainer,
   Tooltip
 } from "recharts";
+import { ErrorState } from "@/components/ErrorState";
+import { exportToCSV } from "@/lib/csv-export";
+import { toast } from "sonner";
 
 export default function InstallationPipelineMonitor() {
   const { tenant } = useTenant();
   const [hoursBack, setHoursBack] = useState<number>(24);
   const [stageFilter, setStageFilter] = useState<string>('all');
 
-  const { data: agents, isLoading: agentsLoading } = useAgentLifecycle(tenant?.id);
-  const { data: metrics, isLoading: metricsLoading } = usePipelineMetrics(tenant?.id, hoursBack);
+  const { data: agents, isLoading: agentsLoading, isError: agentsError, error: agentsErrorData, refetch: refetchAgents } = useAgentLifecycle(tenant?.id);
+  const { data: metrics, isLoading: metricsLoading, isError: metricsError, error: metricsErrorData, refetch: refetchMetrics } = usePipelineMetrics(tenant?.id, hoursBack);
 
   const filteredAgents = agents?.filter(agent => {
     if (stageFilter === 'all') return true;
@@ -57,6 +60,21 @@ export default function InstallationPipelineMonitor() {
         <div className="flex items-center justify-center h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
         </div>
+      </div>
+    );
+  }
+
+  if (agentsError || metricsError) {
+    return (
+      <div className="container mx-auto p-6">
+        <ErrorState 
+          error={agentsErrorData || metricsErrorData!} 
+          onRetry={() => {
+            refetchAgents();
+            refetchMetrics();
+          }}
+          title="Erro ao Carregar Pipeline de Instalação"
+        />
       </div>
     );
   }
@@ -181,9 +199,48 @@ export default function InstallationPipelineMonitor() {
               <CardTitle>Agentes</CardTitle>
               <CardDescription>Lista detalhada com status atual e ações disponíveis</CardDescription>
             </div>
-            <Select value={stageFilter} onValueChange={setStageFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtrar por estágio" />
+            <div className="flex gap-2">
+              <Button
+                onClick={() => {
+                  if (!filteredAgents || filteredAgents.length === 0) {
+                    toast.error('Nenhum agente para exportar');
+                    return;
+                  }
+                  
+                  exportToCSV(
+                    filteredAgents.map(a => ({
+                      agent_name: a.agent_name,
+                      lifecycle_stage: a.lifecycle_stage,
+                      status: a.status_badge.label,
+                      install_time_seconds: a.metrics.install_time_seconds || 0,
+                      last_seen: a.metrics.last_seen ? format(new Date(a.metrics.last_seen), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'Nunca',
+                      is_stuck: a.flags.is_stuck ? 'Sim' : 'Não',
+                      has_errors: a.flags.has_errors ? 'Sim' : 'Não',
+                    })),
+                    'agents-pipeline',
+                    [
+                      { key: 'agent_name', label: 'Nome do Agente' },
+                      { key: 'lifecycle_stage', label: 'Estágio' },
+                      { key: 'status', label: 'Status' },
+                      { key: 'install_time_seconds', label: 'Tempo Instalação (s)' },
+                      { key: 'last_seen', label: 'Última Visibilidade' },
+                      { key: 'is_stuck', label: 'Travado' },
+                      { key: 'has_errors', label: 'Com Erros' },
+                    ]
+                  );
+                  
+                  toast.success(`${filteredAgents.length} agentes exportados com sucesso`);
+                }}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Exportar CSV
+              </Button>
+              <Select value={stageFilter} onValueChange={setStageFilter}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Filtrar por estágio" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos ({agents?.length || 0})</SelectItem>
@@ -193,6 +250,7 @@ export default function InstallationPipelineMonitor() {
                 <SelectItem value="errors">Com Erros ({agents?.filter(a => a.flags.has_errors).length || 0})</SelectItem>
               </SelectContent>
             </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
