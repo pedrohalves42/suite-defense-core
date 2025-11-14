@@ -62,7 +62,8 @@ export const AppSidebar = () => {
     { icon: Key, label: 'Enrollment Keys', to: '/super-admin/enrollment-keys' },
     { icon: Mail, label: 'Convites', to: '/super-admin/invites' },
     { icon: AlertTriangle, label: 'Segurança', to: '/super-admin/security' },
-    { icon: ScrollText, label: 'Logs', to: '/super-admin/audit-logs' },
+    { icon: ScrollText, label: 'Logs Auditoria', to: '/super-admin/audit-logs' },
+    { icon: Activity, label: 'Logs Sistema', to: '/super-admin/system-logs' },
     { icon: Settings, label: 'Configurações', to: '/super-admin/settings' },
   ], []);
 
