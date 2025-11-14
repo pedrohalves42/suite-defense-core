@@ -540,14 +540,19 @@ const AgentInstaller = () => {
 
       setInstallCommand(command);
 
-      await supabase.functions.invoke('track-installation-event', {
+      // Track telemetry (non-critical)
+      supabase.functions.invoke('track-installation-event', {
         body: {
           agent_name: agentName.trim(),
           event_type: 'generated',
           platform: platform,
           installation_method: 'one_click'
         }
-      }).catch(err => logger.error('Failed to track event', err));
+      }).then(({ data, error }) => {
+        if (error || (data && !data.ok)) {
+          logger.warn('[telemetry] Failed to track generated event', { error, data });
+        }
+      }).catch(err => logger.warn('[telemetry] Exception tracking event', err));
 
       toast.success("✅ Comando gerado!", {
         description: "Copie e execute no servidor"
@@ -692,14 +697,19 @@ const AgentInstaller = () => {
       // FASE 4: Use downloadAndVerifyScript (suporta Windows e Linux)
       await downloadAndVerifyScript(credentials.enrollmentKey, platform);
 
-      await supabase.functions.invoke('track-installation-event', {
+      // Track telemetry (non-critical)
+      supabase.functions.invoke('track-installation-event', {
         body: {
           agent_name: agentName.trim(),
           event_type: 'downloaded',
           platform: platform,
           installation_method: 'download'
         }
-      }).catch(err => logger.error('Failed to track event', err));
+      }).then(({ data, error }) => {
+        if (error || (data && !data.ok)) {
+          logger.warn('[telemetry] Failed to track downloaded event', { error, data });
+        }
+      }).catch(err => logger.warn('[telemetry] Exception tracking event', err));
 
     } catch (error: any) {
       logger.error('Generate installer error', error);
@@ -982,14 +992,19 @@ const AgentInstaller = () => {
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(installCommand);
     
-    await supabase.functions.invoke('track-installation-event', {
+    // Track telemetry (non-critical)
+    supabase.functions.invoke('track-installation-event', {
       body: {
         agent_name: agentName.trim(),
         event_type: 'command_copied',
         platform: platform,
         installation_method: 'one_click'
       }
-    }).catch(err => logger.error('Failed to track copy', err));
+    }).then(({ data, error }) => {
+      if (error || (data && !data.ok)) {
+        logger.warn('[telemetry] Failed to track copy event', { error, data });
+      }
+    }).catch(err => logger.warn('[telemetry] Exception tracking event', err));
     
     toast.success("✅ Comando copiado!");
   };
