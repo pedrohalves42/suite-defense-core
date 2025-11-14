@@ -74,6 +74,19 @@ $InstallDir = "C:\\CyberShield"
 $AgentScript = Join-Path $InstallDir "cybershield-agent.ps1"
 $LogDir = Join-Path $InstallDir "logs"
 $LogFile = Join-Path $LogDir "install-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+$taskName = "CyberShieldAgent"
+
+# ============================================================================
+# SYSTEM INFORMATION (collected early for telemetry)
+# ============================================================================
+$osInfo = $null
+$healthCheckOk = $false
+
+try {
+    $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
+} catch {
+    Write-Host "[WARN] Could not retrieve OS information" -ForegroundColor Yellow
+}
 
 # ============================================================================
 # LOGGING FUNCTION
@@ -119,11 +132,14 @@ try {
         $healthCheck = Invoke-WebRequest -Uri "$SERVER_URL/functions/v1/serve-installer" -Method GET -TimeoutSec 10 -UseBasicParsing
         
         if ($healthCheck.StatusCode -eq 200) {
+            $healthCheckOk = $true
             Write-InstallLog "✅ Backend is reachable and healthy"
         } else {
+            $healthCheckOk = $false
             throw "Backend returned unexpected status: $($healthCheck.StatusCode)"
         }
     } catch {
+        $healthCheckOk = $false
         Write-Host ""
         Write-Host "=" * 70 -ForegroundColor Red
         Write-Host "❌ BACKEND UNREACHABLE - Installation aborted" -ForegroundColor Red
@@ -232,35 +248,75 @@ $AgentScriptContentBlock = @"
     # Send post-installation telemetry (HMAC-authenticated)
     Write-InstallLog "Sending installation telemetry..."
     try {
-        # Get task info
-        $taskInfo = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-        $taskCreated = $taskInfo -ne $null
-        $taskRunning = $taskInfo.State -eq "Running"
+        # DEFENSIVE: Ensure all variables exist with fallbacks
+        if (-not $InstallDir) { $InstallDir = "C:\\CyberShield" }
+        if (-not $taskName) { $taskName = "CyberShieldAgent" }
         
-        # Get script info
-        $agentScriptPath = Join-Path $InstallPath "cybershield-agent.ps1"
-        $scriptExists = Test-Path $agentScriptPath
-        $scriptSize = if ($scriptExists) { (Get-Item $agentScriptPath).Length } else { 0 }
+        # Collect OS info with fallback
+        if (-not $osInfo) {
+            try {
+                $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
+            } catch {
+                $osInfo = $null
+            }
+        }
         
-        # Get PowerShell version
-        $psVersion = $PSVersionTable.PSVersion.ToString()
+        # Get task info with defensive checks
+        $taskInfo = $null
+        $taskCreated = $false
+        $taskRunning = $false
         
+        try {
+            $taskInfo = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+            $taskCreated = $null -ne $taskInfo
+            $taskRunning = $taskInfo -and ($taskInfo.State -eq "Running")
+        } catch {
+            Write-InstallLog "   Could not verify task status for telemetry" "DEBUG"
+        }
+        
+        # Get script info with path validation
+        $agentScriptPath = Join-Path $InstallDir "cybershield-agent.ps1"
+        $scriptExists = $false
+        $scriptSize = 0
+        
+        if ($agentScriptPath -and (Test-Path $agentScriptPath -ErrorAction SilentlyContinue)) {
+            $scriptExists = $true
+            try {
+                $scriptItem = Get-Item $agentScriptPath -ErrorAction Stop
+                $scriptSize = $scriptItem.Length
+            } catch {
+                $scriptSize = 0
+            }
+        }
+        
+        # Get PowerShell version with fallback
+        $psVersion = "5.1.0"
+        if ($PSVersionTable -and $PSVersionTable.PSVersion) {
+            $psVersion = $PSVersionTable.PSVersion.ToString()
+        }
+        
+        # TELEMETRY PAYLOAD - Minimal mandatory + optional fields
         $telemetryData = @{
+            # MANDATORY FIELDS (always present)
             success = $true
-            os_version = $osInfo.Caption
+            event_type = "post_installation"
             installation_time = (Get-Date).ToString("o")
+            powershell_version = $psVersion
+            
+            # OPTIONAL FIELDS (may be null/empty)
+            os_version = if ($osInfo) { $osInfo.Caption } else { "Windows Unknown" }
+            os_architecture = if ($osInfo) { $osInfo.OSArchitecture } else { "Unknown" }
             network_tests = @{
-                health_check_passed = $healthCheckOk
+                health_check_passed = [bool]$healthCheckOk
                 dns_test = $true
-                api_test = $healthCheckOk
+                api_test = [bool]$healthCheckOk
             }
             firewall_status = "configured"
             proxy_detected = $false
-            task_created = $taskCreated
-            task_running = $taskRunning
-            script_exists = $scriptExists
-            script_size_bytes = $scriptSize
-            powershell_version = $psVersion
+            task_created = [bool]$taskCreated
+            task_running = [bool]$taskRunning
+            script_exists = [bool]$scriptExists
+            script_size_bytes = [int]$scriptSize
         }
         
         $telemetryJson = $telemetryData | ConvertTo-Json -Compress -Depth 10
@@ -283,13 +339,25 @@ $AgentScriptContentBlock = @"
             "X-Nonce" = $nonce
         }
         
-        Invoke-WebRequest -Uri "$SERVER_URL/functions/v1/post-installation-telemetry" \`
-            -Method POST -Body $telemetryJson -Headers $telemetryHeaders \`
-            -TimeoutSec 10 -UseBasicParsing | Out-Null
+        $telemetryResponse = Invoke-WebRequest \`
+            -Uri "$SERVER_URL/functions/v1/post-installation-telemetry" \`
+            -Method POST \`
+            -Body $telemetryJson \`
+            -Headers $telemetryHeaders \`
+            -TimeoutSec 15 \`
+            -UseBasicParsing
         
-        Write-InstallLog "✅ Telemetry sent successfully"
+        if ($telemetryResponse.StatusCode -eq 200 -or $telemetryResponse.StatusCode -eq 201 -or $telemetryResponse.StatusCode -eq 202) {
+            Write-InstallLog "✅ Telemetry sent successfully (HTTP $($telemetryResponse.StatusCode))"
+        } else {
+            Write-InstallLog "⚠️ Telemetry returned HTTP $($telemetryResponse.StatusCode) (non-critical)" "WARN"
+        }
+        
     } catch {
-        Write-InstallLog "⚠️ Telemetry failed (non-critical): $($_.Exception.Message)" "WARN"
+        $errorDetail = $_.Exception.Message
+        $errorType = $_.Exception.GetType().Name
+        Write-InstallLog "⚠️ Telemetry failed (non-critical): [$errorType] $errorDetail" "WARN"
+        Write-InstallLog "   Installation is complete despite telemetry failure" "INFO"
     }
     
     # Installation complete
