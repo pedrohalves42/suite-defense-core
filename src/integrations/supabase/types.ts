@@ -2130,6 +2130,22 @@ export type Database = {
           total_stuck: number
         }[]
       }
+      check_installation_failure_rate: {
+        Args: {
+          p_hours_back?: number
+          p_tenant_id?: string
+          p_threshold_pct?: number
+        }
+        Returns: {
+          exceeds_threshold: boolean
+          failed_attempts: number
+          failure_rate_pct: number
+          period_end: string
+          period_start: string
+          tenant_id: string
+          total_attempts: number
+        }[]
+      }
       cleanup_expired_keys: { Args: never; Returns: undefined }
       cleanup_old_data: { Args: never; Returns: undefined }
       cleanup_old_failed_attempts: { Args: never; Returns: undefined }
