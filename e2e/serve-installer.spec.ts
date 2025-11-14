@@ -77,4 +77,44 @@ test.describe('Serve Installer Edge Function', () => {
     expect(script.length).toBeGreaterThan(1000);
     expect(script).toContain('CyberShield');
   });
+
+  test('should use secure HMAC implementation (Invoke-SecureRequest)', async ({ request }) => {
+    const response = await request.get(`${process.env.VITE_SUPABASE_URL}/functions/v1/serve-installer/${enrollmentKey}`);
+
+    expect(response.ok()).toBeTruthy();
+    const script = await response.text();
+    
+    // ✅ PHASE 4: Security checks - must use Invoke-SecureRequest
+    expect(script).toContain('Invoke-SecureRequest');
+    expect(script).toContain('function Invoke-SecureRequest');
+    
+    // ✅ Must NOT contain dangerous $headers indexing patterns
+    expect(script).not.toMatch(/\$headers\[['"]X-Request-Id['"]\]/);
+    expect(script).not.toMatch(/\$headers\[['"]X-Timestamp['"]\]/);
+    expect(script).not.toMatch(/Write-Log.*\$headers\[/);
+    
+    // ✅ Verify HMAC generation is internal to Invoke-SecureRequest
+    expect(script).toContain('Get-HmacSignature');
+    expect(script).toContain('X-HMAC-Signature');
+  });
+
+  test('should have minimum security standards', async ({ request }) => {
+    const response = await request.get(`${process.env.VITE_SUPABASE_URL}/functions/v1/serve-installer/${enrollmentKey}`);
+
+    expect(response.ok()).toBeTruthy();
+    const script = await response.text();
+    
+    // Size check (should be substantial with embedded agent script)
+    expect(script.length).toBeGreaterThan(5000);
+    
+    // Must have error handling
+    expect(script).toContain('try');
+    expect(script).toContain('catch');
+    
+    // Must have logging
+    expect(script).toContain('Write-Log');
+    
+    // Must validate parameters
+    expect(script).toContain('IsNullOrWhiteSpace');
+  });
 });
