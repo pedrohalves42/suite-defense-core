@@ -1,13 +1,17 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Activity, AlertCircle, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Activity, AlertCircle, CheckCircle2, Clock, XCircle, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 export default function BuildHealthDashboard() {
+  const queryClient = useQueryClient();
+  
   const { data: builds, isLoading } = useQuery({
     queryKey: ["recent-builds"],
     queryFn: async () => {
@@ -21,6 +25,21 @@ export default function BuildHealthDashboard() {
       return data || [];
     },
     refetchInterval: 15000, // Atualizar a cada 15s
+  });
+
+  const cleanupMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('cleanup-stuck-builds');
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(`✅ Limpeza concluída: ${data.cleaned_count} build(s) marcados como falhos`);
+      queryClient.invalidateQueries({ queryKey: ["recent-builds"] });
+    },
+    onError: (error: Error) => {
+      toast.error(`❌ Erro na limpeza: ${error.message}`);
+    }
   });
 
   const getStatusBadge = (status: string) => {
@@ -79,9 +98,20 @@ export default function BuildHealthDashboard() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>⚠ Builds Travados Detectados</AlertTitle>
-          <AlertDescription>
-            {stuckBuilds.length} build(s) estão travados há mais de 15 minutos. 
-            O watchdog deve limpá-los automaticamente.
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              {stuckBuilds.length} build(s) estão travados há mais de 15 minutos. 
+              O watchdog deve limpá-los automaticamente.
+            </span>
+            <Button 
+              size="sm" 
+              variant="destructive"
+              onClick={() => cleanupMutation.mutate()}
+              disabled={cleanupMutation.isPending}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {cleanupMutation.isPending ? 'Limpando...' : 'Limpar Agora'}
+            </Button>
           </AlertDescription>
         </Alert>
       )}
