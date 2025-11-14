@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
-import { Resend } from "npm:resend@4.0.0";
+import { Resend } from "https://esm.sh/resend@4.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -191,7 +191,9 @@ serve(async (req) => {
         });
 
         console.log(`[${requestId}] Email sent to ${adminEmails.length} admin(s) for tenant ${tenantId}`);
-        emailsSent.push({ tenant_id: tenantId, email_id: emailResult.id });
+        if (emailResult.data?.id) {
+          emailsSent.push({ tenant_id: tenantId, email_id: emailResult.data.id });
+        }
 
         // Update alert with email_sent flag
         if (alert) {
@@ -228,7 +230,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         request_id: requestId
       }),
       {
