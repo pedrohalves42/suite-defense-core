@@ -220,7 +220,8 @@ serve(async (req) => {
       task_running,
       script_exists,
       script_size_bytes,
-      powershell_version
+      powershell_version,
+      metadata
     } = body;
     
     console.log(`[${requestId}] Telemetry data received:`, { 
@@ -314,7 +315,7 @@ serve(async (req) => {
           agent_id: agent.id,
           agent_name: agent.agent_name,
           event_type: 'awaiting_first_heartbeat',
-          platform: platform || 'windows',
+          platform: 'windows',
           success: true,
           metadata: {
             installation_timestamp: new Date().toISOString(),
