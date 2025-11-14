@@ -533,6 +533,38 @@ const AgentInstaller = () => {
       const credentials = await generateCredentials();
       if (!credentials) return;
 
+      // Validate HMAC signature before proceeding
+      if (credentials.hmacSecret) {
+        try {
+          const { data: validationResult, error: validationError } = await supabase.functions.invoke(
+            'validate-hmac-signature', 
+            {
+              body: { 
+                hmac_secret: credentials.hmacSecret,
+                test_payload: 'installation_test'
+              }
+            }
+          );
+
+          if (validationError || !validationResult?.valid) {
+            console.error('[HMAC Validation] Failed:', { validationResult, validationError });
+            toast.warning(
+              "⚠️ Aviso de segurança", 
+              { 
+                description: "A assinatura HMAC pode estar incorreta. Contate o suporte se a instalação falhar.",
+                duration: 10000 
+              }
+            );
+          } else {
+            console.log('[HMAC Validation] ✅ Passed:', validationResult);
+            toast.success("✅ Validação de segurança OK", { duration: 3000 });
+          }
+        } catch (validationException) {
+          console.error('[HMAC Validation] Exception:', validationException);
+          // Não bloqueia em caso de erro de rede
+        }
+      }
+
       const installUrl = `${SUPABASE_URL}/functions/v1/serve-installer/${credentials.enrollmentKey}`;
       const command = platform === 'windows'
         ? `irm ${installUrl} | iex`

@@ -217,3 +217,7 @@ verify_jwt = true
 
 [functions.test-webhook]
 verify_jwt = true
+
+# === HMAC Validation ===
+[functions.validate-hmac-signature]
+verify_jwt = false

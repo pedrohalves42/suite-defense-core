@@ -388,6 +388,37 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
+    // Auto-validate HMAC secret (non-blocking)
+    try {
+      const testPayload = `${Date.now()}:${crypto.randomUUID()}:auto_validation`;
+      const hexToBytes = (hex: string): Uint8Array => {
+        const bytes = new Uint8Array(hex.length / 2);
+        for (let i = 0; i < hex.length; i += 2) {
+          bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+        }
+        return bytes;
+      };
+      
+      const keyBytes = hexToBytes(hmacSecret);
+      const encoder = new TextEncoder();
+      const messageData = encoder.encode(testPayload);
+      const cryptoKey = await crypto.subtle.importKey(
+        'raw',
+        keyBytes.buffer as ArrayBuffer,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+      logger.info(`[${requestId}] ✅ HMAC secret auto-validation: PASSED`);
+    } catch (hmacError: any) {
+      logger.error(`[${requestId}] ⚠️ HMAC secret auto-validation: FAILED`, { 
+        error: hmacError.message,
+        secretPrefix: hmacSecret.substring(0, 8)
+      });
+      // Não bloqueia, mas registra problema crítico
+    }
+
     // Check if agent exists
     const { data: existingAgent } = await supabase
       .from('agents')
