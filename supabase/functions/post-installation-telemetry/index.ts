@@ -321,6 +321,7 @@ serve(async (req) => {
             expected_heartbeat_within_seconds: 120
           }
         });
+    }
 
     // Handle failed installations by notifying admins (optional)
     if (!success) {
