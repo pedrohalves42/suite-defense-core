@@ -11,7 +11,8 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    if: github.event_name == 'repository_dispatch'
     
     # ✅ FASE 6: RETRY 2x SE FALHAR
     strategy:
@@ -38,6 +39,7 @@ jobs:
         timeout-minutes: 3
         shell: pwsh
         run: |
+          Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted
           if (Get-Module -ListAvailable -Name ps2exe) {
             Write-Host "✓ ps2exe already cached"
           } else {
@@ -46,7 +48,7 @@ jobs:
           }
       
       - name: Compile PS1 to EXE
-        timeout-minutes: 8
+        timeout-minutes: 12
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -59,8 +61,21 @@ jobs:
           $callbackUrl = '${{ github.event.client_payload.callback_url }}'
           $callbackToken = '${{ github.event.client_payload.callback_token }}'
           
+          # Start build log
+          $logFile = "build.log"
+          "=== CyberShield Agent EXE Build ===" | Out-File $logFile
+          "Build ID: $buildId" | Out-File $logFile -Append
+          "Output: $outputName" | Out-File $logFile -Append
+          "Version: $version" | Out-File $logFile -Append
+          "GitHub Run: ${{ github.run_id }}" | Out-File $logFile -Append
+          "Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File $logFile -Append
+          "" | Out-File $logFile -Append
+          
+          Write-Host "==================================="
           Write-Host "Build ID: $buildId"
           Write-Host "Output: $outputName"
+          Write-Host "GitHub Run ID: ${{ github.run_id }}"
+          Write-Host "==================================="
           
           # Decode Base64 and save PS1 to temp file
           $ps1Path = "temp_installer.ps1"
@@ -132,27 +147,56 @@ jobs:
           }
           
           # FASE 3: Validação completa
-          if (-not (Test-Path $outputName)) { throw "EXE not found" }
+          "[VALIDATION]" | Out-File $logFile -Append
+          if (-not (Test-Path $outputName)) {
+            "✗ EXE file not found" | Out-File $logFile -Append
+            throw "EXE not found"
+          }
           $size = (Get-Item $outputName).Length
-          if ($size -lt 500KB) { throw "EXE too small (<500KB)" }
+          $sizeMB = [math]::Round($size / 1MB, 2)
+          "✓ EXE size: $sizeMB MB ($size bytes)" | Out-File $logFile -Append
+          
+          if ($size -lt 500KB) {
+            "✗ EXE too small: $size bytes" | Out-File $logFile -Append
+            throw "EXE too small (<500KB)"
+          }
+          
           $hash = (Get-FileHash $outputName -Algorithm SHA256).Hash.ToLower()
+          "✓ SHA256: $hash" | Out-File $logFile -Append
+          
           $fileBytes = [System.IO.File]::ReadAllBytes($outputName)
-          if ($fileBytes[0] -ne 77 -or $fileBytes[1] -ne 90) { throw "Invalid EXE header" }
-          Write-Host "✓ Validation passed - Hash: $hash, Size: $size bytes"
+          if ($fileBytes[0] -ne 77 -or $fileBytes[1] -ne 90) {
+            "✗ Invalid EXE header" | Out-File $logFile -Append
+            throw "Invalid EXE header"
+          }
+          "✓ Valid EXE header (MZ)" | Out-File $logFile -Append
+          "" | Out-File $logFile -Append
+          
+          Write-Host "==================================="
+          Write-Host "✓ Validation passed"
+          Write-Host "  SHA256: $hash"
+          Write-Host "  Size: $sizeMB MB"
+          Write-Host "  Build ID: $buildId"
+          Write-Host "==================================="
           
           # Convert to Base64
+          "[ENCODING]" | Out-File $logFile -Append
           $bytes = [System.IO.File]::ReadAllBytes($outputName)
           $base64 = [Convert]::ToBase64String($bytes)
+          "✓ Base64 encoded: $($base64.Length) chars" | Out-File $logFile -Append
+          "" | Out-File $logFile -Append
           
           Write-Host "✓ EXE converted to Base64 (length: $($base64.Length))"
           
           # Call callback webhook
+          "[CALLBACK]" | Out-File $logFile -Append
           $payload = @{
             build_id = $buildId
             exe_binary_base64 = $base64
             sha256 = $hash
             size_bytes = $size
             github_run_id = '${{ github.run_id }}'
+            github_run_url = "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           } | ConvertTo-Json -Compress
           
           try {
@@ -164,12 +208,28 @@ jobs:
               -TimeoutSec 60 `
               -ErrorAction Stop
             
+            "✓ Callback sent successfully" | Out-File $logFile -Append
             Write-Host "✓ Callback sent successfully"
             Write-Host "Response: $($response | ConvertTo-Json)"
           } catch {
+            "✗ Callback failed: $_" | Out-File $logFile -Append
             Write-Error "Failed to send callback: $_"
             exit 1
           }
+          
+          "[COMPLETE]" | Out-File $logFile -Append
+          "Build completed: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File $logFile -Append
+      
+      - name: Upload Build Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-${{ github.event.client_payload.build_id }}
+          path: |
+            *.exe
+            build.log
+          retention-days: 7
+          if-no-files-found: ignore
       
       - name: Cleanup
         if: always()
