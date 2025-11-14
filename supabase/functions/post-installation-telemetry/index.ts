@@ -1,10 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
+import { verifyHmacSignature } from "../_shared/hmac.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-agent-token, x-hmac-signature, x-timestamp, x-nonce",
 };
+
+const AgentTokenSchema = z.string().regex(/^[A-Za-z0-9]{64}$/, "Invalid agent token format");
 
 const logStep = (step: string, details?: any) => {
   const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
@@ -25,47 +29,96 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
-  const {
-    agent_name,
-    success,
-    os_version,
-    installation_time,
-    network_tests,
-    firewall_status,
-    proxy_detected,
-    errors,
-    task_created,          // ✅ FASE 2: NOVO
-    task_running,          // ✅ FASE 2: NOVO
-    script_exists,         // ✅ FASE 2: NOVO
-    script_size_bytes,     // ✅ FASE 2: NOVO
-    powershell_version     // ✅ FASE 2: NOVO
-  } = await req.json();
-  logStep("Received telemetry", { agent_name, success, network_tests, task_created, task_running });
-
-    if (!agent_name) {
-      throw new Error("agent_name is required");
-    }
-
-    // Buscar agente
-    const { data: agent, error: agentError } = await supabaseClient
-      .from("agents")
-      .select("*")
-      .eq("agent_name", agent_name)
-      .maybeSingle();
-
-    if (agentError) throw agentError;
-    if (!agent) {
-      logStep("Agent not found", { agent_name });
+    // Validate X-Agent-Token header
+    const agentTokenHeader = req.headers.get("X-Agent-Token");
+    if (!agentTokenHeader) {
+      logStep("Missing X-Agent-Token header");
       return new Response(
-        JSON.stringify({ error: "Agent not found" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 404,
-        }
+        JSON.stringify({ error: "Missing X-Agent-Token header" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
       );
     }
 
-  // ✅ FASE 2: Registrar telemetria EXPANDIDA de instalação
+    const tokenValidation = AgentTokenSchema.safeParse(agentTokenHeader);
+    if (!tokenValidation.success) {
+      logStep("Invalid token format", { error: tokenValidation.error });
+      return new Response(
+        JSON.stringify({ error: "Invalid agent token format" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    // Fetch agent token details
+    const { data: agentToken, error: tokenError } = await supabaseClient
+      .from("agent_tokens")
+      .select("agent_id, is_active, expires_at, agents!inner(id, agent_name, tenant_id, hmac_secret)")
+      .eq("token", agentTokenHeader)
+      .maybeSingle();
+
+    if (tokenError || !agentToken) {
+      logStep("Agent token not found", { error: tokenError });
+      return new Response(
+        JSON.stringify({ error: "Invalid agent token" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    if (!agentToken.is_active) {
+      logStep("Agent token inactive");
+      return new Response(
+        JSON.stringify({ error: "Agent token is inactive" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    if (agentToken.expires_at && new Date(agentToken.expires_at) < new Date()) {
+      logStep("Agent token expired");
+      return new Response(
+        JSON.stringify({ error: "Agent token expired" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    const agent = agentToken.agents as any;
+    
+    // Verify HMAC signature
+    const hmacResult = await verifyHmacSignature(
+      supabaseClient,
+      req,
+      agent.agent_name,
+      agent.hmac_secret
+    );
+
+    if (!hmacResult.valid) {
+      logStep("HMAC verification failed", { error: hmacResult.error });
+      return new Response(
+        JSON.stringify({ error: hmacResult.error || "HMAC verification failed" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
+      );
+    }
+
+    logStep("Authentication successful", { agent_name: agent.agent_name });
+
+    // Parse telemetry data
+    const body = await req.json();
+    const {
+      success,
+      os_version,
+      installation_time,
+      network_tests,
+      firewall_status,
+      proxy_detected,
+      errors,
+      task_created,
+      task_running,
+      script_exists,
+      script_size_bytes,
+      powershell_version
+    } = body;
+    
+    logStep("Received telemetry", { agent_name: agent.agent_name, success, task_created, task_running });
+
+    // Insert telemetry data
   const telemetryData = {
     agent_id: agent.id,
     tenant_id: agent.tenant_id,
@@ -104,7 +157,6 @@ serve(async (req) => {
     // Se houver falha, criar alerta
     if (!success) {
       logStep("Installation failed, creating alert", {
-        agent_name,
         errors,
       });
 
