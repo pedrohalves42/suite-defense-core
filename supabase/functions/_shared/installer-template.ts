@@ -24,11 +24,11 @@ $HMAC_SECRET = "{{HMAC_SECRET}}"
 $SERVER_URL = "{{SERVER_URL}}"
 $POLL_INTERVAL = {{POLL_INTERVAL}}
 
-# Validate configuration
-if ([string]::IsNullOrWhiteSpace($AGENT_TOKEN) -or $AGENT_TOKEN -eq "{{AGENT_TOKEN}}") {
-    Write-Error "❌ AGENT_TOKEN not properly configured. Installation cannot proceed."
-    exit 1
-}
+# Log credentials (first 8 chars only for security)
+Write-Host "Configuration loaded:" -ForegroundColor Cyan
+Write-Host "  Token: $($AGENT_TOKEN.Substring(0, [Math]::Min(8, $AGENT_TOKEN.Length)))..." -ForegroundColor Gray
+Write-Host "  HMAC: $($HMAC_SECRET.Substring(0, [Math]::Min(8, $HMAC_SECRET.Length)))..." -ForegroundColor Gray
+Write-Host "  Server: $SERVER_URL" -ForegroundColor Gray
 
 # ============================================================================
 # PATHS AND DIRECTORIES
