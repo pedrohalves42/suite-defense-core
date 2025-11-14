@@ -123,6 +123,7 @@ const App = () => (
                 <Route path="installation-metrics" element={<InstallationMetrics />} />
                 <Route path="installation-pipeline" element={<InstallationPipelineMonitor />} />
                 <Route path="agent-health" element={<AgentHealthMonitor />} />
+                <Route path="agent-diagnostics" element={<AgentDiagnostics />} />
                 <Route path="installation-logs" element={<InstallationLogsExplorer />} />
                 <Route path="tenant/invites" element={<TenantInvites />} />
                 <Route path="tenant/security" element={<TenantSecurity />} />
