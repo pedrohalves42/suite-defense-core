@@ -19,12 +19,13 @@ export const useTenant = () => {
     queryFn: async () => {
       if (!user) return null;
 
-      // Get user's tenant_id from user_roles
+      // Get user's tenant_id from user_roles (handle multiple roles)
       const { data: userRole, error: roleError } = await supabase
         .from('user_roles')
         .select('tenant_id')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .limit(1)
+        .single();
 
       if (roleError) throw roleError;
       if (!userRole?.tenant_id) return null;
