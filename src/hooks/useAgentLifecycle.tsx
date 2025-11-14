@@ -115,6 +115,30 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
   });
 }
 
+export function useFailureRate(tenantId: string | undefined, hoursBack: number = 1) {
+  return useQuery({
+    queryKey: ['failure-rate', tenantId, hoursBack],
+    queryFn: async () => {
+      if (!tenantId) return null;
+
+      const { data, error } = await supabase.rpc('check_installation_failure_rate', {
+        p_tenant_id: tenantId,
+        p_hours_back: hoursBack,
+        p_threshold_pct: 30.0
+      });
+
+      if (error) throw new Error(`Erro ao buscar taxa de falha: ${error.message}`);
+      
+      return data && data.length > 0 ? data[0] : null;
+    },
+    enabled: !!tenantId,
+    refetchInterval: 60000, // Refetch every minute
+    staleTime: 30000,
+    retry: 2,
+    retryDelay: 1000,
+  });
+}
+
 export function useInstallationLogs(filters?: {
   agentId?: string;
   agentName?: string;
