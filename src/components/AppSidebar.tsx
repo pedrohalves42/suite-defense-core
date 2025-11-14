@@ -40,6 +40,7 @@ export const AppSidebar = () => {
     { icon: Activity, label: 'Monitoramento RT', to: '/admin/monitoring-advanced' },
     { icon: Package, label: 'Instalador Agentes', to: '/admin/agent-installer' },
     { icon: BarChart3, label: 'Analytics Instalação', to: '/admin/installation-analytics' },
+    { icon: BarChart3, label: 'Métricas Instalação', to: '/admin/installation-metrics' },
     { icon: Users, label: 'Membros', to: '/admin/members' },
     { icon: Mail, label: 'Convites Tenant', to: '/admin/tenant/invites' },
     { icon: AlertTriangle, label: 'Segurança Tenant', to: '/admin/tenant/security' },
