@@ -15,8 +15,10 @@ import {
   Clock, 
   Server, 
   Activity,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface TestResult {
   step: string;
@@ -32,6 +34,39 @@ export default function AgentTest() {
   const { tenant } = useTenant();
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+
+  // Mutation para limpar dados de teste
+  const cleanupMutation = useMutation({
+    mutationFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No active session');
+
+      const response = await supabase.functions.invoke('cleanup-test-data', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) throw response.error;
+      return response.data;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Dados de teste limpos com sucesso',
+        description: `${data.results.agents} agentes, ${data.results.agent_tokens} tokens, ${data.results.installation_analytics} eventos removidos`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      setSelectedAgent(null);
+      setTestResults([]);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao limpar dados',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   // Fetch agents
   const { data: agents } = useQuery({
@@ -280,6 +315,42 @@ export default function AgentTest() {
             Valide o fluxo completo: criar job → polling → execução → report → ACK
           </p>
         </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Limpar Dados de Teste
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Limpeza de Dados</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <p>Esta ação irá remover permanentemente:</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Todos os agentes</li>
+                  <li>Todos os tokens de agente</li>
+                  <li>Todos os eventos de telemetria</li>
+                  <li>Todas as métricas de sistema</li>
+                  <li>Chaves de enrollment usadas</li>
+                </ul>
+                <p className="font-semibold mt-4">Os usuários serão mantidos.</p>
+                <p className="text-destructive">Esta ação não pode ser desfeita.</p>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => cleanupMutation.mutate()}
+                disabled={cleanupMutation.isPending}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {cleanupMutation.isPending && <Clock className="w-4 h-4 mr-2 animate-spin" />}
+                Confirmar Limpeza
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
