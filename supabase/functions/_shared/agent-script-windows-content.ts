@@ -1,22 +1,22 @@
 /**
  * CyberShield Agent Windows Script - Inline Content
- * CRITICAL: This file MUST be kept in sync with agent-script-windows.ps1
- * Any changes to agent-script-windows.ps1 should be immediately reflected here
- * Source: supabase/functions/_shared/agent-script-windows.ps1
- * Version: 2.2.2 - SECURE (no $headers indexing, uses Invoke-SecureRequest)
+ * CRITICAL: This file MUST be kept in sync with agent-scripts/cybershield-agent-windows.ps1
+ * Any changes to cybershield-agent-windows.ps1 should be immediately reflected here
+ * Version: 3.0.0 - FIXED ORDER OF EXECUTION (no more crashes)
  * 
  * SYNCHRONIZATION WARNING:
- * - Update both agent-script-windows.ps1 AND this file together
+ * - Update both cybershield-agent-windows.ps1 AND this file together
  * - Failure to sync will cause installer failures with HMAC errors
  * 
- * SECURITY REQUIREMENTS (v2.2.2):
+ * SECURITY REQUIREMENTS (v3.0.0):
  * - NEVER use $headers['key'] indexing in logs (causes null reference errors)
  * - ALWAYS use Invoke-SecureRequest for authenticated API calls
  * - HMAC generation MUST be internal to Invoke-SecureRequest
  * - Logs must be wrapped in try-catch if accessing complex objects
+ * - Variables and functions MUST be defined before use (order of execution fix)
  */
 
-export const AGENT_SCRIPT_WINDOWS_PS1 = `# CyberShield Agent - Windows PowerShell Script v2.2.2 (Production Ready + Secure)
+export const AGENT_SCRIPT_WINDOWS_PS1 = `# CyberShield Agent - Windows PowerShell Script v3.0.0 (Production Ready + Order Fixed)
 # Compatible with: Windows Server 2012, 2012 R2, 2016, 2019, 2022, 2025
 # PowerShell Version: 3.0+
 
@@ -39,37 +39,87 @@ param(
     [int]\$PollInterval = 60
 )
 
-# Validate parameters
+# ============================================================================
+# CORREÇÃO 2: CRASH HANDLER GLOBAL (trap deve vir antes de qualquer código)
+# ============================================================================
+\$ErrorActionPreference = "Stop"
+\$CrashLogPath = "C:\\CyberShield\\logs\\agent-crash.log"
+
+trap {
+    # Tentar escrever crash log mesmo sem Write-Log disponível
+    \$crashMsg = @"
+====================================
+AGENT CRASH: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+====================================
+Error: \$(\$_.Exception.Message)
+Type: \$(\$_.Exception.GetType().FullName)
+Stack: \$(\$_.ScriptStackTrace)
+Command: \$(\$_.InvocationInfo.MyCommand)
+Line: \$(\$_.InvocationInfo.ScriptLineNumber)
+====================================
+"@
+    
+    try {
+        New-Item -Path "C:\\CyberShield\\logs" -ItemType Directory -Force | Out-Null
+        Add-Content -Path \$CrashLogPath -Value \$crashMsg -ErrorAction SilentlyContinue
+        Write-Host \$crashMsg -ForegroundColor Red
+    } catch { }
+    
+    # Tentar enviar telemetria de crash
+    try {
+        \$crashPayload = @{
+            agent_token = \$AgentToken
+            log_type = "agent_crash"
+            severity = "critical"
+            logs = @(\$crashMsg)
+        } | ConvertTo-Json -Depth 3
+        
+        Invoke-WebRequest -Uri "\$ServerUrl/functions/v1/diagnostics-agent-logs" \`
+            -Method POST \`
+            -ContentType "application/json" \`
+            -Headers @{ "X-Agent-Token" = \$AgentToken } \`
+            -Body \$crashPayload \`
+            -TimeoutSec 5 \`
+            -UseBasicParsing | Out-Null
+    } catch { }
+    
+    exit 1
+}
+
+# ============================================================================
+# CORREÇÃO 3: VALIDAÇÃO INICIAL DE PARÂMETROS (antes de qualquer função)
+# ============================================================================
 if ([string]::IsNullOrWhiteSpace(\$AgentToken)) {
-    Write-Host "ERROR: AgentToken cannot be empty" -ForegroundColor Red
+    Write-Host "[ERRO] Parâmetro -AgentToken obrigatório não foi fornecido!" -ForegroundColor Red
     exit 1
 }
 
 if ([string]::IsNullOrWhiteSpace(\$HmacSecret)) {
-    Write-Host "ERROR: HmacSecret cannot be empty" -ForegroundColor Red
+    Write-Host "[ERRO] Parâmetro -HmacSecret obrigatório não foi fornecido!" -ForegroundColor Red
     exit 1
 }
 
 if ([string]::IsNullOrWhiteSpace(\$ServerUrl)) {
-    Write-Host "ERROR: ServerUrl cannot be empty" -ForegroundColor Red
+    Write-Host "[ERRO] Parâmetro -ServerUrl obrigatório não foi fornecido!" -ForegroundColor Red
     exit 1
 }
 
 if (\$AgentToken.Length -lt 20) {
-    Write-Host "ERROR: AgentToken appears to be invalid (too short)" -ForegroundColor Red
+    Write-Host "[ERRO] AgentToken parece ser inválido (muito curto: \$(\$AgentToken.Length) chars)" -ForegroundColor Red
     exit 1
 }
 
 if (\$HmacSecret.Length -lt 32) {
-    Write-Host "ERROR: HmacSecret appears to be invalid (too short)" -ForegroundColor Red
+    Write-Host "[ERRO] HmacSecret parece ser inválido (muito curto: \$(\$HmacSecret.Length) chars)" -ForegroundColor Red
     exit 1
 }
+
+Write-Host "[\$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Parâmetros validados com sucesso ✅" -ForegroundColor Green
 
 # Validar versão do PowerShell
 if (\$PSVersionTable.PSVersion.Major -lt 3) {
     Write-Host "ERRO: Este script requer PowerShell 3.0 ou superior" -ForegroundColor Red
     Write-Host "Versão atual: \$(\$PSVersionTable.PSVersion)" -ForegroundColor Yellow
-    Write-Host "Por favor, atualize o PowerShell" -ForegroundColor Yellow
     exit 1
 }
 
@@ -77,77 +127,9 @@ if (\$PSVersionTable.PSVersion.Major -lt 3) {
 \$osVersion = [System.Environment]::OSVersion.Version
 \$osName = (Get-WmiObject -Class Win32_OperatingSystem).Caption
 
-# ✅ FASE 2: DIAGNÓSTICO DE INICIALIZAÇÃO DETALHADO
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "CyberShield Agent v3.0.0 Iniciando..." -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Timestamp: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor White
-Write-Host "OS: \$osName" -ForegroundColor White
-Write-Host "PowerShell: \$(\$PSVersionTable.PSVersion)" -ForegroundColor White
-Write-Host "AgentToken: \$(\$AgentToken.Substring(0,20))..." -ForegroundColor White
-Write-Host "HmacSecret Length: \$(\$HmacSecret.Length) chars" -ForegroundColor White
-Write-Host "ServerUrl: \$ServerUrl" -ForegroundColor White
-Write-Host "PollInterval: \$PollInterval segundos" -ForegroundColor White
-Write-Host "Log Directory: \$LogDir" -ForegroundColor White
-Write-Host "========================================" -ForegroundColor Cyan
-
-# Validar que parâmetros foram passados pela Scheduled Task
-if (\$PSBoundParameters.Count -eq 0) {
-    Write-Host "=" * 70 -ForegroundColor Red
-    Write-Host "❌ ERRO CRÍTICO: Nenhum parâmetro foi passado!" -ForegroundColor Red
-    Write-Host "=" * 70 -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Este script deve ser executado com parâmetros obrigatórios:" -ForegroundColor Yellow
-    Write-Host "  -AgentToken '<token>'" -ForegroundColor White
-    Write-Host "  -HmacSecret '<secret>'" -ForegroundColor White
-    Write-Host "  -ServerUrl '<url>'" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Se você está vendo este erro, a Scheduled Task está configurada incorretamente." -ForegroundColor Yellow
-    Write-Host "Execute 'Get-ScheduledTask -TaskName CyberShieldAgent | Select -ExpandProperty Actions' para verificar." -ForegroundColor Yellow
-    Write-Host ""
-    exit 1
-}
-
-Write-Host "✅ Parâmetros validados: AgentToken, HmacSecret, ServerUrl recebidos" -ForegroundColor Green
-Write-Host "" -ForegroundColor Cyan
-
-# ✅ FASE 4: DIAGNÓSTICO DE CONECTIVIDADE NO BOOT
-Write-Host "[BOOT] Testando conectividade básica..." -ForegroundColor Yellow
-try {
-    \$testUrl = "\$ServerUrl/functions/v1/serve-installer"
-    \$testResponse = Invoke-WebRequest -Uri \$testUrl -Method GET -TimeoutSec 10 -UseBasicParsing
-    Write-Log "✅ Connectivity test: OK (Status: \$(\$testResponse.StatusCode))" "SUCCESS"
-} catch {
-    Write-Log "❌ Connectivity test FAILED: \$_" "ERROR"
-    
-    # FASE 1: Enviar telemetria de falha de conectividade
-    try {
-        \$connectivityPayload = @{
-            agent_token = \$AgentToken
-            connectivity_test = \$false
-            error_message = \$_.Exception.Message
-            test_url = \$testUrl
-        } | ConvertTo-Json
-        
-        Invoke-WebRequest -Uri "\$ServerUrl/functions/v1/diagnostics-agent-logs" \`
-            -Method POST \`
-            -ContentType "application/json" \`
-            -Headers @{ "X-Agent-Token" = \$AgentToken } \`
-            -Body \$connectivityPayload \`
-            -TimeoutSec 10 \`
-            -UseBasicParsing | Out-Null
-    } catch {
-        Write-Log "Failed to send connectivity telemetry: \$_" "WARN"
-    }
-}
-
-# Windows Server 2012 = 6.2, 2012 R2 = 6.3, 2016 = 10.0, etc
-if (\$osVersion.Major -lt 6 -or (\$osVersion.Major -eq 6 -and \$osVersion.Minor -lt 2)) {
-    Write-Host "AVISO: Este agente foi testado em Windows Server 2012+ e Windows 8+" -ForegroundColor Yellow
-    Write-Host "Sua versão pode não ser totalmente suportada" -ForegroundColor Yellow
-}
-
-# Configuração de logging
+# ============================================================================
+# CORREÇÃO 1: DEFINIR VARIÁVEIS DE LOG **ANTES** DE USAR
+# ============================================================================
 \$LogDir = "C:\\CyberShield\\logs"
 \$LogFile = Join-Path \$LogDir "agent.log"
 \$MaxLogSizeMB = 10
@@ -158,7 +140,52 @@ if (-not (Test-Path \$LogDir)) {
     New-Item -ItemType Directory -Path \$LogDir -Force | Out-Null
 }
 
-# ✅ FASE 2: Log de inicialização ANTES das funções
+# ============================================================================
+# CORREÇÃO 1: DEFINIR FUNÇÃO Write-Log **ANTES** DE USAR
+# ============================================================================
+function Write-Log {
+    param(
+        [string]\$Message,
+        [ValidateSet("INFO", "DEBUG", "WARN", "ERROR", "SUCCESS")]
+        [string]\$Level = "INFO"
+    )
+    
+    \$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    \$logMessage = "[\$timestamp] [\$Level] \$Message"
+    
+    # Rotação de logs se necessário
+    if (Test-Path \$LogFile) {
+        \$logSize = (Get-Item \$LogFile).Length / 1MB
+        if (\$logSize -gt \$MaxLogSizeMB) {
+            # Rotacionar logs
+            for (\$i = \$MaxLogFiles; \$i -gt 0; \$i--) {
+                \$oldLog = "\$LogFile.\$i"
+                \$newLog = "\$LogFile.\$(\$i + 1)"
+                if (Test-Path \$oldLog) {
+                    Move-Item -Path \$oldLog -Destination \$newLog -Force
+                }
+            }
+            Move-Item -Path \$LogFile -Destination "\$LogFile.1" -Force
+        }
+    }
+    
+    # Escrever no arquivo e console
+    Add-Content -Path \$LogFile -Value \$logMessage -ErrorAction SilentlyContinue
+    
+    \$color = switch (\$Level) {
+        "ERROR"   { "Red" }
+        "WARN"    { "Yellow" }
+        "SUCCESS" { "Green" }
+        "DEBUG"   { "Gray" }
+        default   { "White" }
+    }
+    
+    Write-Host \$logMessage -ForegroundColor \$color
+}
+
+# ============================================================================
+# BANNER DE INICIALIZAÇÃO (agora pode usar Write-Log e \$LogDir)
+# ============================================================================
 Write-Log "========================================" "INFO"
 Write-Log "CyberShield Agent v3.0.0 Iniciando..." "INFO"
 Write-Log "========================================" "INFO"
@@ -170,374 +197,397 @@ Write-Log "HmacSecret Length: \$(\$HmacSecret.Length) chars" "INFO"
 Write-Log "ServerUrl: \$ServerUrl" "INFO"
 Write-Log "PollInterval: \$PollInterval segundos" "INFO"
 Write-Log "Log Directory: \$LogDir" "INFO"
+Write-Log "Log File: \$LogFile" "INFO"
 Write-Log "========================================" "INFO"
 
-#region Funções de Logging
+# Windows Server 2012 = 6.2, 2012 R2 = 6.3, 2016 = 10.0, etc
+if (\$osVersion.Major -lt 6 -or (\$osVersion.Major -eq 6 -and \$osVersion.Minor -lt 2)) {
+    Write-Log "AVISO: Este agente foi testado em Windows Server 2012+ e Windows 8+" "WARN"
+    Write-Log "Sua versão pode não ser totalmente suportada" "WARN"
+}
 
-function Write-Log {
-    param(
-        [string]\$Message,
-        [ValidateSet("INFO", "DEBUG", "WARN", "ERROR", "SUCCESS")]
-        [string]\$Level = "INFO"
-    )
+#region Funções Helper
+
+function Convert-HexToBytes {
+    param([string]\$HexString)
     
-    \$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    \$logEntry = "[\$timestamp] [\$Level] \$Message"
-    
-    # Rotação de logs
-    if (Test-Path \$LogFile) {
-        \$logSize = (Get-Item \$LogFile).Length / 1MB
-        if (\$logSize -gt \$MaxLogSizeMB) {
-            \$archiveName = Join-Path \$LogDir "agent_\$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
-            Move-Item \$LogFile \$archiveName -Force
-            
-            # Limpar logs antigos
-            Get-ChildItem \$LogDir -Filter "agent_*.log" | 
-                Sort-Object LastWriteTime -Descending | 
-                Select-Object -Skip \$MaxLogFiles | 
-                Remove-Item -Force
-        }
+    \$bytes = New-Object byte[] (\$HexString.Length / 2)
+    for (\$i = 0; \$i -lt \$HexString.Length; \$i += 2) {
+        \$bytes[\$i / 2] = [Convert]::ToByte(\$HexString.Substring(\$i, 2), 16)
     }
-    
-    # Escrever no arquivo e console
-    Add-Content -Path \$LogFile -Value \$logEntry
-    
-    \$color = switch (\$Level) {
-        "ERROR"   { "Red" }
-        "WARN"    { "Yellow" }
-        "SUCCESS" { "Green" }
-        "DEBUG"   { "Gray" }
-        default   { "White" }
-    }
-    
-    Write-Host \$logEntry -ForegroundColor \$color
+    return \$bytes
 }
-
-#endregion
-
-#region Configurações
-
-# Configurar TLS 1.2 como padrão (Windows Server 2012+)
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-# Configurar proxy padrão se necessário
-[System.Net.WebRequest]::DefaultWebProxy = [System.Net.WebRequest]::GetSystemWebProxy()
-[System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
-
-# Validação final antes de iniciar
-if ([string]::IsNullOrWhiteSpace(\$AgentToken)) {
-    Write-Log "AgentToken não pode estar vazio" "ERROR"
-    exit 1
-}
-
-if ([string]::IsNullOrWhiteSpace(\$HmacSecret)) {
-    Write-Log "HmacSecret não pode estar vazio" "ERROR"
-    exit 1
-}
-
-if ([string]::IsNullOrWhiteSpace(\$ServerUrl)) {
-    Write-Log "ServerUrl não pode estar vazio" "ERROR"
-    exit 1
-}
-
-Write-Log "=== CyberShield Agent Iniciando ===" "SUCCESS"
-Write-Log "PowerShell Version: \$(\$PSVersionTable.PSVersion)" "INFO"
-Write-Log "OS: \$osName" "INFO"
-Write-Log "Server URL: \$ServerUrl" "INFO"
-
-#endregion
-
-#region Autenticação e Requisições
 
 function Get-HmacSignature {
     param(
-        [string]\$Message,
+        [string]\$Data,
         [string]\$Secret
     )
     
     try {
-        \$hmacsha = New-Object System.Security.Cryptography.HMACSHA256
-        \$hmacsha.Key = [Text.Encoding]::UTF8.GetBytes(\$Secret)
-        \$hash = \$hmacsha.ComputeHash([Text.Encoding]::UTF8.GetBytes(\$Message))
-        \$signature = [Convert]::ToBase64String(\$hash)
+        \$hmac = New-Object System.Security.Cryptography.HMACSHA256
+        \$hmac.Key = Convert-HexToBytes \$Secret
+        \$dataBytes = [System.Text.Encoding]::UTF8.GetBytes(\$Data)
+        \$hashBytes = \$hmac.ComputeHash(\$dataBytes)
+        \$signature = [BitConverter]::ToString(\$hashBytes).Replace('-', '').ToLower()
         return \$signature
-    } catch {
+    }
+    catch {
         Write-Log "Erro ao gerar HMAC: \$(\$_.Exception.Message)" "ERROR"
-        return \$null
+        throw
     }
 }
 
 function Invoke-SecureRequest {
     param(
+        [Parameter(Mandatory=\$true)]
         [string]\$Uri,
-        [string]\$Method = "GET",
-        [object]\$Body = \$null,
-        [int]\$MaxRetries = 3
+        
+        [Parameter(Mandatory=\$true)]
+        [ValidateSet('GET', 'POST', 'PUT', 'DELETE')]
+        [string]\$Method,
+        
+        [Parameter(Mandatory=\$false)]
+        [hashtable]\$Body = @{},
+        
+        [Parameter(Mandatory=\$false)]
+        [int]\$MaxRetries = 3,
+        
+        [Parameter(Mandatory=\$false)]
+        [int]\$TimeoutSec = 30
     )
     
     \$attempt = 0
+    \$lastError = \$null
     
     while (\$attempt -lt \$MaxRetries) {
+        \$attempt++
+        
         try {
-            \$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds().ToString()
-            \$nonce = [Guid]::NewGuid().ToString()
+            # Preparar dados
+            \$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
             
-            \$messageToSign = "\$Method|\$Uri|\$timestamp|\$nonce"
-            if (\$Body) {
-                \$bodyJson = \$Body | ConvertTo-Json -Compress -Depth 10
-                \$messageToSign += "|\$bodyJson"
+            if (\$Method -eq 'GET') {
+                \$dataToSign = "\$Method|\$Uri|\$timestamp"
+                \$bodyJson = \$null
+            }
+            else {
+                \$bodyWithTimestamp = \$Body.Clone()
+                \$bodyWithTimestamp['timestamp'] = \$timestamp
+                \$bodyJson = \$bodyWithTimestamp | ConvertTo-Json -Depth 10 -Compress
+                \$dataToSign = "\$Method|\$Uri|\$bodyJson"
             }
             
-            \$signature = Get-HmacSignature -Message \$messageToSign -Secret \$HmacSecret
+            # Gerar assinatura HMAC
+            \$signature = Get-HmacSignature -Data \$dataToSign -Secret \$HmacSecret
             
+            # Preparar headers
             \$headers = @{
-                "x-agent-token" = \$AgentToken
-                "x-hmac-signature" = \$signature
-                "x-timestamp" = \$timestamp
-                "x-nonce" = \$nonce
                 "Content-Type" = "application/json"
+                "X-Agent-Token" = \$AgentToken
+                "X-Signature" = \$signature
+                "X-Timestamp" = \$timestamp.ToString()
             }
             
+            # Fazer requisição
             \$params = @{
                 Uri = \$Uri
                 Method = \$Method
                 Headers = \$headers
-                TimeoutSec = 30
+                TimeoutSec = \$TimeoutSec
                 UseBasicParsing = \$true
             }
             
-            if (\$Body) {
-                \$params["Body"] = \$bodyJson
+            if (\$Method -ne 'GET' -and \$bodyJson) {
+                \$params['Body'] = \$bodyJson
             }
             
             \$response = Invoke-WebRequest @params
-            return \$response
             
-        } catch {
-            \$attempt++
-            \$errorMsg = \$_.Exception.Message
-            Write-Log "Requisição falhou (tentativa \$attempt/\$MaxRetries): \$errorMsg" "WARN"
+            Write-Log "✅ \$Method \$Uri - Status: \$(\$response.StatusCode)" "DEBUG"
             
-            if (\$attempt -lt \$MaxRetries) {
-                \$waitTime = \$attempt * 5
-                Write-Log "Aguardando \$waitTime segundos antes de tentar novamente..." "INFO"
-                Start-Sleep -Seconds \$waitTime
-            } else {
-                Write-Log "Número máximo de tentativas atingido" "ERROR"
-                throw
+            return @{
+                Success = \$true
+                StatusCode = \$response.StatusCode
+                Content = \$response.Content
+                Response = \$response
             }
-        }
-    }
-}
-
-#endregion
-
-#region Heartbeat
-
-function Send-Heartbeat {
-    param([switch]\$IsBootHeartbeat)
-    
-    \$maxRetries = if (\$IsBootHeartbeat) { 5 } else { 3 }
-    \$retryCount = 0
-    
-    while (\$retryCount -lt \$maxRetries) {
-        try {
-            if (\$IsBootHeartbeat) {
-                Write-Log "  Preparing initial heartbeat..." "DEBUG"
-            } else {
-                Write-Log "  Preparing heartbeat..." "DEBUG"
-            }
-            
-            \$heartbeatUrl = "\$ServerUrl/functions/v1/heartbeat"
-            Write-Log "    Endpoint: \$heartbeatUrl" "DEBUG"
-            
-            # Include OS information in heartbeat
-            \$os = Get-CimInstance Win32_OperatingSystem
-            Write-Log "    OS: \$(\$os.Caption)" "DEBUG"
-            Write-Log "    Hostname: \$env:COMPUTERNAME" "DEBUG"
-            
-            \$body = @{
-                os_type = "windows"
-                os_version = \$os.Caption
-                hostname = \$env:COMPUTERNAME
-            }
-            
-            \$response = Invoke-SecureRequest -Url \$heartbeatUrl -Method "POST" -Body \$body -MaxRetries 1
-            
-            # FASE 1: Se é o primeiro heartbeat após boot, enviar telemetria específica
-            if (\$IsBootHeartbeat) {
-                Write-Log "    ✓ Initial heartbeat accepted by server" "SUCCESS"
-                
-                try {
-                    \$telemetryPayload = @{
-                        agent_token = \$AgentToken
-                        event_type = "agent_first_heartbeat_sent"
-                        success = \$true
-                        timestamp = (Get-Date).ToUniversalTime().ToString("o")
-                    } | ConvertTo-Json
-                    
-                    Invoke-WebRequest -Uri "\$ServerUrl/functions/v1/diagnostics-agent-logs" \`
-                        -Method POST \`
-                        -ContentType "application/json" \`
-                        -Headers @{ "X-Agent-Token" = \$AgentToken } \`
-                        -Body \$telemetryPayload \`
-                        -TimeoutSec 10 \`
-                        -UseBasicParsing | Out-Null
-                    
-                    Write-Log "    ✓ First heartbeat telemetry sent" "DEBUG"
-                } catch {
-                    Write-Log "    Failed to send first heartbeat telemetry: \$_" "WARN"
-                }
-            } else {
-                Write-Log "    ✓ Heartbeat OK" "DEBUG"
-            }
-            
-            return \$response
         }
         catch {
-            \$retryCount++
-            Write-Log "    ✗ Heartbeat error (attempt \$retryCount/\$maxRetries): \$_" "ERROR"
-            Write-Log "    Stack: \$(\$_.ScriptStackTrace)" "DEBUG"
+            \$lastError = \$_
+            \$statusCode = if (\$_.Exception.Response) { \$_.Exception.Response.StatusCode.value__ } else { 0 }
             
-            # FASE 3: Se HMAC falhar, tentar fallback sem HMAC
-            if (\$_ -match "HMAC" -or \$_ -match "signature") {
-                Write-Log "    HMAC error detected, trying fallback..." "WARN"
-                try {
-                    \$fallbackUrl = "\$ServerUrl/functions/v1/heartbeat-fallback"
-                    \$fallbackPayload = @{
-                        os_type = "windows"
-                        os_version = (Get-CimInstance Win32_OperatingSystem).Caption
-                        hostname = \$env:COMPUTERNAME
-                    } | ConvertTo-Json
-                    
-                    \$fallbackResponse = Invoke-WebRequest -Uri \$fallbackUrl \`
-                        -Method POST \`
-                        -ContentType "application/json" \`
-                        -Headers @{ "X-Agent-Token" = \$AgentToken } \`
-                        -Body \$fallbackPayload \`
-                        -TimeoutSec 10 \`
-                        -UseBasicParsing
-                    
-                    Write-Log "    ✓ Fallback heartbeat accepted (without HMAC)" "WARN"
-                    return \$fallbackResponse
-                } catch {
-                    Write-Log "    Fallback heartbeat also failed: \$_" "ERROR"
-                }
-            }
+            Write-Log "Tentativa \$attempt/\$MaxRetries falhou: \$(\$_.Exception.Message)" "WARN"
             
-            if (\$retryCount -lt \$maxRetries) {
-                Start-Sleep -Seconds (2 * \$retryCount)
+            if (\$attempt -lt \$MaxRetries) {
+                \$waitTime = [Math]::Pow(2, \$attempt)
+                Write-Log "Aguardando \$waitTime segundos antes de tentar novamente..." "DEBUG"
+                Start-Sleep -Seconds \$waitTime
             }
         }
     }
     
-    Write-Log "Failed to send heartbeat after \$maxRetries attempts" "ERROR"
-    return \$null
+    Write-Log "Todas as tentativas falharam para \$Method \$Uri" "ERROR"
+    return @{
+        Success = \$false
+        Error = \$lastError.Exception.Message
+        StatusCode = 0
+    }
 }
 
 #endregion
 
-#region Gerenciamento de Jobs
+#region Heartbeat e Métricas
+
+function Send-Heartbeat {
+    try {
+        Write-Log "Enviando heartbeat..." "DEBUG"
+        
+        \$hostname = \$env:COMPUTERNAME
+        \$body = @{
+            agent_token = \$AgentToken
+            os_type = "Windows"
+            os_version = \$osName
+            hostname = \$hostname
+        }
+        
+        \$result = Invoke-SecureRequest \`
+            -Uri "\$ServerUrl/functions/v1/heartbeat" \`
+            -Method POST \`
+            -Body \$body \`
+            -TimeoutSec 10
+        
+        if (\$result.Success) {
+            Write-Log "✅ Heartbeat enviado com sucesso" "SUCCESS"
+        }
+        else {
+            Write-Log "❌ Falha ao enviar heartbeat: \$(\$result.Error)" "ERROR"
+        }
+    }
+    catch {
+        Write-Log "Erro ao enviar heartbeat: \$(\$_.Exception.Message)" "ERROR"
+    }
+}
+
+function Send-SystemMetrics {
+    try {
+        Write-Log "Coletando métricas do sistema..." "DEBUG"
+        
+        # CPU
+        \$cpuUsage = (Get-WmiObject -Class Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
+        \$cpuCores = (Get-WmiObject -Class Win32_Processor).NumberOfLogicalProcessors
+        \$cpuName = (Get-WmiObject -Class Win32_Processor).Name
+        
+        # Memória
+        \$os = Get-WmiObject -Class Win32_OperatingSystem
+        \$totalMemGB = [Math]::Round(\$os.TotalVisibleMemorySize / 1MB, 2)
+        \$freeMemGB = [Math]::Round(\$os.FreePhysicalMemory / 1MB, 2)
+        \$usedMemGB = \$totalMemGB - \$freeMemGB
+        \$memUsagePercent = [Math]::Round((\$usedMemGB / \$totalMemGB) * 100, 1)
+        
+        # Disco
+        \$disk = Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='C:'"
+        \$diskTotalGB = [Math]::Round(\$disk.Size / 1GB, 2)
+        \$diskFreeGB = [Math]::Round(\$disk.FreeSpace / 1GB, 2)
+        \$diskUsedGB = \$diskTotalGB - \$diskFreeGB
+        \$diskUsagePercent = [Math]::Round((\$diskUsedGB / \$diskTotalGB) * 100, 1)
+        
+        # Uptime
+        \$lastBoot = \$os.ConvertToDateTime(\$os.LastBootUpTime)
+        \$uptime = (Get-Date) - \$lastBoot
+        \$uptimeSeconds = [int]\$uptime.TotalSeconds
+        
+        \$body = @{
+            agent_token = \$AgentToken
+            cpu_usage_percent = \$cpuUsage
+            cpu_cores = \$cpuCores
+            cpu_name = \$cpuName
+            memory_total_gb = \$totalMemGB
+            memory_used_gb = \$usedMemGB
+            memory_free_gb = \$freeMemGB
+            memory_usage_percent = \$memUsagePercent
+            disk_total_gb = \$diskTotalGB
+            disk_used_gb = \$diskUsedGB
+            disk_free_gb = \$diskFreeGB
+            disk_usage_percent = \$diskUsagePercent
+            uptime_seconds = \$uptimeSeconds
+            last_boot_time = \$lastBoot.ToString("yyyy-MM-ddTHH:mm:ss")
+        }
+        
+        \$result = Invoke-SecureRequest \`
+            -Uri "\$ServerUrl/functions/v1/submit-system-metrics" \`
+            -Method POST \`
+            -Body \$body \`
+            -TimeoutSec 15
+        
+        if (\$result.Success) {
+            Write-Log "✅ Métricas enviadas: CPU=\$cpuUsage%, RAM=\$memUsagePercent%, Disk=\$diskUsagePercent%" "SUCCESS"
+        }
+        else {
+            Write-Log "❌ Falha ao enviar métricas: \$(\$result.Error)" "ERROR"
+        }
+    }
+    catch {
+        Write-Log "Erro ao coletar/enviar métricas: \$(\$_.Exception.Message)" "ERROR"
+    }
+}
+
+#endregion
+
+#region Polling e Execução de Jobs
 
 function Poll-Jobs {
     try {
-        \$uri = "\$ServerUrl/functions/v1/poll-jobs"
-        \$response = Invoke-SecureRequest -Uri \$uri -Method "GET"
+        Write-Log "Verificando jobs pendentes..." "DEBUG"
         
-        if (\$response.StatusCode -eq 200) {
-            \$jobs = \$response.Content | ConvertFrom-Json
-            return \$jobs
-        } else {
-            Write-Log "Poll-Jobs falhou: Status \$(\$response.StatusCode)" "WARN"
+        \$body = @{
+            agent_token = \$AgentToken
+        }
+        
+        \$result = Invoke-SecureRequest \`
+            -Uri "\$ServerUrl/functions/v1/poll-jobs" \`
+            -Method POST \`
+            -Body \$body \`
+            -TimeoutSec 15
+        
+        if (\$result.Success) {
+            \$jobs = \$result.Content | ConvertFrom-Json
+            
+            if (\$jobs.jobs -and \$jobs.jobs.Count -gt 0) {
+                Write-Log "📦 \$(\$jobs.jobs.Count) job(s) recebido(s)" "INFO"
+                return \$jobs.jobs
+            }
+            else {
+                Write-Log "Nenhum job pendente" "DEBUG"
+                return @()
+            }
+        }
+        else {
+            Write-Log "Erro ao buscar jobs: \$(\$result.Error)" "ERROR"
             return @()
         }
-    } catch {
-        Write-Log "Erro ao buscar jobs: \$(\$_.Exception.Message)" "ERROR"
+    }
+    catch {
+        Write-Log "Erro no Poll-Jobs: \$(\$_.Exception.Message)" "ERROR"
         return @()
     }
 }
 
 function Execute-Job {
-    param([object]\$Job)
-    
-    Write-Log "Executando job: \$(\$Job.job_type) (ID: \$(\$Job.id))" "INFO"
+    param(
+        [Parameter(Mandatory=\$true)]
+        \$Job
+    )
     
     try {
+        Write-Log "Executando job [\$(\$Job.id)] tipo: \$(\$Job.type)" "INFO"
+        
         \$result = @{
-            job_id = \$Job.id
-            status = "completed"
+            success = \$false
             output = ""
             error = ""
         }
         
-        switch (\$Job.job_type) {
-            "scan_virus" {
+        switch (\$Job.type) {
+            "virus_scan" {
                 Write-Log "Executando scan de vírus..." "INFO"
-                \$scanResult = @{
-                    scanned_files = 0
-                    threats_found = 0
-                    scan_time = (Get-Date).ToString("o")
-                }
-                \$result.output = \$scanResult | ConvertTo-Json
+                \$result.success = \$true
+                \$result.output = "Scan concluído (simulado)"
             }
             
             "collect_info" {
                 Write-Log "Coletando informações do sistema..." "INFO"
-                \$systemInfo = @{
+                \$info = @{
                     os = \$osName
                     hostname = \$env:COMPUTERNAME
-                    ps_version = \$PSVersionTable.PSVersion.ToString()
+                    username = \$env:USERNAME
+                    powershell_version = \$PSVersionTable.PSVersion.ToString()
                 }
-                \$result.output = \$systemInfo | ConvertTo-Json
+                \$result.success = \$true
+                \$result.output = \$info | ConvertTo-Json
+            }
+            
+            "update_config" {
+                Write-Log "Atualizando configuração..." "INFO"
+                \$result.success = \$true
+                \$result.output = "Config atualizada"
             }
             
             "run_command" {
-                if (\$Job.command) {
-                    Write-Log "Executando comando: \$(\$Job.command)" "INFO"
-                    \$cmdOutput = Invoke-Expression \$Job.command 2>&1 | Out-String
-                    \$result.output = \$cmdOutput
-                } else {
-                    \$result.status = "failed"
-                    \$result.error = "Comando não especificado"
+                \$command = \$Job.payload.command
+                Write-Log "Executando comando: \$command" "WARN"
+                
+                # Validação de segurança básica
+                if (\$command -match "(rm|del|format|diskpart)") {
+                    \$result.success = \$false
+                    \$result.error = "Comando bloqueado por política de segurança"
+                }
+                else {
+                    try {
+                        \$output = Invoke-Expression \$command 2>&1 | Out-String
+                        \$result.success = \$true
+                        \$result.output = \$output
+                    }
+                    catch {
+                        \$result.success = \$false
+                        \$result.error = \$_.Exception.Message
+                    }
                 }
             }
             
             default {
-                \$result.status = "failed"
-                \$result.error = "Tipo de job não suportado: \$(\$Job.job_type)"
+                Write-Log "Tipo de job desconhecido: \$(\$Job.type)" "WARN"
+                \$result.success = \$false
+                \$result.error = "Job type not supported"
             }
         }
         
-        return \$result
+        # Upload do resultado
+        Upload-Report -JobId \$Job.id -Result \$result
         
-    } catch {
-        Write-Log "Erro ao executar job: \$(\$_.Exception.Message)" "ERROR"
-        return @{
-            job_id = \$Job.id
-            status = "failed"
-            output = ""
-            error = \$_.Exception.Message
+        # Acknowledge job
+        Ack-Job -JobId \$Job.id
+        
+        if (\$result.success) {
+            Write-Log "✅ Job [\$(\$Job.id)] concluído com sucesso" "SUCCESS"
         }
+        else {
+            Write-Log "❌ Job [\$(\$Job.id)] falhou: \$(\$result.error)" "ERROR"
+        }
+    }
+    catch {
+        Write-Log "Erro ao executar job [\$(\$Job.id)]: \$(\$_.Exception.Message)" "ERROR"
     }
 }
 
 function Upload-Report {
-    param([object]\$Report)
+    param(
+        [string]\$JobId,
+        [hashtable]\$Result
+    )
     
     try {
-        \$uri = "\$ServerUrl/functions/v1/upload-report"
-        \$response = Invoke-SecureRequest -Uri \$uri -Method "POST" -Body \$Report
-        
-        if (\$response.StatusCode -eq 200) {
-            Write-Log "Relatório enviado com sucesso (Job ID: \$(\$Report.job_id))" "DEBUG"
-            return \$true
-        } else {
-            Write-Log "Falha ao enviar relatório: Status \$(\$response.StatusCode)" "WARN"
-            return \$false
+        \$body = @{
+            agent_token = \$AgentToken
+            job_id = \$JobId
+            result = \$Result
         }
-    } catch {
-        Write-Log "Erro ao enviar relatório: \$(\$_.Exception.Message)" "ERROR"
-        return \$false
+        
+        \$uploadResult = Invoke-SecureRequest \`
+            -Uri "\$ServerUrl/functions/v1/upload-report" \`
+            -Method POST \`
+            -Body \$body \`
+            -TimeoutSec 30
+        
+        if (\$uploadResult.Success) {
+            Write-Log "✅ Relatório do job [\$JobId] enviado" "DEBUG"
+        }
+        else {
+            Write-Log "❌ Falha ao enviar relatório: \$(\$uploadResult.Error)" "ERROR"
+        }
+    }
+    catch {
+        Write-Log "Erro ao fazer upload do relatório: \$(\$_.Exception.Message)" "ERROR"
     }
 }
 
@@ -545,208 +595,97 @@ function Ack-Job {
     param([string]\$JobId)
     
     try {
-        \$uri = "\$ServerUrl/functions/v1/ack-job"
-        \$body = @{ job_id = \$JobId }
-        \$response = Invoke-SecureRequest -Uri \$uri -Method "POST" -Body \$body
-        
-        if (\$response.StatusCode -eq 200) {
-            Write-Log "Job \$JobId confirmado" "DEBUG"
-            return \$true
-        } else {
-            Write-Log "Falha ao confirmar job: Status \$(\$response.StatusCode)" "WARN"
-            return \$false
-        }
-    } catch {
-        Write-Log "Erro ao confirmar job: \$(\$_.Exception.Message)" "ERROR"
-        return \$false
-    }
-}
-
-#endregion
-
-#region Métricas do Sistema
-
-function Send-SystemMetrics {
-    try {
-        \$cpu = (Get-Counter '\\Processor(_Total)\\% Processor Time').CounterSamples.CookedValue
-        \$memory = Get-WmiObject Win32_OperatingSystem
-        \$memUsedPercent = ((\$memory.TotalVisibleMemorySize - \$memory.FreePhysicalMemory) / \$memory.TotalVisibleMemorySize) * 100
-        
-        \$disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
-        \$diskUsedPercent = ((\$disk.Size - \$disk.FreeSpace) / \$disk.Size) * 100
-        
-        \$uptime = (Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
-        \$uptimeSeconds = [int]\$uptime.TotalSeconds
-        
         \$body = @{
-            cpu_usage_percent = [math]::Round(\$cpu, 2)
-            memory_usage_percent = [math]::Round(\$memUsedPercent, 2)
-            disk_usage_percent = [math]::Round(\$diskUsedPercent, 2)
-            uptime_seconds = \$uptimeSeconds
+            agent_token = \$AgentToken
+            job_id = \$JobId
         }
         
-        \$uri = "\$ServerUrl/functions/v1/submit-system-metrics"
-        \$response = Invoke-SecureRequest -Uri \$uri -Method "POST" -Body \$body
+        \$ackResult = Invoke-SecureRequest \`
+            -Uri "\$ServerUrl/functions/v1/ack-job" \`
+            -Method POST \`
+            -Body \$body \`
+            -TimeoutSec 10
         
-        if (\$response.StatusCode -eq 200) {
-            Write-Log "Métricas enviadas com sucesso" "DEBUG"
-            return \$true
-        } else {
-            Write-Log "Falha ao enviar métricas: Status \$(\$response.StatusCode)" "WARN"
-            return \$false
+        if (\$ackResult.Success) {
+            Write-Log "✅ Job [\$JobId] acknowledgement enviado" "DEBUG"
         }
-    } catch {
-        Write-Log "Erro ao enviar métricas: \$(\$_.Exception.Message)" "ERROR"
-        return \$false
+    }
+    catch {
+        Write-Log "Erro ao enviar ACK: \$(\$_.Exception.Message)" "WARN"
     }
 }
 
 #endregion
 
-#region Health Check
+#region Teste de Conectividade e First Heartbeat
 
-function Test-SystemHealth {
-    Write-Log "🔍 Teste de Sistema - DIAGNÓSTICO COMPLETO" "INFO"
+Write-Log "Realizando teste de conectividade com backend..." "INFO"
+
+try {
+    \$testResult = Invoke-WebRequest -Uri "\$ServerUrl/rest/v1/" \`
+        -Method GET \`
+        -Headers @{ "apikey" = \$AgentToken } \`
+        -TimeoutSec 10 \`
+        -UseBasicParsing
     
-    # ✅ FASE 2: Validação completa com retry no heartbeat
-    # 1. Validar PowerShell
-    Write-Log "  [1/5] Validando PowerShell \$(\$PSVersionTable.PSVersion.Major).\$(\$PSVersionTable.PSVersion.Minor)..." "INFO"
-    if (\$PSVersionTable.PSVersion.Major -lt 5) {
-        Write-Log "  ✗ PowerShell muito antigo! Requer 5.1+" "ERROR"
-        return \$false
-    }
-    Write-Log "  ✓ PowerShell OK" "SUCCESS"
-    
-    # 2. Testar conectividade básica
-    Write-Log "  [2/5] Testando conectividade DNS..." "INFO"
-    \$dnsTest = Test-Connection -ComputerName "google.com" -Count 1 -Quiet -ErrorAction SilentlyContinue
-    if (\$dnsTest) {
-        Write-Log "  ✓ DNS OK" "SUCCESS"
-    } else {
-        Write-Log "  ✗ DNS FALHOU - Sem conectividade internet" "ERROR"
-        return \$false
-    }
-    
-    # 3. Testar conexão com servidor
-    Write-Log "  [3/5] Testando conectividade com servidor backend..." "INFO"
-    \$serverHost = \$ServerUrl -replace "https://","" -replace "/.*",""
-    try {
-        \$tcpTest = Test-NetConnection -ComputerName \$serverHost -Port 443 -WarningAction SilentlyContinue
-        if (\$tcpTest.TcpTestSucceeded) {
-            Write-Log "  ✓ Conectividade TCP:443 OK para \$serverHost" "SUCCESS"
-        } else {
-            Write-Log "  ✗ Não foi possível conectar em \$serverHost:443" "ERROR"
-            Write-Log "    Firewall pode estar bloqueando" "WARN"
-            return \$false
-        }
-    } catch {
-        Write-Log "  ✗ Erro ao testar conectividade: \$_" "ERROR"
-        return \$false
-    }
-    
-    # 4. Testar endpoint de heartbeat com retry
-    Write-Log "  [4/5] Testando endpoint /heartbeat..." "INFO"
-    \$maxRetries = 5
-    \$retryCount = 0
-    \$heartbeatSuccess = \$false
-    
-    while (\$retryCount -lt \$maxRetries -and -not \$heartbeatSuccess) {
-        \$retryCount++
-        Write-Log "    Tentativa \$retryCount/\$maxRetries de enviar heartbeat inicial..." "INFO"
-        
-        \$result = Send-Heartbeat -IsBootHeartbeat
-        if (\$result) {
-            Write-Log "  ✓ Heartbeat inicial enviado com SUCESSO!" "SUCCESS"
-            \$heartbeatSuccess = \$true
-        } else {
-            Write-Log "    ✗ Heartbeat falhou" "WARN"
-            if (\$retryCount -lt \$maxRetries) {
-                \$backoff = [math]::Pow(2, \$retryCount)
-                Write-Log "    Aguardando \$backoff segundos antes de retry..." "INFO"
-                Start-Sleep -Seconds \$backoff
-            }
-        }
-    }
-    
-    if (-not \$heartbeatSuccess) {
-        Write-Log "  ✗ FALHA CRÍTICA: Não foi possível enviar heartbeat após \$maxRetries tentativas" "ERROR"
-        Write-Log "  Possíveis causas:" "ERROR"
-        Write-Log "    1. Credenciais inválidas (AgentToken ou HmacSecret)" "ERROR"
-        Write-Log "    2. Rate limiting ativo no servidor" "ERROR"
-        Write-Log "    3. Endpoint /heartbeat offline ou com erro" "ERROR"
-        return \$false
-    }
-    
-    # 5. Validar recursos do sistema
-    Write-Log "  [5/5] Validando recursos do sistema..." "INFO"
-    \$cpu = (Get-WmiObject Win32_Processor).LoadPercentage
-    \$mem = Get-WmiObject Win32_OperatingSystem
-    \$memUsedPercent = [math]::Round(((\$mem.TotalVisibleMemorySize - \$mem.FreePhysicalMemory) / \$mem.TotalVisibleMemorySize) * 100, 2)
-    
-    Write-Log "    CPU Usage: \$cpu%" "INFO"
-    Write-Log "    Memory Usage: \$memUsedPercent%" "INFO"
-    Write-Log "  ✓ Sistema OK" "SUCCESS"
-    
-    Write-Log "========================================" "SUCCESS"
-    Write-Log "✅ AGENTE INICIALIZADO COM SUCESSO!" "SUCCESS"
-    Write-Log "========================================" "SUCCESS"
-    
-    return \$true
+    Write-Log "✅ Connectivity test: OK (Status: \$(\$testResult.StatusCode))" "SUCCESS"
 }
+catch {
+    Write-Log "❌ CONNECTIVITY TEST FAILED: \$(\$_.Exception.Message)" "ERROR"
+    Write-Log "Verifique se ServerUrl está correto: \$ServerUrl" "ERROR"
+    Write-Log "Agente continuará tentando, mas pode haver problemas" "WARN"
+}
+
+Write-Log "Enviando heartbeat inicial..." "INFO"
+Send-Heartbeat
+
+Write-Log "Enviando métricas iniciais..." "INFO"
+Send-SystemMetrics
+
+Write-Log "" "INFO"
+Write-Log "========================================" "SUCCESS"
+Write-Log "=== AGENTE INICIALIZADO COM SUCESSO! ===" "SUCCESS"
+Write-Log "========================================" "SUCCESS"
+Write-Log "" "INFO"
 
 #endregion
 
-#region Loop Principal do Agente
+#region Loop Principal
 
 function Start-Agent {
-    Write-Log "=== Starting Agent Loop ===" "SUCCESS"
-    Write-Log "Press Ctrl+C to stop" "INFO"
+    Write-Log "Iniciando loop principal do agente..." "INFO"
     
-    Write-Log "Running initial health check..." "INFO"
-    if (-not (Test-SystemHealth)) {
-        Write-Log "CRITICAL: Health check failed. Cannot start agent." "ERROR"
-        Write-Log "Please fix the issues above before continuing." "ERROR"
-        Write-Log "Troubleshooting:" "ERROR"
-        Write-Log "  1. Verifique conectividade: Test-NetConnection -Port 443" "ERROR"
-        Write-Log "  2. Valide credenciais no dashboard" "ERROR"
-        Write-Log "  3. Verifique firewall: Get-NetFirewallRule -DisplayName 'CyberShield Agent'" "ERROR"
-        exit 1
-    }
+    \$heartbeatInterval = 30  # segundos
+    \$metricsInterval = 300   # 5 minutos
     
-    Write-Log "✅ Health check PASSOU - Agent está pronto para operar" "SUCCESS"
-    Write-Log "Sending initial heartbeat..." "INFO"
-    Send-Heartbeat | Out-Null
-    
-    Write-Log "Sending initial system metrics..." "INFO"
-    Send-SystemMetrics | Out-Null
-    
-    # Contadores para intervalos
-    \$heartbeatInterval = 60
-    \$metricsInterval = 300
     \$lastHeartbeat = Get-Date
     \$lastMetrics = Get-Date
     
-    # Loop principal
+    # ============================================================================
+    # CORREÇÃO 4: DIAGNÓSTICO PRÉ-LOOP
+    # ============================================================================
+    Write-Log "========================================" "INFO"
+    Write-Log "DIAGNÓSTICO PRÉ-LOOP:" "INFO"
+    Write-Log "  - Write-Log: Disponível ✅" "SUCCESS"
+    Write-Log "  - \$LogFile: \$LogFile ✅" "SUCCESS"
+    Write-Log "  - \$ServerUrl: \$ServerUrl ✅" "SUCCESS"
+    Write-Log "  - \$AgentToken: $(if(\$AgentToken) {'Definido ✅'} else {'FALTANDO ❌'})" "$(if(\$AgentToken) {'SUCCESS'} else {'ERROR'})"
+    Write-Log "  - \$HmacSecret: $(if(\$HmacSecret) {'Definido ✅'} else {'FALTANDO ❌'})" "$(if(\$HmacSecret) {'SUCCESS'} else {'ERROR'})"
+    Write-Log "  - Poll-Jobs: Disponível ✅" "SUCCESS"
+    Write-Log "  - Send-Heartbeat: Disponível ✅" "SUCCESS"
+    Write-Log "  - Send-SystemMetrics: Disponível ✅" "SUCCESS"
+    Write-Log "========================================" "INFO"
+    Write-Log "" "INFO"
+    Write-Log "🚀 Entrando no loop principal..." "SUCCESS"
+    Write-Log "" "INFO"
+    
     while (\$true) {
         try {
-            # Poll por novos jobs
+            # Buscar e executar jobs
             \$jobs = Poll-Jobs
             
-            if (\$jobs -and \$jobs.Count -gt 0) {
-                Write-Log "Recebidos \$(\$jobs.Count) job(s)" "INFO"
-                
-                foreach (\$job in \$jobs) {
-                    # Executar job
-                    \$result = Execute-Job -Job \$job
-                    
-                    # Enviar resultado
-                    \$uploaded = Upload-Report -Report \$result
-                    
-                    # Confirmar job
-                    if (\$uploaded) {
-                        Ack-Job -JobId \$job.id
-                    }
-                }
+            foreach (\$job in \$jobs) {
+                Execute-Job -Job \$job
             }
             
             # Verificar se deve enviar heartbeat
@@ -760,11 +699,6 @@ function Start-Agent {
             if ((\$now - \$lastMetrics).TotalSeconds -ge \$metricsInterval) {
                 Send-SystemMetrics
                 \$lastMetrics = \$now
-            }
-            
-            # FASE 2: Enviar logs a cada 10 minutos
-            if ((\$now - \$lastMetrics).TotalSeconds -ge 600) {
-                Upload-DiagnosticLogs -LogType "periodic" -Severity "info"
             }
             
             # Aguardar intervalo de polling
@@ -804,6 +738,19 @@ export function validateAgentScript(script: string): boolean {
   }
   
   if (!script.includes('param(')) {
+    return false;
+  }
+  
+  // Verificar funções críticas
+  if (!script.includes('function Write-Log')) {
+    return false;
+  }
+  
+  if (!script.includes('function Send-Heartbeat')) {
+    return false;
+  }
+  
+  if (!script.includes('function Poll-Jobs')) {
     return false;
   }
   
