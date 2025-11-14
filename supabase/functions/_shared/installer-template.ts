@@ -24,6 +24,43 @@ $HMAC_SECRET = "{{HMAC_SECRET}}"
 $SERVER_URL = "{{SERVER_URL}}"
 $POLL_INTERVAL = {{POLL_INTERVAL}}
 
+# Backward compatibility aliases
+$AgentToken = $AGENT_TOKEN
+$HmacSecret = $HMAC_SECRET
+
+# ============================================================================
+# VALIDATION - Ensure credentials are valid
+# ============================================================================
+if ([string]::IsNullOrWhiteSpace($AGENT_TOKEN) -or $AGENT_TOKEN -like "*{{*") {
+    Write-Host ""
+    Write-Host "=" * 70 -ForegroundColor Red
+    Write-Host "❌ INVALID INSTALLER - Credentials not configured" -ForegroundColor Red
+    Write-Host "=" * 70 -ForegroundColor Red
+    Write-Host ""
+    Write-Host "This installer was not properly generated." -ForegroundColor Yellow
+    Write-Host "Please generate a NEW installer from the dashboard:" -ForegroundColor Yellow
+    Write-Host "  1. Go to Agent Installer page" -ForegroundColor White
+    Write-Host "  2. Enter a unique agent name" -ForegroundColor White
+    Write-Host "  3. Download a fresh installer" -ForegroundColor White
+    Write-Host ""
+    Write-Host "⚠️  DO NOT use old/cached installer links!" -ForegroundColor Yellow
+    Write-Host ""
+    Read-Host "Press Enter to exit"
+    exit 1
+}
+
+if ([string]::IsNullOrWhiteSpace($HMAC_SECRET) -or $HMAC_SECRET -like "*{{*") {
+    Write-Host ""
+    Write-Host "=" * 70 -ForegroundColor Red
+    Write-Host "❌ INVALID INSTALLER - HMAC secret missing" -ForegroundColor Red
+    Write-Host "=" * 70 -ForegroundColor Red
+    Write-Host ""
+    Write-Host "This installer is incomplete. Please generate a new one." -ForegroundColor Yellow
+    Write-Host ""
+    Read-Host "Press Enter to exit"
+    exit 1
+}
+
 # Log credentials (first 8 chars only for security)
 Write-Host "Configuration loaded:" -ForegroundColor Cyan
 Write-Host "  Token: $($AGENT_TOKEN.Substring(0, [Math]::Min(8, $AGENT_TOKEN.Length)))..." -ForegroundColor Gray
@@ -76,14 +113,39 @@ try {
         $env:HTTPS_PROXY = $proxyUri
     }
     
-    # Health check - using public endpoint
+    # Health check - CRITICAL validation
     Write-InstallLog "Performing backend health check..."
     try {
-        $healthCheck = Invoke-WebRequest -Uri "$SERVER_URL/functions/v1/auto-generate-enrollment" -Method GET -TimeoutSec 10 -UseBasicParsing
-        Write-InstallLog "✅ Backend is reachable (Status: $($healthCheck.StatusCode))"
+        $healthCheck = Invoke-WebRequest -Uri "$SERVER_URL/functions/v1/serve-installer" -Method GET -TimeoutSec 10 -UseBasicParsing
+        
+        if ($healthCheck.StatusCode -eq 200) {
+            Write-InstallLog "✅ Backend is reachable and healthy"
+        } else {
+            throw "Backend returned unexpected status: $($healthCheck.StatusCode)"
+        }
     } catch {
-        Write-InstallLog "⚠️ Health check failed: $($_.Exception.Message)" "WARN"
-        Write-InstallLog "⚠️ This is non-critical - installation will continue" "WARN"
+        Write-Host ""
+        Write-Host "=" * 70 -ForegroundColor Red
+        Write-Host "❌ BACKEND UNREACHABLE - Installation aborted" -ForegroundColor Red
+        Write-Host "=" * 70 -ForegroundColor Red
+        Write-Host ""
+        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Possible causes:" -ForegroundColor Cyan
+        Write-Host "  1. No internet connection" -ForegroundColor White
+        Write-Host "  2. Firewall blocking HTTPS traffic" -ForegroundColor White
+        Write-Host "  3. Corporate proxy not configured" -ForegroundColor White
+        Write-Host "  4. Backend service is down (rare)" -ForegroundColor White
+        Write-Host ""
+        Write-Host "Troubleshooting:" -ForegroundColor Cyan
+        Write-Host "  • Test connectivity: Test-NetConnection -ComputerName iavbnmduxpxhwubqrzzn.supabase.co -Port 443" -ForegroundColor White
+        Write-Host "  • Check firewall: Get-NetFirewallRule | Where-Object DisplayName -like '*CyberShield*'" -ForegroundColor White
+        Write-Host "  • If behind proxy, configure: \`$env:HTTPS_PROXY='http://proxy:port'" -ForegroundColor White
+        Write-Host ""
+        Write-Host "If issue persists, generate a NEW installer from the dashboard." -ForegroundColor Yellow
+        Write-Host ""
+        Read-Host "Press Enter to exit"
+        exit 1
     }
     
     # Save agent script
