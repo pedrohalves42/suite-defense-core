@@ -65,6 +65,93 @@ function Write-InstallLog {
     Write-Host $Message
 }
 
+# ✅ TELEMETRIA DE ERROS: Enviar erros de instalação ao backend
+function Send-ErrorTelemetry {
+    param(
+        [string]$ErrorMessage,
+        [string]$ErrorType,
+        [string]$StackTrace
+    )
+    
+    Write-InstallLog "Enviando telemetria de erro ($ErrorType)..."
+    
+    # Capturar logs de instalação existentes
+    $installLogs = @()
+    if (Test-Path $InstallLog) {
+        $installLogs = Get-Content $InstallLog -ErrorAction SilentlyContinue | Select-Object -Last 50
+    }
+    
+    $telemetryPayload = @{
+        agent_token = $AgentToken
+        agent_name = $env:COMPUTERNAME
+        success = $false
+        platform = "windows"
+        installation_time_seconds = 0
+        installation_method = "powershell"
+        error_type = $ErrorType
+        error_message = $ErrorMessage
+        installation_logs = @{
+            stdout = $installLogs
+            stderr = @($StackTrace)
+        }
+        system_info = @{
+            os_version = [System.Environment]::OSVersion.VersionString
+            powershell_version = "$($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)"
+            hostname = $env:COMPUTERNAME
+            admin_privileges = $isAdmin
+            tls_enabled = ([Net.ServicePointManager]::SecurityProtocol -band [Net.SecurityProtocolType]::Tls12) -eq [Net.SecurityProtocolType]::Tls12
+        }
+        network_tests = @{
+            health_check_passed = $false
+            proxy_detected = $false
+            dns_test = $false
+            api_test = $false
+        }
+        errors = @{
+            type = $ErrorType
+            message = $ErrorMessage
+            stack = $StackTrace
+            timestamp = (Get-Date).ToUniversalTime().ToString("o")
+        }
+    } | ConvertTo-Json -Depth 10 -Compress
+    
+    try {
+        Invoke-RestMethod -Uri "$ServerUrl/functions/v1/post-installation-telemetry" `
+            -Method POST `
+            -Body $telemetryPayload `
+            -ContentType "application/json" `
+            -TimeoutSec 10 `
+            -ErrorAction Stop | Out-Null
+        Write-InstallLog "✓ Telemetria de erro enviada com sucesso"
+    } catch {
+        Write-InstallLog "⚠ Falha ao enviar telemetria de erro: $_"
+        # Não bloquear instalação por falha de telemetria
+    }
+}
+
+# ✅ TELEMETRIA: Parser de tipo de erro
+function Get-ErrorType {
+    param([string]$ErrorMessage)
+    
+    switch -Regex ($ErrorMessage) {
+        '401|unauthorized|Unauthorized' { return 'http_401_unauthorized' }
+        '403|forbidden|Forbidden' { return 'http_403_forbidden' }
+        '404|not found|Not Found' { return 'http_404_not_found' }
+        '500|internal server|Internal Server' { return 'http_500_server_error' }
+        '502|bad gateway|Bad Gateway' { return 'http_502_bad_gateway' }
+        '503|service unavailable|Service Unavailable' { return 'http_503_unavailable' }
+        'TLS|SSL|certificate|secure channel' { return 'tls_ssl_error' }
+        'proxy|407' { return 'proxy_error' }
+        'timeout|timed out' { return 'network_timeout' }
+        'DNS|name resolution|could not be resolved' { return 'dns_resolution_error' }
+        'Cannot call a method on a null-valued expression|null' { return 'null_reference_error' }
+        'Access is denied|permission denied' { return 'permission_denied' }
+        'execution policy|ExecutionPolicy' { return 'execution_policy_error' }
+        'not recognized as the name of a cmdlet' { return 'cmdlet_not_found' }
+        default { return 'script_error' }
+    }
+}
+
 try {
     Write-InstallLog "[1/8] Criando diretórios de instalação..."
     if (-not (Test-Path $InstallDir)) {
@@ -419,20 +506,46 @@ TROUBLESHOOTING:
     Start-Sleep -Seconds 10
 
 } catch {
+    # ✅ TELEMETRIA DE ERROS: Capturar e enviar erro ao backend
+    $errorMessage = $_.Exception.Message
+    $stackTrace = $_.ScriptStackTrace
+    $errorType = Get-ErrorType -ErrorMessage $errorMessage
+    
     Write-Host ""
     Write-Host "==================================" -ForegroundColor Red
     Write-Host "ERRO DURANTE A INSTALAÇÃO" -ForegroundColor Red
     Write-Host "==================================" -ForegroundColor Red
     Write-Host ""
     Write-Host "Detalhes do erro:" -ForegroundColor Yellow
-    Write-Host $_.Exception.Message -ForegroundColor Red
+    Write-Host $errorMessage -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Tipo de erro detectado: $errorType" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Stack trace:" -ForegroundColor Yellow
-    Write-Host $_.ScriptStackTrace -ForegroundColor Gray
+    Write-Host $stackTrace -ForegroundColor Gray
+    Write-Host ""
+    
+    # Enviar telemetria de erro (não bloquear se falhar)
+    Write-Host "Enviando telemetria de erro ao backend..." -ForegroundColor Cyan
+    try {
+        Send-ErrorTelemetry -ErrorMessage $errorMessage `
+                           -ErrorType $errorType `
+                           -StackTrace $stackTrace
+        Write-Host "✓ Telemetria de erro enviada" -ForegroundColor Green
+    } catch {
+        Write-Host "⚠ Não foi possível enviar telemetria: $_" -ForegroundColor Yellow
+    }
+    
     Write-Host ""
     Write-Host "Para suporte, entre em contato:" -ForegroundColor Yellow
     Write-Host "  Email: gamehousetecnologia@gmail.com" -ForegroundColor White
     Write-Host "  WhatsApp: (34) 98443-2835" -ForegroundColor White
+    Write-Host ""
+    Write-Host "INFORMAÇÕES PARA DIAGNÓSTICO:" -ForegroundColor Cyan
+    Write-Host "  • Tipo de erro: $errorType" -ForegroundColor White
+    Write-Host "  • Log de instalação: $InstallLog" -ForegroundColor White
+    Write-Host "  • PowerShell versão: $($PSVersionTable.PSVersion)" -ForegroundColor White
+    Write-Host "  • OS: [System.Environment]::OSVersion.VersionString" -ForegroundColor White
     Write-Host ""
     Read-Host "Pressione Enter para sair"
     exit 1

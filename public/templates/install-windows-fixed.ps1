@@ -49,6 +49,93 @@ if ([string]::IsNullOrWhiteSpace($AgentToken) -or $AgentToken -eq "{{AGENT_TOKEN
 $InstallDir = "C:\CyberShield"
 $AgentScript = Join-Path $InstallDir "cybershield-agent.ps1"
 $LogDir = Join-Path $InstallDir "logs"
+$InstallLog = Join-Path $LogDir "install.log"
+
+# Função de log
+function Write-InstallLog {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    if (-not (Test-Path $LogDir)) {
+        New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+    }
+    "$timestamp - $Message" | Out-File $InstallLog -Append
+    Write-Host $Message
+}
+
+# ✅ TELEMETRIA DE ERROS: Enviar erros de instalação ao backend
+function Send-ErrorTelemetry {
+    param(
+        [string]$ErrorMessage,
+        [string]$ErrorType,
+        [string]$StackTrace
+    )
+    
+    Write-InstallLog "Enviando telemetria de erro ($ErrorType)..."
+    
+    $installLogs = @()
+    if (Test-Path $InstallLog) {
+        $installLogs = Get-Content $InstallLog -ErrorAction SilentlyContinue | Select-Object -Last 50
+    }
+    
+    $telemetryPayload = @{
+        agent_token = $AgentToken
+        agent_name = $env:COMPUTERNAME
+        success = $false
+        platform = "windows"
+        installation_time_seconds = 0
+        installation_method = "powershell"
+        error_type = $ErrorType
+        error_message = $ErrorMessage
+        installation_logs = @{
+            stdout = $installLogs
+            stderr = @($StackTrace)
+        }
+        system_info = @{
+            os_version = [System.Environment]::OSVersion.VersionString
+            powershell_version = "$($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)"
+            hostname = $env:COMPUTERNAME
+            admin_privileges = $isAdmin
+        }
+        errors = @{
+            type = $ErrorType
+            message = $ErrorMessage
+            stack = $StackTrace
+            timestamp = (Get-Date).ToUniversalTime().ToString("o")
+        }
+    } | ConvertTo-Json -Depth 10 -Compress
+    
+    try {
+        Invoke-RestMethod -Uri "$ServerUrl/functions/v1/post-installation-telemetry" `
+            -Method POST `
+            -Body $telemetryPayload `
+            -ContentType "application/json" `
+            -TimeoutSec 10 `
+            -ErrorAction Stop | Out-Null
+        Write-InstallLog "✓ Telemetria de erro enviada"
+    } catch {
+        Write-InstallLog "⚠ Falha ao enviar telemetria: $_"
+    }
+}
+
+# Parser de tipo de erro
+function Get-ErrorType {
+    param([string]$ErrorMessage)
+    
+    switch -Regex ($ErrorMessage) {
+        '401|unauthorized' { return 'http_401_unauthorized' }
+        '403|forbidden' { return 'http_403_forbidden' }
+        '404|not found' { return 'http_404_not_found' }
+        '500|internal server' { return 'http_500_server_error' }
+        'TLS|SSL|certificate' { return 'tls_ssl_error' }
+        'proxy' { return 'proxy_error' }
+        'timeout' { return 'network_timeout' }
+        'DNS|name resolution' { return 'dns_resolution_error' }
+        'null-valued expression|null' { return 'null_reference_error' }
+        'Access is denied' { return 'permission_denied' }
+        'execution policy' { return 'execution_policy_error' }
+        default { return 'script_error' }
+    }
+}
 
 try {
     Write-Host "[1/6] Criando diretórios de instalação..." -ForegroundColor Green
@@ -212,16 +299,35 @@ try {
     }
 
 } catch {
+    # ✅ TELEMETRIA DE ERROS
+    $errorMessage = $_.Exception.Message
+    $stackTrace = $_.ScriptStackTrace
+    $errorType = Get-ErrorType -ErrorMessage $errorMessage
+    
     Write-Host ""
     Write-Host "==================================" -ForegroundColor Red
     Write-Host "ERRO DURANTE A INSTALAÇÃO" -ForegroundColor Red
     Write-Host "==================================" -ForegroundColor Red
     Write-Host ""
     Write-Host "Detalhes do erro:" -ForegroundColor Yellow
-    Write-Host $_.Exception.Message -ForegroundColor Red
+    Write-Host $errorMessage -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Tipo de erro: $errorType" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Stack trace:" -ForegroundColor Yellow
-    Write-Host $_.ScriptStackTrace -ForegroundColor Gray
+    Write-Host $stackTrace -ForegroundColor Gray
+    Write-Host ""
+    
+    Write-Host "Enviando telemetria de erro..." -ForegroundColor Cyan
+    try {
+        Send-ErrorTelemetry -ErrorMessage $errorMessage `
+                           -ErrorType $errorType `
+                           -StackTrace $stackTrace
+        Write-Host "✓ Telemetria enviada" -ForegroundColor Green
+    } catch {
+        Write-Host "⚠ Não foi possível enviar telemetria: $_" -ForegroundColor Yellow
+    }
+    
     Write-Host ""
     Write-Host "Para suporte, entre em contato:" -ForegroundColor Yellow
     Write-Host "  Email: gamehousetecnologia@gmail.com" -ForegroundColor White
