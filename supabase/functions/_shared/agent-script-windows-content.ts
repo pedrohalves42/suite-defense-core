@@ -264,29 +264,33 @@ function Invoke-SecureRequest {
         \$attempt++
         
         try {
-            # Preparar dados
-            \$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+            # Preparar dados com timestamp em MILISSEGUNDOS
+            \$timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
             
+            # Gerar nonce único (UUID v4)
+            \$nonce = [guid]::NewGuid().ToString()
+            
+            # Preparar body JSON (vazio para GET)
             if (\$Method -eq 'GET') {
-                \$dataToSign = "\$Method|\$Uri|\$timestamp"
-                \$bodyJson = \$null
+                \$bodyJson = ""
             }
             else {
-                \$bodyWithTimestamp = \$Body.Clone()
-                \$bodyWithTimestamp['timestamp'] = \$timestamp
-                \$bodyJson = \$bodyWithTimestamp | ConvertTo-Json -Depth 10 -Compress
-                \$dataToSign = "\$Method|\$Uri|\$bodyJson"
+                \$bodyJson = \$Body | ConvertTo-Json -Depth 10 -Compress
             }
             
-            # Gerar assinatura HMAC
+            # Construir payload HMAC: "timestamp:nonce:body"
+            \$dataToSign = "\$timestamp:\$nonce:\$bodyJson"
+            
+            # Gerar assinatura HMAC-SHA256
             \$signature = Get-HmacSignature -Data \$dataToSign -Secret \$HmacSecret
             
-            # Preparar headers
+            # Preparar headers (padrão do backend)
             \$headers = @{
                 "Content-Type" = "application/json"
                 "X-Agent-Token" = \$AgentToken
-                "X-Signature" = \$signature
+                "X-HMAC-Signature" = \$signature
                 "X-Timestamp" = \$timestamp.ToString()
+                "X-Nonce" = \$nonce
             }
             
             # Fazer requisição
@@ -361,7 +365,39 @@ function Send-Heartbeat {
             Write-Log "✅ Heartbeat enviado com sucesso" "SUCCESS"
         }
         else {
-            Write-Log "❌ Falha ao enviar heartbeat: \$(\$result.Error)" "ERROR"
+            # Fallback: tentar endpoint sem HMAC se falha for 401/403
+            if (\$result.StatusCode -in @(401, 403)) {
+                Write-Log "⚠️  HMAC falhou, tentando fallback sem HMAC..." "WARN"
+                
+                try {
+                    \$bodyJson = \$body | ConvertTo-Json -Depth 10 -Compress
+                    \$fallbackHeaders = @{
+                        "Content-Type" = "application/json"
+                        "X-Agent-Token" = \$AgentToken
+                    }
+                    
+                    \$fallbackParams = @{
+                        Uri = "\$ServerUrl/functions/v1/heartbeat-fallback"
+                        Method = "POST"
+                        Headers = \$fallbackHeaders
+                        Body = \$bodyJson
+                        TimeoutSec = 10
+                        UseBasicParsing = \$true
+                    }
+                    
+                    \$fallbackResponse = Invoke-WebRequest @fallbackParams
+                    
+                    if (\$fallbackResponse.StatusCode -eq 200) {
+                        Write-Log "✅ Heartbeat fallback enviado com sucesso (sem HMAC)" "SUCCESS"
+                    }
+                }
+                catch {
+                    Write-Log "❌ Fallback também falhou: \$(\$_.Exception.Message)" "ERROR"
+                }
+            }
+            else {
+                Write-Log "❌ Falha ao enviar heartbeat: \$(\$result.Error)" "ERROR"
+            }
         }
     }
     catch {
