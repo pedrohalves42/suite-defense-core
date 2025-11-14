@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { Package, Download, Terminal, CheckCircle2, Loader2, Copy, AlertTriangle, Shield, Clock, FileCheck, BookOpen, HelpCircle, Zap, ExternalLink, RefreshCw } from "lucide-react";
+import { Package, Download, Terminal, CheckCircle2, Loader2, Copy, AlertTriangle, Shield, Clock, FileCheck, BookOpen, HelpCircle, Zap, ExternalLink, RefreshCw, Upload } from "lucide-react";
+import { BuildProgressIndicator } from "@/components/BuildProgressIndicator";
+import { ManualInstallationCard } from "@/components/ManualInstallationCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -106,13 +108,20 @@ const AgentInstaller = () => {
   // FASE 1.1: Health check do GitHub
   const [githubHealthy, setGithubHealthy] = useState<boolean | null>(null);
   
-  // FASE 2.2: Estados de progresso detalhado
-  const [buildProgress, setBuildProgress] = useState({
-    preparing: false,
-    dispatching: false,
-    compiling: false,
-    uploading: false,
-    completed: false
+  // FASE 2.2 & 5: Estados de progresso detalhado consolidado
+  type BuildProgressStep = 'preparing' | 'dispatching' | 'compiling' | 'uploading' | 'completed';
+  
+  interface BuildProgressState {
+    currentStep: BuildProgressStep;
+    status: 'pending' | 'active' | 'completed' | 'error';
+    message: string;
+    githubRunUrl?: string;
+  }
+  
+  const [buildProgress, setBuildProgress] = useState<BuildProgressState>({
+    currentStep: 'preparing',
+    status: 'pending',
+    message: 'Aguardando início...'
   });
   
   // Step 2: Generation states
@@ -721,14 +730,22 @@ const AgentInstaller = () => {
 
     try {
       // FASE 2.2: Progresso - Preparando
-      setBuildProgress({ preparing: true, dispatching: false, compiling: false, uploading: false, completed: false });
+      setBuildProgress({ 
+        currentStep: 'preparing', 
+        status: 'active', 
+        message: 'Gerando credenciais e preparando ambiente...' 
+      });
       toast.info('🔐 Gerando credenciais...');
       
       // Se não tem enrollment_key, gerar automaticamente
       if (!lastEnrollmentKey) {
         const credentials = await generateCredentials();
         if (!credentials) {
-          setBuildProgress({ preparing: false, dispatching: false, compiling: false, uploading: false, completed: false });
+          setBuildProgress({ 
+            currentStep: 'preparing', 
+            status: 'error', 
+            message: 'Falha ao gerar credenciais' 
+          });
           return;
         }
       }
@@ -739,7 +756,11 @@ const AgentInstaller = () => {
       logger.error('[Build] Erro ao gerar instalador', error);
       toast.error(`Erro: ${error.message}`);
       setExeBuildStatus('idle');
-      setBuildProgress({ preparing: false, dispatching: false, compiling: false, uploading: false, completed: false });
+      setBuildProgress({ 
+        currentStep: 'preparing', 
+        status: 'error', 
+        message: error.message || 'Erro desconhecido' 
+      });
     }
   };
 
@@ -766,6 +787,13 @@ const AgentInstaller = () => {
     toast.info('🚀 Iniciando build do EXE... Aguarde 2-3 minutos');
 
     try {
+      // FASE 2.2: Update progress to dispatching
+      setBuildProgress({
+        currentStep: 'dispatching',
+        status: 'active',
+        message: 'Disparando workflow no GitHub Actions...'
+      });
+      
       const buildResult = await retryFetch(async () => {
         const { data, error } = await supabase.functions.invoke('build-agent-exe', {
           body: {
@@ -788,6 +816,14 @@ const AgentInstaller = () => {
       const { build_id, github_actions_url } = buildResult;
       setExeBuildId(build_id);
       setGithubActionsUrl(github_actions_url || null);
+      
+      // FASE 2.2: Progress updated with GitHub URL
+      setBuildProgress({
+        currentStep: 'compiling',
+        status: 'active',
+        message: 'Compilando PS1 → EXE (aguarde 2-3 minutos)...',
+        githubRunUrl: github_actions_url
+      });
 
       // Save to localStorage for recovery
       storage.set('current-build', { 
@@ -862,6 +898,14 @@ const AgentInstaller = () => {
             setExeFileSize(buildData.file_size_bytes);
             setRetryCount(0);
             storage.remove('current-build');
+            
+            // FASE 2.2: Final progress state
+            setBuildProgress({
+              currentStep: 'completed',
+              status: 'completed',
+              message: 'Build concluído com sucesso!',
+              githubRunUrl: buildData.github_run_url || githubActionsUrl || undefined
+            });
             
             const duration = buildData.build_duration_seconds || 0;
             toast.success(`✅ EXE gerado em ${duration}s!`, {
@@ -1306,79 +1350,8 @@ const AgentInstaller = () => {
           <CardContent className="space-y-4">
             {exeBuildStatus === 'building' && (
               <div className="space-y-3">
-                {/* FASE 2.2: UI de progresso detalhado */}
-                <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/30">
-                  <CardContent className="pt-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">1. Preparando build</span>
-                      {buildProgress.preparing ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">2. Enviando para GitHub Actions</span>
-                      {buildProgress.dispatching ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : buildProgress.preparing ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                      ) : (
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">3. Compilando PS1 → EXE</span>
-                      {buildProgress.compiling ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : buildProgress.dispatching ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-600 animate-pulse" />
-                      ) : (
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">4. Fazendo upload para storage</span>
-                      {buildProgress.uploading ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : buildProgress.compiling ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                      ) : (
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">5. Finalizando</span>
-                      {buildProgress.completed ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    
-                    <Progress value={(pollAttempts / 60) * 100} className="mt-4" />
-                    <p className="text-xs text-center text-muted-foreground">
-                      Progresso: {pollAttempts}/60 verificações ({Math.round((pollAttempts / 60) * 100)}%)
-                      {retryCount > 0 && ` • Retry ${retryCount}/${MAX_RETRIES}`}
-                    </p>
-                    
-                    {githubActionsUrl && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => window.open(githubActionsUrl, '_blank')}
-                      >
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Ver build no GitHub Actions
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
+                {/* FASE 2.2: Enhanced visual progress */}
+                <BuildProgressIndicator progress={buildProgress} />
                 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">
