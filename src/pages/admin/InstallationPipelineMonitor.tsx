@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useAgentLifecycle, usePipelineMetrics } from "@/hooks/useAgentLifecycle";
+import { useAgentLifecycle, usePipelineMetrics, useFailureRate } from "@/hooks/useAgentLifecycle";
 import { useTenant } from "@/hooks/useTenant";
 import { useState } from "react";
 import { 
@@ -37,6 +37,7 @@ export default function InstallationPipelineMonitor() {
 
   const { data: agents, isLoading: agentsLoading, isError: agentsError, error: agentsErrorData, refetch: refetchAgents } = useAgentLifecycle(tenant?.id);
   const { data: metrics, isLoading: metricsLoading, isError: metricsError, error: metricsErrorData, refetch: refetchMetrics } = usePipelineMetrics(tenant?.id, hoursBack);
+  const { data: failureRate } = useFailureRate(tenant?.id, 1); // Last hour
 
   const filteredAgents = agents?.filter(agent => {
     if (stageFilter === 'all') return true;
@@ -168,6 +169,51 @@ export default function InstallationPipelineMonitor() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Failure Rate Alert Card */}
+      {failureRate && failureRate.exceeds_threshold && (
+        <Card className="border-destructive bg-destructive/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <div>
+              <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-destructive" />
+                Alta Taxa de Falha Detectada
+              </CardTitle>
+              <CardDescription className="mt-2">
+                Taxa de falha excedeu o limiar de 30% na última hora
+              </CardDescription>
+            </div>
+            <Badge variant="destructive" className="text-lg px-3 py-1">
+              {failureRate.failure_rate_pct}%
+            </Badge>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="grid gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total de Tentativas:</span>
+                <span className="font-semibold">{failureRate.total_attempts}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Instalações Falhadas:</span>
+                <span className="font-semibold text-destructive">{failureRate.failed_attempts}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Período:</span>
+                <span className="font-semibold">
+                  {format(new Date(failureRate.period_start), 'HH:mm', { locale: ptBR })} - {format(new Date(failureRate.period_end), 'HH:mm', { locale: ptBR })}
+                </span>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              className="w-full mt-4"
+              onClick={() => window.location.href = '/admin/installation-logs?success=false'}
+            >
+              Ver Logs de Falha
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Funnel Chart */}
       <Card>
