@@ -49,6 +49,7 @@ import SecurityDashboard from "./pages/admin/SecurityDashboard";
 import AgentMonitoringAdvanced from "./pages/AgentMonitoringAdvanced";
 import ExeBuild from "./pages/docs/ExeBuild";
 import InstallationAnalytics from "./pages/admin/InstallationAnalytics";
+import InstallationMetrics from "./pages/admin/InstallationMetrics";
 import SubscriptionAnalytics from "./pages/admin/SubscriptionAnalytics";
 import StripeSetup from "./pages/admin/StripeSetup";
 import AgentDiagnostics from "./pages/admin/AgentDiagnostics.tsx";
@@ -115,6 +116,7 @@ const App = () => (
                 <Route path="plan-upgrade" element={<PlanUpgrade />} />
                 <Route path="subscriptions" element={<Subscriptions />} />
                 <Route path="installation-analytics" element={<InstallationAnalytics />} />
+                <Route path="installation-metrics" element={<InstallationMetrics />} />
                 <Route path="tenant/invites" element={<TenantInvites />} />
                 <Route path="tenant/security" element={<TenantSecurity />} />
                 <Route path="tenant/logs" element={<TenantLogs />} />
