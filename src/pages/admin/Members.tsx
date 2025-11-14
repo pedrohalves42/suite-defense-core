@@ -136,7 +136,14 @@ export default function Members() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Gerenciar Membros</h1>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            Gerenciar Membros
+            {tenant && (
+              <Badge variant="outline" className="font-normal text-base">
+                {tenant.name}
+              </Badge>
+            )}
+          </h1>
           <p className="text-muted-foreground mt-1">
             Gerencie os membros do seu tenant
           </p>
@@ -179,11 +186,16 @@ export default function Members() {
         </CardHeader>
         <CardContent>
           {(isLoading || tenantLoading) ? (
-            <p className="text-center text-muted-foreground py-8">Carregando...</p>
+            <p className="text-center text-muted-foreground py-8">Carregando membros...</p>
           ) : members.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              Nenhum membro encontrado
-            </p>
+            <div className="text-center py-12 space-y-3">
+              <p className="text-muted-foreground text-lg">
+                {tenant ? `O tenant "${tenant.name}" ainda não possui membros.` : 'Nenhum membro encontrado.'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Clique em "Convidar Membro" acima para adicionar usuários à sua organização.
+              </p>
+            </div>
           ) : (
             <div className="space-y-4">
               {members.map((member) => (
