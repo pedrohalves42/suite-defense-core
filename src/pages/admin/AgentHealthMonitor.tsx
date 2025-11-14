@@ -7,10 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Activity, Heart, AlertCircle, Server, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ErrorState } from "@/components/ErrorState";
 
 export default function AgentHealthMonitor() {
   const { tenant } = useTenant();
-  const { data: agents, isLoading } = useAgentLifecycle(tenant?.id);
+  const { data: agents, isLoading, isError, error: errorData, refetch } = useAgentLifecycle(tenant?.id);
   const [liveHeartbeats, setLiveHeartbeats] = useState<number>(0);
   const [recentHeartbeats, setRecentHeartbeats] = useState<string[]>([]);
 
@@ -52,6 +53,18 @@ export default function AgentHealthMonitor() {
         <div className="flex items-center justify-center h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
         </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="container mx-auto p-6">
+        <ErrorState 
+          error={errorData!} 
+          onRetry={refetch}
+          title="Erro ao Carregar Monitor de Saúde"
+        />
       </div>
     );
   }
