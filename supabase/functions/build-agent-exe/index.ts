@@ -713,6 +713,23 @@ try {
           })
         });
 
+        // Log detailed response info
+        logger.info(`[${requestId}] GitHub dispatch response details`, {
+          success: dispatchResponse.ok,
+          status: dispatchResponse.status,
+          statusText: dispatchResponse.statusText,
+          headers: {
+            rateLimit: dispatchResponse.headers.get('x-ratelimit-remaining'),
+            rateLimitReset: dispatchResponse.headers.get('x-ratelimit-reset'),
+            contentType: dispatchResponse.headers.get('content-type')
+          },
+          url: dispatchUrl,
+          has_token: !!BUILD_GH_TOKEN,
+          token_length: BUILD_GH_TOKEN?.length,
+          repository: BUILD_GH_REPOSITORY,
+          attempt: dispatchAttempt
+        });
+
         if (dispatchResponse.ok || dispatchResponse.status === 204) {
           triggerSuccess = true;
           triggerMethod = 'repository_dispatch';
@@ -737,6 +754,18 @@ try {
           
           // Check if it's a non-retryable error (4xx client errors)
           const isClientError = dispatchResponse.status >= 400 && dispatchResponse.status < 500;
+          
+          logger.error(`[${requestId}] ❌ GitHub API error response`, {
+            status: dispatchResponse.status,
+            statusText: dispatchResponse.statusText,
+            body: errorText,
+            url: dispatchUrl,
+            has_token: !!BUILD_GH_TOKEN,
+            token_prefix: BUILD_GH_TOKEN?.substring(0, 8),
+            repository: BUILD_GH_REPOSITORY,
+            attempt: dispatchAttempt,
+            retryable: !isClientError
+          });
           
           logger.warn(`[${requestId}] ⚠ Tentativa ${dispatchAttempt}/${maxDispatchRetries} falhou`, { 
             status: dispatchResponse.status,
