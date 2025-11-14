@@ -38,9 +38,12 @@ export const AppSidebar = () => {
   const adminItems = useMemo(() => [
     { icon: Home, label: 'Dashboard', to: '/admin/dashboard', end: true },
     { icon: Activity, label: 'Monitoramento RT', to: '/admin/monitoring-advanced' },
+    { icon: Activity, label: 'Saúde Agentes', to: '/admin/agent-health' },
     { icon: Package, label: 'Instalador Agentes', to: '/admin/agent-installer' },
+    { icon: BarChart3, label: 'Pipeline Instalação', to: '/admin/installation-pipeline' },
     { icon: BarChart3, label: 'Analytics Instalação', to: '/admin/installation-analytics' },
     { icon: BarChart3, label: 'Métricas Instalação', to: '/admin/installation-metrics' },
+    { icon: ScrollText, label: 'Logs Instalação', to: '/admin/installation-logs' },
     { icon: Users, label: 'Membros', to: '/admin/members' },
     { icon: Mail, label: 'Convites Tenant', to: '/admin/tenant/invites' },
     { icon: AlertTriangle, label: 'Segurança Tenant', to: '/admin/tenant/security' },

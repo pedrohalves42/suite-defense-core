@@ -60,6 +60,9 @@ import TenantSecurity from "./pages/admin/tenant/TenantSecurity";
 import TenantLogs from "./pages/admin/tenant/TenantLogs";
 import TenantSettings from "./pages/admin/tenant/TenantSettings";
 import SystemLogs from "./pages/admin/SystemLogs";
+import InstallationPipelineMonitor from "./pages/admin/InstallationPipelineMonitor";
+import AgentHealthMonitor from "./pages/admin/AgentHealthMonitor";
+import InstallationLogsExplorer from "./pages/admin/InstallationLogsExplorer";
 
 // CORREÇÃO: QueryClient já está inicializado no src/main.tsx
 // Remover duplicação para manter configurações otimizadas
@@ -118,6 +121,9 @@ const App = () => (
                 <Route path="subscriptions" element={<Subscriptions />} />
                 <Route path="installation-analytics" element={<InstallationAnalytics />} />
                 <Route path="installation-metrics" element={<InstallationMetrics />} />
+                <Route path="installation-pipeline" element={<InstallationPipelineMonitor />} />
+                <Route path="agent-health" element={<AgentHealthMonitor />} />
+                <Route path="installation-logs" element={<InstallationLogsExplorer />} />
                 <Route path="tenant/invites" element={<TenantInvites />} />
                 <Route path="tenant/security" element={<TenantSecurity />} />
                 <Route path="tenant/logs" element={<TenantLogs />} />

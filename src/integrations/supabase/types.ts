@@ -110,6 +110,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agent_builds_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
             foreignKeyName: "agent_builds_enrollment_key_id_fkey"
             columns: ["enrollment_key_id"]
             isOneToOne: false
@@ -222,6 +229,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "agent_system_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
             foreignKeyName: "agent_system_metrics_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -280,13 +294,56 @@ export type Database = {
             referencedRelation: "agents_safe"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "agent_tokens_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
         ]
+      }
+      agent_versions: {
+        Row: {
+          created_at: string | null
+          download_url: string
+          id: string
+          is_latest: boolean | null
+          platform: string
+          release_notes: string | null
+          sha256: string
+          size_bytes: number
+          version: string
+        }
+        Insert: {
+          created_at?: string | null
+          download_url: string
+          id?: string
+          is_latest?: boolean | null
+          platform: string
+          release_notes?: string | null
+          sha256: string
+          size_bytes: number
+          version: string
+        }
+        Update: {
+          created_at?: string | null
+          download_url?: string
+          id?: string
+          is_latest?: boolean | null
+          platform?: string
+          release_notes?: string | null
+          sha256?: string
+          size_bytes?: number
+          version?: string
+        }
+        Relationships: []
       }
       agents: {
         Row: {
           agent_name: string
           enrolled_at: string
-          hmac_secret: string | null
+          hmac_secret: string
           hostname: string | null
           id: string
           last_heartbeat: string | null
@@ -299,7 +356,7 @@ export type Database = {
         Insert: {
           agent_name: string
           enrolled_at?: string
-          hmac_secret?: string | null
+          hmac_secret: string
           hostname?: string | null
           id?: string
           last_heartbeat?: string | null
@@ -312,7 +369,7 @@ export type Database = {
         Update: {
           agent_name?: string
           enrolled_at?: string
-          hmac_secret?: string | null
+          hmac_secret?: string
           hostname?: string | null
           id?: string
           last_heartbeat?: string | null
@@ -498,7 +555,7 @@ export type Database = {
             columns: ["actor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "audit_logs_tenant_id_fkey"
@@ -597,6 +654,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
             foreignKeyName: "enrollment_keys_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -680,7 +744,10 @@ export type Database = {
           installation_time_seconds: number | null
           ip_address: string | null
           metadata: Json | null
+          network_connectivity: boolean | null
           platform: string
+          success: boolean | null
+          telemetry_hash: string | null
           tenant_id: string
           user_agent: string | null
         }
@@ -695,7 +762,10 @@ export type Database = {
           installation_time_seconds?: number | null
           ip_address?: string | null
           metadata?: Json | null
+          network_connectivity?: boolean | null
           platform: string
+          success?: boolean | null
+          telemetry_hash?: string | null
           tenant_id: string
           user_agent?: string | null
         }
@@ -710,7 +780,10 @@ export type Database = {
           installation_time_seconds?: number | null
           ip_address?: string | null
           metadata?: Json | null
+          network_connectivity?: boolean | null
           platform?: string
+          success?: boolean | null
+          telemetry_hash?: string | null
           tenant_id?: string
           user_agent?: string | null
         }
@@ -735,6 +808,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "agents_safe"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installation_analytics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "installation_analytics_tenant_id_fkey"
@@ -1307,6 +1387,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "system_alerts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
             foreignKeyName: "system_alerts_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -1613,6 +1700,41 @@ export type Database = {
       }
     }
     Views: {
+      agent_installation_metrics: {
+        Row: {
+          avg_install_time_sec: number | null
+          date: string | null
+          failed_installs: number | null
+          linux_bash_installs: number | null
+          linux_count: number | null
+          max_install_time_sec: number | null
+          min_install_time_sec: number | null
+          network_failed: number | null
+          network_ok: number | null
+          network_unknown: number | null
+          platform: string | null
+          success_rate_pct: number | null
+          successful_installs: number | null
+          tenant_id: string | null
+          total_attempts: number | null
+          unknown_status: number | null
+          unverified_count: number | null
+          unverified_events: number | null
+          verified_count: number | null
+          verified_events: number | null
+          windows_count: number | null
+          windows_ps1_installs: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installation_analytics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agents_health_view: {
         Row: {
           agent_name: string | null
@@ -1777,13 +1899,19 @@ export type Database = {
       }
       enrollment_keys_safe: {
         Row: {
+          agent_id: string | null
           created_at: string | null
           created_by: string | null
           current_uses: number | null
           description: string | null
+          expiration_notified_at: string | null
           expires_at: string | null
           id: string | null
+          installer_generated_at: string | null
+          installer_sha256: string | null
+          installer_size_bytes: number | null
           is_active: boolean | null
+          key_full: string | null
           key_masked: string | null
           max_uses: number | null
           tenant_id: string | null
@@ -1791,13 +1919,19 @@ export type Database = {
           used_by_agent: string | null
         }
         Insert: {
+          agent_id?: string | null
           created_at?: string | null
           created_by?: string | null
           current_uses?: number | null
           description?: string | null
+          expiration_notified_at?: string | null
           expires_at?: string | null
           id?: string | null
+          installer_generated_at?: string | null
+          installer_sha256?: string | null
+          installer_size_bytes?: number | null
           is_active?: boolean | null
+          key_full?: string | null
           key_masked?: never
           max_uses?: number | null
           tenant_id?: string | null
@@ -1805,13 +1939,19 @@ export type Database = {
           used_by_agent?: string | null
         }
         Update: {
+          agent_id?: string | null
           created_at?: string | null
           created_by?: string | null
           current_uses?: number | null
           description?: string | null
+          expiration_notified_at?: string | null
           expires_at?: string | null
           id?: string | null
+          installer_generated_at?: string | null
+          installer_sha256?: string | null
+          installer_size_bytes?: number | null
           is_active?: boolean | null
+          key_full?: string | null
           key_masked?: never
           max_uses?: number | null
           tenant_id?: string | null
@@ -1819,6 +1959,34 @@ export type Database = {
           used_by_agent?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
           {
             foreignKeyName: "enrollment_keys_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -1828,6 +1996,48 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_enrollment_keys_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      installation_error_summary: {
+        Row: {
+          affected_agents_sample: string[] | null
+          error_message: string | null
+          first_seen: string | null
+          last_seen: string | null
+          occurrence_count: number | null
+          percentage_of_failures: number | null
+          platform: string | null
+          tenant_id: string | null
+          unique_agents_affected: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installation_analytics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      installation_health_status: {
+        Row: {
+          attempts_24h: number | null
+          failed_24h: number | null
+          failure_rate_24h_pct: number | null
+          health_status: string | null
+          last_installation_at: string | null
+          success_24h: number | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installation_analytics_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1853,11 +2063,72 @@ export type Database = {
           },
         ]
       }
+      v_agent_lifecycle_state: {
+        Row: {
+          agent_id: string | null
+          agent_name: string | null
+          agent_status: string | null
+          command_copied_at: string | null
+          downloaded_at: string | null
+          enrolled_at: string | null
+          generated_at: string | null
+          hostname: string | null
+          installation_metadata: Json | null
+          installation_method: string | null
+          installation_success: boolean | null
+          installation_time_seconds: number | null
+          installed_at: string | null
+          is_stuck: boolean | null
+          last_error_at: string | null
+          last_error_message: string | null
+          last_heartbeat: string | null
+          lifecycle_stage: string | null
+          minutes_between_copy_and_install: number | null
+          minutes_since_enrollment: number | null
+          minutes_since_heartbeat: number | null
+          network_connectivity: boolean | null
+          os_type: string | null
+          os_version: string | null
+          platform: string | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_tenant_id_new_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_agents_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_next_run: {
         Args: { from_time?: string; pattern: string }
         Returns: string
+      }
+      calculate_pipeline_metrics: {
+        Args: { p_hours_back?: number; p_tenant_id?: string }
+        Returns: {
+          avg_install_time_seconds: number
+          conversion_rate_copied_to_installed_pct: number
+          conversion_rate_generated_to_installed_pct: number
+          success_rate_pct: number
+          total_active: number
+          total_command_copied: number
+          total_downloaded: number
+          total_generated: number
+          total_installed: number
+          total_stuck: number
+        }[]
       }
       cleanup_expired_keys: { Args: never; Returns: undefined }
       cleanup_old_data: { Args: never; Returns: undefined }
@@ -1868,7 +2139,15 @@ export type Database = {
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       cleanup_old_security_logs: { Args: never; Returns: undefined }
       cleanup_orphaned_agents: { Args: never; Returns: number }
+      cleanup_stuck_builds: {
+        Args: never
+        Returns: {
+          build_ids: string[]
+          cleaned_count: number
+        }[]
+      }
       current_user_tenant_id: { Args: never; Returns: string }
+      dearmor: { Args: { "": string }; Returns: string }
       diagnose_agent_issues: {
         Args: { p_agent_name: string }
         Returns: {
@@ -1885,6 +2164,18 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: undefined
+      }
+      gen_random_uuid: { Args: never; Returns: string }
+      gen_salt: { Args: { "": string }; Returns: string }
+      get_enrollment_key_full: { Args: { p_key_id: string }; Returns: string }
+      get_installation_health_status: {
+        Args: never
+        Returns: {
+          failure_rate_pct: number
+          status: string
+          threshold: number
+          total_attempts: number
+        }[]
       }
       get_latest_agent_metrics: {
         Args: { p_tenant_id: string }
@@ -1903,6 +2194,19 @@ export type Database = {
           uptime_seconds: number
         }[]
       }
+      get_problematic_agents: {
+        Args: never
+        Returns: {
+          agent_name: string
+          created_at: string
+          id: string
+          installation_success: boolean
+          metadata: Json
+          minutes_since_creation: number
+          network_connectivity: boolean
+          status: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1912,6 +2216,10 @@ export type Database = {
       }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      pgp_armor_headers: {
+        Args: { "": string }
+        Returns: Record<string, unknown>[]
+      }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
       update_quota_usage: {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }
