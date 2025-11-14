@@ -666,10 +666,11 @@ try {
     let triggerSuccess = false;
     let triggerMethod = '';
 
-    // ⚡ FASE 1.3: Retry automático com exponential backoff
+    // ⚡ FASE 1.3: Retry automático com exponential backoff ENHANCED
     const maxDispatchRetries = 3;
     let dispatchAttempt = 0;
     let lastError = '';
+    const retryDelays = [2000, 4000, 8000]; // 2s, 4s, 8s - true exponential backoff
 
     // Try repository_dispatch with retry
     while (!triggerSuccess && dispatchAttempt < maxDispatchRetries) {
@@ -718,30 +719,48 @@ try {
           
           telemetry?.completeStep(`github_dispatch_attempt_${dispatchAttempt}`, {
             success: true,
-            status_code: dispatchResponse.status
+            status_code: dispatchResponse.status,
+            total_attempts: dispatchAttempt
           });
           
-          logger.success(`[${requestId}] ✅ GitHub dispatch SUCESSO na tentativa ${dispatchAttempt}`, {
+          logger.success(`[${requestId}] ✅ GitHub dispatch SUCESSO na tentativa ${dispatchAttempt}/${maxDispatchRetries}`, {
             build_id: buildRecord.id,
             status: dispatchResponse.status,
             method: 'repository_dispatch',
-            attempts: dispatchAttempt
+            attempts: dispatchAttempt,
+            retry_count: dispatchAttempt - 1
           });
           break;
         } else {
           const errorText = await dispatchResponse.text();
           lastError = `Status ${dispatchResponse.status}: ${errorText}`;
-          logger.warn(`[${requestId}] ⚠ Tentativa ${dispatchAttempt} falhou`, { 
+          
+          // Check if it's a non-retryable error (4xx client errors)
+          const isClientError = dispatchResponse.status >= 400 && dispatchResponse.status < 500;
+          
+          logger.warn(`[${requestId}] ⚠ Tentativa ${dispatchAttempt}/${maxDispatchRetries} falhou`, { 
             status: dispatchResponse.status,
             statusText: dispatchResponse.statusText,
-            error: errorText
+            error: errorText,
+            retryable: !isClientError
           });
           
-          // Se não for a última tentativa, aguardar antes de retry (exponential backoff)
+          // Don't retry on client errors (4xx)
+          if (isClientError) {
+            logger.error(`[${requestId}] ❌ Non-retryable client error detected`, {
+              status: dispatchResponse.status
+            });
+            break;
+          }
+          
+          // Exponential backoff before next retry
           if (dispatchAttempt < maxDispatchRetries) {
-            const backoffMs = 2000 * dispatchAttempt; // 2s, 4s, 6s
-            telemetry?.info(`Exponential backoff: ${backoffMs}ms`, { attempt: dispatchAttempt });
-            logger.info(`[${requestId}] Aguardando ${backoffMs}ms antes do próximo retry...`);
+            const backoffMs = retryDelays[dispatchAttempt - 1];
+            telemetry?.info(`Exponential backoff: ${backoffMs}ms`, { 
+              attempt: dispatchAttempt,
+              next_delay: backoffMs
+            });
+            logger.info(`[${requestId}] 🕐 Aguardando ${backoffMs}ms antes do próximo retry...`);
             await new Promise(resolve => setTimeout(resolve, backoffMs));
           }
         }
@@ -750,17 +769,20 @@ try {
         
         telemetry?.failStep(`github_dispatch_attempt_${dispatchAttempt}`, dispatchError, {
           attempt: dispatchAttempt,
-          will_retry: dispatchAttempt < maxDispatchRetries
+          will_retry: dispatchAttempt < maxDispatchRetries,
+          error_type: dispatchError.name
         });
         
-        logger.error(`[${requestId}] ❌ repository_dispatch exception (tentativa ${dispatchAttempt})`, { 
+        logger.error(`[${requestId}] ❌ repository_dispatch exception (tentativa ${dispatchAttempt}/${maxDispatchRetries})`, { 
           error: dispatchError.message,
+          error_type: dispatchError.name,
           stack: dispatchError.stack
         });
         
-        // Se não for a última tentativa, aguardar antes de retry
+        // Exponential backoff before retry on network errors
         if (dispatchAttempt < maxDispatchRetries) {
-          const backoffMs = 2000 * dispatchAttempt;
+          const backoffMs = retryDelays[dispatchAttempt - 1];
+          logger.info(`[${requestId}] 🕐 Network error - waiting ${backoffMs}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, backoffMs));
         }
       }
