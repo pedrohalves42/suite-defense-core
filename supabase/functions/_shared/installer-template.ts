@@ -89,6 +89,24 @@ try {
 }
 
 # ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+# Convert HEX string to byte array (PS 5.1 compatible)
+function Convert-HexToBytes {
+    param([string]$HexString)
+    $HexString = $HexString -replace '\\s',''
+    if ($HexString.Length % 2 -ne 0) {
+        throw "HEX string length must be even"
+    }
+    $bytes = New-Object byte[] ($HexString.Length / 2)
+    for ($i = 0; $i -lt $HexString.Length; $i += 2) {
+        $bytes[$i/2] = [Convert]::ToByte($HexString.Substring($i, 2), 16)
+    }
+    return $bytes
+}
+
+# ============================================================================
 # LOGGING FUNCTION
 # ============================================================================
 function Write-InstallLog {
@@ -327,7 +345,7 @@ $AgentScriptContentBlock = @"
         $payload = $timestamp + ":" + $nonce + ":" + $telemetryJson
         
         $hmacsha = New-Object System.Security.Cryptography.HMACSHA256
-        $hmacsha.Key = [System.Linq.Enumerable]::ToArray([System.Convert]::FromHexString($HMAC_SECRET))
+        $hmacsha.Key = Convert-HexToBytes $HMAC_SECRET
         $signatureBytes = $hmacsha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($payload))
         $signature = [System.BitConverter]::ToString($signatureBytes).Replace('-','').ToLower()
         
