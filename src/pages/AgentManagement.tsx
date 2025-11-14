@@ -22,7 +22,9 @@ import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Server, Trash2, Power, PowerOff, CheckCircle, XCircle, Clock, Activity, Edit, FileText, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
+import { Server, Trash2, Power, PowerOff, CheckCircle, XCircle, Clock, Activity, Edit, FileText, AlertTriangle, RefreshCw, Loader2, Trash } from 'lucide-react';
+import AgentInstallationGuide from '@/components/AgentInstallationGuide';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Agent {
   id: string;
@@ -77,6 +79,36 @@ export default function AgentManagement() {
       return result.data;
     },
     enabled: !!selectedAgentLogs,
+  });
+
+  // Query to check post_installation events for all agents
+  const { data: installationStatus } = useQuery<Record<string, boolean>>({
+    queryKey: ['installation-status', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id || !agents) return {};
+      
+      const agentIds = agents.map(a => a.id);
+      if (agentIds.length === 0) return {};
+      
+      const { data, error } = await supabase
+        .from('installation_analytics')
+        .select('agent_id')
+        .in('agent_id', agentIds)
+        .eq('event_type', 'post_installation');
+      
+      if (error) {
+        console.error('Error fetching installation status:', error);
+        return {};
+      }
+      
+      const statusMap: Record<string, boolean> = {};
+      data?.forEach(event => {
+        statusMap[event.agent_id] = true;
+      });
+      
+      return statusMap;
+    },
+    enabled: !!tenant?.id && !!agents && agents.length > 0,
   });
 
   const deleteAgentMutation = useMutation({
@@ -150,6 +182,51 @@ export default function AgentManagement() {
     },
   });
 
+  const cleanupGhostAgentsMutation = useMutation({
+    mutationFn: async () => {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      
+      // Find agents to delete
+      const { data: agentsToDelete, error: findError } = await supabase
+        .from('agents')
+        .select('id, agent_name')
+        .eq('tenant_id', tenant?.id)
+        .is('last_heartbeat', null)
+        .lt('enrolled_at', twentyFourHoursAgo);
+      
+      if (findError) throw findError;
+      if (!agentsToDelete || agentsToDelete.length === 0) {
+        return { count: 0, agents: [] };
+      }
+      
+      // Delete tokens first
+      const agentIds = agentsToDelete.map(a => a.id);
+      await supabase.from('agent_tokens').delete().in('agent_id', agentIds);
+      
+      // Delete agents
+      const { error: deleteError } = await supabase
+        .from('agents')
+        .delete()
+        .in('id', agentIds);
+      
+      if (deleteError) throw deleteError;
+      
+      return { count: agentsToDelete.length, agents: agentsToDelete };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      if (result.count > 0) {
+        toast.success(`${result.count} agente(s) fantasma removido(s)`);
+      } else {
+        toast.info('Nenhum agente fantasma encontrado');
+      }
+    },
+    onError: (error: unknown) => {
+      logger.error('Error cleaning ghost agents', error);
+      toast.error('Erro ao limpar agentes fantasmas');
+    },
+  });
+
   const disableAgentMutation = useMutation({
     mutationFn: async ({ agentId, disable }: { agentId: string; disable: boolean }) => {
       // Update agent status
@@ -182,23 +259,53 @@ export default function AgentManagement() {
   });
 
   const getStatusBadge = (agent: Agent) => {
+    const hasPostInstall = installationStatus?.[agent.id] || false;
+    const hasHeartbeat = !!agent.last_heartbeat;
+    
     if (agent.status === 'disabled') {
       return <Badge variant="secondary"><PowerOff className="w-3 h-3 mr-1" />Desativado</Badge>;
     }
-
-    if (!agent.last_heartbeat) {
-      return <Badge variant="secondary"><Clock className="w-3 h-3 mr-1" />Sem Heartbeat</Badge>;
+    
+    // Agent is fully active with heartbeat
+    if (hasHeartbeat) {
+      const lastHeartbeat = new Date(agent.last_heartbeat);
+      const now = new Date();
+      const diffMinutes = (now.getTime() - lastHeartbeat.getTime()) / (1000 * 60);
+      
+      if (diffMinutes < 5) {
+        return (
+          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+            <Activity className="h-3 w-3 mr-1 animate-pulse" />
+            Ativo
+          </Badge>
+        );
+      } else {
+        return (
+          <Badge variant="destructive">
+            <XCircle className="h-3 w-3 mr-1" />
+            Offline ({Math.floor(diffMinutes)}min)
+          </Badge>
+        );
+      }
     }
-
-    const lastHeartbeat = new Date(agent.last_heartbeat);
-    const now = new Date();
-    const diffMinutes = (now.getTime() - lastHeartbeat.getTime()) / (1000 * 60);
-
-    if (diffMinutes < 5) {
-      return <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" />Online</Badge>;
-    } else {
-      return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Offline</Badge>;
+    
+    // Agent has post_installation but no heartbeat yet
+    if (hasPostInstall) {
+      return (
+        <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
+          <Clock className="h-3 w-3 mr-1" />
+          Aguardando Heartbeat
+        </Badge>
+      );
     }
+    
+    // Agent was generated but not executed
+    return (
+      <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
+        <AlertTriangle className="h-3 w-3 mr-1" />
+        Instalador Não Executado
+      </Badge>
+    );
   };
 
   const getTimeSince = (date: string | null) => {
@@ -226,20 +333,35 @@ export default function AgentManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20">
-          <Server className="h-8 w-8 text-primary" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20">
+            <Server className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold">Gerenciamento de Agentes</h2>
+            <p className="text-muted-foreground">
+              Controle e gerencie os agentes do tenant {tenant?.name}
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-3xl font-bold">Gerenciamento de Agentes</h2>
-          <p className="text-muted-foreground">
-            Controle e gerencie os agentes do tenant {tenant?.name}
-          </p>
-        </div>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => cleanupGhostAgentsMutation.mutate()}
+          disabled={cleanupGhostAgentsMutation.isPending}
+        >
+          {cleanupGhostAgentsMutation.isPending ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Trash className="h-4 w-4 mr-2" />
+          )}
+          Limpar Agentes Fantasmas
+        </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Agentes</CardTitle>
@@ -265,6 +387,19 @@ export default function AgentManagement() {
               }).length || 0}
             </div>
             <p className="text-xs text-muted-foreground">Online agora</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Aguardando Instalação</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-500">
+              {agents?.filter(a => !a.last_heartbeat && a.status !== 'disabled').length || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">Sem heartbeat</p>
           </CardContent>
         </Card>
 
@@ -320,43 +455,56 @@ export default function AgentManagement() {
             </TableHeader>
             <TableBody>
               {agents?.map((agent) => (
-                <TableRow key={agent.id}>
-                  <TableCell className="font-medium">{agent.agent_name}</TableCell>
-                  <TableCell>{getStatusBadge(agent)}</TableCell>
-                  <TableCell>{getTimeSince(agent.last_heartbeat)}</TableCell>
-                  <TableCell>
-                    {format(new Date(agent.enrolled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                  </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    {agent.status === 'disabled' ? (
+                <>
+                  <TableRow key={agent.id}>
+                    <TableCell className="font-medium">{agent.agent_name}</TableCell>
+                    <TableCell>{getStatusBadge(agent)}</TableCell>
+                    <TableCell>{getTimeSince(agent.last_heartbeat)}</TableCell>
+                    <TableCell>
+                      {format(new Date(agent.enrolled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    </TableCell>
+                    <TableCell className="text-right space-x-2">
+                      {agent.status === 'disabled' ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => disableAgentMutation.mutate({ agentId: agent.id, disable: false })}
+                        >
+                          <Power className="h-4 w-4 mr-1" />
+                          Reativar
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAgentToDisable(agent)}
+                        >
+                          <PowerOff className="h-4 w-4 mr-1" />
+                          Desativar
+                        </Button>
+                      )}
                       <Button
-                        variant="outline"
+                        variant="destructive"
                         size="sm"
-                        onClick={() => disableAgentMutation.mutate({ agentId: agent.id, disable: false })}
+                        onClick={() => setAgentToDelete(agent)}
                       >
-                        <Power className="h-4 w-4 mr-1" />
-                        Reativar
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Excluir
                       </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setAgentToDisable(agent)}
-                      >
-                        <PowerOff className="h-4 w-4 mr-1" />
-                        Desativar
-                      </Button>
-                    )}
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setAgentToDelete(agent)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Excluir
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                  </TableRow>
+                  {/* Show installation guide for agents without heartbeat */}
+                  {!agent.last_heartbeat && agent.status !== 'disabled' && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="bg-muted/30">
+                        <AgentInstallationGuide
+                          agent={agent}
+                          hasPostInstallation={installationStatus?.[agent.id] || false}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
               ))}
               {(!agents || agents.length === 0) && (
                 <TableRow>
