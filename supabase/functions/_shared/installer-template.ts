@@ -220,7 +220,7 @@ $AgentScriptContentBlock = @"
     }
     
     $action = New-ScheduledTaskAction -Execute "powershell.exe" \`
-        -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \`"$AgentScript\`""
+        -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \`"$AgentScript\`" -AgentToken \`"$AGENT_TOKEN\`" -HmacSecret \`"$HMAC_SECRET\`" -ServerUrl \`"$SERVER_URL\`" -PollInterval $POLL_INTERVAL"
     
     $trigger = New-ScheduledTaskTrigger -AtStartup
     
@@ -262,6 +262,27 @@ $AgentScriptContentBlock = @"
         Write-InstallLog "⚠️ Could not verify task status" "WARN"
         Write-InstallLog "Run manually: Start-ScheduledTask -TaskName '$taskName'" "INFO"
     }
+    
+    # Verificar se task foi criada com parâmetros corretos
+    $taskAction = (Get-ScheduledTask -TaskName $taskName).Actions[0]
+    $taskArguments = $taskAction.Arguments
+    
+    if ($taskArguments -notlike "*-AgentToken*") {
+        Write-InstallLog "⚠️ WARNING: Scheduled Task missing -AgentToken parameter!" "ERROR"
+        Write-InstallLog "   This is a BUG - agent will not be able to authenticate" "ERROR"
+    }
+    
+    if ($taskArguments -notlike "*-HmacSecret*") {
+        Write-InstallLog "⚠️ WARNING: Scheduled Task missing -HmacSecret parameter!" "ERROR"
+        Write-InstallLog "   This is a BUG - agent will not be able to sign requests" "ERROR"
+    }
+    
+    if ($taskArguments -notlike "*-ServerUrl*") {
+        Write-InstallLog "⚠️ WARNING: Scheduled Task missing -ServerUrl parameter!" "ERROR"
+        Write-InstallLog "   This is a BUG - agent will not know where to connect" "ERROR"
+    }
+    
+    Write-InstallLog "Task command line: powershell.exe $taskArguments" "DEBUG"
     
     # Send post-installation telemetry (HMAC-authenticated)
     Write-InstallLog "Sending installation telemetry..."
