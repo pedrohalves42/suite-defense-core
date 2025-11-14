@@ -91,6 +91,26 @@ Write-Host "PollInterval: \$PollInterval segundos" -ForegroundColor White
 Write-Host "Log Directory: \$LogDir" -ForegroundColor White
 Write-Host "========================================" -ForegroundColor Cyan
 
+# Validar que parâmetros foram passados pela Scheduled Task
+if (\$PSBoundParameters.Count -eq 0) {
+    Write-Host "=" * 70 -ForegroundColor Red
+    Write-Host "❌ ERRO CRÍTICO: Nenhum parâmetro foi passado!" -ForegroundColor Red
+    Write-Host "=" * 70 -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Este script deve ser executado com parâmetros obrigatórios:" -ForegroundColor Yellow
+    Write-Host "  -AgentToken '<token>'" -ForegroundColor White
+    Write-Host "  -HmacSecret '<secret>'" -ForegroundColor White
+    Write-Host "  -ServerUrl '<url>'" -ForegroundColor White
+    Write-Host ""
+    Write-Host "Se você está vendo este erro, a Scheduled Task está configurada incorretamente." -ForegroundColor Yellow
+    Write-Host "Execute 'Get-ScheduledTask -TaskName CyberShieldAgent | Select -ExpandProperty Actions' para verificar." -ForegroundColor Yellow
+    Write-Host ""
+    exit 1
+}
+
+Write-Host "✅ Parâmetros validados: AgentToken, HmacSecret, ServerUrl recebidos" -ForegroundColor Green
+Write-Host "" -ForegroundColor Cyan
+
 # ✅ FASE 4: DIAGNÓSTICO DE CONECTIVIDADE NO BOOT
 Write-Host "[BOOT] Testando conectividade básica..." -ForegroundColor Yellow
 try {

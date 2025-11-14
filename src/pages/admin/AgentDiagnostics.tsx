@@ -153,6 +153,33 @@ export default function AgentDiagnostics() {
         </Button>
       </div>
 
+      {/* Alert para agentes sem heartbeat */}
+      {agents.filter(a => !a.last_heartbeat).length > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Agentes sem comunicação detectados</AlertTitle>
+          <AlertDescription>
+            {agents.filter(a => !a.last_heartbeat).length} agente(s) instalaram mas nunca enviaram heartbeat.
+            <br />
+            Possíveis causas:
+            <ul className="list-disc list-inside mt-2">
+              <li>Scheduled Task sem parâmetros (bug conhecido - corrigido)</li>
+              <li>Firewall bloqueando saída HTTPS</li>
+              <li>Credenciais inválidas (token/HMAC)</li>
+            </ul>
+            <div className="mt-3">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.location.href = '/admin/installation-logs'}
+              >
+                Ver Logs de Instalação
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Lista de Agentes */}
         <Card className="lg:col-span-1">
