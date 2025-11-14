@@ -91,6 +91,36 @@ Write-Host "PollInterval: \$PollInterval segundos" -ForegroundColor White
 Write-Host "Log Directory: \$LogDir" -ForegroundColor White
 Write-Host "========================================" -ForegroundColor Cyan
 
+# ✅ FASE 4: DIAGNÓSTICO DE CONECTIVIDADE NO BOOT
+Write-Host "[BOOT] Testando conectividade básica..." -ForegroundColor Yellow
+try {
+    \$testUrl = "\$ServerUrl/functions/v1/serve-installer"
+    \$testResponse = Invoke-WebRequest -Uri \$testUrl -Method GET -TimeoutSec 10 -UseBasicParsing
+    Write-Log "✅ Connectivity test: OK (Status: \$(\$testResponse.StatusCode))" "SUCCESS"
+} catch {
+    Write-Log "❌ Connectivity test FAILED: \$_" "ERROR"
+    
+    # FASE 1: Enviar telemetria de falha de conectividade
+    try {
+        \$connectivityPayload = @{
+            agent_token = \$AgentToken
+            connectivity_test = \$false
+            error_message = \$_.Exception.Message
+            test_url = \$testUrl
+        } | ConvertTo-Json
+        
+        Invoke-WebRequest -Uri "\$ServerUrl/functions/v1/diagnostics-agent-logs" \`
+            -Method POST \`
+            -ContentType "application/json" \`
+            -Headers @{ "X-Agent-Token" = \$AgentToken } \`
+            -Body \$connectivityPayload \`
+            -TimeoutSec 10 \`
+            -UseBasicParsing | Out-Null
+    } catch {
+        Write-Log "Failed to send connectivity telemetry: \$_" "WARN"
+    }
+}
+
 # Windows Server 2012 = 6.2, 2012 R2 = 6.3, 2016 = 10.0, etc
 if (\$osVersion.Major -lt 6 -or (\$osVersion.Major -eq 6 -and \$osVersion.Minor -lt 2)) {
     Write-Host "AVISO: Este agente foi testado em Windows Server 2012+ e Windows 8+" -ForegroundColor Yellow
@@ -314,8 +344,30 @@ function Send-Heartbeat {
             
             \$response = Invoke-SecureRequest -Url \$heartbeatUrl -Method "POST" -Body \$body -MaxRetries 1
             
+            # FASE 1: Se é o primeiro heartbeat após boot, enviar telemetria específica
             if (\$IsBootHeartbeat) {
                 Write-Log "    ✓ Initial heartbeat accepted by server" "SUCCESS"
+                
+                try {
+                    \$telemetryPayload = @{
+                        agent_token = \$AgentToken
+                        event_type = "agent_first_heartbeat_sent"
+                        success = \$true
+                        timestamp = (Get-Date).ToUniversalTime().ToString("o")
+                    } | ConvertTo-Json
+                    
+                    Invoke-WebRequest -Uri "\$ServerUrl/functions/v1/diagnostics-agent-logs" \`
+                        -Method POST \`
+                        -ContentType "application/json" \`
+                        -Headers @{ "X-Agent-Token" = \$AgentToken } \`
+                        -Body \$telemetryPayload \`
+                        -TimeoutSec 10 \`
+                        -UseBasicParsing | Out-Null
+                    
+                    Write-Log "    ✓ First heartbeat telemetry sent" "DEBUG"
+                } catch {
+                    Write-Log "    Failed to send first heartbeat telemetry: \$_" "WARN"
+                }
             } else {
                 Write-Log "    ✓ Heartbeat OK" "DEBUG"
             }
@@ -326,6 +378,33 @@ function Send-Heartbeat {
             \$retryCount++
             Write-Log "    ✗ Heartbeat error (attempt \$retryCount/\$maxRetries): \$_" "ERROR"
             Write-Log "    Stack: \$(\$_.ScriptStackTrace)" "DEBUG"
+            
+            # FASE 3: Se HMAC falhar, tentar fallback sem HMAC
+            if (\$_ -match "HMAC" -or \$_ -match "signature") {
+                Write-Log "    HMAC error detected, trying fallback..." "WARN"
+                try {
+                    \$fallbackUrl = "\$ServerUrl/functions/v1/heartbeat-fallback"
+                    \$fallbackPayload = @{
+                        os_type = "windows"
+                        os_version = (Get-CimInstance Win32_OperatingSystem).Caption
+                        hostname = \$env:COMPUTERNAME
+                    } | ConvertTo-Json
+                    
+                    \$fallbackResponse = Invoke-WebRequest -Uri \$fallbackUrl \`
+                        -Method POST \`
+                        -ContentType "application/json" \`
+                        -Headers @{ "X-Agent-Token" = \$AgentToken } \`
+                        -Body \$fallbackPayload \`
+                        -TimeoutSec 10 \`
+                        -UseBasicParsing
+                    
+                    Write-Log "    ✓ Fallback heartbeat accepted (without HMAC)" "WARN"
+                    return \$fallbackResponse
+                } catch {
+                    Write-Log "    Fallback heartbeat also failed: \$_" "ERROR"
+                }
+            }
+            
             if (\$retryCount -lt \$maxRetries) {
                 Start-Sleep -Seconds (2 * \$retryCount)
             }
@@ -555,7 +634,7 @@ function Test-SystemHealth {
         \$retryCount++
         Write-Log "    Tentativa \$retryCount/\$maxRetries de enviar heartbeat inicial..." "INFO"
         
-        \$result = Send-Heartbeat
+        \$result = Send-Heartbeat -IsBootHeartbeat
         if (\$result) {
             Write-Log "  ✓ Heartbeat inicial enviado com SUCESSO!" "SUCCESS"
             \$heartbeatSuccess = \$true
@@ -661,6 +740,11 @@ function Start-Agent {
             if ((\$now - \$lastMetrics).TotalSeconds -ge \$metricsInterval) {
                 Send-SystemMetrics
                 \$lastMetrics = \$now
+            }
+            
+            # FASE 2: Enviar logs a cada 10 minutos
+            if ((\$now - \$lastMetrics).TotalSeconds -ge 600) {
+                Upload-DiagnosticLogs -LogType "periodic" -Severity "info"
             }
             
             # Aguardar intervalo de polling
