@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -455,8 +455,8 @@ export default function AgentManagement() {
             </TableHeader>
             <TableBody>
               {agents?.map((agent) => (
-                <>
-                  <TableRow key={agent.id}>
+                <React.Fragment key={agent.id}>
+                  <TableRow>
                     <TableCell className="font-medium">{agent.agent_name}</TableCell>
                     <TableCell>{getStatusBadge(agent)}</TableCell>
                     <TableCell>{getTimeSince(agent.last_heartbeat)}</TableCell>
@@ -504,7 +504,7 @@ export default function AgentManagement() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </React.Fragment>
               ))}
               {(!agents || agents.length === 0) && (
                 <TableRow>
