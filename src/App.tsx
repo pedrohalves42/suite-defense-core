@@ -59,6 +59,7 @@ import TenantInvites from "./pages/admin/tenant/TenantInvites";
 import TenantSecurity from "./pages/admin/tenant/TenantSecurity";
 import TenantLogs from "./pages/admin/tenant/TenantLogs";
 import TenantSettings from "./pages/admin/tenant/TenantSettings";
+import SystemLogs from "./pages/admin/SystemLogs";
 
 // CORREÇÃO: QueryClient já está inicializado no src/main.tsx
 // Remover duplicação para manter configurações otimizadas
@@ -141,6 +142,7 @@ const App = () => (
                 <Route path="settings" element={<Settings />} />
                 <Route path="agent-troubleshooting" element={<AgentTroubleshooting />} />
                 <Route path="build-health" element={<BuildHealthDashboard />} />
+                <Route path="system-logs" element={<SystemLogs />} />
               </Route>
             </Route>
             
