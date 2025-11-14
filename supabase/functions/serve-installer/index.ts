@@ -239,6 +239,15 @@ Deno.serve(async (req) => {
     
     const agentScriptHash = await calculateScriptHash(agentScriptContent);
     
+    // Validate agent script content is valid
+    if (!agentScriptContent || agentScriptContent.length < 5000) {
+      console.error(`[${requestId}] Agent script validation failed: invalid content length (${agentScriptContent?.length || 0} bytes)`);
+      return new Response('Agent script validation failed: content too short or missing', { 
+        status: 503,
+        headers: corsHeaders
+      });
+    }
+    
     console.log(`[${requestId}] Agent script validated successfully`, { 
       size: agentScriptContent.length,
       sizeKB: (agentScriptContent.length / 1024).toFixed(2),
@@ -284,23 +293,36 @@ Deno.serve(async (req) => {
     let templateContent = platform === 'windows' ? WINDOWS_INSTALLER_TEMPLATE : LINUX_INSTALLER_TEMPLATE;
 
     // FASE 2: Replace placeholders with validated credentials
+    // Using function callbacks to prevent $ character interpretation
     templateContent = templateContent
-      .replace(/\{\{AGENT_TOKEN\}\}/g, agentToken)
-      .replace(/\{\{HMAC_SECRET\}\}/g, hmacSecret)
-      .replace(/\{\{SERVER_URL\}\}/g, SUPABASE_URL)
+      .replace(/\{\{AGENT_TOKEN\}\}/g, () => agentToken)
+      .replace(/\{\{HMAC_SECRET\}\}/g, () => hmacSecret)
+      .replace(/\{\{SERVER_URL\}\}/g, () => SUPABASE_URL)
       .replace(/\{\{POLL_INTERVAL\}\}/g, '60')
-      .replace(/\{\{AGENT_HASH\}\}/g, agentScriptHash)
-      .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, agentScriptContent)
-      .replace(/\{\{AGENT_NAME\}\}/g, agentData.agent_name)
-      .replace(/\{\{TIMESTAMP\}\}/g, new Date().toISOString());
+      .replace(/\{\{AGENT_HASH\}\}/g, () => agentScriptHash)
+      .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, () => agentScriptContent)
+      .replace(/\{\{AGENT_NAME\}\}/g, () => agentData.agent_name)
+      .replace(/\{\{TIMESTAMP\}\}/g, () => new Date().toISOString());
 
     // Final validation: ensure no placeholders remain
     if (templateContent.includes('{{')) {
-      console.error(`[${requestId}] Template still contains placeholders after replacement`);
-      return new Response('Installer generation failed: incomplete template', { 
-        status: 500,
-        headers: corsHeaders
+      const remainingPlaceholders = templateContent.match(/\{\{[A-Z_]+\}\}/g) || [];
+      console.error(`[${requestId}] INCOMPLETE TEMPLATE - Found ${remainingPlaceholders.length} unresolved placeholders:`, remainingPlaceholders);
+      
+      // Log context around first few placeholders for debugging
+      remainingPlaceholders.slice(0, 3).forEach((placeholder, idx) => {
+        const pos = templateContent.indexOf(placeholder);
+        const context = templateContent.substring(Math.max(0, pos - 100), pos + 150);
+        console.error(`[${requestId}] Placeholder ${idx + 1} context:`, context.replace(/\n/g, '\\n'));
       });
+      
+      return new Response(
+        `Installer generation failed: ${remainingPlaceholders.length} incomplete placeholders: ${remainingPlaceholders.slice(0, 5).join(', ')}`, 
+        { 
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+        }
+      );
     }
 
     // FASE 2: Calculate SHA256 hash of complete installer script
@@ -353,7 +375,7 @@ Deno.serve(async (req) => {
           'X-Frame-Options': 'DENY',
         },
       });
-    }, { timeoutMs: 25000 });
+    }, { timeoutMs: 30000 }); // 30s timeout for debug and complex operations
 
   } catch (error) {
     if (error instanceof Error && error.message === 'Request timeout') {
