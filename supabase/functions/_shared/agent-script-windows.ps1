@@ -162,10 +162,23 @@ Write-Log "Log Directory: $LogDir" "INFO"
 
 #region Funções de Autenticação
 
+function Convert-HexToBytes {
+    param([string]$HexString)
+    $HexString = $HexString -replace '\s',''
+    if ($HexString.Length % 2 -ne 0) {
+        throw "Hex string length must be even."
+    }
+    $bytes = New-Object byte[] ($HexString.Length / 2)
+    for ($i = 0; $i -lt $HexString.Length; $i += 2) {
+        $bytes[$i/2] = [Convert]::ToByte($HexString.Substring($i, 2), 16)
+    }
+    return $bytes
+}
+
 function Get-HmacSignature {
     param([string]$Message, [string]$Secret)
     $hmacsha = New-Object System.Security.Cryptography.HMACSHA256
-    $hmacsha.Key = [Text.Encoding]::UTF8.GetBytes($Secret)
+    $hmacsha.Key = Convert-HexToBytes $Secret
     $signature = $hmacsha.ComputeHash([Text.Encoding]::UTF8.GetBytes($Message))
     return [System.BitConverter]::ToString($signature).Replace('-', '').ToLower()
 }
