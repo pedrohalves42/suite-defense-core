@@ -1,8 +1,13 @@
 /**
  * CyberShield Agent Windows Script - Inline Content
- * This ensures the script is ALWAYS available even if Storage/HTTP fail
- * Source: public/agent-scripts/cybershield-agent-windows.ps1
- * Version: 2.2.1
+ * CRITICAL: This file MUST be kept in sync with agent-script-windows.ps1
+ * Any changes to agent-script-windows.ps1 should be immediately reflected here
+ * Source: supabase/functions/_shared/agent-script-windows.ps1
+ * Version: 2.2.1 - CORRECTED (uses Invoke-SecureRequest properly)
+ * 
+ * SYNCHRONIZATION WARNING:
+ * - Update both agent-script-windows.ps1 AND this file together
+ * - Failure to sync will cause installer failures with HMAC errors
  */
 
 export const AGENT_SCRIPT_WINDOWS_PS1 = `# CyberShield Agent - Windows PowerShell Script v2.2.1 (Production Ready)
@@ -274,53 +279,55 @@ function Invoke-SecureRequest {
 #region Heartbeat
 
 function Send-Heartbeat {
-    Write-Log "Enviando heartbeat..." "DEBUG"
+    param([switch]\$IsBootHeartbeat)
     
-    \$url = "\$ServerUrl/functions/v1/heartbeat"
-    \$headers = @{
-        'X-Agent-Token' = \$AgentToken
-        'Content-Type' = 'application/json'
-    }
+    \$maxRetries = if (\$IsBootHeartbeat) { 5 } else { 3 }
+    \$retryCount = 0
     
-    \$body = @{
-        os_type = (Get-WmiObject Win32_OperatingSystem).Caption
-        os_version = [System.Environment]::OSVersion.Version.ToString()
-        hostname = [System.Net.Dns]::GetHostName()
-    }
-    
-    \$bodyJson = \$body | ConvertTo-Json -Compress
-    
-    # ✅ FASE 2: Gerar HMAC com logging detalhado
-    Write-Log "  Gerando assinatura HMAC..." "DEBUG"
-    \$hmacHeaders = Get-HmacSignature -Body \$bodyJson
-    foreach (\$key in \$hmacHeaders.Keys) {
-        \$headers[\$key] = \$hmacHeaders[\$key]
-    }
-    Write-Log "  HMAC Headers: X-Request-Id=\$(\$headers['X-Request-Id']), X-Timestamp=\$(\$headers['X-Timestamp'])" "DEBUG"
-    
-    try {
-        \$response = Invoke-SecureRequest -Url \$url -Method POST -Headers \$headers -Body \$bodyJson
-        
-        if (\$response.StatusCode -eq 200) {
-            Write-Log "✓ Heartbeat enviado com sucesso" "SUCCESS"
-            return \$true
-        } elseif (\$response.StatusCode -eq 401) {
-            Write-Log "✗ Heartbeat REJEITADO: Autenticação falhou (401)" "ERROR"
-            Write-Log "  Verifique AgentToken e HmacSecret" "ERROR"
-            return \$false
-        } elseif (\$response.StatusCode -eq 429) {
-            Write-Log "⚠ Rate limit excedido (429) - aguardando..." "WARN"
-            return \$false
-        } else {
-            Write-Log "✗ Heartbeat falhou: HTTP \$(\$response.StatusCode)" "WARN"
-            Write-Log "  Response: \$(\$response.Content)" "DEBUG"
-            return \$false
+    while (\$retryCount -lt \$maxRetries) {
+        try {
+            if (\$IsBootHeartbeat) {
+                Write-Log "  Preparing initial heartbeat..." "DEBUG"
+            } else {
+                Write-Log "  Preparing heartbeat..." "DEBUG"
+            }
+            
+            \$heartbeatUrl = "\$ServerUrl/functions/v1/heartbeat"
+            Write-Log "    Endpoint: \$heartbeatUrl" "DEBUG"
+            
+            # Include OS information in heartbeat
+            \$os = Get-CimInstance Win32_OperatingSystem
+            Write-Log "    OS: \$(\$os.Caption)" "DEBUG"
+            Write-Log "    Hostname: \$env:COMPUTERNAME" "DEBUG"
+            
+            \$body = @{
+                os_type = "windows"
+                os_version = \$os.Caption
+                hostname = \$env:COMPUTERNAME
+            }
+            
+            \$response = Invoke-SecureRequest -Url \$heartbeatUrl -Method "POST" -Body \$body -MaxRetries 1
+            
+            if (\$IsBootHeartbeat) {
+                Write-Log "    ✓ Initial heartbeat accepted by server" "SUCCESS"
+            } else {
+                Write-Log "    ✓ Heartbeat OK" "DEBUG"
+            }
+            
+            return \$response
         }
-    } catch {
-        Write-Log "✗ Erro ao enviar heartbeat: \$(\$_.Exception.Message)" "ERROR"
-        Write-Log "  Stack: \$(\$_.ScriptStackTrace)" "DEBUG"
-        return \$false
+        catch {
+            \$retryCount++
+            Write-Log "    ✗ Heartbeat error (attempt \$retryCount/\$maxRetries): \$_" "ERROR"
+            Write-Log "    Stack: \$(\$_.ScriptStackTrace)" "DEBUG"
+            if (\$retryCount -lt \$maxRetries) {
+                Start-Sleep -Seconds (2 * \$retryCount)
+            }
+        }
     }
+    
+    Write-Log "Failed to send heartbeat after \$maxRetries attempts" "ERROR"
+    return \$null
 }
 
 #endregion
