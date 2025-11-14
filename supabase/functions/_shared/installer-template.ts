@@ -31,7 +31,7 @@ $HmacSecret = $HMAC_SECRET
 # ============================================================================
 # VALIDATION - Ensure credentials are valid
 # ============================================================================
-if ([string]::IsNullOrWhiteSpace($AGENT_TOKEN) -or $AGENT_TOKEN -like "*{{*") {
+if ([string]::IsNullOrWhiteSpace($AGENT_TOKEN) -or $AGENT_TOKEN.Length -lt 32) {
     Write-Host ""
     Write-Host "=" * 70 -ForegroundColor Red
     Write-Host "❌ INVALID INSTALLER - Credentials not configured" -ForegroundColor Red
@@ -49,7 +49,7 @@ if ([string]::IsNullOrWhiteSpace($AGENT_TOKEN) -or $AGENT_TOKEN -like "*{{*") {
     exit 1
 }
 
-if ([string]::IsNullOrWhiteSpace($HMAC_SECRET) -or $HMAC_SECRET -like "*{{*") {
+if ([string]::IsNullOrWhiteSpace($HMAC_SECRET) -or $HMAC_SECRET.Length -ne 64) {
     Write-Host ""
     Write-Host "=" * 70 -ForegroundColor Red
     Write-Host "❌ INVALID INSTALLER - HMAC secret missing" -ForegroundColor Red
