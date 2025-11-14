@@ -3,14 +3,20 @@
  * CRITICAL: This file MUST be kept in sync with agent-script-windows.ps1
  * Any changes to agent-script-windows.ps1 should be immediately reflected here
  * Source: supabase/functions/_shared/agent-script-windows.ps1
- * Version: 2.2.1 - CORRECTED (uses Invoke-SecureRequest properly)
+ * Version: 2.2.2 - SECURE (no $headers indexing, uses Invoke-SecureRequest)
  * 
  * SYNCHRONIZATION WARNING:
  * - Update both agent-script-windows.ps1 AND this file together
  * - Failure to sync will cause installer failures with HMAC errors
+ * 
+ * SECURITY REQUIREMENTS (v2.2.2):
+ * - NEVER use $headers['key'] indexing in logs (causes null reference errors)
+ * - ALWAYS use Invoke-SecureRequest for authenticated API calls
+ * - HMAC generation MUST be internal to Invoke-SecureRequest
+ * - Logs must be wrapped in try-catch if accessing complex objects
  */
 
-export const AGENT_SCRIPT_WINDOWS_PS1 = `# CyberShield Agent - Windows PowerShell Script v2.2.1 (Production Ready)
+export const AGENT_SCRIPT_WINDOWS_PS1 = `# CyberShield Agent - Windows PowerShell Script v2.2.2 (Production Ready + Secure)
 # Compatible with: Windows Server 2012, 2012 R2, 2016, 2019, 2022, 2025
 # PowerShell Version: 3.0+
 

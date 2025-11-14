@@ -1,4 +1,4 @@
-# CyberShield Agent - Windows PowerShell Script v2.2.1 (Production Ready)
+# CyberShield Agent - Windows PowerShell Script v2.2.2 (Production Ready + Secure)
 # Compatible with: Windows Server 2012, 2012 R2, 2016, 2019, 2022, 2025
 # PowerShell Version: 3.0+
 

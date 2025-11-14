@@ -325,6 +325,34 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ✅ PHASE 3: Security validation - detect dangerous patterns
+    console.log(`[${requestId}] Validating script security...`);
+    
+    const dangerousPatterns = [
+      { pattern: /\$headers\[['"]/, description: 'Unsafe $headers indexing (can cause null reference errors)' },
+      { pattern: /Write-Log.*\$headers\[/, description: 'Unsafe $headers logging (can cause script failure)' }
+    ];
+    
+    for (const { pattern, description } of dangerousPatterns) {
+      if (pattern.test(templateContent)) {
+        console.error(`[${requestId}] SECURITY VIOLATION: Dangerous pattern detected - ${description}`);
+        return new Response(
+          JSON.stringify({
+            error: 'Template validation failed',
+            details: `Security violation: ${description}`,
+            timestamp: new Date().toISOString(),
+            requestId
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    }
+    
+    console.log(`[${requestId}] ✓ Script security validation passed`);
+
     // FASE 2: Calculate SHA256 hash of complete installer script
     const installerEncoder = new TextEncoder();
     const installerData = installerEncoder.encode(templateContent);
