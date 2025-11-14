@@ -183,12 +183,146 @@ export default function InstallationAnalytics() {
       </div>
 
       {/* Charts */}
-      <Tabs defaultValue="timeline" className="space-y-4">
-        <TabsList>
+      <Tabs defaultValue="funnel" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="funnel">Funil</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="platforms">Plataformas</TabsTrigger>
           <TabsTrigger value="events">Eventos</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="funnel" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Funil de Conversão de Instalação</CardTitle>
+              <CardDescription>Acompanhe cada etapa do processo de instalação</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Gerado */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-blue-600" />
+                      <span className="font-semibold">1. Instalador Gerado</span>
+                    </div>
+                    <div className="text-2xl font-bold text-blue-600">{metrics.total_generated}</div>
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-8">
+                    <div 
+                      className="bg-blue-600 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                      style={{ width: '100%' }}
+                    >
+                      100%
+                    </div>
+                  </div>
+                </div>
+
+                {/* Copiado */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Download className="h-5 w-5 text-amber-600" />
+                      <span className="font-semibold">2. Comando Copiado</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-bold text-amber-600">{metrics.total_copied}</span>
+                      <span className="text-sm text-muted-foreground">
+                        ({metrics.total_generated > 0 ? ((metrics.total_copied / metrics.total_generated) * 100).toFixed(1) : '0'}%)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-8">
+                    <div 
+                      className="bg-amber-600 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium transition-all"
+                      style={{ width: `${metrics.total_generated > 0 ? (metrics.total_copied / metrics.total_generated) * 100 : 0}%` }}
+                    >
+                      {metrics.total_generated > 0 ? ((metrics.total_copied / metrics.total_generated) * 100).toFixed(1) : '0'}%
+                    </div>
+                  </div>
+                </div>
+
+                {/* Baixado */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Download className="h-5 w-5 text-purple-600" />
+                      <span className="font-semibold">3. Script Baixado</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-bold text-purple-600">{metrics.total_downloaded}</span>
+                      <span className="text-sm text-muted-foreground">
+                        ({metrics.total_generated > 0 ? ((metrics.total_downloaded / metrics.total_generated) * 100).toFixed(1) : '0'}%)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-8">
+                    <div 
+                      className="bg-purple-600 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium transition-all"
+                      style={{ width: `${metrics.total_generated > 0 ? (metrics.total_downloaded / metrics.total_generated) * 100 : 0}%` }}
+                    >
+                      {metrics.total_generated > 0 ? ((metrics.total_downloaded / metrics.total_generated) * 100).toFixed(1) : '0'}%
+                    </div>
+                  </div>
+                </div>
+
+                {/* Instalado */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                      <span className="font-semibold">4. Instalação Completa</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl font-bold text-green-600">{metrics.total_installed}</span>
+                      <span className="text-sm text-muted-foreground">
+                        ({metrics.total_generated > 0 ? ((metrics.total_installed / metrics.total_generated) * 100).toFixed(1) : '0'}%)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-secondary rounded-full h-8">
+                    <div 
+                      className="bg-green-600 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium transition-all"
+                      style={{ width: `${metrics.total_generated > 0 ? (metrics.total_installed / metrics.total_generated) * 100 : 0}%` }}
+                    >
+                      {metrics.total_generated > 0 ? ((metrics.total_installed / metrics.total_generated) * 100).toFixed(1) : '0'}%
+                    </div>
+                  </div>
+                </div>
+
+                {/* Resumo */}
+                <div className="mt-6 p-4 bg-muted rounded-lg">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Taxa de Cópia</p>
+                      <p className="text-xl font-bold">
+                        {metrics.total_generated > 0 ? ((metrics.total_copied / metrics.total_generated) * 100).toFixed(1) : '0'}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Taxa de Download</p>
+                      <p className="text-xl font-bold">
+                        {metrics.total_generated > 0 ? ((metrics.total_downloaded / metrics.total_generated) * 100).toFixed(1) : '0'}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Taxa de Instalação</p>
+                      <p className="text-xl font-bold">
+                        {metrics.total_generated > 0 ? ((metrics.total_installed / metrics.total_generated) * 100).toFixed(1) : '0'}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Taxa de Falha</p>
+                      <p className="text-xl font-bold text-red-600">
+                        {metrics.total_generated > 0 ? ((metrics.total_failed / metrics.total_generated) * 100).toFixed(1) : '0'}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="timeline" className="space-y-4">
           <Card>
@@ -283,7 +417,7 @@ export default function InstallationAnalytics() {
               {avgInstallTime ? `${Math.round(avgInstallTime)}s` : 'N/A'}
             </div>
             <p className="text-sm text-muted-foreground mt-2">
-              Baseado em {analytics?.filter(a => a.event_type === 'installed').length || 0} instalações
+              Baseado em {analytics?.filter(a => a.event_type === 'post_installation' || a.event_type === 'post_installation_unverified').length || 0} instalações
             </p>
           </CardContent>
         </Card>
