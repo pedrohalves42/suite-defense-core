@@ -52,7 +52,10 @@ export default function InstallationAnalytics() {
     total_generated: analytics?.filter(a => a.event_type === 'generated').length || 0,
     total_downloaded: analytics?.filter(a => a.event_type === 'downloaded').length || 0,
     total_copied: analytics?.filter(a => a.event_type === 'command_copied').length || 0,
-    total_installed: analytics?.filter(a => a.event_type === 'installed').length || 0,
+    total_installed: analytics?.filter(a => 
+      a.event_type === 'post_installation' || 
+      a.event_type === 'post_installation_unverified'
+    ).length || 0,
     total_failed: analytics?.filter(a => a.event_type === 'failed').length || 0,
   };
 
@@ -61,9 +64,9 @@ export default function InstallationAnalytics() {
     : '0';
 
   const avgInstallTime = analytics
-    ?.filter(a => a.event_type === 'installed' && a.installation_time_seconds)
+    ?.filter(a => (a.event_type === 'post_installation' || a.event_type === 'post_installation_unverified') && a.installation_time_seconds)
     .reduce((acc, curr) => acc + (curr.installation_time_seconds || 0), 0) / 
-    (analytics?.filter(a => a.event_type === 'installed' && a.installation_time_seconds).length || 1);
+    (analytics?.filter(a => (a.event_type === 'post_installation' || a.event_type === 'post_installation_unverified') && a.installation_time_seconds).length || 1);
 
   // Platform distribution
   const platformData = [
@@ -97,7 +100,7 @@ export default function InstallationAnalytics() {
         a.created_at.startsWith(dateStr) && a.event_type === 'generated'
       ).length || 0,
       installed: analytics?.filter(a => 
-        a.created_at.startsWith(dateStr) && a.event_type === 'installed'
+        a.created_at.startsWith(dateStr) && (a.event_type === 'post_installation' || a.event_type === 'post_installation_unverified')
       ).length || 0,
       failed: analytics?.filter(a => 
         a.created_at.startsWith(dateStr) && a.event_type === 'failed'
