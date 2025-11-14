@@ -269,6 +269,16 @@ serve(async (req) => {
       .from("installation_analytics")
       .insert(telemetryData);
 
+    if (!insertError) {
+      console.log(`[${requestId}] ✅ Telemetry inserted successfully`, {
+        agent_id: agent.id,
+        agent_name: body.agent_name,
+        event_type: 'post_installation',
+        tenant_id: agent.tenant_id,
+        verified: isVerified
+      });
+    }
+
     if (insertError) {
       // Handle duplicate key violations gracefully (idempotent operation)
       if (insertError.code === "23505") {
