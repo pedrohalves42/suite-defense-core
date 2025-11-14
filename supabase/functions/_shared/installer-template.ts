@@ -229,22 +229,62 @@ $AgentScriptContentBlock = @"
         Write-InstallLog "Run manually: Start-ScheduledTask -TaskName '$taskName'" "INFO"
     }
     
-    # Send post-installation telemetry
+    # Send post-installation telemetry (HMAC-authenticated)
     Write-InstallLog "Sending installation telemetry..."
     try {
-        $telemetryBody = @{
-            event = "agent_installed"
-            platform = "windows"
-            installation_method = "installer_script"
-        } | ConvertTo-Json
+        # Get task info
+        $taskInfo = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+        $taskCreated = $taskInfo -ne $null
+        $taskRunning = $taskInfo.State -eq "Running"
+        
+        # Get script info
+        $agentScriptPath = Join-Path $InstallPath "cybershield-agent.ps1"
+        $scriptExists = Test-Path $agentScriptPath
+        $scriptSize = if ($scriptExists) { (Get-Item $agentScriptPath).Length } else { 0 }
+        
+        # Get PowerShell version
+        $psVersion = $PSVersionTable.PSVersion.ToString()
+        
+        $telemetryData = @{
+            success = $true
+            os_version = $osInfo.Caption
+            installation_time = (Get-Date).ToString("o")
+            network_tests = @{
+                health_check_passed = $healthCheckOk
+                dns_test = $true
+                api_test = $healthCheckOk
+            }
+            firewall_status = "configured"
+            proxy_detected = $false
+            task_created = $taskCreated
+            task_running = $taskRunning
+            script_exists = $scriptExists
+            script_size_bytes = $scriptSize
+            powershell_version = $psVersion
+        }
+        
+        $telemetryJson = $telemetryData | ConvertTo-Json -Compress -Depth 10
+        
+        # Calculate HMAC signature
+        $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds().ToString()
+        $nonce = [Guid]::NewGuid().ToString()
+        $payload = $timestamp + ":" + $nonce + ":" + $telemetryJson
+        
+        $hmacsha = New-Object System.Security.Cryptography.HMACSHA256
+        $hmacsha.Key = [System.Linq.Enumerable]::ToArray([System.Convert]::FromHexString($HMAC_SECRET))
+        $signatureBytes = $hmacsha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($payload))
+        $signature = [System.BitConverter]::ToString($signatureBytes).Replace('-','').ToLower()
         
         $telemetryHeaders = @{
             "Content-Type" = "application/json"
-            "apikey" = $AGENT_TOKEN
+            "X-Agent-Token" = $AGENT_TOKEN
+            "X-HMAC-Signature" = $signature
+            "X-Timestamp" = $timestamp
+            "X-Nonce" = $nonce
         }
         
-        Invoke-WebRequest -Uri "$SERVER_URL/functions/v1/track-installation-event" \`
-            -Method POST -Body $telemetryBody -Headers $telemetryHeaders \`
+        Invoke-WebRequest -Uri "$SERVER_URL/functions/v1/post-installation-telemetry" \`
+            -Method POST -Body $telemetryJson -Headers $telemetryHeaders \`
             -TimeoutSec 10 -UseBasicParsing | Out-Null
         
         Write-InstallLog "✅ Telemetry sent successfully"

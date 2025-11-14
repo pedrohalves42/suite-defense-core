@@ -67,6 +67,9 @@ verify_jwt = true
 [functions.check-agent-updates]
 verify_jwt = false
 
+[functions.post-installation-telemetry]
+verify_jwt = false
+
 # === Installation Functions ===
 [functions.auto-generate-enrollment]
 verify_jwt = true
