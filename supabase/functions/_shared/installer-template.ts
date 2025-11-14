@@ -188,9 +188,9 @@ try {
     # ============================================================================
     # AGENT SCRIPT CONTENT (Injected by serve-installer or build-agent-exe)
     # ============================================================================
-$AgentScriptContentBlock = @"
+$AgentScriptContentBlock = @'
 {{AGENT_SCRIPT_CONTENT}}
-"@
+'@
 
     # Write agent script to file
     $AgentScriptContentBlock | Out-File -FilePath $AgentScript -Encoding UTF8 -Force
