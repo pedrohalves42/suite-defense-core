@@ -196,6 +196,40 @@ $AgentScriptContentBlock = @"
     $AgentScriptContentBlock | Out-File -FilePath $AgentScript -Encoding UTF8 -Force
     Write-InstallLog "✅ Agent script saved to: $AgentScript"
     
+    # ============================================================================
+    # CORREÇÃO 5: VALIDAR QUE SCRIPT FOI GERADO CORRETAMENTE
+    # ============================================================================
+    if (Test-Path $AgentScript) {
+        $scriptContent = Get-Content $AgentScript -Raw
+        
+        # Verificar se funções críticas existem
+        $hasWriteLog = $scriptContent -match 'function Write-Log'
+        $hasHeartbeat = $scriptContent -match 'function Send-Heartbeat'
+        $hasPollJobs = $scriptContent -match 'function Poll-Jobs'
+        $hasTrap = $scriptContent -match 'trap \{'
+        
+        if (-not $hasWriteLog) {
+            Write-InstallLog "⚠️ WARNING: Script gerado não contém função Write-Log!" "ERROR"
+        }
+        if (-not $hasHeartbeat) {
+            Write-InstallLog "⚠️ WARNING: Script gerado não contém função Send-Heartbeat!" "ERROR"
+        }
+        if (-not $hasPollJobs) {
+            Write-InstallLog "⚠️ WARNING: Script gerado não contém função Poll-Jobs!" "ERROR"
+        }
+        if (-not $hasTrap) {
+            Write-InstallLog "⚠️ WARNING: Script gerado não contém trap (crash handler)!" "ERROR"
+        }
+        
+        $validationStatus = if($hasWriteLog -and $hasHeartbeat -and $hasPollJobs -and $hasTrap) {'✅ OK'} else {'❌ INCOMPLETE'}
+        Write-InstallLog "Script validation: $validationStatus" "INFO"
+        
+        $scriptSizeKB = [Math]::Round((Get-Item $AgentScript).Length / 1KB, 2)
+        Write-InstallLog "Script size: $scriptSizeKB KB" "INFO"
+    } else {
+        Write-InstallLog "⚠️ CRITICAL: Script file was not created at $AgentScript" "ERROR"
+    }
+    
     # Configure Windows Firewall
     Write-InstallLog "Configuring Windows Firewall rule..."
     $firewallRule = Get-NetFirewallRule -DisplayName "CyberShield Agent Outbound" -ErrorAction SilentlyContinue
