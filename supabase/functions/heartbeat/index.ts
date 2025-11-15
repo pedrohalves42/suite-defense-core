@@ -155,11 +155,20 @@ Deno.serve(async (req) => {
       .eq('id', agent.id)
 
     if (updateError) {
-      logger.error('Failed to update agent heartbeat', updateError)
-      return new Response(
-        JSON.stringify({ error: 'Erro ao atualizar heartbeat' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-      )
+      // Log detalhado do erro mas não bloqueia o heartbeat
+      logger.error('Failed to update agent heartbeat', {
+        error: updateError,
+        errorMessage: updateError.message,
+        errorDetails: updateError.details,
+        errorHint: updateError.hint,
+        agentId: agent.id,
+        agentName: agent.agent_name,
+        updateData: JSON.stringify(updateData)
+      })
+      // Continua mesmo com erro no UPDATE - heartbeat foi autenticado
+      logger.warn('Heartbeat authenticated but update failed - continuing')
+    } else {
+      logger.success('Agent heartbeat updated successfully')
     }
 
     // Atualizar last_used_at do token
@@ -167,8 +176,6 @@ Deno.serve(async (req) => {
       .from('agent_tokens')
       .update({ last_used_at: new Date().toISOString() })
       .eq('token', agentToken)
-
-    logger.success('Agent heartbeat updated successfully')
 
     return new Response(
       JSON.stringify({ 
