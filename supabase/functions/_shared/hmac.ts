@@ -78,10 +78,39 @@ export async function verifyHmacSignature(
     agent_name: agentName,
   });
 
-  // Limpar assinaturas antigas (async, não esperar)
-  supabase.rpc('cleanup_old_hmac_signatures').then();
+  // CRÍTICO: Cleanup com debounce para evitar race conditions
+  await debouncedCleanup(supabase);
 
   return { valid: true };
+}
+
+/**
+ * Debounce Map para controlar chamadas de cleanup
+ * Previne race conditions onde múltiplos agentes chamam cleanup simultaneamente
+ */
+const cleanupTimers = new Map<string, number>();
+const CLEANUP_DEBOUNCE_MS = 5000; // 5 segundos
+
+async function debouncedCleanup(supabase: SupabaseClient): Promise<void> {
+  const key = 'hmac_cleanup';
+  
+  // Cancelar timer anterior se existir
+  const existingTimer = cleanupTimers.get(key);
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+  
+  // Agendar novo cleanup
+  const timer = setTimeout(async () => {
+    try {
+      await supabase.rpc('cleanup_old_hmac_signatures');
+      cleanupTimers.delete(key);
+    } catch (error) {
+      console.error('Cleanup HMAC signatures failed:', error);
+    }
+  }, CLEANUP_DEBOUNCE_MS);
+  
+  cleanupTimers.set(key, timer as unknown as number);
 }
 
 /**
