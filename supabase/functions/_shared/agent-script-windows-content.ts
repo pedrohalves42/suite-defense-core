@@ -22,9 +22,6 @@ export const AGENT_SCRIPT_WINDOWS_PS1 = `# CyberShield Agent - Windows PowerShel
 
 #Requires -Version 3.0
 
-# Fix UTF-8 encoding for console output
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-
 param(
     [Parameter(Mandatory=\$true)]
     [string]\$AgentToken,
@@ -38,6 +35,9 @@ param(
     [Parameter(Mandatory=\$false)]
     [int]\$PollInterval = 60
 )
+
+# Fix UTF-8 encoding for console output
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # ============================================================================
 # CORREÇÃO 2: CRASH HANDLER GLOBAL (trap deve vir antes de qualquer código)
@@ -321,7 +321,17 @@ function Invoke-SecureRequest {
             \$lastError = \$_
             \$statusCode = if (\$_.Exception.Response) { \$_.Exception.Response.StatusCode.value__ } else { 0 }
             
-            Write-Log "Tentativa \$attempt/\$MaxRetries falhou: \$(\$_.Exception.Message)" "WARN"
+            Write-Log "Tentativa \$attempt/\$MaxRetries falhou (Status: \$statusCode): \$(\$_.Exception.Message)" "WARN"
+            
+            # Se for erro de autenticação (401/403), não vale retry
+            if (\$statusCode -in @(401, 403)) {
+                Write-Log "❌ Erro de autenticação detectado (código \$statusCode), abortando retries" "ERROR"
+                return @{
+                    Success = \$false
+                    Error = \$lastError.Exception.Message
+                    StatusCode = \$statusCode
+                }
+            }
             
             if (\$attempt -lt \$MaxRetries) {
                 \$waitTime = [Math]::Pow(2, \$attempt)
@@ -331,11 +341,18 @@ function Invoke-SecureRequest {
         }
     }
     
-    Write-Log "Todas as tentativas falharam para \$Method \$Uri" "ERROR"
+    # Se chegou aqui, esgotou tentativas sem ser erro de autenticação
+    Write-Log "❌ Todas as tentativas falharam para \$Method \$Uri" "ERROR"
+    
+    \$finalStatusCode = 0
+    if (\$lastError.Exception.Response) {
+        \$finalStatusCode = \$lastError.Exception.Response.StatusCode.value__
+    }
+    
     return @{
         Success = \$false
         Error = \$lastError.Exception.Message
-        StatusCode = 0
+        StatusCode = \$finalStatusCode
     }
 }
 
@@ -345,7 +362,10 @@ function Invoke-SecureRequest {
 
 function Send-Heartbeat {
     try {
-        Write-Log "Enviando heartbeat..." "DEBUG"
+        Write-Log "📡 Enviando heartbeat..." "DEBUG"
+        Write-Log "   AgentToken: \$(\$AgentToken.Substring(0,8))..." "DEBUG"
+        Write-Log "   HmacSecret: \$(\$HmacSecret.Substring(0,8))..." "DEBUG"
+        Write-Log "   ServerUrl: \$ServerUrl" "DEBUG"
         
         \$hostname = \$env:COMPUTERNAME
         \$body = @{
@@ -362,12 +382,14 @@ function Send-Heartbeat {
             -TimeoutSec 10
         
         if (\$result.Success) {
-            Write-Log "✅ Heartbeat enviado com sucesso" "SUCCESS"
+            Write-Log "✅ Heartbeat enviado com sucesso (Status: \$(\$result.StatusCode))" "SUCCESS"
         }
         else {
+            Write-Log "❌ Heartbeat falhou: StatusCode=\$(\$result.StatusCode), Error=\$(\$result.Error)" "ERROR"
+            
             # Fallback: tentar endpoint sem HMAC se falha for 401/403
             if (\$result.StatusCode -in @(401, 403)) {
-                Write-Log "⚠️  HMAC falhou, tentando fallback sem HMAC..." "WARN"
+                Write-Log "⚠️  HMAC rejeitado (código \$(\$result.StatusCode)), tentando fallback..." "WARN"
                 
                 try {
                     \$bodyJson = \$body | ConvertTo-Json -Depth 10 -Compress
@@ -385,23 +407,31 @@ function Send-Heartbeat {
                         UseBasicParsing = \$true
                     }
                     
+                    Write-Log "🔄 Tentando fallback: \$(\$fallbackParams.Uri)" "DEBUG"
+                    
                     \$fallbackResponse = Invoke-WebRequest @fallbackParams
                     
                     if (\$fallbackResponse.StatusCode -eq 200) {
-                        Write-Log "✅ Heartbeat fallback enviado com sucesso (sem HMAC)" "SUCCESS"
+                        Write-Log "✅ Heartbeat fallback OK (sem HMAC)" "SUCCESS"
+                    } else {
+                        Write-Log "⚠️  Fallback retornou status: \$(\$fallbackResponse.StatusCode)" "WARN"
                     }
                 }
                 catch {
                     Write-Log "❌ Fallback também falhou: \$(\$_.Exception.Message)" "ERROR"
+                    if (\$_.Exception.Response) {
+                        Write-Log "   Status fallback: \$(\$_.Exception.Response.StatusCode.value__)" "ERROR"
+                    }
                 }
             }
             else {
-                Write-Log "❌ Falha ao enviar heartbeat: \$(\$result.Error)" "ERROR"
+                Write-Log "❌ Erro não é autenticação (código: \$(\$result.StatusCode)), fallback não aplicável" "ERROR"
             }
         }
     }
     catch {
-        Write-Log "Erro ao enviar heartbeat: \$(\$_.Exception.Message)" "ERROR"
+        Write-Log "❌ EXCEPTION em Send-Heartbeat: \$(\$_.Exception.Message)" "ERROR"
+        Write-Log "   StackTrace: \$(\$_.ScriptStackTrace)" "ERROR"
     }
 }
 
