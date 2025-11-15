@@ -254,6 +254,11 @@ if (\$osVersion.Major -lt 6 -or (\$osVersion.Major -eq 6 -and \$osVersion.Minor 
 
 #region Funções Helper
 
+# Variáveis globais para modo degradado
+\$script:ConsecutiveAuthFailures = 0
+\$script:MaxAuthFailuresBeforeDegraded = 10
+\$script:InDegradedMode = \$false
+
 function Convert-HexToBytes {
     param([string]\$HexString)
     
@@ -354,6 +359,9 @@ function Invoke-SecureRequest {
             
             \$response = Invoke-WebRequest @params
             
+            # Sucesso - resetar contador de falhas de auth
+            \$script:ConsecutiveAuthFailures = 0
+            
             Write-Log "✅ \$Method \$Uri - Status: \$(\$response.StatusCode)" "DEBUG"
             
             return @{
@@ -369,13 +377,40 @@ function Invoke-SecureRequest {
             
             Write-Log "Tentativa \$attempt/\$MaxRetries falhou (Status: \$statusCode): \$(\$_.Exception.Message)" "WARN"
             
-            # Se for erro de autenticação (401/403), não vale retry
+            # Analisar erros de autenticação (401/403)
             if (\$statusCode -in @(401, 403)) {
-                Write-Log "❌ Erro de autenticação detectado (código \$statusCode), abortando retries" "ERROR"
+                \$errorCode = \$null
+                \$isTransient = \$false
+                
+                try {
+                    \$errorBody = \$_.ErrorDetails.Message | ConvertFrom-Json
+                    \$errorCode = \$errorBody.code
+                    \$isTransient = \$errorBody.transient -eq \$true
+                    Write-Log "Código de erro: \$errorCode (transitório: \$isTransient)" "DEBUG"
+                } catch {
+                    Write-Log "Não foi possível parsear resposta de erro JSON" "DEBUG"
+                }
+                
+                \$script:ConsecutiveAuthFailures++
+                
+                if (\$script:ConsecutiveAuthFailures -ge \$script:MaxAuthFailuresBeforeDegraded) {
+                    Write-Log "❌ Muitas falhas de autenticação (\$(\$script:ConsecutiveAuthFailures)). Entrando em modo degradado." "FATAL"
+                    Enter-DegradedMode -Reason "TOO_MANY_AUTH_FAILURES" -ErrorCode \$errorCode
+                }
+                
+                if (\$isTransient -and \$errorCode -eq 'AUTH_TIMESTAMP_OUT_OF_RANGE' -and \$attempt -lt \$MaxRetries) {
+                    \$waitTime = [Math]::Pow(2, \$attempt) * 2
+                    Write-Log "⚠️ Clock skew detectado. Retry em \$waitTime segundos..." "WARN"
+                    Start-Sleep -Seconds \$waitTime
+                    continue
+                }
+                
+                Write-Log "❌ Erro de autenticação fatal (\$errorCode), abortando retries" "ERROR"
                 return @{
                     Success = \$false
                     Error = \$lastError.Exception.Message
                     StatusCode = \$statusCode
+                    ErrorCode = \$errorCode
                 }
             }
             
@@ -400,6 +435,81 @@ function Invoke-SecureRequest {
         Error = \$lastError.Exception.Message
         StatusCode = \$finalStatusCode
     }
+}
+
+function Enter-DegradedMode {
+    param([string]\$Reason, [string]\$ErrorCode = "UNKNOWN")
+    
+    \$script:InDegradedMode = \$true
+    Write-Log "========================================" "FATAL"
+    Write-Log "MODO DEGRADADO ATIVADO" "FATAL"
+    Write-Log "Razão: \$Reason | Código: \$ErrorCode" "FATAL"
+    Write-Log "========================================" "FATAL"
+    
+    Write-Log "Diagnóstico:" "INFO"
+    Write-Log "  Hostname: \$env:COMPUTERNAME" "INFO"
+    Write-Log "  Data/Hora: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" "INFO"
+    Write-Log "  Token: \$(\$AgentToken.Substring(0,20))..." "INFO"
+    
+    try {
+        \$healthResult = Test-AgentHealthCheck
+        if (\$healthResult.Success) {
+            Write-Log "✅ Health check OK - problema em outro endpoint" "INFO"
+        } else {
+            Write-Log "❌ Health check falhou: \$(\$healthResult.ErrorCode)" "ERROR"
+        }
+    } catch {
+        Write-Log "Erro ao executar health check: \$(\$_.Exception.Message)" "ERROR"
+    }
+    
+    Write-Log "Modo degradado: apenas heartbeat a cada 5min, sem jobs" "WARN"
+    
+    while (\$true) {
+        try { Send-Heartbeat } catch { Write-Log "Erro no heartbeat degradado: \$(\$_.Exception.Message)" "ERROR" }
+        Start-Sleep -Seconds 300
+    }
+}
+
+function Test-AgentHealthCheck {
+    try {
+        Write-Log "Executando health check..." "DEBUG"
+        
+        \$result = Invoke-SecureRequest \`
+            -Uri "\$ServerUrl/functions/v1/agent-health-check" \`
+            -Method POST \`
+            -Body @{} \`
+            -TimeoutSec 10 \`
+            -MaxRetries 1
+        
+        if (\$result.Success) {
+            \$healthData = \$result.Content | ConvertFrom-Json
+            Write-Log "✅ Health check OK: \$(\$healthData.status)" "SUCCESS"
+            return @{ Success = \$true; Data = \$healthData }
+        } else {
+            return @{ Success = \$false; Error = \$result.Error; ErrorCode = \$result.ErrorCode; StatusCode = \$result.StatusCode }
+        }
+    }
+    catch {
+        return @{ Success = \$false; Error = \$_.Exception.Message }
+    }
+}
+
+function Enter-DegradedMode {
+    param([string]\$Reason, [string]\$ErrorCode = "UNKNOWN")
+    \$script:InDegradedMode = \$true
+    Write-Log "========================================" "FATAL"
+    Write-Log "MODO DEGRADADO | \$Reason | \$ErrorCode" "FATAL"
+    Write-Log "========================================" "FATAL"
+    try { \$hc = Test-AgentHealthCheck; if (\$hc.Success) { Write-Log "✅ Health check OK" "INFO" } else { Write-Log "❌ Health check falhou: \$(\$hc.ErrorCode)" "ERROR" } } catch {}
+    while (\$true) { try { Send-Heartbeat } catch {}; Start-Sleep 300 }
+}
+
+function Test-AgentHealthCheck {
+    try {
+        \$r = Invoke-SecureRequest -Uri "\$ServerUrl/functions/v1/agent-health-check" -Method POST -Body @{} -TimeoutSec 10 -MaxRetries 1
+        if (\$r.Success) { \$d = \$r.Content | ConvertFrom-Json; return @{ Success = \$true; Data = \$d } }
+        return @{ Success = \$false; Error = \$r.Error; ErrorCode = \$r.ErrorCode }
+    } catch { return @{ Success = \$false; Error = \$_.Exception.Message } }
 }
 
 #endregion
