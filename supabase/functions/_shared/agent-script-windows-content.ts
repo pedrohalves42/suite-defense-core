@@ -325,7 +325,7 @@ function Invoke-SecureRequest {
             }
             
             # Construir payload HMAC: "timestamp:nonce:body"
-            \$dataToSign = "\$timestamp:\$nonce:\$bodyJson"
+            \$dataToSign = "\${timestamp}:\${nonce}:\${bodyJson}"
             
             # Gerar assinatura HMAC-SHA256
             \$signature = Get-HmacSignature -Data \$dataToSign -Secret \$HmacSecret
