@@ -139,9 +139,10 @@ Deno.serve(async (req) => {
 
     // Salvar insights no banco
     if (insights.length > 0) {
-      const { error: insertError } = await supabase
+      const { data: insertedInsights, error: insertError } = await supabase
         .from('ai_insights')
-        .insert(insights);
+        .insert(insights)
+        .select();
 
       if (insertError) {
         console.error('[ai-system-analyzer] Error saving insights:', insertError);
@@ -149,6 +150,23 @@ Deno.serve(async (req) => {
       }
 
       console.log(`[ai-system-analyzer] Successfully saved ${insights.length} insights`);
+
+      // FASE 2: Gerar ações sugeridas baseadas nos insights
+      if (insertedInsights && insertedInsights.length > 0) {
+        const suggestedActions = await generateSuggestedActions(insertedInsights);
+        
+        if (suggestedActions.length > 0) {
+          const { error: actionError } = await supabase
+            .from('ai_actions')
+            .insert(suggestedActions);
+
+          if (actionError) {
+            console.error(`[ai-system-analyzer] Error inserting suggested actions:`, actionError);
+          } else {
+            console.log(`[ai-system-analyzer] Generated ${suggestedActions.length} suggested actions`);
+          }
+        }
+      }
     } else {
       console.log('[ai-system-analyzer] No insights generated');
     }
@@ -336,3 +354,86 @@ Responda APENAS com um array JSON válido de insights. Exemplo:
     return [];
   }
 }
+
+// FASE 2: Função para gerar ações sugeridas baseadas em insights
+async function generateSuggestedActions(insights: any[]) {
+  const actions: any[] = [];
+
+  for (const insight of insights) {
+    // Só gerar ações para insights de alta severidade ou críticos
+    if (!['high', 'critical'].includes(insight.severity)) continue;
+
+    // Determinar tipo de ação baseado no tipo de insight
+    let actionType = null;
+    let actionPayload: any = {};
+
+    switch (insight.insight_type) {
+      case 'agent_health':
+      case 'performance_degradation': {
+        // Sugerir diagnóstico para agentes com problemas
+        const agentName = insight.evidence?.agent_name;
+        if (agentName) {
+          actionType = 'create_diagnostic_job';
+          actionPayload = {
+            agent_name: agentName,
+            reason: insight.description,
+            diagnostic_type: 'health_check'
+          };
+        }
+        break;
+      }
+
+      case 'failure_pattern':
+      case 'anomaly': {
+        // Criar alerta para padrões críticos
+        actionType = 'create_system_alert';
+        actionPayload = {
+          title: `AI Alert: ${insight.title}`,
+          message: insight.description,
+          severity: insight.severity === 'critical' ? 'critical' : 'high',
+          evidence: insight.evidence
+        };
+        break;
+      }
+
+      case 'resource_exhaustion': {
+        // Sugerir restart ou limpeza
+        const agentName = insight.evidence?.agent_name;
+        if (agentName) {
+          actionType = 'suggest_agent_restart';
+          actionPayload = {
+            agent_name: agentName,
+            reason: insight.description,
+            cpu_usage: insight.evidence?.cpu_usage,
+            memory_usage: insight.evidence?.memory_usage
+          };
+        }
+        break;
+      }
+
+      case 'stuck_jobs': {
+        actionType = 'suggest_job_cleanup';
+        actionPayload = {
+          reason: insight.description,
+          stuck_job_count: insight.evidence?.stuck_job_count,
+          recommendation: insight.recommendation
+        };
+        break;
+      }
+    }
+
+    // Se encontrou uma ação apropriada, adicionar à lista
+    if (actionType) {
+      actions.push({
+        insight_id: insight.id,
+        tenant_id: insight.tenant_id,
+        action_type: actionType,
+        action_payload: actionPayload,
+        status: 'pending', // Sempre pending - requer aprovação humana
+      });
+    }
+  }
+
+  return actions;
+}
+

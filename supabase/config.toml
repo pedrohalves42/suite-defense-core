@@ -225,10 +225,13 @@ verify_jwt = true
 [functions.validate-hmac-signature]
 verify_jwt = false
 
-# === AI Insights Functions (FASE 1) ===
+# === AI Insights Functions (FASE 1 + FASE 2) ===
 [functions.ai-system-analyzer]
 verify_jwt = false
 schedule = "0 */6 * * *"
 
 [functions.ai-get-insights]
+verify_jwt = true
+
+[functions.ai-action-executor]
 verify_jwt = true

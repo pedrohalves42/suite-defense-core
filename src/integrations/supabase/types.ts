@@ -396,6 +396,93 @@ export type Database = {
           },
         ]
       }
+      ai_action_configs: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_enabled: boolean | null
+          max_executions_per_day: number | null
+          requires_approval: boolean | null
+          risk_level: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          max_executions_per_day?: number | null
+          requires_approval?: boolean | null
+          risk_level?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          max_executions_per_day?: number | null
+          requires_approval?: boolean | null
+          risk_level?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ai_action_executions: {
+        Row: {
+          action_id: string | null
+          created_at: string | null
+          error_message: string | null
+          executed_at: string | null
+          executed_by: string | null
+          execution_result: Json | null
+          execution_status: string | null
+          id: string
+          tenant_id: string
+        }
+        Insert: {
+          action_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          executed_at?: string | null
+          executed_by?: string | null
+          execution_result?: Json | null
+          execution_status?: string | null
+          id?: string
+          tenant_id: string
+        }
+        Update: {
+          action_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          executed_at?: string | null
+          executed_by?: string | null
+          execution_result?: Json | null
+          execution_status?: string | null
+          id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_action_executions_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "ai_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_action_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_actions: {
         Row: {
           action_payload: Json
@@ -2332,6 +2419,10 @@ export type Database = {
           total_installed: number
           total_stuck: number
         }[]
+      }
+      check_action_rate_limit: {
+        Args: { p_action_type: string; p_tenant_id: string }
+        Returns: boolean
       }
       check_installation_failure_rate: {
         Args: {
