@@ -739,6 +739,28 @@ function Execute-Job {
         }
         
         switch (\$Job.type) {
+            "integration_test" {
+                Write-Log "🧪 Executando teste de integração..." "INFO"
+                
+                # Simular execução de teste
+                Start-Sleep -Seconds 2
+                
+                # Coletar informações do sistema para o teste
+                \$testInfo = @{
+                    agent_token = \$AgentToken
+                    hostname = \$env:COMPUTERNAME
+                    os = \$osName
+                    powershell_version = \$PSVersionTable.PSVersion.ToString()
+                    test_timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                    test_status = "completed"
+                }
+                
+                \$result.success = \$true
+                \$result.output = \$testInfo | ConvertTo-Json -Compress
+                
+                Write-Log "✅ Teste de integração concluído com sucesso" "SUCCESS"
+            }
+            
             "virus_scan" {
                 Write-Log "Executando scan de vírus..." "INFO"
                 \$result.success = \$true
@@ -934,8 +956,45 @@ function Start-Agent {
             # Buscar e executar jobs
             \$jobs = Poll-Jobs
             
-            foreach (\$job in \$jobs) {
-                Execute-Job -Job \$job
+            # Validação defensiva: garantir que jobs é um array e não está vazio
+            if (\$null -eq \$jobs -or \$jobs.Count -eq 0) {
+                Write-Log "Nenhum job pendente" "DEBUG"
+            }
+            else {
+                Write-Log "📦 \$(\$jobs.Count) job(s) recebido(s)" "INFO"
+                
+                foreach (\$job in \$jobs) {
+                    # Validação 1: Job não pode ser null
+                    if (\$null -eq \$job) {
+                        Write-Log "⚠️  Job nulo detectado, ignorando" "WARN"
+                        continue
+                    }
+                    
+                    # Validação 2: Job precisa ter ID
+                    if (-not \$job.id) {
+                        Write-Log "⚠️  Job sem ID válido detectado, ignorando" "WARN"
+                        Write-Log "Job bruto: \$(\$job | ConvertTo-Json -Compress)" "DEBUG"
+                        continue
+                    }
+                    
+                    # Validação 3: Job precisa ter tipo
+                    if (-not \$job.type) {
+                        Write-Log "⚠️  Job sem tipo válido (ID: \$(\$job.id)), ignorando" "WARN"
+                        continue
+                    }
+                    
+                    Write-Log "🔄 Processando job: ID=\$(\$job.id), Type=\$(\$job.type)" "INFO"
+                    
+                    try {
+                        Execute-Job -Job \$job
+                        Write-Log "✅ Job \$(\$job.id) processado com sucesso" "SUCCESS"
+                    }
+                    catch {
+                        Write-Log "❌ Erro ao processar job \$(\$job.id): \$(\$_.Exception.Message)" "ERROR"
+                        Write-Log "Stack trace: \$(\$_.ScriptStackTrace)" "DEBUG"
+                        # Continua processando outros jobs mesmo se um falhar
+                    }
+                }
             }
             
             # Verificar se deve enviar heartbeat

@@ -130,10 +130,24 @@ Deno.serve(async (req) => {
       )
     }
 
-    // CRÍTICO: Filtrar jobs nulos ou sem ID (garantir array limpo)
-    const validJobs = (jobs || []).filter(job => job && job.id)
+    // CRÍTICO: Filtrar jobs nulos, sem ID ou sem tipo (garantir array limpo)
+    const validJobs = (jobs || []).filter(job => {
+      if (!job) {
+        console.warn('[poll-jobs] Null job found, filtering out')
+        return false
+      }
+      if (!job.id) {
+        console.warn('[poll-jobs] Job without ID found, filtering out', { job })
+        return false
+      }
+      if (!job.type) {
+        console.warn('[poll-jobs] Job without type found, filtering out', { jobId: job.id })
+        return false
+      }
+      return true
+    })
 
-    console.log(`[poll-jobs] Found ${validJobs.length} valid jobs`)
+    console.log(`[poll-jobs] Found ${validJobs.length} valid jobs (filtered from ${jobs?.length || 0} total)`)
 
     // Marcar jobs como entregues
     if (validJobs.length > 0) {
