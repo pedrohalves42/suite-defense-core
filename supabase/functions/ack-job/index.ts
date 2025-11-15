@@ -65,11 +65,17 @@ Deno.serve(async (req) => {
     if (!hmacResult.valid) {
       console.warn('[ack-job] HMAC verification failed:', {
         agent: agent.agent_name,
-        error: hmacResult.error,
+        errorCode: hmacResult.errorCode,
+        errorMessage: hmacResult.errorMessage,
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip')
       })
       return new Response(
-        JSON.stringify({ error: hmacResult.error }),
+        JSON.stringify({ 
+          error: 'unauthorized',
+          code: hmacResult.errorCode,
+          message: hmacResult.errorMessage,
+          transient: hmacResult.transient
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

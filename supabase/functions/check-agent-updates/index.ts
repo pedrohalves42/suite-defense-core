@@ -85,7 +85,10 @@ Deno.serve(async (req) => {
     );
 
     if (!hmacResult.valid) {
-      console.warn(`[${requestId}] HMAC validation failed: ${hmacResult.error}`);
+      console.warn(`[${requestId}] HMAC validation failed:`, {
+        errorCode: hmacResult.errorCode,
+        errorMessage: hmacResult.errorMessage
+      });
       
       // Log security event
       await supabase.from('security_logs').insert({
@@ -95,15 +98,22 @@ Deno.serve(async (req) => {
         source_ip: req.headers.get('x-forwarded-for') || 'unknown',
         details: {
           agent_name: agent.agent_name,
-          error: hmacResult.error,
+          error_code: hmacResult.errorCode,
+          error_message: hmacResult.errorMessage,
           endpoint: 'check-agent-updates'
         }
       });
 
       return new Response(
-        JSON.stringify({ error: hmacResult.error, requestId }),
+        JSON.stringify({ 
+          error: 'unauthorized',
+          code: hmacResult.errorCode,
+          message: hmacResult.errorMessage,
+          transient: hmacResult.transient,
+          requestId 
+        }),
         {
-          status: 403,
+          status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
