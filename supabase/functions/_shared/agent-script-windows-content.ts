@@ -271,8 +271,8 @@ function Get-HmacSignature {
     )
     
     try {
-        \$hmac = New-Object System.Security.Cryptography.HMACSHA256
-        \$hmac.Key = Convert-HexToBytes \$Secret
+    \$hmac = New-Object System.Security.Cryptography.HMACSHA256
+    \$hmac.Key = [System.Text.Encoding]::UTF8.GetBytes(\$Secret)
         \$dataBytes = [System.Text.Encoding]::UTF8.GetBytes(\$Data)
         \$hashBytes = \$hmac.ComputeHash(\$dataBytes)
         \$signature = [BitConverter]::ToString(\$hashBytes).Replace('-', '').ToLower()
