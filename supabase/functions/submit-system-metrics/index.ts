@@ -76,10 +76,18 @@ Deno.serve(async (req) => {
     if (agent.hmac_secret) {
       const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret);
       if (!hmacResult.valid) {
-        return new Response(JSON.stringify({ error: hmacResult.error || 'Invalid HMAC signature' }), {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ 
+            error: 'unauthorized',
+            code: hmacResult.errorCode,
+            message: hmacResult.errorMessage,
+            transient: hmacResult.transient
+          }), 
+          {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
     }
 
