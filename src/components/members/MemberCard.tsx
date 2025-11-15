@@ -1,8 +1,8 @@
-import { Shield, User, Eye, Trash2 } from 'lucide-react';
+import { Shield, User, Eye, Trash2, Crown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { SafeSelect } from '@/components/SafeSelect';
-import { AppRole, APP_ROLES } from '@/types/roles';
+import { AppRole, isValidRole } from '@/types/roles';
 import { Member } from '@/types/user';
 
 interface MemberCardProps {
@@ -19,12 +19,13 @@ interface MemberCardProps {
 export const MemberCard = ({ member, onRoleChange, onRemove, isUpdating }: MemberCardProps) => {
   const getRoleBadge = (role: AppRole) => {
     const configs = {
-      admin: { icon: Shield, variant: 'default' as const, label: 'Admin' },
+      viewer: { icon: Eye, variant: 'outline' as const, label: 'Visualizador' },
       operator: { icon: User, variant: 'secondary' as const, label: 'Operador' },
-      viewer: { icon: Eye, variant: 'outline' as const, label: 'Visualizador' }
+      admin: { icon: Shield, variant: 'default' as const, label: 'Admin' },
+      super_admin: { icon: Crown, variant: 'destructive' as const, label: 'Super Admin' }
     };
     
-    const config = configs[role];
+    const config = configs[role] || configs.viewer;
     const Icon = config.icon;
     
     return (
@@ -35,8 +36,8 @@ export const MemberCard = ({ member, onRoleChange, onRemove, isUpdating }: Membe
     );
   };
 
-  // CORREÇÃO: Validar role antes de renderizar
-  const validRole = APP_ROLES.includes(member.role) ? member.role : 'viewer';
+  // CORREÇÃO: Usar isValidRole e não rebaixar super_admin
+  const validRole = isValidRole(member.role) ? member.role : 'viewer';
 
   return (
     <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
@@ -56,9 +57,10 @@ export const MemberCard = ({ member, onRoleChange, onRemove, isUpdating }: Membe
           value={validRole}
           onValueChange={(newRole) => onRoleChange(member.user_id, newRole as AppRole)}
           options={[
-            { value: 'admin', label: 'Admin' },
-            { value: 'operator', label: 'Operador' },
             { value: 'viewer', label: 'Visualizador' },
+            { value: 'operator', label: 'Operador' },
+            { value: 'admin', label: 'Admin' },
+            { value: 'super_admin', label: 'Super Admin' },
           ]}
           className="w-32"
           disabled={isUpdating}
