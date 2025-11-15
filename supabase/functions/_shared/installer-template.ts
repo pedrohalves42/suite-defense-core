@@ -77,6 +77,26 @@ $LogFile = Join-Path $LogDir "install-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
 $taskName = "CyberShieldAgent"
 
 # ============================================================================
+# PRÉ-CRIAR LOGS DO AGENTE (Diagnóstico Robusto)
+# ============================================================================
+New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+
+$AgentLogPath = Join-Path $LogDir "agent.log"
+$CrashLogPath = Join-Path $LogDir "agent-crash.log"
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+# Garantir que logs existem antes de o agente rodar
+if (-not (Test-Path $AgentLogPath)) {
+    "[$timestamp] [INFO] Agent log pré-criado pelo instalador\`n" | Out-File -FilePath $AgentLogPath -Encoding UTF8 -Force
+}
+
+if (-not (Test-Path $CrashLogPath)) {
+    "[$timestamp] [INFO] Crash log pré-criado pelo instalador\`n" | Out-File -FilePath $CrashLogPath -Encoding UTF8 -Force
+}
+
+Write-Host "✅ Logs do agente pré-criados em: $LogDir" -ForegroundColor Green
+
+# ============================================================================
 # SYSTEM INFORMATION (collected early for telemetry)
 # ============================================================================
 $osInfo = $null
