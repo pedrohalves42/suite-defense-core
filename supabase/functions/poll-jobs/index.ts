@@ -130,29 +130,51 @@ Deno.serve(async (req) => {
       )
     }
 
-    // CRÍTICO: Filtrar jobs nulos, sem ID ou sem tipo (garantir array limpo)
+    // FASE 1: LOG CRÍTICO - ver o que veio do banco ANTES do filtro
+    console.log('[poll-jobs] Raw jobs from database:', JSON.stringify(jobs))
+    console.log('[poll-jobs] Jobs count from DB:', jobs?.length ?? 0)
+
+    // FASE 1: Filtro QUÁDRUPLO de segurança (null, ID, type, payload)
     const validJobs = (jobs || []).filter(job => {
+      // Check 1: Não é null/undefined
       if (!job) {
-        console.warn('[poll-jobs] Null job found, filtering out')
+        console.warn('[poll-jobs] NULL job detected, filtering out')
         return false
       }
-      if (!job.id) {
-        console.warn('[poll-jobs] Job without ID found, filtering out', { job })
+      
+      // Check 2: Tem ID válido
+      if (!job.id || typeof job.id !== 'string') {
+        console.warn('[poll-jobs] Job without valid ID', { job })
         return false
       }
-      if (!job.type) {
-        console.warn('[poll-jobs] Job without type found, filtering out', { jobId: job.id })
+      
+      // Check 3: Tem tipo válido
+      if (!job.type || typeof job.type !== 'string') {
+        console.warn('[poll-jobs] Job without valid type', { jobId: job.id })
         return false
       }
+      
+      // Check 4: Tem payload (mesmo que seja {})
+      if (job.payload === undefined || job.payload === null) {
+        console.warn('[poll-jobs] Job without payload', { jobId: job.id })
+        return false
+      }
+      
       return true
     })
 
-    console.log(`[poll-jobs] Found ${validJobs.length} valid jobs (filtered from ${jobs?.length || 0} total)`)
+    console.log(`[poll-jobs] Valid jobs after filtering: ${validJobs.length}`)
+
+    // FASE 1: LOG DETALHADO - mostrar IDs dos jobs que estão sendo retornados
+    if (validJobs.length > 0) {
+      console.log('[poll-jobs] Returning job IDs:', validJobs.map(j => j.id))
+    } else {
+      console.log('[poll-jobs] No valid jobs to return')
+    }
 
     // Marcar jobs como entregues
     if (validJobs.length > 0) {
       const jobIds = validJobs.map(j => j.id)
-      console.log('[poll-jobs] Marking jobs as delivered:', jobIds)
       
       const { error: updateError } = await supabase
         .from('jobs')
@@ -166,11 +188,11 @@ Deno.serve(async (req) => {
         console.error('[poll-jobs] Error updating job status:', updateError)
         // Não lançar erro, apenas logar - jobs já foram buscados
       } else {
-        console.log('[poll-jobs] Jobs marked as delivered successfully')
+        console.log('[poll-jobs] Jobs marked as delivered:', jobIds)
       }
     }
 
-    // Retornar jobs válidos
+    // FASE 1: Retornar jobs válidos (array puro para consistência)
     const jobsResponse = validJobs.map(j => ({
       id: j.id,
       type: j.type,
