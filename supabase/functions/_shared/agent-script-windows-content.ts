@@ -485,29 +485,57 @@ function Send-SystemMetrics {
     try {
         Write-Log "Coletando métricas do sistema..." "DEBUG"
         
-        # CPU
-        \$cpuUsage = (Get-WmiObject -Class Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
-        \$cpuCores = (Get-WmiObject -Class Win32_Processor).NumberOfLogicalProcessors
-        \$cpuName = (Get-WmiObject -Class Win32_Processor).Name
+        # CPU (com proteção WMI)
+        try {
+            \$cpuUsage = (Get-WmiObject -Class Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
+            \$cpuCores = (Get-WmiObject -Class Win32_Processor).NumberOfLogicalProcessors
+            \$cpuName = (Get-WmiObject -Class Win32_Processor).Name
+        }
+        catch {
+            Write-Log "⚠️ Falha ao coletar métricas de CPU via WMI: \$(\$_.Exception.Message)" "WARN"
+            \$cpuUsage = 0
+            \$cpuCores = 1
+            \$cpuName = "Unknown CPU"
+        }
         
-        # Memória
-        \$os = Get-WmiObject -Class Win32_OperatingSystem
-        \$totalMemGB = [Math]::Round(\$os.TotalVisibleMemorySize / 1MB, 2)
-        \$freeMemGB = [Math]::Round(\$os.FreePhysicalMemory / 1MB, 2)
-        \$usedMemGB = \$totalMemGB - \$freeMemGB
-        \$memUsagePercent = [Math]::Round((\$usedMemGB / \$totalMemGB) * 100, 1)
+        # Memória (com proteção WMI)
+        try {
+            \$os = Get-WmiObject -Class Win32_OperatingSystem
+            \$totalMemGB = [Math]::Round(\$os.TotalVisibleMemorySize / 1MB, 2)
+            \$freeMemGB = [Math]::Round(\$os.FreePhysicalMemory / 1MB, 2)
+            \$usedMemGB = \$totalMemGB - \$freeMemGB
+            \$memUsagePercent = [Math]::Round((\$usedMemGB / \$totalMemGB) * 100, 1)
+            
+            # Uptime (usa mesmo objeto \$os)
+            \$lastBoot = \$os.ConvertToDateTime(\$os.LastBootUpTime)
+            \$uptime = (Get-Date) - \$lastBoot
+            \$uptimeSeconds = [int]\$uptime.TotalSeconds
+        }
+        catch {
+            Write-Log "⚠️ Falha ao coletar métricas de memória/uptime via WMI: \$(\$_.Exception.Message)" "WARN"
+            \$totalMemGB = 0
+            \$freeMemGB = 0
+            \$usedMemGB = 0
+            \$memUsagePercent = 0
+            \$lastBoot = Get-Date
+            \$uptimeSeconds = 0
+        }
         
-        # Disco
-        \$disk = Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='C:'"
-        \$diskTotalGB = [Math]::Round(\$disk.Size / 1GB, 2)
-        \$diskFreeGB = [Math]::Round(\$disk.FreeSpace / 1GB, 2)
-        \$diskUsedGB = \$diskTotalGB - \$diskFreeGB
-        \$diskUsagePercent = [Math]::Round((\$diskUsedGB / \$diskTotalGB) * 100, 1)
-        
-        # Uptime
-        \$lastBoot = \$os.ConvertToDateTime(\$os.LastBootUpTime)
-        \$uptime = (Get-Date) - \$lastBoot
-        \$uptimeSeconds = [int]\$uptime.TotalSeconds
+        # Disco (com proteção WMI)
+        try {
+            \$disk = Get-WmiObject -Class Win32_LogicalDisk -Filter "DeviceID='C:'"
+            \$diskTotalGB = [Math]::Round(\$disk.Size / 1GB, 2)
+            \$diskFreeGB = [Math]::Round(\$disk.FreeSpace / 1GB, 2)
+            \$diskUsedGB = \$diskTotalGB - \$diskFreeGB
+            \$diskUsagePercent = [Math]::Round((\$diskUsedGB / \$diskTotalGB) * 100, 1)
+        }
+        catch {
+            Write-Log "⚠️ Falha ao coletar métricas de disco via WMI: \$(\$_.Exception.Message)" "WARN"
+            \$diskTotalGB = 0
+            \$diskFreeGB = 0
+            \$diskUsedGB = 0
+            \$diskUsagePercent = 0
+        }
         
         \$body = @{
             agent_token = \$AgentToken
