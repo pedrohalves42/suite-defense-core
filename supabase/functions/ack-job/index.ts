@@ -103,9 +103,33 @@ Deno.serve(async (req) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('token', agentToken)
 
-    // Extrair ID do job da URL
+    // Extrair job_id da URL ou do body (prioridade: URL para compatibilidade)
     const url = new URL(req.url)
-    const jobId = url.pathname.split('/').pop()
+    const jobIdFromUrl = url.pathname.split('/').pop()
+
+    let jobId: string | null = null
+
+    // Prioridade 1: job_id na URL (para compatibilidade com clientes existentes)
+    if (jobIdFromUrl && jobIdFromUrl !== 'ack-job') {
+      jobId = jobIdFromUrl
+    }
+
+    // Prioridade 2: job_id no body (para consistência com upload-report)
+    if (!jobId) {
+      try {
+        const body = await req.json()
+        jobId = body.job_id
+      } catch {
+        // Ignore parse errors, será tratado abaixo
+      }
+    }
+
+    if (!jobId) {
+      return new Response(
+        JSON.stringify({ error: 'job_id ausente (esperado na URL ou body)' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
 
     // Validar formato do job ID
     const jobIdValidation = JobIdSchema.safeParse(jobId)
