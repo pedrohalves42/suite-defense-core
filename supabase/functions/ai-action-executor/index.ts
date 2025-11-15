@@ -1,6 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import {
+  DiagnosticJobPayloadSchema,
+  SystemAlertPayloadSchema,
+  SuggestAgentRestartPayloadSchema,
+  SuggestConfigChangePayloadSchema,
+} from '../_shared/validation.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -108,7 +114,9 @@ serve(async (req) => {
     try {
       switch (action.action_type) {
         case 'create_diagnostic_job': {
-          const payload = action.action_payload as any;
+          // Validar payload com Zod
+          const payload = DiagnosticJobPayloadSchema.parse(action.action_payload);
+
           const { data: job, error: jobError } = await supabase
             .from('jobs')
             .insert({
@@ -118,10 +126,13 @@ serve(async (req) => {
               status: 'pending',
               approved: true,
               payload: {
+                diagnostic_type: payload.diagnostic_type,
+                priority: payload.priority,
                 reason: 'AI-suggested diagnostic',
                 insight_id: action.insight_id,
-                checks: ['heartbeat', 'metrics', 'jobs', 'token']
-              }
+                checks: ['heartbeat', 'metrics', 'jobs', 'token'],
+                ...(payload.metadata ?? {}),
+              },
             })
             .select()
             .single();
@@ -132,20 +143,22 @@ serve(async (req) => {
         }
 
         case 'create_system_alert': {
-          const payload = action.action_payload as any;
+          const payload = SystemAlertPayloadSchema.parse(action.action_payload);
+
           const { data: alert, error: alertError } = await supabase
             .from('system_alerts')
             .insert({
               tenant_id: action.tenant_id,
-              alert_type: 'ai_suggestion',
-              severity: payload.severity || 'medium',
-              title: payload.title,
+              alert_type: payload.alert_type,
+              severity: payload.severity,
+              title: payload.message.slice(0, 80),
               message: payload.message,
               details: {
                 insight_id: action.insight_id,
                 ai_confidence: action.ai_insights?.confidence_score,
-                source: 'ai-action-executor'
-              }
+                source: 'ai-action-executor',
+                ...(payload.metadata ?? {}),
+              },
             })
             .select()
             .single();
@@ -155,10 +168,35 @@ serve(async (req) => {
           break;
         }
 
-        case 'suggest_agent_restart':
-        case 'suggest_config_change':
+        case 'suggest_agent_restart': {
+          const payload = SuggestAgentRestartPayloadSchema.parse(action.action_payload);
+
+          executionResult = {
+            suggestion_type: 'agent_restart',
+            agent_name: payload.agent_name,
+            reason: payload.reason,
+            urgency: payload.urgency,
+            note: 'Suggestion recorded. Manual action required.',
+          };
+          break;
+        }
+
+        case 'suggest_config_change': {
+          const payload = SuggestConfigChangePayloadSchema.parse(action.action_payload);
+
+          executionResult = {
+            suggestion_type: 'config_change',
+            agent_name: payload.agent_name,
+            config_key: payload.config_key,
+            suggested_value: payload.suggested_value,
+            reason: payload.reason,
+            note: 'Suggestion recorded. Manual action required.',
+          };
+          break;
+        }
+
         case 'suggest_job_cleanup': {
-          // Ações de sugestão apenas registram no resultado
+          // Manter case existente sem validação específica por enquanto
           executionResult = {
             suggestion_type: action.action_type,
             payload: action.action_payload,
