@@ -141,3 +141,32 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export function validateFileSize(size: number): boolean {
   return size > 0 && size <= MAX_FILE_SIZE;
 }
+
+// ========== AI ACTION PAYLOADS (FASE 2) ==========
+
+export const DiagnosticJobPayloadSchema = z.object({
+  agent_name: AgentNameSchema,
+  diagnostic_type: z.enum(['full', 'network', 'performance']),
+  priority: z.enum(['low', 'medium', 'high']).optional().default('medium'),
+  metadata: z.record(z.any()).optional(),
+});
+
+export const SystemAlertPayloadSchema = z.object({
+  alert_type: z.enum(['warning', 'error', 'info', 'success']).default('warning'),
+  message: z.string().min(1).max(500),
+  severity: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
+  metadata: z.record(z.any()).optional(),
+});
+
+export const SuggestAgentRestartPayloadSchema = z.object({
+  agent_name: AgentNameSchema,
+  reason: z.string().min(1).max(200),
+  urgency: z.enum(['low', 'medium', 'high']).optional().default('medium'),
+});
+
+export const SuggestConfigChangePayloadSchema = z.object({
+  agent_name: AgentNameSchema,
+  config_key: z.string().min(1).max(100),
+  suggested_value: z.string().max(500),
+  reason: z.string().min(1).max(300),
+});
