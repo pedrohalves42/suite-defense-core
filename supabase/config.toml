@@ -64,6 +64,9 @@ verify_jwt = false
 [functions.validate-agent-health]
 verify_jwt = true
 
+[functions.agent-health-check]
+verify_jwt = false
+
 [functions.check-agent-updates]
 verify_jwt = false
 

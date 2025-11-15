@@ -1,29 +1,47 @@
 import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
+export interface HmacVerificationResult {
+  valid: boolean;
+  errorCode?: string;
+  errorMessage?: string;
+  transient?: boolean;
+}
+
 /**
- * Verifica assinatura HMAC para prevenir ataques de replay
+ * Verifica assinatura HMAC com códigos de erro estruturados
  */
 export async function verifyHmacSignature(
   supabase: SupabaseClient,
   request: Request,
   agentName: string,
   hmacSecret: string
-): Promise<{ valid: boolean; error?: string }> {
+): Promise<HmacVerificationResult> {
   const signature = request.headers.get('X-HMAC-Signature');
   const timestamp = request.headers.get('X-Timestamp');
   const nonce = request.headers.get('X-Nonce');
 
   if (!signature || !timestamp || !nonce) {
-    return { valid: false, error: 'Headers HMAC ausentes' };
+    return { 
+      valid: false, 
+      errorCode: 'AUTH_MISSING_HEADERS',
+      errorMessage: 'Headers HMAC ausentes (X-HMAC-Signature, X-Timestamp, X-Nonce)',
+      transient: false
+    };
   }
 
   // Verificar timestamp (máximo 5 minutos de diferença)
   const requestTime = parseInt(timestamp);
   const now = Date.now();
   const maxDiff = 5 * 60 * 1000; // 5 minutos
+  const skewSeconds = Math.abs(now - requestTime) / 1000;
 
   if (Math.abs(now - requestTime) > maxDiff) {
-    return { valid: false, error: 'Timestamp expirado' };
+    return { 
+      valid: false, 
+      errorCode: 'AUTH_TIMESTAMP_OUT_OF_RANGE',
+      errorMessage: `Timestamp expirado (skew: ${skewSeconds.toFixed(1)}s, máx: 300s)`,
+      transient: true // Clock skew pode ser transitório
+    };
   }
 
   // Verificar se a assinatura já foi usada (prevenir replay)
@@ -36,7 +54,12 @@ export async function verifyHmacSignature(
     .maybeSingle();
 
   if (usedSignature) {
-    return { valid: false, error: 'Assinatura já utilizada (replay attack detectado)' };
+    return { 
+      valid: false, 
+      errorCode: 'AUTH_REPLAY_DETECTED',
+      errorMessage: 'Assinatura já utilizada (replay attack detectado)',
+      transient: false
+    };
   }
 
   // Construir payload para verificação
@@ -69,7 +92,12 @@ export async function verifyHmacSignature(
     .join('');
 
   if (signature !== expectedSignature) {
-    return { valid: false, error: 'Assinatura HMAC inválida' };
+    return { 
+      valid: false, 
+      errorCode: 'AUTH_INVALID_SIGNATURE',
+      errorMessage: 'Assinatura HMAC inválida',
+      transient: false
+    };
   }
 
   // Armazenar assinatura usada

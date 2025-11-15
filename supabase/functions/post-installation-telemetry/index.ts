@@ -201,7 +201,10 @@ serve(async (req) => {
     const isVerified = hmacResult.valid;
     
     if (!isVerified) {
-      console.warn(`[${requestId}] HMAC verification failed: ${hmacResult.error}`);
+      console.warn(`[${requestId}] HMAC verification failed:`, {
+        errorCode: hmacResult.errorCode,
+        errorMessage: hmacResult.errorMessage
+      });
       console.warn(`[${requestId}] Recording telemetry as unverified but linked to agent`);
     } else {
       console.log(`[${requestId}] HMAC verified successfully for agent: ${agent.agent_name}`);
@@ -259,7 +262,7 @@ serve(async (req) => {
         script_exists: script_exists,
         script_size_bytes: script_size_bytes,
         verified: isVerified,
-        hmac_error: isVerified ? null : hmacResult.error,
+        hmac_error: isVerified ? null : hmacResult.errorMessage,
         request_id: requestId
       },
       timestamp: installation_time || new Date().toISOString(),
