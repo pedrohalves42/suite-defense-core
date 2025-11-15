@@ -36,53 +36,76 @@ param(
     [int]\$PollInterval = 60
 )
 
-# CRÍTICO-1: Fix UTF-8 encoding for console output and file operations
+# ====================================
+# BOOTSTRAP CRÍTICO (executa PRIMEIRO)
+# ====================================
+
+# 1. Encoding global
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-\$PSDefaultParameterValues['Out-File:Encoding'] = 'UTF8'
+\$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
+\$PSDefaultParameterValues['ConvertTo-Json:Depth'] = 10
 
-# ============================================================================
-# CRÍTICO-3: MUTEX - PREVENT MULTIPLE INSTANCES
-# ============================================================================
-\$MutexName = "Global\\CyberShieldAgent_\$AgentToken"
-\$Mutex = \$null
+# 2. Paths de log (ANTES de qualquer operação)
+\$LogDir = "C:\\CyberShield\\logs"
+\$LogFile = Join-Path \$LogDir "agent.log"
+\$CrashLogPath = Join-Path \$LogDir "agent-crash.log"
 
-try {
-    \$Mutex = New-Object System.Threading.Mutex(\$false, \$MutexName)
-    
-    if (-not \$Mutex.WaitOne(0)) {
-        Write-Host "⚠️  Another instance of the agent is already running. Exiting..."
-        exit 0
+# 3. Garantir que diretório existe
+New-Item -ItemType Directory -Path \$LogDir -Force -ErrorAction SilentlyContinue | Out-Null
+
+# 4. Função Write-Log disponível IMEDIATAMENTE
+function Write-Log {
+    param(
+        [string]\$Message,
+        [ValidateSet("INFO","DEBUG","WARN","ERROR","SUCCESS","FATAL")]
+        [string]\$Level = "INFO"
+    )
+    try {
+        \$ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        \$line = "[\$ts] [\$Level] \$Message"
+        Add-Content -Path \$script:LogFile -Value \$line -ErrorAction SilentlyContinue
+        
+        # Console colorido
+        \$color = switch (\$Level) {
+            "ERROR" { "Red" }
+            "FATAL" { "DarkRed" }
+            "WARN"  { "Yellow" }
+            "SUCCESS" { "Green" }
+            "DEBUG" { "Gray" }
+            default { "White" }
+        }
+        Write-Host \$line -ForegroundColor \$color
+    } catch {
+        # Fallback silencioso se log falhar
+        Write-Host "[\$Level] \$Message"
     }
-} catch {
-    Write-Host "❌ Failed to create Mutex: \$(\$_.Exception.Message)"
-    exit 1
 }
 
-# ============================================================================
-# CORREÇÃO 2: CRASH HANDLER GLOBAL (trap deve vir antes de qualquer código)
-# ============================================================================
+# 5. ErrorActionPreference + Trap (DEPOIS que Write-Log existe)
 \$ErrorActionPreference = "Stop"
-\$CrashLogPath = "C:\\CyberShield\\logs\\agent-crash.log"
 
 trap {
-    # Tentar escrever crash log mesmo sem Write-Log disponível
+    \$ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     \$crashMsg = @"
-====================================
-AGENT CRASH: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-====================================
-Error: \$(\$_.Exception.Message)
+[\$ts] [FATAL] Unhandled exception in CyberShield Agent
+Message: \$(\$_.Exception.Message)
 Type: \$(\$_.Exception.GetType().FullName)
-Stack: \$(\$_.ScriptStackTrace)
+Stack:
+\$(\$_.ScriptStackTrace)
 Command: \$(\$_.InvocationInfo.MyCommand)
 Line: \$(\$_.InvocationInfo.ScriptLineNumber)
-====================================
 "@
     
+    # Tentar gravar crash log
     try {
-        New-Item -Path "C:\\CyberShield\\logs" -ItemType Directory -Force | Out-Null
         Add-Content -Path \$CrashLogPath -Value \$crashMsg -ErrorAction SilentlyContinue
-        Write-Host \$crashMsg -ForegroundColor Red
-    } catch { }
+    } catch {}
+    
+    # Tentar gravar em agent.log também
+    try {
+        Write-Log "FATAL CRASH: \$(\$_.Exception.Message)" "FATAL"
+        Write-Log "Stack: \$(\$_.ScriptStackTrace)" "FATAL"
+    } catch {}
     
     # Tentar enviar telemetria de crash
     try {
@@ -100,51 +123,92 @@ Line: \$(\$_.InvocationInfo.ScriptLineNumber)
             -Body \$crashPayload \`
             -TimeoutSec 5 \`
             -UseBasicParsing | Out-Null
-    } catch { }
+    } catch {}
     
     exit 1
 }
 
+# 6. Log de bootstrap concluído
+Write-Log "========================================" "INFO"
+Write-Log "CyberShield Agent v3.0.0" "INFO"
+Write-Log "Bootstrap concluído com sucesso" "SUCCESS"
+Write-Log "AgentToken: \$(\$AgentToken.Substring(0,8))..." "DEBUG"
+Write-Log "ServerUrl: \$ServerUrl" "DEBUG"
+Write-Log "========================================" "INFO"
+
 # ============================================================================
-# CORREÇÃO 3: VALIDAÇÃO INICIAL DE PARÂMETROS (antes de qualquer função)
+# CRÍTICO-3: MUTEX - PREVENT MULTIPLE INSTANCES
+# ============================================================================
+\$MutexName = "Global\\CyberShieldAgent_\$AgentToken"
+\$Mutex = \$null
+
+try {
+    \$Mutex = New-Object System.Threading.Mutex(\$false, \$MutexName)
+    
+    if (-not \$Mutex.WaitOne(0)) {
+        Write-Log "Outra instância do agente já está em execução. Encerrando." "WARN"
+        exit 0
+    }
+} catch {
+    Write-Log "Falha ao criar Mutex: \$(\$_.Exception.Message)" "ERROR"
+    throw "Falha ao criar Mutex para prevenir múltiplas instâncias"
+}
+
+# ============================================================================
+# PARAMETER VALIDATION (v3.0.0 - Now with proper logging and throw)
 # ============================================================================
 if ([string]::IsNullOrWhiteSpace(\$AgentToken)) {
-    Write-Host "[ERRO] Parâmetro -AgentToken obrigatório não foi fornecido!" -ForegroundColor Red
-    exit 1
+    Write-Log "Parâmetro -AgentToken é obrigatório mas está vazio" "FATAL"
+    throw "AgentToken é obrigatório"
 }
 
 if ([string]::IsNullOrWhiteSpace(\$HmacSecret)) {
-    Write-Host "[ERRO] Parâmetro -HmacSecret obrigatório não foi fornecido!" -ForegroundColor Red
-    exit 1
+    Write-Log "Parâmetro -HmacSecret é obrigatório mas está vazio" "FATAL"
+    throw "HmacSecret é obrigatório"
 }
 
 if ([string]::IsNullOrWhiteSpace(\$ServerUrl)) {
-    Write-Host "[ERRO] Parâmetro -ServerUrl obrigatório não foi fornecido!" -ForegroundColor Red
-    exit 1
+    Write-Log "Parâmetro -ServerUrl é obrigatório mas está vazio" "FATAL"
+    throw "ServerUrl é obrigatório"
 }
 
+# Validate minimum lengths (security)
 if (\$AgentToken.Length -lt 20) {
-    Write-Host "[ERRO] AgentToken parece ser inválido (muito curto: \$(\$AgentToken.Length) chars)" -ForegroundColor Red
-    exit 1
+    Write-Log "AgentToken muito curto (mínimo 20 caracteres, recebido: \$(\$AgentToken.Length))" "FATAL"
+    throw "AgentToken não atende requisitos mínimos de segurança"
 }
 
 if (\$HmacSecret.Length -lt 32) {
-    Write-Host "[ERRO] HmacSecret parece ser inválido (muito curto: \$(\$HmacSecret.Length) chars)" -ForegroundColor Red
-    exit 1
+    Write-Log "HmacSecret muito curto (mínimo 32 caracteres, recebido: \$(\$HmacSecret.Length))" "FATAL"
+    throw "HmacSecret não atende requisitos mínimos de segurança"
 }
 
-Write-Host "[\$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Parâmetros validados com sucesso ✅" -ForegroundColor Green
+Write-Log "Validação de parâmetros concluída com sucesso" "SUCCESS"
 
-# Validar versão do PowerShell
+# PowerShell version check
 if (\$PSVersionTable.PSVersion.Major -lt 3) {
-    Write-Host "ERRO: Este script requer PowerShell 3.0 ou superior" -ForegroundColor Red
-    Write-Host "Versão atual: \$(\$PSVersionTable.PSVersion)" -ForegroundColor Yellow
-    exit 1
+    Write-Log "PowerShell 3.0+ necessário. Versão atual: \$(\$PSVersionTable.PSVersion)" "FATAL"
+    throw "Versão do PowerShell incompatível"
 }
 
-# Validar sistema operacional
+# ============================================================================
+# SYSTEM INFORMATION (v3.0.0 - Protected WMI call)
+# ============================================================================
 \$osVersion = [System.Environment]::OSVersion.Version
-\$osName = (Get-WmiObject -Class Win32_OperatingSystem).Caption
+\$hostname = \$env:COMPUTERNAME
+
+# Proteção contra falha de WMI (causa comum de crash)
+\$osName = "Windows (detalhe indisponível)"
+try {
+    \$osName = (Get-WmiObject -Class Win32_OperatingSystem -ErrorAction Stop).Caption
+    Write-Log "Sistema operacional detectado: \$osName" "DEBUG"
+} catch {
+    Write-Log "WARN: Não foi possível obter detalhes do SO via WMI: \$(\$_.Exception.Message)" "WARN"
+    Write-Log "O agente continuará normalmente com nome genérico de SO" "INFO"
+}
+
+Write-Log "Hostname: \$hostname" "DEBUG"
+Write-Log "OS Version: \$(\$osVersion.ToString())" "DEBUG"
 
 # ============================================================================
 # CORREÇÃO 1: DEFINIR VARIÁVEIS DE LOG **ANTES** DE USAR
