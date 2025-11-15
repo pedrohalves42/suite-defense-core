@@ -284,7 +284,7 @@ $AgentScriptContentBlock = @'
     # Trigger 2: Repetition every 5 minutes (watchdog against crashes)
     $triggerWatchdog = New-ScheduledTaskTrigger -Once -At (Get-Date) \`
         -RepetitionInterval (New-TimeSpan -Minutes 5) \`
-        -RepetitionDuration ([TimeSpan]::MaxValue)
+        -RepetitionDuration (New-TimeSpan -Days 3650)
     
     $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" \`
         -LogonType ServiceAccount -RunLevel Highest
