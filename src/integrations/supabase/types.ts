@@ -396,6 +396,166 @@ export type Database = {
           },
         ]
       }
+      ai_actions: {
+        Row: {
+          action_payload: Json
+          action_type: string
+          created_at: string
+          error_message: string | null
+          executed_at: string | null
+          executed_by: string | null
+          id: string
+          insight_id: string | null
+          result: Json | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          action_payload?: Json
+          action_type: string
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          executed_by?: string | null
+          id?: string
+          insight_id?: string | null
+          result?: Json | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          action_payload?: Json
+          action_type?: string
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          executed_by?: string | null
+          id?: string
+          insight_id?: string | null
+          result?: Json | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_actions_insight_id_fkey"
+            columns: ["insight_id"]
+            isOneToOne: false
+            referencedRelation: "ai_insights"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_insights: {
+        Row: {
+          acknowledged: boolean | null
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          confidence_score: number | null
+          created_at: string
+          description: string
+          evidence: Json
+          id: string
+          insight_type: string
+          metadata: Json | null
+          recommendation: string | null
+          severity: string
+          tenant_id: string
+          title: string
+        }
+        Insert: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          description: string
+          evidence?: Json
+          id?: string
+          insight_type: string
+          metadata?: Json | null
+          recommendation?: string | null
+          severity: string
+          tenant_id: string
+          title: string
+        }
+        Update: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          description?: string
+          evidence?: Json
+          id?: string
+          insight_type?: string
+          metadata?: Json | null
+          recommendation?: string | null
+          severity?: string
+          tenant_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_learned_patterns: {
+        Row: {
+          confidence: number | null
+          first_seen: string
+          id: string
+          last_seen: string
+          metadata: Json | null
+          occurrences: number | null
+          pattern_data: Json
+          pattern_type: string
+          tenant_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          first_seen?: string
+          id?: string
+          last_seen?: string
+          metadata?: Json | null
+          occurrences?: number | null
+          pattern_data: Json
+          pattern_type: string
+          tenant_id: string
+        }
+        Update: {
+          confidence?: number | null
+          first_seen?: string
+          id?: string
+          last_seen?: string
+          metadata?: Json | null
+          occurrences?: number | null
+          pattern_data?: Json
+          pattern_type?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_learned_patterns_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_keys: {
         Row: {
           created_at: string
