@@ -63,6 +63,7 @@ import SystemLogs from "./pages/admin/SystemLogs";
 import InstallationPipelineMonitor from "./pages/admin/InstallationPipelineMonitor";
 import AgentHealthMonitor from "./pages/admin/AgentHealthMonitor";
 import InstallationLogsExplorer from "./pages/admin/InstallationLogsExplorer";
+import AIInsights from "./pages/admin/AIInsights";
 
 // CORREÇÃO: QueryClient já está inicializado no src/main.tsx
 // Remover duplicação para manter configurações otimizadas
@@ -125,6 +126,7 @@ const App = () => (
                 <Route path="agent-health" element={<AgentHealthMonitor />} />
                 <Route path="agent-diagnostics" element={<AgentDiagnostics />} />
                 <Route path="installation-logs" element={<InstallationLogsExplorer />} />
+                <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="tenant/invites" element={<TenantInvites />} />
                 <Route path="tenant/security" element={<TenantSecurity />} />
                 <Route path="tenant/logs" element={<TenantLogs />} />
