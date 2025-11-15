@@ -192,9 +192,10 @@ $AgentScriptContentBlock = @'
 {{AGENT_SCRIPT_CONTENT}}
 '@
 
-    # Write agent script to file
+    # CRÍTICO-1: Write agent script with forced UTF8-BOM encoding
+    # This prevents silent failures on systems with non-UTF8 default encoding
     $AgentScriptContentBlock | Out-File -FilePath $AgentScript -Encoding UTF8 -Force
-    Write-InstallLog "✅ Agent script saved to: $AgentScript"
+    Write-InstallLog "✅ Agent script saved with UTF8-BOM: $AgentScript"
     
     # ============================================================================
     # CORREÇÃO 5: VALIDAR QUE SCRIPT FOI GERADO CORRETAMENTE
@@ -243,8 +244,8 @@ $AgentScriptContentBlock = @'
         Write-InstallLog "ℹ️ Firewall rule already exists"
     }
     
-    # Create Scheduled Task for agent
-    Write-InstallLog "Creating Scheduled Task for automatic agent startup..."
+    # CRÍTICO-3: Create Scheduled Task with Watchdog (crash recovery)
+    Write-InstallLog "Creating Scheduled Task with Watchdog for crash resilience..."
     
     $taskName = "CyberShieldAgent"
     $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
@@ -256,7 +257,14 @@ $AgentScriptContentBlock = @'
     $action = New-ScheduledTaskAction -Execute "powershell.exe" \`
         -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \`"$AgentScript\`" -AgentToken \`"$AGENT_TOKEN\`" -HmacSecret \`"$HMAC_SECRET\`" -ServerUrl \`"$SERVER_URL\`" -PollInterval $POLL_INTERVAL"
     
-    $trigger = New-ScheduledTaskTrigger -AtStartup
+    # CRÍTICO: Multiple triggers for resilience
+    # Trigger 1: AtStartup (boot)
+    $triggerBoot = New-ScheduledTaskTrigger -AtStartup
+    
+    # Trigger 2: Repetition every 5 minutes (watchdog against crashes)
+    $triggerWatchdog = New-ScheduledTaskTrigger -Once -At (Get-Date) \`
+        -RepetitionInterval (New-TimeSpan -Minutes 5) \`
+        -RepetitionDuration ([TimeSpan]::MaxValue)
     
     $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" \`
         -LogonType ServiceAccount -RunLevel Highest
@@ -265,15 +273,21 @@ $AgentScriptContentBlock = @'
         -AllowStartIfOnBatteries \`
         -DontStopIfGoingOnBatteries \`
         -StartWhenAvailable \`
-        -RestartCount 3 \`
-        -RestartInterval (New-TimeSpan -Minutes 1)
+        -RestartCount 5 \`
+        -RestartInterval (New-TimeSpan -Minutes 1) \`
+        -ExecutionTimeLimit (New-TimeSpan -Hours 0) \`
+        -MultipleInstances IgnoreNew
     
     Register-ScheduledTask -TaskName $taskName \`
-        -Action $action -Trigger $trigger \`
-        -Principal $principal -Settings $settings \`
-        -Description "CyberShield Security Agent - Auto-start at system boot" | Out-Null
+        -Action $action \`
+        -Trigger @($triggerBoot, $triggerWatchdog) \`
+        -Principal $principal \`
+        -Settings $settings \`
+        -Description "CyberShield Security Agent - Auto-start with Watchdog" | Out-Null
     
-    Write-InstallLog "✅ Scheduled Task created: $taskName"
+    Write-InstallLog "✅ Scheduled Task created with Watchdog: $taskName"
+    Write-InstallLog "   → Trigger 1: AtStartup (boot)"
+    Write-InstallLog "   → Trigger 2: Every 5min (watchdog anti-crash)"
     
     # Start the agent task
     Write-InstallLog "Starting CyberShield Agent..."

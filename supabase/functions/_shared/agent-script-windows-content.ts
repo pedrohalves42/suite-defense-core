@@ -36,8 +36,27 @@ param(
     [int]\$PollInterval = 60
 )
 
-# Fix UTF-8 encoding for console output
+# CRÍTICO-1: Fix UTF-8 encoding for console output and file operations
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+\$PSDefaultParameterValues['Out-File:Encoding'] = 'UTF8'
+
+# ============================================================================
+# CRÍTICO-3: MUTEX - PREVENT MULTIPLE INSTANCES
+# ============================================================================
+\$MutexName = "Global\\CyberShieldAgent_\$AgentToken"
+\$Mutex = \$null
+
+try {
+    \$Mutex = New-Object System.Threading.Mutex(\$false, \$MutexName)
+    
+    if (-not \$Mutex.WaitOne(0)) {
+        Write-Host "⚠️  Another instance of the agent is already running. Exiting..."
+        exit 0
+    }
+} catch {
+    Write-Host "❌ Failed to create Mutex: \$(\$_.Exception.Message)"
+    exit 1
+}
 
 # ============================================================================
 # CORREÇÃO 2: CRASH HANDLER GLOBAL (trap deve vir antes de qualquer código)
@@ -780,8 +799,22 @@ function Start-Agent {
 
 #endregion
 
-# Iniciar o agente
-Start-Agent
+# ============================================================================
+# MAIN LOOP - START AGENT WITH MUTEX CLEANUP
+# ============================================================================
+try {
+    Start-Agent
+} finally {
+    # Release mutex on exit
+    if (\$Mutex) {
+        try {
+            \$Mutex.ReleaseMutex()
+            \$Mutex.Dispose()
+        } catch {
+            # Ignore errors releasing mutex
+        }
+    }
+}
 `;
 
 /**
