@@ -30,20 +30,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Buscar tenant do usuário
-    const { data: userRole, error: roleError } = await supabase
+    // Buscar roles do usuário (permite múltiplos)
+    const { data: roles, error: rolesError } = await supabase
       .from('user_roles')
       .select('tenant_id, role')
-      .eq('user_id', user.id)
-      .limit(1)
-      .maybeSingle();
+      .eq('user_id', user.id);
 
-    if (roleError || !userRole || !['admin', 'super_admin'].includes(userRole.role)) {
+    if (rolesError || !roles || roles.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Forbidden: admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const adminRole = roles.find(r => ['admin', 'super_admin'].includes(r.role));
+
+    if (!adminRole) {
+      return new Response(
+        JSON.stringify({ error: 'Forbidden: admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const tenantId = adminRole.tenant_id;
 
     const url = new URL(req.url);
     const page = parseInt(url.searchParams.get('page') || '1');
@@ -58,7 +67,7 @@ Deno.serve(async (req) => {
     let query = supabase
       .from('ai_insights')
       .select('*', { count: 'exact' })
-      .eq('tenant_id', userRole.tenant_id)
+      .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -84,7 +93,7 @@ Deno.serve(async (req) => {
     const { data: stats } = await supabase
       .from('ai_insights')
       .select('severity, acknowledged')
-      .eq('tenant_id', userRole.tenant_id);
+      .eq('tenant_id', tenantId);
 
     const statistics = {
       total: stats?.length || 0,
