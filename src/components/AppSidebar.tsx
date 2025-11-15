@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
@@ -45,6 +45,7 @@ export const AppSidebar = () => {
     { icon: BarChart3, label: 'Métricas Instalação', to: '/admin/installation-metrics' },
     { icon: ScrollText, label: 'Logs Instalação', to: '/admin/installation-logs' },
     { icon: Brain, label: 'IA Insights', to: '/admin/ai-insights' },
+    { icon: CheckCircle, label: 'IA Ações', to: '/admin/ai-actions' },
     { icon: Users, label: 'Membros', to: '/admin/members' },
     { icon: Mail, label: 'Convites Tenant', to: '/admin/tenant/invites' },
     { icon: AlertTriangle, label: 'Segurança Tenant', to: '/admin/tenant/security' },
