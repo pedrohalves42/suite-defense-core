@@ -41,7 +41,7 @@ Deno.serve(async (req: Request) => {
       .limit(1)
       .maybeSingle();
 
-    if (roleError || !userRole || userRole.role !== 'admin') {
+    if (roleError || !userRole || !['admin', 'super_admin'].includes(userRole.role)) {
       await createAuditLog({
         supabase,
         userId: user.id,
