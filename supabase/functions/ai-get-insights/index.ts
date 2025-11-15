@@ -31,13 +31,14 @@ Deno.serve(async (req) => {
     }
 
     // Buscar tenant do usuário
-    const { data: userRole } = await supabase
+    const { data: userRole, error: roleError } = await supabase
       .from('user_roles')
       .select('tenant_id, role')
       .eq('user_id', user.id)
-      .single();
+      .limit(1)
+      .maybeSingle();
 
-    if (!userRole || !['admin', 'super_admin'].includes(userRole.role)) {
+    if (roleError || !userRole || !['admin', 'super_admin'].includes(userRole.role)) {
       return new Response(
         JSON.stringify({ error: 'Forbidden: admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
