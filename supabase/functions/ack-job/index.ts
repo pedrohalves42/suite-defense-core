@@ -161,6 +161,21 @@ Deno.serve(async (req) => {
       )
     }
 
+    // FASE 3: TELEMETRIA - Logar detalhes completos do job antes do ACK
+    console.log(`[ack-job] Processing acknowledgment for job ${validatedJobId}`)
+    console.log('[ack-job] Job details:', {
+      id: existingJob.id,
+      type: existingJob.type,
+      agent_name: existingJob.agent_name,
+      status: existingJob.status,
+      created_at: existingJob.created_at,
+      delivered_at: existingJob.delivered_at
+    })
+
+    if (existingJob.status === 'done') {
+      console.log(`[ack-job] Job ${validatedJobId} already marked as done (idempotent ack)`)
+    }
+
     // Verificar se job pertence ao agente
     if (existingJob.agent_name !== agent.agent_name) {
       console.error('[ACK] Job pertence a outro agente:', existingJob.agent_name, '!=', agent.agent_name)

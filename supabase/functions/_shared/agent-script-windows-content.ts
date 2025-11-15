@@ -701,16 +701,62 @@ function Poll-Jobs {
             -TimeoutSec 15
         
         if (\$result.Success) {
-            \$jobs = \$result.Content | ConvertFrom-Json
-            
-            if (\$jobs.jobs -and \$jobs.jobs.Count -gt 0) {
-                Write-Log "📦 \$(\$jobs.jobs.Count) job(s) recebido(s)" "INFO"
-                return \$jobs.jobs
-            }
-            else {
-                Write-Log "Nenhum job pendente" "DEBUG"
+            # FASE 5: Parse robusto do JSON com tratamento de erro
+            \$responseText = \$result.Content
+            Write-Log "Raw response from poll-jobs: \$responseText" "DEBUG"
+
+            if ([string]::IsNullOrWhiteSpace(\$responseText)) {
+                Write-Log "Empty response from poll-jobs" "WARN"
                 return @()
             }
+
+            try {
+                \$jobs = \$responseText | ConvertFrom-Json
+            }
+            catch {
+                Write-Log "Error parsing jobs JSON: \$(\$_.Exception.Message)" "ERROR"
+                Write-Log "Raw response was: \$responseText" "DEBUG"
+                return @()
+            }
+            
+            # FASE 5: Compatível com array puro OU objeto { jobs: [...] }
+            if (\$jobs.PSObject.Properties.Name -contains 'jobs') {
+                \$jobs = \$jobs.jobs
+            }
+            elseif (\$jobs -isnot [Array]) {
+                # Se veio um único job como objeto
+                Write-Log "Wrapping single job in array" "DEBUG"
+                \$jobs = @(\$jobs)
+            }
+            
+            if (\$null -eq \$jobs) {
+                Write-Log "Parsed jobs is null" "WARN"
+                return @()
+            }
+            
+            # FASE 5: Filtro triplo ANTES de retornar (null, ID, type)
+            \$validJobs = @()
+            foreach (\$job in \$jobs) {
+                if (\$null -eq \$job) {
+                    Write-Log "Skipping null job in response" "WARN"
+                    continue
+                }
+
+                if (-not \$job.id) {
+                    Write-Log "Skipping job without ID: \$(\$job | ConvertTo-Json -Compress)" "WARN"
+                    continue
+                }
+
+                if (-not \$job.type) {
+                    Write-Log "Skipping job without type (ID: \$(\$job.id))" "WARN"
+                    continue
+                }
+
+                \$validJobs += \$job
+            }
+
+            Write-Log "Poll-Jobs: \$(\$validJobs.Count) valid jobs after validation" "DEBUG"
+            return \$validJobs
         }
         else {
             Write-Log "Erro ao buscar jobs: \$(\$result.Error)" "ERROR"
