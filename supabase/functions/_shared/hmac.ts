@@ -5,6 +5,7 @@ export interface HmacVerificationResult {
   errorCode?: string;
   errorMessage?: string;
   transient?: boolean;
+  rawBody?: string;  // Body lido durante a verificação
 }
 
 /**
@@ -109,7 +110,7 @@ export async function verifyHmacSignature(
   // CRÍTICO: Cleanup com debounce para evitar race conditions
   await debouncedCleanup(supabase);
 
-  return { valid: true };
+  return { valid: true, rawBody: body };
 }
 
 /**

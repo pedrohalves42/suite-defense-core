@@ -31,14 +31,6 @@ Deno.serve(async (req) => {
       hostname?: string;
     }
 
-    let osInfo: OSInfo = {}
-    try {
-      const body = await req.json()
-      osInfo = body || {}
-    } catch {
-      // Body vazio é OK para heartbeats legacy
-    }
-
     // Validar formato do token
     const tokenValidation = AgentTokenSchema.safeParse(agentToken)
     if (!tokenValidation.success) {
@@ -100,6 +92,17 @@ Deno.serve(async (req) => {
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+
+    // CRÍTICO: Parsear body DEPOIS da verificação HMAC, usando o rawBody retornado
+    let osInfo: OSInfo = {}
+    if (hmacResult.rawBody) {
+      try {
+        const parsedBody = JSON.parse(hmacResult.rawBody)
+        osInfo = parsedBody || {}
+      } catch {
+        // Body vazio ou inválido é OK para heartbeats legacy
+      }
     }
 
     // Rate limiting: 3 req/min (heartbeat a cada 60s + margem para retry)
