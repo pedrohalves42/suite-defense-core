@@ -450,19 +450,45 @@ $AgentScriptContentBlock = @'
     # Keep-Alive monitoring period (2 minutes)
     Write-InstallLog ""
     Write-InstallLog "🔄 Monitoring agent for 2 minutes (Keep-Alive)..."
-    for ($i = 1; $i -le 24; $i++) {
+    Write-Host -NoNewline "Monitoring agent status"
+    
+    $everRunning = $false
+    $maxChecks = 24   # 24 * 5s = 120 seconds (2 minutes)
+    
+    for ($i = 1; $i -le $maxChecks; $i++) {
         Start-Sleep -Seconds 5
-        $currentTask = Get-ScheduledTask -TaskName $taskName
-        $status = $currentTask.State
+        
+        try {
+            $currentTask = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
+            $status = $currentTask.State
+        } catch {
+            Write-InstallLog "" "ERROR"
+            Write-InstallLog "❌ Failed to read Scheduled Task '$taskName': $($_.Exception.Message)" "ERROR"
+            break
+        }
+        
         Write-Host "." -NoNewline
-        if ($status -ne "Running" -and $status -ne "Ready") {
+        
+        if ($status -eq "Running") {
+            $everRunning = $true
+        }
+        
+        # If status leaves Running/Ready, something went wrong
+        if ($status -notin @("Running", "Ready")) {
             Write-InstallLog "" "WARN"
             Write-InstallLog "⚠️ Agent task status changed to: $status" "WARN"
             break
         }
     }
+    
     Write-InstallLog ""
-    Write-InstallLog "✅ Keep-Alive monitoring complete. Agent is stable."
+    
+    if ($everRunning) {
+        Write-InstallLog "✅ Keep-Alive monitoring complete. Agent is stable."
+    } else {
+        Write-InstallLog "⚠️ Agent never reached Running state during Keep-Alive window" "WARN"
+    }
+    
     Write-InstallLog "Installation log saved to: $LogFile"
     
 } catch {
