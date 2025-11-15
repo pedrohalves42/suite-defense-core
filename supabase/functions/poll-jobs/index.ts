@@ -123,14 +123,21 @@ Deno.serve(async (req) => {
 
     if (jobsError) {
       console.error('[poll-jobs] Error fetching jobs:', jobsError)
-      throw jobsError
+      // Em caso de erro, retornar array vazio em vez de lançar exceção
+      return new Response(
+        JSON.stringify([]),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
     }
 
-    console.log(`[poll-jobs] Found ${jobs?.length || 0} jobs`)
+    // CRÍTICO: Filtrar jobs nulos ou sem ID (garantir array limpo)
+    const validJobs = (jobs || []).filter(job => job && job.id)
+
+    console.log(`[poll-jobs] Found ${validJobs.length} valid jobs`)
 
     // Marcar jobs como entregues
-    if (jobs && jobs.length > 0) {
-      const jobIds = jobs.map(j => j.id)
+    if (validJobs.length > 0) {
+      const jobIds = validJobs.map(j => j.id)
       console.log('[poll-jobs] Marking jobs as delivered:', jobIds)
       
       const { error: updateError } = await supabase
@@ -143,14 +150,14 @@ Deno.serve(async (req) => {
 
       if (updateError) {
         console.error('[poll-jobs] Error updating job status:', updateError)
-        throw updateError
+        // Não lançar erro, apenas logar - jobs já foram buscados
+      } else {
+        console.log('[poll-jobs] Jobs marked as delivered successfully')
       }
-      
-      console.log('[poll-jobs] Jobs marked as delivered successfully')
     }
 
-    // Retornar jobs
-    const jobsResponse = (jobs || []).map(j => ({
+    // Retornar jobs válidos
+    const jobsResponse = validJobs.map(j => ({
       id: j.id,
       type: j.type,
       payload: j.payload,
