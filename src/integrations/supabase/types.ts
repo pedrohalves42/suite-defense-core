@@ -974,6 +974,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_jobs"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "jobs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -2109,6 +2116,42 @@ export type Database = {
           },
         ]
       }
+      v_problematic_jobs: {
+        Row: {
+          age_minutes: number | null
+          agent_name: string | null
+          completed_at: string | null
+          created_at: string | null
+          delivered_at: string | null
+          id: string | null
+          problem_type: string | null
+          status: string | null
+          type: string | null
+        }
+        Insert: {
+          age_minutes?: never
+          agent_name?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          id?: string | null
+          problem_type?: never
+          status?: string | null
+          type?: string | null
+        }
+        Update: {
+          age_minutes?: never
+          agent_name?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          id?: string | null
+          problem_type?: never
+          status?: string | null
+          type?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_next_run: {
@@ -2152,6 +2195,13 @@ export type Database = {
       cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_old_metrics: { Args: never; Returns: undefined }
       cleanup_old_performance_metrics: { Args: never; Returns: undefined }
+      cleanup_old_problematic_jobs: {
+        Args: { p_days_old?: number }
+        Returns: {
+          deleted_count: number
+          job_ids: string[]
+        }[]
+      }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       cleanup_old_security_logs: { Args: never; Returns: undefined }
       cleanup_orphaned_agents: { Args: never; Returns: number }
