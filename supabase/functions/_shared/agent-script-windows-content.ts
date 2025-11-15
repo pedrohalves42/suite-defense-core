@@ -45,40 +45,58 @@ param(
 \$PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 \$PSDefaultParameterValues['ConvertTo-Json:Depth'] = 10
 
-# 2. Paths de log (ANTES de qualquer operação)
+# 2. Paths e configuração de log (ANTES de qualquer operação)
 \$LogDir = "C:\\CyberShield\\logs"
 \$LogFile = Join-Path \$LogDir "agent.log"
 \$CrashLogPath = Join-Path \$LogDir "agent-crash.log"
+\$MaxLogSizeMB = 10
+\$MaxLogFiles = 7
 
 # 3. Garantir que diretório existe
 New-Item -ItemType Directory -Path \$LogDir -Force -ErrorAction SilentlyContinue | Out-Null
 
-# 4. Função Write-Log disponível IMEDIATAMENTE
+# 4. Função Write-Log (ÚNICA, com rotação completa)
 function Write-Log {
     param(
         [string]\$Message,
         [ValidateSet("INFO","DEBUG","WARN","ERROR","SUCCESS","FATAL")]
         [string]\$Level = "INFO"
     )
+    
+    \$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    \$logMessage = "[\$timestamp] [\$Level] \$Message"
+    
+    # Rotação de logs se necessário
     try {
-        \$ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        \$line = "[\$ts] [\$Level] \$Message"
-        Add-Content -Path \$script:LogFile -Value \$line -ErrorAction SilentlyContinue
-        
-        # Console colorido
-        \$color = switch (\$Level) {
-            "ERROR" { "Red" }
-            "FATAL" { "DarkRed" }
-            "WARN"  { "Yellow" }
-            "SUCCESS" { "Green" }
-            "DEBUG" { "Gray" }
-            default { "White" }
+        if (Test-Path \$LogFile) {
+            \$logSize = (Get-Item \$LogFile).Length / 1MB
+            if (\$logSize -gt \$MaxLogSizeMB) {
+                for (\$i = \$MaxLogFiles; \$i -gt 0; \$i--) {
+                    \$oldLog = "\$LogFile.\$i"
+                    \$newLog = "\$LogFile.\$(\$i + 1)"
+                    if (Test-Path \$oldLog) {
+                        Move-Item -Path \$oldLog -Destination \$newLog -Force
+                    }
+                }
+                Move-Item -Path \$LogFile -Destination "\$LogFile.1" -Force
+            }
         }
-        Write-Host \$line -ForegroundColor \$color
+        
+        Add-Content -Path \$LogFile -Value \$logMessage -ErrorAction SilentlyContinue
     } catch {
-        # Fallback silencioso se log falhar
-        Write-Host "[\$Level] \$Message"
+        # Se der erro de IO, ignora (não pode matar o agente por causa do log)
     }
+    
+    \$color = switch (\$Level) {
+        "ERROR"   { "Red" }
+        "FATAL"   { "DarkRed" }
+        "WARN"    { "Yellow" }
+        "SUCCESS" { "Green" }
+        "DEBUG"   { "Gray" }
+        default   { "White" }
+    }
+    
+    Write-Host \$logMessage -ForegroundColor \$color
 }
 
 # 5. ErrorActionPreference + Trap (DEPOIS que Write-Log existe)
@@ -211,63 +229,8 @@ Write-Log "Hostname: \$hostname" "DEBUG"
 Write-Log "OS Version: \$(\$osVersion.ToString())" "DEBUG"
 
 # ============================================================================
-# CORREÇÃO 1: DEFINIR VARIÁVEIS DE LOG **ANTES** DE USAR
-# ============================================================================
-\$LogDir = "C:\\CyberShield\\logs"
-\$LogFile = Join-Path \$LogDir "agent.log"
-\$MaxLogSizeMB = 10
-\$MaxLogFiles = 7
-
-# Criar diretório de logs se não existir
-if (-not (Test-Path \$LogDir)) {
-    New-Item -ItemType Directory -Path \$LogDir -Force | Out-Null
-}
-
-# ============================================================================
-# CORREÇÃO 1: DEFINIR FUNÇÃO Write-Log **ANTES** DE USAR
-# ============================================================================
-function Write-Log {
-    param(
-        [string]\$Message,
-        [ValidateSet("INFO", "DEBUG", "WARN", "ERROR", "SUCCESS")]
-        [string]\$Level = "INFO"
-    )
-    
-    \$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    \$logMessage = "[\$timestamp] [\$Level] \$Message"
-    
-    # Rotação de logs se necessário
-    if (Test-Path \$LogFile) {
-        \$logSize = (Get-Item \$LogFile).Length / 1MB
-        if (\$logSize -gt \$MaxLogSizeMB) {
-            # Rotacionar logs
-            for (\$i = \$MaxLogFiles; \$i -gt 0; \$i--) {
-                \$oldLog = "\$LogFile.\$i"
-                \$newLog = "\$LogFile.\$(\$i + 1)"
-                if (Test-Path \$oldLog) {
-                    Move-Item -Path \$oldLog -Destination \$newLog -Force
-                }
-            }
-            Move-Item -Path \$LogFile -Destination "\$LogFile.1" -Force
-        }
-    }
-    
-    # Escrever no arquivo e console
-    Add-Content -Path \$LogFile -Value \$logMessage -ErrorAction SilentlyContinue
-    
-    \$color = switch (\$Level) {
-        "ERROR"   { "Red" }
-        "WARN"    { "Yellow" }
-        "SUCCESS" { "Green" }
-        "DEBUG"   { "Gray" }
-        default   { "White" }
-    }
-    
-    Write-Host \$logMessage -ForegroundColor \$color
-}
-
-# ============================================================================
-# BANNER DE INICIALIZAÇÃO (agora pode usar Write-Log e \$LogDir)
+# BANNER DE INICIALIZAÇÃO
+#============================================================================
 # ============================================================================
 Write-Log "========================================" "INFO"
 Write-Log "CyberShield Agent v3.0.0 Iniciando..." "INFO"
