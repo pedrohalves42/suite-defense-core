@@ -269,12 +269,22 @@ Responda APENAS com um array JSON válido de insights. Exemplo:
           },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.3,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
+      
+      if (response.status === 429) {
+        console.error('[ai-system-analyzer] Rate limit exceeded, will retry next cycle');
+        return [];
+      }
+      
+      if (response.status === 402) {
+        console.error('[ai-system-analyzer] Payment required - Lovable AI credits exhausted');
+        return [];
+      }
+      
       console.error('[ai-system-analyzer] AI API error:', response.status, errorText);
       return [];
     }
