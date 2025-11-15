@@ -21,6 +21,7 @@ import { useTenant } from '@/hooks/useTenant';
 import { MemberCard } from '@/components/members/MemberCard';
 import { AppRole } from '@/types/roles';
 import { Member, TenantSubscription } from '@/types/user';
+import { getMemberLimit } from '@/lib/subscriptionLimits';
 
 export default function Members() {
   const { toast } = useToast();
@@ -128,9 +129,10 @@ export default function Members() {
   });
 
   const currentUsersCount = members.length;
-  // CORREÇÃO: Usar dados corretos da subscription
-  const maxUsers = subscription?.features?.max_users?.quota_limit || subscription?.device_quantity || 0;
   const planName = subscription?.plan_name || 'free';
+  const memberLimit = getMemberLimit(subscription, 'free');
+  const isUnlimited = memberLimit === null;
+  const isAtLimit = !isUnlimited && currentUsersCount >= (memberLimit ?? 0);
 
   return (
     <div className="space-y-6">
@@ -167,10 +169,10 @@ export default function Members() {
             <div>
               <p className="text-sm text-muted-foreground">Membros</p>
               <p className="text-2xl font-bold">
-                {currentUsersCount} / {maxUsers}
+                {currentUsersCount} / {isUnlimited ? '∞' : memberLimit}
               </p>
             </div>
-            {currentUsersCount >= maxUsers && (
+            {!isUnlimited && isAtLimit && (
               <Badge variant="destructive">Limite atingido</Badge>
             )}
           </div>
