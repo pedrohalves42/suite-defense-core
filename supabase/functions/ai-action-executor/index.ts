@@ -249,6 +249,34 @@ serve(async (req) => {
 
     console.log(`[ai-action-executor] Action ${action_id} executed with status: ${executionStatus}`);
 
+    // 10. Security logging: registrar ação de IA executada
+    if (executionStatus === 'executed') {
+      const { error: securityLogError } = await supabase
+        .from('security_logs')
+        .insert({
+          tenant_id: action.tenant_id,
+          user_id: user.id,
+          ip_address: req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown',
+          endpoint: '/functions/v1/ai-action-executor',
+          attack_type: 'ai_action_executed',
+          severity: actionConfig.risk_level === 'high' ? 'high' : 'info',
+          blocked: false,
+          user_agent: req.headers.get('user-agent') || 'unknown',
+          details: {
+            action_id: action.id,
+            action_type: action.action_type,
+            executed_by: user.id,
+            insight_id: action.insight_id,
+            risk_level: actionConfig.risk_level,
+            result_summary: executionResult,
+          },
+        });
+
+      if (securityLogError) {
+        console.error('[ai-action-executor] Failed to log security event:', securityLogError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: executionStatus === 'executed',

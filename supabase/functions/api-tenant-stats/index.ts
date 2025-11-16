@@ -68,12 +68,12 @@ Deno.serve(async (req) => {
 
     const tenantId = authResult.tenantId!;
 
-    // Fetch statistics
+    // Fetch statistics (with defensive .limit(1000) for each query)
     const [agents, scans, quarantine, jobs] = await Promise.all([
-      supabase.from('agents').select('status, last_heartbeat').eq('tenant_id', tenantId),
-      supabase.from('virus_scans').select('is_malicious').eq('tenant_id', tenantId),
-      supabase.from('quarantined_files').select('status').eq('tenant_id', tenantId),
-      supabase.from('jobs').select('status').eq('tenant_id', tenantId),
+      supabase.from('agents').select('status, last_heartbeat').eq('tenant_id', tenantId).limit(1000),
+      supabase.from('virus_scans').select('is_malicious').eq('tenant_id', tenantId).limit(1000),
+      supabase.from('quarantined_files').select('status').eq('tenant_id', tenantId).limit(1000),
+      supabase.from('jobs').select('status').eq('tenant_id', tenantId).limit(1000),
     ]);
 
     const now = new Date();
