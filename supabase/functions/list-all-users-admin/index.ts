@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { requireSuperAdmin } from '../_shared/require-super-admin.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,45 +12,15 @@ Deno.serve(async (req) => {
   try {
     console.log(`[${requestId}] Starting list-all-users-admin`);
     
+    // CRITICAL SECURITY: Validate super_admin role
+    const authResult = await requireSuperAdmin(req, requestId);
+    if (!authResult.success) {
+      return authResult.response!;
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error(`[${requestId}] Missing Authorization header`);
-      return new Response(JSON.stringify({ error: 'Unauthorized: Missing Authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
-    
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-
-    if (authError || !user) {
-      console.error(`[${requestId}] Auth failed:`, authError);
-      return new Response(JSON.stringify({ error: 'Unauthorized: Invalid token' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.log(`[${requestId}] User authenticated:`, user.id);
-    
-    // Check if user is super_admin
-    const { data: hasSuperAdminRole } = await supabaseClient.rpc('is_super_admin', { 
-      _user_id: user.id
-    });
-
-    if (!hasSuperAdminRole) {
-      console.error(`[${requestId}] User is not super_admin:`, user.id);
-      return new Response(JSON.stringify({ error: 'Access denied: Super Admin only' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     console.log(`[${requestId}] Fetching all users from all tenants`);
 
