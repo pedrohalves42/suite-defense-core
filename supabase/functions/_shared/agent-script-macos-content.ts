@@ -22,7 +22,8 @@ set -euo pipefail
 AGENT_TOKEN="\$1"
 HMAC_SECRET="\$2"
 SERVER_URL="\$3"
-POLL_INTERVAL="\${4:-60}"
+AGENT_NAME="\$4"
+POLL_INTERVAL="\${5:-60}"
 
 # Paths (macOS conventions)
 LOG_DIR="/Library/Logs/CyberShield"
@@ -58,8 +59,15 @@ write_log() {
 }
 
 write_log "INFO" "CyberShield Agent (macOS) started"
+write_log "INFO" "Agent Name: \$AGENT_NAME"
 write_log "INFO" "Token prefix: \${AGENT_TOKEN:0:8}..."
 write_log "INFO" "Server: \$SERVER_URL"
+
+# Validate required parameters
+if [ -z "\$AGENT_TOKEN" ] || [ -z "\$HMAC_SECRET" ] || [ -z "\$SERVER_URL" ] || [ -z "\$AGENT_NAME" ]; then
+    write_log "ERROR" "Missing required parameters. All of AGENT_TOKEN, HMAC_SECRET, SERVER_URL, and AGENT_NAME must be provided."
+    exit 1
+fi
 
 # Collect macOS system information
 OS_VERSION=\$(sw_vers -productVersion)
@@ -196,6 +204,7 @@ send_post_installation_event() {
     
     body=$(cat <<EOF
 {
+  "agent_name": "\$AGENT_NAME",
   "event_type": "post_installation",
   "platform": "macos",
   "success": true,

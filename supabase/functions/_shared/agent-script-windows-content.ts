@@ -32,6 +32,9 @@ param(
     [Parameter(Mandatory=\$true)]
     [string]\$ServerUrl,
     
+    [Parameter(Mandatory=\$true)]
+    [string]\$AgentName,
+    
     [Parameter(Mandatory=\$false)]
     [int]\$PollInterval = 60
 )
@@ -190,6 +193,11 @@ if ([string]::IsNullOrWhiteSpace(\$ServerUrl)) {
     throw "ServerUrl é obrigatório"
 }
 
+if ([string]::IsNullOrWhiteSpace(\$AgentName)) {
+    Write-Log "Parâmetro -AgentName é obrigatório mas está vazio" "FATAL"
+    throw "AgentName é obrigatório"
+}
+
 # Validate minimum lengths (security)
 if (\$AgentToken.Length -lt 20) {
     Write-Log "AgentToken muito curto (mínimo 20 caracteres, recebido: \$(\$AgentToken.Length))" "FATAL"
@@ -239,6 +247,7 @@ Write-Log "Timestamp: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" "INFO"
 Write-Log "OS: \$osName" "INFO"
 Write-Log "PowerShell: \$(\$PSVersionTable.PSVersion)" "INFO"
 Write-Log "AgentToken: \$(\$AgentToken.Substring(0,20))..." "INFO"
+Write-Log "AgentName: \$AgentName" "INFO"
 Write-Log "HmacSecret Length: \$(\$HmacSecret.Length) chars" "INFO"
 Write-Log "ServerUrl: \$ServerUrl" "INFO"
 Write-Log "PollInterval: \$PollInterval segundos" "INFO"
@@ -262,11 +271,22 @@ if (\$osVersion.Major -lt 6 -or (\$osVersion.Major -eq 6 -and \$osVersion.Minor 
 function Convert-HexToBytes {
     param([string]\$HexString)
     
-    \$bytes = New-Object byte[] (\$HexString.Length / 2)
-    for (\$i = 0; \$i -lt \$HexString.Length; \$i += 2) {
-        \$bytes[\$i / 2] = [Convert]::ToByte(\$HexString.Substring(\$i, 2), 16)
+    # Validation: must be 64 hex chars (32 bytes)
+    if (\$HexString -notmatch '^[0-9a-fA-F]{64}\$') {
+        Write-Log "ERROR: HMAC_SECRET must be 64 hexadecimal characters (32 bytes). Current length: \$(\$HexString.Length)" "ERROR"
+        throw "Invalid HMAC_SECRET format. Expected 64 hex characters, got: \$(\$HexString.Length)"
     }
-    return \$bytes
+    
+    try {
+        \$bytes = New-Object byte[] 32
+        for (\$i = 0; \$i -lt 64; \$i += 2) {
+            \$bytes[\$i / 2] = [Convert]::ToByte(\$HexString.Substring(\$i, 2), 16)
+        }
+        return \$bytes
+    } catch {
+        Write-Log "ERROR: Failed to convert HMAC_SECRET from HEX: \$_" "ERROR"
+        throw "HMAC_SECRET conversion failed: \$_"
+    }
 }
 
 function Get-HmacSignature {
@@ -472,6 +492,56 @@ function Send-Heartbeat {
     catch {
         Write-Log "❌ EXCEPTION em Send-Heartbeat: \$(\$_.Exception.Message)" "ERROR"
         Write-Log "   StackTrace: \$(\$_.ScriptStackTrace)" "ERROR"
+    }
+}
+
+function Send-PostInstallationEvent {
+    param(
+        [bool]\$Success = \$true,
+        [string]\$ErrorMessage = "",
+        [int]\$InstallationTimeSeconds = 0
+    )
+    
+    try {
+        Write-Log "📤 Enviando evento de post-installation (success=\$Success)..." "INFO"
+        
+        \$hostname = \$env:COMPUTERNAME
+        \$telemetry = @{
+            os_type = "Windows"
+            os_version = \$osName
+            hostname = \$hostname
+            powershell_version = \$PSVersionTable.PSVersion.ToString()
+            install_method = "scheduled_task"
+        }
+        
+        \$body = @{
+            agent_name = \$AgentName
+            event_type = if (\$Success) { "post_installation" } else { "post_installation_unverified" }
+            platform = "windows"
+            installation_method = "one_click"
+            success = \$Success
+            installation_time_seconds = \$InstallationTimeSeconds
+            error_message = \$ErrorMessage
+            metadata = \$telemetry
+        }
+        
+        \$result = Invoke-SecureRequest \`
+            -Uri "\$ServerUrl/functions/v1/track-installation-event" \`
+            -Method POST \`
+            -Body \$body \`
+            -TimeoutSec 10
+        
+        if (\$result.Success) {
+            Write-Log "✅ Evento post-installation enviado (Status: \$(\$result.StatusCode))" "SUCCESS"
+            return \$true
+        } else {
+            Write-Log "⚠️ Falha ao enviar post-installation event: \$(\$result.Error)" "WARN"
+            return \$false
+        }
+    }
+    catch {
+        Write-Log "❌ EXCEPTION em Send-PostInstallationEvent: \$(\$_.Exception.Message)" "ERROR"
+        return \$false
     }
 }
 

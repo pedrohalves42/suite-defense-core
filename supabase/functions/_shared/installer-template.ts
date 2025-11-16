@@ -22,11 +22,13 @@ $ErrorActionPreference = "Stop"
 $AGENT_TOKEN = "{{AGENT_TOKEN}}"
 $HMAC_SECRET = "{{HMAC_SECRET}}"
 $SERVER_URL = "{{SERVER_URL}}"
+$AGENT_NAME = "{{AGENT_NAME}}"
 $POLL_INTERVAL = {{POLL_INTERVAL}}
 
 # Backward compatibility aliases
 $AgentToken = $AGENT_TOKEN
 $HmacSecret = $HMAC_SECRET
+$AgentName = $AGENT_NAME
 
 # ============================================================================
 # VALIDATION - Ensure credentials are valid
@@ -275,7 +277,7 @@ $AgentScriptContentBlock = @'
     }
     
     $action = New-ScheduledTaskAction -Execute "powershell.exe" \`
-        -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \`"$AgentScript\`" -AgentToken \`"$AGENT_TOKEN\`" -HmacSecret \`"$HMAC_SECRET\`" -ServerUrl \`"$SERVER_URL\`" -PollInterval $POLL_INTERVAL"
+        -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \`"$AgentScript\`" -AgentToken \`"$AGENT_TOKEN\`" -HmacSecret \`"$HMAC_SECRET\`" -ServerUrl \`"$SERVER_URL\`" -AgentName \`"$AGENT_NAME\`" -PollInterval $POLL_INTERVAL"
     
     # CRÍTICO: Multiple triggers for resilience
     # Trigger 1: AtStartup (boot)
