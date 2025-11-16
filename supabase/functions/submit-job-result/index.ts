@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
     }
 
     // Verificar se já está concluído (idempotência)
-    if (job.status === 'done') {
+    if (['done', 'completed', 'failed'].includes(job.status)) {
       console.log('[submit-job-result] Job already done:', job_id)
       return new Response(
         JSON.stringify({ 
@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
 
     // Atualizar o job
     const updateData: Record<string, any> = {
-      status: 'done',
+      status: status,
       completed_at: new Date().toISOString()
     }
 
