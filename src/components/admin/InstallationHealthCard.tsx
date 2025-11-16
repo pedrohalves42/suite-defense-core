@@ -34,7 +34,10 @@ export function InstallationHealthCard() {
     
     try {
       const { data: result, error: fetchError } = await supabase
-        .rpc('installation_health_summary' as any);
+        .rpc('installation_health_summary' as any) as { 
+          data: HealthRow[] | null; 
+          error: any 
+        };
 
       if (fetchError) {
         console.error('[InstallationHealthCard] Error fetching health:', fetchError);
@@ -43,7 +46,7 @@ export function InstallationHealthCard() {
           description: fetchError.message
         });
       } else {
-        setData((result as unknown as HealthRow[]) || []);
+        setData(result || []);
         setLastUpdate(new Date());
       }
     } catch (err) {
