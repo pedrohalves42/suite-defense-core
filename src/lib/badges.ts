@@ -10,8 +10,10 @@ import { AppRole } from '@/types/roles';
  */
 export function getRoleBadgeVariant(
   role: AppRole
-): 'default' | 'secondary' | 'outline' {
+): 'default' | 'secondary' | 'outline' | 'destructive' {
   switch (role) {
+    case 'super_admin':
+      return 'destructive';
     case 'admin':
       return 'default';
     case 'operator':
