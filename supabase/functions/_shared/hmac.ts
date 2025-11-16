@@ -11,6 +11,26 @@ export interface HmacVerificationResult {
 /**
  * Verifica assinatura HMAC com códigos de erro estruturados
  */
+/**
+ * Convert HEX string to Uint8Array (32 bytes for SHA-256)
+ * CRITICAL: This ensures compatibility with PowerShell/Bash agents that use HEX encoding
+ */
+function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.trim().toLowerCase();
+  
+  // Validate HEX format (64 characters = 32 bytes)
+  if (!/^[0-9a-f]{64}$/i.test(clean)) {
+    throw new Error(`Invalid HMAC secret format: expected 64 hex chars, got ${clean.length}`);
+  }
+  
+  const bytes = new Uint8Array(32);
+  for (let i = 0; i < 64; i += 2) {
+    bytes[i / 2] = parseInt(clean.slice(i, i + 2), 16);
+  }
+  
+  return bytes;
+}
+
 export async function verifyHmacSignature(
   supabase: SupabaseClient,
   request: Request,
@@ -74,14 +94,23 @@ export async function verifyHmacSignature(
 
   const payload = `${timestamp}:${nonce}:${body}`;
 
-  // Verificar assinatura HMAC
+  // FASE 1 FIX: Usar HEX para compatibilidade com agentes Windows/macOS
   const encoder = new TextEncoder();
-  const keyData = encoder.encode(hmacSecret);
+  let keyData: Uint8Array;
+  
+  try {
+    keyData = hexToBytes(hmacSecret);
+  } catch (hexError) {
+    // Fallback para UTF-8 (retrocompatibilidade com agentes antigos)
+    console.warn(`[HMAC] HEX parsing failed, trying UTF-8 fallback: ${hexError}`);
+    keyData = encoder.encode(hmacSecret);
+  }
+  
   const messageData = encoder.encode(payload);
 
   const cryptoKey = await crypto.subtle.importKey(
     'raw',
-    keyData,
+    keyData.buffer as ArrayBuffer,
     { name: 'HMAC', hash: 'SHA-256' },
     false,
     ['sign']
