@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 import { WINDOWS_INSTALLER_TEMPLATE } from '../_shared/installer-template.ts';
+import { AGENT_SCRIPT_MACOS_SH } from '../_shared/agent-script-macos-content.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 
@@ -289,8 +290,21 @@ Deno.serve(async (req) => {
     const platform = agentData.os_type || 'windows';
     console.log(`[${requestId}] Generating ${platform} installer for ${agentData.agent_name}`);
 
-    // Select template (using shared template)
-    let templateContent = platform === 'windows' ? WINDOWS_INSTALLER_TEMPLATE : LINUX_INSTALLER_TEMPLATE;
+    // Select template and agent script content based on platform
+    let templateContent: string;
+    let agentScriptContentForPlatform: string;
+    
+    if (platform === 'windows') {
+      templateContent = WINDOWS_INSTALLER_TEMPLATE;
+      agentScriptContentForPlatform = agentScriptContent;
+    } else if (platform === 'macos') {
+      templateContent = MACOS_INSTALLER_TEMPLATE;
+      agentScriptContentForPlatform = AGENT_SCRIPT_MACOS_SH;
+      console.log('[' + requestId + '] Using macOS agent script (' + agentScriptContentForPlatform.length + ' bytes)');
+    } else { // linux
+      templateContent = LINUX_INSTALLER_TEMPLATE;
+      agentScriptContentForPlatform = agentScriptContent;
+    }
 
     // FASE 2: Replace placeholders with validated credentials
     // Using function callbacks to prevent $ character interpretation
@@ -300,7 +314,7 @@ Deno.serve(async (req) => {
       .replace(/\{\{SERVER_URL\}\}/g, () => SUPABASE_URL)
       .replace(/\{\{POLL_INTERVAL\}\}/g, '60')
       .replace(/\{\{AGENT_HASH\}\}/g, () => agentScriptHash)
-      .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, () => agentScriptContent)
+      .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, () => agentScriptContentForPlatform)
       .replace(/\{\{AGENT_NAME\}\}/g, () => agentData.agent_name)
       .replace(/\{\{TIMESTAMP\}\}/g, () => new Date().toISOString());
 
