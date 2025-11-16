@@ -2615,6 +2615,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      installation_health_summary: {
+        Args: never
+        Returns: {
+          failed_events: number
+          os_type: string
+          success_rate: number
+          successful_events: number
+          total_events: number
+          window_interval: string
+        }[]
+      }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       pgp_armor_headers: {
