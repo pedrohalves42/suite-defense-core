@@ -128,11 +128,24 @@ export default function Members() {
     },
   });
 
+  // CRITICAL FIX: Use max_users from tenant_features instead of device_quantity
   const currentUsersCount = members.length;
   const planName = subscription?.plan_name || 'free';
-  const memberLimit = getMemberLimit(subscription, 'free');
+  
+  // Get max_users from tenant_features (primary source of truth)
+  const maxUsersFeature = subscription?.features?.max_users;
+  const memberLimit = maxUsersFeature?.quota_limit ?? getMemberLimit(subscription, 'free');
+  
   const isUnlimited = memberLimit === null;
   const isAtLimit = !isUnlimited && currentUsersCount >= (memberLimit ?? 0);
+  
+  console.log('[Members] Subscription check:', { 
+    planName, 
+    currentUsersCount, 
+    memberLimit, 
+    isAtLimit,
+    maxUsersFeature: maxUsersFeature ? `limit=${maxUsersFeature.quota_limit}, used=${maxUsersFeature.quota_used}` : 'not found'
+  });
 
   return (
     <div className="space-y-6">
