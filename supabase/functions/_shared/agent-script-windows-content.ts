@@ -643,6 +643,40 @@ function Send-SystemMetrics {
     }
 }
 
+function Send-PostInstallationEvent {
+    try {
+        Write-Log "Reportando evento de post_installation..." "INFO"
+
+        \$body = @{
+            event_type = "post_installation"
+            platform   = "windows"
+            agent_token = \$AgentToken
+            hostname   = \$env:COMPUTERNAME
+            timestamp  = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+            success    = \$true
+            installation_method = "one_click"
+            network_connectivity = \$true
+        }
+
+        \$result = Invoke-SecureRequest \`
+            -Uri "\$ServerUrl/functions/v1/track-installation-event" \`
+            -Method POST \`
+            -Body \$body \`
+            -TimeoutSec 10 \`
+            -MaxRetries 2
+
+        if (\$result.Success -and \$result.StatusCode -eq 200) {
+            Write-Log "✅ Evento post_installation registrado com sucesso" "SUCCESS"
+        } else {
+            Write-Log "⚠ Falha ao registrar post_installation: Status=\$(\$result.StatusCode) Error=\$(\$result.Error)" "WARN"
+        }
+    }
+    catch {
+        Write-Log "⚠ Exceção em Send-PostInstallationEvent: \$(\$_.Exception.Message)" "WARN"
+        Write-Log "   Stack: \$(\$_.ScriptStackTrace)" "DEBUG"
+    }
+}
+
 #endregion
 
 #region Polling e Execução de Jobs
@@ -898,21 +932,27 @@ function Ack-Job {
 
 #region Teste de Conectividade e First Heartbeat
 
-Write-Log "Realizando teste de conectividade com backend..." "INFO"
+Write-Log "Realizando teste de conectividade com backend (HMAC)..." "INFO"
 
 try {
-    \$testResult = Invoke-WebRequest -Uri "\$ServerUrl/rest/v1/" \`
-        -Method GET \`
-        -Headers @{ "apikey" = \$AgentToken } \`
+    \$healthBody = @{} | ConvertTo-Json -Compress
+    \$healthResult = Invoke-SecureRequest \`
+        -Uri "\$ServerUrl/functions/v1/agent-health-check" \`
+        -Method POST \`
+        -Body \$healthBody \`
         -TimeoutSec 10 \`
-        -UseBasicParsing
-    
-    Write-Log "✅ Connectivity test: OK (Status: \$(\$testResult.StatusCode))" "SUCCESS"
+        -MaxRetries 1
+
+    if (\$healthResult.Success -and \$healthResult.StatusCode -eq 200) {
+        Write-Log "✅ Backend health-check OK (HTTP 200, HMAC válido)" "SUCCESS"
+    } else {
+        Write-Log "⚠ Health-check HTTP \$(\$healthResult.StatusCode) (não bloqueante)" "WARN"
+        Write-Log "Agente continuará tentando, mas pode haver problemas de rede ou autenticação" "WARN"
+    }
 }
 catch {
-    Write-Log "❌ CONNECTIVITY TEST FAILED: \$(\$_.Exception.Message)" "ERROR"
-    Write-Log "Verifique se ServerUrl está correto: \$ServerUrl" "ERROR"
-    Write-Log "Agente continuará tentando, mas pode haver problemas" "WARN"
+    Write-Log "⚠ Health-check falhou (não bloqueante): \$(\$_.Exception.Message)" "WARN"
+    Write-Log "Agente continuará tentando, mas pode haver problemas de rede ou relógio" "WARN"
 }
 
 Write-Log "Enviando heartbeat inicial..." "INFO"
@@ -926,6 +966,9 @@ Write-Log "========================================" "SUCCESS"
 Write-Log "=== AGENTE INICIALIZADO COM SUCESSO! ===" "SUCCESS"
 Write-Log "========================================" "SUCCESS"
 Write-Log "" "INFO"
+
+Write-Log "Enviando evento de post_installation..." "INFO"
+Send-PostInstallationEvent
 
 #endregion
 
