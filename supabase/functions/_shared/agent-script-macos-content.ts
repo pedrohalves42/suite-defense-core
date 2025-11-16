@@ -175,8 +175,73 @@ poll_jobs() {
     fi
 }
 
+# Send post_installation event
+send_post_installation_event() {
+    local timestamp nonce body signature response http_code
+    
+    write_log "INFO" "Sending post_installation event..."
+    
+    timestamp=\$(date +%s%3N)
+    nonce=\$(generate_nonce)
+    
+    # Enhanced macOS telemetry for post_installation
+    local os_version os_build hardware_model hardware_arch memory_gb cpu_count
+    os_version=\$(sw_vers -productVersion)
+    os_build=\$(sw_vers -buildVersion)
+    hardware_model=\$(sysctl -n hw.model)
+    hardware_arch=\$(uname -m)
+    memory_gb=\$(sysctl -n hw.memsize | awk '{print int(\$1/1024/1024/1024)}')
+    cpu_count=\$(sysctl -n hw.ncpu)
+    
+    body=$(cat <<EOF
+{
+  "event_type": "post_installation",
+  "platform": "macos",
+  "success": true,
+  "installation_method": "one_click",
+  "network_connectivity": true,
+  "metadata": {
+    "os_version": "\$os_version",
+    "os_build": "\$os_build",
+    "hardware_model": "\$hardware_model",
+    "hardware_arch": "\$hardware_arch",
+    "memory_gb": \$memory_gb,
+    "cpu_count": \$cpu_count
+  }
+}
+EOF
+)
+    
+    signature=\$(generate_hmac_signature "\$timestamp" "\$nonce" "\$body")
+    
+    response=\$(curl -sS -w "\\n%{http_code}" -X POST "\${SERVER_URL}/functions/v1/track-installation-event" \\
+        -H "Content-Type: application/json" \\
+        -H "X-Agent-Token: \${AGENT_TOKEN}" \\
+        -H "X-HMAC-Signature: \${signature}" \\
+        -H "X-Timestamp: \${timestamp}" \\
+        -H "X-Nonce: \${nonce}" \\
+        --data "\$body" 2>&1) || {
+            write_log "WARN" "Post-installation event failed: curl error (non-blocking)"
+            return 1
+        }
+    
+    http_code=\$(echo "\$response" | tail -n1)
+    
+    if [ "\$http_code" = "200" ]; then
+        write_log "SUCCESS" "✅ Post-installation event registered successfully"
+    else
+        write_log "WARN" "⚠ Post-installation event failed: HTTP \$http_code (non-blocking)"
+    fi
+}
+
 # Main loop
 write_log "INFO" "Entering main loop (interval: \${POLL_INTERVAL}s)"
+
+# Send initial heartbeat and post_installation event
+send_heartbeat
+send_post_installation_event
+
+write_log "SUCCESS" "=== Agent Initialized Successfully ==="
 
 while true; do
     send_heartbeat
