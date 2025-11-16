@@ -1195,14 +1195,19 @@ export type Database = {
           completed_at: string | null
           created_at: string
           delivered_at: string | null
+          error_message: string | null
+          execution_time_seconds: number | null
+          finished_at: string | null
           id: string
           is_recurring: boolean | null
           last_run_at: string | null
           next_run_at: string | null
+          output: Json | null
           parent_job_id: string | null
           payload: Json | null
           recurrence_pattern: string | null
           scheduled_at: string | null
+          started_at: string | null
           status: string
           tenant_id: string
           type: string
@@ -1213,14 +1218,19 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           delivered_at?: string | null
+          error_message?: string | null
+          execution_time_seconds?: number | null
+          finished_at?: string | null
           id?: string
           is_recurring?: boolean | null
           last_run_at?: string | null
           next_run_at?: string | null
+          output?: Json | null
           parent_job_id?: string | null
           payload?: Json | null
           recurrence_pattern?: string | null
           scheduled_at?: string | null
+          started_at?: string | null
           status?: string
           tenant_id: string
           type: string
@@ -1231,14 +1241,19 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           delivered_at?: string | null
+          error_message?: string | null
+          execution_time_seconds?: number | null
+          finished_at?: string | null
           id?: string
           is_recurring?: boolean | null
           last_run_at?: string | null
           next_run_at?: string | null
+          output?: Json | null
           parent_job_id?: string | null
           payload?: Json | null
           recurrence_pattern?: string | null
           scheduled_at?: string | null
+          started_at?: string | null
           status?: string
           tenant_id?: string
           type?: string
