@@ -163,11 +163,43 @@ export default function Members() {
             Gerencie os membros do seu tenant
           </p>
         </div>
-        <Button onClick={() => navigate('/admin/invites')}>
-          <UserPlus className="h-4 w-4 mr-2" />
-          Convidar Membro
-        </Button>
+        <div className="flex items-center gap-3">
+          {!isUnlimited && isAtLimit && (
+            <Badge variant="destructive" className="text-sm">
+              Limite de membros atingido ({memberLimit})
+            </Badge>
+          )}
+          <Button 
+            onClick={() => navigate('/admin/invites')}
+            disabled={isAtLimit}
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Convidar Membro
+          </Button>
+        </div>
       </div>
+
+      {!isUnlimited && isAtLimit && (
+        <Card className="border-destructive bg-destructive/5">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <p className="font-semibold text-destructive">Limite de membros atingido</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Seu plano <Badge variant="secondary" className="mx-1">{planName}</Badge> 
+                  permite até {memberLimit} membros. Para adicionar mais membros, faça upgrade do seu plano.
+                </p>
+              </div>
+              <Button 
+                onClick={() => navigate('/admin/plan-upgrade')}
+                variant="default"
+              >
+                Fazer Upgrade
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

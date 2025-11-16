@@ -35,7 +35,40 @@ Valida que um super admin pode:
 
 ---
 
-### 2. One-Click Agent Installation (`one-click-installation.spec.ts`)
+### 2. Super Admin - Privilege Escalation Prevention (`super-admin-privilege-escalation.spec.ts`)
+
+**CRITICAL SECURITY TESTS** to validate privilege escalation prevention:
+
+#### ✅ Casos de Teste
+
+| Teste | Descrição | Validação |
+|-------|-----------|-----------|
+| **[CRITICAL] super_admin access** | super_admin can call `list-all-users-admin` | Returns 200 with multi-tenant data |
+| **[CRITICAL] admin denial** | Regular admin CANNOT call super_admin endpoints | Returns 403 Forbidden |
+| **[CRITICAL] operator denial** | Operator CANNOT call super_admin endpoints | Returns 403 Forbidden |
+| **[CRITICAL] unauthenticated denial** | No auth CANNOT call super_admin endpoints | Returns 401 Unauthorized |
+| **[CRITICAL] JWT tampering** | Tampered JWT CANNOT bypass validation | Returns 401 or 403 |
+| **[SECURITY] audit logging** | super_admin operations are logged | Audit log entry created |
+| **[INFO] Frontend redirect** | SuperAdminLayout redirects non-super_admin | Redirects to dashboard |
+| **[INFO] Hook validation** | useSuperAdmin returns correct boolean | Hook works correctly |
+
+#### 🛡️ Attack Vectors Tested
+
+1. **Direct API Call**: Craft HTTP request to Edge Function without React UI
+2. **Frontend Manipulation**: Modify localStorage/React state to appear as super_admin
+3. **JWT Tampering**: Forge JWT with fake super_admin claim
+4. **RLS Bypass**: Attempt direct database updates to user_roles
+5. **SQL Injection**: Malicious input to Edge Function parameters
+
+#### 🔒 Security Layers Validated
+
+- ✅ **Layer 1 (Frontend)**: `SuperAdminLayout` + `useSuperAdmin` hook
+- ✅ **Layer 2 (Backend)**: `requireSuperAdmin` middleware in Edge Functions
+- ✅ **Layer 3 (Database)**: `is_super_admin` RPC with SECURITY DEFINER + RLS policies
+
+---
+
+### 3. One-Click Agent Installation (`one-click-installation.spec.ts`)
 
 Valida o fluxo completo de instalação simplificada:
 
