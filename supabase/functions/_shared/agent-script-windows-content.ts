@@ -542,47 +542,8 @@ function Send-Heartbeat {
         }
         else {
             Write-Log "❌ Heartbeat falhou: StatusCode=\$(\$result.StatusCode), Error=\$(\$result.Error)" "ERROR"
-            
-            # Fallback: tentar endpoint sem HMAC se falha for 401/403
-            if (\$result.StatusCode -in @(401, 403)) {
-                Write-Log "⚠️  HMAC rejeitado (código \$(\$result.StatusCode)), tentando fallback..." "WARN"
-                
-                try {
-                    \$bodyJson = \$body | ConvertTo-Json -Depth 10 -Compress
-                    \$fallbackHeaders = @{
-                        "Content-Type" = "application/json"
-                        "X-Agent-Token" = \$AgentToken
-                    }
-                    
-                    \$fallbackParams = @{
-                        Uri = "\$ServerUrl/functions/v1/heartbeat-fallback"
-                        Method = "POST"
-                        Headers = \$fallbackHeaders
-                        Body = \$bodyJson
-                        TimeoutSec = 10
-                        UseBasicParsing = \$true
-                    }
-                    
-                    Write-Log "🔄 Tentando fallback: \$(\$fallbackParams.Uri)" "DEBUG"
-                    
-                    \$fallbackResponse = Invoke-WebRequest @fallbackParams
-                    
-                    if (\$fallbackResponse.StatusCode -eq 200) {
-                        Write-Log "✅ Heartbeat fallback OK (sem HMAC)" "SUCCESS"
-                    } else {
-                        Write-Log "⚠️  Fallback retornou status: \$(\$fallbackResponse.StatusCode)" "WARN"
-                    }
-                }
-                catch {
-                    Write-Log "❌ Fallback também falhou: \$(\$_.Exception.Message)" "ERROR"
-                    if (\$_.Exception.Response) {
-                        Write-Log "   Status fallback: \$(\$_.Exception.Response.StatusCode.value__)" "ERROR"
-                    }
-                }
-            }
-            else {
-                Write-Log "❌ Erro não é autenticação (código: \$(\$result.StatusCode)), fallback não aplicável" "ERROR"
-            }
+            Write-Log "⚠️  Verifique conectividade de rede e sincronização de relógio do sistema" "WARN"
+            # Heartbeat será retentado no próximo ciclo (60s)
         }
     }
     catch {
