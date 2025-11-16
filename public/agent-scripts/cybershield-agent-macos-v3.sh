@@ -8,12 +8,14 @@ set -euo pipefail
 # PARÂMETROS
 ########################################
 
-SERVER_URL="${SERVER_URL:-}"
-AGENT_TOKEN="${AGENT_TOKEN:-}"
-HMAC_SECRET="${HMAC_SECRET:-}"
-AGENT_NAME="${AGENT_NAME:-$(hostname -s)}"
-AGENT_VERSION="${AGENT_VERSION:-3.0.0}"
+# Prioridade: argumentos > env vars curtas > env vars prefixadas CYBERSHIELD_*
+SERVER_URL="${SERVER_URL:-${CYBERSHIELD_SERVER_URL:-}}"
+AGENT_TOKEN="${AGENT_TOKEN:-${CYBERSHIELD_AGENT_TOKEN:-}}"
+HMAC_SECRET="${HMAC_SECRET:-${CYBERSHIELD_HMAC_SECRET:-}}"
+AGENT_NAME="${AGENT_NAME:-${CYBERSHIELD_AGENT_NAME:-$(hostname -s)}}"
+AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-3.0.0}}"
 
+# Parse argumentos (sobrescreve env vars)
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --server-url)
@@ -27,14 +29,30 @@ while [[ $# -gt 0 ]]; do
     --agent-version)
       AGENT_VERSION="$2"; shift 2;;
     *)
-      echo "Parâmetro desconhecido: $1" >&2
+      echo "❌ Parâmetro desconhecido: $1" >&2
+      echo "Uso: $0 --server-url URL --agent-token TOKEN --hmac-secret SECRET [--agent-name NAME] [--agent-version VERSION]"
       exit 1;;
   esac
 done
 
-if [[ -z "$SERVER_URL" || -z "$AGENT_TOKEN" || -z "$HMAC_SECRET" ]]; then
-  echo "Uso: SERVER_URL=... AGENT_TOKEN=... HMAC_SECRET=... ./cybershield-agent-macos.sh"
-  echo "ou:  ./cybershield-agent-macos.sh --server-url ... --agent-token ... --hmac-secret ..."
+# Validação com mensagens claras
+if [[ -z "$SERVER_URL" ]]; then
+  echo "❌ SERVER_URL não definido" >&2
+  echo "Use: --server-url URL" >&2
+  echo "  ou: SERVER_URL=... (env var)" >&2
+  echo "  ou: CYBERSHIELD_SERVER_URL=... (env var prefixada)" >&2
+  exit 1
+fi
+
+if [[ -z "$AGENT_TOKEN" ]]; then
+  echo "❌ AGENT_TOKEN não definido" >&2
+  echo "Use: --agent-token TOKEN ou AGENT_TOKEN=... ou CYBERSHIELD_AGENT_TOKEN=..." >&2
+  exit 1
+fi
+
+if [[ -z "$HMAC_SECRET" ]]; then
+  echo "❌ HMAC_SECRET não definido" >&2
+  echo "Use: --hmac-secret SECRET ou HMAC_SECRET=... ou CYBERSHIELD_HMAC_SECRET=..." >&2
   exit 1
 fi
 
