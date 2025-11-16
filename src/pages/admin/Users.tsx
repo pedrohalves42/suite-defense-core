@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { ChevronLeft, ChevronRight, Mail, UserCheck, UserX } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
@@ -21,29 +22,40 @@ const ITEMS_PER_PAGE = 10;
 export default function Users() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isSuperAdmin } = useSuperAdmin();
   const [page, setPage] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  // CORREÇÃO: Tipagem adequada em vez de any
   const [selectedUser, setSelectedUser] = useState<UserWithDetails | null>(null);
 
   const { data: usersData, isLoading } = useQuery({
-    queryKey: ['admin-users'],
+    queryKey: ['admin-users', isSuperAdmin],
     queryFn: async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/list-users`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Super admin sees ALL users from ALL tenants
+      const endpoint = isSuperAdmin 
+        ? 'list-all-users-admin' 
+        : 'list-users';
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${endpoint}`,
+        {
+          method: isSuperAdmin ? 'POST' : 'GET',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
       if (!response.ok) throw new Error('Failed to fetch users');
       const data = await response.json();
-      return data.users || [];
+      
+      // list-all-users-admin returns array directly, list-users returns { users: [] }
+      return isSuperAdmin ? data : (data.users || []);
     },
   });
 
@@ -223,7 +235,7 @@ export default function Users() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Tenant</TableHead>
+                  {isSuperAdmin && <TableHead>Tenant</TableHead>}
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Cadastrado em</TableHead>
@@ -235,9 +247,11 @@ export default function Users() {
                   <TableRow key={user.user_id}>
                     <TableCell>{user.full_name || '-'}</TableCell>
                     <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{user.tenant_name}</Badge>
-                    </TableCell>
+                    {isSuperAdmin && (
+                      <TableCell>
+                        <Badge variant="outline">{user.tenant_name || 'N/A'}</Badge>
+                      </TableCell>
+                    )}
                     <TableCell>
                       <Badge variant={getRoleBadgeVariant(user.role)}>
                         {user.role}
