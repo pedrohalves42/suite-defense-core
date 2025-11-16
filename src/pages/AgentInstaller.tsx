@@ -101,7 +101,7 @@ const AgentInstaller = () => {
 
   // Step 1: Configuration
   const [agentName, setAgentName] = useState("");
-  const [platform, setPlatform] = useState<"windows" | "linux">("windows");
+  const [platform, setPlatform] = useState<"windows" | "linux" | "macos">("windows");
   const [agentNameError, setAgentNameError] = useState("");
   const [isCheckingName, setIsCheckingName] = useState(false);
   
@@ -605,7 +605,7 @@ const AgentInstaller = () => {
   };
 
   // FASE 4: Download and validate PS1/SH SHA256
-  const downloadAndVerifyScript = async (enrollmentKey: string, platform: 'windows' | 'linux') => {
+  const downloadAndVerifyScript = async (enrollmentKey: string, platform: 'windows' | 'linux' | 'macos') => {
     if (!enrollmentKey) {
       toast.error("Enrollment key não disponível");
       return;
@@ -1147,6 +1147,12 @@ const AgentInstaller = () => {
                 <RadioGroupItem value="linux" id="linux" />
                 <Label htmlFor="linux" className="cursor-pointer">Linux (Bash)</Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="macos" id="macos" />
+                <Label htmlFor="macos" className="cursor-pointer flex items-center gap-2">
+                  <span>🍎</span> macOS (Bash)
+                </Label>
+              </div>
             </RadioGroup>
           </div>
 
@@ -1200,7 +1206,34 @@ const AgentInstaller = () => {
                 </AlertDescription>
               </Alert>
 
-              <Button 
+              {platform === 'macos' && (
+                <Alert className="mt-4">
+                  <Terminal className="h-4 w-4" />
+                  <AlertTitle>Instruções para macOS</AlertTitle>
+                  <AlertDescription className="space-y-2 text-sm">
+                    <ol className="list-decimal list-inside space-y-2">
+                      <li>
+                        <strong>Abra o Terminal</strong> no macOS (⌘ + Espaço → "Terminal")
+                      </li>
+                      <li>
+                        <strong>Execute o comando gerado</strong> abaixo com <code className="bg-muted px-1 rounded">sudo</code>
+                      </li>
+                      <li>
+                        O instalador criará um <strong>LaunchDaemon</strong> que iniciará automaticamente
+                      </li>
+                      <li>
+                        Verifique o status com: <code className="bg-muted px-1 rounded">launchctl list | grep cybershield</code>
+                      </li>
+                    </ol>
+                    <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-950 rounded text-xs">
+                      <strong>⚠️ Permissões:</strong> O instalador precisa de privilégios de administrador (sudo). 
+                      O agente será instalado em <code>/Library/Application Support/CyberShield</code>.
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Button
                 onClick={generateCopyPasteCommand} 
                 disabled={!isNameValid || isGenerating || circuitBreakerOpen}
                 className="w-full"

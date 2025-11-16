@@ -11,7 +11,7 @@ import { logger } from '@/lib/logger';
 interface AgentMetrics {
   id: string;
   name: string;
-  os_type: 'windows' | 'linux' | 'unknown';
+  os_type: 'windows' | 'linux' | 'macos' | 'unknown';
   os_version?: string;
   hostname?: string;
   status: string;
