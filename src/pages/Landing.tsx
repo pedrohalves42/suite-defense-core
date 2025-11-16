@@ -370,9 +370,9 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {/* Starter */}
-            <div className={`p-8 rounded-2xl border-2 hover:border-primary/50 transition-colors ${audience === 'business' ? 'bg-card border-border' : 'bg-white border-gray-300'}`}>
+            <div className="p-8 rounded-2xl border-2 border-border hover:border-primary/50 transition-colors bg-card">
               <div className="flex items-center gap-2 mb-4">
-                <Zap className={`w-6 h-6 ${audience === 'business' ? 'text-primary' : 'text-gray-700'}`} />
+                <Zap className="w-6 h-6 text-primary" />
                 <h3 className="text-2xl font-bold">{audience === 'business' ? "Starter" : "Básico"}</h3>
               </div>
               <div className="mb-6">
@@ -382,23 +382,23 @@ const Landing = () => {
               <p className="text-sm text-muted-foreground mb-6">{audience === 'business' ? "Ideal para pequenas empresas (até 30 dispositivos)" : "Ideal para até 3 computadores em casa"}</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2">
-                  <CheckCircle className={`w-5 h-5 ${audience === 'business' ? 'text-primary' : 'text-green-600'} shrink-0 mt-0.5`} />
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">{audience === 'business' ? "Dashboard avançado" : "Proteção básica contra vírus"}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className={`w-5 h-5 ${audience === 'business' ? 'text-primary' : 'text-green-600'} shrink-0 mt-0.5`} />
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">{audience === 'business' ? "2 scans avançados por dia" : "Scans automáticos semanais"}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className={`w-5 h-5 ${audience === 'business' ? 'text-primary' : 'text-green-600'} shrink-0 mt-0.5`} />
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">{audience === 'business' ? "Monitoramento em tempo real" : "Monitoramento básico em tempo real"}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className={`w-5 h-5 ${audience === 'business' ? 'text-primary' : 'text-green-600'} shrink-0 mt-0.5`} />
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">{audience === 'business' ? "Suporte por email" : "Suporte via WhatsApp"}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className={`w-5 h-5 ${audience === 'business' ? 'text-primary' : 'text-green-600'} shrink-0 mt-0.5`} />
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">{audience === 'business' ? "30 dias de trial gratuito" : "30 dias grátis para testar"}</span>
                 </li>
               </ul>
@@ -453,9 +453,9 @@ const Landing = () => {
             </div>
 
             {/* Enterprise */}
-            <div className={`p-8 rounded-2xl border-2 border-border hover:border-primary/50 transition-colors ${audience === 'business' ? 'bg-card' : 'bg-white border-gray-300'}`}>
+            <div className="p-8 rounded-2xl border-2 border-border hover:border-primary/50 transition-colors bg-card">
               <div className="flex items-center gap-2 mb-4">
-                <ShieldCheck className={`w-6 h-6 ${audience === 'business' ? 'text-primary' : 'text-gray-700'}`} />
+                <ShieldCheck className="w-6 h-6 text-primary" />
                 <h3 className="text-2xl font-bold">{audience === 'business' ? "Enterprise" : "Avançado"}</h3>
               </div>
               <div className="mb-6">
@@ -465,19 +465,19 @@ const Landing = () => {
               <p className="text-sm text-muted-foreground mb-6">{audience === 'business' ? "Para grandes empresas e necessidades avançadas" : "Para casas com muitos dispositivos e necessidades especiais"}</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2">
-                  <CheckCircle className={`w-5 h-5 ${audience === 'business' ? 'text-primary' : 'text-green-600'} shrink-0 mt-0.5`} />
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">{audience === 'business' ? "Tudo do Pro, mais:" : "Tudo do Completo, mais:"}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className={`w-5 h-5 ${audience === 'business' ? 'text-primary' : 'text-green-600'} shrink-0 mt-0.5`} />
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">{audience === 'business' ? "Suporte dedicado 24/7" : "Suporte premium 24/7"}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className={`w-5 h-5 ${audience === 'business' ? 'text-primary' : 'text-green-600'} shrink-0 mt-0.5`} />
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">{audience === 'business' ? "Consultoria personalizada" : "Consultoria para segurança doméstica"}</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <CheckCircle className={`w-5 h-5 ${audience === 'business' ? 'text-primary' : 'text-green-600'} shrink-0 mt-0.5`} />
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">{audience === 'business' ? "Relatórios avançados e auditoria" : "Relatórios detalhados para sua família"}</span>
                 </li>
               </ul>
