@@ -584,6 +584,38 @@ function Send-SystemMetrics {
     }
 }
 
+function Send-PostInstallationEvent {
+    try {
+        Write-Log "Reportando evento de post_installation..." "INFO"
+
+        $body = @{
+            event_type = "post_installation"
+            platform   = "windows"
+            agent_token = $AgentToken
+            hostname   = $env:COMPUTERNAME
+            timestamp  = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+            success    = $true
+            installation_method = "one_click"
+            network_connectivity = $true
+        }
+
+        $postInstallUrl = "$ServerUrl/functions/v1/track-installation-event"
+        $response = Invoke-SecureRequest -Url $postInstallUrl -Method "POST" -Body $body -MaxRetries 2
+
+        if ($response) {
+            Write-Log "✅ Evento post_installation registrado com sucesso" "SUCCESS"
+        } else {
+            Write-Log "⚠ Falha ao registrar post_installation" "WARN"
+        }
+        
+        return $response
+    }
+    catch {
+        Write-Log "⚠ Exceção em Send-PostInstallationEvent: $_" "WARN"
+        return $null
+    }
+}
+
 #endregion
 
 #region System Health
@@ -603,10 +635,10 @@ function Test-SystemHealth {
     
     for ($i = 1; $i -le $maxRetries; $i++) {
         try {
-            Write-Log "Testing server connectivity (attempt $i/$maxRetries)..." "INFO"
-            $testUrl = "$ServerUrl/functions/v1/poll-jobs"
-            $testResponse = Invoke-SecureRequest -Url $testUrl -Method "GET" -MaxRetries 1
-            Write-Log "Server connectivity: OK" "SUCCESS"
+            Write-Log "Testing server connectivity with HMAC (attempt $i/$maxRetries)..." "INFO"
+            $testUrl = "$ServerUrl/functions/v1/agent-health-check"
+            $testResponse = Invoke-SecureRequest -Url $testUrl -Method "POST" -Body @{} -MaxRetries 1
+            Write-Log "Server connectivity: OK (HMAC authenticated)" "SUCCESS"
             $connected = $true
             break
         }
@@ -673,6 +705,12 @@ function Start-Agent {
     
     Write-Log "Sending initial system metrics..." "INFO"
     Send-SystemMetrics | Out-Null
+    
+    Write-Log "Sending post_installation event..." "INFO"
+    Send-PostInstallationEvent | Out-Null
+    
+    Write-Log "=== Agent Initialized Successfully ===" "SUCCESS"
+    Write-Log "" "INFO"
     
     $lastHeartbeat = Get-Date
     $lastMetrics = Get-Date
