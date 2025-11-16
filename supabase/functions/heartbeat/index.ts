@@ -132,6 +132,7 @@ Deno.serve(async (req) => {
       os_type?: string;
       os_version?: string;
       hostname?: string;
+      agent_version?: string;
     }
 
     const updateData: AgentUpdate = { 
@@ -147,6 +148,12 @@ Deno.serve(async (req) => {
     }
     if (osInfo.hostname) {
       updateData.hostname = osInfo.hostname
+    }
+    
+    // FASE 4: Capturar agent_version do payload
+    const agentVersion = (osInfo as any).agent_version as string | undefined;
+    if (agentVersion) {
+      updateData.agent_version = agentVersion;
     }
 
     const { error: updateError } = await supabase
