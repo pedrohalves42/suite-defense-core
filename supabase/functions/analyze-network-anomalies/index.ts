@@ -80,11 +80,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Coletar dados dos jobs
+    // Coletar dados dos jobs (com limite para evitar DoS)
     let jobsQuery = supabaseAdmin
       .from('jobs')
       .select('agent_name, type, status, created_at, completed_at')
-      .gte('created_at', startTime);
+      .gte('created_at', startTime)
+      .limit(1000); // P0 FIX: Proteção contra DoS com muitos jobs
 
     if (agentName) {
       jobsQuery = jobsQuery.eq('agent_name', agentName);

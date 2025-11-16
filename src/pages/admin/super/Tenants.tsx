@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Users, Activity, Loader2, AlertCircle } from 'lucide-react';
+import { Building2, Users, Activity, Loader2, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Tenant {
@@ -42,32 +44,51 @@ interface TenantWithStats extends Tenant {
 export default function SuperAdminTenants() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // P0 FIX: Paginação para evitar DoS com muitos tenants
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 50;
 
-  // Fetch all tenants
-  const { data: tenants, isLoading: tenantsLoading } = useQuery({
-    queryKey: ['super-admin-tenants'],
+  // Fetch paginated tenants
+  const { data: tenantsData, isLoading: tenantsLoading } = useQuery({
+    queryKey: ['super-admin-tenants', page],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      
+      const { data, error, count } = await supabase
         .from('tenants')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
       
       if (error) throw error;
-      return data as Tenant[];
+      return { tenants: data as Tenant[], totalCount: count || 0 };
     },
+    placeholderData: (previousData) => previousData, // Keep previous data while loading
   });
+  
+  const tenants = tenantsData?.tenants;
+  const totalCount = tenantsData?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  // Fetch all subscriptions
+  // Fetch subscriptions only for current page tenants (P0 FIX)
   const { data: subscriptions } = useQuery({
-    queryKey: ['super-admin-subscriptions'],
+    queryKey: ['super-admin-subscriptions', page],
     queryFn: async () => {
+      if (!tenants || tenants.length === 0) return [];
+      
+      const tenantIds = tenants.map(t => t.id);
       const { data, error } = await supabase
         .from('tenant_subscriptions')
-        .select('*, subscription_plans(*)');
+        .select('*, subscription_plans(*)')
+        .in('tenant_id', tenantIds)
+        .limit(PAGE_SIZE);
       
       if (error) throw error;
       return data as TenantSubscription[];
     },
+    enabled: !!tenants && tenants.length > 0,
   });
 
   // Fetch all plans
@@ -84,13 +105,17 @@ export default function SuperAdminTenants() {
     },
   });
 
-  // Fetch user counts per tenant (COUNT DISTINCT user_id)
+  // Fetch user counts only for current page tenants (P0 FIX)
   const { data: userCounts } = useQuery({
-    queryKey: ['super-admin-user-counts'],
+    queryKey: ['super-admin-user-counts', page],
     queryFn: async () => {
+      if (!tenants || tenants.length === 0) return {};
+      
+      const tenantIds = tenants.map(t => t.id);
       const { data, error } = await supabase
         .from('user_roles')
-        .select('tenant_id, user_id');
+        .select('tenant_id, user_id')
+        .in('tenant_id', tenantIds);
       
       if (error) throw error;
       
@@ -112,15 +137,20 @@ export default function SuperAdminTenants() {
       
       return counts;
     },
+    enabled: !!tenants && tenants.length > 0,
   });
 
-  // Fetch agent counts per tenant
+  // Fetch agent counts only for current page tenants (P0 FIX)
   const { data: agentCounts } = useQuery({
-    queryKey: ['super-admin-agent-counts'],
+    queryKey: ['super-admin-agent-counts', page],
     queryFn: async () => {
+      if (!tenants || tenants.length === 0) return {};
+      
+      const tenantIds = tenants.map(t => t.id);
       const { data, error } = await supabase
         .from('agents')
-        .select('tenant_id');
+        .select('tenant_id')
+        .in('tenant_id', tenantIds);
       
       if (error) throw error;
       
@@ -130,16 +160,21 @@ export default function SuperAdminTenants() {
       });
       return counts;
     },
+    enabled: !!tenants && tenants.length > 0,
   });
 
-  // Fetch tenant_features to get real max_users (source of truth)
+  // Fetch tenant_features only for current page tenants (P0 FIX)
   const { data: tenantFeatures } = useQuery({
-    queryKey: ['super-admin-tenant-features'],
+    queryKey: ['super-admin-tenant-features', page],
     queryFn: async () => {
+      if (!tenants || tenants.length === 0) return {};
+      
+      const tenantIds = tenants.map(t => t.id);
       const { data, error } = await supabase
         .from('tenant_features')
         .select('tenant_id, feature_key, quota_limit')
-        .eq('feature_key', 'max_users');
+        .eq('feature_key', 'max_users')
+        .in('tenant_id', tenantIds);
       
       if (error) throw error;
       
@@ -149,6 +184,33 @@ export default function SuperAdminTenants() {
       });
       
       return limits;
+    },
+    enabled: !!tenants && tenants.length > 0,
+  });
+
+  // P0 FIX: Queries agregadas para cards de resumo (totais gerais, não apenas da página)
+  const { data: totalStats } = useQuery({
+    queryKey: ['super-admin-total-stats'],
+    queryFn: async () => {
+      // Count total unique users across all tenants
+      const { data: userRoles, error: userError } = await supabase
+        .from('user_roles')
+        .select('user_id');
+      
+      if (userError) throw userError;
+      const uniqueUserIds = new Set(userRoles?.map(r => r.user_id) || []);
+      
+      // Count total agents across all tenants
+      const { count: agentCount, error: agentError } = await supabase
+        .from('agents')
+        .select('*', { count: 'exact', head: true });
+      
+      if (agentError) throw agentError;
+      
+      return {
+        totalUsers: uniqueUserIds.size,
+        totalAgents: agentCount || 0,
+      };
     },
   });
 
@@ -242,7 +304,7 @@ export default function SuperAdminTenants() {
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{tenants?.length || 0}</div>
+            <div className="text-2xl font-bold">{totalCount}</div>
             <p className="text-xs text-muted-foreground">Organizações ativas</p>
           </CardContent>
         </Card>
@@ -254,7 +316,7 @@ export default function SuperAdminTenants() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {Object.values(userCounts || {}).reduce((a, b) => a + b, 0)}
+              {totalStats?.totalUsers || 0}
             </div>
             <p className="text-xs text-muted-foreground">Usuários em todos os tenants</p>
           </CardContent>
@@ -267,7 +329,7 @@ export default function SuperAdminTenants() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {Object.values(agentCounts || {}).reduce((a, b) => a + b, 0)}
+              {totalStats?.totalAgents || 0}
             </div>
             <p className="text-xs text-muted-foreground">Agentes monitorando servidores</p>
           </CardContent>
@@ -347,6 +409,38 @@ export default function SuperAdminTenants() {
               ))}
             </TableBody>
           </Table>
+          
+          {/* P0 FIX: Controles de paginação */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Mostrando {page * PAGE_SIZE + 1} a {Math.min((page + 1) * PAGE_SIZE, totalCount)} de {totalCount} tenants
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Anterior
+                </Button>
+                <div className="text-sm text-muted-foreground">
+                  Página {page + 1} de {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                >
+                  Próxima
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
