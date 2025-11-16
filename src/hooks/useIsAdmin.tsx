@@ -8,11 +8,9 @@ export const useIsAdmin = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // CORREÇÃO: Flag para prevenir race condition
     let isCancelled = false;
 
     const checkAdmin = async () => {
-      // Aguarda a autenticação finalizar antes de decidir
       if (authLoading) {
         setLoading(true);
         return;
@@ -25,18 +23,33 @@ export const useIsAdmin = () => {
       }
 
       try {
-        const { data, error } = await supabase.rpc('has_role', {
+        // CRITICAL: Super admin IS admin (principle: super admin has all admin privileges)
+        // Check super_admin FIRST
+        const { data: isSuperAdmin, error: superAdminError } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'super_admin'
+        });
+
+        if (superAdminError) throw superAdminError;
+
+        if (isSuperAdmin === true) {
+          if (!isCancelled) {
+            setIsAdmin(true);
+            setLoading(false);
+          }
+          return;
+        }
+
+        // If not super admin, check regular admin role
+        const { data: isRegularAdmin, error: adminError } = await supabase.rpc('has_role', {
           _user_id: user.id,
           _role: 'admin'
         });
 
-        if (error) {
-          throw error;
-        }
+        if (adminError) throw adminError;
         
-        // CORREÇÃO: Só atualiza se não foi cancelado
         if (!isCancelled) {
-          setIsAdmin(data === true);
+          setIsAdmin(isRegularAdmin === true);
         }
       } catch (error) {
         if (!isCancelled) {
@@ -51,7 +64,6 @@ export const useIsAdmin = () => {
 
     checkAdmin();
 
-    // CORREÇÃO: Cleanup para prevenir memory leak
     return () => {
       isCancelled = true;
     };
