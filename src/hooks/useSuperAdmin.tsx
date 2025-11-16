@@ -7,6 +7,7 @@ export const useSuperAdmin = () => {
   const { user, loading: authLoading } = useAuth();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // CORREÇÃO: Flag para prevenir race condition
@@ -29,16 +30,21 @@ export const useSuperAdmin = () => {
           _user_id: user.id
         });
 
-        if (error) throw error;
+        if (error) {
+          logger.error('RPC is_super_admin failed', error);
+          throw new Error(`Failed to verify super admin status: ${error.message}`);
+        }
         
         // CORREÇÃO: Só atualiza se não foi cancelado
         if (!isCancelled) {
           setIsSuperAdmin(data === true);
+          setError(null);
         }
       } catch (error) {
         logger.error('Error checking super admin status', error);
         if (!isCancelled) {
           setIsSuperAdmin(false);
+          setError(error instanceof Error ? error.message : 'Unknown error checking super admin status');
         }
       } finally {
         if (!isCancelled) {
@@ -55,5 +61,5 @@ export const useSuperAdmin = () => {
     };
   }, [user, authLoading]);
 
-  return { isSuperAdmin, loading };
+  return { isSuperAdmin, loading, error };
 };
