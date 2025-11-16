@@ -207,6 +207,54 @@ EOF
     fi
 }
 
+# Função para enviar evento post_installation
+send_post_installation_event() {
+    log_info "Enviando evento post_installation..."
+    
+    local max_retries=2
+    local retry_count=0
+    
+    # Coletar info do OS para o evento
+    local os_type="linux"
+    local os_version=$(cat /etc/os-release | grep "PRETTY_NAME" | cut -d'"' -f2 2>/dev/null || echo "Linux")
+    local hostname=$(hostname)
+    
+    local event_json
+    event_json=$(cat <<EOF
+{
+  "event_type": "post_installation",
+  "platform": "linux",
+  "success": true,
+  "installation_method": "one_click",
+  "network_connectivity": true,
+  "metadata": {
+    "os_type": "$os_type",
+    "os_version": "$os_version",
+    "hostname": "$hostname"
+  }
+}
+EOF
+)
+    
+    while [ $retry_count -lt $max_retries ]; do
+        local response=$(secure_request "${SERVER_URL}/functions/v1/track-installation-event" "POST" "$event_json" 2>&1)
+        
+        if echo "$response" | grep -q '"success":true\|"ok":true'; then
+            log_info "✅ Evento post_installation registrado com sucesso"
+            return 0
+        fi
+        
+        retry_count=$((retry_count + 1))
+        if [ $retry_count -lt $max_retries ]; then
+            log_warn "Tentativa $retry_count/$max_retries falhou, aguardando..."
+            sleep 2
+        fi
+    done
+    
+    log_warn "⚠ Falha ao registrar post_installation após $max_retries tentativas (não bloqueante)"
+    return 1
+}
+
 # Função para executar job
 execute_job() {
     local job_id="$1"
@@ -302,6 +350,11 @@ start_agent() {
     # Enviar heartbeat e métricas iniciais
     send_heartbeat
     send_system_metrics
+    
+    # Enviar evento de instalação concluída
+    send_post_installation_event
+    
+    log_info "=== Agent Initialized Successfully ==="
     
     local heartbeat_counter=0
     local metrics_counter=0
