@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { logger } from '@/lib/logger';
 
-type UserRole = 'admin' | 'operator' | 'viewer' | null;
+type UserRole = 'admin' | 'operator' | 'viewer' | 'super_admin' | null;
 
 export const useUserRole = () => {
   const { user } = useAuth();
@@ -20,6 +20,19 @@ export const useUserRole = () => {
 
       try {
         // Check roles in priority order using RPC to avoid RLS issues
+        // Super admin first (highest privilege)
+        const { data: isSuperAdmin, error: superAdminError } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'super_admin'
+        });
+
+        if (superAdminError) throw superAdminError;
+        if (isSuperAdmin === true) {
+          setRole('super_admin');
+          setLoading(false);
+          return;
+        }
+
         const { data: isAdmin, error: adminError } = await supabase.rpc('has_role', {
           _user_id: user.id,
           _role: 'admin'
@@ -68,10 +81,11 @@ export const useUserRole = () => {
     checkRole();
   }, [user]);
 
+  const isSuperAdmin = role === 'super_admin';
   const isAdmin = role === 'admin';
   const isOperator = role === 'operator';
   const isViewer = role === 'viewer';
-  const canWrite = isAdmin || isOperator;
+  const canWrite = isSuperAdmin || isAdmin || isOperator;
 
-  return { role, isAdmin, isOperator, isViewer, canWrite, loading };
+  return { role, isSuperAdmin, isAdmin, isOperator, isViewer, canWrite, loading };
 };
