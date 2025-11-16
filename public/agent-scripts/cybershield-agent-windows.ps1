@@ -1,4 +1,4 @@
-# CyberShield Agent - Windows PowerShell Script v2.2.1 (Production Ready)
+# CyberShield Agent - Windows PowerShell Script v2.3.0 (HMAC HEX Fix)
 # Compatible with: Windows Server 2012, 2012 R2, 2016, 2019, 2022, 2025
 # PowerShell Version: 3.0+
 
@@ -162,70 +162,157 @@ Write-Log "Log Directory: $LogDir" "INFO"
 
 #region Funções de Autenticação
 
+function Convert-HexToBytes {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$HexString
+    )
+
+    # Validação: 64 caracteres hexadecimais (32 bytes)
+    if ($HexString -notmatch '^[0-9a-fA-F]{64}$') {
+        Write-Log "ERROR: HMAC_SECRET inválido. Esperado 64 caracteres hex (32 bytes). Length: $($HexString.Length)" "ERROR"
+        throw "Invalid HMAC_SECRET format. Expected 64 hex characters, got: $($HexString.Length)"
+    }
+
+    try {
+        $bytes = New-Object byte[] 32
+        for ($i = 0; $i -lt 64; $i += 2) {
+            $bytes[$i / 2] = [Convert]::ToByte($HexString.Substring($i, 2), 16)
+        }
+        return $bytes
+    } catch {
+        Write-Log "ERROR: Falha ao converter HMAC_SECRET de HEX: $($_.Exception.Message)" "ERROR"
+        throw "HMAC_SECRET conversion failed: $($_.Exception.Message)"
+    }
+}
+
 function Get-HmacSignature {
-    param([string]$Message, [string]$Secret)
-    $hmacsha = New-Object System.Security.Cryptography.HMACSHA256
-    $hmacsha.Key = [Text.Encoding]::UTF8.GetBytes($Secret)
-    $signature = $hmacsha.ComputeHash([Text.Encoding]::UTF8.GetBytes($Message))
-    return [System.BitConverter]::ToString($signature).Replace('-', '').ToLower()
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Message,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$Secret
+    )
+
+    $keyBytes = Convert-HexToBytes $Secret
+
+    $hmac = New-Object System.Security.Cryptography.HMACSHA256
+    $hmac.Key = $keyBytes
+
+    $messageBytes   = [Text.Encoding]::UTF8.GetBytes($Message)
+    $signatureBytes = $hmac.ComputeHash($messageBytes)
+
+    # Retorna em hex minúsculo (compatível com backend)
+    return ([System.BitConverter]::ToString($signatureBytes) -replace '-', '').ToLower()
 }
 
 function Invoke-SecureRequest {
     param(
+        [Parameter(Mandatory = $true)]
         [string]$Url,
+
+        [Parameter()]
+        [ValidateSet("GET", "POST", "PUT", "DELETE")]
         [string]$Method = "GET",
+
+        [Parameter()]
         [object]$Body = $null,
+
+        [Parameter()]
         [int]$MaxRetries = 3,
+
+        [Parameter()]
         [int]$InitialRetryDelay = 2
     )
-    
-    Write-Log "Request: $Method $Url" "DEBUG"
+
     $retryCount = 0
     $retryDelay = $InitialRetryDelay
-    
+
     while ($retryCount -lt $MaxRetries) {
         try {
-            $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-            $nonce = [guid]::NewGuid().ToString()
-            
-            # Fix #4: Validar Body explicitamente antes de converter
-            if ($Body -ne $null -and $Body -is [hashtable]) {
-                $bodyJson = $Body | ConvertTo-Json -Compress
+            # 1) Gerar timestamp e nonce
+            $timestamp = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
+            $nonce     = [guid]::NewGuid().ToString()
+
+            # 2) Serializar body (IMPORTANTE: mesmo formato que vai no request)
+            if ($Body -ne $null) {
+                if ($Body -is [string]) {
+                    $bodyJson = $Body
+                } elseif ($Body -is [hashtable] -or $Body.GetType().Name -like '*PSCustomObject*') {
+                    $bodyJson = $Body | ConvertTo-Json -Compress -Depth 10
+                } else {
+                    $bodyJson = ""
+                }
             } else {
-                $bodyJson = "{}"
+                $bodyJson = ""
             }
-            $message = "${timestamp}:${nonce}:${bodyJson}"
-            $signature = Get-HmacSignature -Message $message -Secret $HmacSecret
-            
+
+            # 3) Montar payload exatamente como backend espera: timestamp:nonce:body
+            $payload   = "$timestamp:$nonce:$bodyJson"
+            $signature = Get-HmacSignature -Message $payload -Secret $HmacSecret
+
+            # 4) Montar headers
             $headers = @{
-                "X-Agent-Token" = $AgentToken
+                "X-Agent-Token"    = $AgentToken
                 "X-HMAC-Signature" = $signature
-                "X-Timestamp" = $timestamp
-                "X-Nonce" = $nonce
-                "Content-Type" = "application/json"
+                "X-Timestamp"      = $timestamp
+                "X-Nonce"          = $nonce
+                "Content-Type"     = "application/json"
             }
-            
-            Write-Log "Headers: Token=$($AgentToken.Substring(0,8))..., Sig=$($signature.Substring(0,16))..." "DEBUG"
-            
+
             $params = @{
-                Uri = $Url
-                Method = $Method
-                Headers = $headers
+                Uri         = $Url
+                Method      = $Method
+                Headers     = $headers
+                TimeoutSec  = 30
                 ErrorAction = "Stop"
             }
-            
-            if ($Body) {
+
+            if ($bodyJson -ne "") {
                 $params.Body = $bodyJson
             }
-            
+
+            Write-Log "DEBUG: Requisição segura → $Method $Url" "DEBUG"
+            Write-Log "DEBUG: Payload HMAC: $timestamp:$nonce:[body_length=$($bodyJson.Length)]" "DEBUG"
+
             $response = Invoke-RestMethod @params
-            Write-Log "Request successful: $Method $Url" "SUCCESS"
+
+            Write-Log "SUCCESS: Requisição bem-sucedida → $Method $Url (StatusCode=200)" "SUCCESS"
             return $response
         }
         catch {
             $retryCount++
             $errorDetails = $_.Exception.Message
-            $statusCode = $_.Exception.Response.StatusCode.value__
+            
+            # Extrair status code se disponível
+            $statusCode = $null
+            if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+                $statusCode = $_.Exception.Response.StatusCode.value__
+            }
+
+            Write-Log "ERROR: Requisição falhou (tentativa $retryCount/$MaxRetries) → $errorDetails" "ERROR"
+            
+            if ($statusCode) {
+                Write-Log "ERROR: Status Code = $statusCode" "ERROR"
+            }
+
+            # 🔴 401 → Erro de autenticação, não adianta retentar
+            if ($statusCode -eq 401) {
+                Write-Log "❌ ERRO DE AUTENTICAÇÃO (401): AgentToken ou HMAC inválido" "ERROR"
+                Write-Log "   → Verifique: AgentToken, HmacSecret, sincronização do relógio do sistema" "ERROR"
+                throw "Authentication failed (401). Cannot retry."
+            }
+
+            # Outros erros: respeitar limite de retries
+            if ($retryCount -ge $MaxRetries) {
+                Write-Log "❌ Falha após $MaxRetries tentativas → $Method $Url" "ERROR"
+                throw
+            }
+
+            Write-Log "WARN: Aguardando $retryDelay segundos antes de retentar..." "WARN"
+            Start-Sleep -Seconds $retryDelay
+            $retryDelay *= 2  # Exponential backoff
             
             Write-Log "Request error (attempt $retryCount/$MaxRetries): $errorDetails" "ERROR"
             if ($statusCode) {
