@@ -78,30 +78,22 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
     }
 
-    // Verificar limite de usuários do plano
-    const { data: subscription } = await supabaseAdmin
-      .from('tenant_subscriptions')
-      .select(`
-        subscription_plans (
-          max_users
-        )
-      `)
+    // ✅ P0 FIX: Usar tenant_features como fonte de verdade única (consistente com frontend)
+    const { data: maxUsersFeature } = await supabaseAdmin
+      .from('tenant_features')
+      .select('quota_limit')
       .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('feature_key', 'max_users')
       .maybeSingle();
 
-    if (!subscription) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Plano não encontrado', 400, requestId);
-    }
+    // Fallback para plano Free se não encontrar feature
+    const maxUsers = maxUsersFeature?.quota_limit || 5;
 
     // Contar usuários atuais do tenant
     const { count: currentUsersCount } = await supabaseAdmin
       .from('user_roles')
       .select('*', { count: 'exact', head: true })
       .eq('tenant_id', tenantId);
-
-    const maxUsers = (subscription.subscription_plans as any).max_users;
 
     if (currentUsersCount && currentUsersCount >= maxUsers) {
       return createErrorResponse(
