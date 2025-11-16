@@ -38,11 +38,19 @@ Acesse: http://localhost:8080
 
 Para informações detalhadas sobre arquitetura e troubleshooting:
 
-- 📐 [Arquitetura do Instalador](docs/INSTALLER_ARCHITECTURE.md) - Fluxo completo, componentes e segurança
-- 🔧 [Guia de Troubleshooting](docs/TROUBLESHOOTING_INSTALLER.md) - Soluções para problemas comuns
-- 🔄 [Sincronização do Script do Agente](docs/AGENT_SCRIPT_SYNC.md) - Sistema automático de atualização
-- 🛡️ [Arquitetura de Segurança](docs/SECURITY_ARCHITECTURE.md) - RLS, HMAC, SHA256
+### Instalação e Configuração
 - 📋 [Setup Completo](SETUP.md) - Instalação e configuração detalhadas
+- 🍎 [Guia de Instalação macOS](docs/MACOS_INSTALLATION_GUIDE.md) - Instalação em macOS (Catalina+)
+- 🔏 [Code Signing macOS](docs/MACOS_CODE_SIGNING.md) - Assinatura e notarização Apple
+- 🌐 [Suporte a Proxy macOS](docs/MACOS_PROXY_SUPPORT.md) - Configuração de proxy corporativo
+
+### Arquitetura e Segurança
+- 📐 [Arquitetura do Instalador](docs/INSTALLER_ARCHITECTURE.md) - Fluxo completo, componentes e segurança
+- 🛡️ [Arquitetura de Segurança](docs/SECURITY_ARCHITECTURE.md) - RLS, HMAC, SHA256
+- 🔄 [Sincronização do Script do Agente](docs/AGENT_SCRIPT_SYNC.md) - Sistema automático de atualização
+
+### Troubleshooting
+- 🔧 [Guia de Troubleshooting](docs/TROUBLESHOOTING_INSTALLER.md) - Soluções para problemas comuns
 
 ---
 
