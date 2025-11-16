@@ -22,12 +22,19 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log(`[${requestId}] Fetching all users from all tenants`);
+    // Parse pagination parameters
+    const url = new URL(req.url);
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '1000'), 1000); // Max 1000
+    const offset = parseInt(url.searchParams.get('offset') || '0');
 
-    // Get ALL user_roles
-    const { data: allUserRoles, error: rolesError } = await supabaseClient
+    console.log(`[${requestId}] Fetching users with pagination: limit=${limit}, offset=${offset}`);
+
+    // Get user_roles with pagination
+    const { data: allUserRoles, error: rolesError, count: totalRoles } = await supabaseClient
       .from('user_roles')
-      .select('user_id, role, tenant_id, created_at');
+      .select('user_id, role, tenant_id, created_at', { count: 'exact' })
+      .range(offset, offset + limit - 1)
+      .order('created_at', { ascending: false });
 
     if (rolesError) {
       console.error(`[${requestId}] Error fetching user_roles:`, rolesError);
@@ -36,17 +43,21 @@ Deno.serve(async (req) => {
 
     if (!allUserRoles || allUserRoles.length === 0) {
       console.log(`[${requestId}] No users found`);
-      return new Response(JSON.stringify([]), {
+      return new Response(JSON.stringify({ 
+        users: [], 
+        pagination: { total: 0, limit, offset, hasMore: false } 
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log(`[${requestId}] Found ${allUserRoles.length} user roles`);
+    console.log(`[${requestId}] Found ${allUserRoles.length} user roles (total: ${totalRoles})`);
 
-    // Get ALL tenants
+    // Get tenants (limited to 1000 for safety)
     const { data: allTenants, error: tenantsError } = await supabaseClient
       .from('tenants')
-      .select('id, name, slug');
+      .select('id, name, slug')
+      .limit(1000);
 
     if (tenantsError) {
       console.error(`[${requestId}] Error fetching tenants:`, tenantsError);
@@ -55,7 +66,7 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Found ${allTenants?.length || 0} tenants`);
 
-    // Get ALL profiles
+    // Get profiles for this page's users only
     const userIds = allUserRoles.map(ur => ur.user_id);
     const { data: allProfiles, error: profilesError } = await supabaseClient
       .from('profiles')
@@ -69,8 +80,11 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Found ${allProfiles?.length || 0} profiles`);
 
-    // Get ALL auth users
-    const { data: authData, error: authUsersError } = await supabaseClient.auth.admin.listUsers();
+    // Get auth users for this page only (max 1000 per Supabase Auth API limit)
+    const { data: authData, error: authUsersError } = await supabaseClient.auth.admin.listUsers({
+      perPage: Math.min(limit, 1000),
+      page: Math.floor(offset / 1000) + 1
+    });
     
     if (authUsersError) {
       console.error(`[${requestId}] Error fetching auth users:`, authUsersError);
@@ -99,7 +113,17 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Returning ${users.length} users`);
 
-    return new Response(JSON.stringify(users), {
+    const hasMore = (totalRoles || 0) > offset + limit;
+
+    return new Response(JSON.stringify({
+      users,
+      pagination: {
+        total: totalRoles || 0,
+        limit,
+        offset,
+        hasMore
+      }
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
