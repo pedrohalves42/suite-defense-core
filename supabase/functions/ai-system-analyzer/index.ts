@@ -104,7 +104,8 @@ Deno.serve(async (req) => {
           .from('jobs')
           .select('status, type, created_at')
           .eq('tenant_id', tenant.id)
-          .gte('created_at', cutoffDate.toISOString());
+          .gte('created_at', cutoffDate.toISOString())
+          .limit(1000); // ✅ CRÍTICO: Previne DoS em escala (P0 fix)
 
         const analysisData: AnalysisData = {
           problematicJobs: problematicJobs || [],
