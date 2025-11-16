@@ -182,7 +182,25 @@ const JobCreator = () => {
         body: requestBody
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle structured error responses
+        const errorData = typeof error === 'object' && 'error' in error ? error.error : error;
+        const errorCode = errorData?.code;
+        const errorMessage = errorData?.message || error.message || "Erro ao criar job";
+
+        if (errorCode === 'FORBIDDEN') {
+          toast.error("Acesso negado. É necessário ter papel admin, operator ou super_admin no tenant do agente.");
+        } else if (errorCode === 'AGENT_NOT_FOUND') {
+          toast.error("Agente não encontrado ou não pertence ao tenant selecionado.");
+        } else if (errorCode === 'TENANT_NOT_FOUND') {
+          toast.error("Tenant não encontrado. Verifique suas permissões.");
+        } else {
+          toast.error(errorMessage);
+        }
+        
+        logger.error("Erro ao criar job", { error, errorCode, errorMessage });
+        return;
+      }
 
       const jobTypeLabel = isRecurring ? 'Job recorrente' : isScheduled ? 'Job agendado' : 'Job';
       toast.success(`${jobTypeLabel} criado com sucesso! ID: ${data.id}`);
@@ -196,8 +214,8 @@ const JobCreator = () => {
       // Reload jobs
       loadJobs();
     } catch (error: any) {
-      logger.error("Erro ao criar job", error);
-      toast.error(error.message || "Erro ao criar job");
+      logger.error("Erro inesperado ao criar job", error);
+      toast.error("Erro inesperado ao criar job. Tente novamente.");
     } finally {
       setLoading(false);
     }

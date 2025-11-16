@@ -47,12 +47,29 @@ Deno.serve(async (req) => {
     const { data: hasSuperAdminRole } = await supabaseAdmin.rpc('is_super_admin', { _user_id: user.id });
 
     if (!hasAdminRole && !hasOperatorRole && !hasSuperAdminRole) {
-      await createAuditLog({ supabase: supabaseAdmin, userId: user.id, tenantId: userRole?.tenant_id || 'unknown', action: 'job_creation_denied', resourceType: 'job', details: { reason: 'insufficient_permissions', required_roles: ['admin', 'operator', 'super_admin'] }, request: req, success: false });
-      return new Response(JSON.stringify({ error: 'Acesso negado. Necessário ser admin, operator ou super_admin.' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
-    if (!userRole?.tenant_id) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
+      await createAuditLog({ 
+        supabase: supabaseAdmin, 
+        userId: user.id, 
+        tenantId: userRole?.tenant_id || 'unknown', 
+        action: 'job_creation_denied', 
+        resourceType: 'job', 
+        details: { 
+          reason: 'insufficient_permissions', 
+          required_roles: ['admin', 'operator', 'super_admin'] 
+        }, 
+        request: req, 
+        success: false 
+      });
+      
+      return new Response(
+        JSON.stringify({ 
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Acesso negado. Necessário ser admin, operator ou super_admin.'
+          }
+        }), 
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Rate limiting por usuário (prevenir flooding de jobs)
@@ -65,8 +82,11 @@ Deno.serve(async (req) => {
     if (!rateLimitResult.allowed) {
       return new Response(
         JSON.stringify({ 
-          error: 'Rate limit excedido',
-          resetAt: rateLimitResult.resetAt 
+          error: {
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: 'Rate limit excedido',
+            resetAt: rateLimitResult.resetAt
+          }
         }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -103,6 +123,75 @@ Deno.serve(async (req) => {
     
     const { agentName, type, payload, approved, scheduledAt, isRecurring, recurrencePattern } = validation.data;
 
+    // Resolve tenant context
+    let effectiveTenantId = userRole?.tenant_id;
+
+    // If super_admin without direct tenant mapping, derive from agent
+    if (hasSuperAdminRole && !effectiveTenantId) {
+      const { data: agentData, error: agentError } = await supabaseAdmin
+        .from('agents')
+        .select('tenant_id')
+        .eq('agent_name', agentName)
+        .limit(1)
+        .maybeSingle();
+
+      if (agentError || !agentData) {
+        await createAuditLog({ 
+          supabase: supabaseAdmin, 
+          userId: user.id, 
+          tenantId: 'unknown', 
+          action: 'job_creation_denied', 
+          resourceType: 'job', 
+          details: { 
+            reason: 'agent_not_found',
+            agent_name: agentName 
+          }, 
+          request: req, 
+          success: false 
+        });
+
+        return new Response(
+          JSON.stringify({ 
+            error: {
+              code: 'AGENT_NOT_FOUND',
+              message: 'Agente não encontrado ou não pertence a nenhum tenant.'
+            }
+          }), 
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      effectiveTenantId = agentData.tenant_id;
+    }
+
+    if (!effectiveTenantId) {
+      await createAuditLog({ 
+        supabase: supabaseAdmin, 
+        userId: user.id, 
+        tenantId: 'unknown', 
+        action: 'job_creation_denied', 
+        resourceType: 'job', 
+        details: { 
+          reason: 'tenant_not_found',
+          user_role: userRole,
+          is_super_admin: hasSuperAdminRole
+        }, 
+        request: req, 
+        success: false 
+      });
+
+      return new Response(
+        JSON.stringify({ 
+          error: {
+            code: 'TENANT_NOT_FOUND',
+            message: 'Tenant não encontrado.'
+          }
+        }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+
     // Calculate next_run_at for recurring jobs
     let nextRunAt = null;
     if (isRecurring && recurrencePattern) {
@@ -120,7 +209,7 @@ Deno.serve(async (req) => {
       payload, 
       status: 'queued', 
       approved,
-      tenant_id: userRole.tenant_id,
+      tenant_id: effectiveTenantId,
       scheduled_at: scheduledAt || null,
       is_recurring: isRecurring,
       recurrence_pattern: recurrencePattern || null,
@@ -140,7 +229,7 @@ Deno.serve(async (req) => {
     await createAuditLog({ 
       supabase: supabaseAdmin, 
       userId: user.id,
-      tenantId: userRole.tenant_id,
+      tenantId: effectiveTenantId,
       action: 'job_created', 
       resourceType: 'job', 
       resourceId: job.id, 
@@ -150,7 +239,8 @@ Deno.serve(async (req) => {
         approved,
         scheduled_at: scheduledAt,
         is_recurring: isRecurring,
-        recurrence_pattern: recurrencePattern
+        recurrence_pattern: recurrencePattern,
+        resolved_tenant_via: hasSuperAdminRole && !userRole?.tenant_id ? 'agent_lookup' : 'user_role'
       }, 
       request: req, 
       success: true 
