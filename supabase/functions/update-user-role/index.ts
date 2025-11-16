@@ -4,7 +4,8 @@ import { corsHeaders } from '../_shared/error-handler.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts'; // CORREÇÃO: Adicionar logger
 
-// CORREÇÃO: Aceitar userId OU user_id para compatibilidade
+// CRITICAL SECURITY: Block super_admin role modifications via this endpoint
+// super_admin can only be assigned via direct database operations
 const UpdateRoleSchema = z.object({
   userId: z.string().uuid('Invalid user ID format').optional(),
   user_id: z.string().uuid('Invalid user ID format').optional(),
@@ -13,6 +14,9 @@ const UpdateRoleSchema = z.object({
     .max(3, 'Maximum of 3 roles')
     .refine((roles) => new Set(roles).size === roles.length, {
       message: 'Roles must be unique',
+    })
+    .refine((roles) => !roles.includes('super_admin' as any), {
+      message: 'Cannot assign super_admin role through this endpoint. Contact system administrator.',
     }),
 }).refine(data => data.userId || data.user_id, {
   message: 'Either userId or user_id is required'
