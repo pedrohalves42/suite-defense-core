@@ -69,6 +69,138 @@ echo "View logs: journalctl -u cybershield-agent -f"
 echo ""
 `;
 
+// macOS installer template
+const MACOS_INSTALLER_TEMPLATE = `#!/bin/bash
+# CyberShield Agent Installer - macOS
+# Auto-generated: {{TIMESTAMP}}
+
+set -euo pipefail
+
+echo "==========================================="
+echo " CyberShield Agent Installer - macOS"
+echo "==========================================="
+
+# Check root privileges
+if [ "\$(id -u)" -ne 0 ]; then
+  echo "❌ This installer must be run as root."
+  echo "   Usage: sudo bash install-macos.sh"
+  exit 1
+fi
+
+# Configuration (injected by backend)
+AGENT_TOKEN="{{AGENT_TOKEN}}"
+HMAC_SECRET="{{HMAC_SECRET}}"
+SERVER_URL="{{SERVER_URL}}"
+
+# Installation paths (macOS conventions)
+INSTALL_DIR="/Library/Application Support/CyberShield"
+LOG_DIR="/Library/Logs/CyberShield"
+PLIST_PATH="/Library/LaunchDaemons/com.cybershield.agent.plist"
+AGENT_SCRIPT="\${INSTALL_DIR}/cybershield-agent-macos.sh"
+
+echo "[1/7] Checking macOS version..."
+OS_VERSION=\$(sw_vers -productVersion)
+echo "✅ Detected macOS \$OS_VERSION"
+
+if [[ "\$OS_VERSION" < "10.15" ]]; then
+  echo "⚠️  Warning: macOS 10.15+ recommended (detected \$OS_VERSION)"
+fi
+
+echo "[2/7] Creating installation directories..."
+mkdir -p "\$INSTALL_DIR"
+mkdir -p "\$LOG_DIR"
+
+echo "[3/7] Installing agent script..."
+cat > "\$AGENT_SCRIPT" << 'EOF_AGENT_SCRIPT'
+{{AGENT_SCRIPT_CONTENT}}
+EOF_AGENT_SCRIPT
+
+chmod +x "\$AGENT_SCRIPT"
+
+echo "[4/7] Testing backend connectivity..."
+HTTP_CODE=\$(curl -s -o /dev/null -w "%{http_code}" \\
+  "\${SERVER_URL}/functions/v1/agent-health-check" || echo "000")
+
+if [[ "\$HTTP_CODE" =~ ^(200|401|405)$ ]]; then
+  echo "✅ Backend accessible (HTTP \$HTTP_CODE)"
+else
+  echo "⚠️  Warning: Backend returned HTTP \$HTTP_CODE"
+  echo "   Installation will continue, agent will retry connection."
+fi
+
+echo "[5/7] Creating LaunchDaemon..."
+cat > "\$PLIST_PATH" << EOF_PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" \\
+ "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.cybershield.agent</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>\${AGENT_SCRIPT}</string>
+      <string>\${AGENT_TOKEN}</string>
+      <string>\${HMAC_SECRET}</string>
+      <string>\${SERVER_URL}</string>
+      <string>60</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>\${LOG_DIR}/agent.log</string>
+    <key>StandardErrorPath</key>
+    <string>\${LOG_DIR}/agent-error.log</string>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>ProcessType</key>
+    <string>Background</string>
+  </dict>
+</plist>
+EOF_PLIST
+
+chown root:wheel "\$PLIST_PATH"
+chmod 644 "\$PLIST_PATH"
+
+echo "[6/7] Validating plist..."
+if ! plutil -lint "\$PLIST_PATH" >/dev/null 2>&1; then
+  echo "❌ ERROR: Invalid plist file"
+  exit 1
+fi
+echo "✅ LaunchDaemon configuration valid"
+
+echo "[7/7] Starting agent..."
+launchctl unload "\$PLIST_PATH" 2>/dev/null || true
+launchctl load "\$PLIST_PATH"
+launchctl start com.cybershield.agent || true
+
+sleep 2
+
+if launchctl list | grep -q "com.cybershield.agent"; then
+  echo ""
+  echo "==========================================="
+  echo "✅ CyberShield Agent installed successfully!"
+  echo "==========================================="
+  echo "Installation directory: \$INSTALL_DIR"
+  echo "Logs: \$LOG_DIR"
+  echo ""
+  echo "Useful commands:"
+  echo "  Status:        launchctl list | grep cybershield"
+  echo "  View logs:     tail -f '\$LOG_DIR/agent.log'"
+  echo "  Stop agent:    sudo launchctl stop com.cybershield.agent"
+  echo "  Start agent:   sudo launchctl start com.cybershield.agent"
+  echo "  Unload:        sudo launchctl unload '\$PLIST_PATH'"
+  echo ""
+else
+  echo "⚠️  Agent installed but not running."
+  echo "   Check logs: tail '\$LOG_DIR/agent.log'"
+  echo "   Check errors: tail '\$LOG_DIR/agent-error.log'"
+  exit 1
+fi
+`;
+
 // Deno server to handle POST requests
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
