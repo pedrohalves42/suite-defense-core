@@ -6,6 +6,10 @@ import {
   LINUX_INSTALLER_TEMPLATE_V3,
   MACOS_INSTALLER_TEMPLATE_V3
 } from '../_shared/installer-template.ts';
+import { 
+  LINUX_INSTALLER_TEMPLATE_V3_ENVVARS,
+  MACOS_INSTALLER_TEMPLATE_V3_ENVVARS
+} from '../_shared/installer-template-envvars.ts';
 import { AGENT_SCRIPT_MACOS_SH } from '../_shared/agent-script-macos-content.ts';
 import { AGENT_SCRIPT_LINUX_SH } from '../_shared/agent-script-linux-content.ts';
 
@@ -276,6 +280,23 @@ Deno.serve(async (req) => {
 
       const url = new URL(req.url);
       const enrollmentKey = url.pathname.split('/').pop();
+      
+      // Get mode: 'args' (default) or 'envvars'
+      const mode = url.searchParams.get('mode') || 'args';
+      if (mode !== 'args' && mode !== 'envvars') {
+        console.log(`[${requestId}] Invalid mode parameter: ${mode}`);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid mode parameter. Use ?mode=args or ?mode=envvars' 
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+      
+      console.log(`[${requestId}] Mode: ${mode}`);
 
       if (!enrollmentKey) {
       console.log(`[${requestId}] Missing enrollment key`);
@@ -427,25 +448,32 @@ Deno.serve(async (req) => {
     const platform = agentData.os_type || 'windows';
     console.log(`[${requestId}] Generating ${platform} installer for ${agentData.agent_name}`);
 
-    // Select template and agent script content based on platform
+    // Select template and agent script content based on platform and mode
     let templateContent: string;
     let agentScriptContentForPlatform: string;
     let agentScriptUrl: string = '';
     
     if (platform === 'windows') {
+      // Windows always uses args mode (PowerShell parameters)
       templateContent = WINDOWS_INSTALLER_TEMPLATE;
       agentScriptContentForPlatform = agentScriptContent;
       agentScriptUrl = ''; // Windows embeds script in installer
     } else if (platform === 'macos') {
-      templateContent = MACOS_INSTALLER_TEMPLATE_V3;
+      // macOS can use args or envvars mode
+      templateContent = mode === 'envvars' 
+        ? MACOS_INSTALLER_TEMPLATE_V3_ENVVARS 
+        : MACOS_INSTALLER_TEMPLATE_V3;
       agentScriptContentForPlatform = AGENT_SCRIPT_MACOS_SH;
       agentScriptUrl = `${SUPABASE_URL}/storage/v1/object/public/agents/cybershield-agent-macos-v3.sh`;
-      console.log('[' + requestId + '] Using macOS agent script v3 (' + agentScriptContentForPlatform.length + ' bytes)');
+      console.log('[' + requestId + '] Using macOS agent script v3 (mode: ' + mode + ', ' + agentScriptContentForPlatform.length + ' bytes)');
     } else { // linux
-      templateContent = LINUX_INSTALLER_TEMPLATE_V3;
+      // Linux can use args or envvars mode
+      templateContent = mode === 'envvars'
+        ? LINUX_INSTALLER_TEMPLATE_V3_ENVVARS
+        : LINUX_INSTALLER_TEMPLATE_V3;
       agentScriptContentForPlatform = AGENT_SCRIPT_LINUX_SH;
       agentScriptUrl = `${SUPABASE_URL}/storage/v1/object/public/agents/cybershield-agent-linux-v3.sh`;
-      console.log('[' + requestId + '] Using Linux agent script v3 (' + agentScriptContentForPlatform.length + ' bytes)');
+      console.log('[' + requestId + '] Using Linux agent script v3 (mode: ' + mode + ', ' + agentScriptContentForPlatform.length + ' bytes)');
     }
 
     // FASE 2: Replace placeholders with validated credentials
