@@ -41,6 +41,14 @@
 - Dashboard card `InstallationHealthCard` mostra métricas em tempo real
 - Ferramentas de teste e diagnóstico em `tools/`
 
+### ✅ FASE 6: Installation Health Monitoring
+- **track-installation-event** agora aceita:
+  - event_type: `post_installation`, `post_installation_unverified`
+  - platform: `macos`, `windows`, `linux`
+- Nova RPC function: `installation_health_summary()`
+- Dashboard card `InstallationHealthCard` mostra métricas em tempo real
+- Ferramentas de teste e diagnóstico em `tools/`
+
 ## 🚀 Como Testar
 
 ### Windows:
