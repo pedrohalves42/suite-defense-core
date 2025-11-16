@@ -60,7 +60,17 @@ write_log() {
 write_log "INFO" "CyberShield Agent (macOS) started"
 write_log "INFO" "Token prefix: \${AGENT_TOKEN:0:8}..."
 write_log "INFO" "Server: \$SERVER_URL"
-write_log "INFO" "macOS version: \$(sw_vers -productVersion)"
+
+# Collect macOS system information
+OS_VERSION=\$(sw_vers -productVersion)
+OS_BUILD=\$(sw_vers -buildVersion)
+HARDWARE_MODEL=\$(sysctl -n hw.model)
+HARDWARE_ARCH=\$(uname -m)
+MEMORY_GB=\$(sysctl -n hw.memsize | awk '{print int(\$1/1024/1024/1024)}')
+
+write_log "INFO" "macOS version: \$OS_VERSION (Build: \$OS_BUILD)"
+write_log "INFO" "Hardware: \$HARDWARE_MODEL (\$HARDWARE_ARCH)"
+write_log "INFO" "Memory: \${MEMORY_GB}GB"
 
 # Generate UUID for nonce
 generate_nonce() {
@@ -84,7 +94,31 @@ send_heartbeat() {
     
     timestamp=\$(date +%s%3N)  # milliseconds
     nonce=\$(generate_nonce)
-    body='{"type":"heartbeat","platform":"macos","os_version":"'\$(sw_vers -productVersion)'"}'
+    
+    # Enhanced macOS telemetry
+    local os_version os_build hardware_model hardware_arch memory_gb cpu_count
+    os_version=\$(sw_vers -productVersion)
+    os_build=\$(sw_vers -buildVersion)
+    hardware_model=\$(sysctl -n hw.model)
+    hardware_arch=\$(uname -m)
+    memory_gb=\$(sysctl -n hw.memsize | awk '{print int(\$1/1024/1024/1024)}')
+    cpu_count=\$(sysctl -n hw.ncpu)
+    
+    body=$(cat <<EOF
+{
+  "type": "heartbeat",
+  "platform": "macos",
+  "os_version": "\$os_version",
+  "os_build": "\$os_build",
+  "hardware": {
+    "model": "\$hardware_model",
+    "architecture": "\$hardware_arch",
+    "memory_gb": \$memory_gb,
+    "cpu_count": \$cpu_count
+  }
+}
+EOF
+)
     
     signature=\$(generate_hmac_signature "\$timestamp" "\$nonce" "\$body")
     
