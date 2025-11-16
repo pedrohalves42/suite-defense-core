@@ -7,8 +7,8 @@ import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 // Validation schema
 const InstallationEventSchema = z.object({
   agent_name: z.string().trim().min(1).max(100),
-  event_type: z.enum(['generated', 'downloaded', 'command_copied', 'installed', 'failed']),
-  platform: z.enum(['windows', 'linux']),
+  event_type: z.enum(['generated', 'downloaded', 'command_copied', 'installed', 'failed', 'post_installation', 'post_installation_unverified']),
+  platform: z.enum(['windows', 'linux', 'macos']),
   installation_method: z.enum(['download', 'one_click', 'manual']).optional(),
   installation_time_seconds: z.number().int().positive().max(86400).optional(),
   error_message: z.string().max(500).optional(),
