@@ -53,6 +53,7 @@ export const MemberCard = ({ member, onRoleChange, onRemove, isUpdating }: Membe
       </div>
       
       <div className="flex items-center gap-3">
+        {/* CRITICAL SECURITY: super_admin role cannot be assigned via UI */}
         <SafeSelect
           value={validRole}
           onValueChange={(newRole) => onRoleChange(member.user_id, newRole as AppRole)}
@@ -60,10 +61,9 @@ export const MemberCard = ({ member, onRoleChange, onRemove, isUpdating }: Membe
             { value: 'viewer', label: 'Visualizador' },
             { value: 'operator', label: 'Operador' },
             { value: 'admin', label: 'Admin' },
-            { value: 'super_admin', label: 'Super Admin' },
           ]}
           className="w-32"
-          disabled={isUpdating}
+          disabled={isUpdating || validRole === 'super_admin'}
         />
         
         <Button
@@ -71,7 +71,7 @@ export const MemberCard = ({ member, onRoleChange, onRemove, isUpdating }: Membe
           size="icon"
           onClick={() => onRemove(member)}
           className="text-destructive hover:text-destructive hover:bg-destructive/10"
-          disabled={isUpdating}
+          disabled={isUpdating || validRole === 'super_admin'}
         >
           <Trash2 className="h-4 w-4" />
         </Button>

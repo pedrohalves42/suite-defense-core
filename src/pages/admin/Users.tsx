@@ -266,8 +266,7 @@ export default function Users() {
                           <SelectTrigger className="w-32">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="super_admin">Super Admin</SelectItem>
+                           <SelectContent>
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="operator">Operator</SelectItem>
                             <SelectItem value="viewer">Viewer</SelectItem>
