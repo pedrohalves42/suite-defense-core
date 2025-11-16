@@ -8,6 +8,7 @@ import { Activity, Heart, AlertCircle, Server, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ErrorState } from "@/components/ErrorState";
+import { InstallationHealthCard } from "@/components/admin/InstallationHealthCard";
 
 export default function AgentHealthMonitor() {
   const { tenant } = useTenant();
@@ -90,6 +91,9 @@ export default function AgentHealthMonitor() {
         <h1 className="text-3xl font-bold">Monitor de Saúde dos Agentes</h1>
         <p className="text-muted-foreground">Acompanhamento em tempo real do status de todos os agentes</p>
       </div>
+
+      {/* Installation Health Card */}
+      <InstallationHealthCard />
 
       {/* Live Stats */}
       <div className="grid gap-4 md:grid-cols-4">
