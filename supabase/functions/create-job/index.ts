@@ -41,11 +41,14 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
+    // Verificar se o usuário tem permissão (admin, operator ou super_admin)
     const { data: hasAdminRole } = await supabaseAdmin.rpc('has_role', { _user_id: user.id, _role: 'admin' });
+    const { data: hasOperatorRole } = await supabaseAdmin.rpc('has_role', { _user_id: user.id, _role: 'operator' });
+    const { data: hasSuperAdminRole } = await supabaseAdmin.rpc('is_super_admin', { _user_id: user.id });
 
-    if (!hasAdminRole) {
-      await createAuditLog({ supabase: supabaseAdmin, userId: user.id, tenantId: userRole?.tenant_id || 'unknown', action: 'job_creation_denied', resourceType: 'job', details: { reason: 'not_admin' }, request: req, success: false });
-      return new Response(JSON.stringify({ error: 'Acesso negado' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    if (!hasAdminRole && !hasOperatorRole && !hasSuperAdminRole) {
+      await createAuditLog({ supabase: supabaseAdmin, userId: user.id, tenantId: userRole?.tenant_id || 'unknown', action: 'job_creation_denied', resourceType: 'job', details: { reason: 'insufficient_permissions', required_roles: ['admin', 'operator', 'super_admin'] }, request: req, success: false });
+      return new Response(JSON.stringify({ error: 'Acesso negado. Necessário ser admin, operator ou super_admin.' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     if (!userRole?.tenant_id) {
