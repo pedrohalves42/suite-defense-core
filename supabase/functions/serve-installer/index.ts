@@ -1,8 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
-import { WINDOWS_INSTALLER_TEMPLATE } from '../_shared/installer-template.ts';
+import { 
+  WINDOWS_INSTALLER_TEMPLATE,
+  LINUX_INSTALLER_TEMPLATE_V3,
+  MACOS_INSTALLER_TEMPLATE_V3
+} from '../_shared/installer-template.ts';
 import { AGENT_SCRIPT_MACOS_SH } from '../_shared/agent-script-macos-content.ts';
+import { AGENT_SCRIPT_LINUX_SH } from '../_shared/agent-script-linux-content.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 
@@ -425,17 +430,22 @@ Deno.serve(async (req) => {
     // Select template and agent script content based on platform
     let templateContent: string;
     let agentScriptContentForPlatform: string;
+    let agentScriptUrl: string = '';
     
     if (platform === 'windows') {
       templateContent = WINDOWS_INSTALLER_TEMPLATE;
       agentScriptContentForPlatform = agentScriptContent;
+      agentScriptUrl = ''; // Windows embeds script in installer
     } else if (platform === 'macos') {
-      templateContent = MACOS_INSTALLER_TEMPLATE;
+      templateContent = MACOS_INSTALLER_TEMPLATE_V3;
       agentScriptContentForPlatform = AGENT_SCRIPT_MACOS_SH;
-      console.log('[' + requestId + '] Using macOS agent script (' + agentScriptContentForPlatform.length + ' bytes)');
+      agentScriptUrl = `${SUPABASE_URL}/storage/v1/object/public/agents/cybershield-agent-macos-v3.sh`;
+      console.log('[' + requestId + '] Using macOS agent script v3 (' + agentScriptContentForPlatform.length + ' bytes)');
     } else { // linux
-      templateContent = LINUX_INSTALLER_TEMPLATE;
-      agentScriptContentForPlatform = agentScriptContent;
+      templateContent = LINUX_INSTALLER_TEMPLATE_V3;
+      agentScriptContentForPlatform = AGENT_SCRIPT_LINUX_SH;
+      agentScriptUrl = `${SUPABASE_URL}/storage/v1/object/public/agents/cybershield-agent-linux-v3.sh`;
+      console.log('[' + requestId + '] Using Linux agent script v3 (' + agentScriptContentForPlatform.length + ' bytes)');
     }
 
     // FASE 2: Replace placeholders with validated credentials
@@ -448,6 +458,8 @@ Deno.serve(async (req) => {
       .replace(/\{\{AGENT_HASH\}\}/g, () => agentScriptHash)
       .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, () => agentScriptContentForPlatform)
       .replace(/\{\{AGENT_NAME\}\}/g, () => agentData.agent_name)
+      .replace(/\{\{AGENT_VERSION\}\}/g, '3.0.0')
+      .replace(/\{\{AGENT_SCRIPT_URL\}\}/g, () => agentScriptUrl)
       .replace(/\{\{TIMESTAMP\}\}/g, () => new Date().toISOString());
 
     // Final validation: ensure no placeholders remain
