@@ -48,23 +48,17 @@ import AuthDebug from "./pages/debug/AuthDebug";
 import SecurityDashboard from "./pages/admin/SecurityDashboard";
 import AgentMonitoringAdvanced from "./pages/AgentMonitoringAdvanced";
 import ExeBuild from "./pages/docs/ExeBuild";
-import InstallationAnalytics from "./pages/admin/InstallationAnalytics";
-import InstallationMetrics from "./pages/admin/InstallationMetrics";
 import SubscriptionAnalytics from "./pages/admin/SubscriptionAnalytics";
 import StripeSetup from "./pages/admin/StripeSetup";
 import AgentDiagnostics from "./pages/admin/AgentDiagnostics.tsx";
 import AgentTroubleshooting from "./pages/admin/AgentTroubleshooting";
 import BuildHealthDashboard from "./pages/admin/BuildHealthDashboard";
-import TenantInvites from "./pages/admin/tenant/TenantInvites";
-import TenantSecurity from "./pages/admin/tenant/TenantSecurity";
-import TenantLogs from "./pages/admin/tenant/TenantLogs";
-import TenantSettings from "./pages/admin/tenant/TenantSettings";
 import SystemLogs from "./pages/admin/SystemLogs";
-import InstallationPipelineMonitor from "./pages/admin/InstallationPipelineMonitor";
 import AgentHealthMonitor from "./pages/admin/AgentHealthMonitor";
-import InstallationLogsExplorer from "./pages/admin/InstallationLogsExplorer";
 import AIInsights from "./pages/admin/AIInsights";
 import AIActionApproval from "./pages/admin/AIActionApproval";
+import Installations from "./pages/admin/Installations";
+import Tenant from "./pages/admin/Tenant";
 
 // CORREÇÃO: QueryClient já está inicializado no src/main.tsx
 // Remover duplicação para manter configurações otimizadas
@@ -116,23 +110,16 @@ const App = () => (
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
                 <Route path="dashboard" element={<Dashboard />} />
-                <Route path="agent-installer" element={<AgentInstaller />} />
                 <Route path="monitoring-advanced" element={<AgentMonitoringAdvanced />} />
                 <Route path="members" element={<Members />} />
                 <Route path="plan-upgrade" element={<PlanUpgrade />} />
                 <Route path="subscriptions" element={<Subscriptions />} />
-                <Route path="installation-analytics" element={<InstallationAnalytics />} />
-                <Route path="installation-metrics" element={<InstallationMetrics />} />
-                <Route path="installation-pipeline" element={<InstallationPipelineMonitor />} />
+                <Route path="installations" element={<Installations />} />
                 <Route path="agent-health" element={<AgentHealthMonitor />} />
                 <Route path="agent-diagnostics" element={<AgentDiagnostics />} />
-                <Route path="installation-logs" element={<InstallationLogsExplorer />} />
                 <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="ai-actions" element={<AIActionApproval />} />
-                <Route path="tenant/invites" element={<TenantInvites />} />
-                <Route path="tenant/security" element={<TenantSecurity />} />
-                <Route path="tenant/logs" element={<TenantLogs />} />
-                <Route path="tenant/settings" element={<TenantSettings />} />
+                <Route path="tenant" element={<Tenant />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
