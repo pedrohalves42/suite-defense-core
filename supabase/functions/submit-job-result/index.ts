@@ -238,6 +238,6 @@ Deno.serve(async (req) => {
     )
 
   } catch (error) {
-    return handleException(error, 'submit-job-result', req)
+    return handleException(error, crypto.randomUUID(), 'submit-job-result')
   }
 })
