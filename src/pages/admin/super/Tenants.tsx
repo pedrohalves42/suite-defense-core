@@ -132,6 +132,26 @@ export default function SuperAdminTenants() {
     },
   });
 
+  // Fetch tenant_features to get real max_users (source of truth)
+  const { data: tenantFeatures } = useQuery({
+    queryKey: ['super-admin-tenant-features'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tenant_features')
+        .select('tenant_id, feature_key, quota_limit')
+        .eq('feature_key', 'max_users');
+      
+      if (error) throw error;
+      
+      const limits: Record<string, number | null> = {};
+      data.forEach((row) => {
+        limits[row.tenant_id] = row.quota_limit;
+      });
+      
+      return limits;
+    },
+  });
+
   // Mutation to update tenant subscription
   const updateSubscription = useMutation({
     mutationFn: async ({ tenantId, planId }: { tenantId: string; planId: string }) => {
@@ -285,10 +305,16 @@ export default function SuperAdminTenants() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2" title="Usuários únicos com acesso ao tenant (independente de quantas roles possuem)">
-                      <span className={tenant.user_count > (tenant.subscription?.subscription_plans.max_users || 0) ? 'text-red-600 font-semibold' : ''}>
-                        {tenant.user_count}/{tenant.subscription?.subscription_plans.max_users || 0}
-                      </span>
+                    <div className="flex items-center gap-2" title="Usuários únicos com acesso ao tenant (fonte: tenant_features.max_users)">
+                      {(() => {
+                        const maxUsers = tenantFeatures?.[tenant.id] ?? tenant.subscription?.subscription_plans.max_users ?? 0;
+                        const isOverLimit = maxUsers !== null && tenant.user_count > maxUsers;
+                        return (
+                          <span className={isOverLimit ? 'text-red-600 font-semibold' : ''}>
+                            {tenant.user_count}/{maxUsers === null ? 'ilimitado' : maxUsers}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </TableCell>
                   <TableCell>
