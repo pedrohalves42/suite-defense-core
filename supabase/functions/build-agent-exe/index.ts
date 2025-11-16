@@ -359,7 +359,7 @@ try {
 
     # ✅ FASE 2: Criar ação com TODOS os parâmetros necessários
     $action = New-ScheduledTaskAction -Execute "PowerShell.exe" \`
-        -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File \`"$AgentScript\`" -AgentToken \`"$AgentToken\`" -HmacSecret \`"$HmacSecret\`" -ServerUrl \`"$ServerUrl\`" -PollInterval $PollInterval"
+        -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File \`"$AgentScript\`" -AgentToken \`"$AgentToken\`" -HmacSecret \`"$HmacSecret\`" -ServerUrl \`"$ServerUrl\`" -AgentName \`"$AgentName\`" -PollInterval $PollInterval"
 
     # Criar trigger (na inicialização do sistema)
     $trigger = New-ScheduledTaskTrigger -AtStartup
