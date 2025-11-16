@@ -104,21 +104,30 @@ export default function AgentTest() {
         message: "Criando job de teste tipo 'report'..."
       });
 
-      const { data: job, error: jobError } = await supabase
-        .from("jobs")
-        .insert([{
-          agent_name: agentName,
+      const { data: jobResponse, error: jobError } = await supabase.functions.invoke('create-job', {
+        body: {
+          agentName,
           type: "report",
-          status: "queued",
-          tenant_id: tenant.id,
-          payload: { test: true, timestamp: new Date().toISOString() }
-        }])
-        .select()
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+          payload: { test: true, timestamp: new Date().toISOString() },
+          approved: true
+        }
+      });
 
-      if (jobError) throw new Error(`Erro ao criar job: ${jobError.message}`);
+      if (jobError) {
+        const errorData = typeof jobError === 'object' && 'error' in jobError ? jobError.error : jobError;
+        const errorCode = errorData?.code;
+        const errorMessage = errorData?.message || jobError.message || "Erro ao criar job";
+
+        if (errorCode === 'FORBIDDEN') {
+          throw new Error("Acesso negado. É necessário ter papel admin, operator ou super_admin.");
+        } else if (errorCode === 'AGENT_NOT_FOUND') {
+          throw new Error("Agente não encontrado ou não pertence ao tenant selecionado.");
+        } else {
+          throw new Error(`Erro ao criar job: ${errorMessage}`);
+        }
+      }
+
+      const job = { id: jobResponse.id, created_at: new Date().toISOString(), ...jobResponse };
 
       addTestResult({
         step: "1. Criar Job de Teste",
