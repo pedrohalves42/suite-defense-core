@@ -2100,27 +2100,39 @@ export type Database = {
       agents_safe: {
         Row: {
           agent_name: string | null
+          agent_version: string | null
           enrolled_at: string | null
+          hostname: string | null
           id: string | null
           last_heartbeat: string | null
+          os_type: string | null
+          os_version: string | null
           payload_hash: string | null
           status: string | null
           tenant_id: string | null
         }
         Insert: {
           agent_name?: string | null
+          agent_version?: string | null
           enrolled_at?: string | null
+          hostname?: string | null
           id?: string | null
           last_heartbeat?: string | null
+          os_type?: string | null
+          os_version?: string | null
           payload_hash?: string | null
           status?: string | null
           tenant_id?: string | null
         }
         Update: {
           agent_name?: string | null
+          agent_version?: string | null
           enrolled_at?: string | null
+          hostname?: string | null
           id?: string | null
           last_heartbeat?: string | null
+          os_type?: string | null
+          os_version?: string | null
           payload_hash?: string | null
           status?: string | null
           tenant_id?: string | null
@@ -2158,7 +2170,7 @@ export type Database = {
         Insert: {
           action?: string | null
           created_at?: string | null
-          details?: never
+          details?: Json | null
           id?: string | null
           ip_address_masked?: never
           resource_id?: string | null
@@ -2170,7 +2182,7 @@ export type Database = {
         Update: {
           action?: string | null
           created_at?: string | null
-          details?: never
+          details?: Json | null
           id?: string | null
           ip_address_masked?: never
           resource_id?: string | null
