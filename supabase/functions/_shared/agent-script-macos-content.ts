@@ -77,15 +77,15 @@ generate_nonce() {
     uuidgen
 }
 
-# HMAC-SHA256 signature generation
+# HMAC-SHA256 signature generation (FASE 3 FIX: usar HEX)
 generate_hmac_signature() {
     local timestamp="\$1"
     local nonce="\$2"
     local body="\$3"
     local payload="\${timestamp}:\${nonce}:\${body}"
     
-    # Convert hex secret to binary and compute HMAC
-    echo -n "\$payload" | openssl dgst -sha256 -hmac "\$HMAC_SECRET" | awk '{print \$2}'
+    # FASE 3 FIX: Usar -mac HMAC -macopt hexkey para compatibilidade com backend HEX
+    echo -n "\$payload" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:\$HMAC_SECRET" | awk '{print \$2}'
 }
 
 # Send heartbeat with HMAC authentication
@@ -95,7 +95,7 @@ send_heartbeat() {
     timestamp=\$(date +%s%3N)  # milliseconds
     nonce=\$(generate_nonce)
     
-    # Enhanced macOS telemetry
+    # Enhanced macOS telemetry (FASE 4: incluir agent_version)
     local os_version os_build hardware_model hardware_arch memory_gb cpu_count
     os_version=\$(sw_vers -productVersion)
     os_build=\$(sw_vers -buildVersion)
@@ -110,6 +110,7 @@ send_heartbeat() {
   "platform": "macos",
   "os_version": "\$os_version",
   "os_build": "\$os_build",
+  "agent_version": "3.0.0",
   "hardware": {
     "model": "\$hardware_model",
     "architecture": "\$hardware_arch",
@@ -200,6 +201,7 @@ send_post_installation_event() {
   "success": true,
   "installation_method": "one_click",
   "network_connectivity": true,
+  "agent_version": "3.0.0",
   "metadata": {
     "os_version": "\$os_version",
     "os_build": "\$os_build",

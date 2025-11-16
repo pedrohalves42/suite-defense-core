@@ -276,8 +276,9 @@ function Get-HmacSignature {
     )
     
     try {
-    \$hmac = New-Object System.Security.Cryptography.HMACSHA256
-    \$hmac.Key = [System.Text.Encoding]::UTF8.GetBytes(\$Secret)
+        # FASE 2 FIX: Usar HEX em vez de UTF-8 (compatível com backend)
+        \$hmac = New-Object System.Security.Cryptography.HMACSHA256
+        \$hmac.Key = Convert-HexToBytes \$Secret
         \$dataBytes = [System.Text.Encoding]::UTF8.GetBytes(\$Data)
         \$hashBytes = \$hmac.ComputeHash(\$dataBytes)
         \$signature = [BitConverter]::ToString(\$hashBytes).Replace('-', '').ToLower()
@@ -321,11 +322,9 @@ function Invoke-SecureRequest {
             # Gerar nonce único (UUID v4)
             \$nonce = [guid]::NewGuid().ToString()
             
-            # Preparar body JSON (vazio para GET)
-            if (\$Method -eq 'GET') {
-                \$bodyJson = ""
-            }
-            else {
+            # Preparar body JSON (FASE 2 FIX: usar string vazia em vez de "{}")
+            \$bodyJson = ""
+            if (\$Method -ne 'GET' -and \$Body -and \$Body.Count -gt 0) {
                 \$bodyJson = \$Body | ConvertTo-Json -Depth 10 -Compress
             }
             
@@ -353,7 +352,8 @@ function Invoke-SecureRequest {
                 UseBasicParsing = \$true
             }
             
-            if (\$Method -ne 'GET' -and \$bodyJson) {
+            # FASE 2 FIX: Só adiciona Body se não for vazio
+            if (\$Method -ne 'GET' -and -not [string]::IsNullOrEmpty(\$bodyJson)) {
                 \$params['Body'] = \$bodyJson
             }
             
@@ -393,19 +393,14 @@ function Invoke-SecureRequest {
                 
                 \$script:ConsecutiveAuthFailures++
                 
-                if (\$script:ConsecutiveAuthFailures -ge \$script:MaxAuthFailuresBeforeDegraded) {
-                    Write-Log "❌ Muitas falhas de autenticação (\$(\$script:ConsecutiveAuthFailures)). Entrando em modo degradado." "FATAL"
-                    Enter-DegradedMode -Reason "TOO_MANY_AUTH_FAILURES" -ErrorCode \$errorCode
-                }
+                # FASE 2 FIX: Stop retries em vez de entrar em modo degradado
+                Write-Log "❌ Authentication failure (\$statusCode). STOPPING retries." "ERROR"
+                Write-Log "   Possible causes:" "ERROR"
+                Write-Log "   - Invalid/expired AgentToken" "ERROR"
+                Write-Log "   - HMAC secret mismatch with backend" "ERROR"
+                Write-Log "   - System clock out of sync (NTP)" "ERROR"
+                Write-Log "   Error code: \$errorCode" "ERROR"
                 
-                if (\$isTransient -and \$errorCode -eq 'AUTH_TIMESTAMP_OUT_OF_RANGE' -and \$attempt -lt \$MaxRetries) {
-                    \$waitTime = [Math]::Pow(2, \$attempt) * 2
-                    Write-Log "⚠️ Clock skew detectado. Retry em \$waitTime segundos..." "WARN"
-                    Start-Sleep -Seconds \$waitTime
-                    continue
-                }
-                
-                Write-Log "❌ Erro de autenticação fatal (\$errorCode), abortando retries" "ERROR"
                 return @{
                     Success = \$false
                     Error = \$lastError.Exception.Message
@@ -437,82 +432,9 @@ function Invoke-SecureRequest {
     }
 }
 
-function Enter-DegradedMode {
-    param([string]\$Reason, [string]\$ErrorCode = "UNKNOWN")
-    
-    \$script:InDegradedMode = \$true
-    Write-Log "========================================" "FATAL"
-    Write-Log "MODO DEGRADADO ATIVADO" "FATAL"
-    Write-Log "Razão: \$Reason | Código: \$ErrorCode" "FATAL"
-    Write-Log "========================================" "FATAL"
-    
-    Write-Log "Diagnóstico:" "INFO"
-    Write-Log "  Hostname: \$env:COMPUTERNAME" "INFO"
-    Write-Log "  Data/Hora: \$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" "INFO"
-    Write-Log "  Token: \$(\$AgentToken.Substring(0,20))..." "INFO"
-    
-    try {
-        \$healthResult = Test-AgentHealthCheck
-        if (\$healthResult.Success) {
-            Write-Log "✅ Health check OK - problema em outro endpoint" "INFO"
-        } else {
-            Write-Log "❌ Health check falhou: \$(\$healthResult.ErrorCode)" "ERROR"
-        }
-    } catch {
-        Write-Log "Erro ao executar health check: \$(\$_.Exception.Message)" "ERROR"
-    }
-    
-    Write-Log "Modo degradado: apenas heartbeat a cada 5min, sem jobs" "WARN"
-    
-    while (\$true) {
-        try { Send-Heartbeat } catch { Write-Log "Erro no heartbeat degradado: \$(\$_.Exception.Message)" "ERROR" }
-        Start-Sleep -Seconds 300
-    }
-}
-
-function Test-AgentHealthCheck {
-    try {
-        Write-Log "Executando health check..." "DEBUG"
-        
-        \$result = Invoke-SecureRequest \`
-            -Uri "\$ServerUrl/functions/v1/agent-health-check" \`
-            -Method POST \`
-            -Body @{} \`
-            -TimeoutSec 10 \`
-            -MaxRetries 1
-        
-        if (\$result.Success) {
-            \$healthData = \$result.Content | ConvertFrom-Json
-            Write-Log "✅ Health check OK: \$(\$healthData.status)" "SUCCESS"
-            return @{ Success = \$true; Data = \$healthData }
-        } else {
-            return @{ Success = \$false; Error = \$result.Error; ErrorCode = \$result.ErrorCode; StatusCode = \$result.StatusCode }
-        }
-    }
-    catch {
-        return @{ Success = \$false; Error = \$_.Exception.Message }
-    }
-}
-
-function Enter-DegradedMode {
-    param([string]\$Reason, [string]\$ErrorCode = "UNKNOWN")
-    \$script:InDegradedMode = \$true
-    Write-Log "========================================" "FATAL"
-    Write-Log "MODO DEGRADADO | \$Reason | \$ErrorCode" "FATAL"
-    Write-Log "========================================" "FATAL"
-    try { \$hc = Test-AgentHealthCheck; if (\$hc.Success) { Write-Log "✅ Health check OK" "INFO" } else { Write-Log "❌ Health check falhou: \$(\$hc.ErrorCode)" "ERROR" } } catch {}
-    while (\$true) { try { Send-Heartbeat } catch {}; Start-Sleep 300 }
-}
-
-function Test-AgentHealthCheck {
-    try {
-        \$r = Invoke-SecureRequest -Uri "\$ServerUrl/functions/v1/agent-health-check" -Method POST -Body @{} -TimeoutSec 10 -MaxRetries 1
-        if (\$r.Success) { \$d = \$r.Content | ConvertFrom-Json; return @{ Success = \$true; Data = \$d } }
-        return @{ Success = \$false; Error = \$r.Error; ErrorCode = \$r.ErrorCode }
-    } catch { return @{ Success = \$false; Error = \$_.Exception.Message } }
-}
-
 #endregion
+
+#region Heartbeat e Métricas
 
 #region Heartbeat e Métricas
 
@@ -529,6 +451,7 @@ function Send-Heartbeat {
             os_type = "Windows"
             os_version = \$osName
             hostname = \$hostname
+            agent_version = "3.0.0"
         }
         
         \$result = Invoke-SecureRequest \`

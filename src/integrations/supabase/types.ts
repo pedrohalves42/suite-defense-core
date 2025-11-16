@@ -113,6 +113,13 @@ export type Database = {
             foreignKeyName: "agent_builds_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_builds_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "v_agent_lifecycle_state"
             referencedColumns: ["agent_id"]
           },
@@ -232,6 +239,13 @@ export type Database = {
             foreignKeyName: "agent_system_metrics_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_system_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "v_agent_lifecycle_state"
             referencedColumns: ["agent_id"]
           },
@@ -298,6 +312,13 @@ export type Database = {
             foreignKeyName: "agent_tokens_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_tokens_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "v_agent_lifecycle_state"
             referencedColumns: ["agent_id"]
           },
@@ -342,6 +363,7 @@ export type Database = {
       agents: {
         Row: {
           agent_name: string
+          agent_version: string | null
           enrolled_at: string
           hmac_secret: string
           hostname: string | null
@@ -355,6 +377,7 @@ export type Database = {
         }
         Insert: {
           agent_name: string
+          agent_version?: string | null
           enrolled_at?: string
           hmac_secret: string
           hostname?: string | null
@@ -368,6 +391,7 @@ export type Database = {
         }
         Update: {
           agent_name?: string
+          agent_version?: string | null
           enrolled_at?: string
           hmac_secret?: string
           hostname?: string | null
@@ -904,6 +928,13 @@ export type Database = {
             foreignKeyName: "enrollment_keys_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "v_agent_lifecycle_state"
             referencedColumns: ["agent_id"]
           },
@@ -1054,6 +1085,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "installation_analytics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1638,6 +1676,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_alerts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
             referencedColumns: ["id"]
           },
           {
@@ -2238,6 +2283,13 @@ export type Database = {
             foreignKeyName: "enrollment_keys_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
             referencedRelation: "v_agent_lifecycle_state"
             referencedColumns: ["agent_id"]
           },
@@ -2317,11 +2369,42 @@ export type Database = {
           },
         ]
       }
+      v_agent_health_summary: {
+        Row: {
+          agent_name: string | null
+          agent_version: string | null
+          health_status: string | null
+          id: string | null
+          last_heartbeat: string | null
+          lifecycle_stage: string | null
+          minutes_since_heartbeat: number | null
+          os_type: string | null
+          outdated: boolean | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_tenant_id_new_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_agents_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_agent_lifecycle_state: {
         Row: {
           agent_id: string | null
           agent_name: string | null
           agent_status: string | null
+          agent_version: string | null
           command_copied_at: string | null
           downloaded_at: string | null
           enrolled_at: string | null
@@ -2343,6 +2426,7 @@ export type Database = {
           network_connectivity: boolean | null
           os_type: string | null
           os_version: string | null
+          payload_hash: string | null
           platform: string | null
           tenant_id: string | null
         }
