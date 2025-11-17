@@ -2634,6 +2634,22 @@ export type Database = {
       }
       gen_random_uuid: { Args: never; Returns: string }
       gen_salt: { Args: { "": string }; Returns: string }
+      get_agent_health_metrics: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          agent_name: string
+          agent_version: string
+          failed_jobs_24h: number
+          failure_rate_pct: number
+          health_status: string
+          hostname: string
+          last_heartbeat: string
+          os_type: string
+          os_version: string
+          seconds_since_heartbeat: number
+          total_jobs_24h: number
+        }[]
+      }
       get_enrollment_key_full: { Args: { p_key_id: string }; Returns: string }
       get_installation_health_status: {
         Args: never
