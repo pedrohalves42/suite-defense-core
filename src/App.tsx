@@ -59,6 +59,7 @@ import AIInsights from "./pages/admin/AIInsights";
 import AIActionApproval from "./pages/admin/AIActionApproval";
 import Installations from "./pages/admin/Installations";
 import Tenant from "./pages/admin/Tenant";
+import JobsV3Migration from "./pages/admin/JobsV3Migration";
 
 // CORREÇÃO: QueryClient já está inicializado no src/main.tsx
 // Remover duplicação para manter configurações otimizadas
@@ -119,8 +120,9 @@ const App = () => (
                 <Route path="agent-diagnostics" element={<AgentDiagnostics />} />
                 <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="ai-actions" element={<AIActionApproval />} />
-                <Route path="tenant" element={<Tenant />} />
-              </Route>
+              <Route path="tenant" element={<Tenant />} />
+              <Route path="jobs-v3-migration" element={<JobsV3Migration />} />
+            </Route>
 
               {/* Super Admin Routes (System-wide) */}
               <Route path="/super-admin" element={<SuperAdminLayout />}>
