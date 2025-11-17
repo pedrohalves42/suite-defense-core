@@ -430,6 +430,73 @@ function Execute-Job {
                 $sys = Get-SystemInfo
                 $output = $sys
             }
+            "scan" {
+                # Payload esperado: { "filePath": "C:\\path\\file.exe", "tenantId": "uuid" }
+                $filePath = $payload.filePath
+                $tenantId = $payload.tenantId
+
+                if (-not (Test-Path $filePath)) {
+                    throw "Arquivo não encontrado: $filePath"
+                }
+
+                # Calcular SHA256
+                $fileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
+                Write-Log "🔍 Escaneando: $filePath (hash: $fileHash)" "INFO"
+
+                # Chamar scan-virus (backend JÁ EXISTE)
+                $scanBody = @{
+                    tenant_id  = $tenantId
+                    agent_name = $Global:AgentName
+                    file_path  = $filePath
+                    file_hash  = $fileHash
+                } | ConvertTo-Json -Depth 5
+
+                $scanResult = Invoke-SecureRequest `
+                    -Path "/functions/v1/scan-virus" `
+                    -Method "POST" `
+                    -Body $scanBody `
+                    -TimeoutSec 60
+
+                if (-not $scanResult.Success) {
+                    throw "Falha ao chamar scan-virus: HTTP $($scanResult.StatusCode)"
+                }
+
+                $scanData = $scanResult.Body | ConvertFrom-Json
+
+                $output = @{
+                    filePath    = $filePath
+                    fileHash    = $fileHash
+                    isMalicious = $scanData.isMalicious
+                    positives   = $scanData.positives
+                    totalScans  = $scanData.totalScans
+                    permalink   = $scanData.permalink
+                    scannerUsed = $scanData.scannerUsed
+                    fromCache   = $scanData.fromCache
+                }
+
+                if ($scanData.isMalicious) {
+                    Write-Log "⚠️ MALWARE DETECTADO: $($scanData.positives)/$($scanData.totalScans) engines" "WARN"
+                    
+                    # Quarentena local (MOVE, não DELETE)
+                    $quarantineRoot = "C:\CyberShield\Quarantine"
+                    if (-not (Test-Path $quarantineRoot)) {
+                        New-Item -ItemType Directory -Path $quarantineRoot -Force | Out-Null
+                    }
+
+                    $fileName = [System.IO.Path]::GetFileName($filePath)
+                    $guid = [guid]::NewGuid().ToString()
+                    $quarantinePath = Join-Path $quarantineRoot "$guid`_$fileName"
+
+                    Move-Item -Path $filePath -Destination $quarantinePath -Force
+                    Write-Log "✅ Arquivo movido para: $quarantinePath" "SUCCESS"
+
+                    $output.quarantined = $true
+                    $output.quarantinePath = $quarantinePath
+                } else {
+                    Write-Log "✅ Arquivo limpo" "SUCCESS"
+                    $output.quarantined = $false
+                }
+            }
             default {
                 throw "Tipo de job não suportado: $jobType"
             }
