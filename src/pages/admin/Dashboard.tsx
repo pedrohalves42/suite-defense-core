@@ -51,10 +51,10 @@ export default function Dashboard() {
           .select('status')
           .eq('tenant_id', tenant.id),
         
-        // Jobs - aceitar v1 (done) e v3 (completed/failed)
+        // Jobs - usar view normalizada para compatibilidade v1/v3
         supabase
-          .from('jobs')
-          .select('status')
+          .from('jobs_normalized')
+          .select('normalized_status, is_v3, duration_seconds')
           .eq('tenant_id', tenant.id)
       ]);
 
@@ -76,9 +76,9 @@ export default function Dashboard() {
         cleanFiles: scans.data?.filter(s => !s.is_malicious).length || 0,
         quarantinedFiles: quarantine.data?.filter(q => q.status === 'quarantined').length || 0,
         totalJobs: jobs.data?.length || 0,
-        completedJobs: jobs.data?.filter(j => j.status === 'completed' || j.status === 'done').length || 0,
-        pendingJobs: jobs.data?.filter(j => j.status === 'queued' || j.status === 'delivered').length || 0,
-        failedJobs: jobs.data?.filter(j => j.status === 'failed').length || 0,
+        completedJobs: jobs.data?.filter(j => j.normalized_status === 'completed').length || 0,
+        pendingJobs: jobs.data?.filter(j => ['queued', 'running'].includes(j.normalized_status || '')).length || 0,
+        failedJobs: jobs.data?.filter(j => j.normalized_status === 'failed').length || 0,
       };
 
       return stats;

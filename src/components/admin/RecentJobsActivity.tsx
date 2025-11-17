@@ -14,8 +14,8 @@ export function RecentJobsActivity({ tenantId }: RecentJobsActivityProps) {
     queryFn: async () => {
       if (!tenantId) return [];
       const { data, error } = await supabase
-        .from('jobs')
-        .select('id, type, status, agent_name, created_at, finished_at, error_message')
+        .from('jobs_normalized')
+        .select('id, type, normalized_status, agent_name, created_at, finished_at, error_message, is_v3, duration_seconds, output')
         .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -41,18 +41,26 @@ export function RecentJobsActivity({ tenantId }: RecentJobsActivityProps) {
       {jobs.map((job) => (
         <div key={job.id} className="flex justify-between items-start text-sm border-b pb-2">
           <div className="flex-1">
-            <div className="font-medium">
-              {job.type} · {job.agent_name}
+            <div className="font-medium flex items-center gap-2">
+              <span>{job.type} · {job.agent_name}</span>
+              {job.is_v3 && (
+                <Badge variant="outline" className="text-xs px-1 py-0">v3</Badge>
+              )}
             </div>
             {job.error_message && (
               <div className="text-xs text-destructive mt-1">
                 Erro: {job.error_message}
               </div>
             )}
+            {job.duration_seconds !== null && job.duration_seconds !== undefined && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Duração: {job.duration_seconds}s
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={statusColors[job.status as keyof typeof statusColors] || 'outline'}>
-              {job.status}
+            <Badge variant={statusColors[job.normalized_status as keyof typeof statusColors] || 'outline'}>
+              {job.normalized_status}
             </Badge>
             <span className="text-xs text-muted-foreground">
               {format(new Date(job.created_at), "dd/MM HH:mm", { locale: ptBR })}
