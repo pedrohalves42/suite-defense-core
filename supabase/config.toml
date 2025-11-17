@@ -70,6 +70,9 @@ verify_jwt = false
 [functions.check-agent-updates]
 verify_jwt = false
 
+[functions.serve-agent-update]
+verify_jwt = false
+
 [functions.post-installation-telemetry]
 verify_jwt = false
 
