@@ -117,22 +117,12 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: 'Invalid payload: job_id required (string)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const jobIdValidation = JobIdSchema.safeParse(job_id)
-    if (!jobIdValidation.success) {
-      return new Response(
-        JSON.stringify({ error: 'Formato de job_id inválido' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
     }
 
     // Validar status
-    if (!status || !['completed', 'failed'].includes(status)) {
+    if (!payload.status || !['completed', 'failed'].includes(payload.status)) {
       return new Response(
-        JSON.stringify({ error: 'status deve ser "completed" ou "failed"' }),
+        JSON.stringify({ error: 'status must be "completed" or "failed"' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
