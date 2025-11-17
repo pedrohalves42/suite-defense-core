@@ -517,71 +517,84 @@ function Execute-Job {
                 }
             }
             "update_agent" {
-                Write-Log "🔄 Executando update do agente..." "INFO"
-                
                 try {
-                    # Buscar última versão
+                    Write-Log "🔄 Job 'update_agent' recebido" "INFO"
+
+                    # Chama serve-agent-update
                     $updateResult = Invoke-SecureRequest `
                         -Uri "$ServerUrl/functions/v1/serve-agent-update" `
                         -Method GET `
-                        -TimeoutSec 30
+                        -TimeoutSec 60
 
                     if (-not $updateResult.Success) {
-                        throw "Falha ao buscar atualização: $($updateResult.ErrorMessage)"
+                        throw "Falha ao buscar update: HTTP $($updateResult.StatusCode)"
                     }
 
-                    $release = $updateResult.Body | ConvertFrom-Json
-                    $newVersion = $release.version
-                    $newScript = $release.script_content
-                    $expectedSha256 = $release.sha256
+                    $data = $updateResult.Body | ConvertFrom-Json
 
-                    Write-Log "📦 Nova versão disponível: $newVersion (atual: $AgentVersion)" "INFO"
+                    # Já está na última versão?
+                    if ($data.message -eq "Already up to date") {
+                        Write-Log "ℹ Agente já está na última versão ($($data.current_version))" "INFO"
+                        $result.success = $true
+                        $result.output  = ($data | ConvertTo-Json -Depth 5)
+                        break
+                    }
+
+                    $newVersion   = $data.version
+                    $scriptText   = $data.script_content
+                    $expectedHash = $data.sha256
+
+                    Write-Log "📦 Atualizando agente para versão $newVersion" "INFO"
+
+                    # Usa o próprio script atual, sem hardcode de caminho
+                    $currentScript = $PSCommandPath
+                    $backupScript  = $currentScript -replace '\.ps1$', "-backup-$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
+                    $tempScript    = Join-Path $env:TEMP "cybershield-agent-update-$newVersion.ps1"
+
+                    # Salvar script novo
+                    Set-Content -Path $tempScript -Value $scriptText -Encoding UTF8
 
                     # Validar SHA256
-                    $actualSha256 = [System.BitConverter]::ToString(
-                        [System.Security.Cryptography.SHA256]::Create().ComputeHash(
-                            [System.Text.Encoding]::UTF8.GetBytes($newScript)
-                        )
-                    ).Replace("-", "").ToLower()
-
-                    if ($actualSha256 -ne $expectedSha256.ToLower()) {
-                        throw "SHA256 inválido! Esperado: $expectedSha256, Recebido: $actualSha256"
+                    $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+                    if ($actualHash -ne $expectedHash.ToLower()) {
+                        Remove-Item $tempScript -Force
+                        throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
                     }
 
-                    Write-Log "✅ SHA256 validado" "SUCCESS"
+                    Write-Log "✅ SHA256 validado: $actualHash" "SUCCESS"
 
                     # Backup do script atual
-                    $scriptPath = "C:\CyberShield\cybershield-agent.ps1"
-                    $backupPath = "C:\CyberShield\Backups\cybershield-agent_$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
-                    $backupDir = Split-Path $backupPath
-                    
-                    if (-not (Test-Path $backupDir)) {
-                        New-Item -ItemType Directory -Path $backupDir -Force | Out-Null
-                    }
+                    Copy-Item -Path $currentScript -Destination $backupScript -Force
+                    Write-Log "📦 Backup criado em: $backupScript" "INFO"
 
-                    Copy-Item -Path $scriptPath -Destination $backupPath -Force
-                    Write-Log "💾 Backup criado: $backupPath" "INFO"
+                    # Trocar script
+                    Copy-Item -Path $tempScript -Destination $currentScript -Force
+                    Remove-Item $tempScript -Force
 
-                    # Atualizar script
-                    Set-Content -Path $scriptPath -Value $newScript -Encoding UTF8 -Force
                     Write-Log "✅ Script atualizado para $newVersion" "SUCCESS"
 
-                    # Reiniciar Scheduled Task
-                    $taskName = "CyberShield Agent"
-                    Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+                    # Reiniciar task
+                    Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
                     Start-Sleep -Seconds 2
-                    Start-ScheduledTask -TaskName $taskName
+                    Start-ScheduledTask -TaskName "CyberShield Agent"
 
                     $output = @{
-                        success     = $true
-                        old_version = $AgentVersion
-                        new_version = $newVersion
-                        backup_path = $backupPath
-                        message     = "Agente atualizado com sucesso"
+                        message     = "Agent updated successfully"
+                        newVersion  = $newVersion
+                        sha256      = $actualHash
+                        restartedAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
-                } catch {
-                    Write-Log "❌ Erro durante update: $_" "ERROR"
-                    throw
+
+                    $result.success = $true
+                    $result.output  = $output | ConvertTo-Json -Depth 5
+                    break
+                }
+                catch {
+                    $err = $_.Exception.Message
+                    Write-Log "❌ Erro no auto-update: $err" "ERROR"
+                    $result.success = $false
+                    $result.error   = $err
+                    break
                 }
             }
             
