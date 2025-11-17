@@ -814,78 +814,90 @@ function Execute-Job {
             }
             
             "scan" {
-                # Payload esperado: { "filePath": "C:\\\\path\\\\file.exe", "tenantId": "uuid" }
-                \$filePath = \$Job.payload.filePath
-                \$tenantId = \$Job.payload.tenantId
+                try {
+                    Write-Log "📄 Job type 'scan' recebido" "INFO"
 
-                if (-not (Test-Path \$filePath)) {
-                    \$result.success = \$false
-                    \$result.error = "Arquivo não encontrado: \$filePath"
-                    break
-                }
+                    # Payload esperado: { "filePath": "C:\\\\path\\\\file.exe", "tenantId": "uuid" }
+                    \$filePath = \$Job.payload.filePath
+                    \$tenantId = \$Job.payload.tenantId
 
-                # Calcular SHA256
-                \$fileHash = (Get-FileHash -Path \$filePath -Algorithm SHA256).Hash.ToLower()
-                Write-Log "🔍 Escaneando: \$filePath (hash: \$fileHash)" "INFO"
-
-                # Chamar scan-virus (backend JÁ EXISTE)
-                \$scanBody = @{
-                    tenant_id  = \$tenantId
-                    agent_name = \$AgentName
-                    file_path  = \$filePath
-                    file_hash  = \$fileHash
-                }
-
-                \$scanResult = Invoke-SecureRequest \`
-                    -Uri "\$ServerUrl/functions/v1/scan-virus" \`
-                    -Method POST \`
-                    -Body \$scanBody \`
-                    -TimeoutSec 60
-
-                if (-not \$scanResult.Success) {
-                    \$result.success = \$false
-                    \$result.error = "Falha ao chamar scan-virus: HTTP \$(\$scanResult.StatusCode)"
-                    break
-                }
-
-                \$scanData = \$scanResult.Body | ConvertFrom-Json
-
-                \$output = @{
-                    filePath    = \$filePath
-                    fileHash    = \$fileHash
-                    isMalicious = \$scanData.isMalicious
-                    positives   = \$scanData.positives
-                    totalScans  = \$scanData.totalScans
-                    permalink   = \$scanData.permalink
-                    scannerUsed = \$scanData.scannerUsed
-                    fromCache   = \$scanData.fromCache
-                }
-
-                if (\$scanData.isMalicious) {
-                    Write-Log "⚠️ MALWARE DETECTADO: \$(\$scanData.positives)/\$(\$scanData.totalScans) engines" "WARN"
-                    
-                    # Quarentena local (MOVE, não DELETE)
-                    \$quarantineRoot = "C:\\CyberShield\\Quarantine"
-                    if (-not (Test-Path \$quarantineRoot)) {
-                        New-Item -ItemType Directory -Path \$quarantineRoot -Force | Out-Null
+                    if (-not \$filePath) {
+                        throw "Payload inválido: 'filePath' não informado"
                     }
 
-                    \$fileName = [System.IO.Path]::GetFileName(\$filePath)
-                    \$guid = [guid]::NewGuid().ToString()
-                    \$quarantinePath = Join-Path \$quarantineRoot "\$guid\`_\$fileName"
+                    if (-not (Test-Path \$filePath)) {
+                        throw "Arquivo não encontrado: \$filePath"
+                    }
 
-                    Move-Item -Path \$filePath -Destination \$quarantinePath -Force
-                    Write-Log "✅ Arquivo movido para: \$quarantinePath" "SUCCESS"
+                    # Calcular SHA256
+                    \$fileHash = (Get-FileHash -Path \$filePath -Algorithm SHA256).Hash.ToLower()
+                    Write-Log "🔍 Escaneando: \$filePath (hash: \$fileHash)" "INFO"
 
-                    \$output.quarantined = \$true
-                    \$output.quarantinePath = \$quarantinePath
-                } else {
-                    Write-Log "✅ Arquivo limpo" "SUCCESS"
-                    \$output.quarantined = \$false
+                    # Monta body para backend (NÃO converte pra JSON aqui)
+                    \$scanBody = @{
+                        tenant_id  = \$tenantId
+                        agent_name = \$AgentName
+                        file_path  = \$filePath
+                        file_hash  = \$fileHash
+                    }
+
+                    # Chama backend scan-virus
+                    \$scanResult = Invoke-SecureRequest \`
+                        -Uri "\$ServerUrl/functions/v1/scan-virus" \`
+                        -Method POST \`
+                        -Body \$scanBody \`
+                        -TimeoutSec 60
+
+                    if (-not \$scanResult.Success) {
+                        throw "Falha ao chamar scan-virus: HTTP \$(\$scanResult.StatusCode)"
+                    }
+
+                    \$scanData = \$scanResult.Body | ConvertFrom-Json
+
+                    # Monta output base
+                    \$output = @{
+                        filePath    = \$filePath
+                        fileHash    = \$fileHash
+                        isMalicious = \$scanData.isMalicious
+                        positives   = \$scanData.positives
+                        totalScans  = \$scanData.totalScans
+                        permalink   = \$scanData.permalink
+                        scannerUsed = \$scanData.scannerUsed
+                        fromCache   = \$scanData.fromCache
+                        quarantined = \$false
+                    }
+
+                    # QUARENTENA FÍSICA (necessária pois backend não tem acesso ao filesystem)
+                    if (\$scanData.isMalicious) {
+                        Write-Log "⚠️ MALWARE DETECTADO: \$(\$scanData.positives)/\$(\$scanData.totalScans) engines" "WARN"
+                        
+                        \$quarantineRoot = "C:\\CyberShield\\Quarantine"
+                        if (-not (Test-Path \$quarantineRoot)) {
+                            New-Item -ItemType Directory -Path \$quarantineRoot -Force | Out-Null
+                        }
+
+                        \$fileName = [System.IO.Path]::GetFileName(\$filePath)
+                        \$guid = [guid]::NewGuid().ToString()
+                        \$quarantinePath = Join-Path \$quarantineRoot "\$guid\`_\$fileName"
+
+                        Move-Item -Path \$filePath -Destination \$quarantinePath -Force
+                        Write-Log "✅ Arquivo movido para quarentena: \$quarantinePath" "SUCCESS"
+
+                        \$output.quarantined = \$true
+                        \$output.quarantinePath = \$quarantinePath
+                    } else {
+                        Write-Log "✅ Arquivo limpo" "SUCCESS"
+                    }
+
+                    \$result.success = \$true
+                    \$result.output = \$output | ConvertTo-Json
                 }
-                
-                \$result.success = \$true
-                \$result.output = \$output | ConvertTo-Json
+                catch {
+                    \$err = \$_.Exception.Message
+                    Write-Log "❌ Erro ao processar job 'scan': \$err" "ERROR"
+                    \$result.success = \$false
+                    \$result.error = \$err
+                }
             }
             
             "update_agent" {
