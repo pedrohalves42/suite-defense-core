@@ -120,6 +120,28 @@ export default function Dashboard() {
     enabled: !!tenant?.id,
   });
 
+  // Query para alertas críticos
+  const { data: criticalAlerts } = useQuery({
+    queryKey: ['critical-alerts', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+
+      const { data, error } = await supabase
+        .from('system_alerts')
+        .select('*')
+        .eq('tenant_id', tenant.id)
+        .in('severity', ['critical', 'high'])
+        .eq('resolved', false)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenant?.id,
+    refetchInterval: 30000, // Atualizar a cada 30s
+  });
+
   if (statsLoading) {
     return (
       <div className="flex items-center justify-center py-8">
