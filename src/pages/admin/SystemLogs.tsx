@@ -5,14 +5,26 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, CheckCircle, Clock, Mail, Activity } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useTenant } from "@/hooks/useTenant";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 
 export default function SystemLogs() {
+  const { tenant } = useTenant();
+  const { isSuperAdmin } = useSuperAdmin();
+
   const { data: alerts, isLoading: alertsLoading } = useQuery({
-    queryKey: ['system-alerts'],
+    queryKey: ['system-alerts', tenant?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('system_alerts')
-        .select('*')
+        .select('*');
+      
+      // Filter by tenant if not super admin
+      if (!isSuperAdmin && tenant?.id) {
+        query = query.eq('tenant_id', tenant.id);
+      }
+      
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(50);
       
@@ -22,11 +34,18 @@ export default function SystemLogs() {
   });
 
   const { data: securityLogs, isLoading: logsLoading } = useQuery({
-    queryKey: ['security-logs'],
+    queryKey: ['security-logs', tenant?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('security_logs')
-        .select('*')
+        .select('*');
+      
+      // Filter by tenant if not super admin
+      if (!isSuperAdmin && tenant?.id) {
+        query = query.eq('tenant_id', tenant.id);
+      }
+      
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(50);
       
