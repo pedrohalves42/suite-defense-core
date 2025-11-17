@@ -146,6 +146,45 @@ export type Database = {
           },
         ]
       }
+      agent_releases: {
+        Row: {
+          channel: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          platform: string
+          release_notes: string | null
+          script_content: string
+          sha256: string
+          version: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          platform?: string
+          release_notes?: string | null
+          script_content: string
+          sha256: string
+          version: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          platform?: string
+          release_notes?: string | null
+          script_content?: string
+          sha256?: string
+          version?: string
+        }
+        Relationships: []
+      }
       agent_system_metrics: {
         Row: {
           agent_id: string
