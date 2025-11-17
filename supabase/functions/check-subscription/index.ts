@@ -75,12 +75,12 @@ Deno.serve(async (req) => {
 
     const typedSubscription = subscription as SubscriptionWithPlan | null;
 
-    // Check if it's Enterprise/Custom plan (without Stripe)
+    // Check if it's Enterprise/Custom/Pro plan (without Stripe)
     if (!typedSubscription?.stripe_subscription_id) {
       const planName = typedSubscription?.subscription_plans?.name || "free";
       
-      // If Enterprise or Custom plan, return local data
-      if (planName === 'enterprise' || planName === 'custom') {
+      // If Enterprise, Custom, or Pro plan, return local data
+      if (planName === 'enterprise' || planName === 'custom' || planName === 'pro') {
         logStep("Enterprise/Custom plan detected - using local data", { planName });
         
         // Get features from database

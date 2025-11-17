@@ -1,20 +1,34 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAgentLifecycle } from "@/hooks/useAgentLifecycle";
 import { useTenant } from "@/hooks/useTenant";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Heart, AlertCircle, Server, Clock } from "lucide-react";
+import { Activity, Heart, AlertCircle, Server, Clock, Monitor } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ErrorState } from "@/components/ErrorState";
 import { InstallationHealthCard } from "@/components/admin/InstallationHealthCard";
+import { useQuery } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 export default function AgentHealthMonitor() {
   const { tenant } = useTenant();
-  const { data: agents, isLoading, isError, error: errorData, refetch } = useAgentLifecycle(tenant?.id);
   const [liveHeartbeats, setLiveHeartbeats] = useState<number>(0);
   const [recentHeartbeats, setRecentHeartbeats] = useState<string[]>([]);
+
+  // Fetch agent health metrics using RPC
+  const { data: agentsHealth = [], isLoading, isError, error: errorData, refetch } = useQuery({
+    queryKey: ['agent-health', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      const { data, error } = await supabase
+        .rpc('get_agent_health_metrics', { p_tenant_id: tenant.id });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenant?.id,
+    refetchInterval: 30000, // 30s
+  });
 
   // Realtime subscription for heartbeats
   useEffect(() => {
@@ -70,18 +84,21 @@ export default function AgentHealthMonitor() {
     );
   }
 
-  // Group agents by health status
-  const healthGroups = {
-    healthy: agents?.filter(a => a.lifecycle_stage === 'active' && !a.flags.has_errors) || [],
-    warning: agents?.filter(a => 
-      (a.lifecycle_stage === 'installed_offline' || a.flags.is_offline) && !a.flags.has_errors
-    ) || [],
-    critical: agents?.filter(a => a.flags.has_errors || a.flags.is_stuck) || [],
-  };
+  // Calculate health counts from real data
+  const counts = agentsHealth.reduce(
+    (acc, agent) => {
+      if (agent.health_status === 'healthy') acc.healthy++;
+      if (agent.health_status === 'critical') acc.critical++;
+      if (agent.health_status === 'offline') acc.offline++;
+      if (agent.health_status === 'never_connected') acc.never_connected++;
+      return acc;
+    },
+    { healthy: 0, critical: 0, offline: 0, never_connected: 0 }
+  );
 
-  const totalAgents = agents?.length || 0;
+  const totalAgents = agentsHealth.length || 0;
   const healthPercentage = totalAgents > 0 
-    ? Math.round((healthGroups.healthy.length / totalAgents) * 100)
+    ? Math.round((counts.healthy / totalAgents) * 100)
     : 0;
 
   return (
@@ -105,7 +122,7 @@ export default function AgentHealthMonitor() {
           <CardContent>
             <div className="text-2xl font-bold">{healthPercentage}%</div>
             <p className="text-xs text-muted-foreground">
-              {healthGroups.healthy.length} de {totalAgents} saudáveis
+              {counts.healthy} de {totalAgents} saudáveis
             </p>
           </CardContent>
         </Card>
@@ -129,7 +146,7 @@ export default function AgentHealthMonitor() {
             <AlertCircle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{healthGroups.critical.length}</div>
+            <div className="text-2xl font-bold text-destructive">{counts.critical}</div>
             <p className="text-xs text-muted-foreground">
               Requerem atenção
             </p>
@@ -138,11 +155,11 @@ export default function AgentHealthMonitor() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avisos</CardTitle>
+            <CardTitle className="text-sm font-medium">Offline</CardTitle>
             <Clock className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{healthGroups.warning.length}</div>
+            <div className="text-2xl font-bold text-yellow-600">{counts.offline}</div>
             <p className="text-xs text-muted-foreground">
               Offline temporariamente
             </p>
@@ -182,16 +199,16 @@ export default function AgentHealthMonitor() {
                 <span className="text-sm">Saudável</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-yellow-500 rounded" />
-                <span className="text-sm">Aviso</span>
+                <div className="w-4 h-4 bg-orange-500 rounded" />
+                <span className="text-sm">Offline</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-red-500 rounded" />
                 <span className="text-sm">Crítico</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-gray-300 rounded" />
-                <span className="text-sm">Offline</span>
+                <div className="w-4 h-4 bg-gray-500 rounded" />
+                <span className="text-sm">Nunca Conectou</span>
               </div>
             </div>
           </CardDescription>
@@ -199,38 +216,41 @@ export default function AgentHealthMonitor() {
         <CardContent>
           <TooltipProvider>
             <div className="grid grid-cols-8 gap-2">
-              {agents?.map((agent) => {
-                const color = 
-                  agent.flags.has_errors || agent.flags.is_stuck ? 'bg-red-500' :
-                  agent.flags.is_offline ? 'bg-gray-300' :
-                  agent.lifecycle_stage === 'active' ? 'bg-green-500' :
-                  'bg-yellow-500';
-
-                return (
-                  <Tooltip key={agent.agent_id}>
-                    <TooltipTrigger asChild>
-                      <div 
-                        className={`${color} h-16 rounded-lg cursor-pointer hover:opacity-80 transition-opacity flex items-center justify-center`}
-                      >
-                        <Server className="h-6 w-6 text-white" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="space-y-1">
-                        <p className="font-semibold">{agent.agent_name}</p>
-                        <p className="text-sm">{agent.status_badge.label}</p>
-                        {agent.metrics.last_seen && (
-                          <p className="text-xs text-muted-foreground">
-                            Visto: {new Date(agent.metrics.last_seen).toLocaleString('pt-BR')}
-                          </p>
-                        )}
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
+              {agentsHealth.map((agent) => (
+                <Tooltip key={agent.agent_name}>
+                  <TooltipTrigger asChild>
+                    <div 
+                      className={cn(
+                        "h-16 rounded-lg cursor-pointer hover:opacity-80 transition-opacity flex items-center justify-center",
+                        agent.health_status === 'healthy' && 'bg-green-500',
+                        agent.health_status === 'offline' && 'bg-orange-500',
+                        agent.health_status === 'critical' && 'bg-red-500',
+                        agent.health_status === 'never_connected' && 'bg-gray-500'
+                      )}
+                    >
+                      <Server className="h-6 w-6 text-white" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <div className="space-y-1">
+                      <p className="font-semibold">{agent.agent_name}</p>
+                      <p className="text-sm capitalize">{agent.health_status}</p>
+                      {agent.seconds_since_heartbeat !== null && (
+                        <p className="text-xs text-muted-foreground">
+                          Último heartbeat: {Math.floor(agent.seconds_since_heartbeat / 60)}min atrás
+                        </p>
+                      )}
+                      {agent.total_jobs_24h > 0 && (
+                        <p className="text-xs">
+                          Jobs: {agent.total_jobs_24h} (falhas: {agent.failure_rate_pct}%)
+                        </p>
+                      )}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
               {/* Fill empty squares to complete grid */}
-              {Array.from({ length: Math.max(0, 8 - (agents?.length || 0) % 8) }).map((_, idx) => (
+              {Array.from({ length: Math.max(0, 8 - (agentsHealth.length % 8 || 8)) }).map((_, idx) => (
                 <div key={`empty-${idx}`} className="h-16 rounded-lg border-2 border-dashed border-gray-200" />
               ))}
             </div>
@@ -238,74 +258,7 @@ export default function AgentHealthMonitor() {
         </CardContent>
       </Card>
 
-      {/* Health Groups */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-green-600">Saudáveis</CardTitle>
-            <CardDescription>{healthGroups.healthy.length} agentes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {healthGroups.healthy.slice(0, 5).map(agent => (
-                <div key={agent.agent_id} className="flex items-center justify-between p-2 rounded hover:bg-accent">
-                  <span className="text-sm">{agent.agent_name}</span>
-                  <Badge variant="outline" className="text-green-600">Ativo</Badge>
-                </div>
-              ))}
-              {healthGroups.healthy.length > 5 && (
-                <p className="text-xs text-muted-foreground">
-                  + {healthGroups.healthy.length - 5} mais
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-yellow-600">Avisos</CardTitle>
-            <CardDescription>{healthGroups.warning.length} agentes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {healthGroups.warning.slice(0, 5).map(agent => (
-                <div key={agent.agent_id} className="flex items-center justify-between p-2 rounded hover:bg-accent">
-                  <span className="text-sm">{agent.agent_name}</span>
-                  <Badge variant="outline" className="text-yellow-600">Offline</Badge>
-                </div>
-              ))}
-              {healthGroups.warning.length > 5 && (
-                <p className="text-xs text-muted-foreground">
-                  + {healthGroups.warning.length - 5} mais
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-red-600">Críticos</CardTitle>
-            <CardDescription>{healthGroups.critical.length} agentes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {healthGroups.critical.slice(0, 5).map(agent => (
-                <div key={agent.agent_id} className="flex items-center justify-between p-2 rounded hover:bg-accent">
-                  <span className="text-sm">{agent.agent_name}</span>
-                  <Badge variant="destructive">Erro</Badge>
-                </div>
-              ))}
-              {healthGroups.critical.length > 5 && (
-                <p className="text-xs text-muted-foreground">
-                  + {healthGroups.critical.length - 5} mais
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Detailed Agent Health List - já implementado acima nas linhas 209-273 */}
     </div>
   );
 }

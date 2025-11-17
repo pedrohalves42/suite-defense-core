@@ -148,7 +148,7 @@ export default function Subscriptions() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl capitalize">{subscription?.plan_name || 'Free'}</CardTitle>
+              <CardTitle className="text-2xl capitalize">{subscription?.plan_name || 'Carregando...'}</CardTitle>
               <CardDescription>
                 {isTrialing ? (
                   <span className="flex items-center gap-2 mt-1">
@@ -193,6 +193,16 @@ export default function Subscriptions() {
           )}
         </CardContent>
       </Card>
+
+      {/* Alert if plan shows Free but should be paid */}
+      {subscription?.plan_name === 'free' && tenant?.id && (
+        <Alert className="mt-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Se você adquiriu um plano pago e ainda aparece como "Free", entre em contato com o suporte.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Usage Metrics */}
       <div className="grid gap-4 md:grid-cols-2">
