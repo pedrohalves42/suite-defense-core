@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { RecentAuditActivity } from '@/components/admin/RecentAuditActivity';
 
 interface Stats {
   totalAgents: number;
@@ -197,6 +198,17 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* Atividade Recente de Auditoria */}
+      <Card className="col-span-full">
+        <CardHeader>
+          <CardTitle>Atividade Recente</CardTitle>
+          <CardDescription>Últimas ações realizadas no sistema</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RecentAuditActivity tenantId={tenant?.id} />
+        </CardContent>
+      </Card>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
