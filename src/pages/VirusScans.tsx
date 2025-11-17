@@ -107,35 +107,6 @@ export default function VirusScans() {
     },
   });
 
-  // Query para gráfico de tendência (últimos 7 dias)
-  const { data: trendData } = useQuery({
-    queryKey: ['scan-trend'],
-    queryFn: async () => {
-      const last7Days = subDays(new Date(), 7);
-      const { data, error } = await supabase
-        .from('virus_scans')
-        .select('scanned_at, is_malicious')
-        .gte('scanned_at', last7Days.toISOString())
-        .order('scanned_at');
-      
-      if (error) throw error;
-
-      // Agrupar por dia
-      const grouped = data.reduce((acc, scan) => {
-        const date = format(new Date(scan.scanned_at), 'yyyy-MM-dd');
-        if (!acc[date]) {
-          acc[date] = { date, total: 0, malicious: 0 };
-        }
-        acc[date].total++;
-        if (scan.is_malicious) {
-          acc[date].malicious++;
-        }
-        return acc;
-      }, {} as Record<string, { date: string; total: number; malicious: number }>);
-
-      return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
-    },
-  });
 
   const getStatusBadge = (ismalicious: boolean | null, positives: number | null) => {
     if (ismalicious === null) {
