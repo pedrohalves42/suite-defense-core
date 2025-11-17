@@ -13,7 +13,7 @@ param(
     [string]$AgentName,
     
     [string]$ServerUrl = "https://iavbnmduxpxhwubqrzzn.supabase.co",
-    [string]$ScriptPath = "C:\CyberShield\cybershield-agent.ps1",
+    [string]$ScriptPath = "C:\CyberShield\cybershield-agent-windows-v3.ps1",
     [int]$PollInterval = 60,
     [string]$TaskName = "CyberShieldAgent"
 )
