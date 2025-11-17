@@ -52,6 +52,9 @@ verify_jwt = false
 [functions.ack-job]
 verify_jwt = false
 
+[functions.submit-job-result]
+verify_jwt = false
+
 [functions.submit-system-metrics]
 verify_jwt = false
 

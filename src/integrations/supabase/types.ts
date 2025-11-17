@@ -1316,6 +1316,13 @@ export type Database = {
             foreignKeyName: "jobs_parent_job_id_fkey"
             columns: ["parent_job_id"]
             isOneToOne: false
+            referencedRelation: "jobs_normalized"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
             referencedRelation: "v_problematic_jobs"
             referencedColumns: ["id"]
           },
@@ -2428,6 +2435,123 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "installation_analytics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs_normalized: {
+        Row: {
+          agent_name: string | null
+          approved: boolean | null
+          completed_at: string | null
+          created_at: string | null
+          delivered_at: string | null
+          duration_seconds: number | null
+          error_message: string | null
+          execution_time_seconds: number | null
+          finished_at: string | null
+          id: string | null
+          is_recurring: boolean | null
+          is_v3: boolean | null
+          last_run_at: string | null
+          next_run_at: string | null
+          normalized_status: string | null
+          output: Json | null
+          parent_job_id: string | null
+          payload: Json | null
+          recurrence_pattern: string | null
+          scheduled_at: string | null
+          started_at: string | null
+          status: string | null
+          tenant_id: string | null
+          type: string | null
+        }
+        Insert: {
+          agent_name?: string | null
+          approved?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          duration_seconds?: never
+          error_message?: string | null
+          execution_time_seconds?: number | null
+          finished_at?: string | null
+          id?: string | null
+          is_recurring?: boolean | null
+          is_v3?: never
+          last_run_at?: string | null
+          next_run_at?: string | null
+          normalized_status?: never
+          output?: Json | null
+          parent_job_id?: string | null
+          payload?: Json | null
+          recurrence_pattern?: string | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          type?: string | null
+        }
+        Update: {
+          agent_name?: string | null
+          approved?: boolean | null
+          completed_at?: string | null
+          created_at?: string | null
+          delivered_at?: string | null
+          duration_seconds?: never
+          error_message?: string | null
+          execution_time_seconds?: number | null
+          finished_at?: string | null
+          id?: string | null
+          is_recurring?: boolean | null
+          is_v3?: never
+          last_run_at?: string | null
+          next_run_at?: string | null
+          normalized_status?: never
+          output?: Json | null
+          parent_job_id?: string | null
+          payload?: Json | null
+          recurrence_pattern?: string | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_normalized"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
