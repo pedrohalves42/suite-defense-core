@@ -1,57 +1,63 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
-import { JobIdSchema, AgentTokenSchema } from '../_shared/validation.ts'
 import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
+import { logSecurityEvent } from '../_shared/security-log.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  )
 
-    // Verificar token do agente
+  try {
+    // 1. Autenticação via X-Agent-Token
     const agentToken = req.headers.get('X-Agent-Token')
     if (!agentToken) {
+      await logSecurityEvent(supabase, {
+        attack_type: 'unauthorized_access',
+        severity: 'medium',
+        endpoint: '/submit-job-result',
+        blocked: true,
+        details: { reason: 'Missing X-Agent-Token' },
+        ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+      })
       return new Response(
-        JSON.stringify({ error: 'Token do agente necessário' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        JSON.stringify({ error: 'X-Agent-Token header required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Validar formato do token
-    const tokenValidation = AgentTokenSchema.safeParse(agentToken)
-    if (!tokenValidation.success) {
-      return new Response(
-        JSON.stringify({ error: 'Formato de token inválido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
-
-    // Buscar agente pelo token
-    const { data: token } = await supabase
+    // Buscar agente via token
+    const { data: token, error: tokenError } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(agent_name, hmac_secret, tenant_id)')
+      .select('agent_id, agents!inner(id, agent_name, tenant_id, hmac_secret)')
       .eq('token', agentToken)
       .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
       .maybeSingle()
 
-    if (!token?.agents) {
+    if (tokenError || !token?.agents) {
+      await logSecurityEvent(supabase, {
+        attack_type: 'invalid_token',
+        severity: 'high',
+        endpoint: '/submit-job-result',
+        blocked: true,
+        details: { token_prefix: agentToken.substring(0, 8) },
+        ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+      })
       return new Response(
-        JSON.stringify({ error: 'Token inválido' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+        JSON.stringify({ error: 'Invalid or inactive token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents
-    
-    // Verificar HMAC obrigatório
+
+    // 2. Verificar HMAC obrigatório
     if (!agent.hmac_secret) {
       console.error('[submit-job-result] CRITICAL: Agent without HMAC secret:', agent.agent_name)
       return new Response(
@@ -59,16 +65,23 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-    
+
     const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
     if (!hmacResult.valid) {
-      console.warn('[submit-job-result] HMAC verification failed:', {
-        agent: agent.agent_name,
-        errorCode: hmacResult.errorCode,
-        errorMessage: hmacResult.errorMessage
+      await logSecurityEvent(supabase, {
+        attack_type: 'hmac_validation_failure',
+        severity: 'high',
+        endpoint: '/submit-job-result',
+        blocked: true,
+        details: {
+          agent_name: agent.agent_name,
+          tenant_id: agent.tenant_id,
+          error_code: hmacResult.errorCode
+        },
+        ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
       })
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: 'unauthorized',
           code: hmacResult.errorCode,
           message: hmacResult.errorMessage,
@@ -78,37 +91,32 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Rate limiting
+    // 3. Rate limiting
     const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'submit-job-result', {
-      maxRequests: 60,
+      maxRequests: 100,
       windowMinutes: 1,
-      blockMinutes: 5,
+      blockMinutes: 5
     })
 
     if (!rateLimitResult.allowed) {
       return new Response(
-        JSON.stringify({ 
-          error: 'Rate limit excedido',
-          resetAt: rateLimitResult.resetAt 
+        JSON.stringify({
+          error: 'Rate limit exceeded',
+          resetAt: rateLimitResult.resetAt
         }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
-    
-    // Atualizar last_used_at do token
-    await supabase
-      .from('agent_tokens')
-      .update({ last_used_at: new Date().toISOString() })
-      .eq('token', agentToken)
 
-    // Parse do body
-    const body = await req.json()
-    const { job_id, status, output, error_message, execution_time_seconds } = body
+    // 4. Parse payload
+    const payload = await req.json()
 
-    // Validar job_id
-    if (!job_id) {
+    // Validação de schema v3
+    if (!payload.job_id || typeof payload.job_id !== 'string') {
       return new Response(
-        JSON.stringify({ error: 'job_id é obrigatório' }),
+        JSON.stringify({ error: 'Invalid payload: job_id required (string)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
