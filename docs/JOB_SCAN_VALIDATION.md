@@ -287,6 +287,242 @@ Move-Item -Path $quarantinedFile -Destination $originalPath -Force
 
 ---
 
+## Job Type: update_agent
+
+### Funcionamento
+
+O job `update_agent` permite atualizar automaticamente o script do agente PowerShell para uma nova versão, garantindo integridade via SHA256 e criando backups de segurança.
+
+### Fluxo Completo
+
+1. **Agente recebe job** `update_agent` (sem payload necessário)
+2. **Chama backend** `/functions/v1/serve-agent-update` via HMAC
+3. **Backend verifica**:
+   - Última release ativa em `agent_releases`
+   - Compara `agent.agent_version` com `release.version`
+   - Retorna "Already up to date" ou release completa
+4. **Agente processa update**:
+   - Salva `script_content` em arquivo temporário
+   - Valida SHA256 do arquivo salvo
+   - Cria backup do script atual
+   - Substitui script com nova versão
+   - Reinicia Scheduled Task
+5. **Retorna output estruturado** via `submit-job-result`
+
+### Payload do Job
+
+```json
+{}
+```
+
+**Campos:** Nenhum payload necessário (agente é identificado por HMAC)
+
+---
+
+### Output Esperado
+
+#### Caso 1: Update Disponível e Executado
+
+```json
+{
+  "message": "Agent updated successfully",
+  "newVersion": "3.1.0",
+  "sha256": "abc123def456...",
+  "restartedAt": "2025-01-17T19:30:00.000Z"
+}
+```
+
+#### Caso 2: Já Está Atualizado
+
+```json
+{
+  "message": "Already up to date",
+  "current_version": "3.1.0",
+  "latest_version": "3.1.0"
+}
+```
+
+### Campos do Output
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `message` | string | Status da operação |
+| `newVersion` | string | Nova versão instalada (se update executado) |
+| `sha256` | string | SHA256 do script instalado (se update executado) |
+| `restartedAt` | string | Timestamp do restart da task (ISO 8601) |
+| `current_version` | string | Versão atual (se "Already up to date") |
+| `latest_version` | string | Última versão disponível (se "Already up to date") |
+
+---
+
+### Validação Manual
+
+#### 1. Criar Release de Teste
+
+```powershell
+# No agente, calcular SHA256 do script atual
+$hash = (Get-FileHash "C:\CyberShield\cybershield-agent.ps1" -Algorithm SHA256).Hash.ToLower()
+$hash
+```
+
+```sql
+-- Inserir release de teste (versão maior que a atual)
+INSERT INTO public.agent_releases (version, platform, channel, script_content, sha256, release_notes, is_active)
+VALUES (
+  '3.1.0',
+  'windows',
+  'stable',
+  '<SCRIPT_CONTENT_AQUI>',  -- Colar conteúdo do .ps1
+  '<SHA256_AQUI>',           -- Colar hash calculado acima
+  'Teste de auto-update',
+  true
+);
+```
+
+#### 2. Criar Job via SQL
+
+```sql
+INSERT INTO public.jobs (
+  tenant_id,
+  agent_name,
+  type,
+  payload,
+  status
+) VALUES (
+  '3adc67e6-8908-4d98-b85b-5e93be4673a1',  -- Pedro Alves tenant
+  'pcteste1',
+  'update_agent',
+  '{}'::jsonb,  -- Sem payload necessário
+  'queued'
+)
+RETURNING id, created_at;
+```
+
+#### 3. Monitorar Execução (60-90s)
+
+```sql
+-- Ver job concluído
+SELECT
+  id, type, status, created_at, delivered_at, started_at, finished_at,
+  execution_time_seconds, output, error_message
+FROM public.jobs
+WHERE type = 'update_agent' AND agent_name = 'pcteste1'
+ORDER BY created_at DESC
+LIMIT 1;
+```
+
+**Status esperado após execução:**
+- `status = 'completed'`
+- `error_message IS NULL`
+- `output` contendo JSON estruturado conforme acima
+
+#### 4. Verificar Backup e Script (PowerShell no agente)
+
+```powershell
+# Ver backups criados
+Get-ChildItem "C:\CyberShield\*-backup-*.ps1" | Sort-Object LastWriteTime -Descending | Select-Object -First 3
+
+# Verificar script atualizado
+Get-Item "C:\CyberShield\cybershield-agent.ps1" | Select-Object FullName, Length, LastWriteTime
+
+# Validar SHA256 do script atualizado
+(Get-FileHash "C:\CyberShield\cybershield-agent.ps1" -Algorithm SHA256).Hash.ToLower()
+```
+
+#### 5. Teste de "Already up to date"
+
+```sql
+-- Criar job novamente (agente já está em 3.1.0)
+INSERT INTO public.jobs (tenant_id, agent_name, type, payload, status)
+VALUES (
+  '3adc67e6-8908-4d98-b85b-5e93be4673a1',
+  'pcteste1',
+  'update_agent',
+  '{}'::jsonb,
+  'queued'
+)
+RETURNING id, created_at;
+```
+
+**Esperado:**
+- `status = 'completed'`
+- `output.message = "Already up to date"`
+- `output.current_version = "3.1.0"`
+
+---
+
+### Cenários de Erro
+
+#### SHA256 Mismatch
+
+```json
+{
+  "success": false,
+  "error": "SHA256 mismatch! Esperado: abc123..., Obtido: def456..."
+}
+```
+
+**Causa:** Script baixado está corrompido ou foi modificado  
+**Ação:** Verificar integridade da release em `agent_releases`
+
+#### Falha ao Buscar Update
+
+```json
+{
+  "success": false,
+  "error": "Falha ao buscar update: HTTP 500"
+}
+```
+
+**Causa:** Erro no Edge Function `serve-agent-update`  
+**Ação:** Verificar logs do Edge Function no Supabase
+
+---
+
+### Melhorias Implementadas (v3)
+
+#### Usa `$PSCommandPath` Dinâmico
+```powershell
+# ❌ ANTES (hardcoded)
+$scriptPath = "C:\CyberShield\cybershield-agent.ps1"
+
+# ✅ AGORA (dinâmico)
+$currentScript = $PSCommandPath
+```
+
+**Benefício:** Funciona independente do local de instalação
+
+#### SHA256 do Arquivo Salvo
+```powershell
+# ❌ ANTES (SHA256 da string)
+$actualSha256 = [System.BitConverter]::ToString(
+    [System.Security.Cryptography.SHA256]::Create().ComputeHash(
+        [System.Text.Encoding]::UTF8.GetBytes($newScript)
+    )
+).Replace("-", "").ToLower()
+
+# ✅ AGORA (SHA256 do arquivo)
+Set-Content -Path $tempScript -Value $scriptText -Encoding UTF8
+$actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+```
+
+**Benefício:** Validação mais confiável (garante integridade do arquivo gravado)
+
+#### Tratamento "Already up to date"
+```powershell
+# ✅ AGORA valida ANTES de processar
+if ($data.message -eq "Already up to date") {
+    Write-Log "ℹ Agente já está na última versão ($($data.current_version))" "INFO"
+    $result.success = $true
+    $result.output  = ($data | ConvertTo-Json -Depth 5)
+    break
+}
+```
+
+**Benefício:** Evita processamento desnecessário e logs mais claros
+
+---
+
 ## Garantias de Segurança
 
 ✅ **Zero alterações em schema**: Usa tabelas existentes

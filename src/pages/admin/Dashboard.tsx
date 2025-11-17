@@ -159,6 +159,45 @@ export default function Dashboard() {
         </p>
       </div>
 
+      {/* Alertas Críticos */}
+      {criticalAlerts && criticalAlerts.length > 0 && (
+        <Card className="border-red-500 bg-red-50 dark:bg-red-950">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              Alertas Críticos ({criticalAlerts.length})
+            </CardTitle>
+            <CardDescription>
+              Requerem atenção imediata
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {criticalAlerts.map((alert) => (
+              <div 
+                key={alert.id} 
+                className="flex justify-between items-start p-3 bg-white dark:bg-gray-900 rounded-lg border"
+              >
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{alert.title}</div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    {alert.message}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {format(new Date(alert.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </div>
+                </div>
+                <Badge 
+                  variant={alert.severity === 'critical' ? 'destructive' : 'default'}
+                  className="ml-2"
+                >
+                  {alert.severity}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
