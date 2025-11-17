@@ -834,11 +834,11 @@ function Execute-Job {
                     agent_name = \$AgentName
                     file_path  = \$filePath
                     file_hash  = \$fileHash
-                } | ConvertTo-Json -Depth 5
+                }
 
                 \$scanResult = Invoke-SecureRequest \`
-                    -Path "/functions/v1/scan-virus" \`
-                    -Method "POST" \`
+                    -Uri "\$ServerUrl/functions/v1/scan-virus" \`
+                    -Method POST \`
                     -Body \$scanBody \`
                     -TimeoutSec 60
 
@@ -886,6 +886,77 @@ function Execute-Job {
                 
                 \$result.success = \$true
                 \$result.output = \$output | ConvertTo-Json
+            }
+            
+            "update_agent" {
+                Write-Log "🔄 Executando update do agente..." "INFO"
+                
+                try {
+                    # Buscar última versão
+                    \$updateResult = Invoke-SecureRequest \`
+                        -Uri "\$ServerUrl/functions/v1/serve-agent-update" \`
+                        -Method GET \`
+                        -TimeoutSec 30
+
+                    if (-not \$updateResult.Success) {
+                        throw "Falha ao buscar atualização: \$(\$updateResult.ErrorMessage)"
+                    }
+
+                    \$release = \$updateResult.Body | ConvertFrom-Json
+                    \$newVersion = \$release.version
+                    \$newScript = \$release.script_content
+                    \$expectedSha256 = \$release.sha256
+
+                    Write-Log "📦 Nova versão disponível: \$newVersion (atual: \$AgentVersion)" "INFO"
+
+                    # Validar SHA256
+                    \$actualSha256 = [System.BitConverter]::ToString(
+                        [System.Security.Cryptography.SHA256]::Create().ComputeHash(
+                            [System.Text.Encoding]::UTF8.GetBytes(\$newScript)
+                        )
+                    ).Replace("-", "").ToLower()
+
+                    if (\$actualSha256 -ne \$expectedSha256.ToLower()) {
+                        throw "SHA256 inválido! Esperado: \$expectedSha256, Recebido: \$actualSha256"
+                    }
+
+                    Write-Log "✅ SHA256 validado" "SUCCESS"
+
+                    # Backup do script atual
+                    \$scriptPath = "C:\\CyberShield\\cybershield-agent.ps1"
+                    \$backupPath = "C:\\CyberShield\\Backups\\cybershield-agent_\$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
+                    \$backupDir = Split-Path \$backupPath
+                    
+                    if (-not (Test-Path \$backupDir)) {
+                        New-Item -ItemType Directory -Path \$backupDir -Force | Out-Null
+                    }
+
+                    Copy-Item -Path \$scriptPath -Destination \$backupPath -Force
+                    Write-Log "💾 Backup criado: \$backupPath" "INFO"
+
+                    # Atualizar script
+                    Set-Content -Path \$scriptPath -Value \$newScript -Encoding UTF8 -Force
+                    Write-Log "✅ Script atualizado para \$newVersion" "SUCCESS"
+
+                    # Reiniciar Scheduled Task
+                    \$taskName = "CyberShield Agent"
+                    Stop-ScheduledTask -TaskName \$taskName -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 2
+                    Start-ScheduledTask -TaskName \$taskName
+
+                    \$result.success = \$true
+                    \$result.output = @{
+                        success     = \$true
+                        old_version = \$AgentVersion
+                        new_version = \$newVersion
+                        backup_path = \$backupPath
+                        message     = "Agente atualizado com sucesso"
+                    } | ConvertTo-Json
+                } catch {
+                    Write-Log "❌ Erro durante update: \$_" "ERROR"
+                    \$result.success = \$false
+                    \$result.error = \$_.Exception.Message
+                }
             }
             
             "update_config" {
