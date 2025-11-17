@@ -1,9 +1,181 @@
 # 🚨 Validação P0 - CyberShield Agent v3
 
-**Data**: 2025-11-16  
-**Status**: ⚠️ VALIDAÇÃO PARCIAL CONCLUÍDA - PENDENTE TESTES E2E
+**Data**: 2025-11-17  
+**Status**: 🚀 PRONTO PARA DEPLOYMENT - EXECUTAR FASE 2
 
 ---
+
+## 🚀 FASE 2: Deploy do Agente Atualizado
+
+**Objetivo:** Colocar o código Python atualizado (`job_poller.py` com `submit-job-result`) rodando nos agentes de produção (`pcteste1`, `testevm1-final`).
+
+### 📦 Método Recomendado: Script Automatizado
+
+**Usamos o script `scripts/deploy-agent-update.ps1` que automatiza todo o processo.**
+
+#### Passos para cada máquina Windows:
+
+```powershell
+# 1. Abrir PowerShell como Administrador
+# 2. Navegar até o diretório do projeto CyberShield
+cd C:\path\to\cybershield
+
+# 3. Executar o script de deployment
+.\scripts\deploy-agent-update.ps1 -AgentName "pcteste1"
+```
+
+**O que o script faz automaticamente:**
+- ✅ Para processos antigos (Scheduled Task + Python)
+- ✅ Cria backup dos arquivos atuais (`C:\CyberShield\backup\backup-YYYYMMDD-HHMMSS`)
+- ✅ Copia novos arquivos Python (main.py, job_poller.py, config.py, etc.)
+- ✅ Atualiza dependências (`pip install -r requirements.txt`)
+- ✅ Valida código (sintaxe Python + presença de `submit_job_result`)
+- ✅ Reinicia Scheduled Task
+- ✅ Verifica logs automaticamente
+- ✅ Confirma que código novo está executando
+
+**Tempo estimado:** ~7-8 minutos por máquina
+
+---
+
+### 🔧 Método Manual (Alternativo)
+
+<details>
+<summary>📋 Clique para expandir instruções manuais</summary>
+
+#### 2.1. Parar Agentes Antigos
+
+```powershell
+# Em cada máquina Windows
+# Executar como Administrador
+
+# Parar Scheduled Task
+Stop-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
+
+# Matar processos Python relacionados
+Get-Process python* -ErrorAction SilentlyContinue | Where-Object {
+    $_.CommandLine -like '*cybershield*'
+} | Stop-Process -Force
+```
+
+#### 2.2. Fazer Backup e Copiar Código
+
+```powershell
+# 1. Criar backup
+Copy-Item -Path "C:\CyberShield" `
+          -Destination "C:\CyberShield\backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')" `
+          -Recurse -Force
+
+# 2. Copiar arquivos atualizados
+$files = @(
+    "main.py",
+    "job_poller.py",
+    "config.py",
+    "heartbeat_sender.py",
+    "auto_updater.py",
+    "hmac_utils.py",
+    "logger_config.py",
+    "requirements.txt"
+)
+
+foreach ($file in $files) {
+    Copy-Item -Path ".\agent\$file" `
+              -Destination "C:\CyberShield\$file" `
+              -Force
+}
+
+# 3. Atualizar dependências
+python -m pip install -r C:\CyberShield\requirements.txt
+```
+
+#### 2.3. Reiniciar Agentes
+
+```powershell
+# Opção A: Reiniciar task existente
+Start-ScheduledTask -TaskName "CyberShieldAgent"
+
+# Opção B: Recriar task limpa
+.\scripts\recreate-agent-task.ps1 `
+  -AgentToken "3e1973dc-..." `
+  -HmacSecret "ab482e64..." `
+  -AgentName "pcteste1"
+```
+
+</details>
+
+---
+
+### ✅ Validação Pós-Deploy
+
+#### 1. Verificar logs em tempo real:
+
+```powershell
+Get-Content "C:\CyberShield\logs\agent.log" -Tail 20 -Wait
+```
+
+**Indicadores de sucesso:**
+- ✅ Aparece: `"📤 Enviando resultado do job"`
+- ✅ Aparece: `"submit-job-result"`
+- ✅ Aparece: `"✅ POST .../submit-job-result - Status: 200"`
+- ❌ **NÃO** aparece: `"ack-job"` (legacy)
+
+**Exemplo de log esperado:**
+```
+[2025-11-17 14:30:15] [DEBUG] 📥 Recebidos 1 job(s)
+[2025-11-17 14:30:15] [INFO] ⚙️  Executando job abc-123 (tipo: integration_test)
+[2025-11-17 14:30:15] [DEBUG] 📤 Enviando resultado do job abc-123 para submit-job-result...
+[2025-11-17 14:30:16] [DEBUG] ✅ POST .../submit-job-result - Status: 200
+[2025-11-17 14:30:16] [SUCCESS] ✅ Resultado do job abc-123 enviado com sucesso
+```
+
+#### 2. Verificar heartbeat no banco:
+
+```sql
+SELECT 
+  agent_name,
+  last_heartbeat,
+  EXTRACT(EPOCH FROM (NOW() - last_heartbeat))::INTEGER as seconds_ago,
+  status
+FROM agents
+WHERE agent_name IN ('pcteste1', 'testevm1-final')
+ORDER BY last_heartbeat DESC;
+```
+
+**Critério de sucesso:**
+- ✅ `seconds_ago` < 120 (heartbeat nos últimos 2 minutos)
+- ✅ Ambos os agentes com status "online"/"active"
+
+---
+
+### 📋 Checklist de Deploy
+
+#### ✅ Para `pcteste1`:
+- [ ] Script `deploy-agent-update.ps1` executado
+- [ ] Backup criado em `C:\CyberShield\backup\`
+- [ ] Logs mostram "✅ Código novo detectado (submit_job_result presente)"
+- [ ] Logs mostram "✅ POST .../submit-job-result - Status: 200"
+- [ ] Heartbeat no banco < 2 minutos
+- [ ] Nenhum erro 401 nos logs recentes
+- [ ] Scheduled Task rodando
+
+#### ✅ Para `testevm1-final`:
+- [ ] Script `deploy-agent-update.ps1` executado
+- [ ] Backup criado em `C:\CyberShield\backup\`
+- [ ] Logs mostram "✅ Código novo detectado (submit_job_result presente)"
+- [ ] Logs mostram "✅ POST .../submit-job-result - Status: 200"
+- [ ] Heartbeat no banco < 2 minutos
+- [ ] Nenhum erro 401 nos logs recentes
+- [ ] Scheduled Task rodando
+
+---
+
+### 🎯 Após Deploy Bem-Sucedido
+
+**Próxima etapa:** Executar **Fase 3: Validação de Jobs Canônicos** (conforme documentado abaixo).
+
+---
+
+
 
 ## ✅ P0-A: Verificação de Funções Backend
 
@@ -270,4 +442,4 @@ Se `submit-job-result` não existir no backend (404):
 ---
 
 **Documento gerado por:** Artemis (Auditoria CyberShield)  
-**Última atualização:** 2025-11-16 19:51 UTC
+**Última atualização:** 2025-11-17 - FASE 2 IMPLEMENTADA
