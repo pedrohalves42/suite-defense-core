@@ -1,4 +1,4 @@
-import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
@@ -52,18 +52,18 @@ Deno.serve(async (req) => {
     }
 
     // Verificar HMAC
-    const isValid = verifyHmacSignature(
-      agent.hmac_secret,
-      signature,
-      timestamp,
-      nonce,
-      '' // GET request, no body
+    const hmacResult = await verifyHmacSignature(
+      supabase,
+      req,
+      agent.agent_name,
+      agent.hmac_secret
     );
 
-    if (!isValid) {
+    if (!hmacResult.valid) {
       logger.warn('[serve-agent-update] HMAC inválido', { 
         requestId, 
-        agentName: agent.agent_name 
+        agentName: agent.agent_name,
+        errorCode: hmacResult.errorCode
       });
       return new Response(
         JSON.stringify({ error: 'Invalid HMAC signature' }),
@@ -142,16 +142,17 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
+    const err = error as Error;
     logger.error('[serve-agent-update] Erro interno', { 
       requestId, 
-      error: error.message,
-      stack: error.stack 
+      error: err.message,
+      stack: err.stack 
     });
 
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',
-        message: error.message,
+        message: err.message,
         requestId 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
