@@ -51,7 +51,7 @@ export default function Dashboard() {
           .select('status')
           .eq('tenant_id', tenant.id),
         
-        // Jobs
+        // Jobs - aceitar v1 (done) e v3 (completed/failed)
         supabase
           .from('jobs')
           .select('status')
@@ -76,7 +76,7 @@ export default function Dashboard() {
         cleanFiles: scans.data?.filter(s => !s.is_malicious).length || 0,
         quarantinedFiles: quarantine.data?.filter(q => q.status === 'quarantined').length || 0,
         totalJobs: jobs.data?.length || 0,
-        completedJobs: jobs.data?.filter(j => j.status === 'completed').length || 0,
+        completedJobs: jobs.data?.filter(j => j.status === 'completed' || j.status === 'done').length || 0,
         pendingJobs: jobs.data?.filter(j => j.status === 'queued' || j.status === 'delivered').length || 0,
         failedJobs: jobs.data?.filter(j => j.status === 'failed').length || 0,
       };

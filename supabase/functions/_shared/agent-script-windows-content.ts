@@ -763,6 +763,8 @@ function Execute-Job {
         \$Job
     )
     
+    \$startTime = Get-Date
+    
     try {
         Write-Log "Executando job [\$(\$Job.id)] tipo: \$(\$Job.type)" "INFO"
         
@@ -1018,21 +1020,29 @@ function Execute-Job {
             }
         }
         
-        # Upload do resultado
-        Upload-Report -JobId \$Job.id -Result \$result
+        \$endTime = Get-Date
+        \$durationSec = [int](\$endTime - \$startTime).TotalSeconds
         
-        # Acknowledge job
-        Ack-Job -JobId \$Job.id
+        # Tentar v3 primeiro
+        \$v3Sent = Submit-JobResult -JobId \$Job.id -Success \$result.success -Output \$result -ErrorMessage \$result.error -ExecutionTimeSeconds \$durationSec -StartedAt \$startTime
+        
+        if (-not \$v3Sent) {
+            Write-Log "Usando fallback v1 para job [\$(\$Job.id)]" "WARN"
+            Ack-Job -JobId \$Job.id
+        }
         
         if (\$result.success) {
-            Write-Log "✅ Job [\$(\$Job.id)] concluído com sucesso" "SUCCESS"
+            Write-Log "✅ Job [\$(\$Job.id)] concluído" "SUCCESS"
         }
         else {
-            Write-Log "❌ Job [\$(\$Job.id)] falhou: \$(\$result.error)" "ERROR"
+            Write-Log "❌ Job [\$(\$Job.id)] falhou" "ERROR"
         }
     }
     catch {
         Write-Log "Erro ao executar job [\$(\$Job.id)]: \$(\$_.Exception.Message)" "ERROR"
+        \$endTime = Get-Date
+        \$durationSec = [int](\$endTime - \$startTime).TotalSeconds
+        Submit-JobResult -JobId \$Job.id -Success \$false -ErrorMessage \$_.Exception.Message -ExecutionTimeSeconds \$durationSec
     }
 }
 
@@ -1067,6 +1077,48 @@ function Upload-Report {
     }
 }
 
+function Submit-JobResult {
+    param(
+        [Parameter(Mandatory=\$true)][string]\$JobId,
+        [Parameter(Mandatory=\$true)][bool]\$Success,
+        [Parameter(Mandatory=\$false)][object]\$Output = \$null,
+        [Parameter(Mandatory=\$false)][string]\$ErrorMessage = "",
+        [Parameter(Mandatory=\$false)][int]\$ExecutionTimeSeconds = 0,
+        [Parameter(Mandatory=\$false)][datetime]\$StartedAt = \$null
+    )
+    
+    try {
+        \$bodyObj = @{
+            job_id = \$JobId
+            status = if (\$Success) { "completed" } else { "failed" }
+            output = \$Output
+            error_message = if (\$ErrorMessage) { \$ErrorMessage } else { \$null }
+            execution_time_seconds = \$ExecutionTimeSeconds
+        }
+        
+        if (\$StartedAt) {
+            \$bodyObj.started_at = \$StartedAt.ToUniversalTime().ToString("o")
+        }
+        
+        \$response = Invoke-SecureRequest \`
+            -Uri "\$ServerUrl/functions/v1/submit-job-result" \`
+            -Method POST \`
+            -Body \$bodyObj \`
+            -TimeoutSec 30
+        
+        if (\$response.Success) {
+            Write-Log "✅ Job [\$JobId] resultado enviado via v3" "INFO"
+            return \$true
+        }
+        Write-Log "⚠ Falha v3: HTTP \$(\$response.StatusCode)" "WARN"
+        return \$false
+    }
+    catch {
+        Write-Log "❌ Erro em submit-job-result: \$(\$_.Exception.Message)" "ERROR"
+        return \$false
+    }
+}
+
 function Ack-Job {
     param([string]\$JobId)
     
@@ -1083,11 +1135,14 @@ function Ack-Job {
             -TimeoutSec 10
         
         if (\$ackResult.Success) {
-            Write-Log "✅ Job [\$JobId] acknowledgement enviado" "DEBUG"
+            Write-Log "✅ Job [\$JobId] ack v1 enviado (fallback)" "INFO"
+            return \$true
         }
+        return \$false
     }
     catch {
-        Write-Log "Erro ao enviar ACK: \$(\$_.Exception.Message)" "WARN"
+        Write-Log "Erro ack-job: \$(\$_.Exception.Message)" "ERROR"
+        return \$false
     }
 }
 
