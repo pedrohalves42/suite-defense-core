@@ -836,10 +836,10 @@ function Execute-Job {
                     file_hash  = \$fileHash
                 } | ConvertTo-Json -Depth 5
 
-                \$scanResult = Invoke-SecureRequest \\
-                    -Path "/functions/v1/scan-virus" \\
-                    -Method "POST" \\
-                    -Body \$scanBody \\
+                \$scanResult = Invoke-SecureRequest \`
+                    -Path "/functions/v1/scan-virus" \`
+                    -Method "POST" \`
+                    -Body \$scanBody \`
                     -TimeoutSec 60
 
                 if (-not \$scanResult.Success) {
