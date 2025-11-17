@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { RecentAuditActivity } from '@/components/admin/RecentAuditActivity';
+import { RecentJobsActivity } from '@/components/admin/RecentJobsActivity';
 
 interface Stats {
   totalAgents: number;
@@ -199,16 +200,30 @@ export default function Dashboard() {
         </Card>
       )}
 
-      {/* Atividade Recente de Auditoria */}
-      <Card className="col-span-full">
-        <CardHeader>
-          <CardTitle>Atividade Recente</CardTitle>
-          <CardDescription>Últimas ações realizadas no sistema</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RecentAuditActivity tenantId={tenant?.id} />
-        </CardContent>
-      </Card>
+      {/* Recent Activity & Jobs Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Atividade Recente</CardTitle>
+            <CardDescription>Principais ações de segurança no seu tenant</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RecentAuditActivity tenantId={tenant?.id} />
+          </CardContent>
+        </Card>
+
+        {/* Recent Jobs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Últimos Jobs Executados</CardTitle>
+            <CardDescription>Jobs recentes processados pelos agentes</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RecentJobsActivity tenantId={tenant?.id} />
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

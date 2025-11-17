@@ -81,7 +81,12 @@ Deno.serve(async (req) => {
       
       // If Enterprise, Custom, or Pro plan, return local data
       if (planName === 'enterprise' || planName === 'custom' || planName === 'pro') {
-        logStep("Enterprise/Custom plan detected - using local data", { planName });
+        logStep("Manual plan detected - DETAILED", { 
+          planName,
+          tenantId,
+          deviceQuantity: typedSubscription?.device_quantity,
+          status: typedSubscription?.status
+        });
         
         // Get features from database
         const { data: features } = await supabaseClient

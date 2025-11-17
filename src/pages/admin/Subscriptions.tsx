@@ -1,3 +1,4 @@
+import React from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +21,11 @@ export default function Subscriptions() {
   const { subscription, isLoading: subLoading, refetch: refetchSubscription } = useSubscription();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Force refetch on mount to ensure latest data
+  React.useEffect(() => {
+    refetchSubscription();
+  }, [refetchSubscription]);
 
   // Fetch billing history (invoices)
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery({
@@ -72,6 +78,16 @@ export default function Subscriptions() {
     if (!limit) return 0;
     return Math.min(Math.round((used / limit) * 100), 100);
   };
+
+  // Improved plan display with fallback chain
+  const rawPlan = subscription?.plan_name ?? 'Carregando...';
+  const planLabelMap: Record<string, string> = {
+    free: 'Free',
+    pro: 'Pro',
+    enterprise: 'Enterprise',
+    custom: 'Custom',
+  };
+  const displayPlan = planLabelMap[rawPlan] ?? rawPlan;
 
   const isOnFreePlan = subscription?.plan_name === 'free';
   const isTrialing = subscription?.status === 'trialing';
@@ -195,11 +211,11 @@ export default function Subscriptions() {
       </Card>
 
       {/* Alert if plan shows Free but should be paid */}
-      {subscription?.plan_name === 'free' && tenant?.id && (
-        <Alert className="mt-4">
+      {subscription?.plan_name === 'free' && rawPlan === 'Carregando...' && (
+        <Alert className="mt-4 border-yellow-500 bg-yellow-50">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Se você adquiriu um plano pago e ainda aparece como "Free", entre em contato com o suporte.
+            ⚠️ Sistema está validando seu plano. Se "Free" persistir mas você é cliente Pro, contate o suporte.
           </AlertDescription>
         </Alert>
       )}

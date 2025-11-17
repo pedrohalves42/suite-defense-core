@@ -2,11 +2,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle, Clock, Mail, Activity } from "lucide-react";
+import { AlertCircle, CheckCircle, Clock, Mail, Activity, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTenant } from "@/hooks/useTenant";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { RecentAuditActivity } from "@/components/admin/RecentAuditActivity";
 
 export default function SystemLogs() {
   const { tenant } = useTenant();
@@ -183,6 +184,22 @@ export default function SystemLogs() {
               </div>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Audit Logs */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5" />
+            Logs de Auditoria
+          </CardTitle>
+          <CardDescription>
+            Ações de usuários e eventos de sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RecentAuditActivity tenantId={tenant?.id} />
         </CardContent>
       </Card>
 
