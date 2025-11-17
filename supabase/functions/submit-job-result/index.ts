@@ -17,14 +17,17 @@ Deno.serve(async (req) => {
   try {
     // 1. Autenticação via X-Agent-Token
     const agentToken = req.headers.get('X-Agent-Token')
+    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+    
     if (!agentToken) {
-      await logSecurityEvent(supabase, {
-        attack_type: 'unauthorized_access',
-        severity: 'medium',
+      await logSecurityEvent({
+        supabase,
+        ipAddress,
         endpoint: '/submit-job-result',
+        attackType: 'unauthorized',
+        severity: 'medium',
         blocked: true,
-        details: { reason: 'Missing X-Agent-Token' },
-        ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+        details: { reason: 'Missing X-Agent-Token' }
       })
       return new Response(
         JSON.stringify({ error: 'X-Agent-Token header required' }),
@@ -41,13 +44,14 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (tokenError || !token?.agents) {
-      await logSecurityEvent(supabase, {
-        attack_type: 'invalid_token',
-        severity: 'high',
+      await logSecurityEvent({
+        supabase,
+        ipAddress,
         endpoint: '/submit-job-result',
+        attackType: 'unauthorized',
+        severity: 'high',
         blocked: true,
-        details: { token_prefix: agentToken.substring(0, 8) },
-        ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+        details: { token_prefix: agentToken.substring(0, 8) }
       })
       return new Response(
         JSON.stringify({ error: 'Invalid or inactive token' }),
@@ -68,17 +72,18 @@ Deno.serve(async (req) => {
 
     const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
     if (!hmacResult.valid) {
-      await logSecurityEvent(supabase, {
-        attack_type: 'hmac_validation_failure',
-        severity: 'high',
+      await logSecurityEvent({
+        supabase,
+        tenantId: agent.tenant_id,
+        ipAddress,
         endpoint: '/submit-job-result',
+        attackType: 'unauthorized',
+        severity: 'high',
         blocked: true,
         details: {
           agent_name: agent.agent_name,
-          tenant_id: agent.tenant_id,
           error_code: hmacResult.errorCode
-        },
-        ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+        }
       })
       return new Response(
         JSON.stringify({
@@ -111,8 +116,15 @@ Deno.serve(async (req) => {
     // 4. Parse payload
     const payload = await req.json()
 
+    // Extrair variáveis do payload
+    const job_id = payload.job_id
+    const status = payload.status
+    const output = payload.output
+    const error_message = payload.error_message
+    const execution_time_seconds = payload.execution_time_seconds
+
     // Validação de schema v3
-    if (!payload.job_id || typeof payload.job_id !== 'string') {
+    if (!job_id || typeof job_id !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Invalid payload: job_id required (string)' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -120,7 +132,7 @@ Deno.serve(async (req) => {
     }
 
     // Validar status
-    if (!payload.status || !['completed', 'failed'].includes(payload.status)) {
+    if (!status || !['completed', 'failed'].includes(status)) {
       return new Response(
         JSON.stringify({ error: 'status must be "completed" or "failed"' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
