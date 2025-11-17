@@ -120,16 +120,16 @@ const App = () => (
                 <Route path="agent-diagnostics" element={<AgentDiagnostics />} />
                 <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="ai-actions" element={<AIActionApproval />} />
-              <Route path="tenant" element={<Tenant />} />
-              <Route path="jobs-v3-migration" element={<JobsV3Migration />} />
-            </Route>
+                <Route path="system-logs" element={<SystemLogs />} />
+                <Route path="tenant" element={<Tenant />} />
+                <Route path="jobs-v3-migration" element={<JobsV3Migration />} />
+              </Route>
 
               {/* Super Admin Routes (System-wide) */}
               <Route path="/super-admin" element={<SuperAdminLayout />}>
                 <Route index element={<SuperAdminTenants />} />
                 <Route path="tenants" element={<SuperAdminTenants />} />
                 <Route path="metrics" element={<SuperAdminMetrics />} />
-                <Route path="diagnostics" element={<AgentDiagnostics />} />
                 <Route path="subscription-analytics" element={<SubscriptionAnalytics />} />
                 <Route path="stripe-setup" element={<StripeSetup />} />
                 <Route path="users" element={<Users />} />
