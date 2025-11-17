@@ -58,23 +58,40 @@ Deno.serve(async (req) => {
     if (userError || !userData.user) throw new Error("Unauthorized");
     logStep("User authenticated", { userId: userData.user.id });
 
-    // Check if user is admin
-    const { data: isAdmin, error: roleError } = await supabaseClient.rpc('has_role', {
+    // Check if user is admin or super_admin
+    // CRITICAL: Super admin IS admin (principle: super admin has all admin privileges)
+    const { data: isSuperAdmin, error: superAdminError } = await supabaseClient.rpc('has_role', {
       _user_id: userData.user.id,
-      _role: 'admin'
+      _role: 'super_admin'
     });
 
-    if (roleError) {
-      logStep("Role check error", { error: roleError });
+    if (superAdminError) {
+      logStep("Super admin check error", { error: superAdminError });
       throw new Error('Failed to verify admin permissions');
     }
 
-    if (!isAdmin) {
-      logStep("Access denied - not admin");
-      throw new Error("Only admins can access health check");
-    }
+    // If super admin, grant immediate access
+    if (isSuperAdmin) {
+      logStep("Super admin access verified");
+    } else {
+      // If not super admin, check for regular admin role
+      const { data: isAdmin, error: adminError } = await supabaseClient.rpc('has_role', {
+        _user_id: userData.user.id,
+        _role: 'admin'
+      });
 
-    logStep("Admin access verified");
+      if (adminError) {
+        logStep("Admin check error", { error: adminError });
+        throw new Error('Failed to verify admin permissions');
+      }
+
+      if (!isAdmin) {
+        logStep("Access denied - not admin or super_admin");
+        throw new Error("Only admins can access health check");
+      }
+
+      logStep("Admin access verified");
+    }
 
     // Initialize response
     const response: HealthCheckResponse = {
