@@ -203,7 +203,7 @@ Deno.serve(async (req) => {
     }
 
      // Atualizar o job com campos v3
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       status: status,
       finished_at: payload.finished_at || new Date().toISOString(),
       completed_at: new Date().toISOString() // Compatibilidade legado
