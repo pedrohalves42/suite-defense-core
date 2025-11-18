@@ -11,11 +11,8 @@
  * Last synchronized: 2025-01-18 (v3.1.0-SIMPLIFIED Windows template)
  */
 
-// Windows Installer Template - Simplified and hardened
-// Single source of truth with inline agent script using PowerShell here-string
-export const WINDOWS_INSTALLER_TEMPLATE = String.raw`#Requires -RunAsAdministrator
-#Requires -Version 5.1
-
+// Windows Installer Template - Simplified to ~100 lines
+export const WINDOWS_INSTALLER_TEMPLATE = String.raw`
 param(
   [Parameter(Mandatory = $true)]
   [string]$ServerUrl   = "{{SERVER_URL}}",
@@ -30,163 +27,93 @@ param(
   [string]$AgentName   = "{{AGENT_NAME}}"
 )
 
-$ErrorActionPreference = "Stop"
-[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-
 $BasePath  = "C:\CyberShield"
 $LogsPath  = Join-Path $BasePath "logs"
 $LogFile   = Join-Path $LogsPath "installer.log"
 
-# Create directories
+# Garante diretórios
 New-Item -ItemType Directory -Path $BasePath -Force  | Out-Null
 New-Item -ItemType Directory -Path $LogsPath -Force  | Out-Null
 
-# Logging helper
 function Write-InstallerLog {
     param(
         [string]$Message,
         [string]$Level = "INFO"
     )
-    $line = "[{0}] [{1}] {2}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Level, $Message
+    $line = "[{0}] [{1}] {2}" -f (Get-Date -Format o), $Level, $Message
     $line | Out-File -FilePath $LogFile -Append -Encoding UTF8
     Write-Host $line
 }
 
-Write-Host "==================================" -ForegroundColor Cyan
-Write-Host "CyberShield Agent Installer v3.1.0" -ForegroundColor Cyan
-Write-Host "==================================" -ForegroundColor Cyan
-Write-Host ""
+Write-InstallerLog "Iniciando instalador CyberShield..." "INFO"
 
-Write-InstallerLog "Iniciando instalação do CyberShield Agent..." "INFO"
-
-# Verify Administrator privileges
+# Verifica se está em modo Admin
 $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-InstallerLog "ERRO: Instalador não está em modo Administrador." "ERROR"
+    Write-InstallerLog "Instalador não está em modo Administrador." "ERROR"
     Write-Host "❌ Este instalador precisa ser executado como Administrador." -ForegroundColor Red
     exit 1
 }
 
-Write-InstallerLog "Privilégios de Administrador verificados." "INFO"
+Write-InstallerLog "Execução confirmada como Administrador." "INFO"
 
-# Verify PowerShell version
-if ($PSVersionTable.PSVersion.Major -lt 5) {
-    Write-InstallerLog "ERRO: PowerShell 5.1+ é necessário." "ERROR"
-    Write-Host "❌ Este script requer PowerShell 5.1 ou superior." -ForegroundColor Red
-    exit 1
-}
-
-Write-InstallerLog "PowerShell versão $($PSVersionTable.PSVersion) detectado." "INFO"
-
-# Agent script path
-$AgentScriptPath = Join-Path $BasePath "cybershield-agent-windows-v3.ps1"
-
-Write-Host "[1/4] Limpando instalações antigas..." -ForegroundColor Yellow
-
-# Remove old Scheduled Task if exists
-$TaskName = "CyberShieldAgent"
-$existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-if ($existingTask) {
-    try {
-        Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue | Out-Null
-        Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
-        Write-InstallerLog "Scheduled Task antiga removida: $TaskName" "INFO"
-    } catch {
-        Write-InstallerLog "Aviso: Não foi possível remover task antiga: $($_.Exception.Message)" "WARN"
-    }
-}
-
-# Stop old agent processes
-$oldProcesses = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'cybershield-agent' }
-if ($oldProcesses) {
-    Write-InstallerLog "Parando $($oldProcesses.Count) processo(s) antigo(s)..." "INFO"
-    foreach ($proc in $oldProcesses) {
-        Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
-    }
-    Start-Sleep -Seconds 2
-}
-
-Write-Host "[2/4] Instalando script do agente..." -ForegroundColor Yellow
-
-# Create agent script inline (here-string for clean embedding)
-$agentScriptContent = @'
+# Script completo do agente (injetado pelo backend)
+$agentScript = @'
 {{AGENT_SCRIPT_CONTENT}}
 '@
 
-# Write agent script to disk
-$agentScriptContent | Out-File -FilePath $AgentScriptPath -Encoding UTF8 -Force
-Write-InstallerLog "Script do agente criado em: $AgentScriptPath" "INFO"
+$AgentScriptPath = "C:\CyberShield\cybershield-agent-windows-v3.ps1"
+$agentScript | Out-File -FilePath $AgentScriptPath -Encoding UTF8 -Force
 
-Write-Host "[3/4] Criando Scheduled Task..." -ForegroundColor Yellow
+Write-InstallerLog "Script do agente criado em $AgentScriptPath" "INFO"
 
-# Create new Scheduled Task
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File \`"$AgentScriptPath\`" -ServerUrl \`"$ServerUrl\`" -AgentToken \`"$AgentToken\`" -HmacSecret \`"$HmacSecret\`" -AgentName \`"$AgentName\`""
+# Remover Scheduled Task antiga, se existir
+$TaskName = "CyberShieldAgent"
+$existingTask = $null
+try {
+    $existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+} catch { }
+
+if ($existingTask) {
+    Write-InstallerLog "Removendo Scheduled Task antiga '$TaskName'..." "INFO"
+    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+}
+
+# Criar nova Scheduled Task (sem backticks de continuação)
+$action = New-ScheduledTaskAction -Execute "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -Argument '-ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\CyberShield\cybershield-agent-windows-v3.ps1" -ServerUrl "{{SERVER_URL}}" -AgentToken "{{AGENT_TOKEN}}" -HmacSecret "{{HMAC_SECRET}}" -AgentName "{{AGENT_NAME}}"'
 
 $trigger = New-ScheduledTaskTrigger -AtStartup
 
-$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+$principalTask = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
 
+Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principalTask -Settings $settings -Description "CyberShield Security Agent v3"
+
+Write-InstallerLog "Scheduled Task '$TaskName' criada." "INFO"
+
 try {
-    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description "CyberShield Security Agent v3.0" -Force | Out-Null
-    Write-InstallerLog "Scheduled Task criada: $TaskName" "INFO"
+    Start-ScheduledTask -TaskName $TaskName
+    Write-InstallerLog "Scheduled Task '$TaskName' iniciada." "INFO"
 } catch {
-    Write-InstallerLog "ERRO ao criar Scheduled Task: $($_.Exception.Message)" "ERROR"
-    Write-Host "❌ Falha ao criar Scheduled Task." -ForegroundColor Red
+    Write-InstallerLog "Falha ao iniciar Scheduled Task '$TaskName': $($_.Exception.Message)" "ERROR"
+    Write-Host "❌ Falha ao iniciar o serviço do agente. Verifique o Event Viewer." -ForegroundColor Red
     exit 1
 }
 
-Write-Host "[4/4] Iniciando agente..." -ForegroundColor Yellow
-
-# Start the agent immediately
-try {
-    Start-ScheduledTask -TaskName $TaskName
-    Write-InstallerLog "Scheduled Task iniciada: $TaskName" "INFO"
-    Start-Sleep -Seconds 2
-    
-    # Verify task is running
-    $taskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
-    if ($taskInfo.LastTaskResult -eq 0 -or $taskInfo.LastTaskResult -eq 267009) {
-        Write-InstallerLog "Agente iniciado com sucesso." "SUCCESS"
-    } else {
-        Write-InstallerLog "Aviso: Task iniciada mas com código: $($taskInfo.LastTaskResult)" "WARN"
-    }
-} catch {
-    Write-InstallerLog "ERRO ao iniciar Scheduled Task: $($_.Exception.Message)" "ERROR"
-    Write-Host "⚠️  Task criada mas não iniciada. Inicie manualmente ou reinicie o sistema." -ForegroundColor Yellow
-}
-
-Write-Host ""
-Write-Host "==================================" -ForegroundColor Green
-Write-Host "✅ Instalação concluída com sucesso!" -ForegroundColor Green
-Write-Host "==================================" -ForegroundColor Green
-Write-Host ""
-Write-Host "Detalhes:" -ForegroundColor Cyan
-Write-Host "  Diretório: $BasePath" -ForegroundColor Gray
-Write-Host "  Logs: $LogFile" -ForegroundColor Gray
-Write-Host "  Task: $TaskName" -ForegroundColor Gray
-Write-Host ""
-Write-Host "O agente está em execução em segundo plano." -ForegroundColor Green
-Write-Host "Para verificar logs: Get-Content '$LogFile' -Tail 50" -ForegroundColor Gray
-Write-Host ""
-
 Write-InstallerLog "Instalação concluída com sucesso." "SUCCESS"
+Write-Host "✅ CyberShield Agent instalado com sucesso." -ForegroundColor Green
 `;
 
-// Linux Installer Template (v3) - systemd service
-export const LINUX_INSTALLER_TEMPLATE_V3 = String.raw`#!/usr/bin/env bash
-# CyberShield Agent - Linux Installation Script v3.0
-# Auto-generated: {{TIMESTAMP}}
+// Linux Installer Template v3
+export const LINUX_INSTALLER_TEMPLATE_V3 = `#!/bin/bash
+set -e
 
-set -euo pipefail
+# ========================================
+# CyberShield Agent Installer for Linux
+# Version: 3.0
+# ========================================
 
-echo "=========================================="
-echo "CyberShield Agent Installer v3.0 (Linux)"
-echo "=========================================="
-echo ""
-
-# Configuration
 SERVER_URL="{{SERVER_URL}}"
 AGENT_TOKEN="{{AGENT_TOKEN}}"
 HMAC_SECRET="{{HMAC_SECRET}}"
@@ -194,97 +121,91 @@ AGENT_NAME="{{AGENT_NAME}}"
 AGENT_VERSION="{{AGENT_VERSION}}"
 AGENT_SCRIPT_URL="{{AGENT_SCRIPT_URL}}"
 
-# Paths
-INSTALL_DIR="/opt/cybershield"
-AGENT_SCRIPT="$INSTALL_DIR/cybershield-agent.sh"
-LOG_DIR="/var/log/cybershield"
-SYSTEMD_SERVICE="/etc/systemd/system/cybershield-agent.service"
+BASE_PATH="/opt/cybershield"
+LOGS_PATH="\${BASE_PATH}/logs"
+AGENT_SCRIPT="\${BASE_PATH}/cybershield-agent-linux.sh"
 
-# Verify root
-if [[ $EUID -ne 0 ]]; then
-   echo "❌ Este script deve ser executado como root (use sudo)" 
-   exit 1
+echo "==================================="
+echo "CyberShield Agent Installer v3.0"
+echo "==================================="
+echo ""
+
+# Verificar root
+if [ "$EUID" -ne 0 ]; then
+  echo "❌ Este script precisa ser executado como root."
+  exit 1
 fi
 
-echo "[1/5] Verificando dependências..."
+# Verificar dependências
 for cmd in curl bash openssl jq; do
-    if ! command -v $cmd &> /dev/null; then
-        echo "❌ Comando '$cmd' não encontrado. Por favor, instale-o primeiro."
-        exit 1
-    fi
+  if ! command -v \$cmd &> /dev/null; then
+    echo "❌ Comando '\$cmd' não encontrado. Instale-o e tente novamente."
+    exit 1
+  fi
 done
 
-echo "[2/5] Criando diretórios..."
-mkdir -p "$INSTALL_DIR"
-mkdir -p "$LOG_DIR"
+echo "✅ Dependências verificadas."
 
-echo "[3/5] Baixando script do agente..."
-if ! curl -fsSL "$AGENT_SCRIPT_URL" -o "$AGENT_SCRIPT"; then
-    echo "❌ Falha ao baixar script do agente"
-    exit 1
-fi
+# Criar diretórios
+mkdir -p "\${BASE_PATH}"
+mkdir -p "\${LOGS_PATH}"
 
-chmod +x "$AGENT_SCRIPT"
+echo "✅ Diretórios criados: \${BASE_PATH}"
 
-echo "[4/5] Criando serviço systemd..."
-cat > "$SYSTEMD_SERVICE" <<EOF
+# Download do script do agente
+echo "Baixando script do agente de \${AGENT_SCRIPT_URL}..."
+curl -f -s -o "\${AGENT_SCRIPT}" "\${AGENT_SCRIPT_URL}" || {
+  echo "❌ Falha ao baixar o script do agente."
+  exit 1
+}
+
+chmod +x "\${AGENT_SCRIPT}"
+echo "✅ Script do agente instalado."
+
+# Criar serviço systemd
+cat > /etc/systemd/system/cybershield-agent.service <<EOF
 [Unit]
-Description=CyberShield Security Agent v3.0
-After=network-online.target
-Wants=network-online.target
+Description=CyberShield Security Agent
+After=network.target
 
 [Service]
 Type=simple
-ExecStart=$AGENT_SCRIPT
-Environment="SERVER_URL=$SERVER_URL"
-Environment="AGENT_TOKEN=$AGENT_TOKEN"
-Environment="HMAC_SECRET=$HMAC_SECRET"
-Environment="AGENT_NAME=$AGENT_NAME"
+User=root
+ExecStart=\${AGENT_SCRIPT}
+Environment="SERVER_URL=\${SERVER_URL}"
+Environment="AGENT_TOKEN=\${AGENT_TOKEN}"
+Environment="HMAC_SECRET=\${HMAC_SECRET}"
+Environment="AGENT_NAME=\${AGENT_NAME}"
 Restart=always
 RestartSec=10
-StandardOutput=append:$LOG_DIR/agent.log
-StandardError=append:$LOG_DIR/agent.log
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-echo "[5/5] Iniciando serviço..."
 systemctl daemon-reload
-systemctl enable cybershield-agent
-systemctl start cybershield-agent
+systemctl enable cybershield-agent.service
+systemctl start cybershield-agent.service
 
-sleep 2
-
-if systemctl is-active --quiet cybershield-agent; then
-    echo ""
-    echo "=========================================="
-    echo "✅ Instalação concluída com sucesso!"
-    echo "=========================================="
-    echo ""
-    echo "Status: $(systemctl is-active cybershield-agent)"
-    echo "Logs: journalctl -u cybershield-agent -f"
-    echo ""
-else
-    echo "⚠️  Serviço instalado mas não está ativo."
-    echo "Verifique logs: journalctl -u cybershield-agent -xe"
-    exit 1
-fi
+echo "✅ Serviço systemd configurado e iniciado."
+echo ""
+echo "==================================="
+echo "Instalação concluída com sucesso!"
+echo "==================================="
+echo ""
+echo "Para verificar o status: systemctl status cybershield-agent"
+echo "Para ver logs: journalctl -u cybershield-agent -f"
 `;
 
-// macOS Installer Template (v3) - LaunchDaemon
-export const MACOS_INSTALLER_TEMPLATE_V3 = String.raw`#!/usr/bin/env bash
-# CyberShield Agent - macOS Installation Script v3.0
-# Auto-generated: {{TIMESTAMP}}
+// macOS Installer Template v3
+export const MACOS_INSTALLER_TEMPLATE_V3 = `#!/bin/bash
+set -e
 
-set -euo pipefail
+# ========================================
+# CyberShield Agent Installer for macOS
+# Version: 3.0
+# ========================================
 
-echo "=========================================="
-echo "CyberShield Agent Installer v3.0 (macOS)"
-echo "=========================================="
-echo ""
-
-# Configuration
 SERVER_URL="{{SERVER_URL}}"
 AGENT_TOKEN="{{AGENT_TOKEN}}"
 HMAC_SECRET="{{HMAC_SECRET}}"
@@ -292,92 +213,91 @@ AGENT_NAME="{{AGENT_NAME}}"
 AGENT_VERSION="{{AGENT_VERSION}}"
 AGENT_SCRIPT_URL="{{AGENT_SCRIPT_URL}}"
 
-# Paths
-INSTALL_DIR="/usr/local/cybershield"
-AGENT_SCRIPT="$INSTALL_DIR/cybershield-agent.sh"
-LOG_DIR="/var/log/cybershield"
-PLIST_PATH="/Library/LaunchDaemons/com.cybershield.agent.plist"
+BASE_PATH="/opt/cybershield"
+LOGS_PATH="\${BASE_PATH}/logs"
+AGENT_SCRIPT="\${BASE_PATH}/cybershield-agent-macos.sh"
 
-# Verify root
-if [[ $EUID -ne 0 ]]; then
-   echo "❌ Este script deve ser executado como root (use sudo)" 
-   exit 1
+echo "==================================="
+echo "CyberShield Agent Installer v3.0"
+echo "==================================="
+echo ""
+
+# Verificar root
+if [ "$EUID" -ne 0 ]; then
+  echo "❌ Este script precisa ser executado como root (sudo)."
+  exit 1
 fi
 
-echo "[1/5] Verificando dependências..."
+# Verificar dependências
 for cmd in curl bash; do
-    if ! command -v $cmd &> /dev/null; then
-        echo "❌ Comando '$cmd' não encontrado."
-        exit 1
-    fi
+  if ! command -v \$cmd &> /dev/null; then
+    echo "❌ Comando '\$cmd' não encontrado."
+    exit 1
+  fi
 done
 
-echo "[2/5] Criando diretórios..."
-mkdir -p "$INSTALL_DIR"
-mkdir -p "$LOG_DIR"
+echo "✅ Dependências verificadas."
 
-echo "[3/5] Baixando script do agente..."
-if ! curl -fsSL "$AGENT_SCRIPT_URL" -o "$AGENT_SCRIPT"; then
-    echo "❌ Falha ao baixar script do agente"
-    exit 1
-fi
+# Criar diretórios
+mkdir -p "\${BASE_PATH}"
+mkdir -p "\${LOGS_PATH}"
 
-chmod +x "$AGENT_SCRIPT"
+echo "✅ Diretórios criados: \${BASE_PATH}"
 
-echo "[4/5] Criando LaunchDaemon..."
-cat > "$PLIST_PATH" <<EOF
+# Download do script do agente
+echo "Baixando script do agente de \${AGENT_SCRIPT_URL}..."
+curl -f -s -o "\${AGENT_SCRIPT}" "\${AGENT_SCRIPT_URL}" || {
+  echo "❌ Falha ao baixar o script do agente."
+  exit 1
+}
+
+chmod +x "\${AGENT_SCRIPT}"
+echo "✅ Script do agente instalado."
+
+# Criar LaunchDaemon
+cat > /Library/LaunchDaemons/com.cybershield.agent.plist <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>Label</key>
-    <string>com.cybershield.agent</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>$AGENT_SCRIPT</string>
-    </array>
-    <key>EnvironmentVariables</key>
-    <dict>
-        <key>SERVER_URL</key>
-        <string>$SERVER_URL</string>
-        <key>AGENT_TOKEN</key>
-        <string>$AGENT_TOKEN</string>
-        <key>HMAC_SECRET</key>
-        <string>$HMAC_SECRET</string>
-        <key>AGENT_NAME</key>
-        <string>$AGENT_NAME</string>
-    </dict>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardOutPath</key>
-    <string>$LOG_DIR/agent.log</string>
-    <key>StandardErrorPath</key>
-    <string>$LOG_DIR/agent.log</string>
+  <key>Label</key>
+  <string>com.cybershield.agent</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>\${AGENT_SCRIPT}</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>SERVER_URL</key>
+    <string>\${SERVER_URL}</string>
+    <key>AGENT_TOKEN</key>
+    <string>\${AGENT_TOKEN}</string>
+    <key>HMAC_SECRET</key>
+    <string>\${HMAC_SECRET}</string>
+    <key>AGENT_NAME</key>
+    <string>\${AGENT_NAME}</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>\${LOGS_PATH}/agent.log</string>
+  <key>StandardErrorPath</key>
+  <string>\${LOGS_PATH}/agent.error.log</string>
 </dict>
 </plist>
 EOF
 
-chmod 644 "$PLIST_PATH"
+launchctl load /Library/LaunchDaemons/com.cybershield.agent.plist
 
-echo "[5/5] Iniciando agente..."
-launchctl load "$PLIST_PATH"
-
-sleep 2
-
-if launchctl list | grep -q com.cybershield.agent; then
-    echo ""
-    echo "=========================================="
-    echo "✅ Instalação concluída com sucesso!"
-    echo "=========================================="
-    echo ""
-    echo "Logs: tail -f $LOG_DIR/agent.log"
-    echo ""
-else
-    echo "⚠️  LaunchDaemon carregado mas não está ativo."
-    echo "Verifique logs: tail -f $LOG_DIR/agent.log"
-    exit 1
-fi
+echo "✅ LaunchDaemon configurado e iniciado."
+echo ""
+echo "==================================="
+echo "Instalação concluída com sucesso!"
+echo "==================================="
+echo ""
+echo "Para verificar o status: launchctl list | grep cybershield"
+echo "Para ver logs: tail -f \${LOGS_PATH}/agent.log"
 `;
 
