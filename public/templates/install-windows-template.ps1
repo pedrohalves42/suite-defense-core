@@ -1,6 +1,6 @@
-# CyberShield Agent - Windows Installation Script v3.0.0-APEX
+# CyberShield Agent - Windows Installation Script v3.1.0-HARDENED
 # Auto-generated: {{TIMESTAMP}}
-# APEX BUILD - Universal, Robust, Production-Ready
+# Hardened Build - Production-Ready with Self-Test & Auto-Cleanup
 
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
@@ -11,7 +11,7 @@ $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 Write-Host "==================================" -ForegroundColor Cyan
-Write-Host "CyberShield Agent Installer v3.0.0-APEX" -ForegroundColor Cyan
+Write-Host "CyberShield Agent Installer v3.1.0-HARDENED" -ForegroundColor Cyan
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -38,7 +38,7 @@ if ($PSVersionTable.PSVersion.Major -lt 5) {
 $AgentToken = "{{AGENT_TOKEN}}"
 $HmacSecret = "{{HMAC_SECRET}}"
 $ServerUrl = "{{SERVER_URL}}"
-$PollInterval = 60  # ✅ FASE 1.1: Definido explicitamente
+$PollInterval = 60
 
 # Validar parâmetros
 if ([string]::IsNullOrWhiteSpace($AgentToken) -or $AgentToken -eq "{{AGENT_TOKEN}}") {
@@ -48,13 +48,18 @@ if ([string]::IsNullOrWhiteSpace($AgentToken) -or $AgentToken -eq "{{AGENT_TOKEN
     exit 1
 }
 
-# Diretório de instalação - ✅ FASE 1.1: Path unificado
+# Log credentials (prefixes only for security)
+$TokenPrefix = $AgentToken.Substring(0, 8)
+$HmacPrefix = $HmacSecret.Substring(0, 8)
+Write-Host "[INFO] AgentToken: $TokenPrefix... HmacSecret: $HmacPrefix..." -ForegroundColor Gray
+
+# Diretório de instalação
 $InstallDir = "C:\CyberShield"
 $AgentScript = Join-Path $InstallDir "cybershield-agent.ps1"
 $LogDir = Join-Path $InstallDir "logs"
 $InstallLog = Join-Path $LogDir "install.log"
 
-# ✅ FASE 1.1: Função de log de instalação
+# Função de log de instalação
 function Write-InstallLog {
     param([string]$Message)
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -65,7 +70,55 @@ function Write-InstallLog {
     Write-Host $Message
 }
 
-# ✅ TELEMETRIA DE ERROS: Enviar erros de instalação ao backend
+# ========================================
+# FASE 1: CLEANUP DE INSTALAÇÕES ANTIGAS
+# ========================================
+Write-Host ""
+Write-Host "[1/6] Limpando instalações anteriores..." -ForegroundColor Yellow
+
+# Parar e remover tasks antigas
+$oldTasks = Get-ScheduledTask | Where-Object { $_.TaskName -match 'CyberShield' }
+if ($oldTasks) {
+    Write-InstallLog "Encontradas $($oldTasks.Count) task(s) antiga(s)"
+    foreach ($task in $oldTasks) {
+        try {
+            Write-InstallLog "  Removendo task: $($task.TaskName)"
+            Stop-ScheduledTask -TaskName $task.TaskName -ErrorAction SilentlyContinue
+            Unregister-ScheduledTask -TaskName $task.TaskName -Confirm:$false -ErrorAction SilentlyContinue
+        } catch {
+            Write-InstallLog "  Aviso: Erro ao remover $($task.TaskName): $($_.Exception.Message)"
+        }
+    }
+} else {
+    Write-InstallLog "Nenhuma task antiga encontrada"
+}
+
+# Matar processos antigos do agente
+$oldProcesses = Get-CimInstance Win32_Process | Where-Object { 
+    $_.CommandLine -match 'cybershield-agent' 
+}
+if ($oldProcesses) {
+    Write-InstallLog "Encontrados $($oldProcesses.Count) processo(s) antigo(s)"
+    foreach ($proc in $oldProcesses) {
+        try {
+            Write-InstallLog "  Encerrando PID $($proc.ProcessId)"
+            Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+        } catch {
+            Write-InstallLog "  Aviso: Erro ao encerrar PID $($proc.ProcessId)"
+        }
+    }
+    Start-Sleep -Seconds 2
+} else {
+    Write-InstallLog "Nenhum processo antigo encontrado"
+}
+
+Write-Host "✅ Limpeza concluída" -ForegroundColor Green
+
+# ========================================
+# FASE 2: FUNÇÕES AUXILIARES
+# ========================================
+
+# Função de telemetria de erros
 function Send-ErrorTelemetry {
     param(
         [string]$ErrorMessage,
@@ -153,7 +206,7 @@ function Get-ErrorType {
 }
 
 try {
-    Write-InstallLog "[1/8] Criando diretórios de instalação..."
+    Write-InstallLog "[2/7] Criando diretórios de instalação..."
     if (-not (Test-Path $InstallDir)) {
         New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     }
@@ -163,7 +216,7 @@ try {
     Write-InstallLog "✓ Diretórios criados com sucesso"
 
     # ✅ FASE 1.2: Configurar proxy e TLS globalmente
-    Write-InstallLog "[2/8] Configurando rede (TLS 1.2 + Proxy)..."
+    Write-InstallLog "[3/7] Configurando rede (TLS 1.2 + Proxy)..."
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
     $proxy = [System.Net.WebRequest]::GetSystemWebProxy()
@@ -179,7 +232,7 @@ try {
     Write-InstallLog "✓ TLS 1.2 habilitado e proxy configurado"
 
     # ✅ FASE 1.3: Health check inicial
-    Write-InstallLog "[3/8] Testando conectividade com backend..."
+    Write-InstallLog "[4/7] Testando conectividade com backend..."
     $healthCheck = $false
     $healthUrls = @(
         "$ServerUrl/functions/v1/heartbeat",
@@ -246,7 +299,7 @@ try {
         Write-InstallLog "⚠ Não foi possível criar regra de firewall: $($_.Exception.Message)"
     }
 
-    Write-InstallLog "[6/8] Criando tarefa agendada..."
+    Write-InstallLog "[5/7] Criando tarefa agendada..."
 
     $taskName = "CyberShield Agent"
     $taskDescription = "CyberShield Security Agent - Monitora o sistema e reporta ao servidor central"
@@ -258,8 +311,11 @@ try {
         Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
     }
 
-    # Criar ação - ✅ FASE 1.1: $PollInterval agora definido
-    $action = New-ScheduledTaskAction -Execute "PowerShell.exe" `
+    # Usar caminho absoluto do PowerShell 64-bit
+    $PowerShellExe = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+    
+    # Criar ação
+    $action = New-ScheduledTaskAction -Execute $PowerShellExe `
         -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File `"$AgentScript`" -AgentToken `"$AgentToken`" -HmacSecret `"$HmacSecret`" -ServerUrl `"$ServerUrl`" -PollInterval $PollInterval"
 
     # Criar trigger (na inicialização do sistema)
@@ -289,7 +345,102 @@ try {
 
     Write-InstallLog "✓ Tarefa agendada criada com sucesso"
 
-    Write-InstallLog "[7/8] Iniciando o agente..."
+    # ========================================
+    # FASE 3: SELF-TEST DE CONECTIVIDADE
+    # ========================================
+    Write-Host ""
+    Write-Host "[6/6] Executando self-test de conectividade..." -ForegroundColor Yellow
+    Write-InstallLog "[Self-Test] Validando credenciais com backend..."
+    
+    # Log credentials being tested (prefixes only)
+    Write-InstallLog "[Self-Test] Token: $TokenPrefix... | HMAC: $HmacPrefix..."
+    
+    try {
+        # Construir timestamp e nonce para HMAC
+        $timestamp = [Math]::Floor((Get-Date).ToUniversalTime().Subtract((Get-Date "1970-01-01")).TotalSeconds).ToString()
+        $nonce = [guid]::NewGuid().ToString()
+        
+        # Construir payload para HMAC (vazio para heartbeat)
+        $payload = ""
+        
+        # Calcular HMAC-SHA256
+        $hmacsha = New-Object System.Security.Cryptography.HMACSHA256
+        $hmacsha.Key = [System.Text.Encoding]::UTF8.GetBytes($HmacSecret)
+        $dataToSign = "$AgentToken|$timestamp|$nonce|$payload"
+        $signature = [Convert]::ToBase64String($hmacsha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($dataToSign)))
+        
+        # Headers para autenticação
+        $headers = @{
+            "X-Agent-Token" = $AgentToken
+            "X-Signature" = $signature
+            "X-Timestamp" = $timestamp
+            "X-Nonce" = $nonce
+            "Content-Type" = "application/json"
+        }
+        
+        # Tentar heartbeat
+        $selfTestUrl = "$ServerUrl/functions/v1/heartbeat"
+        Write-InstallLog "[Self-Test] Chamando $selfTestUrl"
+        
+        $response = Invoke-RestMethod -Uri $selfTestUrl `
+            -Method POST `
+            -Headers $headers `
+            -Body '{}' `
+            -TimeoutSec 15 `
+            -ErrorAction Stop
+        
+        Write-Host "✅ Self-test PASSOU - Credenciais validadas!" -ForegroundColor Green
+        Write-InstallLog "[Self-Test] ✅ HTTP 200 - Autenticação bem-sucedida"
+        Write-InstallLog "[Self-Test] Response: $($response | ConvertTo-Json -Compress)"
+        
+    } catch {
+        $statusCode = $_.Exception.Response.StatusCode.value__
+        $errorBody = ""
+        
+        if ($_.Exception.Response) {
+            try {
+                $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+                $errorBody = $reader.ReadToEnd()
+                $reader.Close()
+            } catch {}
+        }
+        
+        Write-Host "❌ Self-test FALHOU!" -ForegroundColor Red
+        Write-InstallLog "[Self-Test] ❌ HTTP $statusCode - $($_.Exception.Message)"
+        
+        if ($statusCode -eq 401) {
+            Write-Host ""
+            Write-Host "================================================" -ForegroundColor Red
+            Write-Host "ERRO CRÍTICO: TOKEN OU HMAC SECRET INVÁLIDOS" -ForegroundColor Red
+            Write-Host "================================================" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "O instalador foi gerado com credenciais incorretas." -ForegroundColor Yellow
+            Write-Host "Token usado: $TokenPrefix..." -ForegroundColor Yellow
+            Write-Host "HMAC usado: $HmacPrefix..." -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "SOLUÇÃO:" -ForegroundColor Cyan
+            Write-Host "  1. Volte ao dashboard (/admin/agent-installer)" -ForegroundColor White
+            Write-Host "  2. Gere um NOVO instalador para este agente" -ForegroundColor White
+            Write-Host "  3. Execute o novo instalador" -ForegroundColor White
+            Write-Host ""
+            
+            # Remover a tarefa criada (inútil com credenciais erradas)
+            Write-InstallLog "[Self-Test] Removendo tarefa inválida..."
+            Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+            
+            Write-InstallLog "[Self-Test] Instalação ABORTADA devido a credenciais inválidas"
+            Read-Host "Pressione Enter para sair"
+            exit 401
+        }
+        
+        Write-Host "⚠️  Self-test falhou mas instalação continuará" -ForegroundColor Yellow
+        Write-Host "    Código HTTP: $statusCode" -ForegroundColor Gray
+        Write-Host "    Erro: $($_.Exception.Message)" -ForegroundColor Gray
+        Write-InstallLog "[Self-Test] Aviso: Self-test falhou mas não bloqueará instalação"
+    }
+
+    Write-Host ""
+    Write-Host "[7/7] Iniciando o agente..." -ForegroundColor Yellow
 
     # Iniciar a tarefa
     Start-ScheduledTask -TaskName $taskName
@@ -332,7 +483,7 @@ try {
     Write-Host ""
 
     # ✅ FASE 2: Enviar telemetria EXPANDIDA pós-instalação
-    Write-InstallLog "[8/10] Enviando telemetria DETALHADA pós-instalação..."
+    Write-InstallLog "[7/7] Enviando telemetria pós-instalação..."
     try {
         # Validar se tarefa agendada foi criada e está rodando
         $taskExists = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
@@ -382,7 +533,7 @@ try {
     }
 
     # ✅ FASE 2: Validação Pós-Instalação com Retry
-    Write-InstallLog "[9/10] Validando inicialização do agente (aguardando 15s)..."
+    Write-InstallLog "[7/7] Validando inicialização do agente (aguardando 15s)..."
     Start-Sleep -Seconds 15
     
     $validationAttempts = 0
@@ -423,7 +574,7 @@ try {
     }
 
     # ✅ FASE 2: DIAGNÓSTICO FINAL DE INSTALAÇÃO
-    Write-InstallLog "[10/10] DIAGNÓSTICO FINAL DE INSTALAÇÃO..."
+    Write-InstallLog "[7/7] DIAGNÓSTICO FINAL DE INSTALAÇÃO..."
     
     $diagnosticReport = @"
 
@@ -479,30 +630,14 @@ TROUBLESHOOTING:
         Write-Host "✅ INSTALAÇÃO CONCLUÍDA E VALIDADA!" -ForegroundColor Green
     } else {
         Write-Host "⚠️  INSTALAÇÃO CONCLUÍDA MAS VALIDAÇÃO INCOMPLETA" -ForegroundColor Yellow
-        Write-Host "Por favor, verifique os logs acima para troubleshooting" -ForegroundColor Yellow
+        Write-Host "Por favor, verifique os logs: $LogDir\agent.log" -ForegroundColor Yellow
     }
     Write-Host ""
-
-    # ✅ FASE 1.4: Instalador "Keep-Alive" - monitorar agente por 60 segundos
+    Write-Host "Agente instalado e validado com sucesso!" -ForegroundColor Green
+    Write-Host "Você pode fechar esta janela ou aguardar fechamento automático." -ForegroundColor Gray
     Write-Host ""
-    Write-Host "Instalação concluída! Monitorando agente por 60 segundos..." -ForegroundColor Cyan
-    Write-Host "Feche esta janela a qualquer momento." -ForegroundColor Gray
-    Write-Host ""
-
-    for ($i = 1; $i -le 12; $i++) {
-        Start-Sleep -Seconds 5
-        $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-        $taskInfo = Get-ScheduledTaskInfo -TaskName $taskName -ErrorAction SilentlyContinue
-        
-        Write-Host "[$i/12] Task Status: $($task.State) | Last Result: $($taskInfo.LastTaskResult)" -ForegroundColor Gray
-        
-        if ($task.State -eq "Running") {
-            Write-Host "✓ Agente está rodando!" -ForegroundColor Green
-        }
-    }
-
-    Write-Host ""
-    Write-Host "Monitoramento concluído. Instalador será fechado em 10 segundos..." -ForegroundColor Yellow
+    
+    # Aguardar 10 segundos antes de fechar
     Start-Sleep -Seconds 10
 
 } catch {
