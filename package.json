@@ -15,8 +15,9 @@
     "test:coverage": "vitest run --coverage",
     "validate:code": "npm run typecheck && npm run lint",
     "validate:tests": "npm run test",
-    "validate:all": "tsx tools/validate-system.ts"
-     
+    "validate:all": "tsx tools/validate-system.ts",
+    "sync:agent": "bash scripts/sync-agent-script.sh",
+    "validate:sync": "npm run sync:agent && git diff --exit-code supabase/functions/_shared/agent-script-windows-content.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
