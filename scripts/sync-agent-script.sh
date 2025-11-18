@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e
 
-# Caminhos fonte e destino
 SOURCE="public/agent-scripts/cybershield-agent-windows-v3.ps1"
 TARGET="supabase/functions/_shared/agent-script-windows-content.ts"
 
@@ -12,42 +11,34 @@ fi
 
 echo "🔄 Sincronizando $SOURCE -> $TARGET"
 
-# Lê conteúdo do .ps1 e escapa para template literal TS
-SCRIPT_CONTENT=$(cat "$SOURCE")
-
-# Gerar arquivo TypeScript completo
-cat > "$TARGET" << 'EOFTS'
+# Cabeçalho TS fixo
+cat > "$TARGET" <<'EOF'
 /**
  * CyberShield Agent Windows Script - AUTO-GERADO
- * NÃO EDITAR MANUALMENTE - Use: npm run sync:agent
+ * NÃO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
  */
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
-EOFTS
+EOF
 
-# Append script content (sem escaping adicional, backtick template já resolve)
-cat "$SOURCE" >> "$TARGET"
+# Corpo do script PowerShell com escaping para template literal TS:
+#  - \  -> \\
+#  - `  -> \`
+#  - $  -> \$
+sed \
+  -e 's/\\/\\\\/g' \
+  -e 's/`/\\`/g' \
+  -e 's/\$/\\$/g' \
+  "$SOURCE" >> "$TARGET"
 
-# Fechar template
-cat >> "$TARGET" << 'EOFTS'
+# Fecha o template literal e exporta helper
+cat >> "$TARGET" <<'EOF'
 `;
 
 export function getAgentScriptWindows(): string {
   return AGENT_SCRIPT_WINDOWS_CONTENT;
 }
-
-export function validateAgentScript(content: string): boolean {
-  return content.length > 5000 && content.includes('CyberShield');
-}
-
-export async function calculateScriptHash(content: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(content);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-EOFTS
+EOF
 
 echo "✅ Sync concluído. Tamanho: $(wc -c < "$SOURCE") bytes"
