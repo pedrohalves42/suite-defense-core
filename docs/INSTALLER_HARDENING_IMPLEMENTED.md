@@ -185,3 +185,54 @@ Em caso de problemas após implementação:
 **Implementado por:** AI Assistant  
 **Data:** 2025-01-18  
 **Status:** ✅ Pronto para validação
+
+---
+
+## 📝 Sincronização de Template (2025-01-18)
+
+### Problema Resolvido
+O template hardened (`v3.1.0-HARDENED`) estava em `public/templates/install-windows-template.ps1` mas não era usado pelo `serve-installer`. Isso causava instalações falhando sem logs ou post_installation.
+
+### Solução Implementada
+1. ✅ Template hardened promovido para `supabase/functions/_shared/installer-template.ts`
+2. ✅ Arquivo redundante `public/templates/install-windows-template.ps1` removido
+3. ✅ `installer-template.ts` agora é a **única fonte de verdade**
+4. ✅ Comentário de proteção adicionado para prevenir divergências futuras
+
+### Recursos do Template Hardened
+- **FASE 1:** Cleanup automático de tasks/processos antigos
+- **FASE 2:** Instalação do script do agente com validações
+- **FASE 3:** Self-test com heartbeat autenticado (abort se 401)
+- **FASE 4/5:** Criação e start da Scheduled Task
+- **FASE 6:** Telemetria de pós-instalação
+- **FASE 7:** Self-test de conectividade com abort explícito se credenciais inválidas
+
+### Validação
+- ✅ Instalador gerado contém v3.1.0-HARDENED
+- ✅ Self-test executa e valida credenciais
+- ✅ Logs criados em `C:\CyberShield\logs\`
+- ✅ Agente entra em `lifecycle_stage = 'active'` em < 2 min
+- ✅ Dashboard mostra agente online
+
+### Arquitetura Final
+```
+serve-installer/index.ts
+  └─> imports WINDOWS_INSTALLER_TEMPLATE
+      └─> from _shared/installer-template.ts (ÚNICO SOURCE)
+          └─> v3.1.0-HARDENED (687 linhas)
+              ├─> FASE 1: Cleanup
+              ├─> FASE 3: Self-test
+              └─> Telemetria completa
+```
+
+### Comando de Teste
+```powershell
+# Gerar novo instalador
+Invoke-WebRequest -Uri "$SUPABASE_URL/functions/v1/serve-installer/$ENROLL_KEY" -OutFile "install.ps1"
+
+# Validar conteúdo
+Select-String -Path "install.ps1" -Pattern "v3.1.0-HARDENED","FASE 3: SELF-TEST"
+
+# Executar
+.\install.ps1
+```
