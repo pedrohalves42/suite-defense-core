@@ -241,3 +241,14 @@ verify_jwt = true
 
 [functions.ai-action-executor]
 verify_jwt = true
+
+# === Health & Monitoring Functions ===
+[functions.health]
+verify_jwt = false
+
+[functions.check-installation-health]
+verify_jwt = false
+
+[[edge_runtime.schedules]]
+path = "/check-installation-health"
+schedule = "0 * * * *"
