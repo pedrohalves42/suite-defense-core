@@ -202,10 +202,11 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Atualizar o job
+     // Atualizar o job com campos v3
     const updateData: Record<string, any> = {
       status: status,
-      completed_at: new Date().toISOString()
+      finished_at: payload.finished_at || new Date().toISOString(),
+      completed_at: new Date().toISOString() // Compatibilidade legado
     }
 
     // Adicionar campos extras se existirem
@@ -217,6 +218,9 @@ Deno.serve(async (req) => {
     }
     if (execution_time_seconds !== undefined) {
       updateData.execution_time_seconds = execution_time_seconds
+    }
+    if (payload.started_at) {
+      updateData.started_at = payload.started_at
     }
 
     const { error: updateError } = await supabase
