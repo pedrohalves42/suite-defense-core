@@ -164,6 +164,9 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Validate agent script synchronization
+      run: npm run validate:sync
+
     - name: Run Guardian system validation
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
