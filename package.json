@@ -8,7 +8,15 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "validate:code": "npm run typecheck && npm run lint",
+    "validate:tests": "npm run test",
+    "validate:all": "tsx tools/validate-system.ts"
+     
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
