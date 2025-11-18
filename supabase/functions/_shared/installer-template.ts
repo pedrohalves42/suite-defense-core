@@ -119,7 +119,7 @@ Start-ScheduledTask -TaskName $taskName
 Write-Host "[6/7] Executando self-test..." -ForegroundColor Yellow
 try {
     $timestamp = [int][double]::Parse((Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss"))
-    $payload = "{`"agent_token`":`"$AgentToken`",`"timestamp`":$timestamp}"
+    $payload = "{\`"agent_token\`":\`"$AgentToken\`",\`"timestamp\`":$timestamp}"
     $hmacsha256 = New-Object System.Security.Cryptography.HMACSHA256
     $hmacsha256.Key = [Text.Encoding]::UTF8.GetBytes($HmacSecret)
     $signature = [Convert]::ToBase64String($hmacsha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($payload)))
