@@ -1,3 +1,5 @@
+#Requires -RunAsAdministrator
+
 # recreate-agent-task.ps1
 # Recria a Scheduled Task do CyberShield Agent com credenciais corretas
 # Uso: .\recreate-agent-task.ps1 -AgentToken "xxx" -HmacSecret "yyy" -AgentName "zzz"
@@ -18,41 +20,62 @@ param(
     [string]$TaskName = "CyberShieldAgent"
 )
 
-Write-Host "`n🔧 CyberShield Agent Task Recreator" -ForegroundColor Cyan
-Write-Host "==================================`n" -ForegroundColor Cyan
+$ErrorActionPreference = "Stop"
 
-# Validações
+Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Cyan
+Write-Host "║  CYBER SHIELD - AGENT TASK RECREATOR       ║" -ForegroundColor Cyan
+Write-Host "╚════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+
+# Validações iniciais
+Write-Host "=== Validando parâmetros ===" -ForegroundColor Cyan
+Write-Host "AgentToken: $($AgentToken.Substring(0, 8))..." -ForegroundColor Gray
+Write-Host "HmacSecret: $($HmacSecret.Substring(0, 8))..." -ForegroundColor Gray
+Write-Host "AgentName: $AgentName" -ForegroundColor Gray
+Write-Host "ScriptPath: $ScriptPath" -ForegroundColor Gray
+
+# Verificar se o script existe
 if (-not (Test-Path $ScriptPath)) {
-    Write-Host "❌ Erro: Script não encontrado em $ScriptPath" -ForegroundColor Red
+    Write-Error "Script não encontrado em: $ScriptPath"
+    Write-Host "Certifique-se de que o arquivo existe antes de continuar." -ForegroundColor Red
     exit 1
 }
+Write-Host "✓ Script encontrado" -ForegroundColor Green
 
-Write-Host "📋 Configuração:" -ForegroundColor Cyan
-Write-Host "   Agent Name: $AgentName" -ForegroundColor Gray
-Write-Host "   Agent Token: $($AgentToken.Substring(0, 8))..." -ForegroundColor Gray
-Write-Host "   HMAC Secret: $($HmacSecret.Substring(0, 8))..." -ForegroundColor Gray
-Write-Host "   Server URL: $ServerUrl" -ForegroundColor Gray
-Write-Host "   Script Path: $ScriptPath" -ForegroundColor Gray
-Write-Host "   Poll Interval: ${PollInterval}s" -ForegroundColor Gray
-Write-Host "   Task Name: $TaskName`n" -ForegroundColor Gray
+# Parar e remover processos antigos
+Write-Host "`n=== Limpando processos antigos ===" -ForegroundColor Cyan
+$oldProcesses = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'cybershield-agent.*ps1' }
+if ($oldProcesses) {
+    Write-Host "Encontrados $($oldProcesses.Count) processos antigos. Finalizando..." -ForegroundColor Yellow
+    $oldProcesses | ForEach-Object { 
+        try {
+            Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop
+            Write-Host "  ✓ Processo $($_.ProcessId) finalizado" -ForegroundColor Gray
+        } catch {
+            Write-Host "  ⚠ Não foi possível finalizar processo $($_.ProcessId)" -ForegroundColor Yellow
+        }
+    }
+} else {
+    Write-Host "✓ Nenhum processo antigo encontrado" -ForegroundColor Green
+}
 
-# Remover task existente
-Write-Host "🗑️  Removendo task existente (se houver)..." -ForegroundColor Yellow
+# Parar e remover tarefa existente
+Write-Host "`n=== Removendo tarefa agendada existente ===" -ForegroundColor Cyan
 try {
     $existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
     if ($existingTask) {
         Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
         Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction Stop
-        Write-Host "   ✅ Task anterior removida" -ForegroundColor Green
+        Write-Host "✓ Tarefa removida" -ForegroundColor Green
     } else {
-        Write-Host "   ℹ️  Nenhuma task anterior encontrada" -ForegroundColor Gray
+        Write-Host "✓ Nenhuma tarefa existente encontrada" -ForegroundColor Green
     }
 } catch {
-    Write-Host "   ⚠️  Erro ao remover task anterior: $_" -ForegroundColor Yellow
+    Write-Host "⚠ Aviso ao remover tarefa: $_" -ForegroundColor Yellow
 }
 
-# Criar action
-Write-Host "`n🔨 Criando nova task..." -ForegroundColor Cyan
+# Criar nova tarefa
+Write-Host "`n=== Criando nova tarefa agendada ===" -ForegroundColor Cyan
 
 $actionArgs = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ScriptPath`" " +
               "-AgentToken `"$AgentToken`" " +
@@ -61,25 +84,18 @@ $actionArgs = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$S
               "-AgentName `"$AgentName`" " +
               "-PollInterval $PollInterval"
 
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $actionArgs
+$trigger1 = New-ScheduledTaskTrigger -AtStartup
+$trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5)
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+$settings = New-ScheduledTaskSettingsSet `
+    -AllowStartIfOnBatteries `
+    -DontStopIfGoingOnBatteries `
+    -StartWhenAvailable `
+    -RestartCount 3 `
+    -RestartInterval (New-TimeSpan -Minutes 1)
+
 try {
-    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $actionArgs
-    
-    # Criar triggers (startup + repetição a cada 5 minutos)
-    $trigger1 = New-ScheduledTaskTrigger -AtStartup
-    $trigger2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5)
-    
-    # Configurar para rodar como SYSTEM
-    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-    
-    # Configurações adicionais
-    $settings = New-ScheduledTaskSettingsSet `
-        -AllowStartIfOnBatteries `
-        -DontStopIfGoingOnBatteries `
-        -StartWhenAvailable `
-        -RestartCount 3 `
-        -RestartInterval (New-TimeSpan -Minutes 1)
-    
-    # Registrar task
     Register-ScheduledTask `
         -TaskName $TaskName `
         -Action $action `
@@ -87,30 +103,42 @@ try {
         -Principal $principal `
         -Settings $settings `
         -Force | Out-Null
-    
-    Write-Host "   ✅ Task criada com sucesso" -ForegroundColor Green
-    
-    # Iniciar task
-    Write-Host "`n▶️  Iniciando task..." -ForegroundColor Cyan
-    Start-ScheduledTask -TaskName $TaskName
-    Start-Sleep -Seconds 2
-    
-    # Verificar status
-    $taskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
-    Write-Host "   Estado: $($taskInfo.LastTaskResult)" -ForegroundColor Gray
-    Write-Host "   Última execução: $($taskInfo.LastRunTime)" -ForegroundColor Gray
-    Write-Host "   Próxima execução: $($taskInfo.NextRunTime)" -ForegroundColor Gray
-    
-    Write-Host "`n🎉 Task recriada e iniciada com sucesso!" -ForegroundColor Green
-    Write-Host "`n📝 Próximos passos:" -ForegroundColor Cyan
-    Write-Host "   1. Aguarde ~60 segundos" -ForegroundColor Gray
-    Write-Host "   2. Verifique logs em C:\CyberShield\logs\agent.log" -ForegroundColor Gray
-    Write-Host "   3. Confirme heartbeat no dashboard" -ForegroundColor Gray
-    Write-Host ""
-    
-    exit 0
-    
+    Write-Host "✓ Tarefa registrada" -ForegroundColor Green
 } catch {
-    Write-Host "`n❌ Erro ao criar task: $_" -ForegroundColor Red
+    Write-Error "Falha ao registrar tarefa: $_"
     exit 1
 }
+
+# Iniciar a tarefa
+Write-Host "`n=== Iniciando tarefa ===" -ForegroundColor Cyan
+Start-ScheduledTask -TaskName $TaskName
+Start-Sleep -Seconds 2
+Write-Host "✓ Tarefa iniciada" -ForegroundColor Green
+
+# Verificar argumentos efetivos
+Write-Host "`n=== Verificação ===" -ForegroundColor Cyan
+$task = Get-ScheduledTask -TaskName $TaskName
+$actualArgs = $task.Actions[0].Arguments
+
+if ($actualArgs -match [regex]::Escape($AgentToken.Substring(0, 8))) {
+    Write-Host "✓ AgentToken correto" -ForegroundColor Green
+}
+if ($actualArgs -match [regex]::Escape($HmacSecret.Substring(0, 8))) {
+    Write-Host "✓ HmacSecret correto" -ForegroundColor Green
+}
+if ($actualArgs -match [regex]::Escape($AgentName)) {
+    Write-Host "✓ AgentName correto" -ForegroundColor Green
+}
+
+Write-Host "`n╔════════════════════════════════════════════╗" -ForegroundColor Green
+Write-Host "║      ✓ TAREFA CRIADA COM SUCESSO           ║" -ForegroundColor Green
+Write-Host "╚════════════════════════════════════════════╝" -ForegroundColor Green
+
+Write-Host "`nPróximos passos:" -ForegroundColor Yellow
+Write-Host "1. Aguarde 30-60 segundos para o agente inicializar"
+Write-Host "2. Verifique os logs:" -ForegroundColor Cyan
+Write-Host "   Get-Content C:\CyberShield\logs\agent.log -Tail 50 -Wait" -ForegroundColor White
+Write-Host "3. Procure por '[INFO] ✅ Autenticado com sucesso'"
+Write-Host "4. Verifique o dashboard em /admin/agent-health"
+Write-Host "`nPara diagnóstico detalhado:" -ForegroundColor Yellow
+Write-Host "   .\scripts\validate-agent-config.ps1 -AgentName $AgentName" -ForegroundColor White
