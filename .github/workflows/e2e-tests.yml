@@ -168,7 +168,7 @@ jobs:
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      run: npx tsx tools/validate-system.ts
+      run: npm run validate:all
 
     - name: Upload validation report
       uses: actions/upload-artifact@v4
