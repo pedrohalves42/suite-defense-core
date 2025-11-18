@@ -1,566 +1,164 @@
 /**
- * Shared Windows Installer Template
- * Single source of truth for PS1 installer generation
- * Used by: serve-installer, build-agent-exe
+ * ⚠️ CRITICAL: Single Source of Truth for Installers
+ * 
+ * This file is the ONLY authoritative template for Windows/Linux/macOS installers.
+ * Do NOT create parallel versions in public/templates/ or other locations.
+ * 
+ * All changes to installers MUST be made here to ensure consistency across:
+ * - serve-installer Edge Function (runtime generation)
+ * - build-agent-exe Edge Function (EXE compilation)
+ * 
+ * Last synchronized: 2025-01-18 (v3.1.0-HARDENED Windows template)
  */
 
-export const WINDOWS_INSTALLER_TEMPLATE = `# CyberShield Agent - Windows Installation Script v3.0.0-APEX
+export const WINDOWS_INSTALLER_TEMPLATE = String.raw`# CyberShield Agent - Windows Installation Script v3.1.0-HARDENED
 # Auto-generated: {{TIMESTAMP}}
-# APEX BUILD - Universal, Robust, Production-Ready
+# Hardened Build - Production-Ready with Self-Test & Auto-Cleanup
 
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
 
 $ErrorActionPreference = "Stop"
-
-# Fix UTF-8 encoding for console output
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
-$AGENT_TOKEN = "{{AGENT_TOKEN}}"
-$HMAC_SECRET = "{{HMAC_SECRET}}"
-$SERVER_URL = "{{SERVER_URL}}"
-$AGENT_NAME = "{{AGENT_NAME}}"
-$POLL_INTERVAL = {{POLL_INTERVAL}}
+Write-Host "==================================" -ForegroundColor Cyan
+Write-Host "CyberShield Agent Installer v3.1.0-HARDENED" -ForegroundColor Cyan
+Write-Host "==================================" -ForegroundColor Cyan
+Write-Host ""
 
-# Backward compatibility aliases
-$AgentToken = $AGENT_TOKEN
-$HmacSecret = $HMAC_SECRET
-$AgentName = $AGENT_NAME
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+$isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-# ============================================================================
-# VALIDATION - Ensure credentials are valid
-# ============================================================================
-if ([string]::IsNullOrWhiteSpace($AGENT_TOKEN) -or $AGENT_TOKEN.Length -lt 32) {
-    Write-Host ""
-    Write-Host "=" * 70 -ForegroundColor Red
-    Write-Host "❌ INVALID INSTALLER - Credentials not configured" -ForegroundColor Red
-    Write-Host "=" * 70 -ForegroundColor Red
-    Write-Host ""
-    Write-Host "This installer was not properly generated." -ForegroundColor Yellow
-    Write-Host "Please generate a NEW installer from the dashboard:" -ForegroundColor Yellow
-    Write-Host "  1. Go to Agent Installer page" -ForegroundColor White
-    Write-Host "  2. Enter a unique agent name" -ForegroundColor White
-    Write-Host "  3. Download a fresh installer" -ForegroundColor White
-    Write-Host ""
-    Write-Host "⚠️  DO NOT use old/cached installer links!" -ForegroundColor Yellow
-    Write-Host ""
-    Read-Host "Press Enter to exit"
+if (-not $isAdmin) {
+    Write-Host "ERRO: Este script requer privilégios de administrador" -ForegroundColor Red
+    Read-Host "Pressione Enter para sair"
     exit 1
 }
 
-if ([string]::IsNullOrWhiteSpace($HMAC_SECRET) -or $HMAC_SECRET.Length -ne 64) {
-    Write-Host ""
-    Write-Host "=" * 70 -ForegroundColor Red
-    Write-Host "❌ INVALID INSTALLER - HMAC secret missing" -ForegroundColor Red
-    Write-Host "=" * 70 -ForegroundColor Red
-    Write-Host ""
-    Write-Host "This installer is incomplete. Please generate a new one." -ForegroundColor Yellow
-    Write-Host ""
-    Read-Host "Press Enter to exit"
+if ($PSVersionTable.PSVersion.Major -lt 5) {
+    Write-Host "ERRO: Este script requer PowerShell 5.1 ou superior" -ForegroundColor Red
     exit 1
 }
 
-# Log credentials (first 8 chars only for security)
-Write-Host "Configuration loaded:" -ForegroundColor Cyan
-Write-Host "  Token: $($AGENT_TOKEN.Substring(0, [Math]::Min(8, $AGENT_TOKEN.Length)))..." -ForegroundColor Gray
-Write-Host "  HMAC: $($HMAC_SECRET.Substring(0, [Math]::Min(8, $HMAC_SECRET.Length)))..." -ForegroundColor Gray
-Write-Host "  Server: $SERVER_URL" -ForegroundColor Gray
+$AgentToken = "{{AGENT_TOKEN}}"
+$HmacSecret = "{{HMAC_SECRET}}"
+$ServerUrl = "{{SERVER_URL}}"
+$PollInterval = 60
 
-# ============================================================================
-# PATHS AND DIRECTORIES
-# ============================================================================
-$InstallDir = "C:\\CyberShield"
+if ([string]::IsNullOrWhiteSpace($AgentToken) -or $AgentToken -eq "{{AGENT_TOKEN}}") {
+    Write-Host "ERRO: Token do agente não configurado" -ForegroundColor Red
+    exit 1
+}
+
+$TokenPrefix = $AgentToken.Substring(0, 8)
+$HmacPrefix = $HmacSecret.Substring(0, 8)
+Write-Host "[INFO] AgentToken: $TokenPrefix... HmacSecret: $HmacPrefix..." -ForegroundColor Gray
+
+$InstallDir = "C:\CyberShield"
 $AgentScript = Join-Path $InstallDir "cybershield-agent.ps1"
 $LogDir = Join-Path $InstallDir "logs"
-$LogFile = Join-Path $LogDir "install-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
-$taskName = "CyberShieldAgent"
+$InstallLog = Join-Path $LogDir "install.log"
 
-# ============================================================================
-# PRÉ-CRIAR LOGS DO AGENTE (Diagnóstico Robusto)
-# ============================================================================
+function Write-InstallLog {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    if (-not (Test-Path $LogDir)) {
+        New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+    }
+    "$timestamp - $Message" | Out-File $InstallLog -Append
+    Write-Host $Message
+}
+
+Write-Host ""
+Write-Host "[1/7] Limpando instalações anteriores..." -ForegroundColor Yellow
+
+$oldTasks = Get-ScheduledTask | Where-Object { $_.TaskName -match 'CyberShield' }
+if ($oldTasks) {
+    Write-InstallLog "Encontradas $($oldTasks.Count) task(s) antiga(s)"
+    foreach ($task in $oldTasks) {
+        try {
+            Stop-ScheduledTask -TaskName $task.TaskName -ErrorAction SilentlyContinue
+            Unregister-ScheduledTask -TaskName $task.TaskName -Confirm:$false -ErrorAction SilentlyContinue
+        } catch {}
+    }
+}
+
+$oldProcesses = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'cybershield-agent' }
+if ($oldProcesses) {
+    foreach ($proc in $oldProcesses) {
+        Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+    }
+    Start-Sleep -Seconds 2
+}
+
+Write-Host "[2/7] Criando diretórios..." -ForegroundColor Yellow
+New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 
-$AgentLogPath = Join-Path $LogDir "agent.log"
-$CrashLogPath = Join-Path $LogDir "agent-crash.log"
-$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+Write-Host "[3/7] Configurando rede..." -ForegroundColor Yellow
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# Garantir que logs existem antes de o agente rodar
-if (-not (Test-Path $AgentLogPath)) {
-    "[$timestamp] [INFO] Agent log pré-criado pelo instalador\`n" | Out-File -FilePath $AgentLogPath -Encoding UTF8 -Force
-}
-
-if (-not (Test-Path $CrashLogPath)) {
-    "[$timestamp] [INFO] Crash log pré-criado pelo instalador\`n" | Out-File -FilePath $CrashLogPath -Encoding UTF8 -Force
-}
-
-Write-Host "✅ Logs do agente pré-criados em: $LogDir" -ForegroundColor Green
-
-# ============================================================================
-# SYSTEM INFORMATION (collected early for telemetry)
-# ============================================================================
-$osInfo = $null
-$healthCheckOk = $false
-
-try {
-    $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
-} catch {
-    Write-Host "[WARN] Could not retrieve OS information" -ForegroundColor Yellow
-}
-
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
-
-# Convert HEX string to byte array (PS 5.1 compatible)
-function Convert-HexToBytes {
-    param([string]$HexString)
-    $HexString = $HexString -replace '\\s',''
-    if ($HexString.Length % 2 -ne 0) {
-        throw "HEX string length must be even"
-    }
-    $bytes = New-Object byte[] ($HexString.Length / 2)
-    for ($i = 0; $i -lt $HexString.Length; $i += 2) {
-        $bytes[$i/2] = [Convert]::ToByte($HexString.Substring($i, 2), 16)
-    }
-    return $bytes
-}
-
-# ============================================================================
-# LOGGING FUNCTION
-# ============================================================================
-function Write-InstallLog {
-    param([string]$Message, [string]$Level = "INFO")
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logMessage = "[$timestamp] [$Level] $Message"
-    Write-Host $logMessage
-    if (Test-Path $LogDir) {
-        Add-Content -Path $LogFile -Value $logMessage -ErrorAction SilentlyContinue
-    }
-}
-
-# ============================================================================
-# INSTALLATION STEPS
-# ============================================================================
-
-try {
-    Write-InstallLog "🚀 Starting CyberShield Agent installation..."
-    
-    # Create directories
-    Write-InstallLog "Creating installation directories..."
-    New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-    New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
-    
-    # Configure TLS 1.2
-    Write-InstallLog "Configuring TLS 1.2 for secure communication..."
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    
-    # Detect and configure proxy
-    Write-InstallLog "Detecting proxy settings..."
-    $proxyUri = [System.Net.WebRequest]::GetSystemWebProxy().GetProxy($SERVER_URL)
-    if ($proxyUri -ne $SERVER_URL) {
-        Write-InstallLog "Proxy detected: $proxyUri"
-        $env:HTTP_PROXY = $proxyUri
-        $env:HTTPS_PROXY = $proxyUri
-    }
-    
-    # Health check - CRITICAL validation
-    Write-InstallLog "Performing backend health check..."
-    try {
-        $healthCheck = Invoke-WebRequest -Uri "$SERVER_URL/functions/v1/serve-installer" -Method GET -TimeoutSec 10 -UseBasicParsing
-        
-        if ($healthCheck.StatusCode -eq 200) {
-            $healthCheckOk = $true
-            Write-InstallLog "✅ Backend is reachable and healthy"
-        } else {
-            $healthCheckOk = $false
-            throw "Backend returned unexpected status: $($healthCheck.StatusCode)"
-        }
-    } catch {
-        $healthCheckOk = $false
-        Write-Host ""
-        Write-Host "=" * 70 -ForegroundColor Red
-        Write-Host "❌ BACKEND UNREACHABLE - Installation aborted" -ForegroundColor Red
-        Write-Host "=" * 70 -ForegroundColor Red
-        Write-Host ""
-        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Yellow
-        Write-Host ""
-        Write-Host "Possible causes:" -ForegroundColor Cyan
-        Write-Host "  1. No internet connection" -ForegroundColor White
-        Write-Host "  2. Firewall blocking HTTPS traffic" -ForegroundColor White
-        Write-Host "  3. Corporate proxy not configured" -ForegroundColor White
-        Write-Host "  4. Backend service is down (rare)" -ForegroundColor White
-        Write-Host ""
-        Write-Host "Troubleshooting:" -ForegroundColor Cyan
-        Write-Host "  • Test connectivity: Test-NetConnection -ComputerName iavbnmduxpxhwubqrzzn.supabase.co -Port 443" -ForegroundColor White
-        Write-Host "  • Check firewall: Get-NetFirewallRule | Where-Object DisplayName -like '*CyberShield*'" -ForegroundColor White
-        Write-Host "  • If behind proxy, configure: \`$env:HTTPS_PROXY='http://proxy:port'" -ForegroundColor White
-        Write-Host ""
-        Write-Host "If issue persists, generate a NEW installer from the dashboard." -ForegroundColor Yellow
-        Write-Host ""
-        Read-Host "Press Enter to exit"
-        exit 1
-    }
-    
-    # Save agent script
-    Write-InstallLog "Installing CyberShield agent script..."
-    
-    # ============================================================================
-    # AGENT SCRIPT CONTENT (Injected by serve-installer or build-agent-exe)
-    # ============================================================================
-$AgentScriptContentBlock = @'
+Write-Host "[4/7] Instalando script do agente..." -ForegroundColor Yellow
+$AgentContent = @'
 {{AGENT_SCRIPT_CONTENT}}
 '@
+Set-Content -Path $AgentScript -Value $AgentContent -Encoding UTF8 -Force
 
-    # CRÍTICO-1: Write agent script with forced UTF8-BOM encoding
-    # This prevents silent failures on systems with non-UTF8 default encoding
-    $AgentScriptContentBlock | Out-File -FilePath $AgentScript -Encoding UTF8 -Force
-    Write-InstallLog "✅ Agent script saved with UTF8-BOM: $AgentScript"
+Write-Host "[5/7] Criando tarefa agendada..." -ForegroundColor Yellow
+$taskName = "CyberShield Agent"
+$PowerShellExe = "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
+
+$action = New-ScheduledTaskAction -Execute $PowerShellExe -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File \`"$AgentScript\`" -AgentToken \`"$AgentToken\`" -HmacSecret \`"$HmacSecret\`" -ServerUrl \`"$ServerUrl\`" -PollInterval $PollInterval"
+$trigger = New-ScheduledTaskTrigger -AtStartup
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
+Start-ScheduledTask -TaskName $taskName
+
+Write-Host "[6/7] Executando self-test..." -ForegroundColor Yellow
+try {
+    $timestamp = [int][double]::Parse((Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss"))
+    $payload = "{`"agent_token`":`"$AgentToken`",`"timestamp`":$timestamp}"
+    $hmacsha256 = New-Object System.Security.Cryptography.HMACSHA256
+    $hmacsha256.Key = [Text.Encoding]::UTF8.GetBytes($HmacSecret)
+    $signature = [Convert]::ToBase64String($hmacsha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($payload)))
     
-    # ============================================================================
-    # CORREÇÃO 5: VALIDAR QUE SCRIPT FOI GERADO CORRETAMENTE
-    # ============================================================================
-    if (Test-Path $AgentScript) {
-        $scriptContent = Get-Content $AgentScript -Raw
-        
-        # Verificar se funções críticas existem
-        $hasWriteLog = $scriptContent -match 'function Write-Log'
-        $hasHeartbeat = $scriptContent -match 'function Send-Heartbeat'
-        $hasPollJobs = $scriptContent -match 'function Poll-Jobs'
-        $hasTrap = $scriptContent -match 'trap \{'
-        
-        if (-not $hasWriteLog) {
-            Write-InstallLog "⚠️ WARNING: Script gerado não contém função Write-Log!" "ERROR"
-        }
-        if (-not $hasHeartbeat) {
-            Write-InstallLog "⚠️ WARNING: Script gerado não contém função Send-Heartbeat!" "ERROR"
-        }
-        if (-not $hasPollJobs) {
-            Write-InstallLog "⚠️ WARNING: Script gerado não contém função Poll-Jobs!" "ERROR"
-        }
-        if (-not $hasTrap) {
-            Write-InstallLog "⚠️ WARNING: Script gerado não contém trap (crash handler)!" "ERROR"
-        }
-        
-        $validationStatus = if($hasWriteLog -and $hasHeartbeat -and $hasPollJobs -and $hasTrap) {'✅ OK'} else {'❌ INCOMPLETE'}
-        Write-InstallLog "Script validation: $validationStatus" "INFO"
-        
-        $scriptSizeKB = [Math]::Round((Get-Item $AgentScript).Length / 1KB, 2)
-        Write-InstallLog "Script size: $scriptSizeKB KB" "INFO"
-    } else {
-        Write-InstallLog "⚠️ CRITICAL: Script file was not created at $AgentScript" "ERROR"
+    $headers = @{
+        "X-Agent-Token" = $AgentToken
+        "X-HMAC-Signature" = $signature
+        "X-Timestamp" = $timestamp.ToString()
     }
     
-    # Configure Windows Firewall
-    Write-InstallLog "Configuring Windows Firewall rule..."
-    $firewallRule = Get-NetFirewallRule -DisplayName "CyberShield Agent Outbound" -ErrorAction SilentlyContinue
-    if (-not $firewallRule) {
-        New-NetFirewallRule -DisplayName "CyberShield Agent Outbound" \`
-            -Direction Outbound -Action Allow \`
-            -Program "powershell.exe" \`
-            -Description "Allow CyberShield Agent to communicate with backend" | Out-Null
-        Write-InstallLog "✅ Firewall rule created"
-    } else {
-        Write-InstallLog "ℹ️ Firewall rule already exists"
+    $response = Invoke-WebRequest -Uri "$ServerUrl/functions/v1/heartbeat" -Method POST -Headers $headers -Body $payload -ContentType "application/json" -TimeoutSec 15
+    
+    if ($response.StatusCode -eq 200) {
+        Write-Host "✅ Self-test PASSOU - Credenciais validadas!" -ForegroundColor Green
     }
-    
-    # CRÍTICO-3: Create Scheduled Task with Watchdog (crash recovery)
-    Write-InstallLog "Creating Scheduled Task with Watchdog for crash resilience..."
-    
-    $taskName = "CyberShieldAgent"
-    $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-    if ($existingTask) {
-        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-        Write-InstallLog "Removed existing task"
-    }
-    
-    $action = New-ScheduledTaskAction -Execute "powershell.exe" \`
-        -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \`"$AgentScript\`" -AgentToken \`"$AGENT_TOKEN\`" -HmacSecret \`"$HMAC_SECRET\`" -ServerUrl \`"$SERVER_URL\`" -AgentName \`"$AGENT_NAME\`" -PollInterval $POLL_INTERVAL"
-    
-    # CRÍTICO: Multiple triggers for resilience
-    # Trigger 1: AtStartup (boot)
-    $triggerBoot = New-ScheduledTaskTrigger -AtStartup
-    
-    # Trigger 2: Repetition every 5 minutes (watchdog against crashes)
-    $triggerWatchdog = New-ScheduledTaskTrigger -Once -At (Get-Date) \`
-        -RepetitionInterval (New-TimeSpan -Minutes 5) \`
-        -RepetitionDuration (New-TimeSpan -Days 3650)
-    
-    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" \`
-        -LogonType ServiceAccount -RunLevel Highest
-    
-    $settings = New-ScheduledTaskSettingsSet \`
-        -AllowStartIfOnBatteries \`
-        -DontStopIfGoingOnBatteries \`
-        -StartWhenAvailable \`
-        -RestartCount 5 \`
-        -RestartInterval (New-TimeSpan -Minutes 1) \`
-        -ExecutionTimeLimit (New-TimeSpan -Hours 0) \`
-        -MultipleInstances IgnoreNew
-    
-    Register-ScheduledTask -TaskName $taskName \`
-        -Action $action \`
-        -Trigger @($triggerBoot, $triggerWatchdog) \`
-        -Principal $principal \`
-        -Settings $settings \`
-        -Description "CyberShield Security Agent - Auto-start with Watchdog" | Out-Null
-    
-    Write-InstallLog "✅ Scheduled Task created with Watchdog: $taskName"
-    Write-InstallLog "   → Trigger 1: AtStartup (boot)"
-    Write-InstallLog "   → Trigger 2: Every 5min (watchdog anti-crash)"
-    
-    # Start the agent task
-    Write-InstallLog "Starting CyberShield Agent..."
-    Start-ScheduledTask -TaskName $taskName
-    
-    Start-Sleep -Seconds 3
-    
-    $taskInfo = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-    if ($taskInfo) {
-        Write-InstallLog "✅ Agent task status: $($taskInfo.State)"
-        
-        if ($taskInfo.State -eq "Ready") {
-            Write-InstallLog "✅ Task is ready to run"
-        } elseif ($taskInfo.State -eq "Running") {
-            Write-InstallLog "✅ Task is already running"
-        } else {
-            Write-InstallLog "⚠️ Task state: $($taskInfo.State)" "WARN"
-        }
-    } else {
-        Write-InstallLog "⚠️ Could not verify task status" "WARN"
-        Write-InstallLog "Run manually: Start-ScheduledTask -TaskName '$taskName'" "INFO"
-    }
-    
-    # Verificar se task foi criada com parâmetros corretos
-    $taskAction = (Get-ScheduledTask -TaskName $taskName).Actions[0]
-    $taskArguments = $taskAction.Arguments
-    
-    if ($taskArguments -notlike "*-AgentToken*") {
-        Write-InstallLog "⚠️ WARNING: Scheduled Task missing -AgentToken parameter!" "ERROR"
-        Write-InstallLog "   This is a BUG - agent will not be able to authenticate" "ERROR"
-    }
-    
-    if ($taskArguments -notlike "*-HmacSecret*") {
-        Write-InstallLog "⚠️ WARNING: Scheduled Task missing -HmacSecret parameter!" "ERROR"
-        Write-InstallLog "   This is a BUG - agent will not be able to sign requests" "ERROR"
-    }
-    
-    if ($taskArguments -notlike "*-ServerUrl*") {
-        Write-InstallLog "⚠️ WARNING: Scheduled Task missing -ServerUrl parameter!" "ERROR"
-        Write-InstallLog "   This is a BUG - agent will not know where to connect" "ERROR"
-    }
-    
-    Write-InstallLog "Task command line: powershell.exe $taskArguments" "DEBUG"
-    
-    # Send post-installation telemetry (HMAC-authenticated)
-    Write-InstallLog "Sending installation telemetry..."
-    try {
-        # DEFENSIVE: Ensure all variables exist with fallbacks
-        if (-not $InstallDir) { $InstallDir = "C:\\CyberShield" }
-        if (-not $taskName) { $taskName = "CyberShieldAgent" }
-        
-        # Collect OS info with fallback
-        if (-not $osInfo) {
-            try {
-                $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
-            } catch {
-                $osInfo = $null
-            }
-        }
-        
-        # Get task info with defensive checks
-        $taskInfo = $null
-        $taskCreated = $false
-        $taskRunning = $false
-        
-        try {
-            $taskInfo = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-            $taskCreated = $null -ne $taskInfo
-            $taskRunning = $taskInfo -and ($taskInfo.State -eq "Running")
-        } catch {
-            Write-InstallLog "   Could not verify task status for telemetry" "DEBUG"
-        }
-        
-        # Get script info with path validation
-        $agentScriptPath = Join-Path $InstallDir "cybershield-agent.ps1"
-        $scriptExists = $false
-        $scriptSize = 0
-        
-        if ($agentScriptPath -and (Test-Path $agentScriptPath -ErrorAction SilentlyContinue)) {
-            $scriptExists = $true
-            try {
-                $scriptItem = Get-Item $agentScriptPath -ErrorAction Stop
-                $scriptSize = $scriptItem.Length
-            } catch {
-                $scriptSize = 0
-            }
-        }
-        
-        # Get PowerShell version with fallback
-        $psVersion = "5.1.0"
-        if ($PSVersionTable -and $PSVersionTable.PSVersion) {
-            $psVersion = $PSVersionTable.PSVersion.ToString()
-        }
-        
-        # TELEMETRY PAYLOAD - Minimal mandatory + optional fields
-        $telemetryData = @{
-            # MANDATORY FIELDS (always present)
-            success = $true
-            event_type = "post_installation"
-            installation_time = (Get-Date).ToString("o")
-            powershell_version = $psVersion
-            
-            # OPTIONAL FIELDS (may be null/empty)
-            os_version = if ($osInfo) { $osInfo.Caption } else { "Windows Unknown" }
-            os_architecture = if ($osInfo) { $osInfo.OSArchitecture } else { "Unknown" }
-            network_tests = @{
-                health_check_passed = [bool]$healthCheckOk
-                dns_test = $true
-                api_test = [bool]$healthCheckOk
-            }
-            firewall_status = "configured"
-            proxy_detected = $false
-            task_created = [bool]$taskCreated
-            task_running = [bool]$taskRunning
-            script_exists = [bool]$scriptExists
-            script_size_bytes = [int]$scriptSize
-        }
-        
-        $telemetryJson = $telemetryData | ConvertTo-Json -Compress -Depth 10
-        
-        # Calculate HMAC signature
-        $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds().ToString()
-        $nonce = [Guid]::NewGuid().ToString()
-        $payload = $timestamp + ":" + $nonce + ":" + $telemetryJson
-        
-        $hmacsha = New-Object System.Security.Cryptography.HMACSHA256
-        $hmacsha.Key = Convert-HexToBytes $HMAC_SECRET
-        $signatureBytes = $hmacsha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($payload))
-        $signature = [System.BitConverter]::ToString($signatureBytes).Replace('-','').ToLower()
-        
-        $telemetryHeaders = @{
-            "Content-Type" = "application/json"
-            "X-Agent-Token" = $AGENT_TOKEN
-            "X-HMAC-Signature" = $signature
-            "X-Timestamp" = $timestamp
-            "X-Nonce" = $nonce
-        }
-        
-        $telemetryResponse = Invoke-WebRequest \`
-            -Uri "$SERVER_URL/functions/v1/post-installation-telemetry" \`
-            -Method POST \`
-            -Body $telemetryJson \`
-            -Headers $telemetryHeaders \`
-            -TimeoutSec 15 \`
-            -UseBasicParsing
-        
-        if ($telemetryResponse.StatusCode -eq 200 -or $telemetryResponse.StatusCode -eq 201 -or $telemetryResponse.StatusCode -eq 202) {
-            Write-InstallLog "✅ Telemetry sent successfully (HTTP $($telemetryResponse.StatusCode))"
-        } else {
-            Write-InstallLog "⚠️ Telemetry returned HTTP $($telemetryResponse.StatusCode) (non-critical)" "WARN"
-        }
-        
-    } catch {
-        $errorDetail = $_.Exception.Message
-        $errorType = $_.Exception.GetType().Name
-        Write-InstallLog "⚠️ Telemetry failed (non-critical): [$errorType] $errorDetail" "WARN"
-        Write-InstallLog "   Installation is complete despite telemetry failure" "INFO"
-    }
-    
-    # Installation complete
-    Write-InstallLog "=" * 70
-    Write-InstallLog "✅ CyberShield Agent installed successfully!" "SUCCESS"
-    Write-InstallLog "=" * 70
-    Write-InstallLog ""
-    Write-InstallLog "📋 Useful commands:"
-    Write-InstallLog "  • View agent status:  Get-ScheduledTask -TaskName '$taskName'"
-    Write-InstallLog "  • Start agent:        Start-ScheduledTask -TaskName '$taskName'"
-    Write-InstallLog "  • Stop agent:         Stop-ScheduledTask -TaskName '$taskName'"
-    Write-InstallLog "  • View logs:          Get-Content '$LogFile'"
-    Write-InstallLog ""
-    Write-InstallLog "🔍 Agent is now running in background with automatic restart on system boot."
-    Write-InstallLog "Monitor the dashboard for agent status and heartbeat."
-    
-    # Keep-Alive monitoring period (2 minutes)
-    Write-InstallLog ""
-    Write-InstallLog "🔄 Monitoring agent for 2 minutes (Keep-Alive)..."
-    Write-Host -NoNewline "Monitoring agent status"
-    
-    $everRunning = $false
-    $maxChecks = 24   # 24 * 5s = 120 seconds (2 minutes)
-    
-    for ($i = 1; $i -le $maxChecks; $i++) {
-        Start-Sleep -Seconds 5
-        
-        try {
-            $currentTask = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
-            $status = $currentTask.State
-        } catch {
-            Write-InstallLog "" "ERROR"
-            Write-InstallLog "❌ Failed to read Scheduled Task '$taskName': $($_.Exception.Message)" "ERROR"
-            break
-        }
-        
-        Write-Host "." -NoNewline
-        
-        if ($status -eq "Running") {
-            $everRunning = $true
-        }
-        
-        # If status leaves Running/Ready, something went wrong
-        if ($status -notin @("Running", "Ready")) {
-            Write-InstallLog "" "WARN"
-            Write-InstallLog "⚠️ Agent task status changed to: $status" "WARN"
-            break
-        }
-    }
-    
-    Write-InstallLog ""
-    
-    if ($everRunning) {
-        Write-InstallLog "✅ Keep-Alive monitoring complete. Agent is stable."
-    } else {
-        Write-InstallLog "⚠️ Agent never reached Running state during Keep-Alive window" "WARN"
-    }
-    
-    Write-InstallLog "Installation log saved to: $LogFile"
-    
 } catch {
-    Write-Host ""
-    Write-Host "=" * 70 -ForegroundColor Red
-    Write-Host "❌ INSTALLATION FAILED!" -ForegroundColor Red
-    Write-Host "=" * 70 -ForegroundColor Red
-    Write-Host ""
-    Write-Host "Error Details:" -ForegroundColor Yellow
-    Write-Host "  Message: $($_.Exception.Message)" -ForegroundColor White
-    Write-Host "  Line: $($_.InvocationInfo.ScriptLineNumber)" -ForegroundColor White
-    Write-Host "  Command: $($_.InvocationInfo.Line.Trim())" -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "Stack Trace:" -ForegroundColor Yellow
-    Write-Host $_.ScriptStackTrace -ForegroundColor Gray
-    Write-Host ""
-    
-    # Log detailed error
-    if (Test-Path $LogDir) {
-        Write-InstallLog "FATAL ERROR: $($_.Exception.Message)" "ERROR"
-        Write-InstallLog "Line: $($_.InvocationInfo.ScriptLineNumber)" "ERROR"
-        Write-InstallLog "StackTrace: $($_.ScriptStackTrace)" "ERROR"
+    $statusCode = $_.Exception.Response.StatusCode.value__
+    if ($statusCode -eq 401) {
+        Write-Host ""
+        Write-Host "❌ ERRO CRÍTICO: TOKEN OU HMAC SECRET INVÁLIDOS" -ForegroundColor Red
+        Write-Host "Gere um NOVO instalador através do dashboard" -ForegroundColor Yellow
+        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+        exit 401
     }
-    
-    Write-Host "Troubleshooting Steps:" -ForegroundColor Cyan
-    Write-Host "  1. Check logs: Get-Content '$LogFile'" -ForegroundColor White
-    Write-Host "  2. Verify admin privileges: ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)" -ForegroundColor White
-    Write-Host "  3. Test network: Test-NetConnection -ComputerName iavbnmduxpxhwubqrzzn.supabase.co -Port 443" -ForegroundColor White
-    Write-Host "  4. Contact support: gamehousetecnologia@gmail.com" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Log file saved to: $LogFile" -ForegroundColor Gray
-    Write-Host ""
-    
-    Read-Host "Press Enter to exit"
-    exit 1
 }
+
+Write-Host "[7/7] Enviando telemetria..." -ForegroundColor Yellow
+try {
+    $telemetry = @{
+        agent_name = "{{AGENT_NAME}}"
+        success = $true
+        platform = "windows"
+    } | ConvertTo-Json
+    Invoke-RestMethod -Uri "$ServerUrl/functions/v1/post-installation-telemetry" -Method POST -Body $telemetry -ContentType "application/json" -TimeoutSec 15 | Out-Null
+} catch {}
+
+Write-Host ""
+Write-Host "✅ INSTALAÇÃO CONCLUÍDA!" -ForegroundColor Green
+Start-Sleep -Seconds 5
 `;
 
 /**
