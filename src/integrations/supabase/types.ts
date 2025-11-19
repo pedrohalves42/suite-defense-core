@@ -124,6 +124,13 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
+            foreignKeyName: "agent_builds_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "agent_builds_enrollment_key_id_fkey"
             columns: ["enrollment_key_id"]
             isOneToOne: false
@@ -289,6 +296,13 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
+            foreignKeyName: "agent_system_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "agent_system_metrics_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -360,6 +374,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_lifecycle_state"
             referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_tokens_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -978,6 +999,13 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "enrollment_keys_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -1139,6 +1167,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_lifecycle_state"
             referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "installation_analytics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "installation_analytics_tenant_id_fkey"
@@ -1342,6 +1377,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_lifecycle_state"
             referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "jobs_parent_job_id_fkey"
@@ -1790,6 +1832,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_agent_lifecycle_state"
             referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "system_alerts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "system_alerts_tenant_id_fkey"
@@ -2405,6 +2454,13 @@ export type Database = {
             referencedColumns: ["agent_id"]
           },
           {
+            foreignKeyName: "enrollment_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "enrollment_keys_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -2675,6 +2731,38 @@ export type Database = {
           },
         ]
       }
+      v_problematic_agents: {
+        Row: {
+          agent_name: string | null
+          enrolled_at: string | null
+          has_active_token: number | null
+          id: string | null
+          issue_type: string | null
+          last_heartbeat: string | null
+          minutes_since_enrollment: number | null
+          pending_jobs_count: number | null
+          status: string | null
+          tenant_id: string | null
+          tenant_name: string | null
+          token_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_tenant_id_new_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_agents_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_problematic_jobs: {
         Row: {
           age_minutes: number | null
@@ -2752,6 +2840,10 @@ export type Database = {
           total_attempts: number
         }[]
       }
+      cleanup_all_problematic_agents: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
       cleanup_expired_keys: { Args: never; Returns: undefined }
       cleanup_old_data: { Args: never; Returns: undefined }
       cleanup_old_failed_attempts: { Args: never; Returns: undefined }
@@ -2768,6 +2860,7 @@ export type Database = {
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       cleanup_old_security_logs: { Args: never; Returns: undefined }
       cleanup_orphaned_agents: { Args: never; Returns: number }
+      cleanup_problematic_agent: { Args: { p_agent_id: string }; Returns: Json }
       cleanup_stuck_builds: {
         Args: never
         Returns: {
@@ -2777,6 +2870,7 @@ export type Database = {
       }
       current_user_tenant_id: { Args: never; Returns: string }
       dearmor: { Args: { "": string }; Returns: string }
+      diagnose_agent: { Args: { p_agent_name: string }; Returns: Json }
       diagnose_agent_issues: {
         Args: { p_agent_name: string }
         Returns: {
