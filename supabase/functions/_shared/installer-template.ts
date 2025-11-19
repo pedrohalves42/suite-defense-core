@@ -137,8 +137,8 @@ $agentScriptContent = @'
 {{AGENT_SCRIPT_CONTENT}}
 '@
 
-# Write agent script to disk
-$agentScriptContent | Out-File -FilePath $AgentScriptPath -Encoding UTF8 -Force
+# Write agent script to disk (UTF8 without BOM to prevent parsing issues)
+[System.IO.File]::WriteAllText($AgentScriptPath, $agentScriptContent, [System.Text.UTF8Encoding]::new($false))
 Write-InstallerLog "Script do agente criado em: $AgentScriptPath" "INFO"
 
 Write-Host "[3/4] Criando Scheduled Task..." -ForegroundColor Yellow
