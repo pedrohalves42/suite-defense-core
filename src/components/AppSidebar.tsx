@@ -52,7 +52,7 @@ export const AppSidebar = () => {
     { icon: Home, label: 'Meu Tenant (Admin)', to: '/admin/dashboard', end: false },
     { icon: Package, label: 'Gerenciar Tenants', to: '/super-admin/tenants', end: true },
     { icon: BarChart3, label: 'Métricas Globais', to: '/super-admin/metrics' },
-    { icon: Activity, label: 'Diagnóstico Agentes', to: '/super-admin/diagnostics' },
+    { icon: Activity, label: 'Diagnóstico Agentes', to: '/admin/agent-diagnostics' },
     { icon: BarChart3, label: 'Analytics Subs', to: '/super-admin/subscription-analytics' },
     { icon: CreditCard, label: 'Config Stripe', to: '/super-admin/stripe-setup' },
     { icon: Users, label: 'Todos Usuários', to: '/super-admin/users' },
