@@ -5,11 +5,11 @@ SOURCE="public/agent-scripts/cybershield-agent-windows-v3.ps1"
 TARGET="supabase/functions/_shared/agent-script-windows-content.ts"
 
 if [ ! -f "$SOURCE" ]; then
-  echo "❌ Arquivo fonte não encontrado: $SOURCE"
+  echo "[ERROR] Arquivo fonte não encontrado: $SOURCE"
   exit 1
 fi
 
-echo "🔄 Sincronizando $SOURCE -> $TARGET"
+echo "[SYNC] Sincronizando $SOURCE -> $TARGET"
 
 # Cabeçalho TS fixo
 cat > "$TARGET" <<'EOF'
@@ -41,4 +41,4 @@ export function getAgentScriptWindows(): string {
 }
 EOF
 
-echo "✅ Sync concluído. Tamanho: $(wc -c < "$SOURCE") bytes"
+echo "[SUCCESS] Sync concluído. Tamanho: $(wc -c < "$SOURCE") bytes"
