@@ -16,6 +16,42 @@ import { AGENT_SCRIPT_LINUX_SH } from '../_shared/agent-script-linux-content.ts'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 
 /**
+ * Valida que não há placeholders não substituídos no script
+ */
+function validateNoPlaceholders(
+  script: string,
+  scriptType: string,
+  requestId: string,
+): void {
+  const remaining = script.match(/\{\{[A-Z0-9_]+\}\}/g);
+
+  if (!remaining || remaining.length === 0) return;
+
+  const placeholderList = remaining.join(', ');
+
+  console.error('[serve-installer] Placeholders não substituídos', {
+    scriptType,
+    placeholders: placeholderList,
+    count: remaining.length,
+    requestId,
+  });
+
+  // Logar um pouco de contexto pra facilitar debug
+  remaining.slice(0, 3).forEach((ph, idx) => {
+    const pos = script.indexOf(ph);
+    const context = script.substring(Math.max(0, pos - 120), pos + 120);
+    console.error(
+      `[serve-installer] Contexto do placeholder ${idx + 1}:`,
+      context.replace(/\n/g, '\\n').slice(0, 240),
+    );
+  });
+
+  throw new Error(
+    `Script gerado contém ${remaining.length} placeholders não substituídos: ${placeholderList}`,
+  );
+}
+
+/**
  * ✅ PHASE 1 & 2 COMPLETE: Centralized Templates
  * 
  * All installer templates are now imported from the single source of truth:
@@ -357,6 +393,9 @@ Deno.serve(async (req) => {
     }
     
     console.log(`[${requestId}] ✓ Script security validation passed`);
+
+    // Validação final: garantir que não sobrou nenhum {{PLACEHOLDER}}
+    validateNoPlaceholders(templateContent, platform, requestId);
 
     // FASE 2: Calculate SHA256 hash of complete installer script
     const installerEncoder = new TextEncoder();
