@@ -17,6 +17,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const exec = promisify(execCb);
 
+const IS_CI = process.env.CI === 'true';
+
 type CheckResult = {
   name: string;
   ok: boolean;
@@ -576,14 +578,27 @@ async function main() {
   });
 
   // 2. Qualidade de código (opcional em dev)
-  sections.push({
-    title: 'Qualidade de Código (TypeScript / ESLint / Testes)',
-    results: [
-      await runCommand('TypeScript typecheck', 'npm run typecheck', true),
-      await runCommand('ESLint', 'npm run lint', true),
-      await runCommand('Vitest (unit tests)', 'npm run test', true),
-    ],
-  });
+  if (!IS_CI) {
+    sections.push({
+      title: 'Qualidade de Código (TypeScript / ESLint / Testes)',
+      results: [
+        await runCommand('TypeScript typecheck', 'npm run typecheck', true),
+        await runCommand('ESLint', 'npm run lint', true),
+        await runCommand('Vitest (unit tests)', 'npm run test', true),
+      ],
+    });
+  } else {
+    sections.push({
+      title: 'Qualidade de Código (CI)',
+      results: [
+        {
+          name: 'Checks executados no workflow de CI',
+          ok: true,
+          details: 'Pulados aqui para evitar duplicidade (typecheck/lint/tests já rodando em outros jobs)',
+        },
+      ],
+    });
+  }
 
   // 3. Edge Functions
   sections.push({

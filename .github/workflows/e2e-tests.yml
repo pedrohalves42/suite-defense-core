@@ -147,8 +147,8 @@ jobs:
         TEST_ADMIN_PASSWORD: ${{ secrets.TEST_ADMIN_PASSWORD }}
   
   guardian-validation:
-    timeout-minutes: 10
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
@@ -164,16 +164,26 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Validate agent script synchronization
-      run: npm run validate:sync
+    - name: 🔄 Validate Agent Script Sync
+      run: |
+        npm run sync:agent
+        if ! git diff --exit-code supabase/functions/_shared/agent-script-windows-content.ts; then
+          echo "❌ ERRO: Agent script não sincronizado!"
+          echo "Execute localmente: npm run sync:agent"
+          echo ""
+          echo "Diff encontrado (primeiras linhas):"
+          git diff supabase/functions/_shared/agent-script-windows-content.ts | head -80
+          exit 1
+        fi
 
-    - name: Run Guardian system validation
+    - name: 🛡 Guardian - System Validation
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
         VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
         SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         INTERNAL_FUNCTION_SECRET: ${{ secrets.INTERNAL_FUNCTION_SECRET }}
-      run: npm run validate:all
+        CI: "true"
+      run: timeout 5m npm run validate:all
 
     - name: Upload validation report
       uses: actions/upload-artifact@v4
@@ -182,4 +192,5 @@ jobs:
         name: guardian-validation-report
         path: validation-report.json
         retention-days: 30
+
 

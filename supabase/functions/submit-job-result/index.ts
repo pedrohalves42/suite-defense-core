@@ -165,6 +165,22 @@ Deno.serve(async (req) => {
 
     // Validar que o job pertence ao agente
     if (job.agent_name !== agent.agent_name) {
+      await logSecurityEvent({
+        supabase,
+        tenantId: agent.tenant_id,
+        ipAddress,
+        endpoint: '/submit-job-result',
+        attackType: 'unauthorized',
+        severity: 'high',
+        blocked: true,
+        details: {
+          reason: 'Job ownership mismatch',
+          job_id,
+          job_agent: job.agent_name,
+          requesting_agent: agent.agent_name
+        }
+      })
+      
       console.error('[submit-job-result] Job ownership mismatch:', {
         job_id,
         job_agent: job.agent_name,
@@ -176,20 +192,43 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Validar tenant
+    // Validação extra: evitar acesso cross-tenant
     if (job.tenant_id !== agent.tenant_id) {
-      console.error('[submit-job-result] Tenant mismatch:', {
+      await logSecurityEvent({
+        supabase,
+        tenantId: agent.tenant_id,
+        ipAddress,
+        endpoint: '/submit-job-result',
+        attackType: 'unauthorized',
+        severity: 'critical',
+        blocked: true,
+        details: {
+          reason: 'Cross-tenant job access attempt',
+          job_tenant: job.tenant_id,
+          agent_tenant: agent.tenant_id,
+          job_id,
+          agent_name: agent.agent_name
+        }
+      })
+      
+      console.error('[submit-job-result] Cross-tenant access blocked:', {
         job_id,
         job_tenant: job.tenant_id,
         agent_tenant: agent.tenant_id
       })
       return new Response(
-        JSON.stringify({ error: 'Tenant mismatch' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          error: 'Cross-tenant access denied',
+          details: 'Job pertence a outra organização'
+        }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
       )
     }
 
-    // Verificar se já está concluído (idempotência)
+    // Impedir que job seja processado duas vezes
     if (['done', 'completed', 'failed'].includes(job.status)) {
       console.log('[submit-job-result] Job already done:', job_id)
       return new Response(

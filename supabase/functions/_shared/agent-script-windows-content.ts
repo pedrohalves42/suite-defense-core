@@ -732,6 +732,39 @@ catch {
 }
 `;
 
+// FASE 1: Exportar conteúdo do agente diretamente (sem file system)
 export function getAgentScriptWindows(): string {
   return AGENT_SCRIPT_WINDOWS_CONTENT;
+}
+
+// Função para validar o conteúdo do script
+export function validateAgentScript(scriptContent: string): boolean {
+  if (!scriptContent || scriptContent.length < 1000) {
+    return false;
+  }
+  
+  const requiredSignatures = [
+    'CyberShield Agent',
+    'Write-Log',
+    'Send-Heartbeat',
+    'Poll-Jobs',
+    'Submit-JobResult',
+  ];
+  
+  for (const signature of requiredSignatures) {
+    if (!scriptContent.includes(signature)) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+// Função para calcular hash SHA256
+export async function calculateScriptHash(scriptContent: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(scriptContent);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
