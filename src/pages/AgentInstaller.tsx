@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Package, Download, Terminal, CheckCircle2, Loader2, Copy, AlertTriangle, Shield, Clock, FileCheck, BookOpen, HelpCircle, Zap, ExternalLink, RefreshCw, Upload } from "lucide-react";
 import { BuildProgressIndicator } from "@/components/BuildProgressIndicator";
 import { ManualInstallationCard } from "@/components/ManualInstallationCard";
@@ -98,12 +99,31 @@ const AgentInstaller = () => {
   // Connectivity & Retry hooks
   const { isOnline } = useOnlineStatus();
   const { retryFetch, isRetrying } = useRetryFetch();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
   // Step 1: Configuration
   const [agentName, setAgentName] = useState("");
   const [platform, setPlatform] = useState<"windows" | "linux" | "macos">("windows");
   const [agentNameError, setAgentNameError] = useState("");
   const [isCheckingName, setIsCheckingName] = useState(false);
+
+  // Detectar se veio de regeneração de credenciais
+  useEffect(() => {
+    const agentNameFromUrl = searchParams.get("agent_name");
+    const isRegenerated = searchParams.get("regenerated") === "true";
+
+    if (agentNameFromUrl) {
+      setAgentName(agentNameFromUrl);
+    }
+
+    if (agentNameFromUrl && isRegenerated) {
+      toast.info(
+        `🔄 Agente "${agentNameFromUrl}" teve credenciais regeneradas. O instalador antigo NÃO funciona mais. Gere um novo abaixo.`,
+        { duration: 8000 }
+      );
+    }
+  }, [searchParams]);
   
   // FASE 1.1: Health check do GitHub
   const [githubHealthy, setGithubHealthy] = useState<boolean | null>(null);
@@ -1055,6 +1075,34 @@ const AgentInstaller = () => {
           </p>
         </div>
       </div>
+
+      {/* Alerta de regeneração de credenciais */}
+      {searchParams.get("regenerated") === "true" && (
+        <Alert className="border-yellow-500/50 bg-yellow-500/10">
+          <AlertTriangle className="h-5 w-5 text-yellow-500" />
+          <AlertTitle className="text-yellow-600 dark:text-yellow-400">
+            Credenciais Regeneradas
+          </AlertTitle>
+          <AlertDescription className="text-sm text-muted-foreground space-y-3">
+            <p>
+              O agente <strong>{agentName}</strong> teve suas credenciais invalidadas. 
+              O instalador antigo não funciona mais.
+            </p>
+            <p>
+              Gere um novo método de instalação abaixo e reinstale o agente na máquina alvo.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/admin/agent-troubleshooting")}
+              className="gap-2"
+            >
+              <Terminal className="h-3 w-3" />
+              Voltar para Troubleshooting
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Circuit Breaker Warning */}
       {circuitBreakerOpen && (
