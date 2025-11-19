@@ -366,6 +366,86 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ============= VALIDAÇÃO CRÍTICA ADICIONAL =============
+
+    // 1) Garantir que AGENT_SCRIPT_CONTENT foi substituído (específico para Windows)
+    if (platform === 'windows' && templateContent.includes('{{AGENT_SCRIPT_CONTENT}}')) {
+      console.error(`[${requestId}] CRITICAL: AGENT_SCRIPT_CONTENT placeholder not replaced`, {
+        platform,
+        agentName: agentData.agent_name,
+        scriptSize: agentScriptContentForPlatform?.length || 0
+      });
+      
+      return new Response(
+        JSON.stringify({
+          error: 'Agent script content not injected',
+          details: 'Template contains unresolved {{AGENT_SCRIPT_CONTENT}} placeholder',
+          requestId,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // 2) Validar tamanho mínimo do script gerado (detectar truncamento)
+    const MIN_INSTALLER_SIZE = 10000; // ~10KB mínimo para um instalador válido
+
+    if (templateContent.length < MIN_INSTALLER_SIZE) {
+      console.error(`[${requestId}] CRITICAL: Generated installer too small`, {
+        platform,
+        agentName: agentData.agent_name,
+        installerSize: templateContent.length,
+        expectedMinimum: MIN_INSTALLER_SIZE
+      });
+      
+      return new Response(
+        JSON.stringify({
+          error: 'Generated installer script too small',
+          details: `Installer size: ${templateContent.length} bytes (expected > ${MIN_INSTALLER_SIZE} bytes)`,
+          requestId,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // 3) Para Windows, validar que o script do agente embutido não está vazio ou truncado
+    if (platform === 'windows') {
+      const scriptContentMatch = templateContent.match(/\$AgentScriptContent = @'\n([\s\S]*?)\n'@/);
+      if (!scriptContentMatch || scriptContentMatch[1].trim().length < 5000) {
+        console.error(`[${requestId}] CRITICAL: Windows agent script content invalid or truncated`, {
+          agentName: agentData.agent_name,
+          embeddedScriptSize: scriptContentMatch?.[1]?.length || 0
+        });
+        
+        return new Response(
+          JSON.stringify({
+            error: 'Windows agent script invalid or truncated',
+            details: 'Embedded PowerShell script is too small or missing',
+            requestId,
+            timestamp: new Date().toISOString()
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+    }
+
+    console.log(`[${requestId}] ✅ Additional installer validations passed`, {
+      installerSize: templateContent.length,
+      installerSizeKB: (templateContent.length / 1024).toFixed(2),
+      platform,
+      agentName: agentData.agent_name
+    });
+
     // ✅ PHASE 3: Security validation - detect dangerous patterns
     console.log(`[${requestId}] Validating script security...`);
     
