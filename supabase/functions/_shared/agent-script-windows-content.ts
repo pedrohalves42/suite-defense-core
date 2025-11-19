@@ -44,7 +44,36 @@ param(
 \$ErrorActionPreference = "Stop"
 
 # ============================================
-#  VARIÁVEIS GLOBAIS
+#  TRAP GLOBAL - Captura QUALQUER erro não tratado
+# ============================================
+\$Global:CS_LogFile = "C:\\CyberShield\\logs\\cybershield-agent-v3.log"
+
+trap {
+    \$errorMsg = "FATAL ERROR: \$(\$_.Exception.Message)"
+    \$stack = \$_.ScriptStackTrace
+    
+    # Tentar logar no arquivo
+    try {
+        \$logDir = "C:\\CyberShield\\logs"
+        if (-not (Test-Path \$logDir)) {
+            New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
+        }
+        
+        \$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        "[\$timestamp] [FATAL] \$errorMsg" | Out-File -FilePath \$Global:CS_LogFile -Append -Encoding UTF8
+        "[\$timestamp] [FATAL] Stack: \$stack" | Out-File -FilePath \$Global:CS_LogFile -Append -Encoding UTF8
+    } catch {
+        # Se até isso falhar, escrever no Event Log do Windows
+        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9999 -EntryType Error -Message \$errorMsg -ErrorAction SilentlyContinue
+    }
+    
+    Write-Host "[FATAL] \$errorMsg" -ForegroundColor Red
+    Write-Host "[FATAL] Stack: \$stack" -ForegroundColor Red
+    break
+}
+
+# ============================================
+#  VARIÁVEIS GLOBAIS - CAMINHO ABSOLUTO (não depende de \$PSScriptRoot)
 # ============================================
 \$Global:ServerUrl    = \$ServerUrl.TrimEnd('/')
 \$Global:AgentToken   = \$AgentToken
@@ -52,12 +81,17 @@ param(
 \$Global:AgentName    = \$AgentName
 \$Global:AgentVersion = \$AgentVersion
 
-# Diretório de log
-\$logDir = Join-Path -Path \$PSScriptRoot -ChildPath "logs"
+# Diretório de log com caminho absoluto
+\$logDir = "C:\\CyberShield\\logs"
 if (-not (Test-Path \$logDir)) {
-    New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
+    try {
+        New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
+    } catch {
+        Write-Host "[ERROR] Failed to create log directory: \$_" -ForegroundColor Red
+        # Continuar - trap vai logar no Event Log se necessário
+    }
 }
-\$Global:LogFilePath = Join-Path -Path \$logDir -ChildPath "cybershield-agent-v3.log"
+\$Global:LogFilePath = "\$logDir\\cybershield-agent-v3.log"
 
 # Intervalos
 \$Global:PollIntervalSeconds = 30
