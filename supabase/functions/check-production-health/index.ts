@@ -132,6 +132,8 @@ Deno.serve(async (req) => {
     if (alerts.length > 0) {
       console.log(`[check-production-health] Creating ${alerts.length} alert(s)`);
       
+      const criticalAlerts = [];
+      
       for (const alert of alerts) {
         const { error: insertError } = await supabase
           .from('system_alerts')
@@ -143,6 +145,36 @@ Deno.serve(async (req) => {
 
         if (insertError) {
           console.error('[check-production-health] Error inserting alert:', insertError);
+        } else if (alert.severity === 'critical' || alert.severity === 'high') {
+          criticalAlerts.push(alert);
+        }
+      }
+
+      // ✅ CORREÇÃO #3A: Enviar notificações automáticas para alertas críticos
+      if (criticalAlerts.length > 0) {
+        console.log(`[check-production-health] Sending notifications for ${criticalAlerts.length} critical alert(s)`);
+        
+        try {
+          const { error: notifyError } = await supabase.functions.invoke('send-system-alert', {
+            body: {
+              event: 'production_health_check',
+              severity: 'critical',
+              tenant_id: null, // System-wide
+              details: {
+                alerts: criticalAlerts,
+                timestamp: now.toISOString(),
+                total_alerts: criticalAlerts.length
+              }
+            }
+          });
+
+          if (notifyError) {
+            console.error('[check-production-health] Error sending notifications:', notifyError);
+          } else {
+            console.log('[check-production-health] ✅ Notifications sent successfully');
+          }
+        } catch (notifyErr) {
+          console.error('[check-production-health] Exception sending notifications:', notifyErr);
         }
       }
     }
