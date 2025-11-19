@@ -139,10 +139,11 @@ Deno.serve(async (req) => {
     // FASE 1 CRÍTICO: Use inline agent script (always available)
     logger.info('Using inline agent script', { requestId });
     
-    const { getAgentScriptWindows, validateAgentScript, calculateScriptHash } = await import('../_shared/agent-script-windows-content.ts');
+const { getAgentScriptWindows } = await import('../_shared/agent-script-windows-content.ts');
+const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
     const agentScriptContent = getAgentScriptWindows();
     
-    if (!validateAgentScript(agentScriptContent)) {
+    if (!validateAgentScriptContent(agentScriptContent)) {
       logger.error('CRITICAL: Inline script validation failed', { requestId });
       return createErrorResponse(
         ErrorCode.INTERNAL_ERROR,

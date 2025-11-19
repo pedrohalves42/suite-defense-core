@@ -99,3 +99,39 @@ export async function validateAgentScriptOrThrow(): Promise<void> {
 
   console.log('[VALIDATION] Agent script validated successfully:', result.details);
 }
+
+/**
+ * Validate agent script content (string-based version for inline validation)
+ */
+export function validateAgentScriptContent(scriptContent: string): boolean {
+  if (!scriptContent || scriptContent.length < 1000) {
+    return false;
+  }
+  
+  const requiredSignatures = [
+    'CyberShield Agent',
+    'Write-Log',
+    'Send-Heartbeat',
+    'Poll-Jobs',
+    'Submit-JobResult',
+  ];
+  
+  for (const signature of requiredSignatures) {
+    if (!scriptContent.includes(signature)) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * Calculate SHA256 hash of script content
+ */
+export async function calculateScriptHash(scriptContent: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(scriptContent);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
