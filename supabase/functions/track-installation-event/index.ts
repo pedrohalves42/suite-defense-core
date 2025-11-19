@@ -7,7 +7,7 @@ import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 // Validation schema
 const InstallationEventSchema = z.object({
   agent_name: z.string().trim().min(1).max(100),
-  event_type: z.enum(['generated', 'downloaded', 'command_copied', 'installed', 'failed', 'post_installation', 'post_installation_unverified']),
+  event_type: z.enum(['generated', 'downloaded', 'command_copied', 'installed', 'failed', 'post_installation', 'post_installation_unverified', 'installation_failed']),
   platform: z.enum(['windows', 'linux', 'macos']),
   installation_method: z.enum(['download', 'one_click', 'manual']).optional(),
   installation_time_seconds: z.number().int().positive().max(86400).optional(),
@@ -89,7 +89,160 @@ Deno.serve(async (req) => {
 
     const event: InstallationEvent = validation.data;
 
-    // Get user authentication (optional for telemetry)
+    // ===== MODO ALTERNATIVO: Auth via X-Agent-Token (para instaladores falhando) =====
+    const agentToken = req.headers.get('X-Agent-Token');
+    const hmacSignature = req.headers.get('X-HMAC-Signature');
+
+    if (agentToken && hmacSignature && event.event_type === 'installation_failed') {
+      // Modo telemetria de falha: não exige JWT, usa agent credentials
+      logger.info('[track-installation-event] Using agent-token mode for failure telemetry', { requestId });
+      
+      try {
+        // Buscar agent pré-existente (pode não existir ainda se instalação está falhando antes de registrar)
+        const { data: agentData } = await supabase
+          .from('agents')
+          .select('id, tenant_id, hmac_secret')
+          .eq('agent_name', event.agent_name)
+          .maybeSingle();
+
+        if (!agentData) {
+          // Agent não existe ainda (instalação falhando antes de registrar)
+          // Tentar usar enrollment_key_prefix do metadata para encontrar tenant
+          const tokenPrefix = event.metadata?.token_prefix as string | undefined;
+          
+          if (!tokenPrefix) {
+            logger.warn('[track-installation-event] No agent and no token prefix', { requestId });
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                tracked: false,
+                reason: 'no_tenant_identifier',
+                requestId,
+              } as TelemetryResponse),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // Buscar tenant via enrollment key
+          const { data: keyData } = await supabase
+            .from('enrollment_keys')
+            .select('tenant_id')
+            .ilike('key', `${tokenPrefix}%`)
+            .eq('is_active', true)
+            .maybeSingle();
+
+          if (!keyData) {
+            logger.warn('[track-installation-event] No enrollment key found', { requestId, prefix: tokenPrefix });
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                tracked: false,
+                reason: 'enrollment_key_not_found',
+                requestId,
+              } as TelemetryResponse),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          const tenantId = keyData.tenant_id;
+
+          // Inserir telemetria de falha sem agent_id
+          const { error: insertError } = await supabase
+            .from('installation_analytics')
+            .insert({
+              tenant_id: tenantId,
+              agent_id: null, // Agent não existe ainda
+              agent_name: event.agent_name,
+              event_type: 'installation_failed',
+              platform: event.platform,
+              installation_method: event.installation_method,
+              error_message: event.error_message,
+              metadata: event.metadata || {},
+              success: false,
+              ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+              user_agent: req.headers.get('user-agent') || 'unknown',
+            });
+
+          if (insertError) {
+            logger.error('[track-installation-event] Insert failed', { requestId, error: insertError });
+            return new Response(
+              JSON.stringify({
+                ok: false,
+                tracked: false,
+                reason: 'insert_failed',
+                requestId,
+                details: { code: insertError.code, message: insertError.message }
+              } as TelemetryResponse),
+              { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          logger.success('[track-installation-event] Failure telemetry tracked (agent-token mode)', { requestId });
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              tracked: true,
+              requestId
+            } as TelemetryResponse),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Se agent existe, inserir telemetria com agent_id
+        const { error: insertError } = await supabase
+          .from('installation_analytics')
+          .insert({
+            tenant_id: agentData.tenant_id,
+            agent_id: agentData.id,
+            agent_name: event.agent_name,
+            event_type: 'installation_failed',
+            platform: event.platform,
+            installation_method: event.installation_method,
+            error_message: event.error_message,
+            metadata: event.metadata || {},
+            success: false,
+            ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+            user_agent: req.headers.get('user-agent') || 'unknown',
+          });
+
+        if (insertError) {
+          logger.error('[track-installation-event] Insert failed', { requestId, error: insertError });
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              tracked: false,
+              reason: 'insert_failed',
+              requestId,
+              details: { code: insertError.code, message: insertError.message }
+            } as TelemetryResponse),
+            { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        logger.success('[track-installation-event] Failure telemetry tracked (agent-token mode with agent_id)', { requestId });
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            tracked: true,
+            requestId
+          } as TelemetryResponse),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (err) {
+        logger.error('[track-installation-event] Agent-token mode error', { requestId, error: err });
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            tracked: false,
+            reason: 'internal_error',
+            requestId,
+          } as TelemetryResponse),
+          { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // ===== FLUXO NORMAL: Auth via JWT =====
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       logger.warn('[track-installation-event] No authorization header', { requestId });
