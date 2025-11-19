@@ -97,7 +97,7 @@ export default function AgentTroubleshooting() {
       // Redirecionar para página de instalação com query params
       setTimeout(() => {
         navigate(
-          `/agent-installer?agent_name=${encodeURIComponent(agentName)}&regenerated=true`
+          `/installer?agent_name=${encodeURIComponent(agentName)}&regenerated=true`
         );
       }, 1500); // Delay para usuário ler o toast
       
