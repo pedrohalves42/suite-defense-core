@@ -5,6 +5,9 @@ import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 
 Deno.serve(async (req) => {
+  // ⚠️ DEPRECATION WARNING - This endpoint is being phased out
+  console.warn('[ack-job] ⚠️ DEPRECATED: This endpoint is being phased out. Use /submit-job-result instead.');
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -189,8 +192,20 @@ Deno.serve(async (req) => {
     if (existingJob.status === 'done') {
       console.log('[ACK] Job já estava confirmado (idempotente):', validatedJobId)
       return new Response(
-        JSON.stringify({ ok: true, message: 'Job já estava confirmado' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        JSON.stringify({ 
+          ok: true, 
+          message: 'Job já estava confirmado (v1 - DEPRECATED)',
+          deprecation_warning: 'This endpoint will be removed. Use submit-job-result'
+        }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'X-Deprecation-Warning': 'ack-job is deprecated. Migrate to submit-job-result',
+            'X-Sunset-Date': '2025-12-31'
+          }, 
+          status: 200 
+        }
       )
     }
 
@@ -219,9 +234,18 @@ Deno.serve(async (req) => {
     console.log('[ACK] Job confirmado com sucesso:', validatedJobId, updatedJob)
 
     return new Response(
-      JSON.stringify({ ok: true }),
+      JSON.stringify({ 
+        ok: true,
+        message: 'Job acknowledged (v1 - DEPRECATED)',
+        deprecation_warning: 'This endpoint will be removed on 2025-12-31. Migrate to submit-job-result'
+      }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'X-Deprecation-Warning': 'ack-job is deprecated. Migrate to submit-job-result',
+          'X-Sunset-Date': '2025-12-31'
+        },
         status: 200
       }
     )
