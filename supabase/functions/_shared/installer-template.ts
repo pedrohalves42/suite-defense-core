@@ -11,9 +11,14 @@
  * Last synchronized: 2025-01-18 (v3.1.0-SIMPLIFIED Windows template)
  */
 
+// Helper to create raw string templates (avoids escaping issues with backticks in PowerShell)
+const raw = (strings: TemplateStringsArray, ...values: unknown[]) => {
+  return strings.raw[0];
+};
+
 // Windows Installer Template - Simplified and hardened
 // Single source of truth with inline agent script using PowerShell here-string
-export const WINDOWS_INSTALLER_TEMPLATE = `#Requires -RunAsAdministrator
+export const WINDOWS_INSTALLER_TEMPLATE = raw`#Requires -RunAsAdministrator
 #Requires -Version 5.1
 
 param(
