@@ -297,10 +297,10 @@ function Send-PostInstallationEvent {
     Write-Log "Enviando post_installation..." "INFO"
 
     try {
-        $result = Invoke-SecureRequest `
-            -Path "/functions/v1/track-installation-event" `
-            -Method "POST" `
-            -Body $body `
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/track-installation-event" \`
+            -Method "POST" \`
+            -Body \$body \`
             -TimeoutSec 20
 
         if ($result.Success -and $result.StatusCode -eq 200) {
