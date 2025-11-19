@@ -78,6 +78,30 @@ if ($PSVersionTable.PSVersion.Major -lt 5) {
 
 Write-InstallerLog "PowerShell versão $($PSVersionTable.PSVersion) detectado." "INFO"
 
+# ===== Debug seguro de configuração do agente =====
+try {
+    $tokenPrefix = if ($AgentToken) {
+        $AgentToken.Substring(0, [Math]::Min(8, $AgentToken.Length))
+    } else {
+        ''
+    }
+
+    $hmacPrefix = if ($HmacSecret) {
+        $HmacSecret.Substring(0, [Math]::Min(8, $HmacSecret.Length))
+    } else {
+        ''
+    }
+
+    Write-InstallerLog "📋 Configuração do agente:" "INFO"
+    Write-InstallerLog "  → ServerUrl: $ServerUrl" "INFO"
+    Write-InstallerLog "  → AgentName: $AgentName" "INFO"
+    Write-InstallerLog "  → Token (prefix): $tokenPrefix..." "INFO"
+    Write-InstallerLog "  → HMAC (prefix): $hmacPrefix..." "INFO"
+} catch {
+    Write-InstallerLog "⚠ Falha ao logar prefixos de credenciais: $($_.Exception.Message)" "WARN"
+}
+# ================================================
+
 # Agent script path
 $AgentScriptPath = Join-Path $BasePath "cybershield-agent-windows-v3.ps1"
 
