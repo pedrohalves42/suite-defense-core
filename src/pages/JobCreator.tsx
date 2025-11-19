@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Zap, Plus, Server, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
+import { Zap, Plus, Server, CheckCircle, XCircle, Clock, AlertCircle, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
+import { useMutation } from "@tanstack/react-query";
 
 interface Agent {
   id: string;
@@ -100,6 +101,38 @@ const JobCreator = () => {
       setRecentJobs(data || []);
     } catch (error) {
       logger.error("Erro ao carregar jobs", error);
+    }
+  };
+
+  const clearPendingJobs = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('jobs')
+        .delete()
+        .eq('status', 'queued')
+        .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Jobs pendentes limpos com sucesso");
+      loadJobs();
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao limpar jobs: ${error.message}`);
+    }
+  });
+
+  const handleClearPendingJobs = () => {
+    const pendingCount = recentJobs.filter(j => j.status === 'queued').length;
+    
+    if (pendingCount === 0) {
+      toast.info("Não há jobs pendentes para limpar");
+      return;
+    }
+    
+    if (confirm(`Limpar ${pendingCount} job(s) pendente(s) com mais de 24h?`)) {
+      clearPendingJobs.mutate();
     }
   };
 
@@ -249,16 +282,27 @@ const JobCreator = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
-          <Zap className="h-8 w-8 text-primary animate-pulse-glow" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
+            <Zap className="h-8 w-8 text-primary animate-pulse-glow" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Criador de Jobs
+            </h1>
+            <p className="text-sm text-muted-foreground">Crie e gerencie jobs para os agentes</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Criador de Jobs
-          </h1>
-          <p className="text-sm text-muted-foreground">Crie e gerencie jobs para os agentes</p>
-        </div>
+        <Button
+          onClick={handleClearPendingJobs}
+          disabled={clearPendingJobs.isPending}
+          variant="outline"
+          className="gap-2"
+        >
+          <Trash2 className="h-4 w-4" />
+          {clearPendingJobs.isPending ? "Limpando..." : "Limpar Pendentes"}
+        </Button>
       </div>
 
       {/* Stats Cards */}
