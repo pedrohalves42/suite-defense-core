@@ -17,10 +17,10 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `
     - Evento de post_installation
     
     Uso:
-    powershell.exe -ExecutionPolicy Bypass -File .\cybershield-agent-windows-v3.ps1 `
-        -ServerUrl "https://seu-projeto.supabase.co" `
-        -AgentToken "AGENT_TOKEN_AQUI" `
-        -HmacSecret "64_HEX_CHARS_AQUI" `
+    powershell.exe -ExecutionPolicy Bypass -File .\cybershield-agent-windows-v3.ps1 \`
+        -ServerUrl "https://seu-projeto.supabase.co" \`
+        -AgentToken "AGENT_TOKEN_AQUI" \`
+        -HmacSecret "64_HEX_CHARS_AQUI" \`
         -AgentName "meu-servidor-01"
 #>
 
@@ -331,10 +331,10 @@ function Send-Heartbeat {
     Write-Log "Enviando heartbeat..." "INFO"
 
     try {
-        $result = Invoke-SecureRequest `
-            -Path "/functions/v1/heartbeat" `
-            -Method "POST" `
-            -Body $body `
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/heartbeat" \`
+            -Method "POST" \`
+            -Body \$body \`
             -TimeoutSec 15
 
         if ($result.Success -and $result.StatusCode -eq 200) {
@@ -382,10 +382,10 @@ function Submit-JobResult {
     Write-Log "Enviando resultado do job $JobId (status=$Status)..." "INFO"
 
     try {
-        $result = Invoke-SecureRequest `
-            -Path "/functions/v1/submit-job-result" `
-            -Method "POST" `
-            -Body $body `
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/submit-job-result" \`
+            -Method "POST" \`
+            -Body \$body \`
             -TimeoutSec 30
 
         if ($result.Success -and $result.StatusCode -eq 200) {
@@ -396,8 +396,8 @@ function Submit-JobResult {
             return $false
         }
     } catch {
-        Write-Log "❌ Erro ao enviar resultado do job ${JobId}: $($_.Exception.Message)" "ERROR"
-        return $false
+        Write-Log "❌ Erro ao enviar resultado do job \${JobId}: \$(\$_.Exception.Message)" "ERROR"
+        return \$false
     }
 }
 
@@ -466,10 +466,10 @@ function Execute-Job {
                     }
 
                     # Chama backend scan-virus
-                    $scanResult = Invoke-SecureRequest `
-                        -Uri "$ServerUrl/functions/v1/scan-virus" `
-                        -Method POST `
-                        -Body $scanBody `
+                    \$scanResult = Invoke-SecureRequest \`
+                        -Uri "\$ServerUrl/functions/v1/scan-virus" \`
+                        -Method POST \`
+                        -Body \$scanBody \`
                         -TimeoutSec 60
 
                     if (-not $scanResult.Success) {
@@ -500,9 +500,9 @@ function Execute-Job {
                             New-Item -ItemType Directory -Path $quarantineRoot -Force | Out-Null
                         }
 
-                        $fileName = [System.IO.Path]::GetFileName($filePath)
-                        $guid = [guid]::NewGuid().ToString()
-                        $quarantinePath = Join-Path $quarantineRoot "$guid`_$fileName"
+                        \$fileName = [System.IO.Path]::GetFileName(\$filePath)
+                        \$guid = [guid]::NewGuid().ToString()
+                        \$quarantinePath = Join-Path \$quarantineRoot "\$guid\`_\$fileName"
 
                         Move-Item -Path $filePath -Destination $quarantinePath -Force
                         Write-Log "✅ Arquivo movido para quarentena: $quarantinePath" "SUCCESS"
@@ -528,9 +528,9 @@ function Execute-Job {
                     Write-Log "🔄 Job 'update_agent' recebido" "INFO"
 
                     # Chama serve-agent-update
-                    $updateResult = Invoke-SecureRequest `
-                        -Uri "$ServerUrl/functions/v1/serve-agent-update" `
-                        -Method GET `
+                    \$updateResult = Invoke-SecureRequest \`
+                        -Uri "\$ServerUrl/functions/v1/serve-agent-update" \`
+                        -Method GET \`
                         -TimeoutSec 60
 
                     if (-not $updateResult.Success) {
@@ -610,25 +610,25 @@ function Execute-Job {
             }
         }
 
-        $execTime = [int]((Get-Date) - $startTime).TotalSeconds
+        \$execTime = [int]((Get-Date) - \$startTime).TotalSeconds
 
-        Submit-JobResult `
-            -JobId $jobId `
-            -Status "completed" `
-            -Output $output `
-            -ExecutionTimeSeconds $execTime
+        Submit-JobResult \`
+            -JobId \$jobId \`
+            -Status "completed" \`
+            -Output \$output \`
+            -ExecutionTimeSeconds \$execTime
     }
     catch {
-        $err = "Erro ao executar job $jobId`: $($_.Exception.Message)"
-        Write-Log $err "ERROR"
+        \$err = "Erro ao executar job \$jobId\`: \$(\$_.Exception.Message)"
+        Write-Log \$err "ERROR"
 
-        $execTime = [int]((Get-Date) - $startTime).TotalSeconds
+        \$execTime = [int]((Get-Date) - \$startTime).TotalSeconds
 
-        Submit-JobResult `
-            -JobId $jobId `
-            -Status "failed" `
-            -ErrorMessage $err `
-            -ExecutionTimeSeconds $execTime
+        Submit-JobResult \`
+            -JobId \$jobId \`
+            -Status "failed" \`
+            -ErrorMessage \$err \`
+            -ExecutionTimeSeconds \$execTime
     }
 }
 
@@ -644,10 +644,10 @@ function Poll-Jobs {
     Write-Log "Consultando jobs..." "INFO"
 
     try {
-        $result = Invoke-SecureRequest `
-            -Path "/functions/v1/poll-jobs" `
-            -Method "POST" `
-            -Body $body `
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/poll-jobs" \`
+            -Method "POST" \`
+            -Body \$body \`
             -TimeoutSec 20
 
         if (-not $result.Success -or $result.StatusCode -ne 200) {
@@ -695,8 +695,8 @@ try {
     # 2) Primeiro heartbeat
     Send-Heartbeat
 
-    $bootstrapElapsed = [int]((Get-Date) - $bootstrapStart).TotalSeconds
-    Write-Log "✅ Bootstrap concluído em ${bootstrapElapsed}s" "SUCCESS"
+    \$bootstrapElapsed = [int]((Get-Date) - \$bootstrapStart).TotalSeconds
+    Write-Log "✅ Bootstrap concluído em \${bootstrapElapsed}s" "SUCCESS"
 
     Write-Log "🔄 Entrando no loop principal (intervalo=$($Global:PollIntervalSeconds)s)" "INFO"
 
