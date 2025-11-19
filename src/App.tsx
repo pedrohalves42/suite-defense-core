@@ -60,6 +60,7 @@ import AIActionApproval from "./pages/admin/AIActionApproval";
 import Installations from "./pages/admin/Installations";
 import Tenant from "./pages/admin/Tenant";
 import JobsV3Migration from "./pages/admin/JobsV3Migration";
+import InstallationHealth from "./pages/admin/InstallationHealth";
 
 // CORREÇÃO: QueryClient já está inicializado no src/main.tsx
 // Remover duplicação para manter configurações otimizadas
@@ -123,6 +124,7 @@ const App = () => (
                 <Route path="system-logs" element={<SystemLogs />} />
                 <Route path="tenant" element={<Tenant />} />
                 <Route path="jobs-v3-migration" element={<JobsV3Migration />} />
+                <Route path="installation-health" element={<InstallationHealth />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
