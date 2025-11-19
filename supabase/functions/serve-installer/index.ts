@@ -237,10 +237,11 @@ Deno.serve(async (req) => {
     // FASE 1 CRÍTICO: Use inline agent script (always available)
     console.log(`[${requestId}] Using inline agent script`);
     
-    const { getAgentScriptWindows, validateAgentScript, calculateScriptHash } = await import('../_shared/agent-script-windows-content.ts');
+const { getAgentScriptWindows } = await import('../_shared/agent-script-windows-content.ts');
+const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
     const agentScriptContent = getAgentScriptWindows();
     
-    if (!validateAgentScript(agentScriptContent)) {
+    if (!validateAgentScriptContent(agentScriptContent)) {
       console.error(`[${requestId}] CRITICAL: Inline script validation failed`);
       return new Response(
         'Failed to generate secure installer - inline script validation failed',
