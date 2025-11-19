@@ -44,36 +44,7 @@ param(
 \$ErrorActionPreference = "Stop"
 
 # ============================================
-#  TRAP GLOBAL - Captura QUALQUER erro não tratado
-# ============================================
-\$Global:CS_LogFile = "C:\\CyberShield\\logs\\cybershield-agent-v3.log"
-
-trap {
-    \$errorMsg = "FATAL ERROR: \$(\$_.Exception.Message)"
-    \$stack = \$_.ScriptStackTrace
-    
-    # Tentar logar no arquivo
-    try {
-        \$logDir = "C:\\CyberShield\\logs"
-        if (-not (Test-Path \$logDir)) {
-            New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
-        }
-        
-        \$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        "[\$timestamp] [FATAL] \$errorMsg" | Out-File -FilePath \$Global:CS_LogFile -Append -Encoding UTF8
-        "[\$timestamp] [FATAL] Stack: \$stack" | Out-File -FilePath \$Global:CS_LogFile -Append -Encoding UTF8
-    } catch {
-        # Se até isso falhar, escrever no Event Log do Windows
-        Write-EventLog -LogName Application -Source "CyberShield" -EventId 9999 -EntryType Error -Message \$errorMsg -ErrorAction SilentlyContinue
-    }
-    
-    Write-Host "[FATAL] \$errorMsg" -ForegroundColor Red
-    Write-Host "[FATAL] Stack: \$stack" -ForegroundColor Red
-    break
-}
-
-# ============================================
-#  VARIÁVEIS GLOBAIS - CAMINHO ABSOLUTO (não depende de \$PSScriptRoot)
+#  VARIÁVEIS GLOBAIS
 # ============================================
 \$Global:ServerUrl    = \$ServerUrl.TrimEnd('/')
 \$Global:AgentToken   = \$AgentToken
@@ -81,17 +52,12 @@ trap {
 \$Global:AgentName    = \$AgentName
 \$Global:AgentVersion = \$AgentVersion
 
-# Diretório de log com caminho absoluto
-\$logDir = "C:\\CyberShield\\logs"
+# Diretório de log
+\$logDir = Join-Path -Path \$PSScriptRoot -ChildPath "logs"
 if (-not (Test-Path \$logDir)) {
-    try {
-        New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
-    } catch {
-        Write-Host "[ERROR] Failed to create log directory: \$_" -ForegroundColor Red
-        # Continuar - trap vai logar no Event Log se necessário
-    }
+    New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
 }
-\$Global:LogFilePath = "\$logDir\\cybershield-agent-v3.log"
+\$Global:LogFilePath = Join-Path -Path \$logDir -ChildPath "cybershield-agent-v3.log"
 
 # Intervalos
 \$Global:PollIntervalSeconds = 30
@@ -773,39 +739,6 @@ catch {
 }
 `;
 
-// FASE 1: Exportar conteúdo do agente diretamente (sem file system)
 export function getAgentScriptWindows(): string {
   return AGENT_SCRIPT_WINDOWS_CONTENT;
-}
-
-// Função para validar o conteúdo do script
-export function validateAgentScript(scriptContent: string): boolean {
-  if (!scriptContent || scriptContent.length < 1000) {
-    return false;
-  }
-  
-  const requiredSignatures = [
-    'CyberShield Agent',
-    'Write-Log',
-    'Send-Heartbeat',
-    'Poll-Jobs',
-    'Submit-JobResult',
-  ];
-  
-  for (const signature of requiredSignatures) {
-    if (!scriptContent.includes(signature)) {
-      return false;
-    }
-  }
-  
-  return true;
-}
-
-// Função para calcular hash SHA256
-export async function calculateScriptHash(scriptContent: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(scriptContent);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
