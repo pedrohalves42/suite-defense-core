@@ -4,6 +4,150 @@ Guia completo para diagnosticar e resolver problemas com instaladores do agente.
 
 ---
 
+## ⚡ Checklist Rápido (5 minutos)
+
+Execute estas verificações após rodar o instalador:
+
+### 1. Verificar Logs
+```powershell
+Get-Content "C:\CyberShield\logs\installer.log" -Tail 50
+```
+
+**O que procurar:**
+- ✅ `FASE 6: Instalação concluída com sucesso`
+- ❌ `ERRO CRÍTICO` ou `throw`
+
+### 2. Verificar Scheduled Task
+```powershell
+Get-ScheduledTask -TaskName "CyberShieldAgent*" | Format-List TaskName, State, LastRunTime, LastTaskResult
+```
+
+**Valores esperados:**
+- `State`: Ready ou Running
+- `LastTaskResult`: 0 (sucesso) ou vazio (ainda não executou)
+- `LastRunTime`: timestamp recente
+
+### 3. Verificar Script do Agente
+```powershell
+Test-Path "C:\CyberShield\cybershield-agent-*.ps1"
+$script = Get-Item "C:\CyberShield\cybershield-agent-*.ps1" -ErrorAction SilentlyContinue
+if ($script) {
+    Write-Host "Script size: $($script.Length) bytes (esperado: >50KB)" -ForegroundColor $(if ($script.Length -gt 50000) {'Green'} else {'Red'})
+} else {
+    Write-Host "❌ Script não encontrado!" -ForegroundColor Red
+}
+```
+
+### 4. Verificar Logs do Agente
+```powershell
+Get-Content "C:\CyberShield\logs\cybershield-agent-v3.log" -Tail 50
+```
+
+**O que procurar:**
+- ✅ `[HEARTBEAT] Enviando heartbeat...`
+- ✅ `Status code: 200`
+- ❌ `401 Unauthorized` → credenciais erradas
+
+### 5. Verificar no Dashboard
+- Ir para `/admin/agents`
+- Agente deve aparecer com status `active` em < 2 minutos
+- `last_heartbeat` deve ser recente
+
+---
+
+## 🐛 Problemas Comuns
+
+### Problema 1: Agente fica "pending" sem heartbeat
+
+| Sintoma | Causa Provável | Solução |
+|---------|----------------|---------|
+| Task não existe | Instalador falhou antes da FASE 4 | Ver logs do instalador |
+| Task existe mas LastTaskResult ≠ 0 | Argumentos mal-formados | Verificar encoding UTF-8 |
+| Script não existe | FASE 2 falhou | Ver logs: "Script criado" |
+| Script < 10KB | Template truncado | Regenerar instalador |
+| 401 em logs | Token/HMAC errados | Regenerar credenciais |
+
+**Script de diagnóstico rápido:**
+```powershell
+# Executar na VM como Admin
+param([Parameter(Mandatory=$true)][string]$AgentName)
+
+Write-Host "=== Diagnóstico: $AgentName ===" -ForegroundColor Cyan
+
+# 1. Task
+$task = Get-ScheduledTask -TaskName "CyberShieldAgent-$AgentName" -ErrorAction SilentlyContinue
+if ($task) {
+    Write-Host "✅ Task existe: $($task.State)" -ForegroundColor Green
+    $taskInfo = Get-ScheduledTaskInfo -TaskName $task.TaskName
+    Write-Host "   LastRunTime: $($taskInfo.LastRunTime)"
+    Write-Host "   LastTaskResult: $($taskInfo.LastTaskResult)"
+} else {
+    Write-Host "❌ Task não encontrada" -ForegroundColor Red
+}
+
+# 2. Script
+$scriptPath = "C:\CyberShield\cybershield-agent-$AgentName.ps1"
+if (Test-Path $scriptPath) {
+    $scriptSize = (Get-Item $scriptPath).Length
+    if ($scriptSize -gt 10000) {
+        Write-Host "✅ Script OK: $scriptSize bytes" -ForegroundColor Green
+    } else {
+        Write-Host "❌ Script truncado: $scriptSize bytes" -ForegroundColor Red
+    }
+} else {
+    Write-Host "❌ Script não encontrado" -ForegroundColor Red
+}
+
+# 3. Logs
+if (Test-Path "C:\CyberShield\logs\cybershield-agent-v3.log") {
+    Write-Host "✅ Log do agente existe" -ForegroundColor Green
+    $lastError = Get-Content "C:\CyberShield\logs\cybershield-agent-v3.log" | Select-String "ERROR|401|timeout" | Select-Object -Last 5
+    if ($lastError) {
+        Write-Host "⚠️ Últimos erros:" -ForegroundColor Yellow
+        $lastError | ForEach-Object { Write-Host "   $_" }
+    }
+} else {
+    Write-Host "❌ Log do agente não encontrado" -ForegroundColor Red
+}
+
+# 4. Conectividade
+try {
+    $response = Invoke-WebRequest -Uri "https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/health" -UseBasicParsing
+    Write-Host "✅ Conectividade OK" -ForegroundColor Green
+} catch {
+    Write-Host "❌ Falha de conectividade" -ForegroundColor Red
+}
+
+Write-Host "`n=== Fim do diagnóstico ===" -ForegroundColor Cyan
+```
+
+### Problema 2: Jobs não são executados (ficam em "queued")
+
+**Checklist:**
+1. Agente está `active`? → Ver dashboard
+2. `last_heartbeat` recente (<5 min)? → Se não, agente offline
+3. Jobs antigos (>1h)? → Cancelar e criar novo teste
+4. Logs do agente mostram polling? → Verificar `poll-jobs`
+
+**SQL para diagnóstico:**
+```sql
+-- Jobs stuck por agente
+SELECT 
+  j.agent_name,
+  COUNT(*) as stuck_jobs,
+  MIN(j.created_at) as oldest,
+  a.status,
+  a.last_heartbeat
+FROM jobs j
+LEFT JOIN agents a ON a.agent_name = j.agent_name
+WHERE j.status = 'queued'
+  AND j.created_at < NOW() - INTERVAL '30 minutes'
+GROUP BY j.agent_name, a.status, a.last_heartbeat
+ORDER BY stuck_jobs DESC;
+```
+
+---
+
 ## 🔍 Diagnóstico Rápido
 
 ### Checklist Inicial
