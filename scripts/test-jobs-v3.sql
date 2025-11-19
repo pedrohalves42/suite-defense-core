@@ -1,0 +1,210 @@
+-- ============================================================
+-- Script de Teste de Jobs v3 (FASE 3)
+-- ============================================================
+--
+-- Use este script para validar que a implementação de Jobs v3
+-- está funcionando corretamente end-to-end.
+--
+-- Jobs v3 usam o endpoint submit-job-result e preenchem:
+-- - output (JSON com resultado da execução)
+-- - execution_time_seconds
+-- - started_at, finished_at
+-- - error_message (se falhou)
+--
+-- PRÉ-REQUISITOS:
+-- 1. Script do agente sincronizado: npm run sync:agent
+-- 2. Pelo menos 1 agente ativo no sistema
+-- 3. Agente deve ter função Submit-JobResult implementada
+--
+-- COMO USAR:
+-- 1. Execute PARTE 1 para criar job de teste
+-- 2. Aguarde 60 segundos
+-- 3. Execute PARTE 2 para validar resultado
+-- 4. Execute PARTE 3 para verificar adoção geral de v3
+--
+-- ============================================================
+
+-- ════════════════════════════════════════════════════════════
+-- PARTE 1: Criar Job de Teste v3
+-- ════════════════════════════════════════════════════════════
+
+-- Este job será criado com status 'queued' e deve ser processado
+-- pelo agente ativo nos próximos 60 segundos
+
+INSERT INTO jobs (
+  id,
+  agent_name,
+  type,
+  payload,
+  status,
+  tenant_id,
+  created_at
+)
+SELECT
+  gen_random_uuid(),
+  a.agent_name,
+  'integration_test_v3',
+  jsonb_build_object(
+    'message', 'Test Jobs v3 implementation',
+    'timestamp', NOW(),
+    'test_id', gen_random_uuid()
+  ),
+  'queued',
+  a.tenant_id,
+  NOW()
+FROM agents a
+WHERE a.status = 'active'
+  AND a.last_heartbeat > NOW() - INTERVAL '5 minutes'
+ORDER BY a.last_heartbeat DESC
+LIMIT 1;
+
+-- Resultado esperado: INSERT 0 1
+-- Se não inserir: não há agentes ativos recentemente
+
+-- ════════════════════════════════════════════════════════════
+-- PARTE 2: Validar Resultado (aguardar 60 segundos)
+-- ════════════════════════════════════════════════════════════
+
+-- Verificar status do job de teste
+SELECT 
+  id,
+  agent_name,
+  type,
+  status,
+  output IS NOT NULL AS is_v3,
+  output,
+  execution_time_seconds,
+  started_at,
+  finished_at,
+  error_message,
+  created_at
+FROM jobs
+WHERE type = 'integration_test_v3'
+ORDER BY created_at DESC
+LIMIT 1;
+
+-- ✅ RESULTADO ESPERADO (v3 funcionando):
+-- - status: 'completed' (ou 'failed', mas com info)
+-- - is_v3: true
+-- - output: JSON não nulo com resultado da execução
+-- - execution_time_seconds: número > 0
+-- - started_at: timestamp preenchido
+-- - finished_at: timestamp preenchido
+-- - error_message: NULL (se completed) ou string (se failed)
+
+-- ❌ RESULTADO PROBLEMÁTICO (ainda usa v1):
+-- - status: 'done' (v1) ou 'queued' (não processou)
+-- - is_v3: false
+-- - output: NULL
+-- - execution_time_seconds: NULL
+-- - started_at: NULL
+
+-- ════════════════════════════════════════════════════════════
+-- PARTE 3: Verificar Adoção Geral de v3 (última semana)
+-- ════════════════════════════════════════════════════════════
+
+-- Ver quantos jobs usaram v3 vs v1
+SELECT 
+  COUNT(*) FILTER (WHERE output IS NOT NULL) AS jobs_v3,
+  COUNT(*) FILTER (WHERE output IS NULL) AS jobs_v1,
+  COUNT(*) AS total_jobs,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE output IS NOT NULL) / NULLIF(COUNT(*), 0), 1) AS pct_v3,
+  CASE 
+    WHEN COUNT(*) = 0 THEN '⏸️ Sem jobs na última semana'
+    WHEN COUNT(*) FILTER (WHERE output IS NOT NULL) = 0 THEN '❌ 0% de adoção v3'
+    WHEN ROUND(100.0 * COUNT(*) FILTER (WHERE output IS NOT NULL) / COUNT(*), 1) < 50 THEN '⚠️ Menos de 50% usa v3'
+    WHEN ROUND(100.0 * COUNT(*) FILTER (WHERE output IS NOT NULL) / COUNT(*), 1) < 95 THEN '🔄 Migração em progresso'
+    ELSE '✅ >95% usa v3 - Pronto para deprecar ack-job'
+  END AS status
+FROM jobs
+WHERE created_at > NOW() - INTERVAL '7 days';
+
+-- ════════════════════════════════════════════════════════════
+-- PARTE 4: Identificar Agentes Ainda Usando v1
+-- ════════════════════════════════════════════════════════════
+
+-- Listar agentes que criaram jobs mas nunca usaram v3
+SELECT 
+  agent_name,
+  COUNT(*) FILTER (WHERE output IS NULL) AS v1_jobs,
+  COUNT(*) FILTER (WHERE output IS NOT NULL) AS v3_jobs,
+  COUNT(*) AS total_jobs,
+  MAX(created_at) FILTER (WHERE output IS NULL) AS last_v1_job,
+  MAX(created_at) FILTER (WHERE output IS NOT NULL) AS last_v3_job
+FROM jobs
+WHERE created_at > NOW() - INTERVAL '3 days'
+GROUP BY agent_name
+HAVING COUNT(*) FILTER (WHERE output IS NOT NULL) = 0 -- Nunca usou v3
+ORDER BY total_jobs DESC;
+
+-- Ação recomendada para esses agentes:
+-- 1. Verificar se script contém função Submit-JobResult
+-- 2. Se não: sincronizar e reinstalar (npm run sync:agent)
+-- 3. Se sim: verificar logs do agente (pode ter erro no Submit-JobResult)
+
+-- ════════════════════════════════════════════════════════════
+-- PARTE 5: Comparar Performance v1 vs v3
+-- ════════════════════════════════════════════════════════════
+
+-- Jobs v3 têm execution_time_seconds, v1 precisa calcular
+WITH job_durations AS (
+  SELECT 
+    CASE WHEN output IS NOT NULL THEN 'v3' ELSE 'v1' END AS version,
+    type,
+    COALESCE(
+      execution_time_seconds, 
+      EXTRACT(EPOCH FROM (completed_at - created_at))
+    )::INTEGER AS duration_seconds
+  FROM jobs
+  WHERE created_at > NOW() - INTERVAL '7 days'
+    AND (status = 'completed' OR status = 'done')
+)
+SELECT 
+  version,
+  COUNT(*) AS total_jobs,
+  ROUND(AVG(duration_seconds), 1) AS avg_duration_sec,
+  MIN(duration_seconds) AS min_duration_sec,
+  MAX(duration_seconds) AS max_duration_sec
+FROM job_durations
+GROUP BY version
+ORDER BY version DESC;
+
+-- ════════════════════════════════════════════════════════════
+-- TROUBLESHOOTING
+-- ════════════════════════════════════════════════════════════
+
+-- Se o job de teste ficou em 'queued' por > 2 minutos:
+-- 1. Verificar se agente está realmente ativo:
+SELECT agent_name, status, last_heartbeat, 
+       EXTRACT(EPOCH FROM (NOW() - last_heartbeat))/60 AS minutes_since_heartbeat
+FROM agents
+WHERE status = 'active'
+ORDER BY last_heartbeat DESC;
+
+-- 2. Verificar logs do agente (na VM):
+-- Get-Content "C:\CyberShield\logs\cybershield-agent-v3.log" -Tail 100
+
+-- 3. Verificar se poll-jobs está funcionando (logs do Edge Function)
+
+-- Se o job completou mas output é NULL (v1):
+-- 1. Verificar se Submit-JobResult existe no script:
+-- Select-String -Path "C:\CyberShield\cybershield-agent-*.ps1" -Pattern "Submit-JobResult"
+
+-- 2. Se não existe: sincronizar script
+-- npm run sync:agent
+-- git diff public/agent-scripts/cybershield-agent-windows-v3.ps1
+
+-- 3. Reinstalar agente com script atualizado
+
+-- ════════════════════════════════════════════════════════════
+-- LIMPEZA (opcional)
+-- ════════════════════════════════════════════════════════════
+
+-- Remover jobs de teste após validação
+-- Descomente para executar:
+--
+-- DELETE FROM jobs 
+-- WHERE type = 'integration_test_v3' 
+--   AND created_at > NOW() - INTERVAL '1 hour';
+--
+-- ════════════════════════════════════════════════════════════
