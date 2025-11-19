@@ -25,6 +25,18 @@ jobs:
     - name: Install dependencies
       run: npm install --no-audit --no-fund
 
+    - name: 🔄 Validate Agent Script Sync
+      run: |
+        npm run sync:agent
+        if ! git diff --exit-code supabase/functions/_shared/agent-script-windows-content.ts; then
+          echo "❌ ERRO: Agent script não sincronizado!"
+          echo "Execute localmente: npm run sync:agent"
+          echo ""
+          echo "Diff encontrado (primeiras linhas):"
+          git diff supabase/functions/_shared/agent-script-windows-content.ts | head -80
+          exit 1
+        fi
+
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps chromium
 

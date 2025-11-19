@@ -52,6 +52,18 @@ function Write-InstallerLog {
     Write-Host $line
 }
 
+# HMAC SHA256 helper for self-test
+function Get-HMACSHA256 {
+    param(
+        [string]$Message,
+        [string]$Secret
+    )
+    $hmac = New-Object System.Security.Cryptography.HMACSHA256
+    $hmac.Key = [System.Text.Encoding]::UTF8.GetBytes($Secret)
+    $hashBytes = $hmac.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Message))
+    return [System.BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+}
+
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host "CyberShield Agent Installer v3.1.0" -ForegroundColor Cyan
 Write-Host "==================================" -ForegroundColor Cyan
@@ -105,7 +117,7 @@ try {
 # Agent script path
 $AgentScriptPath = Join-Path $BasePath "cybershield-agent-windows-v3.ps1"
 
-Write-Host "[1/4] Limpando instalações antigas..." -ForegroundColor Yellow
+Write-Host "[1/5] Limpando instalações antigas..." -ForegroundColor Yellow
 
 # Remove old Scheduled Task if exists
 $TaskName = "CyberShieldAgent"
@@ -130,7 +142,7 @@ if ($oldProcesses) {
     Start-Sleep -Seconds 2
 }
 
-Write-Host "[2/4] Instalando script do agente..." -ForegroundColor Yellow
+Write-Host "[2/5] Instalando script do agente..." -ForegroundColor Yellow
 
 # Create agent script inline (here-string for clean embedding)
 $agentScriptContent = @'
@@ -141,7 +153,69 @@ $agentScriptContent = @'
 [System.IO.File]::WriteAllText($AgentScriptPath, $agentScriptContent, [System.Text.UTF8Encoding]::new($false))
 Write-InstallerLog "Script do agente criado em: $AgentScriptPath" "INFO"
 
-Write-Host "[3/4] Criando Scheduled Task..." -ForegroundColor Yellow
+Write-Host "[3/5] 🔍 Testando conectividade com o backend..." -ForegroundColor Yellow
+Write-InstallerLog "Iniciando self-test de conectividade" "INFO"
+
+try {
+    # Self-test: chamar /heartbeat uma vez
+    $selfTestBody = @{
+        agent_name     = $AgentName
+        agent_version  = "3.1.0"
+        os_type        = "windows"
+        self_test      = $true
+    } | ConvertTo-Json -Compress
+
+    $selfTestHmac = Get-HMACSHA256 -Message $selfTestBody -Secret $HmacSecret
+
+    $selfTestHeaders = @{
+        "Content-Type"     = "application/json"
+        "X-Agent-Token"    = $AgentToken
+        "X-HMAC-Signature" = $selfTestHmac
+    }
+
+    $selfTestResponse = Invoke-WebRequest \`
+        -Uri "$ServerUrl/functions/v1/heartbeat" \`
+        -Method POST \`
+        -Headers $selfTestHeaders \`
+        -Body $selfTestBody \`
+        -TimeoutSec 10 \`
+        -UseBasicParsing
+
+    if ($selfTestResponse.StatusCode -eq 200) {
+        Write-InstallerLog "Self-test OK: backend respondeu 200" "INFO"
+        Write-Host "✅ Backend respondeu (200 OK)" -ForegroundColor Green
+    }
+    else {
+        Write-InstallerLog "Self-test com status inesperado: $($selfTestResponse.StatusCode)" "WARN"
+        Write-Host "⚠ Backend respondeu com status $($selfTestResponse.StatusCode)" -ForegroundColor Yellow
+    }
+}
+catch {
+    $errMsg = $_.Exception.Message
+    Write-InstallerLog "Self-test falhou: $errMsg" "WARN"
+
+    if ($errMsg -match "401") {
+        # Credenciais claramente erradas → aborta
+        $tokenPrefix = if ($AgentToken) { $AgentToken.Substring(0, [Math]::Min(8, $AgentToken.Length)) } else { "" }
+        $hmacPrefix  = if ($HmacSecret) { $HmacSecret.Substring(0, [Math]::Min(8, $HmacSecret.Length)) } else { "" }
+
+        Write-InstallerLog "ERRO CRÍTICO: 401 Unauthorized durante self-test (token/HMAC inválidos)" "ERROR"
+        Write-Host "❌ Token ou HMAC inválidos (401 Unauthorized)" -ForegroundColor Red
+        Write-Host "   Token (prefixo): $tokenPrefix..." -ForegroundColor Yellow
+        Write-Host "   HMAC  (prefixo): $hmacPrefix..." -ForegroundColor Yellow
+        Write-Host "   Gere um novo instalador e tente novamente." -ForegroundColor Yellow
+        exit 1
+    }
+    else {
+        # Problema de rede / timeout → loga, mas não bloqueia
+        Write-Host "⚠ Não foi possível conectar ao backend no self-test, continuando mesmo assim." -ForegroundColor Yellow
+        Write-Host "   Detalhes: $errMsg" -ForegroundColor DarkGray
+    }
+}
+
+Write-Host ""
+
+Write-Host "[4/5] Criando Scheduled Task..." -ForegroundColor Yellow
 
 # Create new Scheduled Task
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File \`"$AgentScriptPath\`" -ServerUrl \`"$ServerUrl\`" -AgentToken \`"$AgentToken\`" -HmacSecret \`"$HmacSecret\`" -AgentName \`"$AgentName\`""
@@ -161,7 +235,7 @@ try {
     exit 1
 }
 
-Write-Host "[4/4] Iniciando agente..." -ForegroundColor Yellow
+Write-Host "[5/5] Iniciando agente..." -ForegroundColor Yellow
 
 # Start the agent immediately
 try {
