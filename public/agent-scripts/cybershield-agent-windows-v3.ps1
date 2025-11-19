@@ -366,7 +366,10 @@ function Submit-JobResult {
         [string]$ErrorMessage = "",
         
         [Parameter(Mandatory = $false)]
-        [int]$ExecutionTimeSeconds = 0
+        [int]$ExecutionTimeSeconds = 0,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$StartedAt = ""
     )
 
     $body = @{
@@ -376,10 +379,15 @@ function Submit-JobResult {
         output                 = $Output
         error_message          = $ErrorMessage
         execution_time_seconds = $ExecutionTimeSeconds
+        started_at             = $StartedAt
         finished_at            = (Get-Date).ToUniversalTime().ToString("o")
     }
 
-    Write-Log "Enviando resultado do job $JobId (status=$Status)..." "INFO"
+    Write-Log "Enviando resultado do job $JobId (status=$Status, started_at=$StartedAt)..." "INFO"
+    
+    # Log detalhado do payload para debug
+    $bodyJson = $body | ConvertTo-Json -Depth 10 -Compress
+    Write-Log "Payload: $bodyJson" "DEBUG"
 
     try {
         $result = Invoke-SecureRequest `
@@ -393,10 +401,12 @@ function Submit-JobResult {
             return $true
         } else {
             Write-Log "❌ Falha ao enviar resultado (Status=$($result.StatusCode))" "ERROR"
+            Write-Log "Response body: $($result.Body)" "ERROR"
             return $false
         }
     } catch {
         Write-Log "❌ Erro ao enviar resultado do job ${JobId}: $($_.Exception.Message)" "ERROR"
+        Write-Log "Stack trace: $($_.ScriptStackTrace)" "ERROR"
         return $false
     }
 }
@@ -611,24 +621,28 @@ function Execute-Job {
         }
 
         $execTime = [int]((Get-Date) - $startTime).TotalSeconds
+        $startTimeISO = $startTime.ToUniversalTime().ToString("o")
 
         Submit-JobResult `
             -JobId $jobId `
             -Status "completed" `
             -Output $output `
-            -ExecutionTimeSeconds $execTime
+            -ExecutionTimeSeconds $execTime `
+            -StartedAt $startTimeISO
     }
     catch {
         $err = "Erro ao executar job $jobId`: $($_.Exception.Message)"
         Write-Log $err "ERROR"
 
         $execTime = [int]((Get-Date) - $startTime).TotalSeconds
+        $startTimeISO = $startTime.ToUniversalTime().ToString("o")
 
         Submit-JobResult `
             -JobId $jobId `
             -Status "failed" `
             -ErrorMessage $err `
-            -ExecutionTimeSeconds $execTime
+            -ExecutionTimeSeconds $execTime `
+            -StartedAt $startTimeISO
     }
 }
 
