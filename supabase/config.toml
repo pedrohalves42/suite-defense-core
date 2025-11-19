@@ -163,6 +163,10 @@ verify_jwt = false
 [functions.analyze-network-anomalies]
 verify_jwt = true
 
+[functions.check-production-health]
+verify_jwt = false
+schedule = "0 * * * *"  # Executa a cada hora
+
 # === Alert Functions ===
 [functions.send-alert-email]
 verify_jwt = false
@@ -245,6 +249,10 @@ verify_jwt = true
 # === Health & Monitoring Functions ===
 [functions.health]
 verify_jwt = false
+
+[functions.check-installation-health]
+verify_jwt = false
+schedule = "0 * * * *"  # Executa a cada hora
 
 [functions.check-installation-health]
 verify_jwt = false
