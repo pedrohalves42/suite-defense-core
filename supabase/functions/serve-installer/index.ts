@@ -1,3 +1,14 @@
+/**
+ * serve-installer Edge Function
+ * 
+ * Generates and serves custom agent installer scripts with embedded credentials.
+ * 
+ * Security: Validates enrollment keys, enforces rate limits, and ensures HMAC secrets.
+ * Platforms: Windows (PowerShell), Linux (Bash), macOS (Bash)
+ * 
+ * Last updated: 2025-01-19 - Added StartedAt validation for Jobs v3
+ */
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
@@ -491,6 +502,31 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
           }
         );
       }
+
+      // 🔥 PHASE 4: Validação adicional para StartedAt (Jobs v3)
+      console.log(`[${requestId}] Validating StartedAt parameter presence...`);
+      
+      if (!embeddedScript.includes('StartedAt')) {
+        console.error(`[${requestId}] CRITICAL: StartedAt parameter missing in embedded script`, {
+          agentName: agentData.agent_name,
+          scriptPreview: embeddedScript.substring(0, 200)
+        });
+        
+        return new Response(
+          JSON.stringify({
+            error: 'Generated agent script is outdated',
+            details: 'Missing StartedAt parameter. Backend needs redeploy with updated agent-script-windows-content.ts',
+            requestId,
+            timestamp: new Date().toISOString()
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+      
+      console.log(`[${requestId}] ✅ StartedAt parameter validation passed`);
     }
 
     // 🔥 BUG FIX P3: Log consolidado de sucesso com TODAS as validações
@@ -504,7 +540,8 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
         agentScriptContentInjected: platform === 'windows',
         minSizeCheck: true,
         embeddedScriptValid: platform === 'windows',
-        criticalFunctionsPresent: platform === 'windows'
+        criticalFunctionsPresent: platform === 'windows',
+        startedAtParameterPresent: platform === 'windows'
       }
     });
 
