@@ -119,6 +119,22 @@ try {
 
 Write-InstallerLog "FASE 3: Self-test concluído" "SUCCESS"
 
+# ============= VALIDAÇÃO CRÍTICA: Script do Agente =============
+Write-InstallerLog "Validando script do agente..." "INFO"
+
+if (-not (Test-Path $AgentScriptPath)) {
+    Write-InstallerLog "❌ ERRO CRÍTICO: Script do agente não foi criado" "ERROR"
+    throw "Script do agente não encontrado em: $AgentScriptPath"
+}
+
+$scriptSize = (Get-Item $AgentScriptPath).Length
+if ($scriptSize -lt 10000) {  # Script completo deve ter ~50KB+
+    Write-InstallerLog "❌ ERRO: Script do agente incompleto ($scriptSize bytes)" "ERROR"
+    throw "Script do agente muito pequeno. Esperado >10KB, encontrado: $scriptSize bytes"
+}
+
+Write-InstallerLog "✅ Script do agente validado: $scriptSize bytes" "SUCCESS"
+
 # ============= FASE 4: Scheduled Task =============
 Write-InstallerLog "FASE 4: Criando Scheduled Task..." "INFO"
 
