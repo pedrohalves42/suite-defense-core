@@ -3,19 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": {
+    "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "validate:code": "npm run typecheck && npm run lint",
-    "validate:tests": "npm run test",
-    "validate:all": "tsx tools/validate-system.ts"
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -23,16 +15,11 @@
     "test:coverage": "vitest run --coverage",
     "validate:code": "npm run typecheck && npm run lint",
     "validate:tests": "npm run test",
-<<<<<<< HEAD
-    "validate:all": "tsx tools/validate-system.ts"
-     
-
-=======
     "validate:all": "tsx tools/validate-system.ts",
     "sync:agent": "bash scripts/sync-agent-script.sh",
     "validate:sync": "npm run sync:agent && git diff --exit-code supabase/functions/_shared/agent-script-windows-content.ts"
->>>>>>> 91d7dd1f75f3309d459ccc5c367cd48f0828deaf
   },
+
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@playwright/test": "^1.56.1",
