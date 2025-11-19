@@ -368,6 +368,31 @@ Deno.serve(async (req) => {
 
     // ============= VALIDAÇÃO CRÍTICA ADICIONAL =============
 
+    // 🔥 BUG FIX P0: Validar TODOS os placeholders críticos foram substituídos
+    const criticalPlaceholders = ['{{AGENT_NAME}}', '{{AGENT_TOKEN}}', '{{HMAC_SECRET}}', '{{SERVER_URL}}'];
+    const unsubstitutedCritical = criticalPlaceholders.filter(ph => templateContent.includes(ph));
+    
+    if (unsubstitutedCritical.length > 0) {
+      console.error(`[${requestId}] CRITICAL: Unsubstituted critical placeholders`, {
+        platform,
+        agentName: agentData.agent_name,
+        unsubstituted: unsubstitutedCritical
+      });
+      
+      return new Response(
+        JSON.stringify({
+          error: 'Critical placeholders not substituted',
+          details: `Template contains: ${unsubstitutedCritical.join(', ')}`,
+          requestId,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
     // 1) Garantir que AGENT_SCRIPT_CONTENT foi substituído (específico para Windows)
     if (platform === 'windows' && templateContent.includes('{{AGENT_SCRIPT_CONTENT}}')) {
       console.error(`[${requestId}] CRITICAL: AGENT_SCRIPT_CONTENT placeholder not replaced`, {
@@ -415,9 +440,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3) Para Windows, validar que o script do agente embutido não está vazio ou truncado
+    // 3) 🔥 BUG FIX P2: Para Windows, validar que o script do agente embutido não está vazio ou truncado
+    // Regex melhorado: aceita @' e @" para here-strings
     if (platform === 'windows') {
-      const scriptContentMatch = templateContent.match(/\$AgentScriptContent = @'\n([\s\S]*?)\n'@/);
+      const hereStringPattern = /\$AgentScriptContent\s*=\s*@['"]\s*([\s\S]*?)\s*['"]\@/;
+      const scriptContentMatch = templateContent.match(hereStringPattern);
+      
       if (!scriptContentMatch || scriptContentMatch[1].trim().length < 5000) {
         console.error(`[${requestId}] CRITICAL: Windows agent script content invalid or truncated`, {
           agentName: agentData.agent_name,
@@ -437,13 +465,46 @@ Deno.serve(async (req) => {
           }
         );
       }
+
+      // 🔥 BUG FIX P2: Validar presença de funções críticas no script embutido
+      const embeddedScript = scriptContentMatch[1];
+      const criticalFunctions = ['Submit-JobResult', 'Send-Heartbeat', 'Poll-Jobs'];
+      const missingFunctions = criticalFunctions.filter(fn => !embeddedScript.includes(fn));
+      
+      if (missingFunctions.length > 0) {
+        console.error(`[${requestId}] CRITICAL: Missing critical functions in embedded agent script`, {
+          agentName: agentData.agent_name,
+          missingFunctions
+        });
+        
+        return new Response(
+          JSON.stringify({
+            error: 'Embedded agent script missing critical functions',
+            details: `Missing: ${missingFunctions.join(', ')}`,
+            requestId,
+            timestamp: new Date().toISOString()
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
     }
 
-    console.log(`[${requestId}] ✅ Additional installer validations passed`, {
+    // 🔥 BUG FIX P3: Log consolidado de sucesso com TODAS as validações
+    console.log(`[${requestId}] ✅ All installer validations passed`, {
       installerSize: templateContent.length,
       installerSizeKB: (templateContent.length / 1024).toFixed(2),
       platform,
-      agentName: agentData.agent_name
+      agentName: agentData.agent_name,
+      validations: {
+        criticalPlaceholdersSubstituted: true,
+        agentScriptContentInjected: platform === 'windows',
+        minSizeCheck: true,
+        embeddedScriptValid: platform === 'windows',
+        criticalFunctionsPresent: platform === 'windows'
+      }
     });
 
     // ✅ PHASE 3: Security validation - detect dangerous patterns

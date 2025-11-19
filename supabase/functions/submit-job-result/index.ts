@@ -116,12 +116,14 @@ Deno.serve(async (req) => {
     // 4. Parse payload
     const payload = await req.json()
 
-    // Extrair variáveis do payload
+    // 🔥 BUG FIX P1: Extrair TODOS os campos v3, incluindo timestamps
     const job_id = payload.job_id
     const status = payload.status
     const output = payload.output
     const error_message = payload.error_message
     const execution_time_seconds = payload.execution_time_seconds
+    const started_at = payload.started_at
+    const finished_at = payload.finished_at
 
     // Validação de schema v3
     if (!job_id || typeof job_id !== 'string') {
@@ -139,13 +141,36 @@ Deno.serve(async (req) => {
       )
     }
 
+    // 🔥 BUG FIX P1: Validar execution_time_seconds se fornecido
+    if (execution_time_seconds !== undefined && execution_time_seconds !== null) {
+      if (typeof execution_time_seconds !== 'number' || execution_time_seconds < 0) {
+        return new Response(
+          JSON.stringify({ error: 'execution_time_seconds must be a positive number' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      // 🔥 BUG FIX P1: Alertar se execution_time fornecido sem timestamps
+      if (!started_at || !finished_at) {
+        console.warn('[submit-job-result] execution_time_seconds provided without timestamps', {
+          job_id,
+          agent: agent.agent_name,
+          execution_time_seconds,
+          has_started_at: !!started_at,
+          has_finished_at: !!finished_at
+        })
+      }
+    }
+
     console.log('[submit-job-result] Processing:', {
       job_id,
       agent: agent.agent_name,
       status,
       has_output: !!output,
       has_error: !!error_message,
-      execution_time: execution_time_seconds
+      execution_time: execution_time_seconds,
+      has_started_at: !!started_at,
+      has_finished_at: !!finished_at
     })
 
     // Buscar o job
@@ -241,11 +266,16 @@ Deno.serve(async (req) => {
       )
     }
 
-     // Atualizar o job com campos v3
+     // 🔥 BUG FIX P1: Atualizar o job com TODOS os campos v3, incluindo timestamps
     const updateData: Record<string, unknown> = {
       status: status,
-      finished_at: payload.finished_at || new Date().toISOString(),
+      finished_at: finished_at || new Date().toISOString(),
       completed_at: new Date().toISOString() // Compatibilidade legado
+    }
+
+    // 🔥 BUG FIX P1: Incluir started_at explicitamente
+    if (started_at) {
+      updateData.started_at = started_at
     }
 
     // Adicionar campos extras se existirem
@@ -257,9 +287,6 @@ Deno.serve(async (req) => {
     }
     if (execution_time_seconds !== undefined) {
       updateData.execution_time_seconds = execution_time_seconds
-    }
-    if (payload.started_at) {
-      updateData.started_at = payload.started_at
     }
 
     const { error: updateError } = await supabase
