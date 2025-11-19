@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ interface ProblematicAgent {
 }
 
 export default function AgentTroubleshooting() {
+  const navigate = useNavigate();
   const [regeneratingAgent, setRegeneratingAgent] = useState<string | null>(null);
 
   // Query para buscar agentes problemáticos
@@ -78,7 +80,7 @@ export default function AgentTroubleshooting() {
   const handleRegenerateCredentials = async (agentId: string, agentName: string) => {
     setRegeneratingAgent(agentId);
     try {
-      // Deletar agente atual
+      // Deletar agente atual (isso invalida token/HMAC antigos)
       const { error: deleteError } = await supabase
         .from("agents")
         .delete()
@@ -86,13 +88,24 @@ export default function AgentTroubleshooting() {
 
       if (deleteError) throw deleteError;
 
-      toast.success(`Credenciais regeneradas para ${agentName}. Baixe novo instalador.`);
-      refetch();
+      // Toast de sucesso
+      toast.success(
+        `Credenciais regeneradas para "${agentName}". Redirecionando para gerar novo instalador...`,
+        { duration: 3000 }
+      );
+
+      // Redirecionar para página de instalação com query params
+      setTimeout(() => {
+        navigate(
+          `/agent-installer?agent_name=${encodeURIComponent(agentName)}&regenerated=true`
+        );
+      }, 1500); // Delay para usuário ler o toast
+      
     } catch (error: any) {
       toast.error(`Erro ao regenerar credenciais: ${error.message}`);
-    } finally {
       setRegeneratingAgent(null);
     }
+    // Nota: não resetamos regeneratingAgent aqui porque vamos sair da página
   };
 
   if (isLoading) {
