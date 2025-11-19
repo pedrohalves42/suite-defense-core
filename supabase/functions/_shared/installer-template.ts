@@ -124,23 +124,19 @@ Write-InstallerLog "FASE 4: Criando Scheduled Task..." "INFO"
 
 $TaskName = "CyberShieldAgent-$AgentName"
 
-# Construir argumentos em array (mais legível e debugável)
-$AgentArgs = @(
-    "-ExecutionPolicy", "Bypass",
-    "-NoProfile",
-    "-WindowStyle", "Hidden",
-    "-File", "\\\`"$AgentScriptPath\\\`"",
-    "-ServerUrl", "\\\`"$ServerUrl\\\`"",
-    "-AgentToken", "\\\`"$AgentToken\\\`"",
-    "-HmacSecret", "\\\`"$HmacSecret\\\`"",
-    "-AgentName", "\\\`"$AgentName\\\`""
-)
+# Construir string de argumentos com escaping correto para Task Scheduler
+$ArgumentString = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden " + \`
+                  "-File \`"$AgentScriptPath\`" " + \`
+                  "-ServerUrl \`"$ServerUrl\`" " + \`
+                  "-AgentToken \`"$AgentToken\`" " + \`
+                  "-HmacSecret \`"$HmacSecret\`" " + \`
+                  "-AgentName \`"$AgentName\`""
 
-Write-InstallerLog "Task arguments: $($AgentArgs -join ' ')" "DEBUG"
+Write-InstallerLog "Task arguments: $ArgumentString" "DEBUG"
 
 $Action = New-ScheduledTaskAction \`
     -Execute "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" \`
-    -Argument ($AgentArgs -join " ")
+    -Argument $ArgumentString
 
 $Trigger = New-ScheduledTaskTrigger -AtStartup
 $Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
@@ -165,10 +161,36 @@ Write-InstallerLog "Scheduled Task criada: $TaskName" "SUCCESS"
 Write-InstallerLog "FASE 5: Iniciando agente..." "INFO"
 
 Start-ScheduledTask -TaskName $TaskName
-Start-Sleep -Seconds 2
+Write-InstallerLog "Scheduled Task iniciada" "INFO"
 
-$taskInfo = Get-ScheduledTask -TaskName $TaskName
-Write-InstallerLog "Status da task: $($taskInfo.State)" "INFO"
+# Aguardar execução inicial
+Start-Sleep -Seconds 5
+
+# Validação completa da task
+$taskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
+$taskState = Get-ScheduledTask -TaskName $TaskName
+
+Write-InstallerLog "Task State: $($taskState.State)" "INFO"
+Write-InstallerLog "Last Run Time: $($taskInfo.LastRunTime)" "INFO"
+Write-InstallerLog "Last Task Result: $($taskInfo.LastTaskResult)" "INFO"
+
+if ($taskInfo.LastTaskResult -ne 0 -and $taskInfo.LastTaskResult -ne $null) {
+    Write-InstallerLog "⚠️  AVISO: Task retornou código de erro: $($taskInfo.LastTaskResult)" "WARN"
+    Write-InstallerLog "Isso pode indicar problema com argumentos ou permissões" "WARN"
+}
+
+# Verificar se o agente conseguiu iniciar (log criado)
+Start-Sleep -Seconds 10
+
+$agentLogPath = Join-Path $LogsPath "cybershield-agent-v3.log"
+if (Test-Path $agentLogPath) {
+    $logSize = (Get-Item $agentLogPath).Length
+    Write-InstallerLog "✅ Log do agente detectado: $agentLogPath ($logSize bytes)" "SUCCESS"
+} else {
+    Write-InstallerLog "⚠️  AVISO: Log do agente não encontrado após 10s" "WARN"
+    Write-InstallerLog "Path esperado: $agentLogPath" "INFO"
+    Write-InstallerLog "Verifique se a Scheduled Task está executando corretamente" "WARN"
+}
 
 Write-InstallerLog "FASE 5: Agente iniciado" "SUCCESS"
 
