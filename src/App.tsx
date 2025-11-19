@@ -52,6 +52,7 @@ import SubscriptionAnalytics from "./pages/admin/SubscriptionAnalytics";
 import StripeSetup from "./pages/admin/StripeSetup";
 import AgentDiagnostics from "./pages/admin/AgentDiagnostics.tsx";
 import AgentTroubleshooting from "./pages/admin/AgentTroubleshooting";
+import ProblematicAgentsManager from "./pages/admin/ProblematicAgentsManager";
 import BuildHealthDashboard from "./pages/admin/BuildHealthDashboard";
 import SystemLogs from "./pages/admin/SystemLogs";
 import AgentHealthMonitor from "./pages/admin/AgentHealthMonitor";
@@ -120,6 +121,7 @@ const App = () => (
                 <Route path="agent-health" element={<AgentHealthMonitor />} />
                 <Route path="agent-diagnostics" element={<AgentDiagnostics />} />
                 <Route path="agent-troubleshooting" element={<AgentTroubleshooting />} />
+                <Route path="problematic-agents" element={<ProblematicAgentsManager />} />
                 <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="ai-actions" element={<AIActionApproval />} />
                 <Route path="system-logs" element={<SystemLogs />} />

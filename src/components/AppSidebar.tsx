@@ -54,6 +54,7 @@ export const AppSidebar = () => {
     { icon: BarChart3, label: 'Métricas Globais', to: '/super-admin/metrics' },
     { icon: Activity, label: 'Diagnóstico Agentes', to: '/admin/agent-diagnostics' },
     { icon: Terminal, label: 'Troubleshooting', to: '/admin/agent-troubleshooting' },
+    { icon: AlertTriangle, label: 'Agentes Problemáticos', to: '/admin/problematic-agents' },
     { icon: BarChart3, label: 'Analytics Subs', to: '/super-admin/subscription-analytics' },
     { icon: CreditCard, label: 'Config Stripe', to: '/super-admin/stripe-setup' },
     { icon: Users, label: 'Todos Usuários', to: '/super-admin/users' },
