@@ -1,6 +1,6 @@
 /**
  * CyberShield Agent Windows Script - AUTO-GERADO
- * NÃO EDITAR MANUALMENTE - Use: npm run sync:agent
+ * NÃO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
  */
 
@@ -17,7 +17,7 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `
     - Evento de post_installation
     
     Uso:
-    powershell.exe -ExecutionPolicy Bypass -File .\cybershield-agent-windows-v3.ps1 \`
+    powershell.exe -ExecutionPolicy Bypass -File .\\cybershield-agent-windows-v3.ps1 \`
         -ServerUrl "https://seu-projeto.supabase.co" \`
         -AgentToken "AGENT_TOKEN_AQUI" \`
         -HmacSecret "64_HEX_CHARS_AQUI" \`
@@ -25,63 +25,63 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 #>
 
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$ServerUrl,
+    [Parameter(Mandatory = \$true)]
+    [string]\$ServerUrl,
 
-    [Parameter(Mandatory = $true)]
-    [string]$AgentToken,
+    [Parameter(Mandatory = \$true)]
+    [string]\$AgentToken,
 
-    [Parameter(Mandatory = $true)]
-    [string]$HmacSecret,
+    [Parameter(Mandatory = \$true)]
+    [string]\$HmacSecret,
 
-    [Parameter(Mandatory = $false)]
-    [string]$AgentName = $env:COMPUTERNAME.ToLower(),
+    [Parameter(Mandatory = \$false)]
+    [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
-    [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.0.0"
+    [Parameter(Mandatory = \$false)]
+    [string]\$AgentVersion = "3.0.0"
 )
 
-$ErrorActionPreference = "Stop"
+\$ErrorActionPreference = "Stop"
 
 # ============================================
 #  VARIÁVEIS GLOBAIS
 # ============================================
-$Global:ServerUrl    = $ServerUrl.TrimEnd('/')
-$Global:AgentToken   = $AgentToken
-$Global:HmacSecret   = $HmacSecret
-$Global:AgentName    = $AgentName
-$Global:AgentVersion = $AgentVersion
+\$Global:ServerUrl    = \$ServerUrl.TrimEnd('/')
+\$Global:AgentToken   = \$AgentToken
+\$Global:HmacSecret   = \$HmacSecret
+\$Global:AgentName    = \$AgentName
+\$Global:AgentVersion = \$AgentVersion
 
 # Diretório de log
-$logDir = Join-Path -Path $PSScriptRoot -ChildPath "logs"
-if (-not (Test-Path $logDir)) {
-    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+\$logDir = Join-Path -Path \$PSScriptRoot -ChildPath "logs"
+if (-not (Test-Path \$logDir)) {
+    New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
 }
-$Global:LogFilePath = Join-Path -Path $logDir -ChildPath "cybershield-agent-v3.log"
+\$Global:LogFilePath = Join-Path -Path \$logDir -ChildPath "cybershield-agent-v3.log"
 
 # Intervalos
-$Global:PollIntervalSeconds = 30
+\$Global:PollIntervalSeconds = 30
 
 # ============================================
 #  LOGGING
 # ============================================
 function Write-Log {
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$Message,
+        [Parameter(Mandatory = \$true)]
+        [string]\$Message,
         
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = \$false)]
         [ValidateSet("DEBUG","INFO","WARN","ERROR","SUCCESS")]
-        [string]$Level = "INFO"
+        [string]\$Level = "INFO"
     )
 
-    $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-    $line = "[{0}] [{1}] {2}" -f $timestamp, $Level, $Message
+    \$timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+    \$line = "[{0}] [{1}] {2}" -f \$timestamp, \$Level, \$Message
 
-    Write-Host $line
+    Write-Host \$line
     
     try {
-        Add-Content -Path $Global:LogFilePath -Value $line
+        Add-Content -Path \$Global:LogFilePath -Value \$line
     } catch {
         # Ignorar erro de escrita no log para não quebrar o agente
     }
@@ -92,45 +92,45 @@ function Write-Log {
 # ============================================
 function Convert-HexToBytes {
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$HexString
+        [Parameter(Mandatory = \$true)]
+        [string]\$HexString
     )
 
-    if ($HexString -notmatch '^[0-9a-fA-F]{64}$') {
-        Write-Log "HMAC_SECRET inválido. Esperado 64 caracteres hex (32 bytes). Length: $($HexString.Length)" "ERROR"
-        throw "Invalid HMAC_SECRET format. Expected 64 hex characters, got: $($HexString.Length)"
+    if (\$HexString -notmatch '^[0-9a-fA-F]{64}\$') {
+        Write-Log "HMAC_SECRET inválido. Esperado 64 caracteres hex (32 bytes). Length: \$(\$HexString.Length)" "ERROR"
+        throw "Invalid HMAC_SECRET format. Expected 64 hex characters, got: \$(\$HexString.Length)"
     }
 
     try {
-        $bytes = New-Object byte[] 32
-        for ($i = 0; $i -lt 64; $i += 2) {
-            $bytes[$i / 2] = [Convert]::ToByte($HexString.Substring($i, 2), 16)
+        \$bytes = New-Object byte[] 32
+        for (\$i = 0; \$i -lt 64; \$i += 2) {
+            \$bytes[\$i / 2] = [Convert]::ToByte(\$HexString.Substring(\$i, 2), 16)
         }
-        return $bytes
+        return \$bytes
     } catch {
-        Write-Log "Falha ao converter HMAC_SECRET de HEX para bytes: $($_.Exception.Message)" "ERROR"
-        throw "HMAC_SECRET conversion failed: $($_.Exception.Message)"
+        Write-Log "Falha ao converter HMAC_SECRET de HEX para bytes: \$(\$_.Exception.Message)" "ERROR"
+        throw "HMAC_SECRET conversion failed: \$(\$_.Exception.Message)"
     }
 }
 
 function Get-HmacSignature {
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$Message,
+        [Parameter(Mandatory = \$true)]
+        [string]\$Message,
         
-        [Parameter(Mandatory = $true)]
-        [string]$SecretHex
+        [Parameter(Mandatory = \$true)]
+        [string]\$SecretHex
     )
 
-    $keyBytes = Convert-HexToBytes $SecretHex
+    \$keyBytes = Convert-HexToBytes \$SecretHex
 
-    $hmac = New-Object System.Security.Cryptography.HMACSHA256
-    $hmac.Key = $keyBytes
+    \$hmac = New-Object System.Security.Cryptography.HMACSHA256
+    \$hmac.Key = \$keyBytes
 
-    $messageBytes   = [Text.Encoding]::UTF8.GetBytes($Message)
-    $signatureBytes = $hmac.ComputeHash($messageBytes)
+    \$messageBytes   = [Text.Encoding]::UTF8.GetBytes(\$Message)
+    \$signatureBytes = \$hmac.ComputeHash(\$messageBytes)
 
-    return ([System.BitConverter]::ToString($signatureBytes) -replace '-', '').ToLower()
+    return ([System.BitConverter]::ToString(\$signatureBytes) -replace '-', '').ToLower()
 }
 
 # ============================================
@@ -138,103 +138,103 @@ function Get-HmacSignature {
 # ============================================
 function Invoke-SecureRequest {
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$Path,
+        [Parameter(Mandatory = \$true)]
+        [string]\$Path,
 
         [Parameter()]
         [ValidateSet("GET","POST","PUT","DELETE")]
-        [string]$Method = "GET",
+        [string]\$Method = "GET",
 
         [Parameter()]
-        [object]$Body = $null,
+        [object]\$Body = \$null,
 
         [Parameter()]
-        [int]$TimeoutSec = 30,
+        [int]\$TimeoutSec = 30,
 
         [Parameter()]
-        [int]$MaxRetries = 3
+        [int]\$MaxRetries = 3
     )
 
-    $uri        = "$($Global:ServerUrl)$Path"
-    $retryCount = 0
-    $retryDelay = 2
+    \$uri        = "\$(\$Global:ServerUrl)\$Path"
+    \$retryCount = 0
+    \$retryDelay = 2
 
-    while ($true) {
+    while (\$true) {
         try {
-            $timestamp = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
-            $nonce     = [guid]::NewGuid().ToString()
+            \$timestamp = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
+            \$nonce     = [guid]::NewGuid().ToString()
 
-            if ($Body -ne $null) {
-                if ($Body -is [string]) {
-                    $bodyJson = $Body
-                } elseif ($Body -is [hashtable] -or $Body.GetType().Name -like 'PSCustomObject') {
-                    $bodyJson = $Body | ConvertTo-Json -Compress -Depth 10
+            if (\$Body -ne \$null) {
+                if (\$Body -is [string]) {
+                    \$bodyJson = \$Body
+                } elseif (\$Body -is [hashtable] -or \$Body.GetType().Name -like 'PSCustomObject') {
+                    \$bodyJson = \$Body | ConvertTo-Json -Compress -Depth 10
                 } else {
-                    $bodyJson = ""
+                    \$bodyJson = ""
                 }
             } else {
-                $bodyJson = ""
+                \$bodyJson = ""
             }
 
-            $payload   = "$timestamp:$nonce:$bodyJson"
-            $signature = Get-HmacSignature -Message $payload -SecretHex $Global:HmacSecret
+            \$payload   = "\$timestamp:\$nonce:\$bodyJson"
+            \$signature = Get-HmacSignature -Message \$payload -SecretHex \$Global:HmacSecret
 
-            $headers = @{
-                "X-Agent-Token"    = $Global:AgentToken
-                "X-HMAC-Signature" = $signature
-                "X-Timestamp"      = $timestamp
-                "X-Nonce"          = $nonce
+            \$headers = @{
+                "X-Agent-Token"    = \$Global:AgentToken
+                "X-HMAC-Signature" = \$signature
+                "X-Timestamp"      = \$timestamp
+                "X-Nonce"          = \$nonce
                 "Content-Type"     = "application/json"
             }
 
-            $params = @{
-                Uri         = $uri
-                Method      = $Method
-                Headers     = $headers
-                TimeoutSec  = $TimeoutSec
+            \$params = @{
+                Uri         = \$uri
+                Method      = \$Method
+                Headers     = \$headers
+                TimeoutSec  = \$TimeoutSec
                 ErrorAction = "Stop"
             }
 
-            if ($bodyJson -ne "") {
-                $params.Body = $bodyJson
+            if (\$bodyJson -ne "") {
+                \$params.Body = \$bodyJson
             }
 
-            Write-Log "DEBUG: $Method $uri (body_length=$($bodyJson.Length))" "DEBUG"
+            Write-Log "DEBUG: \$Method \$uri (body_length=\$(\$bodyJson.Length))" "DEBUG"
 
-            $response = Invoke-WebRequest @params -UseBasicParsing
-            $status   = [int]$response.StatusCode
+            \$response = Invoke-WebRequest @params -UseBasicParsing
+            \$status   = [int]\$response.StatusCode
 
-            Write-Log "DEBUG: Resposta $status de $uri" "DEBUG"
+            Write-Log "DEBUG: Resposta \$status de \$uri" "DEBUG"
 
             return [pscustomobject]@{
-                Success    = $true
-                StatusCode = $status
-                Body       = $response.Content
+                Success    = \$true
+                StatusCode = \$status
+                Body       = \$response.Content
             }
         }
         catch {
-            $retryCount++
+            \$retryCount++
 
-            $statusCode = $null
-            if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
-                $statusCode = $_.Exception.Response.StatusCode.value__
+            \$statusCode = \$null
+            if (\$_.Exception.Response -and \$_.Exception.Response.StatusCode) {
+                \$statusCode = \$_.Exception.Response.StatusCode.value__
             }
 
-            Write-Log "Erro na requisição $Method $uri (tentativa $retryCount/$MaxRetries): $($_.Exception.Message)" "ERROR"
+            Write-Log "Erro na requisição \$Method \$uri (tentativa \$retryCount/\$MaxRetries): \$(\$_.Exception.Message)" "ERROR"
 
-            if ($statusCode -eq 401) {
+            if (\$statusCode -eq 401) {
                 Write-Log "❌ Erro de autenticação (401). Verifique AgentToken / HmacSecret / clock." "ERROR"
                 throw
             }
 
-            if ($retryCount -ge $MaxRetries) {
-                Write-Log "❌ Falha definitiva após $MaxRetries tentativas em $uri" "ERROR"
+            if (\$retryCount -ge \$MaxRetries) {
+                Write-Log "❌ Falha definitiva após \$MaxRetries tentativas em \$uri" "ERROR"
                 throw
             }
 
-            Write-Log "WARN: Aguardando $retryDelay segundos para tentar de novo..." "WARN"
-            Start-Sleep -Seconds $retryDelay
-            $retryDelay *= 2
+            Write-Log "WARN: Aguardando \$retryDelay segundos para tentar de novo..." "WARN"
+            Start-Sleep -Seconds \$retryDelay
+            \$retryDelay *= 2
         }
     }
 }
@@ -244,27 +244,27 @@ function Invoke-SecureRequest {
 # ============================================
 function Get-SystemInfo {
     try {
-        $os = Get-CimInstance Win32_OperatingSystem
-        $cs = Get-CimInstance Win32_ComputerSystem
+        \$os = Get-CimInstance Win32_OperatingSystem
+        \$cs = Get-CimInstance Win32_ComputerSystem
 
         return @{
             os_type      = "Windows"
-            os_name      = $os.Caption
-            os_version   = $os.Version
-            build_number = $os.BuildNumber
-            hostname     = $env:COMPUTERNAME
-            domain       = $cs.Domain
-            total_ram_gb = [Math]::Round($cs.TotalPhysicalMemory / 1GB, 2)
-            agent_name   = $Global:AgentName
-            agent_version = $Global:AgentVersion
+            os_name      = \$os.Caption
+            os_version   = \$os.Version
+            build_number = \$os.BuildNumber
+            hostname     = \$env:COMPUTERNAME
+            domain       = \$cs.Domain
+            total_ram_gb = [Math]::Round(\$cs.TotalPhysicalMemory / 1GB, 2)
+            agent_name   = \$Global:AgentName
+            agent_version = \$Global:AgentVersion
         }
     } catch {
-        Write-Log "Erro ao coletar informações do sistema: $($_.Exception.Message)" "WARN"
+        Write-Log "Erro ao coletar informações do sistema: \$(\$_.Exception.Message)" "WARN"
         return @{
             os_type      = "Windows"
-            hostname     = $env:COMPUTERNAME
-            agent_name   = $Global:AgentName
-            agent_version = $Global:AgentVersion
+            hostname     = \$env:COMPUTERNAME
+            agent_name   = \$Global:AgentName
+            agent_version = \$Global:AgentVersion
         }
     }
 }
@@ -274,24 +274,24 @@ function Get-SystemInfo {
 # ============================================
 function Send-PostInstallationEvent {
     param(
-        [bool]$Success = $true,
-        [string]$ErrorMessage = "",
-        [int]$InstallationTimeSeconds = 0
+        [bool]\$Success = \$true,
+        [string]\$ErrorMessage = "",
+        [int]\$InstallationTimeSeconds = 0
     )
 
-    $sys = Get-SystemInfo
+    \$sys = Get-SystemInfo
 
-    $body = @{
-        agent_name                = $Global:AgentName
-        event_type                = $Success ? "post_installation" : "post_installation_unverified"
+    \$body = @{
+        agent_name                = \$Global:AgentName
+        event_type                = \$Success ? "post_installation" : "post_installation_unverified"
         platform                  = "windows"
         installation_method       = "one_click"
-        success                   = $Success
-        installation_time_seconds = $InstallationTimeSeconds
-        error_message             = $ErrorMessage
-        agent_version             = $Global:AgentVersion
-        network_connectivity      = $true
-        metadata                  = $sys
+        success                   = \$Success
+        installation_time_seconds = \$InstallationTimeSeconds
+        error_message             = \$ErrorMessage
+        agent_version             = \$Global:AgentVersion
+        network_connectivity      = \$true
+        metadata                  = \$sys
     }
 
     Write-Log "Enviando post_installation..." "INFO"
@@ -303,13 +303,13 @@ function Send-PostInstallationEvent {
             -Body \$body \`
             -TimeoutSec 20
 
-        if ($result.Success -and $result.StatusCode -eq 200) {
+        if (\$result.Success -and \$result.StatusCode -eq 200) {
             Write-Log "✅ post_installation registrado com sucesso" "SUCCESS"
         } else {
-            Write-Log "⚠️ Falha ao registrar post_installation (Status=$($result.StatusCode))" "WARN"
+            Write-Log "⚠️ Falha ao registrar post_installation (Status=\$(\$result.StatusCode))" "WARN"
         }
     } catch {
-        Write-Log "⚠️ Erro ao enviar post_installation: $($_.Exception.Message)" "WARN"
+        Write-Log "⚠️ Erro ao enviar post_installation: \$(\$_.Exception.Message)" "WARN"
     }
 }
 
@@ -317,15 +317,15 @@ function Send-PostInstallationEvent {
 #  HEARTBEAT
 # ============================================
 function Send-Heartbeat {
-    $sys = Get-SystemInfo
+    \$sys = Get-SystemInfo
 
-    $body = @{
-        agent_name    = $Global:AgentName
+    \$body = @{
+        agent_name    = \$Global:AgentName
         platform      = "windows"
-        os_name       = $sys.os_name
-        os_version    = $sys.os_version
-        hostname      = $sys.hostname
-        agent_version = $Global:AgentVersion
+        os_name       = \$sys.os_name
+        os_version    = \$sys.os_version
+        hostname      = \$sys.hostname
+        agent_version = \$Global:AgentVersion
     }
 
     Write-Log "Enviando heartbeat..." "INFO"
@@ -337,13 +337,13 @@ function Send-Heartbeat {
             -Body \$body \`
             -TimeoutSec 15
 
-        if ($result.Success -and $result.StatusCode -eq 200) {
+        if (\$result.Success -and \$result.StatusCode -eq 200) {
             Write-Log "✅ Heartbeat OK (200)" "SUCCESS"
         } else {
-            Write-Log "❌ Heartbeat falhou (Status=$($result.StatusCode))" "ERROR"
+            Write-Log "❌ Heartbeat falhou (Status=\$(\$result.StatusCode))" "ERROR"
         }
     } catch {
-        Write-Log "❌ Erro ao enviar heartbeat: $($_.Exception.Message)" "ERROR"
+        Write-Log "❌ Erro ao enviar heartbeat: \$(\$_.Exception.Message)" "ERROR"
     }
 }
 
@@ -352,34 +352,34 @@ function Send-Heartbeat {
 # ============================================
 function Submit-JobResult {
     param(
-        [Parameter(Mandatory = $true)]
-        [string]$JobId,
+        [Parameter(Mandatory = \$true)]
+        [string]\$JobId,
         
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = \$true)]
         [ValidateSet("completed","failed")]
-        [string]$Status,
+        [string]\$Status,
         
-        [Parameter(Mandatory = $false)]
-        [hashtable]$Output = @{},
+        [Parameter(Mandatory = \$false)]
+        [hashtable]\$Output = @{},
         
-        [Parameter(Mandatory = $false)]
-        [string]$ErrorMessage = "",
+        [Parameter(Mandatory = \$false)]
+        [string]\$ErrorMessage = "",
         
-        [Parameter(Mandatory = $false)]
-        [int]$ExecutionTimeSeconds = 0
+        [Parameter(Mandatory = \$false)]
+        [int]\$ExecutionTimeSeconds = 0
     )
 
-    $body = @{
-        job_id                 = $JobId
-        agent_name             = $Global:AgentName
-        status                 = $Status
-        output                 = $Output
-        error_message          = $ErrorMessage
-        execution_time_seconds = $ExecutionTimeSeconds
+    \$body = @{
+        job_id                 = \$JobId
+        agent_name             = \$Global:AgentName
+        status                 = \$Status
+        output                 = \$Output
+        error_message          = \$ErrorMessage
+        execution_time_seconds = \$ExecutionTimeSeconds
         finished_at            = (Get-Date).ToUniversalTime().ToString("o")
     }
 
-    Write-Log "Enviando resultado do job $JobId (status=$Status)..." "INFO"
+    Write-Log "Enviando resultado do job \$JobId (status=\$Status)..." "INFO"
 
     try {
         \$result = Invoke-SecureRequest \`
@@ -388,12 +388,12 @@ function Submit-JobResult {
             -Body \$body \`
             -TimeoutSec 30
 
-        if ($result.Success -and $result.StatusCode -eq 200) {
-            Write-Log "✅ Resultado do job $JobId enviado com sucesso" "SUCCESS"
-            return $true
+        if (\$result.Success -and \$result.StatusCode -eq 200) {
+            Write-Log "✅ Resultado do job \$JobId enviado com sucesso" "SUCCESS"
+            return \$true
         } else {
-            Write-Log "❌ Falha ao enviar resultado (Status=$($result.StatusCode))" "ERROR"
-            return $false
+            Write-Log "❌ Falha ao enviar resultado (Status=\$(\$result.StatusCode))" "ERROR"
+            return \$false
         }
     } catch {
         Write-Log "❌ Erro ao enviar resultado do job \${JobId}: \$(\$_.Exception.Message)" "ERROR"
@@ -406,63 +406,63 @@ function Submit-JobResult {
 # ============================================
 function Execute-Job {
     param(
-        [Parameter(Mandatory = $true)]
-        $Job
+        [Parameter(Mandatory = \$true)]
+        \$Job
     )
 
-    $jobId   = $Job.id
-    $jobType = $Job.type
-    $payload = $Job.payload
+    \$jobId   = \$Job.id
+    \$jobType = \$Job.type
+    \$payload = \$Job.payload
 
-    $startTime = Get-Date
+    \$startTime = Get-Date
 
-    Write-Log "🔧 Executando job $jobId (type=$jobType)" "INFO"
+    Write-Log "🔧 Executando job \$jobId (type=\$jobType)" "INFO"
 
     try {
-        $output = @{}
+        \$output = @{}
 
-        switch ($jobType) {
+        switch (\$jobType) {
             "integration_test" {
-                $sys = Get-SystemInfo
+                \$sys = Get-SystemInfo
                 
-                $output = @{
+                \$output = @{
                     message   = "Integration test executed successfully"
                     timestamp = (Get-Date).ToUniversalTime().ToString("o")
-                    agent     = $Global:AgentName
-                    version   = $Global:AgentVersion
-                    system    = $sys
+                    agent     = \$Global:AgentName
+                    version   = \$Global:AgentVersion
+                    system    = \$sys
                 }
             }
             "collect_info" {
-                $sys = Get-SystemInfo
-                $output = $sys
+                \$sys = Get-SystemInfo
+                \$output = \$sys
             }
             "scan" {
                 try {
                     Write-Log "📄 Job type 'scan' recebido" "INFO"
 
-                    # Payload esperado: { "filePath": "C:\\path\\file.exe", "tenantId": "uuid" }
-                    $filePath = $payload.filePath
-                    $tenantId = $payload.tenantId
+                    # Payload esperado: { "filePath": "C:\\\\path\\\\file.exe", "tenantId": "uuid" }
+                    \$filePath = \$payload.filePath
+                    \$tenantId = \$payload.tenantId
 
-                    if (-not $filePath) {
+                    if (-not \$filePath) {
                         throw "Payload inválido: 'filePath' não informado"
                     }
 
-                    if (-not (Test-Path $filePath)) {
-                        throw "Arquivo não encontrado: $filePath"
+                    if (-not (Test-Path \$filePath)) {
+                        throw "Arquivo não encontrado: \$filePath"
                     }
 
                     # Calcular SHA256
-                    $fileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
-                    Write-Log "🔍 Escaneando: $filePath (hash: $fileHash)" "INFO"
+                    \$fileHash = (Get-FileHash -Path \$filePath -Algorithm SHA256).Hash.ToLower()
+                    Write-Log "🔍 Escaneando: \$filePath (hash: \$fileHash)" "INFO"
 
                     # Monta body para backend (NÃO converte pra JSON aqui)
-                    $scanBody = @{
-                        tenant_id  = $tenantId
-                        agent_name = $Global:AgentName
-                        file_path  = $filePath
-                        file_hash  = $fileHash
+                    \$scanBody = @{
+                        tenant_id  = \$tenantId
+                        agent_name = \$Global:AgentName
+                        file_path  = \$filePath
+                        file_hash  = \$fileHash
                     }
 
                     # Chama backend scan-virus
@@ -472,55 +472,55 @@ function Execute-Job {
                         -Body \$scanBody \`
                         -TimeoutSec 60
 
-                    if (-not $scanResult.Success) {
-                        throw "Falha ao chamar scan-virus: HTTP $($scanResult.StatusCode)"
+                    if (-not \$scanResult.Success) {
+                        throw "Falha ao chamar scan-virus: HTTP \$(\$scanResult.StatusCode)"
                     }
 
-                    $scanData = $scanResult.Body | ConvertFrom-Json
+                    \$scanData = \$scanResult.Body | ConvertFrom-Json
 
                     # Monta output base
-                    $output = @{
-                        filePath    = $filePath
-                        fileHash    = $fileHash
-                        isMalicious = $scanData.isMalicious
-                        positives   = $scanData.positives
-                        totalScans  = $scanData.totalScans
-                        permalink   = $scanData.permalink
-                        scannerUsed = $scanData.scannerUsed
-                        fromCache   = $scanData.fromCache
-                        quarantined = $false
+                    \$output = @{
+                        filePath    = \$filePath
+                        fileHash    = \$fileHash
+                        isMalicious = \$scanData.isMalicious
+                        positives   = \$scanData.positives
+                        totalScans  = \$scanData.totalScans
+                        permalink   = \$scanData.permalink
+                        scannerUsed = \$scanData.scannerUsed
+                        fromCache   = \$scanData.fromCache
+                        quarantined = \$false
                     }
 
                     # QUARENTENA FÍSICA (necessária pois backend não tem acesso ao filesystem)
-                    if ($scanData.isMalicious) {
-                        Write-Log "⚠️ MALWARE DETECTADO: $($scanData.positives)/$($scanData.totalScans) engines" "WARN"
+                    if (\$scanData.isMalicious) {
+                        Write-Log "⚠️ MALWARE DETECTADO: \$(\$scanData.positives)/\$(\$scanData.totalScans) engines" "WARN"
                         
-                        $quarantineRoot = "C:\CyberShield\Quarantine"
-                        if (-not (Test-Path $quarantineRoot)) {
-                            New-Item -ItemType Directory -Path $quarantineRoot -Force | Out-Null
+                        \$quarantineRoot = "C:\\CyberShield\\Quarantine"
+                        if (-not (Test-Path \$quarantineRoot)) {
+                            New-Item -ItemType Directory -Path \$quarantineRoot -Force | Out-Null
                         }
 
                         \$fileName = [System.IO.Path]::GetFileName(\$filePath)
                         \$guid = [guid]::NewGuid().ToString()
                         \$quarantinePath = Join-Path \$quarantineRoot "\$guid\`_\$fileName"
 
-                        Move-Item -Path $filePath -Destination $quarantinePath -Force
-                        Write-Log "✅ Arquivo movido para quarentena: $quarantinePath" "SUCCESS"
+                        Move-Item -Path \$filePath -Destination \$quarantinePath -Force
+                        Write-Log "✅ Arquivo movido para quarentena: \$quarantinePath" "SUCCESS"
 
-                        $output.quarantined = $true
-                        $output.quarantinePath = $quarantinePath
+                        \$output.quarantined = \$true
+                        \$output.quarantinePath = \$quarantinePath
                     } else {
                         Write-Log "✅ Arquivo limpo" "SUCCESS"
                     }
 
-                    $result.success = $true
-                    $result.output = $output | ConvertTo-Json
+                    \$result.success = \$true
+                    \$result.output = \$output | ConvertTo-Json
                 }
                 catch {
-                    $err = $_.Exception.Message
-                    Write-Log "❌ Erro ao processar job 'scan': $err" "ERROR"
-                    $result.success = $false
-                    $result.error = $err
+                    \$err = \$_.Exception.Message
+                    Write-Log "❌ Erro ao processar job 'scan': \$err" "ERROR"
+                    \$result.success = \$false
+                    \$result.error = \$err
                 }
             }
             "update_agent" {
@@ -533,80 +533,80 @@ function Execute-Job {
                         -Method GET \`
                         -TimeoutSec 60
 
-                    if (-not $updateResult.Success) {
-                        throw "Falha ao buscar update: HTTP $($updateResult.StatusCode)"
+                    if (-not \$updateResult.Success) {
+                        throw "Falha ao buscar update: HTTP \$(\$updateResult.StatusCode)"
                     }
 
-                    $data = $updateResult.Body | ConvertFrom-Json
+                    \$data = \$updateResult.Body | ConvertFrom-Json
 
                     # Já está na última versão?
-                    if ($data.message -eq "Already up to date") {
-                        Write-Log "ℹ Agente já está na última versão ($($data.current_version))" "INFO"
-                        $result.success = $true
-                        $result.output  = ($data | ConvertTo-Json -Depth 5)
+                    if (\$data.message -eq "Already up to date") {
+                        Write-Log "ℹ Agente já está na última versão (\$(\$data.current_version))" "INFO"
+                        \$result.success = \$true
+                        \$result.output  = (\$data | ConvertTo-Json -Depth 5)
                         break
                     }
 
-                    $newVersion   = $data.version
-                    $scriptText   = $data.script_content
-                    $expectedHash = $data.sha256
+                    \$newVersion   = \$data.version
+                    \$scriptText   = \$data.script_content
+                    \$expectedHash = \$data.sha256
 
-                    Write-Log "📦 Atualizando agente para versão $newVersion" "INFO"
+                    Write-Log "📦 Atualizando agente para versão \$newVersion" "INFO"
 
                     # Usa o próprio script atual, sem hardcode de caminho
-                    $currentScript = $PSCommandPath
-                    $backupScript  = $currentScript -replace '\.ps1$', "-backup-$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
-                    $tempScript    = Join-Path $env:TEMP "cybershield-agent-update-$newVersion.ps1"
+                    \$currentScript = \$PSCommandPath
+                    \$backupScript  = \$currentScript -replace '\\.ps1\$', "-backup-\$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
+                    \$tempScript    = Join-Path \$env:TEMP "cybershield-agent-update-\$newVersion.ps1"
 
                     # Salvar script novo
-                    Set-Content -Path $tempScript -Value $scriptText -Encoding UTF8
+                    Set-Content -Path \$tempScript -Value \$scriptText -Encoding UTF8
 
                     # Validar SHA256
-                    $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
-                    if ($actualHash -ne $expectedHash.ToLower()) {
-                        Remove-Item $tempScript -Force
-                        throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
+                    \$actualHash = (Get-FileHash -Path \$tempScript -Algorithm SHA256).Hash.ToLower()
+                    if (\$actualHash -ne \$expectedHash.ToLower()) {
+                        Remove-Item \$tempScript -Force
+                        throw "SHA256 mismatch! Esperado: \$expectedHash, Obtido: \$actualHash"
                     }
 
-                    Write-Log "✅ SHA256 validado: $actualHash" "SUCCESS"
+                    Write-Log "✅ SHA256 validado: \$actualHash" "SUCCESS"
 
                     # Backup do script atual
-                    Copy-Item -Path $currentScript -Destination $backupScript -Force
-                    Write-Log "📦 Backup criado em: $backupScript" "INFO"
+                    Copy-Item -Path \$currentScript -Destination \$backupScript -Force
+                    Write-Log "📦 Backup criado em: \$backupScript" "INFO"
 
                     # Trocar script
-                    Copy-Item -Path $tempScript -Destination $currentScript -Force
-                    Remove-Item $tempScript -Force
+                    Copy-Item -Path \$tempScript -Destination \$currentScript -Force
+                    Remove-Item \$tempScript -Force
 
-                    Write-Log "✅ Script atualizado para $newVersion" "SUCCESS"
+                    Write-Log "✅ Script atualizado para \$newVersion" "SUCCESS"
 
                     # Reiniciar task
                     Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
                     Start-Sleep -Seconds 2
                     Start-ScheduledTask -TaskName "CyberShield Agent"
 
-                    $output = @{
+                    \$output = @{
                         message     = "Agent updated successfully"
-                        newVersion  = $newVersion
-                        sha256      = $actualHash
+                        newVersion  = \$newVersion
+                        sha256      = \$actualHash
                         restartedAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
 
-                    $result.success = $true
-                    $result.output  = $output | ConvertTo-Json -Depth 5
+                    \$result.success = \$true
+                    \$result.output  = \$output | ConvertTo-Json -Depth 5
                     break
                 }
                 catch {
-                    $err = $_.Exception.Message
-                    Write-Log "❌ Erro no auto-update: $err" "ERROR"
-                    $result.success = $false
-                    $result.error   = $err
+                    \$err = \$_.Exception.Message
+                    Write-Log "❌ Erro no auto-update: \$err" "ERROR"
+                    \$result.success = \$false
+                    \$result.error   = \$err
                     break
                 }
             }
             
             default {
-                throw "Tipo de job não suportado: $jobType"
+                throw "Tipo de job não suportado: \$jobType"
             }
         }
 
@@ -636,9 +636,9 @@ function Execute-Job {
 #  POLL DE JOBS
 # ============================================
 function Poll-Jobs {
-    $body = @{
-        agent_name    = $Global:AgentName
-        agent_version = $Global:AgentVersion
+    \$body = @{
+        agent_name    = \$Global:AgentName
+        agent_version = \$Global:AgentVersion
     }
 
     Write-Log "Consultando jobs..." "INFO"
@@ -650,30 +650,30 @@ function Poll-Jobs {
             -Body \$body \`
             -TimeoutSec 20
 
-        if (-not $result.Success -or $result.StatusCode -ne 200) {
-            Write-Log "❌ poll-jobs falhou (Status=$($result.StatusCode))" "ERROR"
+        if (-not \$result.Success -or \$result.StatusCode -ne 200) {
+            Write-Log "❌ poll-jobs falhou (Status=\$(\$result.StatusCode))" "ERROR"
             return
         }
 
-        if ([string]::IsNullOrWhiteSpace($result.Body)) {
+        if ([string]::IsNullOrWhiteSpace(\$result.Body)) {
             Write-Log "⚠️ Resposta de poll-jobs vazia" "WARN"
             return
         }
 
-        $jobs = $result.Body | ConvertFrom-Json
+        \$jobs = \$result.Body | ConvertFrom-Json
 
-        if ($null -eq $jobs -or $jobs.Count -eq 0) {
+        if (\$null -eq \$jobs -or \$jobs.Count -eq 0) {
             Write-Log "📭 Nenhum job disponível" "INFO"
             return
         }
 
-        Write-Log "📬 Recebidos $($jobs.Count) job(s)" "INFO"
+        Write-Log "📬 Recebidos \$(\$jobs.Count) job(s)" "INFO"
 
-        foreach ($job in $jobs) {
-            Execute-Job -Job $job
+        foreach (\$job in \$jobs) {
+            Execute-Job -Job \$job
         }
     } catch {
-        Write-Log "❌ Erro no poll-jobs: $($_.Exception.Message)" "ERROR"
+        Write-Log "❌ Erro no poll-jobs: \$(\$_.Exception.Message)" "ERROR"
     }
 }
 
@@ -681,16 +681,16 @@ function Poll-Jobs {
 #  LOOP PRINCIPAL
 # ============================================
 Write-Log "============================================" "INFO"
-Write-Log "🚀 Iniciando CyberShield Agent - Windows v$Global:AgentVersion" "INFO"
-Write-Log "🌐 ServerUrl: $Global:ServerUrl" "DEBUG"
-Write-Log "🏷️  AgentName: $Global:AgentName" "DEBUG"
+Write-Log "🚀 Iniciando CyberShield Agent - Windows v\$Global:AgentVersion" "INFO"
+Write-Log "🌐 ServerUrl: \$Global:ServerUrl" "DEBUG"
+Write-Log "🏷️  AgentName: \$Global:AgentName" "DEBUG"
 Write-Log "============================================" "INFO"
 
 try {
-    $bootstrapStart = Get-Date
+    \$bootstrapStart = Get-Date
 
     # 1) Enviar evento de post_installation
-    Send-PostInstallationEvent -Success $true -InstallationTimeSeconds 0
+    Send-PostInstallationEvent -Success \$true -InstallationTimeSeconds 0
 
     # 2) Primeiro heartbeat
     Send-Heartbeat
@@ -698,52 +698,40 @@ try {
     \$bootstrapElapsed = [int]((Get-Date) - \$bootstrapStart).TotalSeconds
     Write-Log "✅ Bootstrap concluído em \${bootstrapElapsed}s" "SUCCESS"
 
-    Write-Log "🔄 Entrando no loop principal (intervalo=$($Global:PollIntervalSeconds)s)" "INFO"
+    Write-Log "🔄 Entrando no loop principal (intervalo=\$(\$Global:PollIntervalSeconds)s)" "INFO"
 
-    $lastHeartbeat = Get-Date
-    $lastPoll      = Get-Date
+    \$lastHeartbeat = Get-Date
+    \$lastPoll      = Get-Date
 
-    while ($true) {
-        $now = Get-Date
+    while (\$true) {
+        \$now = Get-Date
 
         try {
             # Heartbeat a cada intervalo
-            if ((($now - $lastHeartbeat).TotalSeconds) -ge $Global:PollIntervalSeconds) {
+            if (((\$now - \$lastHeartbeat).TotalSeconds) -ge \$Global:PollIntervalSeconds) {
                 Send-Heartbeat
-                $lastHeartbeat = Get-Date
+                \$lastHeartbeat = Get-Date
             }
 
             # Poll de jobs a cada intervalo
-            if ((($now - $lastPoll).TotalSeconds) -ge $Global:PollIntervalSeconds) {
+            if (((\$now - \$lastPoll).TotalSeconds) -ge \$Global:PollIntervalSeconds) {
                 Poll-Jobs
-                $lastPoll = Get-Date
+                \$lastPoll = Get-Date
             }
         } catch {
-            Write-Log "❌ Erro no loop principal: $($_.Exception.Message)" "ERROR"
+            Write-Log "❌ Erro no loop principal: \$(\$_.Exception.Message)" "ERROR"
         }
 
         Start-Sleep -Seconds 2
     }
 }
 catch {
-    Write-Log "💥 Erro fatal no agente: $($_.Exception.Message)" "ERROR"
-    Write-Log "Stack trace: $($_.ScriptStackTrace)" "ERROR"
+    Write-Log "💥 Erro fatal no agente: \$(\$_.Exception.Message)" "ERROR"
+    Write-Log "Stack trace: \$(\$_.ScriptStackTrace)" "ERROR"
     exit 1
 }
 `;
 
 export function getAgentScriptWindows(): string {
   return AGENT_SCRIPT_WINDOWS_CONTENT;
-}
-
-export function validateAgentScript(content: string): boolean {
-  return content.length > 5000 && content.includes('CyberShield');
-}
-
-export async function calculateScriptHash(content: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(content);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
