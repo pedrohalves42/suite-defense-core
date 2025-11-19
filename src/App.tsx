@@ -119,6 +119,7 @@ const App = () => (
                 <Route path="installations" element={<Installations />} />
                 <Route path="agent-health" element={<AgentHealthMonitor />} />
                 <Route path="agent-diagnostics" element={<AgentDiagnostics />} />
+                <Route path="agent-troubleshooting" element={<AgentTroubleshooting />} />
                 <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="ai-actions" element={<AIActionApproval />} />
                 <Route path="system-logs" element={<SystemLogs />} />

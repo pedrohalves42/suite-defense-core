@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
@@ -53,6 +53,7 @@ export const AppSidebar = () => {
     { icon: Package, label: 'Gerenciar Tenants', to: '/super-admin/tenants', end: true },
     { icon: BarChart3, label: 'Métricas Globais', to: '/super-admin/metrics' },
     { icon: Activity, label: 'Diagnóstico Agentes', to: '/admin/agent-diagnostics' },
+    { icon: Terminal, label: 'Troubleshooting', to: '/admin/agent-troubleshooting' },
     { icon: BarChart3, label: 'Analytics Subs', to: '/super-admin/subscription-analytics' },
     { icon: CreditCard, label: 'Config Stripe', to: '/super-admin/stripe-setup' },
     { icon: Users, label: 'Todos Usuários', to: '/super-admin/users' },
