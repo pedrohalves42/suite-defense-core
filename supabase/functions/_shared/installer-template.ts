@@ -13,7 +13,7 @@
 
 // Windows Installer Template - Simplified and hardened
 // Single source of truth with inline agent script using PowerShell here-string
-export const WINDOWS_INSTALLER_TEMPLATE = String.raw`#Requires -RunAsAdministrator
+export const WINDOWS_INSTALLER_TEMPLATE = `#Requires -RunAsAdministrator
 #Requires -Version 5.1
 
 param(
@@ -62,6 +62,51 @@ function Get-HMACSHA256 {
     $hmac.Key = [System.Text.Encoding]::UTF8.GetBytes($Secret)
     $hashBytes = $hmac.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Message))
     return [System.BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+}
+
+# Telemetria de falha (envia mas não bloqueia em erro)
+function Send-FailureTelemetry {
+    param(
+        [string]$Phase,
+        [string]$ErrorMessage
+    )
+
+    try {
+        $tokenPrefix = if ($AgentToken) { $AgentToken.Substring(0, [Math]::Min(8, $AgentToken.Length)) } else { "unknown" }
+        
+        $body = @{
+            agent_name = $AgentName
+            event_type = "installation_failed"
+            platform   = "windows"
+            error_message = $ErrorMessage
+            metadata   = @{
+                phase              = $Phase
+                token_prefix       = $tokenPrefix
+                powershell_version = $PSVersionTable.PSVersion.ToString()
+                os_version         = [System.Environment]::OSVersion.Version.ToString()
+            }
+        } | ConvertTo-Json -Depth 5 -Compress
+
+        $hmac = Get-HMACSHA256 -Message $body -Secret $HmacSecret
+
+        Invoke-WebRequest ``
+            -Uri "$ServerUrl/functions/v1/track-installation-event" ``
+            -Method POST ``
+            -Headers @{
+                "Content-Type"     = "application/json"
+                "X-Agent-Token"    = $AgentToken
+                "X-HMAC-Signature" = $hmac
+            } ``
+            -Body $body ``
+            -TimeoutSec 10 ``
+            -UseBasicParsing | Out-Null
+        
+        Write-InstallerLog "Telemetria de falha enviada" "INFO"
+    }
+    catch {
+        # Não bloqueia o instalador
+        Write-InstallerLog "Aviso: não foi possível enviar telemetria ($($_.Exception.Message))" "WARN"
+    }
 }
 
 Write-Host "==================================" -ForegroundColor Cyan
@@ -204,6 +249,10 @@ catch {
         Write-Host "   Token (prefixo): $tokenPrefix..." -ForegroundColor Yellow
         Write-Host "   HMAC  (prefixo): $hmacPrefix..." -ForegroundColor Yellow
         Write-Host "   Gere um novo instalador e tente novamente." -ForegroundColor Yellow
+        
+        # Enviar telemetria de falha antes de abortar
+        Send-FailureTelemetry -Phase "self-test" -ErrorMessage "401 Unauthorized during heartbeat self-test"
+        
         exit 1
     }
     else {
@@ -230,8 +279,13 @@ try {
     Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Description "CyberShield Security Agent v3.0" -Force | Out-Null
     Write-InstallerLog "Scheduled Task criada: $TaskName" "INFO"
 } catch {
-    Write-InstallerLog "ERRO ao criar Scheduled Task: $($_.Exception.Message)" "ERROR"
+    $taskError = $_.Exception.Message
+    Write-InstallerLog "ERRO ao criar Scheduled Task: $taskError" "ERROR"
     Write-Host "❌ Falha ao criar Scheduled Task." -ForegroundColor Red
+    
+    # Enviar telemetria de falha antes de abortar
+    Send-FailureTelemetry -Phase "create-scheduled-task" -ErrorMessage "Failed to create scheduled task: $taskError"
+    
     exit 1
 }
 
