@@ -274,9 +274,16 @@ function Send-PostInstallationEvent {
 
     $sys = Get-SystemInfo
 
+    # PowerShell 5.1 compatibility: calculate event_type outside hashtable
+    $eventType = if ($Success) { 
+        "post_installation" 
+    } else { 
+        "post_installation_unverified" 
+    }
+
     $body = @{
         agent_name                = $Global:AgentName
-        event_type                = $Success ? "post_installation" : "post_installation_unverified"
+        event_type                = $eventType
         platform                  = "windows"
         installation_method       = "one_click"
         success                   = $Success
