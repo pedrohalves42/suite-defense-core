@@ -97,9 +97,24 @@ Write-InstallerLog "FASE 3: Self-test concluído" "SUCCESS"
 Write-InstallerLog "FASE 4: Criando Scheduled Task..." "INFO"
 
 $TaskName = "CyberShieldAgent-$AgentName"
+
+# Construir argumentos em array (mais legível e debugável)
+$AgentArgs = @(
+    "-ExecutionPolicy", "Bypass",
+    "-NoProfile",
+    "-WindowStyle", "Hidden",
+    "-File", "\\\`"$AgentScriptPath\\\`"",
+    "-ServerUrl", "\\\`"$ServerUrl\\\`"",
+    "-AgentToken", "\\\`"$AgentToken\\\`"",
+    "-HmacSecret", "\\\`"$HmacSecret\\\`"",
+    "-AgentName", "\\\`"$AgentName\\\`""
+)
+
+Write-InstallerLog "Task arguments: $($AgentArgs -join ' ')" "DEBUG"
+
 $Action = New-ScheduledTaskAction \`
-    -Execute "powershell.exe" \`
-    -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File \\\`"$AgentScriptPath\\\`" -ServerUrl \\\`"$ServerUrl\\\`" -AgentToken \\\`"$AgentToken\\\`" -HmacSecret \\\`"$HmacSecret\\\`" -AgentName \\\`"$AgentName\\\`""
+    -Execute "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" \`
+    -Argument ($AgentArgs -join " ")
 
 $Trigger = New-ScheduledTaskTrigger -AtStartup
 $Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
