@@ -1229,6 +1229,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          agent_id: string | null
           agent_name: string
           approved: boolean
           completed_at: string | null
@@ -1252,6 +1253,7 @@ export type Database = {
           type: string
         }
         Insert: {
+          agent_id?: string | null
           agent_name: string
           approved?: boolean
           completed_at?: string | null
@@ -1275,6 +1277,7 @@ export type Database = {
           type: string
         }
         Update: {
+          agent_id?: string | null
           agent_name?: string
           approved?: boolean
           completed_at?: string | null
@@ -1304,6 +1307,41 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
           },
           {
             foreignKeyName: "jobs_parent_job_id_fkey"
