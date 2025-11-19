@@ -257,9 +257,6 @@ verify_jwt = false
 verify_jwt = false
 schedule = "0 * * * *"  # Executa a cada hora
 
-[functions.check-installation-health]
+[functions.monitor-stuck-agents]
 verify_jwt = false
-
-[[edge_runtime.schedules]]
-path = "/check-installation-health"
-schedule = "0 * * * *"
+schedule = "*/10 * * * *"  # Executa a cada 10 minutos
