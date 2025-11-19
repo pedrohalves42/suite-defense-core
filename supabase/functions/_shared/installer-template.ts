@@ -75,9 +75,35 @@ $AgentScriptContent = @'
 '@
 
 $AgentScriptPath = Join-Path $BasePath "cybershield-agent-$AgentName.ps1"
-$AgentScriptContent | Out-File -FilePath $AgentScriptPath -Encoding UTF8 -Force
+
+# Salvar script do agente em UTF-8 SEM BOM (compatível com PowerShell 5.1 e Task Scheduler)
+Write-InstallerLog "Salvando script do agente em UTF-8 sem BOM..." "INFO"
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($AgentScriptPath, $AgentScriptContent, $utf8NoBom)
 
 Write-InstallerLog "Script criado: $AgentScriptPath ($(([System.IO.FileInfo]$AgentScriptPath).Length) bytes)" "SUCCESS"
+
+# Validação crítica de encoding
+Write-InstallerLog "Validando encoding do script..." "INFO"
+try {
+    $bytes = [System.IO.File]::ReadAllBytes($AgentScriptPath)
+    
+    # Detectar UTF-16 LE (0xFF 0xFE) - isso impede execução
+    if ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) {
+        Write-InstallerLog "❌ ERRO CRÍTICO: Script salvo em UTF-16 LE - instalação falhará!" "ERROR"
+        throw "Encoding incorreto detectado (UTF-16 LE). Script não será executável."
+    }
+    
+    # Detectar UTF-8 com BOM (aceitável mas não ideal)
+    if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
+        Write-InstallerLog "⚠️  AVISO: Script tem BOM UTF-8 (funciona, mas não é ideal)" "WARN"
+    } else {
+        Write-InstallerLog "✅ Encoding validado: UTF-8 sem BOM (IDEAL)" "SUCCESS"
+    }
+} catch {
+    Write-InstallerLog "⚠️  Falha na validação de encoding: $($_.Exception.Message)" "WARN"
+    Write-InstallerLog "Continuando instalação..." "INFO"
+}
 
 # ============= FASE 3: Self-test =============
 Write-InstallerLog "FASE 3: Testando conectividade com backend..." "INFO"
