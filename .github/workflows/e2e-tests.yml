@@ -26,7 +26,11 @@ jobs:
     - name: Install dependencies
       run: npm install --no-audit --no-fund
 
-    - name: 🛡 Run Guardian (validate-system.ts)
+    - name: ASCII Guard - Block non-ASCII characters
+      run: npm run ascii:check
+      continue-on-error: false
+
+    - name: Run Guardian (validate-system.ts)
       run: npm run validate:all
       env:
         VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
