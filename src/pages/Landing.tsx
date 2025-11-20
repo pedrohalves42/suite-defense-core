@@ -19,39 +19,39 @@ const Landing = () => {
   const content = {
     business: {
       hero: {
-        badge: "Protecao Empresarial de Verdade",
+        badge: "Proteção Empresarial de Verdade",
         title1: "Proteja os Ativos Digitais",
         title2: "da Sua Empresa",
-        description: "Monitore todos os dispositivos da sua empresa em um unico painel centralizado.",
-        descriptionBold: " Visibilidade completa e resposta em tempo real.",
+        description: "Monitore todos os dispositivos da sua empresa em um único painel centralizado.",
+        descriptionBold: " Visibilidade completa, e resposta em tempo real.",
         stat2Label: "Dispositivos por plano",
-        ctaButton: "Comecar Trial Gratis",
-        reassurance: "✓ 30 dias de trial gratuito | ✓ Instalacao em 5 minutos | ✓ Suporte 100% em portugues"
+        ctaButton: "Começar Trial Grátis",
+        reassurance: "✓ 30 dias de trial gratuito | ✓ Instalação em 5 minutos | ✓ Suporte 100% em português"
       },
       benefits: {
-        card1: { title: "Veja Tudo em Um So Lugar", description: "Painel centralizado com status de todos os dispositivos da empresa" },
+        card1: { title: "Veja Tudo em Um Só Lugar", description: "Painel centralizado com status de todos os dispositivos da empresa" },
         card2: { title: "Haja em Segundos", description: "Resposta em tempo real para proteger seus ativos digitais" },
-        card3: { title: "Economize Tempo e Dinheiro", description: "Automacao inteligente reduz custos operacionais" }
+        card3: { title: "Economize Tempo e Dinheiro", description: "Automação inteligente reduz custos operacionais" }
       },
       calculator: { label: "Quantos dispositivos sua empresa possui?" }
     },
     home: {
       hero: {
-        badge: "Seguranca Digital Para Toda a Familia",
+        badge: "Segurança Digital Para Toda a Família",
         title1: "Proteja os Computadores e Dados",
-        title2: "da Sua Familia",
-        description: "Monitore todos os PCs de casa em um unico painel.",
-        descriptionBold: " Proteja fotos, documentos e a privacidade da familia contra virus e ameacas.",
+        title2: "da Sua Família",
+        description: "Monitore todos os PCs de casa em um único painel.",
+        descriptionBold: " Proteja fotos, documentos e a privacidade da família contra vírus e ameaças.",
         stat2Label: "Ideal para 1-10 PCs",
         ctaButton: "Proteger Minha Casa Agora",
-        reassurance: "✓ 30 dias gratis | ✓ Instale voce mesmo em 5min | ✓ Suporte em portugues via WhatsApp"
+        reassurance: "✓ 30 dias grátis | ✓ Instale você mesmo em 5min | ✓ Suporte em português via WhatsApp"
       },
       benefits: {
-        card1: { title: "Veja Tudo em Um So Lugar", description: "Veja o status de todos os PCs da casa: do seu home office ao computador dos filhos" },
-        card2: { title: "Haja em Segundos", description: "Proteja fotos de familia, documentos importantes e a privacidade de todos em tempo real" },
-        card3: { title: "Economize Tempo e Dinheiro", description: "Chega de pagar tecnico toda semana. Mantenha os PCs seguros automaticamente" }
+        card1: { title: "Veja Tudo em Um Só Lugar", description: "Veja o status de todos os PCs da casa: do seu home office ao computador dos filhos" },
+        card2: { title: "Haja em Segundos", description: "Proteja fotos de família, documentos importantes e a privacidade de todos em tempo real" },
+        card3: { title: "Economize Tempo e Dinheiro", description: "Chega de pagar técnico toda semana. Mantenha os PCs seguros automaticamente" }
       },
-      calculator: { label: "Quantos computadores voce tem em casa?" }
+      calculator: { label: "Quantos computadores você tem em casa?" }
     }
   };
 
@@ -120,10 +120,10 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              {audience === 'business' ? "Por Que Escolher o CyberShield" : "Beneficios para Sua Casa"}
+              {audience === 'business' ? "Por Que Escolher o CyberShield" : "Benefícios para Sua Casa"}
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              {audience === 'business' ? "Protecao empresarial simplificada com tecnologia de ponta" : "Seguranca digital facil para proteger sua familia e seus dispositivos"}
+              {audience === 'business' ? "Proteção empresarial simplificada com tecnologia de ponta" : "Segurança digital fácil para proteger sua família e seus dispositivos"}
             </p>
           </div>
 
@@ -166,10 +166,10 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              {audience === 'business' ? "Casos de Uso Especificos" : "Como o CyberShield Protege Sua Casa"}
+              {audience === 'business' ? "Casos de Uso Específicos" : "Como o CyberShield Protege Sua Casa"}
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              {audience === 'business' ? "Solucoes para diferentes setores e necessidades empresariais" : "Protecao para todos os dispositivos e membros da familia"}
+              {audience === 'business' ? "Soluções para diferentes setores e necessidades empresariais" : "Proteção para todos os dispositivos e membros da família"}
             </p>
           </div>
 
@@ -183,13 +183,13 @@ const Landing = () => {
                 </div>
                 <div className="bg-card p-8 rounded-2xl border border-border text-center">
                   <Building2 className="mx-auto mb-4 w-12 h-12 text-primary" />
-                  <h3 className="text-xl font-bold mb-2">Pequenas e Medias Empresas</h3>
-                  <p className="text-muted-foreground">Solucoes acessiveis para proteger seus ativos digitais.</p>
+                  <h3 className="text-xl font-bold mb-2">Pequenas e Médias Empresas</h3>
+                  <p className="text-muted-foreground">Soluções acessíveis para proteger seus ativos digitais.</p>
                 </div>
                 <div className="bg-card p-8 rounded-2xl border border-border text-center">
                   <ShieldCheck className="mx-auto mb-4 w-12 h-12 text-primary" />
-                  <h3 className="text-xl font-bold mb-2">Compliance e Seguranca</h3>
-                  <p className="text-muted-foreground">Atenda requisitos regulatorios com relatorios detalhados.</p>
+                  <h3 className="text-xl font-bold mb-2">Compliance e Segurança</h3>
+                  <p className="text-muted-foreground">Atenda requisitos regulatórios com relatórios detalhados.</p>
                 </div>
               </>
             ) : (
@@ -201,13 +201,13 @@ const Landing = () => {
                 </div>
                 <div className="bg-card p-8 rounded-2xl border border-border text-center">
                   <Baby className="mx-auto mb-4 w-12 h-12 text-primary" />
-                  <h3 className="text-xl font-bold mb-2">Protecao para Criancas</h3>
-                  <p className="text-muted-foreground">Mantenha os dispositivos dos filhos seguros contra ameacas.</p>
+                  <h3 className="text-xl font-bold mb-2">Proteção para Crianças</h3>
+                  <p className="text-muted-foreground">Mantenha os dispositivos dos filhos seguros contra ameaças.</p>
                 </div>
                 <div className="bg-card p-8 rounded-2xl border border-border text-center">
                   <Users className="mx-auto mb-4 w-12 h-12 text-primary" />
-                  <h3 className="text-xl font-bold mb-2">Familia Conectada</h3>
-                  <p className="text-muted-foreground">Gerencie a seguranca de todos os dispositivos da casa.</p>
+                  <h3 className="text-xl font-bold mb-2">Família Conectada</h3>
+                  <p className="text-muted-foreground">Gerencie a segurança de todos os dispositivos da casa.</p>
                 </div>
               </>
             )}
@@ -223,7 +223,7 @@ const Landing = () => {
               {audience === 'business' ? "Como Funciona" : "Como Funciona o CyberShield em Casa"}
             </h2>
             <p className="text-xl text-muted-foreground">
-              {audience === 'business' ? "Tres passos simples para protecao completa" : "Protecao facil em tres passos para sua familia"}
+              {audience === 'business' ? "Três passos simples para proteção completa" : "Proteção fácil em três passos para sua família"}
             </p>
           </div>
 
@@ -234,9 +234,9 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
                   <span className="text-2xl font-bold text-primary">1</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Instalacao em Minutos" : "Instale em Minutos"}</h3>
+                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Instalação em Minutos" : "Instale em Minutos"}</h3>
                 <p className="text-muted-foreground text-lg">
-                  {audience === 'business' ? "Instale o agente em cada dispositivo. Processo simplificado, sem necessidade de conhecimento tecnico avancado." : "Instale o software facilmente em todos os computadores da sua casa."}
+                  {audience === 'business' ? "Instale o agente em cada dispositivo. Processo simplificado, sem necessidade de conhecimento técnico avançado." : "Instale o software facilmente em todos os computadores da sua casa."}
                 </p>
               </div>
             </div>
@@ -247,9 +247,9 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
                   <span className="text-2xl font-bold text-primary">2</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Monitoramento Centralizado" : "Monitoramento Facil"}</h3>
+                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Monitoramento Centralizado" : "Monitoramento Fácil"}</h3>
                 <p className="text-muted-foreground text-lg">
-                  {audience === 'business' ? "Dashboard unificado exibe status operacional, ameacas detectadas e anomalias em tempo real." : "Veja o status de todos os PCs da casa em um painel simples e intuitivo."}
+                  {audience === 'business' ? "Dashboard unificado exibe status operacional, ameaças detectadas e anomalias em tempo real." : "Veja o status de todos os PCs da casa em um painel simples e intuitivo."}
                 </p>
               </div>
             </div>
@@ -260,9 +260,9 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
                   <span className="text-2xl font-bold text-primary">3</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Resposta Automatizada" : "Protecao Automatizada"}</h3>
+                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Resposta Automatizada" : "Proteção Automatizada"}</h3>
                 <p className="text-muted-foreground text-lg">
-                  {audience === 'business' ? "Execute correcoes e atualizacoes remotamente atraves da interface centralizada." : "O CyberShield protege automaticamente contra ameacas sem que voce precise se preocupar."}
+                  {audience === 'business' ? "Execute correções e atualizações remotamente através da interface centralizada." : "O CyberShield protege automaticamente contra ameaças sem que você precise se preocupar."}
                 </p>
               </div>
             </div>
@@ -284,9 +284,9 @@ const Landing = () => {
                     <Zap className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg mb-2">{audience === 'business' ? "Scans de Virus Avancados" : "Protecao Contra Virus"}</h3>
+                    <h3 className="font-bold text-lg mb-2">{audience === 'business' ? "Scans de Vírus Avançados" : "Proteção Contra Vírus"}</h3>
                     <p className="text-muted-foreground">
-                      {audience === 'business' ? "Integracao com VirusTotal e Hybrid Analysis para deteccao de ameacas em tempo real." : "Detecta e remove virus e malwares automaticamente."}
+                      {audience === 'business' ? "Integração com VirusTotal e Hybrid Analysis para detecção de ameaças em tempo real." : "Detecta e remove vírus e malwares automaticamente."}
                     </p>
                   </div>
                 </div>
@@ -296,9 +296,9 @@ const Landing = () => {
                     <Lock className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg mb-2">{audience === 'business' ? "Quarentena Automatica" : "Isolamento de Ameacas"}</h3>
+                    <h3 className="font-bold text-lg mb-2">{audience === 'business' ? "Quarentena Automática" : "Isolamento de Ameaças"}</h3>
                     <p className="text-muted-foreground">
-                      {audience === 'business' ? "Arquivos maliciosos sao automaticamente isolados para proteger sua rede." : "Arquivos suspeitos sao isolados para manter sua casa segura."}
+                      {audience === 'business' ? "Arquivos maliciosos são automaticamente isolados para proteger sua rede." : "Arquivos suspeitos são isolados para manter sua casa segura."}
                     </p>
                   </div>
                 </div>
