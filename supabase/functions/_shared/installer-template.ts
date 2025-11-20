@@ -56,11 +56,38 @@ try {
 }
 
 # Remove old scheduled tasks
+Write-InstallerLog "Removendo tasks antigas do CyberShield..." "INFO"
 try {
-    Get-ScheduledTask -TaskName "CyberShieldAgent*" -ErrorAction SilentlyContinue | ForEach-Object {
-        Write-InstallerLog "Removendo task antiga: $($_.TaskName)" "INFO"
-        Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:\$false -ErrorAction SilentlyContinue
+    # Método 1: PowerShell cmdlet
+    $oldTasks = Get-ScheduledTask -TaskName "CyberShieldAgent*" -ErrorAction SilentlyContinue
+    if ($oldTasks) {
+        foreach ($task in $oldTasks) {
+            Write-InstallerLog "Removendo task antiga (cmdlet): $($task.TaskName)" "INFO"
+            try {
+                Stop-ScheduledTask -TaskName $task.TaskName -ErrorAction SilentlyContinue
+                Unregister-ScheduledTask -TaskName $task.TaskName -Confirm:\$false -ErrorAction Stop
+                Write-InstallerLog "Task removida com sucesso: $($task.TaskName)" "SUCCESS"
+            } catch {
+                Write-InstallerLog "Falha ao remover $($task.TaskName) via cmdlet: $($_.Exception.Message)" "WARN"
+            }
+        }
     }
+    
+    # Método 2: schtasks.exe (fallback mais agressivo)
+    $schtasksOutput = schtasks.exe /Query /FO CSV 2>&1 | ConvertFrom-Csv -ErrorAction SilentlyContinue
+    if ($schtasksOutput) {
+        $cyberShieldTasks = $schtasksOutput | Where-Object { $_.'TaskName' -like '*CyberShieldAgent*' }
+        if ($cyberShieldTasks) {
+            foreach ($task in $cyberShieldTasks) {
+                $taskName = $task.'TaskName'.TrimStart('\')
+                Write-InstallerLog "Removendo task antiga (schtasks): $taskName" "INFO"
+                $deleteResult = schtasks.exe /Delete /TN "$taskName" /F 2>&1
+                Write-InstallerLog "Resultado: $deleteResult" "DEBUG"
+            }
+        }
+    }
+    
+    Write-InstallerLog "Cleanup de tasks antigas concluido" "SUCCESS"
 } catch {
     Write-InstallerLog "Aviso ao remover tasks: $($_.Exception.Message)" "WARN"
 }
@@ -193,6 +220,34 @@ Write-InstallerLog "Last Task Result: $($taskInfo.LastTaskResult)" "INFO"
 if ($taskInfo.LastTaskResult -ne 0 -and $taskInfo.LastTaskResult -ne $null) {
     Write-InstallerLog "[WARN] AVISO: Task retornou codigo de erro: $($taskInfo.LastTaskResult)" "WARN"
     Write-InstallerLog "Isso pode indicar problema com argumentos ou permissoes" "WARN"
+    
+    # Diagnóstico específico por código de erro
+    switch ($taskInfo.LastTaskResult) {
+        1 {
+            Write-InstallerLog "Codigo 1: Erro generico. Verifique argumentos da task." "WARN"
+        }
+        2147942667 {
+            Write-InstallerLog "Codigo 2147942667: Arquivo nao encontrado. Verifique path do script." "WARN"
+        }
+        2147943140 {
+            Write-InstallerLog "Codigo 2147943140: Acesso negado. Verifique permissoes SYSTEM." "WARN"
+        }
+        2147942402 {
+            Write-InstallerLog "Codigo 2147942402: Arquivo em uso. Aguarde e tente novamente." "WARN"
+        }
+        4294770688 {
+            Write-InstallerLog "Codigo 4294770688: Argumentos mal formatados. Verifique escaping." "WARN"
+        }
+        default {
+            Write-InstallerLog "Codigo desconhecido: $($taskInfo.LastTaskResult)" "WARN"
+        }
+    }
+    
+    # Sugerir próximos passos
+    Write-InstallerLog "Proximos passos de diagnostico:" "INFO"
+    Write-InstallerLog "  1. Verificar log do agente: C:\CyberShield\logs\cybershield-agent-v3.log" "INFO"
+    Write-InstallerLog "  2. Executar manualmente: C:\CyberShield\cybershield-agent-$AgentName.ps1" "INFO"
+    Write-InstallerLog "  3. Verificar Event Viewer: Logs de Aplicativo" "INFO"
 }
 
 # Verificar se o agente conseguiu iniciar (log criado)
@@ -229,21 +284,45 @@ try {
     
     $headers = @{
         "Content-Type" = "application/json"
+        "apikey" = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhdmJubWR1eHB4aHd1YnFyenpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NzkzMzIsImV4cCI6MjA3NTQ1NTMzMn0.79Bg6lX-ArhDGLeaUN7MPgChv4FQNJ_KcjdMa5IerWk"
     }
     
-    Invoke-WebRequest \`
+    Write-InstallerLog "Enviando telemetria para: $telemetryUrl" "DEBUG"
+    
+    $response = Invoke-WebRequest \`
         -Uri $telemetryUrl \`
         -Method POST \`
         -Body $telemetryBody \`
         -Headers $headers \`
         -UseBasicParsing \`
         -TimeoutSec 10 \`
-        -ErrorAction Stop | Out-Null
+        -ErrorAction Stop
     
-    Write-InstallerLog "Telemetria enviada com sucesso" "SUCCESS"
+    Write-InstallerLog "Telemetria enviada com sucesso (HTTP $($response.StatusCode))" "SUCCESS"
 } catch {
-    Write-InstallerLog "AVISO: Falha ao enviar telemetria: $($_.Exception.Message)" "WARN"
+    $errorDetails = $_.Exception.Message
+    $statusCode = "N/A"
+    
+    # Extrair código HTTP se disponível
+    if ($_.Exception.Response) {
+        $statusCode = [int]$_.Exception.Response.StatusCode
+    }
+    
+    Write-InstallerLog "AVISO: Falha ao enviar telemetria (HTTP $statusCode): $errorDetails" "WARN"
+    
+    # Diagnóstico específico por tipo de erro
+    if ($statusCode -eq 401) {
+        Write-InstallerLog "Erro de autenticacao. Verifique se o apikey esta correto." "WARN"
+    } elseif ($statusCode -eq 500) {
+        Write-InstallerLog "Erro no servidor backend. Verifique logs do Edge Function." "WARN"
+    } elseif ($statusCode -eq 404) {
+        Write-InstallerLog "Endpoint de telemetria nao encontrado. Verifique URL do servidor." "WARN"
+    } else {
+        Write-InstallerLog "Erro de rede ou timeout. Verifique conectividade." "WARN"
+    }
+    
     Write-InstallerLog "Instalacao concluida, mas telemetria nao foi enviada" "INFO"
+    Write-InstallerLog "O agente ainda pode funcionar normalmente via heartbeats" "INFO"
 }
 
 # ============= Conclusao =============
