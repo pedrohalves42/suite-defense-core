@@ -26,7 +26,7 @@ const Landing = () => {
         descriptionBold: " Visibilidade completa e resposta em tempo real.",
         stat2Label: "Dispositivos por plano",
         ctaButton: "Comecar Trial Gratis",
-        reassurance: "? 30 dias de trial gratuito ? ? Instalacao em 5 minutos ? ? Suporte 100% em portugues"
+        reassurance: "✓ 30 dias de trial gratuito | ✓ Instalacao em 5 minutos | ✓ Suporte 100% em portugues"
       },
       benefits: {
         card1: { title: "Veja Tudo em Um So Lugar", description: "Painel centralizado com status de todos os dispositivos da empresa" },
@@ -44,7 +44,7 @@ const Landing = () => {
         descriptionBold: " Proteja fotos, documentos e a privacidade da familia contra virus e ameacas.",
         stat2Label: "Ideal para 1-10 PCs",
         ctaButton: "Proteger Minha Casa Agora",
-        reassurance: "? 30 dias gratis ? ? Instale voce mesmo em 5min ? ? Suporte em portugues via WhatsApp"
+        reassurance: "✓ 30 dias gratis | ✓ Instale voce mesmo em 5min | ✓ Suporte em portugues via WhatsApp"
       },
       benefits: {
         card1: { title: "Veja Tudo em Um So Lugar", description: "Veja o status de todos os PCs da casa: do seu home office ao computador dos filhos" },
@@ -130,7 +130,7 @@ const Landing = () => {
           <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div className="bg-card p-8 rounded-2xl border border-border text-center">
               <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-3xl">?</span>
+                <BarChart className="w-8 h-8 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3">{currentContent.benefits.card1.title}</h3>
               <p className="text-muted-foreground">
@@ -140,7 +140,7 @@ const Landing = () => {
 
             <div className="bg-card p-8 rounded-2xl border border-border text-center">
               <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-3xl">?</span>
+                <Zap className="w-8 h-8 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3">{currentContent.benefits.card2.title}</h3>
               <p className="text-muted-foreground">
@@ -150,7 +150,7 @@ const Landing = () => {
 
             <div className="bg-card p-8 rounded-2xl border border-border text-center">
               <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-3xl">?</span>
+                <TrendingUp className="w-8 h-8 text-primary" />
               </div>
               <h3 className="text-xl font-bold mb-3">{currentContent.benefits.card3.title}</h3>
               <p className="text-muted-foreground">
