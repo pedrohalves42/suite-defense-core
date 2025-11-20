@@ -58,10 +58,10 @@ try {
         Set-Acl -Path $LogsPath -AclObject $acl
         Write-InstallerLog "Permissoes SYSTEM aplicadas em $LogsPath" "SUCCESS"
     } catch {
-        Write-InstallerLog "Aviso: nao foi possivel aplicar ACL para SYSTEM em $LogsPath: $_" "WARN"
+        Write-InstallerLog "Aviso: nao foi possivel aplicar ACL para SYSTEM em $LogsPath: $($_.Exception.Message)" "WARN"
     }
 } catch {
-    Write-InstallerLog "ERRO CRITICO: falha ao criar pastas base/logs: $_" "ERROR"
+    Write-InstallerLog "ERRO CRITICO: falha ao criar pastas base/logs: $($_.Exception.Message)" "ERROR"
     throw "Instalacao abortada: nao foi possivel criar pastas e logs em $BasePath"
 }
 
@@ -81,7 +81,7 @@ try {
         Write-InstallerLog "Event source 'CyberShield' ja existe" "INFO"
     }
 } catch {
-    Write-InstallerLog "Aviso: nao foi possivel registrar event source 'CyberShield': $_" "WARN"
+    Write-InstallerLog "Aviso: nao foi possivel registrar event source 'CyberShield': $($_.Exception.Message)" "WARN"
 }
 
 Write-InstallerLog "=== CyberShield Agent Installer v3.1.0-HARDENED ===" "INFO"
@@ -217,7 +217,7 @@ try {
     Add-Content -Path $AgentLogPath -Value $line -Encoding UTF8
     Write-InstallerLog "Teste de escrita no log do agente ok: $AgentLogPath" "SUCCESS"
 } catch {
-    Write-InstallerLog "ERRO CRITICO: nao foi possivel escrever no log do agente: $_" "ERROR"
+    Write-InstallerLog "ERRO CRITICO: nao foi possivel escrever no log do agente: $($_.Exception.Message)" "ERROR"
     throw "Instalacao abortada: sem permissao para criar logs do agente em $AgentLogPath"
 }
 
@@ -276,7 +276,7 @@ try {
     Write-InstallerLog "Scheduled task last run time: $($taskInfo.LastRunTime)" "INFO"
     Write-InstallerLog "Scheduled task last result: $($taskInfo.LastTaskResult)" "INFO"
 } catch {
-    Write-InstallerLog "Aviso: nao foi possivel ler informacoes da scheduled task $TaskName: $_" "WARN"
+    Write-InstallerLog "Aviso: nao foi possivel ler informacoes da scheduled task $TaskName: $($_.Exception.Message)" "WARN"
 }
 
 # Diagnostico: ler eventos recentes do EventLog Application para o source CyberShield
@@ -293,7 +293,7 @@ try {
         Write-InstallerLog "Nenhum evento recente encontrado para source 'CyberShield'" "INFO"
     }
 } catch {
-    Write-InstallerLog "Aviso: nao foi possivel ler EventLog Application: $_" "WARN"
+    Write-InstallerLog "Aviso: nao foi possivel ler EventLog Application: $($_.Exception.Message)" "WARN"
 }
 
 # Validacao completa da task
