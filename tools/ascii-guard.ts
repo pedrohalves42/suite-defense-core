@@ -15,8 +15,8 @@ import * as path from "path";
 
 const ROOT = process.cwd();
 
-// File extensions to scan
-const TARGET_EXTS = [".ps1", ".psm1", ".ts", ".tsx", ".sql", ".psd1"];
+// File extensions to scan (backend only - frontend can have accents for UX)
+const TARGET_EXTS = [".ps1", ".psm1", ".sql", ".psd1"];
 
 // Directories to ignore
 const IGNORE_DIRS = new Set<string>([
@@ -94,7 +94,19 @@ const replacementsByCode: Record<number, string> = {
 
 function isTargetFile(filePath: string): boolean {
   const ext = path.extname(filePath).toLowerCase();
-  return TARGET_EXTS.includes(ext);
+  
+  // Backend files: always validate
+  if (TARGET_EXTS.includes(ext)) {
+    return true;
+  }
+  
+  // TypeScript files: only validate if in supabase/functions (Edge Functions)
+  if (ext === ".ts" || ext === ".tsx") {
+    const normalized = filePath.replace(/\\/g, "/");
+    return normalized.includes("supabase/functions/");
+  }
+  
+  return false;
 }
 
 function walk(dir: string, files: string[] = []): string[] {
