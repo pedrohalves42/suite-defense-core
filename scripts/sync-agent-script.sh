@@ -11,11 +11,11 @@ fi
 
 echo "[SYNC] Sincronizando $SOURCE -> $TARGET"
 
-# Cabeçalho TS fixo
+# Cabecalho TS fixo
 cat > "$TARGET" <<'EOF'
 /**
  * CyberShield Agent Windows Script - AUTO-GERADO
- * NÃO EDITAR MANUALMENTE.
+ * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
  */
 
