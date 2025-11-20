@@ -28,14 +28,60 @@ $BasePath  = "C:\\CyberShield"
 $LogsPath  = Join-Path $BasePath "logs"
 $LogFile   = Join-Path $LogsPath "installer.log"
 
-New-Item -ItemType Directory -Path $BasePath -Force  | Out-Null
-New-Item -ItemType Directory -Path $LogsPath -Force  | Out-Null
+# Criar pastas base e logs com permissoes explicitas
+try {
+    if (-not (Test-Path $BasePath)) {
+        New-Item -ItemType Directory -Path $BasePath -Force | Out-Null
+        Write-InstallerLog "Pasta base criada: $BasePath" "SUCCESS"
+    } else {
+        Write-InstallerLog "Pasta base ja existe: $BasePath" "INFO"
+    }
+
+    if (-not (Test-Path $LogsPath)) {
+        New-Item -ItemType Directory -Path $LogsPath -Force | Out-Null
+        Write-InstallerLog "Pasta de logs criada: $LogsPath" "SUCCESS"
+    } else {
+        Write-InstallerLog "Pasta de logs ja existe: $LogsPath" "INFO"
+    }
+
+    # Garantir permissoes para SYSTEM
+    try {
+        $acl = Get-Acl $LogsPath
+        $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "NT AUTHORITY\SYSTEM",
+            "FullControl",
+            "ContainerInherit,ObjectInherit",
+            "None",
+            "Allow"
+        )
+        $acl.SetAccessRule($systemRule)
+        Set-Acl -Path $LogsPath -AclObject $acl
+        Write-InstallerLog "Permissoes SYSTEM aplicadas em $LogsPath" "SUCCESS"
+    } catch {
+        Write-InstallerLog "Aviso: nao foi possivel aplicar ACL para SYSTEM em $LogsPath: $_" "WARN"
+    }
+} catch {
+    Write-InstallerLog "ERRO CRITICO: falha ao criar pastas base/logs: $_" "ERROR"
+    throw "Instalacao abortada: nao foi possivel criar pastas e logs em $BasePath"
+}
 
 function Write-InstallerLog {
     param([string]$Message, [string]$Level = "INFO")
     $line = "[{0}] [{1}] {2}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Level, $Message
     $line | Out-File -FilePath $LogFile -Append -Encoding UTF8
     Write-Host $line
+}
+
+# Registrar event source para fallback de log em caso de falha no arquivo
+try {
+    if (-not [System.Diagnostics.EventLog]::SourceExists("CyberShield")) {
+        New-EventLog -LogName Application -Source "CyberShield"
+        Write-InstallerLog "Event source 'CyberShield' registrada" "SUCCESS"
+    } else {
+        Write-InstallerLog "Event source 'CyberShield' ja existe" "INFO"
+    }
+} catch {
+    Write-InstallerLog "Aviso: nao foi possivel registrar event source 'CyberShield': $_" "WARN"
 }
 
 Write-InstallerLog "=== CyberShield Agent Installer v3.1.0-HARDENED ===" "INFO"
@@ -162,6 +208,19 @@ if ($scriptSize -lt 10000) {  # Script completo deve ter ~50KB+
 
 Write-InstallerLog "[OK]  Script do agente validado: $scriptSize bytes" "SUCCESS"
 
+# Testar escrita no log do agente antes de criar a scheduled task
+$AgentLogPath = Join-Path $LogsPath "cybershield-agent-v3.log"
+
+try {
+    $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $line = "$ts [INFO] Agent log criado pelo instalador"
+    Add-Content -Path $AgentLogPath -Value $line -Encoding UTF8
+    Write-InstallerLog "Teste de escrita no log do agente ok: $AgentLogPath" "SUCCESS"
+} catch {
+    Write-InstallerLog "ERRO CRITICO: nao foi possivel escrever no log do agente: $_" "ERROR"
+    throw "Instalacao abortada: sem permissao para criar logs do agente em $AgentLogPath"
+}
+
 # ============= FASE 4: Scheduled Task =============
 Write-InstallerLog "FASE 4: Criando Scheduled Task..." "INFO"
 
@@ -208,6 +267,34 @@ Write-InstallerLog "Scheduled Task iniciada" "INFO"
 
 # Aguardar execucao inicial
 Start-Sleep -Seconds 5
+
+# Diagnostico: verificar status da task
+try {
+    $taskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
+    $task = Get-ScheduledTask -TaskName $TaskName
+    Write-InstallerLog "Scheduled task state: $($task.State)" "INFO"
+    Write-InstallerLog "Scheduled task last run time: $($taskInfo.LastRunTime)" "INFO"
+    Write-InstallerLog "Scheduled task last result: $($taskInfo.LastTaskResult)" "INFO"
+} catch {
+    Write-InstallerLog "Aviso: nao foi possivel ler informacoes da scheduled task $TaskName: $_" "WARN"
+}
+
+# Diagnostico: ler eventos recentes do EventLog Application para o source CyberShield
+Write-InstallerLog "Verificando eventos recentes no EventLog Application para source 'CyberShield'" "INFO"
+try {
+    $cutoff = (Get-Date).AddMinutes(-2)
+    $events = Get-EventLog -LogName Application -Source "CyberShield" -After $cutoff -Newest 10 -ErrorAction SilentlyContinue
+    if ($events) {
+        foreach ($evt in $events) {
+            $line = "EventLog [$($evt.EntryType)] $($evt.TimeGenerated): $($evt.Message)"
+            Write-InstallerLog $line "DEBUG"
+        }
+    } else {
+        Write-InstallerLog "Nenhum evento recente encontrado para source 'CyberShield'" "INFO"
+    }
+} catch {
+    Write-InstallerLog "Aviso: nao foi possivel ler EventLog Application: $_" "WARN"
+}
 
 # Validacao completa da task
 $taskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
