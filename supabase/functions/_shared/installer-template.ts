@@ -96,12 +96,12 @@ try {
     
     # Detectar UTF-8 com BOM (aceitavel mas nao ideal)
     if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
-        Write-InstallerLog "[WARN] ?  AVISO: Script tem BOM UTF-8 (funciona, mas nao e ideal)" "WARN"
+        Write-InstallerLog "[WARN] AVISO: Script tem BOM UTF-8 (funciona, mas nao e ideal)" "WARN"
     } else {
         Write-InstallerLog "[OK]  Encoding validado: UTF-8 sem BOM (IDEAL)" "SUCCESS"
     }
 } catch {
-    Write-InstallerLog "[WARN] ?  Falha na validacao de encoding: $($_.Exception.Message)" "WARN"
+    Write-InstallerLog "[WARN] Falha na validacao de encoding: $($_.Exception.Message)" "WARN"
     Write-InstallerLog "Continuando instalacao..." "INFO"
 }
 
@@ -191,7 +191,7 @@ Write-InstallerLog "Last Run Time: $($taskInfo.LastRunTime)" "INFO"
 Write-InstallerLog "Last Task Result: $($taskInfo.LastTaskResult)" "INFO"
 
 if ($taskInfo.LastTaskResult -ne 0 -and $taskInfo.LastTaskResult -ne $null) {
-    Write-InstallerLog "[WARN] ?  AVISO: Task retornou codigo de erro: $($taskInfo.LastTaskResult)" "WARN"
+    Write-InstallerLog "[WARN] AVISO: Task retornou codigo de erro: $($taskInfo.LastTaskResult)" "WARN"
     Write-InstallerLog "Isso pode indicar problema com argumentos ou permissoes" "WARN"
 }
 
@@ -203,7 +203,7 @@ if (Test-Path $agentLogPath) {
     $logSize = (Get-Item $agentLogPath).Length
     Write-InstallerLog "[OK]  Log do agente detectado: $agentLogPath ($logSize bytes)" "SUCCESS"
 } else {
-    Write-InstallerLog "[WARN] ?  AVISO: Log do agente nao encontrado apos 10s" "WARN"
+    Write-InstallerLog "[WARN] AVISO: Log do agente nao encontrado apos 10s" "WARN"
     Write-InstallerLog "Path esperado: $agentLogPath" "INFO"
     Write-InstallerLog "Verifique se a Scheduled Task esta executando corretamente" "WARN"
 }
@@ -253,10 +253,10 @@ Write-Host "[OK]  Instalacao concluida com sucesso!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Detalhes da instalacao:" -ForegroundColor Cyan
-Write-Host "  ? Agente: $AgentName" -ForegroundColor White
-Write-Host "  ? Pasta: $BasePath" -ForegroundColor White
-Write-Host "  ? Logs: $LogFile" -ForegroundColor White
-Write-Host "  ? Task: $TaskName" -ForegroundColor White
+Write-Host "  * Agente: $AgentName" -ForegroundColor White
+Write-Host "  * Pasta: $BasePath" -ForegroundColor White
+Write-Host "  * Logs: $LogFile" -ForegroundColor White
+Write-Host "  * Task: $TaskName" -ForegroundColor White
 Write-Host ""
 Write-Host "O agente esta rodando em background e enviara heartbeats automaticamente." -ForegroundColor White
 Write-Host "Verifique o status no dashboard em alguns minutos." -ForegroundColor White
