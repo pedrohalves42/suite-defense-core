@@ -37,6 +37,33 @@ param(
 $ErrorActionPreference = "Stop"
 
 # ============================================
+#  TRAP GLOBAL PARA ERROS NAO TRATADOS
+# ============================================
+trap {
+    $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $msg = "FATAL ERROR: $($_.Exception.Message) at line $($_.InvocationInfo.ScriptLineNumber)"
+    $stack = $_.ScriptStackTrace
+
+    $logDir = "C:\CyberShield\logs"
+    $logPath = Join-Path $logDir "cybershield-agent-v3.log"
+
+    # Log em arquivo se a pasta existir
+    if (Test-Path $logDir) {
+        try {
+            "$ts [FATAL] $msg" | Out-File -FilePath $logPath -Append -Encoding UTF8
+            "$ts [FATAL] Stack: $stack" | Out-File -FilePath $logPath -Append -Encoding UTF8
+        } catch {
+            # se ate gravar log falhar, nao fazer mais nada aqui
+        }
+    }
+
+    # Fallback para EventLog (source ja registrada pelo instalador)
+    Write-EventLog -LogName Application -Source "CyberShield" -EventId 1001 -EntryType Error -Message "$msg`n$stack" -ErrorAction SilentlyContinue
+
+    throw
+}
+
+# ============================================
 #  VARIAVEIS GLOBAIS
 # ============================================
 $Global:ServerUrl    = $ServerUrl.TrimEnd('/')
