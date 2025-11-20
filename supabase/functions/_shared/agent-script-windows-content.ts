@@ -41,6 +41,8 @@ param(
     [string]\$AgentVersion = "3.0.0"
 )
 
+\$ErrorActionPreference = "Stop"
+
 # ============================================
 #  TRAP GLOBAL PARA ERROS NAO TRATADOS
 # ============================================
@@ -69,54 +71,6 @@ trap {
 }
 
 # ============================================
-#  STARTUP LOG (ANTES DE TUDO)
-# ============================================
-try {
-    \$logDir = "C:\\CyberShield\\logs"
-    if (-not (Test-Path \$logDir)) {
-        New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
-    }
-    \$startupLog = Join-Path -Path \$logDir -ChildPath "cybershield-agent-v3.log"
-    Add-Content -Path \$startupLog -Value "[\$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [STARTUP] Agent iniciado com parametros: AgentName=\$AgentName, ServerUrl=\$ServerUrl"
-} catch {
-    # Fallback para Event Log se arquivo falhar
-    Write-EventLog -LogName Application -Source "CyberShield" -EventId 1000 -EntryType Error -Message "Failed to create log file: \$_" -ErrorAction SilentlyContinue
-}
-
-\$ErrorActionPreference = "Stop"
-
-# ============================================
-#  VALIDACAO DE PARAMETROS
-# ============================================
-\$logDir = "C:\\CyberShield\\logs"
-if (-not (Test-Path \$logDir)) {
-    New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
-}
-\$Global:LogFilePath = Join-Path -Path \$logDir -ChildPath "cybershield-agent-v3.log"
-
-# Log startup info
-Add-Content -Path \$Global:LogFilePath -Value "[\$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [INFO] === CyberShield Agent v3.0.0 ===" -ErrorAction SilentlyContinue
-Add-Content -Path \$Global:LogFilePath -Value "[\$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [INFO] ServerUrl: \$ServerUrl" -ErrorAction SilentlyContinue
-Add-Content -Path \$Global:LogFilePath -Value "[\$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [INFO] AgentToken: \$(\$AgentToken.Substring(0,8))..." -ErrorAction SilentlyContinue
-Add-Content -Path \$Global:LogFilePath -Value "[\$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [INFO] HmacSecret: \$(\$HmacSecret.Substring(0,8))..." -ErrorAction SilentlyContinue
-Add-Content -Path \$Global:LogFilePath -Value "[\$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [INFO] AgentName: \$AgentName" -ErrorAction SilentlyContinue
-
-if ([string]::IsNullOrWhiteSpace(\$ServerUrl)) {
-    Add-Content -Path \$Global:LogFilePath -Value "[\$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [FATAL] ERRO: ServerUrl vazio" -ErrorAction SilentlyContinue
-    throw "ServerUrl parameter is required"
-}
-
-if ([string]::IsNullOrWhiteSpace(\$AgentToken)) {
-    Add-Content -Path \$Global:LogFilePath -Value "[\$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [FATAL] ERRO: AgentToken vazio" -ErrorAction SilentlyContinue
-    throw "AgentToken parameter is required"
-}
-
-if ([string]::IsNullOrWhiteSpace(\$HmacSecret)) {
-    Add-Content -Path \$Global:LogFilePath -Value "[\$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [FATAL] ERRO: HmacSecret vazio" -ErrorAction SilentlyContinue
-    throw "HmacSecret parameter is required"
-}
-
-# ============================================
 #  VARIAVEIS GLOBAIS
 # ============================================
 \$Global:ServerUrl    = \$ServerUrl.TrimEnd('/')
@@ -124,6 +78,13 @@ if ([string]::IsNullOrWhiteSpace(\$HmacSecret)) {
 \$Global:HmacSecret   = \$HmacSecret
 \$Global:AgentName    = \$AgentName
 \$Global:AgentVersion = \$AgentVersion
+
+# Diretorio de log
+\$logDir = Join-Path -Path \$PSScriptRoot -ChildPath "logs"
+if (-not (Test-Path \$logDir)) {
+    New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
+}
+\$Global:LogFilePath = Join-Path -Path \$logDir -ChildPath "cybershield-agent-v3.log"
 
 # Intervalos
 \$Global:PollIntervalSeconds = 30
@@ -137,7 +98,7 @@ function Write-Log {
         [string]\$Message,
         
         [Parameter(Mandatory = \$false)]
-        [ValidateSet("DEBUG","INFO","WARN","ERROR","SUCCESS","FATAL")]
+        [ValidateSet("DEBUG","INFO","WARN","ERROR","SUCCESS")]
         [string]\$Level = "INFO"
     )
 
@@ -147,23 +108,9 @@ function Write-Log {
     Write-Host \$line
     
     try {
-        Add-Content -Path \$Global:LogFilePath -Value \$line -ErrorAction Stop
+        Add-Content -Path \$Global:LogFilePath -Value \$line
     } catch {
-        # Fallback: Event Log do Windows
-        try {
-            \$eventId = if (\$Level -eq "ERROR") { 
-                1002 
-            } elseif (\$Level -eq "FATAL") { 
-                1003 
-            } elseif (\$Level -eq "WARN") { 
-                1004 
-            } else { 
-                1005 
-            }
-            Write-EventLog -LogName Application -Source "CyberShield" -EventId \$eventId -EntryType Warning -Message \$line -ErrorAction SilentlyContinue
-        } catch {
-            # Ignorar se Event Log tambem falhar (script continua)
-        }
+        # Ignorar erro de escrita no log para nao quebrar o agente
     }
 }
 
