@@ -27,7 +27,7 @@ const signupSchema = z.object({
     .trim()
     .min(2, 'Nome deve ter pelo menos 2 caracteres')
     .max(100, 'Nome muito longo')
-    .regex(/^[a-zA-ZA-?\s]+$/, 'Nome deve conter apenas letras e espacos'),
+    .regex(/^[a-zA-Z\s]+$/, 'Nome deve conter apenas letras e espacos'),
 });
 
 export default function Signup() {

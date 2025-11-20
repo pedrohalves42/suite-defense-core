@@ -12,7 +12,7 @@ const ContactFormSchema = z.object({
   name: z.string()
     .min(2, "Nome muito curto")
     .max(100, "Nome muito longo")
-    .regex(/^[a-zA-ZA-?\s\-']+$/, "Nome contem caracteres invalidos"),
+    .regex(/^[a-zA-Z\s\-']+$/, "Nome contem caracteres invalidos"),
   email: z.string()
     .email("Email invalido")
     .max(255, "Email muito longo"),
