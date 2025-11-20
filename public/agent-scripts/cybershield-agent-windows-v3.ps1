@@ -2,7 +2,7 @@
     CyberShield Agent - Windows v3.0.0 (Essencial)
     
     Funcionalidades:
-    - HMAC SHA256 com secret em HEX (64 chars → 32 bytes)
+    - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
     - Heartbeat periódico
     - Poll de jobs
     - Execução de jobs
@@ -449,7 +449,7 @@ function Execute-Job {
             }
             "scan" {
                 try {
-                    Write-Log "📄 Job type 'scan' recebido" "INFO"
+                    Write-Log "[SCAN] Job type 'scan' recebido" "INFO"
 
                     # Payload esperado: { "filePath": "C:\\path\\file.exe", "tenantId": "uuid" }
                     $filePath = $payload.filePath
@@ -465,7 +465,7 @@ function Execute-Job {
 
                     # Calcular SHA256
                     $fileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
-                    Write-Log "🔍 Escaneando: $filePath (hash: $fileHash)" "INFO"
+                    Write-Log "[SCAN] Escaneando: $filePath (hash: $fileHash)" "INFO"
 
                     # Monta body para backend (NÃO converte pra JSON aqui)
                     $scanBody = @{
@@ -551,7 +551,7 @@ function Execute-Job {
 
                     # Já está na última versão?
                     if ($data.message -eq "Already up to date") {
-                        Write-Log "ℹ Agente já está na última versão ($($data.current_version))" "INFO"
+                        Write-Log "[INFO] Agente já está na última versão ($($data.current_version))" "INFO"
                         $result.success = $true
                         $result.output  = ($data | ConvertTo-Json -Depth 5)
                         break
@@ -561,7 +561,7 @@ function Execute-Job {
                     $scriptText   = $data.script_content
                     $expectedHash = $data.sha256
 
-                    Write-Log "📦 Atualizando agente para versão $newVersion" "INFO"
+                    Write-Log "[UPDATE] Atualizando agente para versão $newVersion" "INFO"
 
                     # Usa o próprio script atual, sem hardcode de caminho
                     $currentScript = $PSCommandPath
@@ -582,7 +582,7 @@ function Execute-Job {
 
                     # Backup do script atual
                     Copy-Item -Path $currentScript -Destination $backupScript -Force
-                    Write-Log "📦 Backup criado em: $backupScript" "INFO"
+                    Write-Log "[BACKUP] Backup criado em: $backupScript" "INFO"
 
                     # Trocar script
                     Copy-Item -Path $tempScript -Destination $currentScript -Force

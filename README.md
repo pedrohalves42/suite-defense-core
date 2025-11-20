@@ -52,6 +52,9 @@ Para informações detalhadas sobre arquitetura e troubleshooting:
 ### Troubleshooting
 - 🔧 [Guia de Troubleshooting](docs/TROUBLESHOOTING_INSTALLER.md) - Soluções para problemas comuns
 
+### Validação e Testes
+- ✅ [Script de Validação de Installers](scripts/verificar-installer-agente.ps1) - Validação local de encoding, sintaxe e integridade
+
 ---
 
 ## Project info
