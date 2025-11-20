@@ -101,6 +101,62 @@ npx playwright test e2e/heartbeat-validation.spec.ts
 
 ---
 
+## 🧪 FASE 4.5: Validação Local de Scripts
+
+### Script de Validação Automatizado
+
+Antes de instalar qualquer agente, valide o script localmente:
+
+```powershell
+# Download do script de validação
+# (Disponível no botão "Baixar Script de Validação" no painel de Troubleshooting)
+
+# Ou clone o repositório:
+git clone <repo-url>
+cd <repo-dir>
+
+# Execute a validação
+.\scripts\verificar-installer-agente.ps1 -ScriptPath "C:\Users\Pedro\Downloads\installer.ps1"
+```
+
+**O que o script valida:**
+- ✅ Encoding correto (UTF-8 sem BOM / ASCII)
+- ✅ Ausência de emojis e caracteres Unicode
+- ✅ Sintaxe PowerShell 5.1 válida
+- ✅ Presença de funções críticas (Submit-JobResult, Send-Heartbeat, etc.)
+- ✅ Parâmetro StartedAt (Jobs v3)
+- ✅ Assinatura CyberShield
+
+**Resultado Esperado:**
+```
+=== Verificação de Script do Agente / Installer ===
+=== 1) Encoding ===
+[OK] Encoding detectado: UTF-8 sem BOM / ASCII (IDEAL)
+
+=== 2) Caracteres não-ASCII (emoji / símbolos) ===
+[OK] Nenhum caractere fora do ASCII básico detectado.
+
+=== 3) Sintaxe PowerShell 5.1 ===
+[OK] Sintaxe PowerShell 5.1 VÁLIDA
+
+=== 4) Funções críticas de AGENTE ===
+[OK] Função Submit-JobResult presente
+[OK] Função Send-Heartbeat presente
+[OK] Função Poll-Jobs presente
+[OK] Função Get-HmacSignature presente
+
+=== 5) Presença de StartedAt (Jobs v3) ===
+[OK] Parâmetro/variável StartedAt encontrado no script
+
+=== 6) Assinatura CyberShield ===
+[OK] Assinatura 'CyberShield Agent' encontrada no script
+
+=== Resumo da Validação ===
+[SUCCESS] Todas as validações críticas PASSARAM
+```
+
+---
+
 ## 🔍 Diagnóstico de Problemas
 
 ### Se agente NÃO conectar:

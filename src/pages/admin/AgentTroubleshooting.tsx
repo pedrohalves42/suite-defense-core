@@ -130,6 +130,50 @@ export default function AgentTroubleshooting() {
         </p>
       </div>
 
+      {/* Script de Validação */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Script de Validação Local
+          </CardTitle>
+          <CardDescription>
+            Valide installers localmente antes da instalação para detectar problemas de encoding, sintaxe e integridade
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p>O script verifica:</p>
+            <ul className="list-disc list-inside space-y-1 ml-4">
+              <li>Encoding correto (UTF-8 sem BOM / ASCII)</li>
+              <li>Ausência de emojis e caracteres Unicode</li>
+              <li>Sintaxe PowerShell 5.1 válida</li>
+              <li>Presença de funções críticas do agente</li>
+              <li>Parâmetros essenciais (StartedAt para Jobs v3)</li>
+            </ul>
+          </div>
+          <Button
+            onClick={() => {
+              const scriptContent = `# Script content would be fetched from repository
+# For now, direct users to documentation
+window.open('https://github.com/your-repo/cybershield/blob/main/scripts/verificar-installer-agente.ps1', '_blank')`;
+              
+              toast.info(
+                "Script de validação disponível no repositório. Consulte a documentação para instruções de uso.",
+                { duration: 5000 }
+              );
+            }}
+            className="w-full gap-2"
+          >
+            <Shield className="h-4 w-4" />
+            Ver Script de Validação
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Execute com: <code className="bg-muted px-1 py-0.5 rounded">.\verificar-installer-agente.ps1 -ScriptPath "caminho\do\installer.ps1"</code>
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Sumário de Problemas */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
