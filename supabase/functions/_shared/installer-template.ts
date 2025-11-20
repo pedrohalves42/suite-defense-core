@@ -58,7 +58,7 @@ try {
 # Remove old scheduled tasks
 Write-InstallerLog "Removendo tasks antigas do CyberShield..." "INFO"
 try {
-    # Método 1: PowerShell cmdlet
+    # Metodo 1: PowerShell cmdlet
     $oldTasks = Get-ScheduledTask -TaskName "CyberShieldAgent*" -ErrorAction SilentlyContinue
     if ($oldTasks) {
         foreach ($task in $oldTasks) {
@@ -73,7 +73,7 @@ try {
         }
     }
     
-    # Método 2: schtasks.exe (fallback mais agressivo)
+    # Metodo 2: schtasks.exe (fallback mais agressivo)
     $schtasksOutput = schtasks.exe /Query /FO CSV 2>&1 | ConvertFrom-Csv -ErrorAction SilentlyContinue
     if ($schtasksOutput) {
         $cyberShieldTasks = $schtasksOutput | Where-Object { $_.'TaskName' -like '*CyberShieldAgent*' }
@@ -221,7 +221,7 @@ if ($taskInfo.LastTaskResult -ne 0 -and $taskInfo.LastTaskResult -ne $null) {
     Write-InstallerLog "[WARN] AVISO: Task retornou codigo de erro: $($taskInfo.LastTaskResult)" "WARN"
     Write-InstallerLog "Isso pode indicar problema com argumentos ou permissoes" "WARN"
     
-    # Diagnóstico específico por código de erro
+    # Diagnostico especifico por codigo de erro
     switch ($taskInfo.LastTaskResult) {
         1 {
             Write-InstallerLog "Codigo 1: Erro generico. Verifique argumentos da task." "WARN"
@@ -243,7 +243,7 @@ if ($taskInfo.LastTaskResult -ne 0 -and $taskInfo.LastTaskResult -ne $null) {
         }
     }
     
-    # Sugerir próximos passos
+    # Sugerir proximos passos
     Write-InstallerLog "Proximos passos de diagnostico:" "INFO"
     Write-InstallerLog "  1. Verificar log do agente: C:\CyberShield\logs\cybershield-agent-v3.log" "INFO"
     Write-InstallerLog "  2. Executar manualmente: C:\CyberShield\cybershield-agent-$AgentName.ps1" "INFO"
@@ -303,14 +303,14 @@ try {
     $errorDetails = $_.Exception.Message
     $statusCode = "N/A"
     
-    # Extrair código HTTP se disponível
+    # Extrair codigo HTTP se disponivel
     if ($_.Exception.Response) {
         $statusCode = [int]$_.Exception.Response.StatusCode
     }
     
     Write-InstallerLog "AVISO: Falha ao enviar telemetria (HTTP $statusCode): $errorDetails" "WARN"
     
-    # Diagnóstico específico por tipo de erro
+    # Diagnostico especifico por tipo de erro
     if ($statusCode -eq 401) {
         Write-InstallerLog "Erro de autenticacao. Verifique se o apikey esta correto." "WARN"
     } elseif ($statusCode -eq 500) {
