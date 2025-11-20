@@ -51,9 +51,12 @@ Para informações detalhadas sobre arquitetura e troubleshooting:
 
 ### Troubleshooting
 - 🔧 [Guia de Troubleshooting](docs/TROUBLESHOOTING_INSTALLER.md) - Soluções para problemas comuns
+- 🩺 [Diagnósticos do Sistema](docs/SYSTEM_DIAGNOSTICS.md) - Queries SQL e ferramentas de diagnóstico
+- 📋 [Checklist de Deployment](docs/DEPLOYMENT_CHECKLIST.md) - Validação pré e pós-deployment
 
 ### Validação e Testes
 - ✅ [Script de Validação de Installers](scripts/verificar-installer-agente.ps1) - Validação local de encoding, sintaxe e integridade
+- 🔍 [Queries de Diagnóstico](scripts/diagnostic-queries.sql) - Biblioteca completa de queries SQL para troubleshooting
 
 ---
 

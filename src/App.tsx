@@ -62,6 +62,8 @@ import Installations from "./pages/admin/Installations";
 import Tenant from "./pages/admin/Tenant";
 import JobsV3Migration from "./pages/admin/JobsV3Migration";
 import InstallationHealth from "./pages/admin/InstallationHealth";
+import PerformanceMetrics from "./pages/admin/PerformanceMetrics";
+import SystemHealth from "./pages/admin/SystemHealth";
 
 // CORRECAO: QueryClient ja esta inicializado no src/main.tsx
 // Remover duplicacao para manter configuracoes otimizadas
@@ -128,6 +130,8 @@ const App = () => (
                 <Route path="tenant" element={<Tenant />} />
                 <Route path="jobs-v3-migration" element={<JobsV3Migration />} />
                 <Route path="installation-health" element={<InstallationHealth />} />
+                <Route path="performance-metrics" element={<PerformanceMetrics />} />
+                <Route path="system-health" element={<SystemHealth />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
