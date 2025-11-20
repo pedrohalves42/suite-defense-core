@@ -1,8 +1,8 @@
 /**
  * Installer Template Version Tracker
  * 
- * Este arquivo rastreia as versões do installer template para facilitar
- * debugging e validação de deploys.
+ * Este arquivo rastreia as versoes do installer template para facilitar
+ * debugging e validacao de deploys.
  * 
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */

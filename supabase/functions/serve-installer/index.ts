@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
 
   try {
     return await withTimeout(async () => {
-      // Log da versão do installer template
+      // Log da versao do installer template
       console.log(`[${requestId}] ${getVersionInfo()}`);
       console.log(`[${requestId}] Processing request - ${req.method} ${req.url}`);
 
