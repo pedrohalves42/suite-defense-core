@@ -1,6 +1,6 @@
 /**
  * CyberShield Agent Windows Script - AUTO-GERADO
- * NÃO EDITAR MANUALMENTE.
+ * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
  */
 
