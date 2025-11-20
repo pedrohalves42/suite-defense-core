@@ -1,5 +1,5 @@
 # CyberShield Windows Installation Test Suite
-# Este script testa completamente a instalação e funcionamento do agent Windows
+# Este script testa completamente a instalacao e funcionamento do agent Windows
 
 param(
     [Parameter(Mandatory=$true)]
@@ -9,7 +9,7 @@ param(
     [string]$EnrollmentKey,
     
     [Parameter(Mandatory=$false)]
-    [int]$TestDuration = 300  # 5 minutos de teste por padrão
+    [int]$TestDuration = 300  # 5 minutos de teste por padrao
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,7 +27,7 @@ function Write-TestResult {
         [string]$Details = ""
     )
     
-    $status = if ($Passed) { "[✓ PASS]" } else { "[✗ FAIL]" }
+    $status = if ($Passed) { "[? PASS]" } else { "[? FAIL]" }
     $color = if ($Passed) { $ColorSuccess } else { $ColorError }
     
     Write-Host "$status $TestName" -ForegroundColor $color
@@ -37,7 +37,7 @@ function Write-TestResult {
 }
 
 function Test-Prerequisites {
-    Write-Host "`n=== TESTE 1: Pré-requisitos ===" -ForegroundColor $ColorInfo
+    Write-Host "`n=== TESTE 1: Pre-requisitos ===" -ForegroundColor $ColorInfo
     
     # PowerShell Version
     $psVersion = $PSVersionTable.PSVersion
@@ -60,7 +60,7 @@ function Test-Prerequisites {
     # Server Reachability
     try {
         $response = Invoke-WebRequest -Uri "$ServerUrl/functions/v1/poll-jobs" -Method HEAD -UseBasicParsing -TimeoutSec 10
-        $serverOk = $response.StatusCode -eq 401 -or $response.StatusCode -eq 200  # 401 é esperado (sem auth)
+        $serverOk = $response.StatusCode -eq 401 -or $response.StatusCode -eq 200  # 401 e esperado (sem auth)
     } catch {
         $serverOk = $false
     }
@@ -73,7 +73,7 @@ function Test-EnrollmentProcess {
     Write-Host "`n=== TESTE 2: Processo de Enrollment ===" -ForegroundColor $ColorInfo
     
     try {
-        # Chamar função de enrollment
+        # Chamar funcao de enrollment
         $enrollUrl = "$ServerUrl/functions/v1/enroll-agent"
         
         $agentName = "test-agent-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
@@ -193,10 +193,10 @@ function Test-JobAcknowledgment {
         return $false
     }
     
-    # Se não há jobs, criar um de teste via API
+    # Se nao ha jobs, criar um de teste via API
     Write-Host "       Creating test job..." -ForegroundColor Gray
     
-    # Por enquanto, vamos simular que não há jobs pendentes
+    # Por enquanto, vamos simular que nao ha jobs pendentes
     Write-TestResult "Job ACK (No Jobs)" $true "No jobs to acknowledge (expected)"
     
     return $true
@@ -205,7 +205,7 @@ function Test-JobAcknowledgment {
 function Test-ContinuousOperation {
     param([int]$DurationSeconds)
     
-    Write-Host "`n=== TESTE 6: Operação Contínua ($DurationSeconds segundos) ===" -ForegroundColor $ColorInfo
+    Write-Host "`n=== TESTE 6: Operacao Continua ($DurationSeconds segundos) ===" -ForegroundColor $ColorInfo
     
     if (-not $script:TestAgentToken) {
         Write-TestResult "Continuous Operation Test" $false "No agent token available"
@@ -246,10 +246,10 @@ function Test-ContinuousOperation {
                 $null = Invoke-RestMethod -Uri "$ServerUrl/functions/v1/heartbeat" -Method POST -Headers $headers -Body "{}" -TimeoutSec 30
                 $heartbeatCount++
                 $lastHeartbeat = Get-Date
-                Write-Host "       ✓ Heartbeat #$heartbeatCount" -ForegroundColor Green
+                Write-Host "       ? Heartbeat #$heartbeatCount" -ForegroundColor Green
             } catch {
                 $heartbeatErrors++
-                Write-Host "       ✗ Heartbeat error: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "       ? Heartbeat error: $($_.Exception.Message)" -ForegroundColor Red
             }
         }
         
@@ -276,10 +276,10 @@ function Test-ContinuousOperation {
                 $jobs = Invoke-RestMethod -Uri "$ServerUrl/functions/v1/poll-jobs" -Method GET -Headers $headers -TimeoutSec 30
                 $pollCount++
                 $lastPoll = Get-Date
-                Write-Host "       ✓ Poll #$pollCount (jobs: $($jobs.Count))" -ForegroundColor Green
+                Write-Host "       ? Poll #$pollCount (jobs: $($jobs.Count))" -ForegroundColor Green
             } catch {
                 $pollErrors++
-                Write-Host "       ✗ Poll error: $($_.Exception.Message)" -ForegroundColor Red
+                Write-Host "       ? Poll error: $($_.Exception.Message)" -ForegroundColor Red
             }
         }
         
@@ -321,7 +321,7 @@ function Test-LogsAndCleanup {
     
     if ($cleanup -eq "y") {
         Write-Host "       Cleaning up test agent..." -ForegroundColor Gray
-        # Aqui você poderia chamar uma API para deletar o agente
+        # Aqui voce poderia chamar uma API para deletar o agente
         Write-Host "       Note: Manual cleanup may be needed in dashboard" -ForegroundColor Yellow
     }
     
@@ -333,9 +333,9 @@ function Test-LogsAndCleanup {
 # ============================================
 
 Write-Host ""
-Write-Host "╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║     CyberShield Windows Agent Installation Test Suite    ║" -ForegroundColor Cyan
-Write-Host "╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
+Write-Host "?     CyberShield Windows Agent Installation Test Suite    ?" -ForegroundColor Cyan
+Write-Host "?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Server: $ServerUrl" -ForegroundColor Gray
 Write-Host "Test Duration: $TestDuration seconds" -ForegroundColor Gray
@@ -376,9 +376,9 @@ try {
 # ============================================
 
 Write-Host ""
-Write-Host "╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║                     FINAL REPORT                          ║" -ForegroundColor Cyan
-Write-Host "╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
+Write-Host "?                     FINAL REPORT                          ?" -ForegroundColor Cyan
+Write-Host "?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
 Write-Host ""
 
 $passedTests = ($testResults.Values | Where-Object { $_ -eq $true }).Count
@@ -386,7 +386,7 @@ $totalTests = $testResults.Count
 $passRate = ($passedTests / $totalTests) * 100
 
 foreach ($test in $testResults.GetEnumerator()) {
-    $status = if ($test.Value) { "[✓]" } else { "[✗]" }
+    $status = if ($test.Value) { "[?]" } else { "[?]" }
     $color = if ($test.Value) { $ColorSuccess } else { $ColorError }
     Write-Host "$status $($test.Key)" -ForegroundColor $color
 }
@@ -396,10 +396,10 @@ Write-Host "Tests Passed: $passedTests / $totalTests ($([math]::Round($passRate,
 Write-Host ""
 
 if ($passRate -ge 85) {
-    Write-Host "✓ INSTALLATION VALIDATION: PASSED" -ForegroundColor $ColorSuccess
+    Write-Host "? INSTALLATION VALIDATION: PASSED" -ForegroundColor $ColorSuccess
     Write-Host "  Agent is ready for production deployment" -ForegroundColor Gray
 } else {
-    Write-Host "✗ INSTALLATION VALIDATION: FAILED" -ForegroundColor $ColorError
+    Write-Host "? INSTALLATION VALIDATION: FAILED" -ForegroundColor $ColorError
     Write-Host "  Review failed tests before deploying" -ForegroundColor Gray
 }
 

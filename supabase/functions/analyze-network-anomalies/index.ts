@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Verificar autenticação
+    // Verificar autenticacao
     const {
       data: { user },
       error: authError,
@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     if (authError || !user) {
       console.error('Authentication error:', authError);
       return new Response(
-        JSON.stringify({ error: 'Não autenticado' }),
+        JSON.stringify({ error: 'Nao autenticado' }),
         {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
       .from('jobs')
       .select('agent_name, type, status, created_at, completed_at')
       .gte('created_at', startTime)
-      .limit(1000); // P0 FIX: Proteção contra DoS com muitos jobs
+      .limit(1000); // P0 FIX: Protecao contra DoS com muitos jobs
 
     if (agentName) {
       jobsQuery = jobsQuery.eq('agent_name', agentName);
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Preparar contexto para análise da IA
+    // Preparar contexto para analise da IA
     const analysisContext = {
       timeRange: `${timeRangeHours} horas`,
       totalAgents: agents?.length || 0,
@@ -127,27 +127,27 @@ Deno.serve(async (req) => {
       }
     };
 
-    // Chamar Lovable AI para análise
-    const aiPrompt = `Você é um especialista em segurança de rede e análise de comportamento de sistemas.
+    // Chamar Lovable AI para analise
+    const aiPrompt = `Voce e um especialista em seguranca de rede e analise de comportamento de sistemas.
 
-Analise os seguintes dados de uma rede de segurança de endpoints (CyberShield) e identifique possíveis anomalias, problemas ou padrões suspeitos:
+Analise os seguintes dados de uma rede de seguranca de endpoints (CyberShield) e identifique possiveis anomalias, problemas ou padroes suspeitos:
 
 ${JSON.stringify(analysisContext, null, 2)}
 
-Forneça uma análise detalhada incluindo:
-1. **Resumo Executivo**: Visão geral do estado da rede
+Forneca uma analise detalhada incluindo:
+1. **Resumo Executivo**: Visao geral do estado da rede
 2. **Anomalias Detectadas**: Liste qualquer comportamento anormal ou suspeito
-3. **Padrões Identificados**: Tendências nos dados
-4. **Alertas Críticos**: Problemas que requerem atenção imediata
-5. **Recomendações**: Ações sugeridas para melhorar a segurança
+3. **Padroes Identificados**: Tendencias nos dados
+4. **Alertas Criticos**: Problemas que requerem atencao imediata
+5. **Recomendacoes**: Acoes sugeridas para melhorar a seguranca
 
-Seja específico e técnico, focando em segurança cibernética.`;
+Seja especifico e tecnico, focando em seguranca cibernetica.`;
 
     if (!LOVABLE_API_KEY) {
       console.warn('LOVABLE_API_KEY not configured');
       return new Response(
         JSON.stringify({ 
-          error: 'IA não configurada',
+          error: 'IA nao configurada',
           rawData: analysisContext 
         }),
         {
@@ -168,7 +168,7 @@ Seja específico e técnico, focando em segurança cibernética.`;
         messages: [
           {
             role: 'system',
-            content: 'Você é um especialista em segurança de rede e detecção de anomalias.'
+            content: 'Voce e um especialista em seguranca de rede e deteccao de anomalias.'
           },
           {
             role: 'user',

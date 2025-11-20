@@ -3,9 +3,9 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 
 /**
- * Edge Function para agentes verificarem updates disponíveis
- * Autenticação: X-Agent-Token + HMAC
- * Retorna versão latest baseada no platform do agente
+ * Edge Function para agentes verificarem updates disponiveis
+ * Autenticacao: X-Agent-Token + HMAC
+ * Retorna versao latest baseada no platform do agente
  */
 
 Deno.serve(async (req) => {
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
     const platform = (agent.os_type?.toLowerCase() || 'windows');
     console.log(`[${requestId}] Platform: ${platform}`);
 
-    // 5. Buscar versão latest para o platform
+    // 5. Buscar versao latest para o platform
     const { data: latestVersion, error: versionError } = await supabase
       .from('agent_versions')
       .select('*')
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Latest version found: ${latestVersion.version}`);
 
-    // 6. Retornar informações da versão
+    // 6. Retornar informacoes da versao
     return new Response(
       JSON.stringify({
         has_update: true,

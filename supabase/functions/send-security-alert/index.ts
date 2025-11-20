@@ -24,7 +24,7 @@ serve(async (req) => {
       );
     }
 
-    // Verificar autenticação
+    // Verificar autenticacao
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
@@ -44,7 +44,7 @@ serve(async (req) => {
       );
     }
 
-    // Buscar tenant_id do usuário
+    // Buscar tenant_id do usuario
     const { data: userRole } = await supabase
       .from('user_roles')
       .select('tenant_id')
@@ -58,7 +58,7 @@ serve(async (req) => {
                       req.headers.get('x-real-ip') || 
                       'unknown';
 
-    // Inserir log de segurança
+    // Inserir log de seguranca
     const { error: logError } = await supabase
       .from('security_logs')
       .insert({
@@ -85,7 +85,7 @@ serve(async (req) => {
       details,
     });
 
-    // Se for crítico, criar alerta no sistema
+    // Se for critico, criar alerta no sistema
     if (severity === 'critical' || severity === 'high') {
       try {
         await supabase
@@ -94,7 +94,7 @@ serve(async (req) => {
             tenant_id: tenantId,
             alert_type: alertType,
             severity: severity,
-            title: `Alerta de Segurança: ${alertType}`,
+            title: `Alerta de Seguranca: ${alertType}`,
             message: `Tentativa suspeita detectada: ${JSON.stringify(details)}`,
             details: details || {},
           });

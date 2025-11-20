@@ -31,8 +31,8 @@ Deno.serve(async (req) => {
 
     const trialEndDate = new Date(trial_end).toLocaleDateString('pt-BR');
     const subject = days_remaining === 7 
-      ? `⏰ Seu trial expira em ${days_remaining} dias`
-      : `🚨 Seu trial expira amanhã!`;
+      ? `? Seu trial expira em ${days_remaining} dias`
+      : `? Seu trial expira amanha!`;
 
     const html = `
       <!DOCTYPE html>
@@ -53,44 +53,44 @@ Deno.serve(async (req) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="margin: 0;">🛡️ CyberShield</h1>
-              <p style="margin: 10px 0 0 0; opacity: 0.9;">Proteção Avançada para seus Dispositivos</p>
+              <h1 style="margin: 0;">?? CyberShield</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">Protecao Avancada para seus Dispositivos</p>
             </div>
             <div class="content">
-              <h2>Olá, ${tenant_name}!</h2>
+              <h2>Ola, ${tenant_name}!</h2>
               
               ${days_remaining === 7 ? `
-                <p>Seu período de trial está chegando ao fim e expira em <strong>${days_remaining} dias</strong>, no dia <strong>${trialEndDate}</strong>.</p>
-                <p>Esperamos que você esteja aproveitando todos os recursos premium do CyberShield!</p>
+                <p>Seu periodo de trial esta chegando ao fim e expira em <strong>${days_remaining} dias</strong>, no dia <strong>${trialEndDate}</strong>.</p>
+                <p>Esperamos que voce esteja aproveitando todos os recursos premium do CyberShield!</p>
               ` : `
                 <div class="warning">
-                  <strong>⚠️ Atenção:</strong> Seu trial expira <strong>amanhã, ${trialEndDate}</strong>!
+                  <strong>[WARN] ? Atencao:</strong> Seu trial expira <strong>amanha, ${trialEndDate}</strong>!
                 </div>
-                <p>Para continuar aproveitando todos os recursos de proteção avançada, escolha um plano agora.</p>
+                <p>Para continuar aproveitando todos os recursos de protecao avancada, escolha um plano agora.</p>
               `}
               
-              <p><strong>O que você tem acesso no trial:</strong></p>
+              <p><strong>O que voce tem acesso no trial:</strong></p>
               <ul>
-                <li>✅ Monitoramento em tempo real de dispositivos</li>
-                <li>✅ Scans de vírus ilimitados</li>
-                <li>✅ Dashboard de segurança avançado</li>
-                <li>✅ Alertas e notificações automáticas</li>
-                <li>✅ Suporte por email</li>
+                <li>[OK]  Monitoramento em tempo real de dispositivos</li>
+                <li>[OK]  Scans de virus ilimitados</li>
+                <li>[OK]  Dashboard de seguranca avancado</li>
+                <li>[OK]  Alertas e notificacoes automaticas</li>
+                <li>[OK]  Suporte por email</li>
               </ul>
               
-              <p><strong>Não perca acesso a esses recursos!</strong></p>
+              <p><strong>Nao perca acesso a esses recursos!</strong></p>
               
               <div style="text-align: center; margin: 30px 0;">
                 <a href="${Deno.env.get("SUPABASE_URL")}/admin/plan-upgrade" class="cta-button">
-                  ${days_remaining === 7 ? 'Ver Planos Disponíveis' : '🚀 Assinar Agora'}
+                  ${days_remaining === 7 ? 'Ver Planos Disponiveis' : '? Assinar Agora'}
                 </a>
               </div>
               
-              <p style="color: #6b7280; font-size: 14px;">Após o trial, você será automaticamente migrado para o plano gratuito com recursos limitados, a menos que escolha um dos nossos planos pagos.</p>
+              <p style="color: #6b7280; font-size: 14px;">Apos o trial, voce sera automaticamente migrado para o plano gratuito com recursos limitados, a menos que escolha um dos nossos planos pagos.</p>
             </div>
             <div class="footer">
-              <p>CyberShield - Proteção que você pode confiar</p>
-              <p>Esta é uma mensagem automática. Por favor, não responda este email.</p>
+              <p>CyberShield - Protecao que voce pode confiar</p>
+              <p>Esta e uma mensagem automatica. Por favor, nao responda este email.</p>
             </div>
           </div>
         </body>

@@ -1,12 +1,12 @@
 /**
- * CORREÇÃO: Definições consolidadas de tipos de usuário
- * Substitui múltiplas definições espalhadas pelo código
+ * CORRECAO: Definicoes consolidadas de tipos de usuario
+ * Substitui multiplas definicoes espalhadas pelo codigo
  */
 
 import { AppRole } from './roles';
 
 /**
- * Perfil básico do usuário
+ * Perfil basico do usuario
  */
 export interface UserProfile {
   user_id: string;
@@ -16,7 +16,7 @@ export interface UserProfile {
 
 /**
  * Membro de um tenant com role associado
- * CORREÇÃO: tenant_id opcional para compatibilidade com queries
+ * CORRECAO: tenant_id opcional para compatibilidade com queries
  */
 export interface Member {
   id: string;
@@ -31,7 +31,7 @@ export interface Member {
 }
 
 /**
- * Usuário completo com detalhes administrativos
+ * Usuario completo com detalhes administrativos
  */
 export interface UserWithDetails {
   user_id: string;
@@ -45,7 +45,7 @@ export interface UserWithDetails {
 }
 
 /**
- * Informações de assinatura do tenant
+ * Informacoes de assinatura do tenant
  */
 export interface TenantSubscription {
   subscription_plans: {

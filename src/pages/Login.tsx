@@ -15,11 +15,11 @@ import { logger } from '@/lib/logger';
 const loginSchema = z.object({
   email: z.string()
     .trim()
-    .min(1, 'Email é obrigatório')
-    .email('Email inválido')
+    .min(1, 'Email e obrigatorio')
+    .email('Email invalido')
     .max(255, 'Email muito longo'),
   password: z.string()
-    .min(1, 'Senha é obrigatória')
+    .min(1, 'Senha e obrigatoria')
     .max(72, 'Senha muito longa'),
 });
 
@@ -34,7 +34,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Verificar tentativas falhadas ao carregar a página
+  // Verificar tentativas falhadas ao carregar a pagina
   useEffect(() => {
     const checkFailedAttempts = async () => {
       const { data, error } = await supabase.functions.invoke('check-failed-logins', {
@@ -42,12 +42,12 @@ export default function Login() {
       });
 
       if (!error && data) {
-        // Verificar se IP está bloqueado
+        // Verificar se IP esta bloqueado
         if (data.blocked) {
           toast({
             variant: 'destructive',
-            title: '🚨 Acesso Bloqueado - Proteção Anti-Brute-Force',
-            description: `Seu IP foi bloqueado até ${new Date(data.blockedUntil).toLocaleString('pt-BR')} (${data.attemptCount || 5}+ tentativas em 15 minutos). Contate o suporte se isso for um erro.`,
+            title: '? Acesso Bloqueado - Protecao Anti-Brute-Force',
+            description: `Seu IP foi bloqueado ate ${new Date(data.blockedUntil).toLocaleString('pt-BR')} (${data.attemptCount || 5}+ tentativas em 15 minutos). Contate o suporte se isso for um erro.`,
             duration: 15000,
           });
           setLoading(true); // Desabilitar interface
@@ -88,11 +88,11 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
 
-    // Validar CAPTCHA se necessário
+    // Validar CAPTCHA se necessario
     if (requiresCaptcha && !captchaToken) {
       toast({
         variant: 'destructive',
-        title: 'CAPTCHA obrigatório',
+        title: 'CAPTCHA obrigatorio',
         description: 'Complete o CAPTCHA para continuar.',
       });
       setLoading(false);
@@ -105,7 +105,7 @@ export default function Login() {
       const firstError = validation.error.issues[0];
       toast({
         variant: 'destructive',
-        title: 'Erro de validação',
+        title: 'Erro de validacao',
         description: firstError.message,
       });
       setLoading(false);
@@ -136,15 +136,15 @@ export default function Login() {
         window.location.reload(); // Recarregar para mostrar CAPTCHA
       }
       
-      // Mensagens específicas baseadas no erro
+      // Mensagens especificas baseadas no erro
       let message = 'Email ou senha incorretos. Tente novamente.';
       let description = '';
       
       if (error.message.includes('Email not confirmed')) {
-        message = 'Email não confirmado';
+        message = 'Email nao confirmado';
         description = 'Verifique sua caixa de entrada para confirmar seu email.';
       } else if (error.message.includes('Invalid login credentials')) {
-        description = 'Verifique suas credenciais ou tente o login por email mágico.';
+        description = 'Verifique suas credenciais ou tente o login por email magico.';
       } else if (error.status === 429) {
         message = 'Muitas tentativas';
         description = 'Aguarde alguns minutos antes de tentar novamente.';
@@ -175,12 +175,12 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
 
-    const emailValidation = z.string().email('Email inválido').safeParse(email);
+    const emailValidation = z.string().email('Email invalido').safeParse(email);
     if (!emailValidation.success) {
       toast({
         variant: 'destructive',
-        title: 'Email inválido',
-        description: 'Por favor, insira um email válido.',
+        title: 'Email invalido',
+        description: 'Por favor, insira um email valido.',
       });
       setLoading(false);
       return;
@@ -197,7 +197,7 @@ export default function Login() {
       toast({
         variant: 'destructive',
         title: 'Erro ao enviar link',
-        description: 'Não foi possível enviar o email. Tente novamente.',
+        description: 'Nao foi possivel enviar o email. Tente novamente.',
       });
     } else {
       setMagicLinkSent(true);
@@ -226,7 +226,7 @@ export default function Login() {
         <Tabs defaultValue="password" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="password">Senha</TabsTrigger>
-            <TabsTrigger value="magic">Email Mágico</TabsTrigger>
+            <TabsTrigger value="magic">Email Magico</TabsTrigger>
           </TabsList>
 
           <TabsContent value="password">
@@ -236,7 +236,7 @@ export default function Login() {
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      ⚠️ {attemptCount} tentativa{attemptCount > 1 ? 's' : ''} falhada{attemptCount > 1 ? 's' : ''} detectada{attemptCount > 1 ? 's' : ''}. 
+                      [WARN] ? {attemptCount} tentativa{attemptCount > 1 ? 's' : ''} falhada{attemptCount > 1 ? 's' : ''} detectada{attemptCount > 1 ? 's' : ''}. 
                       {3 - attemptCount} tentativa{3 - attemptCount > 1 ? 's' : ''} restante{3 - attemptCount > 1 ? 's' : ''} antes do CAPTCHA.
                     </AlertDescription>
                   </Alert>
@@ -245,8 +245,8 @@ export default function Login() {
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      🔒 Proteção ativada: {attemptCount} tentativas falhadas. Complete o CAPTCHA para continuar.
-                      {attemptCount >= 5 && ' Próximo bloqueio automático após mais falhas!'}
+                      ? Protecao ativada: {attemptCount} tentativas falhadas. Complete o CAPTCHA para continuar.
+                      {attemptCount >= 5 && ' Proximo bloqueio automatico apos mais falhas!'}
                     </AlertDescription>
                   </Alert>
                 )}
@@ -267,7 +267,7 @@ export default function Login() {
                   <Input
                     id="password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder="????????"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -289,7 +289,7 @@ export default function Login() {
                     </Link>
                   </div>
                   <div>
-                    Não tem uma conta?{' '}
+                    Nao tem uma conta?{' '}
                     <Link to="/signup" className="text-primary hover:underline">
                       Cadastre-se
                     </Link>
@@ -318,23 +318,23 @@ export default function Login() {
                   <p className="flex items-start gap-2">
                     <Mail className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     <span>
-                      Enviaremos um link de acesso único para seu email. 
-                      {' '}Ideal para redes corporativas com restrições.
+                      Enviaremos um link de acesso unico para seu email. 
+                      {' '}Ideal para redes corporativas com restricoes.
                     </span>
                   </p>
                 </div>
                 {magicLinkSent && (
                   <div className="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950 p-3 rounded-md">
-                    ✓ Email enviado! Verifique sua caixa de entrada.
+                    ? Email enviado! Verifique sua caixa de entrada.
                   </div>
                 )}
               </CardContent>
               <CardFooter className="flex flex-col space-y-4">
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Enviando...' : 'Enviar Link Mágico'}
+                  {loading ? 'Enviando...' : 'Enviar Link Magico'}
                 </Button>
                 <div className="text-sm text-center text-muted-foreground">
-                  Não tem uma conta?{' '}
+                  Nao tem uma conta?{' '}
                   <Link to="/signup" className="text-primary hover:underline">
                     Cadastre-se
                   </Link>

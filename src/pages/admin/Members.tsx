@@ -30,11 +30,11 @@ export default function Members() {
   const { tenant, loading: tenantLoading } = useTenant();
   const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
 
-  // CORREÇÃO: Cache key com tenant.id para invalidação correta
+  // CORRECAO: Cache key com tenant.id para invalidacao correta
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['tenant-members', tenant?.id],
     queryFn: async () => {
-      // CORREÇÃO: Adicionar headers de autenticação explicitamente
+      // CORRECAO: Adicionar headers de autenticacao explicitamente
       const { data: { session } } = await supabase.auth.getSession();
       
       const { data, error } = await supabase.functions.invoke('list-users', {
@@ -49,11 +49,11 @@ export default function Members() {
     enabled: !!tenant?.id,
   });
 
-  // Buscar assinatura do tenant - CORREÇÃO: usar check-subscription Edge Function
+  // Buscar assinatura do tenant - CORRECAO: usar check-subscription Edge Function
   const { data: subscription } = useQuery({
     queryKey: ['subscription', tenant?.id],
     queryFn: async () => {
-      if (!tenant?.id) throw new Error('Tenant não encontrado');
+      if (!tenant?.id) throw new Error('Tenant nao encontrado');
 
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -96,10 +96,10 @@ export default function Members() {
     },
   });
 
-  // CORREÇÃO: Tipagem melhorada com AppRole e headers explícitos
+  // CORRECAO: Tipagem melhorada com AppRole e headers explicitos
   const updateRole = useMutation({
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
-      // CORREÇÃO: Adicionar headers de autenticação explicitamente
+      // CORRECAO: Adicionar headers de autenticacao explicitamente
       const { data: { session } } = await supabase.auth.getSession();
       
       const { data, error } = await supabase.functions.invoke('update-user-role', {
@@ -187,7 +187,7 @@ export default function Members() {
                 <p className="font-semibold text-destructive">Limite de membros atingido</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   Seu plano <Badge variant="secondary" className="mx-1">{planName}</Badge> 
-                  permite até {memberLimit} membros. Para adicionar mais membros, faça upgrade do seu plano.
+                  permite ate {memberLimit} membros. Para adicionar mais membros, faca upgrade do seu plano.
                 </p>
               </div>
               <Button 
@@ -203,7 +203,7 @@ export default function Members() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Informações da Assinatura</CardTitle>
+          <CardTitle>Informacoes da Assinatura</CardTitle>
           <CardDescription>Detalhes do seu plano e limites</CardDescription>
           <div className="mt-2">
             <Badge variant="secondary">{planName}</Badge>
@@ -214,7 +214,7 @@ export default function Members() {
             <div>
               <p className="text-sm text-muted-foreground">Membros</p>
               <p className="text-2xl font-bold">
-                {currentUsersCount} / {isUnlimited ? '∞' : memberLimit}
+                {currentUsersCount} / {isUnlimited ? '?' : memberLimit}
               </p>
             </div>
             {!isUnlimited && isAtLimit && (
@@ -228,7 +228,7 @@ export default function Members() {
         <CardHeader>
           <CardTitle>Membros do Tenant</CardTitle>
           <CardDescription>
-            Lista de todos os usuários com acesso ao seu tenant
+            Lista de todos os usuarios com acesso ao seu tenant
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -237,10 +237,10 @@ export default function Members() {
           ) : members.length === 0 ? (
             <div className="text-center py-12 space-y-3">
               <p className="text-muted-foreground text-lg">
-                {tenant ? `O tenant "${tenant.name}" ainda não possui membros.` : 'Nenhum membro encontrado.'}
+                {tenant ? `O tenant "${tenant.name}" ainda nao possui membros.` : 'Nenhum membro encontrado.'}
               </p>
               <p className="text-sm text-muted-foreground">
-                Clique em "Convidar Membro" acima para adicionar usuários à sua organização.
+                Clique em "Convidar Membro" acima para adicionar usuarios a sua organizacao.
               </p>
             </div>
           ) : (
@@ -269,7 +269,7 @@ export default function Members() {
             <AlertDialogDescription>
               Tem certeza que deseja remover{' '}
               <strong>{memberToRemove?.profiles?.full_name || memberToRemove?.email}</strong>{' '}
-              do tenant? Esta ação não pode ser desfeita.
+              do tenant? Esta acao nao pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

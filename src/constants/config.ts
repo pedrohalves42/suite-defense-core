@@ -1,9 +1,9 @@
 /**
- * CORREÇÃO: Constantes centralizadas do sistema
- * Facilita manutenção e evita números mágicos no código
+ * CORRECAO: Constantes centralizadas do sistema
+ * Facilita manutencao e evita numeros magicos no codigo
  */
 
-// Paginação
+// Paginacao
 export const ITEMS_PER_PAGE = 20;
 export const DEFAULT_PAGE = 0;
 
@@ -12,7 +12,7 @@ export const DEBOUNCE_DELAY_MS = 500;
 export const RETRY_INITIAL_DELAY_MS = 2000;
 export const MAX_RETRIES = 3;
 
-// Validação de Agentes
+// Validacao de Agentes
 export const AGENT_NAME_MIN_LENGTH = 3;
 export const AGENT_NAME_MAX_LENGTH = 50;
 export const AGENT_NAME_REGEX = /^[a-zA-Z0-9\-_]+$/;
@@ -21,9 +21,9 @@ export const AGENT_NAME_REGEX = /^[a-zA-Z0-9\-_]+$/;
 export const CACHE_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutos
 export const CACHE_GC_TIME_MS = 10 * 60 * 1000; // 10 minutos
 
-// CORREÇÃO: Roles movidos para src/types/roles.ts (centralizado)
+// CORRECAO: Roles movidos para src/types/roles.ts (centralizado)
 
-// Feature Flags (se necessário)
+// Feature Flags (se necessario)
 export const FEATURES = {
   ENABLE_ANALYTICS: true,
   ENABLE_SUPER_ADMIN: true,

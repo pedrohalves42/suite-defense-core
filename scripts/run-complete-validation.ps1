@@ -4,12 +4,12 @@
     CyberShield Complete Validation Orchestrator
 
 .DESCRIPTION
-    Executa todas as fases de validação do sistema CyberShield:
-    - Fase 1: Limpeza (já executada via Supabase)
+    Executa todas as fases de validacao do sistema CyberShield:
+    - Fase 1: Limpeza (ja executada via Supabase)
     - Fase 2: Teste de ciclo completo do agente
     - Fase 3: Build do instalador .EXE
     - Fase 4: Testes E2E automatizados
-    - Fase 5: Guia para validação manual em VM
+    - Fase 5: Guia para validacao manual em VM
 
 .EXAMPLE
     .\run-complete-validation.ps1
@@ -37,20 +37,20 @@ function Write-Phase($message) {
 }
 
 function Write-Success($message) {
-    Write-Host "✅ $message" -ForegroundColor Green
+    Write-Host "[OK]  $message" -ForegroundColor Green
 }
 
 function Write-Info($message) {
-    Write-Host "ℹ️  $message" -ForegroundColor Yellow
+    Write-Host "[INFO] ?  $message" -ForegroundColor Yellow
 }
 
 function Write-Error-Custom($message) {
-    Write-Host "❌ $message" -ForegroundColor Red
+    Write-Host "[ERROR]  $message" -ForegroundColor Red
 }
 
-# Verificar pré-requisitos
+# Verificar pre-requisitos
 function Test-Prerequisites {
-    Write-Phase "VERIFICANDO PRÉ-REQUISITOS"
+    Write-Phase "VERIFICANDO PRE-REQUISITOS"
     
     # PowerShell version
     if ($PSVersionTable.PSVersion.Major -lt 5) {
@@ -80,11 +80,11 @@ function Test-Prerequisites {
             if ($nodeVersion) {
                 Write-Success "Node.js instalado: $nodeVersion"
             } else {
-                Write-Info "Node.js não encontrado - testes E2E serão pulados"
+                Write-Info "Node.js nao encontrado - testes E2E serao pulados"
                 $script:SkipE2ETests = $true
             }
         } catch {
-            Write-Info "Node.js não encontrado - testes E2E serão pulados"
+            Write-Info "Node.js nao encontrado - testes E2E serao pulados"
             $script:SkipE2ETests = $true
         }
     }
@@ -92,35 +92,35 @@ function Test-Prerequisites {
     # ps2exe para build
     if (-not $SkipExeBuild) {
         if (-not (Get-Module -ListAvailable -Name ps2exe)) {
-            Write-Info "ps2exe não instalado - instalando..."
+            Write-Info "ps2exe nao instalado - instalando..."
             try {
                 Install-Module -Name ps2exe -Scope CurrentUser -Force -AllowClobber
                 Write-Success "ps2exe instalado"
             } catch {
-                Write-Info "Falha ao instalar ps2exe - build .EXE será pulado"
+                Write-Info "Falha ao instalar ps2exe - build .EXE sera pulado"
                 $script:SkipExeBuild = $true
             }
         } else {
-            Write-Success "ps2exe disponível"
+            Write-Success "ps2exe disponivel"
         }
     }
 }
 
-# Fase 1: Já executada via Supabase
+# Fase 1: Ja executada via Supabase
 function Show-Phase1Status {
     Write-Phase "FASE 1: LIMPEZA DO BANCO DE DADOS"
     Write-Success "Limpeza executada via Supabase Query"
-    Write-Info "Agentes órfãos removidos: TESTEMIT, AGENT-01"
-    Write-Info "Função cleanup_orphaned_agents() executada"
+    Write-Info "Agentes orfaos removidos: TESTEMIT, AGENT-01"
+    Write-Info "Funcao cleanup_orphaned_agents() executada"
 }
 
-# Fase 2: Instruções para teste manual
+# Fase 2: Instrucoes para teste manual
 function Show-Phase2Instructions {
     Write-Phase "FASE 2: TESTE DE CICLO COMPLETO DO AGENTE"
     
     Write-Host @"
 
-📋 INSTRUÇÕES PARA TESTE MANUAL:
+? INSTRUCOES PARA TESTE MANUAL:
 
 1. Acesse o dashboard: http://localhost:5173/admin/agent-installer
 
@@ -133,20 +133,20 @@ function Show-Phase2Instructions {
    - Agent Token
    - HMAC Secret
 
-4. Execute o script de simulação:
+4. Execute o script de simulacao:
    cd scripts
    .\test-agent-simulation.ps1 -AgentToken "SEU_TOKEN" -HmacSecret "SEU_HMAC"
 
 5. Valide no dashboard:
    - Status: active
    - Heartbeat: < 1 minuto
-   - Métricas: Visíveis em 5 minutos
+   - Metricas: Visiveis em 5 minutos
 
 "@ -ForegroundColor White
     
     $continue = Read-Host "`nPressione ENTER quando completar a Fase 2 (ou 'skip' para pular)"
     if ($continue -ne "skip") {
-        Write-Success "Fase 2 confirmada pelo usuário"
+        Write-Success "Fase 2 confirmada pelo usuario"
     }
 }
 
@@ -159,10 +159,10 @@ function Invoke-Phase3Build {
         return
     }
     
-    Write-Info "Para build do .EXE, você precisará de credenciais válidas"
+    Write-Info "Para build do .EXE, voce precisara de credenciais validas"
     Write-Host @"
 
-Opções:
+Opcoes:
 1. Build com credenciais existentes (requer Token + HMAC)
 2. Pular build (fazer manualmente depois)
 
@@ -183,12 +183,12 @@ Opções:
                 -AgentName "PROD-BUILD" `
                 -ErrorAction Stop
             
-            Write-Success "Build .EXE concluído"
+            Write-Success "Build .EXE concluido"
         } catch {
             Write-Error-Custom "Erro no build: $_"
         }
     } else {
-        Write-Info "Build .EXE pulado - execute manualmente quando necessário"
+        Write-Info "Build .EXE pulado - execute manualmente quando necessario"
     }
 }
 
@@ -206,7 +206,7 @@ function Invoke-Phase4Tests {
     try {
         # Verificar se node_modules existe
         if (-not (Test-Path ".\node_modules")) {
-            Write-Info "Instalando dependências..."
+            Write-Info "Instalando dependencias..."
             npm install
         }
         
@@ -214,10 +214,10 @@ function Invoke-Phase4Tests {
         Write-Info "Rodando testes Playwright..."
         npx playwright test --reporter=list
         
-        Write-Success "Testes E2E concluídos"
+        Write-Success "Testes E2E concluidos"
         
-        # Oferecer ver relatório HTML
-        $viewReport = Read-Host "`nDeseja ver o relatório HTML? (s/n)"
+        # Oferecer ver relatorio HTML
+        $viewReport = Read-Host "`nDeseja ver o relatorio HTML? (s/n)"
         if ($viewReport -eq 's') {
             npx playwright show-report
         }
@@ -227,22 +227,22 @@ function Invoke-Phase4Tests {
     }
 }
 
-# Fase 5: Validação Manual VM
+# Fase 5: Validacao Manual VM
 function Show-Phase5Instructions {
-    Write-Phase "FASE 5: VALIDAÇÃO MANUAL EM VM WINDOWS SERVER 2022"
+    Write-Phase "FASE 5: VALIDACAO MANUAL EM VM WINDOWS SERVER 2022"
     
     Write-Host @"
 
-📋 CHECKLIST PARA VALIDAÇÃO EM VM REAL:
+? CHECKLIST PARA VALIDACAO EM VM REAL:
 
-PRÉ-REQUISITOS:
-□ VM Windows Server 2022 limpa
-□ PowerShell 5.1+
-□ Acesso de administrador
-□ Conectividade HTTPS com Supabase
+PRE-REQUISITOS:
+? VM Windows Server 2022 limpa
+? PowerShell 5.1+
+? Acesso de administrador
+? Conectividade HTTPS com Supabase
 
 PASSOS:
-1. Na VM, configure execução:
+1. Na VM, configure execucao:
    Set-ExecutionPolicy Bypass -Scope Process -Force
 
 2. Gere instalador no dashboard:
@@ -250,20 +250,20 @@ PASSOS:
    Nome: PROD-WIN2022-FINAL
 
 3. Execute instalador:
-   Opção A: .\install-PROD-WIN2022-FINAL-windows.ps1
-   Opção B: .\CyberShield-Installer-*.exe (se compilado)
+   Opcao A: .\install-PROD-WIN2022-FINAL-windows.ps1
+   Opcao B: .\CyberShield-Installer-*.exe (se compilado)
 
-4. VALIDAÇÕES CRONOMETRADAS:
-   □ T+10s:  Script executado sem erros
-   □ T+60s:  Heartbeat registrado no dashboard
-   □ T+5min: Métricas de sistema visíveis
-   □ T+8min: Job criado e executado com sucesso
+4. VALIDACOES CRONOMETRADAS:
+   ? T+10s:  Script executado sem erros
+   ? T+60s:  Heartbeat registrado no dashboard
+   ? T+5min: Metricas de sistema visiveis
+   ? T+8min: Job criado e executado com sucesso
 
 5. DASHBOARD:
-   □ Status: active (verde)
-   □ OS: Windows Server 2022
-   □ CPU/RAM/Disk: Dados visíveis
-   □ Uptime > 0
+   ? Status: active (verde)
+   ? OS: Windows Server 2022
+   ? CPU/RAM/Disk: Dados visiveis
+   ? Uptime > 0
 
 TROUBLESHOOTING:
 - Logs do agente: C:\ProgramData\CyberShield\logs\
@@ -272,61 +272,61 @@ TROUBLESHOOTING:
 
 "@ -ForegroundColor White
 
-    Write-Success "Documentação completa em: VALIDATION_GUIDE.md"
+    Write-Success "Documentacao completa em: VALIDATION_GUIDE.md"
 }
 
-# Relatório Final
+# Relatorio Final
 function Show-FinalReport {
-    Write-Phase "RELATÓRIO FINAL DE VALIDAÇÃO"
+    Write-Phase "RELATORIO FINAL DE VALIDACAO"
     
     Write-Host @"
 
-✅ FASES CONCLUÍDAS:
-   ✓ Fase 1: Limpeza do banco de dados
-   ✓ Fase 2: Instruções de teste de ciclo completo
-   ✓ Fase 3: Script de build .EXE disponível
-   ✓ Fase 4: Testes E2E executados (se disponível)
-   ✓ Fase 5: Guia de validação manual fornecido
+[OK]  FASES CONCLUIDAS:
+   ? Fase 1: Limpeza do banco de dados
+   ? Fase 2: Instrucoes de teste de ciclo completo
+   ? Fase 3: Script de build .EXE disponivel
+   ? Fase 4: Testes E2E executados (se disponivel)
+   ? Fase 5: Guia de validacao manual fornecido
 
-📁 ARQUIVOS CRIADOS:
-   • scripts/test-agent-simulation.ps1
-   • scripts/build-installer-exe.ps1
-   • scripts/run-complete-validation.ps1
-   • COMPLETE_VALIDATION_REPORT.md
+? ARQUIVOS CRIADOS:
+   ? scripts/test-agent-simulation.ps1
+   ? scripts/build-installer-exe.ps1
+   ? scripts/run-complete-validation.ps1
+   ? COMPLETE_VALIDATION_REPORT.md
 
-📚 DOCUMENTAÇÃO:
-   • VALIDATION_GUIDE.md - Guia de validação passo-a-passo
-   • TESTING_GUIDE.md - Guia de testes E2E
-   • EXE_BUILD_INSTRUCTIONS.md - Build do instalador
+? DOCUMENTACAO:
+   ? VALIDATION_GUIDE.md - Guia de validacao passo-a-passo
+   ? TESTING_GUIDE.md - Guia de testes E2E
+   ? EXE_BUILD_INSTRUCTIONS.md - Build do instalador
 
-🚀 PRÓXIMOS PASSOS:
-   1. Completar validação manual em VM (Fase 5)
+? PROXIMOS PASSOS:
+   1. Completar validacao manual em VM (Fase 5)
    2. Ativar Leaked Password Protection (Supabase Dashboard)
-   3. Assinar EXE com certificado EV para produção
-   4. Monitorar métricas nos primeiros 7 dias
+   3. Assinar EXE com certificado EV para producao
+   4. Monitorar metricas nos primeiros 7 dias
    5. Configurar alertas para agentes offline >10min
 
-📊 TEMPO ESTIMADO TOTAL: ~65 minutos
-   • Fase 1: 5 min (✅ concluída)
-   • Fase 2: 15 min (aguardando execução)
-   • Fase 3: 20 min (script pronto)
-   • Fase 4: 10 min (✅ concluída se disponível)
-   • Fase 5: 15 min (aguardando VM)
+? TEMPO ESTIMADO TOTAL: ~65 minutos
+   ? Fase 1: 5 min ([OK]  concluida)
+   ? Fase 2: 15 min (aguardando execucao)
+   ? Fase 3: 20 min (script pronto)
+   ? Fase 4: 10 min ([OK]  concluida se disponivel)
+   ? Fase 5: 15 min (aguardando VM)
 
 "@ -ForegroundColor White
 
-    Write-Success "`n🎉 VALIDAÇÃO COMPLETA! Sistema pronto para produção."
+    Write-Success "`n? VALIDACAO COMPLETA! Sistema pronto para producao."
 }
 
-# ===== EXECUÇÃO PRINCIPAL =====
+# ===== EXECUCAO PRINCIPAL =====
 try {
     Write-Host @"
-╔══════════════════════════════════════════════════════════╗
-║                                                          ║
-║   CyberShield - Complete Validation Orchestrator        ║
-║   Version 2.2.1                                          ║
-║                                                          ║
-╚══════════════════════════════════════════════════════════╝
+????????????????????????????????????????????????????????????
+?                                                          ?
+?   CyberShield - Complete Validation Orchestrator        ?
+?   Version 2.2.1                                          ?
+?                                                          ?
+????????????????????????????????????????????????????????????
 "@ -ForegroundColor Cyan
 
     Test-Prerequisites
@@ -337,11 +337,11 @@ try {
     Show-Phase5Instructions
     Show-FinalReport
     
-    Write-Host "`n✨ Script concluído com sucesso!" -ForegroundColor Green
-    Write-Host "📖 Consulte COMPLETE_VALIDATION_REPORT.md para detalhes completos.`n" -ForegroundColor Cyan
+    Write-Host "`n? Script concluido com sucesso!" -ForegroundColor Green
+    Write-Host "? Consulte COMPLETE_VALIDATION_REPORT.md para detalhes completos.`n" -ForegroundColor Cyan
     
 } catch {
-    Write-Host "`n❌ ERRO FATAL: $_" -ForegroundColor Red
+    Write-Host "`n[ERROR]  ERRO FATAL: $_" -ForegroundColor Red
     Write-Host "Stack Trace: $($_.ScriptStackTrace)" -ForegroundColor Red
     exit 1
 }

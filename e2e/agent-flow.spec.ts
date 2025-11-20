@@ -179,7 +179,7 @@ test.describe('Agent Flow E2E', () => {
     expect(ackData.message).toContain('Job acknowledged');
   });
 
-  test('7. Admin verificar job concluído', async ({ request }) => {
+  test('7. Admin verificar job concluido', async ({ request }) => {
     const listJobsResponse = await request.post(`${SUPABASE_URL}/functions/v1/list-jobs`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -201,7 +201,7 @@ test.describe('Agent Flow E2E', () => {
   });
 
   test('8. Rate limiting validation', async ({ request }) => {
-    // Tentar fazer múltiplos heartbeats rapidamente
+    // Tentar fazer multiplos heartbeats rapidamente
     const promises = [];
     for (let i = 0; i < 5; i++) {
       const timestamp = Date.now().toString();

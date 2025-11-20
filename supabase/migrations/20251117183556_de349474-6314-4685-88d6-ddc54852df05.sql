@@ -15,11 +15,11 @@ CREATE TABLE IF NOT EXISTS public.agent_releases (
   created_by     uuid REFERENCES auth.users(id)
 );
 
--- Índice único para version + platform + channel
+-- Indice unico para version + platform + channel
 CREATE UNIQUE INDEX idx_agent_releases_version_platform
   ON public.agent_releases (version, platform, channel);
 
--- Índice para consultas de releases ativas
+-- Indice para consultas de releases ativas
 CREATE INDEX idx_agent_releases_active
   ON public.agent_releases (is_active, platform, channel)
   WHERE is_active = true;
@@ -42,13 +42,13 @@ CREATE POLICY "Agents can read active releases"
   USING (is_active = true);
 
 -- ============================================
--- Comentários
+-- Comentarios
 -- ============================================
 
-COMMENT ON TABLE public.agent_releases IS 'Armazena versões do agente para auto-update';
-COMMENT ON COLUMN public.agent_releases.version IS 'Versão semântica (e.g., 3.1.0)';
+COMMENT ON TABLE public.agent_releases IS 'Armazena versoes do agente para auto-update';
+COMMENT ON COLUMN public.agent_releases.version IS 'Versao semantica (e.g., 3.1.0)';
 COMMENT ON COLUMN public.agent_releases.platform IS 'Plataforma: windows, linux, macos';
 COMMENT ON COLUMN public.agent_releases.channel IS 'Canal de release: stable, beta, alpha';
-COMMENT ON COLUMN public.agent_releases.script_content IS 'Conteúdo completo do script PowerShell/Bash';
-COMMENT ON COLUMN public.agent_releases.sha256 IS 'Hash SHA256 do script_content para validação';
+COMMENT ON COLUMN public.agent_releases.script_content IS 'Conteudo completo do script PowerShell/Bash';
+COMMENT ON COLUMN public.agent_releases.sha256 IS 'Hash SHA256 do script_content para validacao';
 COMMENT ON COLUMN public.agent_releases.is_active IS 'Apenas releases ativas podem ser baixadas';

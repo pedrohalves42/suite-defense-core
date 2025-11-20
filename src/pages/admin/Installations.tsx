@@ -14,9 +14,9 @@ const Installations = () => {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Gerenciar Instalações</h1>
+        <h1 className="text-3xl font-bold">Gerenciar Instalacoes</h1>
         <p className="text-muted-foreground">
-          Central completa para monitorar e gerenciar instalações de agentes
+          Central completa para monitorar e gerenciar instalacoes de agentes
         </p>
       </div>
 
@@ -40,7 +40,7 @@ const Installations = () => {
           </TabsTrigger>
           <TabsTrigger value="metrics">
             <BarChart3 className="h-4 w-4 mr-2" />
-            Métricas
+            Metricas
           </TabsTrigger>
           <TabsTrigger value="logs">
             <ScrollText className="h-4 w-4 mr-2" />

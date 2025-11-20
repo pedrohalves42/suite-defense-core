@@ -129,7 +129,7 @@ export default function AgentManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success('Agente excluído com sucesso');
+      toast.success('Agente excluido com sucesso');
       setAgentToDelete(null);
     },
     onError: (error: unknown) => {
@@ -155,7 +155,7 @@ export default function AgentManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success('Agente e dados excluídos');
+      toast.success('Agente e dados excluidos');
       setAgentToForceDelete(null);
     },
     onError: (error: unknown) => {
@@ -166,7 +166,7 @@ export default function AgentManagement() {
 
   const editAgentMutation = useMutation({
     mutationFn: async ({ agentId, newName }: { agentId: string; newName: string }) => {
-      if (!newName || newName.trim().length < 3) throw new Error('Nome inválido');
+      if (!newName || newName.trim().length < 3) throw new Error('Nome invalido');
       const { error } = await supabase.from('agents').update({ agent_name: newName.trim() }).eq('id', agentId);
       if (error) throw error;
     },
@@ -303,7 +303,7 @@ export default function AgentManagement() {
     return (
       <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
         <AlertTriangle className="h-3 w-3 mr-1" />
-        Instalador Não Executado
+        Instalador Nao Executado
       </Badge>
     );
   };
@@ -316,11 +316,11 @@ export default function AgentManagement() {
     const diffMins = Math.floor(diffMs / (1000 * 60));
 
     if (diffMins < 1) return 'Agora mesmo';
-    if (diffMins < 60) return `${diffMins}min atrás`;
+    if (diffMins < 60) return `${diffMins}min atras`;
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h atrás`;
+    if (diffHours < 24) return `${diffHours}h atras`;
     const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d atrás`;
+    return `${diffDays}d atras`;
   };
 
   if (isLoading) {
@@ -392,7 +392,7 @@ export default function AgentManagement() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aguardando Instalação</CardTitle>
+            <CardTitle className="text-sm font-medium">Aguardando Instalacao</CardTitle>
             <AlertTriangle className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
@@ -448,9 +448,9 @@ export default function AgentManagement() {
               <TableRow>
                 <TableHead>Nome do Agente</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Último Heartbeat</TableHead>
+                <TableHead>Ultimo Heartbeat</TableHead>
                 <TableHead>Registrado em</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="text-right">Acoes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -461,7 +461,7 @@ export default function AgentManagement() {
                     <TableCell>{getStatusBadge(agent)}</TableCell>
                     <TableCell>{getTimeSince(agent.last_heartbeat)}</TableCell>
                     <TableCell>
-                      {format(new Date(agent.enrolled_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {format(new Date(agent.enrolled_at), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}
                     </TableCell>
                     <TableCell className="text-right space-x-2">
                       {agent.status === 'disabled' ? (
@@ -524,10 +524,10 @@ export default function AgentManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Tem certeza que deseja excluir este agente?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O agente <strong>{agentToDelete?.agent_name}</strong> será permanentemente
+              Esta acao nao pode ser desfeita. O agente <strong>{agentToDelete?.agent_name}</strong> sera permanentemente
               removido do sistema, incluindo todos os seus tokens de acesso.
               <br /><br />
-              <strong>Aviso:</strong> O agente instalado no endpoint continuará tentando se conectar até ser desinstalado manualmente.
+              <strong>Aviso:</strong> O agente instalado no endpoint continuara tentando se conectar ate ser desinstalado manualmente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -548,16 +548,16 @@ export default function AgentManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Desativar Agente</AlertDialogTitle>
             <AlertDialogDescription>
-              Você está prestes a desativar o agente <strong>{agentToDisable?.agent_name}</strong>.
+              Voce esta prestes a desativar o agente <strong>{agentToDisable?.agent_name}</strong>.
               <br /><br />
-              Isso irá:
+              Isso ira:
               <ul className="list-disc list-inside mt-2 space-y-1">
                 <li>Desativar todos os tokens de acesso deste agente</li>
                 <li>Impedir que o agente envie heartbeats ou execute jobs</li>
-                <li>Manter o histórico e dados do agente no sistema</li>
+                <li>Manter o historico e dados do agente no sistema</li>
               </ul>
               <br />
-              Você pode reativar o agente a qualquer momento.
+              Voce pode reativar o agente a qualquer momento.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

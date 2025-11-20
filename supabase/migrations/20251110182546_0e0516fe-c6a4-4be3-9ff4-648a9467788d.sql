@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS public.subscription_plans (
   updated_at timestamp with time zone NOT NULL DEFAULT now()
 );
 
--- Inserir planos padrão
+-- Inserir planos padrao
 INSERT INTO public.subscription_plans (name, max_users, max_agents, max_scans_per_month)
 VALUES 
   ('free', 2, 5, 100),

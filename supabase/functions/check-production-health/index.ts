@@ -4,10 +4,10 @@ import { corsHeaders } from '../_shared/cors.ts';
 /**
  * Check Production Health
  * 
- * Monitora a saúde do sistema e cria alertas automáticos para:
- * - Falta de heartbeats recentes (última hora)
- * - Alta taxa de falha de instalação (>30% em 24h)
- * - Jobs em fila acumulando (>100 há mais de 30min)
+ * Monitora a saude do sistema e cria alertas automaticos para:
+ * - Falta de heartbeats recentes (ultima hora)
+ * - Alta taxa de falha de instalacao (>30% em 24h)
+ * - Jobs em fila acumulando (>100 ha mais de 30min)
  * 
  * Executado via cron job a cada hora
  */
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
   console.log('[check-production-health] Starting health check at', now.toISOString());
 
   try {
-    // ✅ CHECK 1: Heartbeats recentes
+    // [OK]  CHECK 1: Heartbeats recentes
     const { data: recentHeartbeats, error: heartbeatError } = await supabase
       .from('agents')
       .select('id, agent_name, last_heartbeat')
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
           tenant_id: null, // System-wide alert
           alert_type: 'no_heartbeats',
           severity: 'high',
-          title: 'Nenhum heartbeat de agentes na última hora',
+          title: 'Nenhum heartbeat de agentes na ultima hora',
           message: `${activeAgentsCount} agente(s) ativo(s) mas nenhum heartbeat recente detectado.`,
           details: {
             last_check: now.toISOString(),
@@ -59,13 +59,13 @@ Deno.serve(async (req) => {
             threshold_minutes: 60
           }
         });
-        console.log('[check-production-health] ⚠️ No recent heartbeats detected');
+        console.log('[check-production-health] [WARN] ? No recent heartbeats detected');
       }
     } else {
-      console.log(`[check-production-health] ✅ ${recentHeartbeats.length} agents with recent heartbeats`);
+      console.log(`[check-production-health] [OK]  ${recentHeartbeats.length} agents with recent heartbeats`);
     }
 
-    // ✅ CHECK 2: Taxa de falha de instalação
+    // [OK]  CHECK 2: Taxa de falha de instalacao
     const { data: installations, error: installError } = await supabase
       .from('installation_analytics')
       .select('success, event_type')
@@ -85,8 +85,8 @@ Deno.serve(async (req) => {
           tenant_id: null, // System-wide alert
           alert_type: 'high_installation_failure',
           severity: 'critical',
-          title: `Alta taxa de falha de instalação: ${(failureRate * 100).toFixed(1)}%`,
-          message: `${failureCount} de ${installations.length} instalações falharam nas últimas 24 horas (threshold: 30%)`,
+          title: `Alta taxa de falha de instalacao: ${(failureRate * 100).toFixed(1)}%`,
+          message: `${failureCount} de ${installations.length} instalacoes falharam nas ultimas 24 horas (threshold: 30%)`,
           details: {
             failure_rate: failureRate,
             failed_count: failureCount,
@@ -95,13 +95,13 @@ Deno.serve(async (req) => {
             period_hours: 24
           }
         });
-        console.log('[check-production-health] ⚠️ High installation failure rate detected');
+        console.log('[check-production-health] [WARN] ? High installation failure rate detected');
       }
     } else {
-      console.log(`[check-production-health] ✅ Installation sample too small (${installations?.length || 0} < 10)`);
+      console.log(`[check-production-health] [OK]  Installation sample too small (${installations?.length || 0} < 10)`);
     }
 
-    // ✅ CHECK 3: Jobs em fila acumulando
+    // [OK]  CHECK 3: Jobs em fila acumulando
     const { count: queuedJobsCount, error: jobsError } = await supabase
       .from('jobs')
       .select('*', { count: 'exact', head: true })
@@ -115,20 +115,20 @@ Deno.serve(async (req) => {
         tenant_id: null, // System-wide alert
         alert_type: 'jobs_stuck',
         severity: 'high',
-        title: `${queuedJobsCount} jobs em fila há mais de 30 minutos`,
-        message: 'Jobs não estão sendo processados. Verifique a saúde dos agentes e a conectividade.',
+        title: `${queuedJobsCount} jobs em fila ha mais de 30 minutos`,
+        message: 'Jobs nao estao sendo processados. Verifique a saude dos agentes e a conectividade.',
         details: {
           queued_count: queuedJobsCount,
           threshold_count: 100,
           age_minutes: 30
         }
       });
-      console.log('[check-production-health] ⚠️ Too many stuck jobs in queue');
+      console.log('[check-production-health] [WARN] ? Too many stuck jobs in queue');
     } else {
-      console.log(`[check-production-health] ✅ Queued jobs within normal range (${queuedJobsCount || 0})`);
+      console.log(`[check-production-health] [OK]  Queued jobs within normal range (${queuedJobsCount || 0})`);
     }
 
-    // ✅ Inserir alertas no banco
+    // [OK]  Inserir alertas no banco
     if (alerts.length > 0) {
       console.log(`[check-production-health] Creating ${alerts.length} alert(s)`);
       
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ✅ CORREÇÃO #3A: Enviar notificações automáticas para alertas críticos
+      // [OK]  CORRECAO #3A: Enviar notificacoes automaticas para alertas criticos
       if (criticalAlerts.length > 0) {
         console.log(`[check-production-health] Sending notifications for ${criticalAlerts.length} critical alert(s)`);
         
@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
           if (notifyError) {
             console.error('[check-production-health] Error sending notifications:', notifyError);
           } else {
-            console.log('[check-production-health] ✅ Notifications sent successfully');
+            console.log('[check-production-health] [OK]  Notifications sent successfully');
           }
         } catch (notifyErr) {
           console.error('[check-production-health] Exception sending notifications:', notifyErr);

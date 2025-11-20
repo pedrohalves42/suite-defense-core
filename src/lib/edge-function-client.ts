@@ -3,7 +3,7 @@ import { logger } from './logger';
 
 /**
  * FASE 2: Helper unificado para chamadas Edge Functions
- * Garante headers de autenticação corretos e tratamento de erros padronizado
+ * Garante headers de autenticacao corretos e tratamento de erros padronizado
  */
 export async function callEdgeFunction<T = any>(
   functionName: string,
@@ -12,17 +12,17 @@ export async function callEdgeFunction<T = any>(
 ): Promise<T> {
   const requestId = crypto.randomUUID();
   
-  // Obter sessão atual
+  // Obter sessao atual
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
   if (sessionError) {
-    logger.error(`[${requestId}] Erro ao obter sessão`, sessionError);
-    throw new Error('Erro ao obter sessão de autenticação');
+    logger.error(`[${requestId}] Erro ao obter sessao`, sessionError);
+    throw new Error('Erro ao obter sessao de autenticacao');
   }
   
   if (!session) {
-    logger.error(`[${requestId}] Usuário não autenticado`);
-    throw new Error('Usuário não autenticado. Faça login novamente.');
+    logger.error(`[${requestId}] Usuario nao autenticado`);
+    throw new Error('Usuario nao autenticado. Faca login novamente.');
   }
 
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${functionName}`;
@@ -63,18 +63,18 @@ export async function callEdgeFunction<T = any>(
 
       const errorMessage = errorData.error?.message || errorData.message || `HTTP ${response.status}`;
       
-      // Mensagens amigáveis por status
+      // Mensagens amigaveis por status
       switch (response.status) {
         case 400:
-          throw new Error(`Requisição inválida: ${errorMessage}`);
+          throw new Error(`Requisicao invalida: ${errorMessage}`);
         case 401:
-          throw new Error('Não autorizado. Faça login novamente.');
+          throw new Error('Nao autorizado. Faca login novamente.');
         case 403:
-          throw new Error('Acesso negado. Você não tem permissão para esta operação.');
+          throw new Error('Acesso negado. Voce nao tem permissao para esta operacao.');
         case 404:
-          throw new Error(`Função não encontrada: ${functionName}`);
+          throw new Error(`Funcao nao encontrada: ${functionName}`);
         case 429:
-          throw new Error('Muitas requisições. Aguarde um momento e tente novamente.');
+          throw new Error('Muitas requisicoes. Aguarde um momento e tente novamente.');
         case 500:
         case 502:
         case 503:
@@ -97,21 +97,21 @@ export async function callEdgeFunction<T = any>(
       stack: error.stack
     });
     
-    // Se já for um erro que lançamos, re-throw
-    if (error.message.includes('Requisição inválida') || 
-        error.message.includes('Não autorizado') ||
+    // Se ja for um erro que lancamos, re-throw
+    if (error.message.includes('Requisicao invalida') || 
+        error.message.includes('Nao autorizado') ||
         error.message.includes('Acesso negado') ||
-        error.message.includes('Muitas requisições') ||
+        error.message.includes('Muitas requisicoes') ||
         error.message.includes('Erro no servidor')) {
       throw error;
     }
     
     // Se for erro de rede
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      throw new Error('Erro de conexão. Verifique sua internet e tente novamente.');
+      throw new Error('Erro de conexao. Verifique sua internet e tente novamente.');
     }
     
-    // Erro genérico
+    // Erro generico
     throw new Error(`Erro ao executar ${functionName}: ${error.message}`);
   }
 }

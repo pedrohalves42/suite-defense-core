@@ -1,6 +1,6 @@
--- FASE 3: Correções de Banco de Dados e Consistência
+-- FASE 3: Correcoes de Banco de Dados e Consistencia
 
--- 1. Adicionar agent_id à enrollment_keys se não existir
+-- 1. Adicionar agent_id a enrollment_keys se nao existir
 DO $$ 
 BEGIN
   IF NOT EXISTS (
@@ -13,7 +13,7 @@ BEGIN
   END IF;
 END $$;
 
--- 2. Criar índices de performance
+-- 2. Criar indices de performance
 CREATE INDEX IF NOT EXISTS idx_agents_tenant_heartbeat ON public.agents(tenant_id, last_heartbeat);
 CREATE INDEX IF NOT EXISTS idx_agents_status ON public.agents(status);
 CREATE INDEX IF NOT EXISTS idx_agent_tokens_agent_active ON public.agent_tokens(agent_id, is_active);
@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_enrollment_keys_agent ON public.enrollment_keys(a
 CREATE INDEX IF NOT EXISTS idx_jobs_agent_status ON public.jobs(agent_name, status);
 CREATE INDEX IF NOT EXISTS idx_agent_metrics_agent_collected ON public.agent_system_metrics(agent_id, collected_at DESC);
 
--- 3. Função de limpeza de agentes órfãos
+-- 3. Funcao de limpeza de agentes orfaos
 CREATE OR REPLACE FUNCTION public.cleanup_orphaned_agents()
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -33,7 +33,7 @@ AS $$
 DECLARE
   deleted_count INTEGER;
 BEGIN
-  -- Remover agentes órfãos: status='pending', sem heartbeat, criados há mais de 48h
+  -- Remover agentes orfaos: status='pending', sem heartbeat, criados ha mais de 48h
   WITH deleted AS (
     DELETE FROM public.agents
     WHERE status = 'pending'
@@ -43,7 +43,7 @@ BEGIN
   )
   SELECT COUNT(*) INTO deleted_count FROM deleted;
   
-  RAISE NOTICE 'Limpeza de agentes órfãos: % agentes removidos', deleted_count;
+  RAISE NOTICE 'Limpeza de agentes orfaos: % agentes removidos', deleted_count;
   RETURN deleted_count;
 END;
 $$;
@@ -56,7 +56,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Atualizar enrollment_keys quando um agente é criado
+  -- Atualizar enrollment_keys quando um agente e criado
   UPDATE public.enrollment_keys
   SET 
     current_uses = current_uses + 1,
@@ -69,7 +69,7 @@ BEGIN
 END;
 $$;
 
--- Criar trigger se não existir
+-- Criar trigger se nao existir
 DROP TRIGGER IF EXISTS trigger_update_enrollment_key_usage ON public.agents;
 CREATE TRIGGER trigger_update_enrollment_key_usage
   AFTER INSERT ON public.agents

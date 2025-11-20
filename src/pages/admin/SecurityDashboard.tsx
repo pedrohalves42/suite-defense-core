@@ -151,9 +151,9 @@ export default function SecurityDashboard() {
       xss: 'XSS',
       path_traversal: 'Path Traversal',
       rate_limit: 'Rate Limit',
-      invalid_input: 'Entrada Inválida',
-      brute_force: 'Força Bruta',
-      unauthorized: 'Não Autorizado',
+      invalid_input: 'Entrada Invalida',
+      brute_force: 'Forca Bruta',
+      unauthorized: 'Nao Autorizado',
       control_characters: 'Caracteres de Controle',
     };
     return labels[type] || type;
@@ -162,9 +162,9 @@ export default function SecurityDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard de Segurança</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard de Seguranca</h1>
         <p className="text-muted-foreground">
-          Monitoramento em tempo real de tentativas de ataque e validações de segurança
+          Monitoramento em tempo real de tentativas de ataque e validacoes de seguranca
         </p>
       </div>
 
@@ -177,18 +177,18 @@ export default function SecurityDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.total || 0}</div>
-            <p className="text-xs text-muted-foreground">Últimas 24 horas</p>
+            <p className="text-xs text-muted-foreground">Ultimas 24 horas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ataques Críticos</CardTitle>
+            <CardTitle className="text-sm font-medium">Ataques Criticos</CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{stats?.critical || 0}</div>
-            <p className="text-xs text-muted-foreground">Requerem atenção imediata</p>
+            <p className="text-xs text-muted-foreground">Requerem atencao imediata</p>
           </CardContent>
         </Card>
 
@@ -205,12 +205,12 @@ export default function SecurityDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">IPs Únicos</CardTitle>
+            <CardTitle className="text-sm font-medium">IPs Unicos</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.uniqueIps || 0}</div>
-            <p className="text-xs text-muted-foreground">Endereços diferentes</p>
+            <p className="text-xs text-muted-foreground">Enderecos diferentes</p>
           </CardContent>
         </Card>
       </div>
@@ -219,9 +219,9 @@ export default function SecurityDashboard() {
       {logs && logs.filter(l => l.severity === 'critical').length > 0 && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Atenção: Eventos Críticos Detectados</AlertTitle>
+          <AlertTitle>Atencao: Eventos Criticos Detectados</AlertTitle>
           <AlertDescription>
-            {logs.filter(l => l.severity === 'critical').length} evento(s) crítico(s) detectado(s) recentemente.
+            {logs.filter(l => l.severity === 'critical').length} evento(s) critico(s) detectado(s) recentemente.
             Revise imediatamente as tabelas abaixo.
           </AlertDescription>
         </Alert>
@@ -232,7 +232,7 @@ export default function SecurityDashboard() {
         <TabsList>
           <TabsTrigger value="logs">
             <Shield className="h-4 w-4 mr-2" />
-            Logs de Segurança
+            Logs de Seguranca
           </TabsTrigger>
           {isSuperAdmin && (
             <>
@@ -252,20 +252,20 @@ export default function SecurityDashboard() {
         <TabsContent value="logs">
           <Card>
             <CardHeader>
-              <CardTitle>Logs de Segurança</CardTitle>
+              <CardTitle>Logs de Seguranca</CardTitle>
               <CardDescription>
-                Tentativas de ataque e validações falhadas (atualiza a cada 10 segundos)
+                Tentativas de ataque e validacoes falhadas (atualiza a cada 10 segundos)
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  Carregando logs de segurança...
+                  Carregando logs de seguranca...
                 </div>
               ) : !logs || logs.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Shield className="h-12 w-12 mx-auto mb-2 opacity-20" />
-                  <p>Nenhum evento de segurança registrado</p>
+                  <p>Nenhum evento de seguranca registrado</p>
                 </div>
               ) : (
                 <div className="rounded-md border">
@@ -325,7 +325,7 @@ export default function SecurityDashboard() {
               <CardHeader>
                 <CardTitle>IPs Bloqueados</CardTitle>
                 <CardDescription>
-                  Endereços IP temporariamente bloqueados por tentativas de ataque
+                  Enderecos IP temporariamente bloqueados por tentativas de ataque
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -343,7 +343,7 @@ export default function SecurityDashboard() {
                           <TableHead>Bloqueado em</TableHead>
                           <TableHead>Expira em</TableHead>
                           <TableHead>Motivo</TableHead>
-                          <TableHead>Ações</TableHead>
+                          <TableHead>Acoes</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -391,7 +391,7 @@ export default function SecurityDashboard() {
               <CardHeader>
                 <CardTitle>Tentativas de Login Falhadas</CardTitle>
                 <CardDescription>
-                  Tentativas de login que falharam nas últimas 24 horas
+                  Tentativas de login que falharam nas ultimas 24 horas
                 </CardDescription>
               </CardHeader>
               <CardContent>

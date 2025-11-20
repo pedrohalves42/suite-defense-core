@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Verificar autenticação interna
+    // Verificar autenticacao interna
     const internalSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
     const authHeader = req.headers.get('X-Internal-Secret');
     
@@ -76,14 +76,14 @@ Deno.serve(async (req) => {
         tenant_id: admin.tenant_id,
         alert_type: 'brute_force_attack',
         severity: 'critical',
-        title: '🚨 Ataque de Força Bruta Detectado e Bloqueado',
-        message: `IP ${ipAddress} foi bloqueado após ${attemptCount} tentativas de login falhadas em 15 minutos.`,
+        title: '? Ataque de Forca Bruta Detectado e Bloqueado',
+        message: `IP ${ipAddress} foi bloqueado apos ${attemptCount} tentativas de login falhadas em 15 minutos.`,
         details: {
           ip_address: ipAddress,
-          email: email || 'não identificado',
+          email: email || 'nao identificado',
           attempt_count: attemptCount,
           blocked_until: blockedUntil,
-          user_agent: userAgent || 'não identificado',
+          user_agent: userAgent || 'nao identificado',
           timestamp: new Date().toISOString(),
         },
       });
@@ -103,24 +103,24 @@ Deno.serve(async (req) => {
     if (resendKey) {
       try {
         const emailBody = `
-🚨 ALERTA DE SEGURANÇA - Ataque de Força Bruta Detectado
+? ALERTA DE SEGURANCA - Ataque de Forca Bruta Detectado
 
-Um ataque de força bruta foi detectado e bloqueado automaticamente:
+Um ataque de forca bruta foi detectado e bloqueado automaticamente:
 
 IP Atacante: ${ipAddress}
-Email Tentado: ${email || 'Não identificado'}
+Email Tentado: ${email || 'Nao identificado'}
 Tentativas: ${attemptCount} em 15 minutos
-Bloqueado até: ${new Date(blockedUntil).toLocaleString('pt-BR')}
-User Agent: ${userAgent || 'Não identificado'}
+Bloqueado ate: ${new Date(blockedUntil).toLocaleString('pt-BR')}
+User Agent: ${userAgent || 'Nao identificado'}
 
 O IP foi automaticamente bloqueado por 1 hora.
 
-Recomendações:
-- Verifique os logs de segurança no dashboard
+Recomendacoes:
+- Verifique os logs de seguranca no dashboard
 - Monitore tentativas adicionais deste IP
 - Considere adicionar o IP a uma lista de bloqueio permanente se o ataque persistir
 
-Este é um alerta automático do sistema CyberShield.
+Este e um alerta automatico do sistema CyberShield.
         `.trim();
 
         await supabaseAdmin.functions.invoke('send-alert-email', {
@@ -129,7 +129,7 @@ Este é um alerta automático do sistema CyberShield.
           },
           body: {
             to: 'security@cybershield.local', // Configurar email real
-            subject: '🚨 Ataque de Força Bruta Detectado',
+            subject: '? Ataque de Forca Bruta Detectado',
             text: emailBody,
           }
         });

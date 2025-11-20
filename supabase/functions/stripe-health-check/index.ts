@@ -122,19 +122,19 @@ Deno.serve(async (req) => {
       logStep("Stripe key not configured");
       response.checks.stripe_api = {
         status: 'error',
-        message: 'STRIPE_SECRET_KEY não está configurado'
+        message: 'STRIPE_SECRET_KEY nao esta configurado'
       };
       response.overall_status = 'down';
-      response.recommendations.push('🔴 Configure STRIPE_SECRET_KEY nos secrets do projeto');
+      response.recommendations.push('? Configure STRIPE_SECRET_KEY nos secrets do projeto');
     } else if (!stripeKey.startsWith('sk_test_') && !stripeKey.startsWith('sk_live_')) {
       logStep("Invalid Stripe key format", { prefix: stripeKey.substring(0, 3) });
       response.checks.stripe_api = {
         status: 'error',
-        message: 'Chave inválida: deve começar com sk_test_ ou sk_live_ (não use Restricted Keys)'
+        message: 'Chave invalida: deve comecar com sk_test_ ou sk_live_ (nao use Restricted Keys)'
       };
       response.overall_status = 'down';
-      response.recommendations.push('🔴 Atualize STRIPE_SECRET_KEY para uma Secret Key válida (sk_test_* ou sk_live_*)');
-      response.recommendations.push('📘 Restricted Keys (rk_*) não têm permissões suficientes');
+      response.recommendations.push('? Atualize STRIPE_SECRET_KEY para uma Secret Key valida (sk_test_* ou sk_live_*)');
+      response.recommendations.push('? Restricted Keys (rk_*) nao tem permissoes suficientes');
     } else {
       try {
         const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
@@ -165,9 +165,9 @@ Deno.serve(async (req) => {
         
         let errorMessage = 'Erro ao conectar com Stripe';
         if (err?.type === 'StripeAuthenticationError') {
-          errorMessage = 'Chave de API inválida ou sem permissões';
+          errorMessage = 'Chave de API invalida ou sem permissoes';
         } else if (err?.type === 'StripeConnectionError') {
-          errorMessage = 'Erro de conexão com Stripe API';
+          errorMessage = 'Erro de conexao com Stripe API';
         }
         
         response.checks.stripe_api = {
@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
           message: errorMessage
         };
         response.overall_status = 'down';
-        response.recommendations.push('🔴 Verificar STRIPE_SECRET_KEY - chave pode estar inválida');
+        response.recommendations.push('? Verificar STRIPE_SECRET_KEY - chave pode estar invalida');
       }
     }
 
@@ -214,21 +214,21 @@ Deno.serve(async (req) => {
         logStep("Partial products configuration", { starterExists, proExists });
         
         if (!starterExists) {
-          response.recommendations.push('⚠️ Produto Starter não configurado');
+          response.recommendations.push('[WARN] ? Produto Starter nao configurado');
         }
         if (!proExists) {
-          response.recommendations.push('⚠️ Produto Pro não configurado');
+          response.recommendations.push('[WARN] ? Produto Pro nao configurado');
         }
       } else {
         response.checks.products_configured.status = 'missing';
         response.overall_status = 'degraded';
         logStep("No products configured");
-        response.recommendations.push('🔴 Nenhum produto Stripe configurado - clique em "Criar Produtos"');
+        response.recommendations.push('? Nenhum produto Stripe configurado - clique em "Criar Produtos"');
       }
     } catch (error) {
       const err = error as any;
       logStep("Error checking products", { error: err?.message || 'Unknown error' });
-      response.recommendations.push('⚠️ Erro ao verificar produtos no banco de dados');
+      response.recommendations.push('[WARN] ? Erro ao verificar produtos no banco de dados');
     }
 
     // Check 3: Webhook Configuration
@@ -240,12 +240,12 @@ Deno.serve(async (req) => {
     };
     
     if (!response.recommendations.some(r => r.includes('webhook'))) {
-      response.recommendations.push('📘 Configure webhook no Stripe Dashboard com os eventos necessários');
+      response.recommendations.push('? Configure webhook no Stripe Dashboard com os eventos necessarios');
     }
 
     // Add positive recommendations
     if (response.overall_status === 'healthy') {
-      response.recommendations.push('✅ Sistema Stripe totalmente operacional!');
+      response.recommendations.push('[OK]  Sistema Stripe totalmente operacional!');
     }
 
     logStep("Health check completed", { status: response.overall_status });

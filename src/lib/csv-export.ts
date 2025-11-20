@@ -15,7 +15,7 @@ export function exportToCSV<T extends Record<string, any>>(
     return columns.map(col => {
       const value = item[col.key];
       
-      // Escapar valores para CSV (aspas duplas, vírgulas, quebras de linha)
+      // Escapar valores para CSV (aspas duplas, virgulas, quebras de linha)
       if (value === null || value === undefined) return '';
       
       const strValue = String(value);

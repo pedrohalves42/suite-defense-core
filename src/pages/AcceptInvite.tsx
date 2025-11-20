@@ -12,9 +12,9 @@ import { logger } from '@/lib/logger';
 
 const passwordSchema = z.string()
   .min(8, 'Senha deve ter pelo menos 8 caracteres')
-  .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
-  .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
-  .regex(/[0-9]/, 'Senha deve conter pelo menos um número')
+  .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiuscula')
+  .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minuscula')
+  .regex(/[0-9]/, 'Senha deve conter pelo menos um numero')
   .regex(/[^A-Za-z0-9]/, 'Senha deve conter pelo menos um caractere especial');
 
 export default function AcceptInvite() {
@@ -33,7 +33,7 @@ export default function AcceptInvite() {
   useEffect(() => {
     const fetchInvite = async () => {
       if (!token) {
-        toast({ title: 'Token inválido', variant: 'destructive' });
+        toast({ title: 'Token invalido', variant: 'destructive' });
         navigate('/login');
         return;
       }
@@ -49,7 +49,7 @@ export default function AcceptInvite() {
           .maybeSingle();
 
         if (error || !data) {
-          toast({ title: 'Convite não encontrado ou expirado', variant: 'destructive' });
+          toast({ title: 'Convite nao encontrado ou expirado', variant: 'destructive' });
           navigate('/login');
           return;
         }
@@ -93,7 +93,7 @@ export default function AcceptInvite() {
 
     if (!validatePassword(password)) {
       toast({ 
-        title: 'Senha não atende aos requisitos', 
+        title: 'Senha nao atende aos requisitos', 
         description: passwordErrors[0],
         variant: 'destructive' 
       });
@@ -174,7 +174,7 @@ export default function AcceptInvite() {
           </div>
           <CardTitle className="text-2xl text-center">Aceitar Convite</CardTitle>
           <CardDescription className="text-center">
-            Você foi convidado como <strong>{invite.role}</strong>
+            Voce foi convidado como <strong>{invite.role}</strong>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -204,7 +204,7 @@ export default function AcceptInvite() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Mínimo 8 caracteres"
+                placeholder="Minimo 8 caracteres"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
@@ -224,7 +224,7 @@ export default function AcceptInvite() {
                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-2">
-                Senha deve conter: 8+ caracteres, maiúscula, minúscula, número e caractere especial
+                Senha deve conter: 8+ caracteres, maiuscula, minuscula, numero e caractere especial
               </p>
             </div>
             <Button 

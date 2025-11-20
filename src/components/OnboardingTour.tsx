@@ -21,31 +21,31 @@ interface TourStep {
 
 const tourSteps: TourStep[] = [
   {
-    title: 'Bem-vindo ao CyberShield! 🎉',
-    description: 'Vamos fazer um tour rápido pela plataforma para você começar a proteger seus endpoints imediatamente.',
+    title: 'Bem-vindo ao CyberShield! ?',
+    description: 'Vamos fazer um tour rapido pela plataforma para voce comecar a proteger seus endpoints imediatamente.',
     icon: Shield,
   },
   {
     title: 'Instale Agentes',
-    description: 'O primeiro passo é instalar agentes nos seus servidores Windows ou Linux. Vá em "Instalador de Agentes" no menu lateral e siga as instruções.',
+    description: 'O primeiro passo e instalar agentes nos seus servidores Windows ou Linux. Va em "Instalador de Agentes" no menu lateral e siga as instrucoes.',
     icon: Activity,
     action: 'Ir para Instalador',
   },
   {
-    title: 'Execute Scans de Segurança',
-    description: 'Com os agentes instalados, você pode executar scans de vírus, verificações de segurança e análises de rede remotamente.',
+    title: 'Execute Scans de Seguranca',
+    description: 'Com os agentes instalados, voce pode executar scans de virus, verificacoes de seguranca e analises de rede remotamente.',
     icon: FileCheck,
     action: 'Ver Jobs',
   },
   {
-    title: 'Gerencie Usuários',
-    description: 'Convide membros da sua equipe com diferentes níveis de acesso: Admin (controle total), Operador (criar jobs) ou Visualizador (somente leitura).',
+    title: 'Gerencie Usuarios',
+    description: 'Convide membros da sua equipe com diferentes niveis de acesso: Admin (controle total), Operador (criar jobs) ou Visualizador (somente leitura).',
     icon: Users,
-    action: 'Gerenciar Usuários',
+    action: 'Gerenciar Usuarios',
   },
   {
-    title: 'Pronto para começar! ✅',
-    description: 'Você está pronto! Explore o dashboard, instale seus primeiros agentes e comece a monitorar a segurança dos seus endpoints.',
+    title: 'Pronto para comecar! [OK] ',
+    description: 'Voce esta pronto! Explore o dashboard, instale seus primeiros agentes e comece a monitorar a seguranca dos seus endpoints.',
     icon: CheckCircle2,
   },
 ];
@@ -166,11 +166,11 @@ export const OnboardingTour = ({ open, onClose, onComplete }: OnboardingTourProp
               {isLastStep ? (
                 <>
                   <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Começar
+                  Comecar
                 </>
               ) : (
                 <>
-                  Próximo
+                  Proximo
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </>
               )}

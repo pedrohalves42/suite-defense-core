@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
           status: 'error',
           error: 'unauthorized',
           code: 'AUTH_MISSING_TOKEN',
-          message: 'Token do agente necessário' 
+          message: 'Token do agente necessario' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
           status: 'error',
           error: 'unauthorized',
           code: 'AUTH_INVALID_TOKEN_FORMAT',
-          message: 'Formato de token inválido' 
+          message: 'Formato de token invalido' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
           status: 'error',
           error: 'unauthorized',
           code: 'AUTH_INVALID_TOKEN',
-          message: 'Token inválido ou expirado' 
+          message: 'Token invalido ou expirado' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
           status: 'error',
           error: 'configuration_error',
           code: 'AUTH_HMAC_NOT_CONFIGURED',
-          message: 'HMAC secret não configurado para este agente' 
+          message: 'HMAC secret nao configurado para este agente' 
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )

@@ -103,7 +103,7 @@ export default function SubscriptionAnalytics() {
         <div>
           <h1 className="text-3xl font-bold">Analytics de Assinaturas</h1>
           <p className="text-muted-foreground mt-1">
-            Métricas de receita, conversão e retenção
+            Metricas de receita, conversao e retencao
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -145,11 +145,11 @@ export default function SubscriptionAnalytics() {
       <div>
         <h1 className="text-3xl font-bold">Analytics de Assinaturas</h1>
         <p className="text-muted-foreground mt-1">
-          Métricas de receita, conversão e retenção
+          Metricas de receita, conversao e retencao
         </p>
       </div>
 
-      {/* Métricas Principais */}
+      {/* Metricas Principais */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -174,14 +174,14 @@ export default function SubscriptionAnalytics() {
               {analytics.churn_rate}%
             </div>
             <Badge variant={getChurnBadgeVariant(analytics.churn_rate)} className="mt-2">
-              {analytics.churn_rate < 5 ? 'Excelente' : analytics.churn_rate < 10 ? 'Bom' : 'Atenção'}
+              {analytics.churn_rate < 5 ? 'Excelente' : analytics.churn_rate < 10 ? 'Bom' : 'Atencao'}
             </Badge>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversão Trial</CardTitle>
+            <CardTitle className="text-sm font-medium">Conversao Trial</CardTitle>
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -189,7 +189,7 @@ export default function SubscriptionAnalytics() {
               {analytics.trial_conversion_rate}%
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Trial → Pago
+              Trial ? Pago
             </p>
           </CardContent>
         </Card>
@@ -208,15 +208,15 @@ export default function SubscriptionAnalytics() {
         </Card>
       </div>
 
-      {/* Gráfico de Tendência de Receita */}
+      {/* Grafico de Tendencia de Receita */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Evolução do MRR
+            Evolucao do MRR
           </CardTitle>
           <CardDescription>
-            Receita mensal recorrente nos últimos 6 meses
+            Receita mensal recorrente nos ultimos 6 meses
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -258,7 +258,7 @@ export default function SubscriptionAnalytics() {
               Novos vs. Cancelamentos
             </CardTitle>
             <CardDescription>
-              Comparativo mensal de entrada e saída
+              Comparativo mensal de entrada e saida
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -276,10 +276,10 @@ export default function SubscriptionAnalytics() {
           </CardContent>
         </Card>
 
-        {/* Distribuição por Status */}
+        {/* Distribuicao por Status */}
         <Card>
           <CardHeader>
-            <CardTitle>Distribuição por Status</CardTitle>
+            <CardTitle>Distribuicao por Status</CardTitle>
             <CardDescription>
               Breakdown das assinaturas atuais
             </CardDescription>
@@ -322,15 +322,15 @@ export default function SubscriptionAnalytics() {
         </Card>
       </div>
 
-      {/* Métricas Adicionais */}
+      {/* Metricas Adicionais */}
       <Card>
         <CardHeader>
-          <CardTitle>Métricas Adicionais</CardTitle>
+          <CardTitle>Metricas Adicionais</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div>
-              <p className="text-sm text-muted-foreground">Receita Média por Cliente</p>
+              <p className="text-sm text-muted-foreground">Receita Media por Cliente</p>
               <p className="text-2xl font-bold mt-1">
                 {formatMoney(analytics.avg_revenue_per_customer)}
               </p>

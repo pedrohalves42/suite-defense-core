@@ -26,7 +26,7 @@ try {
     $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
     
     if (-not $isAdmin) {
-        Write-Host "❌ This script must be run as Administrator" -ForegroundColor Red
+        Write-Host "[ERROR]  This script must be run as Administrator" -ForegroundColor Red
         Write-Host "   Right-click PowerShell and select 'Run as Administrator'" -ForegroundColor Yellow
         exit 1
     }
@@ -38,9 +38,9 @@ try {
         Write-Host "  Found existing task: $taskName" -ForegroundColor Gray
         Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
         Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-        Write-Host "  ✓ Task removed successfully" -ForegroundColor Green
+        Write-Host "  ? Task removed successfully" -ForegroundColor Green
     } else {
-        Write-Host "  ℹ No existing task found" -ForegroundColor Gray
+        Write-Host "  [INFO]  No existing task found" -ForegroundColor Gray
     }
 
     # 2. Remove old installation directory
@@ -48,9 +48,9 @@ try {
     if (Test-Path $installDir) {
         Write-Host "  Removing directory: $installDir" -ForegroundColor Gray
         Remove-Item $installDir -Recurse -Force -ErrorAction Stop
-        Write-Host "  ✓ Directory cleaned successfully" -ForegroundColor Green
+        Write-Host "  ? Directory cleaned successfully" -ForegroundColor Green
     } else {
-        Write-Host "  ℹ No existing installation found" -ForegroundColor Gray
+        Write-Host "  [INFO]  No existing installation found" -ForegroundColor Gray
     }
 
     # 3. Download latest installer
@@ -65,10 +65,10 @@ try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         
         Invoke-WebRequest -Uri $url -OutFile $installerPath -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop
-        Write-Host "  ✓ Installer downloaded to: $installerPath" -ForegroundColor Green
+        Write-Host "  ? Installer downloaded to: $installerPath" -ForegroundColor Green
         Write-Host "  Size: $((Get-Item $installerPath).Length / 1KB) KB" -ForegroundColor Gray
     } catch {
-        Write-Host "  ❌ Failed to download installer: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  [ERROR]  Failed to download installer: $($_.Exception.Message)" -ForegroundColor Red
         throw
     }
 
@@ -83,9 +83,9 @@ try {
             throw "Installer exited with code: $LASTEXITCODE"
         }
         
-        Write-Host "  ✓ Installer completed successfully" -ForegroundColor Green
+        Write-Host "  ? Installer completed successfully" -ForegroundColor Green
     } catch {
-        Write-Host "  ❌ Installer failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  [ERROR]  Installer failed: $($_.Exception.Message)" -ForegroundColor Red
         throw
     }
 
@@ -96,36 +96,36 @@ try {
     # Check scheduled task
     $newTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     if ($newTask) {
-        Write-Host "  ✓ Scheduled task created: $taskName" -ForegroundColor Green
+        Write-Host "  ? Scheduled task created: $taskName" -ForegroundColor Green
         Write-Host "  Task state: $($newTask.State)" -ForegroundColor Gray
     } else {
-        Write-Host "  ⚠ Scheduled task not found" -ForegroundColor Yellow
+        Write-Host "  [WARN]  Scheduled task not found" -ForegroundColor Yellow
     }
     
     # Check installation directory
     if (Test-Path $installDir) {
-        Write-Host "  ✓ Installation directory exists: $installDir" -ForegroundColor Green
+        Write-Host "  ? Installation directory exists: $installDir" -ForegroundColor Green
     } else {
-        Write-Host "  ⚠ Installation directory not found" -ForegroundColor Yellow
+        Write-Host "  [WARN]  Installation directory not found" -ForegroundColor Yellow
     }
     
     # Check and display recent logs
     $logFile = "C:\CyberShield\logs\agent.log"
     if (Test-Path $logFile) {
         Write-Host ""
-        Write-Host "  📄 Recent agent logs:" -ForegroundColor Cyan
+        Write-Host "  [DOC]  Recent agent logs:" -ForegroundColor Cyan
         Write-Host "  " + ("-" * 60) -ForegroundColor Gray
         Get-Content $logFile -Tail 20 | ForEach-Object {
             Write-Host "  $_" -ForegroundColor Gray
         }
         Write-Host "  " + ("-" * 60) -ForegroundColor Gray
     } else {
-        Write-Host "  ⚠ Log file not found: $logFile" -ForegroundColor Yellow
+        Write-Host "  [WARN]  Log file not found: $logFile" -ForegroundColor Yellow
     }
 
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "✅ Reinstallation completed successfully!" -ForegroundColor Green
+    Write-Host "[OK]  Reinstallation completed successfully!" -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor White
@@ -142,7 +142,7 @@ try {
 } catch {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Red
-    Write-Host "❌ Reinstallation failed!" -ForegroundColor Red
+    Write-Host "[ERROR]  Reinstallation failed!" -ForegroundColor Red
     Write-Host "========================================" -ForegroundColor Red
     Write-Host ""
     Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red

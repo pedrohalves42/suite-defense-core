@@ -1,9 +1,9 @@
--- FASE 4: Corrigir RLS Policy problemática em enrollment_keys
--- Remover policy inútil que contém "AND false"
+-- FASE 4: Corrigir RLS Policy problematica em enrollment_keys
+-- Remover policy inutil que contem "AND false"
 
 DROP POLICY IF EXISTS "Operators can view enrollment key metadata" ON public.enrollment_keys;
 
--- Criar policy correta para operators (se necessário)
+-- Criar policy correta para operators (se necessario)
 -- Apenas se operators realmente precisarem acessar enrollment keys
 CREATE POLICY "Operators can view enrollment key metadata"
 ON public.enrollment_keys

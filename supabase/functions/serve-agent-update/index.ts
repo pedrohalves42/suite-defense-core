@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
 
   try {
-    logger.info('[serve-agent-update] Requisição recebida', { requestId });
+    logger.info('[serve-agent-update] Requisicao recebida', { requestId });
 
     // Verificar HMAC
     const agentToken = req.headers.get('X-Agent-Token');
@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (agentError || !agent) {
-      logger.error('[serve-agent-update] Agente não encontrado', { 
+      logger.error('[serve-agent-update] Agente nao encontrado', { 
         requestId, 
         agentToken,
         error: agentError 
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
     );
 
     if (!hmacResult.valid) {
-      logger.warn('[serve-agent-update] HMAC inválido', { 
+      logger.warn('[serve-agent-update] HMAC invalido', { 
         requestId, 
         agentName: agent.agent_name,
         errorCode: hmacResult.errorCode
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    logger.info('[serve-agent-update] HMAC válido', { 
+    logger.info('[serve-agent-update] HMAC valido', { 
       requestId, 
       agentName: agent.agent_name,
       currentVersion: agent.agent_version 
@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     // Determinar plataforma
     const platform = agent.os_type?.toLowerCase() || 'windows';
 
-    // Buscar última release ativa
+    // Buscar ultima release ativa
     const { data: release, error: releaseError } = await supabase
       .from('agent_releases')
       .select('version, script_content, sha256, release_notes, created_at')
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (releaseError || !release) {
-      logger.warn('[serve-agent-update] Nenhuma release disponível', { 
+      logger.warn('[serve-agent-update] Nenhuma release disponivel', { 
         requestId, 
         platform,
         error: releaseError 
@@ -106,9 +106,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se já está na última versão
+    // Verificar se ja esta na ultima versao
     if (release.version === agent.agent_version) {
-      logger.info('[serve-agent-update] Agente já está atualizado', { 
+      logger.info('[serve-agent-update] Agente ja esta atualizado', { 
         requestId, 
         agentName: agent.agent_name,
         version: agent.agent_version 
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    logger.info('[serve-agent-update] Retornando atualização', { 
+    logger.info('[serve-agent-update] Retornando atualizacao', { 
       requestId, 
       agentName: agent.agent_name,
       fromVersion: agent.agent_version,

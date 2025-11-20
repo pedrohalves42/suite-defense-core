@@ -97,9 +97,9 @@ export default function AIInsights() {
 
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      anomaly_detection: 'Detecção de Anomalia',
-      optimization: 'Otimização',
-      prediction: 'Predição',
+      anomaly_detection: 'Deteccao de Anomalia',
+      optimization: 'Otimizacao',
+      prediction: 'Predicao',
       root_cause: 'Causa Raiz',
     };
     return labels[type] || type;
@@ -154,7 +154,7 @@ export default function AIInsights() {
             IA de Autoaprendizado
           </h1>
           <p className="text-muted-foreground mt-2">
-            Insights gerados automaticamente pela análise de dados do sistema
+            Insights gerados automaticamente pela analise de dados do sistema
           </p>
         </div>
         <Badge variant="outline" className="flex items-center gap-2">
@@ -180,13 +180,13 @@ export default function AIInsights() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Críticos</CardTitle>
+            <CardTitle className="text-sm font-medium">Criticos</CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{stats.critical}</div>
             <p className="text-xs text-muted-foreground">
-              Requerem atenção imediata
+              Requerem atencao imediata
             </p>
           </CardContent>
         </Card>
@@ -199,7 +199,7 @@ export default function AIInsights() {
           <CardContent>
             <div className="text-2xl font-bold text-warning">{stats.warning}</div>
             <p className="text-xs text-muted-foreground">
-              Investigação recomendada
+              Investigacao recomendada
             </p>
           </CardContent>
         </Card>
@@ -237,7 +237,7 @@ export default function AIInsights() {
               <Info className="h-4 w-4" />
               <AlertTitle>Nenhum insight pendente</AlertTitle>
               <AlertDescription>
-                A IA está monitorando o sistema continuamente. Novos insights aparecerão aqui automaticamente.
+                A IA esta monitorando o sistema continuamente. Novos insights aparecerao aqui automaticamente.
               </AlertDescription>
             </Alert>
           ) : (
@@ -274,7 +274,7 @@ export default function AIInsights() {
                     <div className="flex items-start gap-2">
                       <TrendingUp className="h-5 w-5 text-primary mt-0.5" />
                       <div>
-                        <p className="font-semibold text-sm mb-1">Recomendação:</p>
+                        <p className="font-semibold text-sm mb-1">Recomendacao:</p>
                         <p className="text-sm text-muted-foreground">{insight.recommendation}</p>
                       </div>
                     </div>
@@ -283,7 +283,7 @@ export default function AIInsights() {
                   {/* Evidence */}
                   {insight.evidence && Object.keys(insight.evidence).length > 0 && (
                     <div className="border rounded-lg p-4">
-                      <p className="font-semibold text-sm mb-2">Evidências:</p>
+                      <p className="font-semibold text-sm mb-2">Evidencias:</p>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         {insight.evidence.failureRate !== undefined && (
                           <div>
@@ -293,19 +293,19 @@ export default function AIInsights() {
                         )}
                         {insight.evidence.avgCpuUsage !== undefined && (
                           <div>
-                            <span className="text-muted-foreground">CPU Média:</span>
+                            <span className="text-muted-foreground">CPU Media:</span>
                             <span className="ml-2 font-medium">{insight.evidence.avgCpuUsage.toFixed(1)}%</span>
                           </div>
                         )}
                         {insight.evidence.avgMemoryUsage !== undefined && (
                           <div>
-                            <span className="text-muted-foreground">Memória Média:</span>
+                            <span className="text-muted-foreground">Memoria Media:</span>
                             <span className="ml-2 font-medium">{insight.evidence.avgMemoryUsage.toFixed(1)}%</span>
                           </div>
                         )}
                         {insight.evidence.problematicJobsCount !== undefined && (
                           <div>
-                            <span className="text-muted-foreground">Jobs Problemáticos:</span>
+                            <span className="text-muted-foreground">Jobs Problematicos:</span>
                             <span className="ml-2 font-medium">{insight.evidence.problematicJobsCount}</span>
                           </div>
                         )}
@@ -316,8 +316,8 @@ export default function AIInsights() {
                   {/* Metadata */}
                   <div className="flex items-center justify-between pt-2 border-t">
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>Confiança: {(insight.confidence_score * 100).toFixed(0)}%</span>
-                      <span>•</span>
+                      <span>Confianca: {(insight.confidence_score * 100).toFixed(0)}%</span>
+                      <span>?</span>
                       <span>{formatDate(insight.created_at)}</span>
                     </div>
                     <Button
@@ -341,7 +341,7 @@ export default function AIInsights() {
               <Info className="h-4 w-4" />
               <AlertTitle>Nenhum insight reconhecido ainda</AlertTitle>
               <AlertDescription>
-                Insights reconhecidos aparecerão aqui para referência histórica.
+                Insights reconhecidos aparecerao aqui para referencia historica.
               </AlertDescription>
             </Alert>
           ) : (

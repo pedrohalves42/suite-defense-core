@@ -21,7 +21,7 @@ export const AdminLayout = () => {
     if (!loading && !isAdmin) {
       toast({
         title: "Acesso Negado",
-        description: "Você não tem permissões de administrador.",
+        description: "Voce nao tem permissoes de administrador.",
         variant: "destructive"
       });
     }
@@ -31,7 +31,7 @@ export const AdminLayout = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <p className="text-muted-foreground">Verificando permissões...</p>
+        <p className="text-muted-foreground">Verificando permissoes...</p>
       </div>
     );
   }

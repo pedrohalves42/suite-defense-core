@@ -17,7 +17,7 @@ Deno.serve(async (req: Request) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Autenticação necessária' }),
+        JSON.stringify({ error: 'Autenticacao necessaria' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
 
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Usuário não autenticado' }),
+        JSON.stringify({ error: 'Usuario nao autenticado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -74,8 +74,8 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Chave da API do Stripe não configurada',
-          message: 'A chave STRIPE_SECRET_KEY não está configurada nos secrets do projeto'
+          error: 'Chave da API do Stripe nao configurada',
+          message: 'A chave STRIPE_SECRET_KEY nao esta configurada nos secrets do projeto'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -112,7 +112,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ 
           success: false, 
           error: 'Falha ao conectar com Stripe',
-          message: `Status HTTP ${testResponse.status}: ${errorData.error?.message || 'Verifique se a chave da API está correta'}`,
+          message: `Status HTTP ${testResponse.status}: ${errorData.error?.message || 'Verifique se a chave da API esta correta'}`,
           details: errorData.error?.type
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -139,7 +139,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Conexão com Stripe estabelecida com sucesso',
+        message: 'Conexao com Stripe estabelecida com sucesso',
         details: {
           accountId: accountData.id,
           businessType: accountData.business_type,
@@ -155,7 +155,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: 'Erro ao testar integração',
+        error: 'Erro ao testar integracao',
         message: error instanceof Error ? error.message : 'Erro desconhecido'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

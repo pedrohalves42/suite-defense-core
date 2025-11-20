@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -34,12 +34,12 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Verificar se é admin
+    // Verificar se e admin
     const { data: hasAdminRole, error: roleError } = await supabaseAdmin.rpc('has_role', { 
       _user_id: user.id, 
       _role: 'admin' 
@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
     const adminTenantId = await getTenantIdForUser(supabaseAdmin, user.id);
 
     if (!adminTenantId) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant nao encontrado', 400, requestId);
     }
 
     // Buscar user_role a ser atualizado
@@ -76,17 +76,17 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (targetError || !targetRole) {
-      return createErrorResponse(ErrorCode.NOT_FOUND, 'Membro não encontrado', 404, requestId);
+      return createErrorResponse(ErrorCode.NOT_FOUND, 'Membro nao encontrado', 404, requestId);
     }
 
     // Verificar se o membro pertence ao mesmo tenant
     if (targetRole.tenant_id !== adminTenantId) {
-      return createErrorResponse(ErrorCode.FORBIDDEN, 'Membro não pertence ao seu tenant', 403, requestId);
+      return createErrorResponse(ErrorCode.FORBIDDEN, 'Membro nao pertence ao seu tenant', 403, requestId);
     }
 
-    // Não permitir que o admin altere seu próprio role
+    // Nao permitir que o admin altere seu proprio role
     if (targetRole.user_id === user.id) {
-      return createErrorResponse(ErrorCode.FORBIDDEN, 'Você não pode alterar seu próprio role', 403, requestId);
+      return createErrorResponse(ErrorCode.FORBIDDEN, 'Voce nao pode alterar seu proprio role', 403, requestId);
     }
 
     // Atualizar role

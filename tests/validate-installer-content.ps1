@@ -23,9 +23,9 @@ $validationResults = @{
 Write-Host "[1/6] Checking file existence..." -ForegroundColor Yellow
 if (Test-Path $InstallerPath) {
     $validationResults['File Exists'] = $true
-    Write-Host "✓ File found" -ForegroundColor Green
+    Write-Host "? File found" -ForegroundColor Green
 } else {
-    Write-Host "✗ File not found: $InstallerPath" -ForegroundColor Red
+    Write-Host "? File not found: $InstallerPath" -ForegroundColor Red
     exit 1
 }
 
@@ -51,9 +51,9 @@ foreach ($placeholder in $placeholders) {
 
 if ($foundPlaceholders.Count -eq 0) {
     $validationResults['No Placeholders'] = $true
-    Write-Host "✓ No unreplaced placeholders found" -ForegroundColor Green
+    Write-Host "? No unreplaced placeholders found" -ForegroundColor Green
 } else {
-    Write-Host "✗ Found unreplaced placeholders:" -ForegroundColor Red
+    Write-Host "? Found unreplaced placeholders:" -ForegroundColor Red
     $foundPlaceholders | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
 }
 
@@ -79,9 +79,9 @@ foreach ($marker in $agentCodeMarkers) {
 
 if ($foundMarkers -eq $agentCodeMarkers.Count) {
     $validationResults['Agent Code Present'] = $true
-    Write-Host "✓ All $foundMarkers agent code markers found" -ForegroundColor Green
+    Write-Host "? All $foundMarkers agent code markers found" -ForegroundColor Green
 } else {
-    Write-Host "✗ Missing $($agentCodeMarkers.Count - $foundMarkers) agent code markers:" -ForegroundColor Red
+    Write-Host "? Missing $($agentCodeMarkers.Count - $foundMarkers) agent code markers:" -ForegroundColor Red
     $missingMarkers | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
 }
 
@@ -107,9 +107,9 @@ foreach ($func in $requiredFunctions) {
 
 if ($foundFunctions -eq $requiredFunctions.Count) {
     $validationResults['Required Functions Present'] = $true
-    Write-Host "✓ All $foundFunctions required functions found" -ForegroundColor Green
+    Write-Host "? All $foundFunctions required functions found" -ForegroundColor Green
 } else {
-    Write-Host "✗ Missing $($requiredFunctions.Count - $foundFunctions) functions:" -ForegroundColor Red
+    Write-Host "? Missing $($requiredFunctions.Count - $foundFunctions) functions:" -ForegroundColor Red
     $missingFunctions | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
 }
 
@@ -118,9 +118,9 @@ Write-Host "`n[5/6] Validating PowerShell syntax..." -ForegroundColor Yellow
 try {
     $null = [System.Management.Automation.PSParser]::Tokenize($content, [ref]$null)
     $validationResults['Valid PowerShell Syntax'] = $true
-    Write-Host "✓ PowerShell syntax is valid" -ForegroundColor Green
+    Write-Host "? PowerShell syntax is valid" -ForegroundColor Green
 } catch {
-    Write-Host "✗ Invalid PowerShell syntax: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "? Invalid PowerShell syntax: $($_.Exception.Message)" -ForegroundColor Red
 }
 
 # Test 6: Check file size
@@ -130,9 +130,9 @@ $fileSizeKB = [math]::Round($fileSize / 1KB, 2)
 
 if ($fileSize -gt 50KB) {
     $validationResults['Adequate Size'] = $true
-    Write-Host "✓ File size: $fileSizeKB KB (adequate)" -ForegroundColor Green
+    Write-Host "? File size: $fileSizeKB KB (adequate)" -ForegroundColor Green
 } else {
-    Write-Host "✗ File size: $fileSizeKB KB (too small, expected > 50 KB)" -ForegroundColor Red
+    Write-Host "? File size: $fileSizeKB KB (too small, expected > 50 KB)" -ForegroundColor Red
 }
 
 # Summary
@@ -142,7 +142,7 @@ $totalTests = $validationResults.Count
 $successRate = [math]::Round(($passedTests / $totalTests) * 100, 0)
 
 foreach ($test in $validationResults.GetEnumerator() | Sort-Object Name) {
-    $status = if ($test.Value) { "✓ PASS" } else { "✗ FAIL" }
+    $status = if ($test.Value) { "? PASS" } else { "? FAIL" }
     $color = if ($test.Value) { "Green" } else { "Red" }
     Write-Host "$status - $($test.Key)" -ForegroundColor $color
 }
@@ -157,9 +157,9 @@ Write-Host "Total characters: $($content.Length)" -ForegroundColor White
 
 # Exit code
 if ($successRate -eq 100) {
-    Write-Host "`n✓ Validation PASSED - Installer is ready for use!" -ForegroundColor Green
+    Write-Host "`n? Validation PASSED - Installer is ready for use!" -ForegroundColor Green
     exit 0
 } else {
-    Write-Host "`n✗ Validation FAILED - Please review errors above" -ForegroundColor Red
+    Write-Host "`n? Validation FAILED - Please review errors above" -ForegroundColor Red
     exit 1
 }

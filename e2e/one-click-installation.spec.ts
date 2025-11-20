@@ -30,10 +30,10 @@ test.describe('One-Click Agent Installation', () => {
     await page.goto('/installer');
     
     // Wait for page to load
-    await page.waitForSelector('text=Instalação Automática de Agente', { timeout: 10000 });
+    await page.waitForSelector('text=Instalacao Automatica de Agente', { timeout: 10000 });
     
     // Verify page elements
-    await expect(page.locator('h1')).toContainText('Instalação Automática de Agente');
+    await expect(page.locator('h1')).toContainText('Instalacao Automatica de Agente');
     await expect(page.locator('input[placeholder*="nome do agente"]')).toBeVisible();
   });
 
@@ -48,7 +48,7 @@ test.describe('One-Click Agent Installation', () => {
     await page.click('button:has-text("Windows")');
     
     // Generate one-click command
-    await page.click('button:has-text("Gerar Comando Rápido")');
+    await page.click('button:has-text("Gerar Comando Rapido")');
     
     // Wait for command to be generated
     await page.waitForSelector('pre:has-text("irm")', { timeout: 10000 });
@@ -80,7 +80,7 @@ test.describe('One-Click Agent Installation', () => {
     await page.click('button:has-text("Linux")');
     
     // Generate one-click command
-    await page.click('button:has-text("Gerar Comando Rápido")');
+    await page.click('button:has-text("Gerar Comando Rapido")');
     
     // Wait for command to be generated
     await page.waitForSelector('pre:has-text("curl")', { timeout: 10000 });
@@ -107,7 +107,7 @@ test.describe('One-Click Agent Installation', () => {
     const agentName = `test-agent-copy-${Date.now()}`;
     await page.fill('input[placeholder*="nome do agente"]', agentName);
     await page.click('button:has-text("Windows")');
-    await page.click('button:has-text("Gerar Comando Rápido")');
+    await page.click('button:has-text("Gerar Comando Rapido")');
     
     // Wait for command to appear
     await page.waitForSelector('pre:has-text("irm")', { timeout: 10000 });
@@ -157,7 +157,7 @@ test.describe('One-Click Agent Installation', () => {
     const agentName = `test-agent-url-${Date.now()}`;
     await page.fill('input[placeholder*="nome do agente"]', agentName);
     await page.click('button:has-text("Windows")');
-    await page.click('button:has-text("Gerar Comando Rápido")');
+    await page.click('button:has-text("Gerar Comando Rapido")');
     
     // Wait for command and extract URL
     await page.waitForSelector('pre:has-text("irm")', { timeout: 10000 });
@@ -199,7 +199,7 @@ test.describe('One-Click Agent Installation', () => {
     const agentName = `test-agent-creds-${Date.now()}`;
     await page.fill('input[placeholder*="nome do agente"]', agentName);
     await page.click('button:has-text("Linux")');
-    await page.click('button:has-text("Gerar Comando Rápido")');
+    await page.click('button:has-text("Gerar Comando Rapido")');
     
     // Extract URL
     await page.waitForSelector('pre:has-text("curl")', { timeout: 10000 });
@@ -234,7 +234,7 @@ test.describe('One-Click Agent Installation', () => {
     const agentName = `test-win-full-${Date.now()}`;
     await page.fill('input[placeholder*="nome do agente"]', agentName);
     await page.click('button:has-text("Windows")');
-    await page.click('button:has-text("Gerar Comando Rápido")');
+    await page.click('button:has-text("Gerar Comando Rapido")');
     
     // Extract URL and fetch script
     await page.waitForSelector('pre:has-text("irm")', { timeout: 10000 });
@@ -265,7 +265,7 @@ test.describe('One-Click Agent Installation', () => {
     const agentName = `test-linux-full-${Date.now()}`;
     await page.fill('input[placeholder*="nome do agente"]', agentName);
     await page.click('button:has-text("Linux")');
-    await page.click('button:has-text("Gerar Comando Rápido")');
+    await page.click('button:has-text("Gerar Comando Rapido")');
     
     // Extract URL and fetch script
     await page.waitForSelector('pre:has-text("curl")', { timeout: 10000 });
@@ -304,7 +304,7 @@ test.describe('One-Click Agent Installation', () => {
     for (const invalidName of invalidNames) {
       await page.fill('input[placeholder*="nome do agente"]', invalidName);
       await page.click('button:has-text("Windows")');
-      await page.click('button:has-text("Gerar Comando Rápido")');
+      await page.click('button:has-text("Gerar Comando Rapido")');
       
       // Should show validation error
       const errorVisible = await page.locator('text=caracteres especiais').isVisible().catch(() => false);
@@ -329,7 +329,7 @@ test.describe('One-Click Agent Installation', () => {
       // Fill form
       await page.fill('input[placeholder*="nome do agente"]', agentName);
       await page.click('button:has-text("Windows")');
-      await page.click('button:has-text("Gerar Comando Rápido")');
+      await page.click('button:has-text("Gerar Comando Rapido")');
       
       // Wait for command
       await page.waitForSelector('pre:has-text("irm")', { timeout: 10000 });
@@ -355,7 +355,7 @@ test.describe('One-Click Agent Installation', () => {
     await page.goto('/installer');
     
     // Verify instructions are present
-    await expect(page.locator('text=Instalação Automática de Agente')).toBeVisible();
+    await expect(page.locator('text=Instalacao Automatica de Agente')).toBeVisible();
     await expect(page.locator('text=Execute como Administrador')).toBeVisible();
     await expect(page.locator('text=Agente envia heartbeats')).toBeVisible();
     
@@ -364,6 +364,6 @@ test.describe('One-Click Agent Installation', () => {
     await expect(page.locator('text=PowerShell como Administrador')).toBeVisible();
     
     await page.click('button:has-text("Linux")');
-    await expect(page.locator('text=privilégios de root')).toBeVisible();
+    await expect(page.locator('text=privilegios de root')).toBeVisible();
   });
 });

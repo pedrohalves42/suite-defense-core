@@ -244,7 +244,7 @@ test.describe('Linux Agent Installation E2E', () => {
     expect(scriptContent).toMatch(/HMAC_SECRET.*empty/);
     expect(scriptContent).toMatch(/SERVER_URL.*empty/);
     
-    console.log('✓ Parameter validation implemented');
+    console.log('? Parameter validation implemented');
   });
 
   test('should validate critical fixes - Retry Logic in Heartbeat', async ({ page }) => {
@@ -272,7 +272,7 @@ test.describe('Linux Agent Installation E2E', () => {
     // Validate exponential backoff
     expect(scriptContent).toMatch(/sleep.*attempt|\$\(\(.*attempt/);
     
-    console.log('✓ Retry logic with backoff implemented in heartbeat');
+    console.log('? Retry logic with backoff implemented in heartbeat');
   });
 
   test('should validate critical fixes - Server Connectivity Test', async ({ page }) => {
@@ -298,7 +298,7 @@ test.describe('Linux Agent Installation E2E', () => {
     expect(scriptContent).toMatch(/for.*attempt|while.*attempt/);
     expect(scriptContent).toMatch(/X-Agent-Token/);
     
-    console.log('✓ Server connectivity test with retry implemented');
+    console.log('? Server connectivity test with retry implemented');
   });
 
   test('should validate critical fixes - HMAC Security', async ({ page }) => {
@@ -328,6 +328,6 @@ test.describe('Linux Agent Installation E2E', () => {
     expect(scriptContent).toContain('X-HMAC-Signature');
     expect(scriptContent).toContain('X-Timestamp');
     
-    console.log('✓ Secure HMAC implementation validated');
+    console.log('? Secure HMAC implementation validated');
   });
 });

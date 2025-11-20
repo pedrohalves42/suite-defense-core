@@ -1,4 +1,4 @@
--- Migration 1: Adicionar campos OS à tabela agents
+-- Migration 1: Adicionar campos OS a tabela agents
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS os_type TEXT CHECK (os_type IN ('windows', 'linux', 'unknown'));
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS os_version TEXT;
 ALTER TABLE agents ADD COLUMN IF NOT EXISTS hostname TEXT;
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS agent_system_metrics (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX idx_agent_system_metrics_agent_id ON agent_system_metrics(agent_id);
 CREATE INDEX idx_agent_system_metrics_tenant_id ON agent_system_metrics(tenant_id);
 CREATE INDEX idx_agent_system_metrics_collected_at ON agent_system_metrics(collected_at DESC);
@@ -66,7 +66,7 @@ CREATE POLICY "Super admins can view all metrics" ON agent_system_metrics
     )
   );
 
--- Cleanup automático de métricas antigas
+-- Cleanup automatico de metricas antigas
 CREATE OR REPLACE FUNCTION cleanup_old_metrics()
 RETURNS void
 LANGUAGE plpgsql
@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS system_alerts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Índices
+-- Indices
 CREATE INDEX idx_system_alerts_tenant_id ON system_alerts(tenant_id);
 CREATE INDEX idx_system_alerts_agent_id ON system_alerts(agent_id);
 CREATE INDEX idx_system_alerts_created_at ON system_alerts(created_at DESC);
@@ -153,7 +153,7 @@ CREATE POLICY "Super admins can update all alerts" ON system_alerts
     )
   );
 
--- Migration 4: Função para obter últimas métricas por agente
+-- Migration 4: Funcao para obter ultimas metricas por agente
 CREATE OR REPLACE FUNCTION get_latest_agent_metrics(p_tenant_id UUID)
 RETURNS TABLE (
   agent_id UUID,

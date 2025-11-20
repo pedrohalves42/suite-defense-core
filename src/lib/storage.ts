@@ -2,7 +2,7 @@ import { logger } from './logger';
 
 /**
  * Utility para gerenciar localStorage de forma segura
- * Preserva estado crítico entre quedas de conexão
+ * Preserva estado critico entre quedas de conexao
  */
 
 interface StorageItem<T> {
@@ -31,7 +31,7 @@ export const storage = {
 
   /**
    * Recupera um item do localStorage
-   * Retorna null se não existir ou estiver expirado
+   * Retorna null se nao existir ou estiver expirado
    */
   get<T>(key: string): T | null {
     try {

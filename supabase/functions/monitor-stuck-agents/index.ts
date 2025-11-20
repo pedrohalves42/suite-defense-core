@@ -1,8 +1,8 @@
 /**
  * Monitor Stuck Agents
  * 
- * Monitora agentes em estado 'pending' sem heartbeat há mais de 10 minutos
- * e cria alertas no sistema para investigação.
+ * Monitora agentes em estado 'pending' sem heartbeat ha mais de 10 minutos
+ * e cria alertas no sistema para investigacao.
  * 
  * Executa: A cada 10 minutos (cron)
  */
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     }
 
     if (!stuckAgents || stuckAgents.length === 0) {
-      logger.info(`[${requestId}] No stuck agents found ✓`);
+      logger.info(`[${requestId}] No stuck agents found ?`);
       return new Response(
         JSON.stringify({
           success: true,

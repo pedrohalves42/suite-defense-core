@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
     await withTimeout(async () => {
       console.log('[check-installation-health] Verificando taxa de falha...')
 
-      // Query para taxa de falha nas últimas 24h
+      // Query para taxa de falha nas ultimas 24h
       const { data: failureRate, error } = await supabase
         .rpc('get_installation_health_status')
 
@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
       }
 
       if (!failureRate || failureRate.length === 0) {
-        console.log('[check-installation-health] Nenhum dado de instalação disponível')
+        console.log('[check-installation-health] Nenhum dado de instalacao disponivel')
         return
       }
 
@@ -40,8 +40,8 @@ Deno.serve(async (req) => {
           .insert({
             severity: 'high',
             alert_type: 'installation_failure',
-            title: 'Alta taxa de falha em instalações',
-            message: `Taxa de falha de instalação: ${failureRatePct}% (threshold: ${threshold}%)`,
+            title: 'Alta taxa de falha em instalacoes',
+            message: `Taxa de falha de instalacao: ${failureRatePct}% (threshold: ${threshold}%)`,
             details: healthData,
             tenant_id: '00000000-0000-0000-0000-000000000000' // System-level alert
           })

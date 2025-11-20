@@ -1,4 +1,4 @@
--- Corrigir view agents_safe - remover SECURITY DEFINER implícito
+-- Corrigir view agents_safe - remover SECURITY DEFINER implicito
 DROP VIEW IF EXISTS public.agents_safe CASCADE;
 
 CREATE VIEW public.agents_safe 

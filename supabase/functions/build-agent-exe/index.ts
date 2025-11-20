@@ -55,10 +55,10 @@ Deno.serve(async (req) => {
 
   try {
     return await withTimeout(async () => {
-      // 📊 Initialize telemetry (will be updated after build record creation)
+      // ? Initialize telemetry (will be updated after build record creation)
       let telemetry: BuildTelemetry | null = null;
       
-      // ⚡ FASE 1.2: LOGS EXPLÍCITOS NO INÍCIO
+      // ? FASE 1.2: LOGS EXPLICITOS NO INICIO
       logger.info(`[${requestId}] ========== BUILD REQUEST START ==========`);
       logger.info(`[${requestId}] Method: ${req.method}`);
       logger.info(`[${requestId}] GitHub Token Present: ${!!BUILD_GH_TOKEN}`);
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent credentials incomplete', 500, requestId);
     }
 
-    // FASE 1 CRÍTICO: Use inline agent script (always available)
+    // FASE 1 CRITICO: Use inline agent script (always available)
     logger.info('Using inline agent script', { requestId });
     
 const { getAgentScriptWindows } = await import('../_shared/agent-script-windows-content.ts');
@@ -157,7 +157,7 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
     
     logger.success(`Agent script validated: ${agentScriptContent.length} bytes, hash: ${agentScriptHash}`);
 
-    // ✅ FASE 1: Windows Installer Template APEX v3.0.0 (FULL SYNC with install-windows-template.ps1)
+    // [OK]  FASE 1: Windows Installer Template APEX v3.0.0 (FULL SYNC with install-windows-template.ps1)
     const WINDOWS_INSTALLER_TEMPLATE = `# CyberShield Agent - Windows Installation Script v3.0.0-APEX
 # Auto-generated: {{TIMESTAMP}}
 # APEX BUILD - Universal, Robust, Production-Ready
@@ -175,46 +175,46 @@ Write-Host "CyberShield Agent Installer v3.0.0-APEX" -ForegroundColor Cyan
 Write-Host "==================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Verificar privilégios de administrador
+# Verificar privilegios de administrador
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 $isAdmin = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 if (-not $isAdmin) {
-    Write-Host "ERRO: Este script requer privilégios de administrador" -ForegroundColor Red
+    Write-Host "ERRO: Este script requer privilegios de administrador" -ForegroundColor Red
     Write-Host "Clique direito no arquivo e selecione 'Executar como Administrador'" -ForegroundColor Yellow
     Read-Host "Pressione Enter para sair"
     exit 1
 }
 
-# Verificar versão do PowerShell
+# Verificar versao do PowerShell
 if ($PSVersionTable.PSVersion.Major -lt 5) {
     Write-Host "ERRO: Este script requer PowerShell 5.1 ou superior" -ForegroundColor Red
-    Write-Host "Versão atual: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
+    Write-Host "Versao atual: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
     Read-Host "Pressione Enter para sair"
     exit 1
 }
 
-# Configuração
+# Configuracao
 $AgentToken = "{{AGENT_TOKEN}}"
 $HmacSecret = "{{HMAC_SECRET}}"
 $ServerUrl = "{{SERVER_URL}}"
 $PollInterval = 60
 
-# Validar parâmetros
+# Validar parametros
 if ([string]::IsNullOrWhiteSpace($AgentToken) -or $AgentToken -eq "{{AGENT_TOKEN}}") {
-    Write-Host "ERRO: Token do agente não configurado" -ForegroundColor Red
-    Write-Host "Por favor, gere um novo instalador através do dashboard web" -ForegroundColor Yellow
+    Write-Host "ERRO: Token do agente nao configurado" -ForegroundColor Red
+    Write-Host "Por favor, gere um novo instalador atraves do dashboard web" -ForegroundColor Yellow
     Read-Host "Pressione Enter para sair"
     exit 1
 }
 
-# Diretório de instalação - ✅ FASE 1.1: Path unificado
+# Diretorio de instalacao - [OK]  FASE 1.1: Path unificado
 $InstallDir = "C:\\CyberShield"
 $AgentScript = Join-Path $InstallDir "cybershield-agent.ps1"
 $LogDir = Join-Path $InstallDir "logs"
 $InstallLog = Join-Path $LogDir "install.log"
 
-# ✅ FASE 1.1: Função de log de instalação
+# [OK]  FASE 1.1: Funcao de log de instalacao
 function Write-InstallLog {
     param([string]$Message)
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -230,16 +230,16 @@ $installStartTime = Get-Date
 $installStartTime = Get-Date
 
 try {
-    Write-InstallLog "[1/8] Criando diretórios de instalação..."
+    Write-InstallLog "[1/8] Criando diretorios de instalacao..."
     if (-not (Test-Path $InstallDir)) {
         New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
     }
     if (-not (Test-Path $LogDir)) {
         New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
     }
-    Write-InstallLog "✓ Diretórios criados com sucesso"
+    Write-InstallLog "? Diretorios criados com sucesso"
 
-    # ✅ FASE 1.2: Configurar proxy e TLS globalmente
+    # [OK]  FASE 1.2: Configurar proxy e TLS globalmente
     Write-InstallLog "[2/8] Configurando rede (TLS 1.2 + Proxy)..."
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     
@@ -251,12 +251,12 @@ try {
         [System.Net.WebRequest]::DefaultWebProxy = $proxy
         [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
     } else {
-        Write-InstallLog "Nenhum proxy detectado - conexão direta"
+        Write-InstallLog "Nenhum proxy detectado - conexao direta"
     }
-    Write-InstallLog "✓ TLS 1.2 habilitado e proxy configurado"
+    Write-InstallLog "? TLS 1.2 habilitado e proxy configurado"
 
-    # ✅ FASE 1.3: Health check inicial com retry mechanism
-    Write-InstallLog "[3/8] Testando conectividade com backend (até 3 tentativas)..."
+    # [OK]  FASE 1.3: Health check inicial com retry mechanism
+    Write-InstallLog "[3/8] Testando conectividade com backend (ate 3 tentativas)..."
     $healthCheck = $false
     $healthUrls = @(
         "$ServerUrl/functions/v1/heartbeat",
@@ -279,16 +279,16 @@ try {
                 }
                 $response = Invoke-WebRequest -Uri $url -Method GET -TimeoutSec 10 -UseBasicParsing
                 if ($response.StatusCode -eq 200) {
-                    Write-InstallLog "✓ Conectividade verificada: $url"
+                    Write-InstallLog "? Conectividade verificada: $url"
                     $healthCheck = $true
                     $success = $true
                     break
                 }
             } catch {
                 $retryCount++
-                Write-InstallLog "✗ Tentativa $retryCount falhou: $url - $($_.Exception.Message)"
+                Write-InstallLog "? Tentativa $retryCount falhou: $url - $($_.Exception.Message)"
                 if ($retryCount -ge $maxRetries) {
-                    Write-InstallLog "✗ Todas as tentativas falharam para: $url"
+                    Write-InstallLog "? Todas as tentativas falharam para: $url"
                 }
             }
         }
@@ -300,29 +300,29 @@ try {
 
     if (-not $healthCheck) {
         Write-Host ""
-        Write-Host "⚠ AVISO: Não foi possível conectar ao backend." -ForegroundColor Yellow
-        Write-Host "Possíveis causas:" -ForegroundColor Yellow
+        Write-Host "[WARN]  AVISO: Nao foi possivel conectar ao backend." -ForegroundColor Yellow
+        Write-Host "Possiveis causas:" -ForegroundColor Yellow
         Write-Host "  1. Firewall bloqueando HTTPS (porta 443)" -ForegroundColor Gray
-        Write-Host "  2. Proxy corporativo não configurado" -ForegroundColor Gray
+        Write-Host "  2. Proxy corporativo nao configurado" -ForegroundColor Gray
         Write-Host "  3. Servidor backend offline" -ForegroundColor Gray
         Write-Host ""
-        $continue = Read-Host "Continuar instalação mesmo assim? (S/N)"
+        $continue = Read-Host "Continuar instalacao mesmo assim? (S/N)"
         if ($continue -ne "S") {
-            Write-InstallLog "Instalação cancelada pelo usuário (sem conectividade)"
+            Write-InstallLog "Instalacao cancelada pelo usuario (sem conectividade)"
             exit 1
         }
     }
 
     Write-InstallLog "[4/8] Salvando script do agente (embedded)..."
     
-    # ✅ FASE 1.4: Conteúdo do script do agente (embedded)
+    # [OK]  FASE 1.4: Conteudo do script do agente (embedded)
     $AgentContent = @'
 {{AGENT_SCRIPT_CONTENT}}
 '@
 
     # Salvar script do agente
     Set-Content -Path $AgentScript -Value $AgentContent -Encoding UTF8 -Force
-    Write-InstallLog "✓ Script do agente salvo em: $AgentScript"
+    Write-InstallLog "? Script do agente salvo em: $AgentScript"
 
     Write-InstallLog "[5/8] Configurando regra de firewall..."
     try {
@@ -339,11 +339,11 @@ try {
                            -Protocol TCP \`
                            -RemotePort 443 \`
                            -Program "powershell.exe" \`
-                           -Description "Permite comunicação do CyberShield Agent com o servidor" \`
+                           -Description "Permite comunicacao do CyberShield Agent com o servidor" \`
                            -ErrorAction Stop | Out-Null
-        Write-InstallLog "✓ Regra de firewall configurada"
+        Write-InstallLog "? Regra de firewall configurada"
     } catch {
-        Write-InstallLog "⚠ Não foi possível criar regra de firewall: $($_.Exception.Message)"
+        Write-InstallLog "[WARN]  Nao foi possivel criar regra de firewall: $($_.Exception.Message)"
     }
 
     Write-InstallLog "[6/8] Criando tarefa agendada..."
@@ -358,14 +358,14 @@ try {
         Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
     }
 
-    # ✅ FASE 2: Criar ação com TODOS os parâmetros necessários
+    # [OK]  FASE 2: Criar acao com TODOS os parametros necessarios
     $action = New-ScheduledTaskAction -Execute "PowerShell.exe" \`
         -Argument "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File \`"$AgentScript\`" -AgentToken \`"$AgentToken\`" -HmacSecret \`"$HmacSecret\`" -ServerUrl \`"$ServerUrl\`" -AgentName \`"$AgentName\`" -PollInterval $PollInterval"
 
-    # Criar trigger (na inicialização do sistema)
+    # Criar trigger (na inicializacao do sistema)
     $trigger = New-ScheduledTaskTrigger -AtStartup
 
-    # Criar configurações com restart policies
+    # Criar configuracoes com restart policies
     $settings = New-ScheduledTaskSettingsSet \`
         -AllowStartIfOnBatteries \`
         -DontStopIfGoingOnBatteries \`
@@ -374,7 +374,7 @@ try {
         -RestartInterval (New-TimeSpan -Minutes 1) \`
         -ExecutionTimeLimit (New-TimeSpan -Days 365)
 
-    # Criar principal (executar como SYSTEM com privilégios máximos)
+    # Criar principal (executar como SYSTEM com privilegios maximos)
     $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 
     # Registrar tarefa
@@ -387,7 +387,7 @@ try {
         -Principal $principal \`
         -Force | Out-Null
 
-    Write-InstallLog "✓ Tarefa agendada criada com sucesso"
+    Write-InstallLog "? Tarefa agendada criada com sucesso"
 
     Write-InstallLog "[7/8] Iniciando o agente..."
 
@@ -397,14 +397,14 @@ try {
     # Aguardar um momento para a tarefa iniciar
     Start-Sleep -Seconds 3
 
-    # Verificar se a tarefa está rodando
+    # Verificar se a tarefa esta rodando
     $task = Get-ScheduledTask -TaskName $taskName
     $taskState = $task.State
     $taskInfo = Get-ScheduledTaskInfo -TaskName $taskName
 
     Write-Host ""
     Write-Host "==================================" -ForegroundColor Green
-    Write-Host "✓ INSTALAÇÃO CONCLUÍDA COM SUCESSO!" -ForegroundColor Green
+    Write-Host "? INSTALACAO CONCLUIDA COM SUCESSO!" -ForegroundColor Green
     Write-Host "==================================" -ForegroundColor Green
     Write-Host ""
 
@@ -417,49 +417,49 @@ try {
     }
 
     Write-Host ""
-    Write-Host "INFORMAÇÕES DA INSTALAÇÃO:" -ForegroundColor Cyan
-    Write-Host "  • Diretório: $InstallDir" -ForegroundColor White
-    Write-Host "  • Logs: $LogDir\\agent.log" -ForegroundColor White
-    Write-Host "  • Logs de instalação: $InstallLog" -ForegroundColor White
-    Write-Host "  • Tarefa: $taskName" -ForegroundColor White
-    Write-Host "  • Última execução: $($taskInfo.LastRunTime)" -ForegroundColor White
+    Write-Host "INFORMACOES DA INSTALACAO:" -ForegroundColor Cyan
+    Write-Host "  ? Diretorio: $InstallDir" -ForegroundColor White
+    Write-Host "  ? Logs: $LogDir\\agent.log" -ForegroundColor White
+    Write-Host "  ? Logs de instalacao: $InstallLog" -ForegroundColor White
+    Write-Host "  ? Tarefa: $taskName" -ForegroundColor White
+    Write-Host "  ? Ultima execucao: $($taskInfo.LastRunTime)" -ForegroundColor White
     Write-Host ""
 
-    # ✅ FASE 1.5: Validação pós-instalação + Telemetria com Retry
-    Write-InstallLog "[8/10] Validando instalação..."
+    # [OK]  FASE 1.5: Validacao pos-instalacao + Telemetria com Retry
+    Write-InstallLog "[8/10] Validando instalacao..."
     
     # Validar que Scheduled Task foi criada (FASE 1.1)
-    Write-Host "🔍 Validando Scheduled Task..." -ForegroundColor Cyan
+    Write-Host "[SCAN]  Validando Scheduled Task..." -ForegroundColor Cyan
     $taskExists = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     if (-not $taskExists) {
-        Write-Host "❌ CRÍTICO: Scheduled Task '$taskName' não foi criada!" -ForegroundColor Red
-        Write-InstallLog "❌ Validação falhou: Scheduled Task não encontrada"
+        Write-Host "[ERROR]  CRITICO: Scheduled Task '$taskName' nao foi criada!" -ForegroundColor Red
+        Write-InstallLog "[ERROR]  Validacao falhou: Scheduled Task nao encontrada"
         $taskValidation = $false
     } else {
-        Write-Host "✅ Scheduled Task validada" -ForegroundColor Green
-        Write-InstallLog "✓ Scheduled Task validada"
+        Write-Host "[OK]  Scheduled Task validada" -ForegroundColor Green
+        Write-InstallLog "? Scheduled Task validada"
         $taskValidation = $true
     }
     
-    # Validar que processo do agente está rodando (FASE 1.1)
+    # Validar que processo do agente esta rodando (FASE 1.1)
     Write-InstallLog "[9/10] Validando processo do agente..."
-    Write-Host "🔍 Validando processo do agente..." -ForegroundColor Cyan
+    Write-Host "[SCAN]  Validando processo do agente..." -ForegroundColor Cyan
     Start-Sleep -Seconds 5  # Aguardar agente iniciar
     $agentProcess = Get-Process -Name "powershell" -ErrorAction SilentlyContinue | Where-Object {
         $_.CommandLine -like "*cybershield-agent-windows.ps1*"
     }
     if (-not $agentProcess) {
-        Write-Host "⚠️ Processo do agente não detectado imediatamente (pode estar iniciando via Scheduled Task)" -ForegroundColor Yellow
-        Write-InstallLog "⚠ Processo não detectado imediatamente"
+        Write-Host "[WARN] ? Processo do agente nao detectado imediatamente (pode estar iniciando via Scheduled Task)" -ForegroundColor Yellow
+        Write-InstallLog "[WARN]  Processo nao detectado imediatamente"
         $processValidation = $false
     } else {
-        Write-Host "✅ Processo do agente validado (PID: $($agentProcess.Id))" -ForegroundColor Green
-        Write-InstallLog "✓ Processo validado (PID: $($agentProcess.Id))"
+        Write-Host "[OK]  Processo do agente validado (PID: $($agentProcess.Id))" -ForegroundColor Green
+        Write-InstallLog "? Processo validado (PID: $($agentProcess.Id))"
         $processValidation = $true
     }
     
-    # ✅ FASE 1.5: Enviar telemetria pós-instalação com Retry (FASE 1.1)
-    Write-InstallLog "[10/10] Enviando telemetria pós-instalação..."
+    # [OK]  FASE 1.5: Enviar telemetria pos-instalacao com Retry (FASE 1.1)
+    Write-InstallLog "[10/10] Enviando telemetria pos-instalacao..."
     $telemetryBody = @{
         agent_name = "{{AGENT_NAME}}"
         success = $true
@@ -480,39 +480,39 @@ try {
     $maxRetries = 3
     for ($i = 1; $i -le $maxRetries; $i++) {
         try {
-            Write-Host "📡 Enviando telemetria (tentativa $i/$maxRetries)..." -ForegroundColor Cyan
+            Write-Host "? Enviando telemetria (tentativa $i/$maxRetries)..." -ForegroundColor Cyan
             Invoke-RestMethod -Uri "$ServerUrl/functions/v1/post-installation-telemetry" \`
                 -Method POST \`
                 -Body $telemetryBody \`
                 -ContentType "application/json" \`
                 -TimeoutSec 10 \`
                 -ErrorAction Stop | Out-Null
-            Write-Host "✅ Telemetria enviada com sucesso" -ForegroundColor Green
-            Write-InstallLog "✓ Telemetria enviada com sucesso"
+            Write-Host "[OK]  Telemetria enviada com sucesso" -ForegroundColor Green
+            Write-InstallLog "? Telemetria enviada com sucesso"
             $telemetrySent = $true
             break
         } catch {
             $waitTime = [math]::Pow(2, $i)  # Exponential backoff: 2s, 4s, 8s
-            Write-Host "⚠️ Tentativa $i falhou: $_" -ForegroundColor Yellow
-            Write-InstallLog "⚠ Telemetria tentativa $i falhou: $_"
+            Write-Host "[WARN] ? Tentativa $i falhou: $_" -ForegroundColor Yellow
+            Write-InstallLog "[WARN]  Telemetria tentativa $i falhou: $_"
             if ($i -lt $maxRetries) {
-                Write-Host "⏳ Aguardando $waitTime segundos antes de retentar..." -ForegroundColor Yellow
+                Write-Host "? Aguardando $waitTime segundos antes de retentar..." -ForegroundColor Yellow
                 Start-Sleep -Seconds $waitTime
             }
         }
     }
     
     if (-not $telemetrySent) {
-        Write-Host "⚠️ Falha ao enviar telemetria após $maxRetries tentativas (não crítico)" -ForegroundColor Yellow
-        Write-InstallLog "⚠ Falha ao enviar telemetria após $maxRetries tentativas"
+        Write-Host "[WARN] ? Falha ao enviar telemetria apos $maxRetries tentativas (nao critico)" -ForegroundColor Yellow
+        Write-InstallLog "[WARN]  Falha ao enviar telemetria apos $maxRetries tentativas"
     }
 
     Write-Host ""
-    Write-Host "Instalação concluída! Monitorando agente por 60 segundos..." -ForegroundColor Cyan
+    Write-Host "Instalacao concluida! Monitorando agente por 60 segundos..." -ForegroundColor Cyan
     Write-Host "Feche esta janela a qualquer momento." -ForegroundColor Gray
     Write-Host ""
 
-    # ✅ FASE 1.6: Keep-Alive monitoring
+    # [OK]  FASE 1.6: Keep-Alive monitoring
     for ($i = 1; $i -le 12; $i++) {
         Start-Sleep -Seconds 5
         $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
@@ -521,18 +521,18 @@ try {
         Write-Host "[$i/12] Task Status: $($task.State) | Last Result: $($taskInfo.LastTaskResult)" -ForegroundColor Gray
         
         if ($task.State -eq "Running") {
-            Write-Host "✓ Agente está rodando!" -ForegroundColor Green
+            Write-Host "? Agente esta rodando!" -ForegroundColor Green
         }
     }
 
     Write-Host ""
-    Write-Host "Monitoramento concluído. Instalador será fechado em 10 segundos..." -ForegroundColor Yellow
+    Write-Host "Monitoramento concluido. Instalador sera fechado em 10 segundos..." -ForegroundColor Yellow
     Start-Sleep -Seconds 10
 
 } catch {
     Write-Host ""
     Write-Host "==================================" -ForegroundColor Red
-    Write-Host "ERRO DURANTE A INSTALAÇÃO" -ForegroundColor Red
+    Write-Host "ERRO DURANTE A INSTALACAO" -ForegroundColor Red
     Write-Host "==================================" -ForegroundColor Red
     Write-Host ""
     Write-Host "Detalhes do erro:" -ForegroundColor Yellow
@@ -546,7 +546,7 @@ try {
 }
 `;
     
-    // ✅ FASE 1.7: Replace placeholders including agent script content
+    // [OK]  FASE 1.7: Replace placeholders including agent script content
     let installerContent = WINDOWS_INSTALLER_TEMPLATE
       .replace(/\{\{AGENT_TOKEN\}\}/g, tokenData.token)
       .replace(/\{\{HMAC_SECRET\}\}/g, agentData.hmac_secret)
@@ -574,7 +574,7 @@ try {
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Failed to create build', 500, requestId);
     }
 
-    // 📊 Initialize telemetry with build_id
+    // ? Initialize telemetry with build_id
     telemetry = new BuildTelemetry(buildRecord.id, requestId);
     telemetry.info('Build record created', { 
       agent_name,
@@ -639,7 +639,7 @@ try {
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'GitHub API unreachable', 500, requestId);
     }
 
-    // ✅ FASE 3.2: Converter PS1 para Base64 (Deno-safe UTF-8)
+    // [OK]  FASE 3.2: Converter PS1 para Base64 (Deno-safe UTF-8)
     telemetry?.startStep('encode_installer', {
       installer_size_bytes: installerContent.length
     });
@@ -654,7 +654,7 @@ try {
     });
 
     const githubActionsUrl = `https://github.com/${BUILD_GH_REPOSITORY}/actions`;
-    // ✅ FASE 3.1: Update version to 3.0.0-APEX
+    // [OK]  FASE 3.1: Update version to 3.0.0-APEX
     const workflowPayload = {
       ps1_content_base64: ps1Base64,
       output_name: `CyberShield-Agent-${agent_name}-${Date.now()}.exe`,
@@ -667,7 +667,7 @@ try {
     let triggerSuccess = false;
     let triggerMethod = '';
 
-    // ⚡ FASE 1.3: Retry automático com exponential backoff ENHANCED
+    // ? FASE 1.3: Retry automatico com exponential backoff ENHANCED
     const maxDispatchRetries = 3;
     let dispatchAttempt = 0;
     let lastError = '';
@@ -684,7 +684,7 @@ try {
       });
       
       try {
-        logger.info(`[${requestId}] ⚡ FASE 1.3: GitHub dispatch (tentativa ${dispatchAttempt}/${maxDispatchRetries})`, {
+        logger.info(`[${requestId}] ? FASE 1.3: GitHub dispatch (tentativa ${dispatchAttempt}/${maxDispatchRetries})`, {
           build_id: buildRecord.id,
           repository: BUILD_GH_REPOSITORY,
           hasToken: !!BUILD_GH_TOKEN,
@@ -741,7 +741,7 @@ try {
             total_attempts: dispatchAttempt
           });
           
-          logger.success(`[${requestId}] ✅ GitHub dispatch SUCESSO na tentativa ${dispatchAttempt}/${maxDispatchRetries}`, {
+          logger.success(`[${requestId}] [OK]  GitHub dispatch SUCESSO na tentativa ${dispatchAttempt}/${maxDispatchRetries}`, {
             build_id: buildRecord.id,
             status: dispatchResponse.status,
             method: 'repository_dispatch',
@@ -756,7 +756,7 @@ try {
           // Check if it's a non-retryable error (4xx client errors)
           const isClientError = dispatchResponse.status >= 400 && dispatchResponse.status < 500;
           
-          logger.error(`[${requestId}] ❌ GitHub API error response`, {
+          logger.error(`[${requestId}] [ERROR]  GitHub API error response`, {
             status: dispatchResponse.status,
             statusText: dispatchResponse.statusText,
             body: errorText,
@@ -768,7 +768,7 @@ try {
             retryable: !isClientError
           });
           
-          logger.warn(`[${requestId}] ⚠ Tentativa ${dispatchAttempt}/${maxDispatchRetries} falhou`, { 
+          logger.warn(`[${requestId}] [WARN]  Tentativa ${dispatchAttempt}/${maxDispatchRetries} falhou`, { 
             status: dispatchResponse.status,
             statusText: dispatchResponse.statusText,
             error: errorText,
@@ -777,7 +777,7 @@ try {
           
           // Don't retry on client errors (4xx)
           if (isClientError) {
-            logger.error(`[${requestId}] ❌ Non-retryable client error detected`, {
+            logger.error(`[${requestId}] [ERROR]  Non-retryable client error detected`, {
               status: dispatchResponse.status
             });
             break;
@@ -790,7 +790,7 @@ try {
               attempt: dispatchAttempt,
               next_delay: backoffMs
             });
-            logger.info(`[${requestId}] 🕐 Aguardando ${backoffMs}ms antes do próximo retry...`);
+            logger.info(`[${requestId}] ? Aguardando ${backoffMs}ms antes do proximo retry...`);
             await new Promise(resolve => setTimeout(resolve, backoffMs));
           }
         }
@@ -803,7 +803,7 @@ try {
           error_type: dispatchError.name
         });
         
-        logger.error(`[${requestId}] ❌ repository_dispatch exception (tentativa ${dispatchAttempt}/${maxDispatchRetries})`, { 
+        logger.error(`[${requestId}] [ERROR]  repository_dispatch exception (tentativa ${dispatchAttempt}/${maxDispatchRetries})`, { 
           error: dispatchError.message,
           error_type: dispatchError.name,
           stack: dispatchError.stack
@@ -812,7 +812,7 @@ try {
         // Exponential backoff before retry on network errors
         if (dispatchAttempt < maxDispatchRetries) {
           const backoffMs = retryDelays[dispatchAttempt - 1];
-          logger.info(`[${requestId}] 🕐 Network error - waiting ${backoffMs}ms before retry...`);
+          logger.info(`[${requestId}] ? Network error - waiting ${backoffMs}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, backoffMs));
         }
       }
@@ -825,7 +825,7 @@ try {
         last_error: lastError
       });
       
-      logger.error(`[${requestId}] ❌ Todas as ${maxDispatchRetries} tentativas de dispatch falharam`);
+      logger.error(`[${requestId}] [ERROR]  Todas as ${maxDispatchRetries} tentativas de dispatch falharam`);
       
       await serviceRoleClient
         .from('agent_builds')

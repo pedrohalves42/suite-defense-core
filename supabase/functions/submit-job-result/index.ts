@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
   )
 
   try {
-    // 1. Autenticação via X-Agent-Token
+    // 1. Autenticacao via X-Agent-Token
     const agentToken = req.headers.get('X-Agent-Token')
     const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
     
@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
 
     const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents
 
-    // 2. Verificar HMAC obrigatório
+    // 2. Verificar HMAC obrigatorio
     if (!agent.hmac_secret) {
       console.error('[submit-job-result] CRITICAL: Agent without HMAC secret:', agent.agent_name)
       return new Response(
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
     // 4. Parse payload
     const payload = await req.json()
 
-    // 🔥 BUG FIX P1: Extrair TODOS os campos v3, incluindo timestamps
+    // ? BUG FIX P1: Extrair TODOS os campos v3, incluindo timestamps
     const job_id = payload.job_id
     const status = payload.status
     const output = payload.output
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
     const started_at = payload.started_at
     const finished_at = payload.finished_at
 
-    // Validação de schema v3
+    // Validacao de schema v3
     if (!job_id || typeof job_id !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Invalid payload: job_id required (string)' }),
@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // 🔥 BUG FIX P1: Validar execution_time_seconds se fornecido
+    // ? BUG FIX P1: Validar execution_time_seconds se fornecido
     if (execution_time_seconds !== undefined && execution_time_seconds !== null) {
       if (typeof execution_time_seconds !== 'number' || execution_time_seconds < 0) {
         return new Response(
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
         )
       }
 
-      // 🔥 BUG FIX P1: Alertar se execution_time fornecido sem timestamps
+      // ? BUG FIX P1: Alertar se execution_time fornecido sem timestamps
       if (!started_at || !finished_at) {
         console.warn('[submit-job-result] execution_time_seconds provided without timestamps', {
           job_id,
@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
     if (fetchError || !job) {
       console.error('[submit-job-result] Job not found:', job_id)
       return new Response(
-        JSON.stringify({ error: 'Job não encontrado' }),
+        JSON.stringify({ error: 'Job nao encontrado' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -212,12 +212,12 @@ Deno.serve(async (req) => {
         requesting_agent: agent.agent_name
       })
       return new Response(
-        JSON.stringify({ error: 'Este job não pertence ao agente autenticado' }),
+        JSON.stringify({ error: 'Este job nao pertence ao agente autenticado' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Validação extra: evitar acesso cross-tenant
+    // Validacao extra: evitar acesso cross-tenant
     if (job.tenant_id !== agent.tenant_id) {
       await logSecurityEvent({
         supabase,
@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           error: 'Cross-tenant access denied',
-          details: 'Job pertence a outra organização'
+          details: 'Job pertence a outra organizacao'
         }),
         {
           status: 403,
@@ -259,21 +259,21 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true,
-          message: 'Job já estava concluído',
+          message: 'Job ja estava concluido',
           job_id
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-     // 🔥 BUG FIX P1: Atualizar o job com TODOS os campos v3, incluindo timestamps
+     // ? BUG FIX P1: Atualizar o job com TODOS os campos v3, incluindo timestamps
     const updateData: Record<string, unknown> = {
       status: status,
       finished_at: finished_at || new Date().toISOString(),
       completed_at: new Date().toISOString() // Compatibilidade legado
     }
 
-    // 🔥 BUG FIX P1: Incluir started_at explicitamente
+    // ? BUG FIX P1: Incluir started_at explicitamente
     if (started_at) {
       updateData.started_at = started_at
     }

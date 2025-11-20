@@ -1,8 +1,8 @@
 -- ============================================
--- CORREÇÃO DE SECURITY WARNINGS DO SUPABASE
+-- CORRECAO DE SECURITY WARNINGS DO SUPABASE
 -- ============================================
 
--- 1. Mover extensão pg_net do schema public para extensions
+-- 1. Mover extensao pg_net do schema public para extensions
 -- ============================================
 DROP EXTENSION IF EXISTS pg_net CASCADE;
 CREATE SCHEMA IF NOT EXISTS extensions;
@@ -22,8 +22,8 @@ SELECT * FROM private.installation_metrics_hourly;
 
 -- Habilitar RLS na view regular
 ALTER VIEW public.installation_metrics_hourly OWNER TO postgres;
--- Note: Views herdam as permissões das tabelas subjacentes via SECURITY DEFINER functions
+-- Note: Views herdam as permissoes das tabelas subjacentes via SECURITY DEFINER functions
 
--- Comentário explicativo
+-- Comentario explicativo
 COMMENT ON VIEW public.installation_metrics_hourly IS 
 'Public view for installation metrics. Accesses private.installation_metrics_hourly. Protected by RLS via user_roles checks in queries.';

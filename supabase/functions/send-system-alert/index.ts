@@ -119,13 +119,13 @@ async function sendEmailAlert(
   };
 
   const severityLabels = {
-    info: 'ℹ️ Informação',
-    warning: '⚠️ Atenção',
-    critical: '🚨 Crítico',
+    info: '[INFO] ? Informacao',
+    warning: '[WARN] ? Atencao',
+    critical: '? Critico',
   };
 
   const eventLabels = {
-    virus_detected: 'Vírus Detectado',
+    virus_detected: 'Virus Detectado',
     jobs_failed: 'Falhas em Jobs',
     agent_offline: 'Agente Offline',
     network_anomaly: 'Anomalia de Rede',
@@ -221,7 +221,7 @@ async function sendEmailAlert(
                 <tr>
                   <td style="padding: 20px; background-color: #f9fafb; text-align: center; border-top: 1px solid #e5e7eb;">
                     <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                      Este é um alerta automático do CyberShield. Não responda este email.
+                      Este e um alerta automatico do CyberShield. Nao responda este email.
                     </p>
                   </td>
                 </tr>

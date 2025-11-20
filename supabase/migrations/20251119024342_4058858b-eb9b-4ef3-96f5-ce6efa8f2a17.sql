@@ -1,14 +1,14 @@
--- FASE 3: Migration FK + Limpeza de Jobs Órfãos
--- Objetivo: Adicionar coluna agent_id com FK CASCADE e limpar dados órfãos
+-- FASE 3: Migration FK + Limpeza de Jobs Orfaos
+-- Objetivo: Adicionar coluna agent_id com FK CASCADE e limpar dados orfaos
 
--- 1) Deletar jobs órfãos (não há agent_name correspondente na tabela agents)
+-- 1) Deletar jobs orfaos (nao ha agent_name correspondente na tabela agents)
 DELETE FROM jobs
 WHERE agent_name IS NOT NULL
   AND agent_name NOT IN (
     SELECT agent_name FROM agents WHERE agent_name IS NOT NULL
   );
 
--- 2) Criar coluna agent_id se não existir
+-- 2) Criar coluna agent_id se nao existir
 ALTER TABLE jobs
 ADD COLUMN IF NOT EXISTS agent_id UUID;
 
@@ -26,9 +26,9 @@ ADD CONSTRAINT jobs_agent_id_fkey
   REFERENCES agents(id)
   ON DELETE CASCADE;
 
--- 5) Criar índice para melhorar performance de queries por agent_id
+-- 5) Criar indice para melhorar performance de queries por agent_id
 CREATE INDEX IF NOT EXISTS idx_jobs_agent_id ON jobs(agent_id);
 
--- Comentário para documentação
+-- Comentario para documentacao
 COMMENT ON COLUMN jobs.agent_id IS 
-  'FK para agents.id com ON DELETE CASCADE para evitar jobs órfãos quando um agente é deletado.';
+  'FK para agents.id com ON DELETE CASCADE para evitar jobs orfaos quando um agente e deletado.';

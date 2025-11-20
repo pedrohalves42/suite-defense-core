@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     const { token: inviteToken } = await req.json();
 
     if (!inviteToken) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Token inválido', 400, requestId);
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Token invalido', 400, requestId);
     }
 
     // Get invite
@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (inviteError || !invite) {
-      return createErrorResponse(ErrorCode.NOT_FOUND, 'Convite não encontrado ou expirado', 404, requestId);
+      return createErrorResponse(ErrorCode.NOT_FOUND, 'Convite nao encontrado ou expirado', 404, requestId);
     }
 
     // Check expiration
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
 
     // Check if email matches
     if (user.email !== invite.email) {
-      return createErrorResponse(ErrorCode.FORBIDDEN, 'Email não corresponde ao convite', 403, requestId);
+      return createErrorResponse(ErrorCode.FORBIDDEN, 'Email nao corresponde ao convite', 403, requestId);
     }
 
     // Create user role

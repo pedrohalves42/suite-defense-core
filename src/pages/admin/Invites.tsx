@@ -98,7 +98,7 @@ export default function Invites() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold">Convites de Usuários</h2>
+          <h2 className="text-3xl font-bold">Convites de Usuarios</h2>
           <p className="text-muted-foreground">Convide novos membros para o seu tenant</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
@@ -112,7 +112,7 @@ export default function Invites() {
             <DialogHeader>
               <DialogTitle>Enviar Convite</DialogTitle>
               <DialogDescription>
-                Convide um novo usuário para {tenant?.name || 'seu tenant'}
+                Convide um novo usuario para {tenant?.name || 'seu tenant'}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -132,7 +132,7 @@ export default function Invites() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="viewer">Viewer - Apenas visualização</SelectItem>
+                    <SelectItem value="viewer">Viewer - Apenas visualizacao</SelectItem>
                     <SelectItem value="operator">Operator - Pode gerenciar jobs</SelectItem>
                     <SelectItem value="admin">Admin - Acesso total</SelectItem>
                   </SelectContent>
@@ -168,7 +168,7 @@ export default function Invites() {
                   <TableHead>Status</TableHead>
                   <TableHead>Enviado em</TableHead>
                   <TableHead>Expira em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-right">Acoes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

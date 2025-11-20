@@ -9,13 +9,13 @@
  */
 export const LINUX_INSTALLER_TEMPLATE_V3_ENVVARS = `#!/usr/bin/env bash
 # CyberShield - Instalador Linux v3.0.0 (Env Vars Mode)
-# Este arquivo é um TEMPLATE. Os valores {{PLACEHOLDER}} serão
-# substituídos pelo backend antes do download para o cliente.
+# Este arquivo e um TEMPLATE. Os valores {{PLACEHOLDER}} serao
+# substituidos pelo backend antes do download para o cliente.
 
 set -euo pipefail
 
 ########################################
-# VARIÁVEIS DE TEMPLATE (substituídas no backend)
+# VARIAVEIS DE TEMPLATE (substituidas no backend)
 ########################################
 SERVER_URL="{{SERVER_URL}}"
 AGENT_TOKEN="{{AGENT_TOKEN}}"
@@ -25,7 +25,7 @@ AGENT_VERSION="{{AGENT_VERSION}}"
 AGENT_SCRIPT_URL="{{AGENT_SCRIPT_URL}}"
 
 ########################################
-# CONFIGURAÇÃO / PATHS
+# CONFIGURACAO / PATHS
 ########################################
 INSTALL_DIR="/opt/cybershield"
 BIN_PATH="\\$INSTALL_DIR/cybershield-agent-linux.sh"
@@ -35,7 +35,7 @@ SERVICE_FILE="/etc/systemd/system/\\$\{SERVICE_NAME\}.service"
 LOG_DIR="/var/log/cybershield"
 
 ########################################
-# FUNÇÕES DE LOG
+# FUNCOES DE LOG
 ########################################
 log() {
   local level="\\$1"; shift
@@ -57,22 +57,22 @@ if [[ "\\$EUID" -ne 0 ]]; then
 fi
 
 ########################################
-# CHECAR DEPENDÊNCIAS
+# CHECAR DEPENDENCIAS
 ########################################
 need_cmd() {
-  command -v "\\$1" >/dev/null 2>&1 || fail "Dependência ausente: \\$1"
+  command -v "\\$1" >/dev/null 2>&1 || fail "Dependencia ausente: \\$1"
 }
 
-log "INFO" "Verificando dependências..."
+log "INFO" "Verificando dependencias..."
 need_cmd curl
 need_cmd bash
 need_cmd openssl
 need_cmd jq
 
 ########################################
-# CRIAR DIRETÓRIOS
+# CRIAR DIRETORIOS
 ########################################
-log "INFO" "Criando diretórios em \\$INSTALL_DIR e \\$LOG_DIR..."
+log "INFO" "Criando diretorios em \\$INSTALL_DIR e \\$LOG_DIR..."
 mkdir -p "\\$INSTALL_DIR" "\\$LOG_DIR"
 
 ########################################
@@ -135,16 +135,16 @@ EOF
 log "INFO" "Recarregando systemd..."
 systemctl daemon-reload
 
-log "INFO" "Habilitando serviço \\$SERVICE_NAME na inicialização..."
+log "INFO" "Habilitando servico \\$SERVICE_NAME na inicializacao..."
 systemctl enable "\\$SERVICE_NAME"
 
-log "INFO" "Iniciando serviço \\$SERVICE_NAME..."
+log "INFO" "Iniciando servico \\$SERVICE_NAME..."
 systemctl start "\\$SERVICE_NAME"
 
 sleep 2
 
 if systemctl is-active --quiet "\\$SERVICE_NAME"; then
-  log "SUCCESS" "✅ CyberShield Agent instalado com sucesso!"
+  log "SUCCESS" "[OK]  CyberShield Agent instalado com sucesso!"
   echo ""
   echo "============================================"
   echo "CyberShield Agent instalado e rodando!"
@@ -155,10 +155,10 @@ if systemctl is-active --quiet "\\$SERVICE_NAME"; then
   echo ""
   echo "Verificar status:   systemctl status \\$SERVICE_NAME"
   echo "Ver logs:           journalctl -u \\$SERVICE_NAME -f"
-  echo "Parar serviço:      systemctl stop \\$SERVICE_NAME"
+  echo "Parar servico:      systemctl stop \\$SERVICE_NAME"
   echo ""
 else
-  fail "Falha ao iniciar o serviço. Verifique: journalctl -u \\$SERVICE_NAME"
+  fail "Falha ao iniciar o servico. Verifique: journalctl -u \\$SERVICE_NAME"
 fi
 `;
 
@@ -168,13 +168,13 @@ fi
  */
 export const MACOS_INSTALLER_TEMPLATE_V3_ENVVARS = `#!/usr/bin/env bash
 # CyberShield - Instalador macOS v3.0.0 (Env Vars Mode)
-# Este arquivo é um TEMPLATE. Os valores {{PLACEHOLDER}} serão
-# substituídos pelo backend antes do download para o cliente.
+# Este arquivo e um TEMPLATE. Os valores {{PLACEHOLDER}} serao
+# substituidos pelo backend antes do download para o cliente.
 
 set -euo pipefail
 
 ########################################
-# VARIÁVEIS DE TEMPLATE (substituídas no backend)
+# VARIAVEIS DE TEMPLATE (substituidas no backend)
 ########################################
 SERVER_URL="{{SERVER_URL}}"
 AGENT_TOKEN="{{AGENT_TOKEN}}"
@@ -184,7 +184,7 @@ AGENT_VERSION="{{AGENT_VERSION}}"
 AGENT_SCRIPT_URL="{{AGENT_SCRIPT_URL}}"
 
 ########################################
-# CONFIGURAÇÃO / PATHS
+# CONFIGURACAO / PATHS
 ########################################
 INSTALL_DIR="/Library/CyberShield"
 BIN_PATH="\\$INSTALL_DIR/cybershield-agent-macos.sh"
@@ -192,7 +192,7 @@ PLIST_PATH="/Library/LaunchDaemons/com.cybershield.agent.plist"
 LOG_DIR="/Library/Logs/CyberShield"
 
 ########################################
-# FUNÇÕES DE LOG
+# FUNCOES DE LOG
 ########################################
 log() {
   local level="\\$1"; shift
@@ -214,22 +214,22 @@ if [[ "\\$EUID" -ne 0 ]]; then
 fi
 
 ########################################
-# CHECAR DEPENDÊNCIAS
+# CHECAR DEPENDENCIAS
 ########################################
 need_cmd() {
-  command -v "\\$1" >/dev/null 2>&1 || fail "Dependência ausente: \\$1 (instale via Homebrew se necessário)"
+  command -v "\\$1" >/dev/null 2>&1 || fail "Dependencia ausente: \\$1 (instale via Homebrew se necessario)"
 }
 
-log "INFO" "Verificando dependências..."
+log "INFO" "Verificando dependencias..."
 need_cmd curl
 need_cmd bash
 need_cmd openssl
 need_cmd jq
 
 ########################################
-# CRIAR DIRETÓRIOS
+# CRIAR DIRETORIOS
 ########################################
-log "INFO" "Criando diretórios em \\$INSTALL_DIR e \\$LOG_DIR..."
+log "INFO" "Criando diretorios em \\$INSTALL_DIR e \\$LOG_DIR..."
 mkdir -p "\\$INSTALL_DIR" "\\$LOG_DIR"
 
 ########################################
@@ -310,7 +310,7 @@ launchctl load -w "\\$PLIST_PATH" \\
 sleep 2
 
 if launchctl list | grep -q "com.cybershield.agent"; then
-  log "SUCCESS" "✅ CyberShield Agent instalado com sucesso!"
+  log "SUCCESS" "[OK]  CyberShield Agent instalado com sucesso!"
   echo ""
   echo "============================================"
   echo "CyberShield Agent instalado e rodando!"
@@ -321,9 +321,9 @@ if launchctl list | grep -q "com.cybershield.agent"; then
   echo ""
   echo "Verificar status:   launchctl list | grep cybershield"
   echo "Ver logs:           tail -f \\$LOG_DIR/agent.log"
-  echo "Parar serviço:      launchctl unload \\$PLIST_PATH"
+  echo "Parar servico:      launchctl unload \\$PLIST_PATH"
   echo ""
 else
-  fail "Falha ao iniciar o serviço. Verifique os logs em \\$LOG_DIR/agent.log"
+  fail "Falha ao iniciar o servico. Verifique os logs em \\$LOG_DIR/agent.log"
 fi
 `;

@@ -1,4 +1,4 @@
--- Correção 2.3: Remover duplicatas de user_roles e adicionar constraint
+-- Correcao 2.3: Remover duplicatas de user_roles e adicionar constraint
 
 -- Passo 1: Remover duplicatas mantendo apenas a role mais privilegiada
 -- (super_admin > admin > operator > viewer)

@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * 🛡 Guardian – Validação Completa do Sistema CyberShield
+ * ? Guardian ? Validacao Completa do Sistema CyberShield
  *
  * Rodar com:
  *   npx tsx tools/validate-system.ts
@@ -39,7 +39,7 @@ function getSupabaseAdmin() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceKey) {
-    // Retorna null para permitir validação parcial localmente
+    // Retorna null para permitir validacao parcial localmente
     return null;
   }
 
@@ -59,12 +59,12 @@ async function runCommand(name: string, command: string, optional = false): Prom
   } catch (err: any) {
     const errorMsg = err?.message || String(err);
     
-    // Se é opcional e falhou, retorna como sucesso com aviso
+    // Se e opcional e falhou, retorna como sucesso com aviso
     if (optional) {
       return {
         name,
         ok: true,
-        details: `⏭️  Check pulado (comando falhou ou não disponível): ${errorMsg.split('\n')[0]}`,
+        details: `??  Check pulado (comando falhou ou nao disponivel): ${errorMsg.split('\n')[0]}`,
       };
     }
     
@@ -106,20 +106,20 @@ async function checkEnvVars(): Promise<CheckResult> {
   let details = '';
 
   if (missing.length > 0) {
-    details += `Variáveis obrigatórias faltando: ${missing.join(', ')}\n`;
+    details += `Variaveis obrigatorias faltando: ${missing.join(', ')}\n`;
   }
 
   const optionalMissing = optionalImportant.filter((k) => !process.env[k]);
   if (optionalMissing.length > 0) {
-    details += `Aviso: variáveis opcionais não definidas (ok em dev): ${optionalMissing.join(', ')}\n`;
+    details += `Aviso: variaveis opcionais nao definidas (ok em dev): ${optionalMissing.join(', ')}\n`;
   }
 
   if (!details) {
-    details = 'Todas as variáveis obrigatórias estão definidas.';
+    details = 'Todas as variaveis obrigatorias estao definidas.';
   }
 
   return {
-    name: 'Variáveis de ambiente (.env)',
+    name: 'Variaveis de ambiente (.env)',
     ok: missing.length === 0,
     details,
   };
@@ -158,22 +158,22 @@ async function checkEdgeFunctionsConfig(): Promise<CheckResult> {
 
     if (missing.length > 0) {
       return {
-        name: 'Edge Functions críticas registradas em supabase/config.toml',
+        name: 'Edge Functions criticas registradas em supabase/config.toml',
         ok: false,
         details:
-          `Faltando seções de function no config.toml para: ${missing.join(', ')}.\n` +
+          `Faltando secoes de function no config.toml para: ${missing.join(', ')}.\n` +
           `Presentes: ${present.join(', ') || 'nenhuma'}.`,
       };
     }
 
     return {
-      name: 'Edge Functions críticas registradas em supabase/config.toml',
+      name: 'Edge Functions criticas registradas em supabase/config.toml',
       ok: true,
-      details: `Todas as funções críticas estão registradas: ${present.join(', ')}`,
+      details: `Todas as funcoes criticas estao registradas: ${present.join(', ')}`,
     };
   } catch (err: any) {
     return {
-      name: 'Edge Functions críticas registradas em supabase/config.toml',
+      name: 'Edge Functions criticas registradas em supabase/config.toml',
       ok: false,
       details:
         err?.message ||
@@ -183,7 +183,7 @@ async function checkEdgeFunctionsConfig(): Promise<CheckResult> {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 3. Segurança HMAC dos agentes                                              */
+/* 3. Seguranca HMAC dos agentes                                              */
 /* -------------------------------------------------------------------------- */
 
 async function checkAgentHMAC(): Promise<CheckResult> {
@@ -193,7 +193,7 @@ async function checkAgentHMAC(): Promise<CheckResult> {
     return {
       name: 'HMAC Secrets dos agentes',
       ok: true,
-      details: '⏭️  Check pulado (SUPABASE_SERVICE_ROLE_KEY não configurada localmente)',
+      details: '??  Check pulado (SUPABASE_SERVICE_ROLE_KEY nao configurada localmente)',
     };
   }
 
@@ -216,19 +216,19 @@ async function checkAgentHMAC(): Promise<CheckResult> {
     return {
       name: 'HMAC Secrets dos agentes',
       ok: false,
-      details: `Agentes sem hmac_secret válido: ${list}`,
+      details: `Agentes sem hmac_secret valido: ${list}`,
     };
   }
 
   return {
     name: 'HMAC Secrets dos agentes',
     ok: true,
-    details: 'Todos os agentes possuem hmac_secret configurado (não nulo/não vazio).',
+    details: 'Todos os agentes possuem hmac_secret configurado (nao nulo/nao vazio).',
   };
 }
 
 /* -------------------------------------------------------------------------- */
-/* 4. Multi-tenancy: tenant_id em tabelas críticas                            */
+/* 4. Multi-tenancy: tenant_id em tabelas criticas                            */
 /* -------------------------------------------------------------------------- */
 
 async function checkTenantIsolation(): Promise<CheckResult> {
@@ -238,7 +238,7 @@ async function checkTenantIsolation(): Promise<CheckResult> {
     return {
       name: 'Isolamento multi-tenant (tenant_id)',
       ok: true,
-      details: '⏭️  Check pulado (SUPABASE_SERVICE_ROLE_KEY não configurada localmente)',
+      details: '??  Check pulado (SUPABASE_SERVICE_ROLE_KEY nao configurada localmente)',
     };
   }
 
@@ -266,7 +266,7 @@ async function checkTenantIsolation(): Promise<CheckResult> {
     }
 
     if (data && data.length > 0) {
-      problems.push(`${table} (há registros com tenant_id NULL)`);
+      problems.push(`${table} (ha registros com tenant_id NULL)`);
     }
   }
 
@@ -283,12 +283,12 @@ async function checkTenantIsolation(): Promise<CheckResult> {
   return {
     name: 'Isolamento multi-tenant (tenant_id)',
     ok: true,
-    details: 'Nenhuma tabela crítica possui registros com tenant_id NULL.',
+    details: 'Nenhuma tabela critica possui registros com tenant_id NULL.',
   };
 }
 
 /* -------------------------------------------------------------------------- */
-/* 5. Jobs – últimos 7 dias (v1: status = done)                               */
+/* 5. Jobs ? ultimos 7 dias (v1: status = done)                               */
 /* -------------------------------------------------------------------------- */
 
 async function checkRecentCompletedJobs(): Promise<CheckResult> {
@@ -296,9 +296,9 @@ async function checkRecentCompletedJobs(): Promise<CheckResult> {
 
   if (!supabase) {
     return {
-      name: 'Jobs concluídos v1 (últimos 7 dias)',
+      name: 'Jobs concluidos v1 (ultimos 7 dias)',
       ok: true,
-      details: '⏭️  Check pulado (SUPABASE_SERVICE_ROLE_KEY não configurada localmente)',
+      details: '??  Check pulado (SUPABASE_SERVICE_ROLE_KEY nao configurada localmente)',
     };
   }
 
@@ -316,7 +316,7 @@ async function checkRecentCompletedJobs(): Promise<CheckResult> {
 
   if (error) {
     return {
-      name: 'Jobs concluídos v1 (últimos 7 dias)',
+      name: 'Jobs concluidos v1 (ultimos 7 dias)',
       ok: false,
       details: error.message,
     };
@@ -324,32 +324,32 @@ async function checkRecentCompletedJobs(): Promise<CheckResult> {
 
   if (!data || data.length === 0) {
     return {
-      name: 'Jobs concluídos v1 (últimos 7 dias)',
+      name: 'Jobs concluidos v1 (ultimos 7 dias)',
       ok: false,
       details:
-        'Nenhum job com status=done nos últimos 7 dias. Agentes podem estar offline ou já migraram para v3.',
+        'Nenhum job com status=done nos ultimos 7 dias. Agentes podem estar offline ou ja migraram para v3.',
     };
   }
 
   const withOutput = data.filter((j) => j.output !== null);
 
-  let details = `${data.length} job(s) v1 concluídos encontrados (status=done).`;
+  let details = `${data.length} job(s) v1 concluidos encontrados (status=done).`;
   if (withOutput.length === 0) {
     details +=
-      '\n✅ Nenhum job v1 tem campo "output" preenchido (esperado para v1).';
+      '\n[OK]  Nenhum job v1 tem campo "output" preenchido (esperado para v1).';
   } else {
-    details += `\n⚠ ${withOutput.length} job(s) v1 têm output preenchido (inconsistência).`;
+    details += `\n[WARN]  ${withOutput.length} job(s) v1 tem output preenchido (inconsistencia).`;
   }
 
   return {
-    name: 'Jobs concluídos v1 (últimos 7 dias)',
+    name: 'Jobs concluidos v1 (ultimos 7 dias)',
     ok: data.length > 0,
     details,
   };
 }
 
 /* -------------------------------------------------------------------------- */
-/* 6. Jobs v3 – Adoção e Saúde                                                */
+/* 6. Jobs v3 ? Adocao e Saude                                                */
 /* -------------------------------------------------------------------------- */
 
 async function checkJobsV3Adoption(): Promise<CheckResult> {
@@ -357,15 +357,15 @@ async function checkJobsV3Adoption(): Promise<CheckResult> {
 
   if (!supabase) {
     return {
-      name: 'Adoção Jobs v3',
+      name: 'Adocao Jobs v3',
       ok: true,
-      details: '⏭️  Check pulado (SUPABASE_SERVICE_ROLE_KEY não configurada localmente)',
+      details: '??  Check pulado (SUPABASE_SERVICE_ROLE_KEY nao configurada localmente)',
     };
   }
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Buscar jobs concluídos (v1 + v3)
+  // Buscar jobs concluidos (v1 + v3)
   const { data, error } = await supabase
     .from('jobs')
     .select('id, agent_name, output, status')
@@ -374,7 +374,7 @@ async function checkJobsV3Adoption(): Promise<CheckResult> {
 
   if (error) {
     return {
-      name: 'Adoção Jobs v3',
+      name: 'Adocao Jobs v3',
       ok: false,
       details: error.message,
     };
@@ -382,9 +382,9 @@ async function checkJobsV3Adoption(): Promise<CheckResult> {
 
   if (!data || data.length === 0) {
     return {
-      name: 'Adoção Jobs v3',
+      name: 'Adocao Jobs v3',
       ok: false,
-      details: 'Nenhum job concluído nos últimos 7 dias.',
+      details: 'Nenhum job concluido nos ultimos 7 dias.',
     };
   }
 
@@ -411,11 +411,11 @@ async function checkJobsV3Adoption(): Promise<CheckResult> {
   let details = `Total: ${total} jobs | v3: ${v3Jobs} (${v3Percentage.toFixed(1)}%) | v1: ${v1Jobs}`;
 
   if (v3Percentage < 50) {
-    details += `\n❌ CRÍTICO: Menos de 50% dos jobs estão usando v3. Rollout pode estar falhando.`;
+    details += `\n[ERROR]  CRITICO: Menos de 50% dos jobs estao usando v3. Rollout pode estar falhando.`;
   } else if (v3Percentage < 80) {
-    details += `\n⚠ Aviso: Menos de 80% dos jobs estão usando v3.`;
+    details += `\n[WARN]  Aviso: Menos de 80% dos jobs estao usando v3.`;
   } else {
-    details += `\n✅ Migração bem-sucedida: >80% dos jobs usam v3.`;
+    details += `\n[OK]  Migracao bem-sucedida: >80% dos jobs usam v3.`;
   }
 
   if (v1Agents.length > 0) {
@@ -426,7 +426,7 @@ async function checkJobsV3Adoption(): Promise<CheckResult> {
   }
 
   return {
-    name: 'Adoção Jobs v3',
+    name: 'Adocao Jobs v3',
     ok: v3Percentage >= 50,
     details,
   };
@@ -437,9 +437,9 @@ async function checkJobsHealthV3(): Promise<CheckResult> {
 
   if (!supabase) {
     return {
-      name: 'Saúde Jobs v3 (output estruturado)',
+      name: 'Saude Jobs v3 (output estruturado)',
       ok: true,
-      details: '⏭️  Check pulado (SUPABASE_SERVICE_ROLE_KEY não configurada localmente)',
+      details: '??  Check pulado (SUPABASE_SERVICE_ROLE_KEY nao configurada localmente)',
     };
   }
 
@@ -454,7 +454,7 @@ async function checkJobsHealthV3(): Promise<CheckResult> {
 
   if (error) {
     return {
-      name: 'Saúde Jobs v3 (output estruturado)',
+      name: 'Saude Jobs v3 (output estruturado)',
       ok: false,
       details: error.message,
     };
@@ -462,9 +462,9 @@ async function checkJobsHealthV3(): Promise<CheckResult> {
 
   if (!data || data.length === 0) {
     return {
-      name: 'Saúde Jobs v3 (output estruturado)',
+      name: 'Saude Jobs v3 (output estruturado)',
       ok: true,
-      details: 'Nenhum job v3 encontrado ainda (migração em andamento).',
+      details: 'Nenhum job v3 encontrado ainda (migracao em andamento).',
     };
   }
 
@@ -481,18 +481,18 @@ Total v3: ${data.length}
 Completados: ${completed}
 Falhados: ${failed}
 Com execution_time: ${withExecTime} (${((withExecTime / data.length) * 100).toFixed(1)}%)
-Tempo médio: ${avgExecTime.toFixed(1)}s
+Tempo medio: ${avgExecTime.toFixed(1)}s
   `.trim();
 
   return {
-    name: 'Saúde Jobs v3 (output estruturado)',
+    name: 'Saude Jobs v3 (output estruturado)',
     ok: true,
     details,
   };
 }
 
 /* -------------------------------------------------------------------------- */
-/* 7. Distribuição de jobs (type/status)                                      */
+/* 7. Distribuicao de jobs (type/status)                                      */
 /* -------------------------------------------------------------------------- */
 
 async function checkJobsDistribution(): Promise<CheckResult> {
@@ -500,9 +500,9 @@ async function checkJobsDistribution(): Promise<CheckResult> {
 
   if (!supabase) {
     return {
-      name: 'Distribuição de jobs (7 dias)',
+      name: 'Distribuicao de jobs (7 dias)',
       ok: true,
-      details: '⏭️  Check pulado (SUPABASE_SERVICE_ROLE_KEY não configurada localmente)',
+      details: '??  Check pulado (SUPABASE_SERVICE_ROLE_KEY nao configurada localmente)',
     };
   }
 
@@ -512,7 +512,7 @@ async function checkJobsDistribution(): Promise<CheckResult> {
 
   if (error) {
     return {
-      name: 'Distribuição de jobs (7 dias)',
+      name: 'Distribuicao de jobs (7 dias)',
       ok: false,
       details: error.message,
     };
@@ -520,9 +520,9 @@ async function checkJobsDistribution(): Promise<CheckResult> {
 
   if (!data || data.length === 0) {
     return {
-      name: 'Distribuição de jobs (7 dias)',
+      name: 'Distribuicao de jobs (7 dias)',
       ok: false,
-      details: 'Nenhum job encontrado nos últimos 7 dias.',
+      details: 'Nenhum job encontrado nos ultimos 7 dias.',
     };
   }
 
@@ -547,16 +547,16 @@ async function checkJobsDistribution(): Promise<CheckResult> {
     .map(([k, v]) => `${k} = ${v}`)
     .join(' | ');
 
-  let details = `Total: ${total} | Concluídos (done/completed): ${done} | Na fila (queued): ${queued}`;
+  let details = `Total: ${total} | Concluidos (done/completed): ${done} | Na fila (queued): ${queued}`;
   if (queuedRate > 30) {
-    details += `\n⚠ ${queuedRate.toFixed(
+    details += `\n[WARN]  ${queuedRate.toFixed(
       1
-    )}% dos jobs estão em 'queued'. Possível congestionamento ou agentes offline.`;
+    )}% dos jobs estao em 'queued'. Possivel congestionamento ou agentes offline.`;
   }
-  details += `\nTop 10 combinações type::status: ${summary}`;
+  details += `\nTop 10 combinacoes type::status: ${summary}`;
 
   return {
-    name: 'Distribuição de jobs (7 dias)',
+    name: 'Distribuicao de jobs (7 dias)',
     ok: done > 0,
     details,
   };
@@ -567,20 +567,20 @@ async function checkJobsDistribution(): Promise<CheckResult> {
 /* -------------------------------------------------------------------------- */
 
 async function main() {
-  console.log('🛡  Guardian – Validação Completa do Sistema CyberShield\n');
+  console.log('?  Guardian ? Validacao Completa do Sistema CyberShield\n');
 
   const sections: Section[] = [];
 
   // 1. Env vars
   sections.push({
-    title: 'Configuração de Ambiente',
+    title: 'Configuracao de Ambiente',
     results: [await checkEnvVars()],
   });
 
-  // 2. Qualidade de código (opcional em dev)
+  // 2. Qualidade de codigo (opcional em dev)
   if (!IS_CI) {
     sections.push({
-      title: 'Qualidade de Código (TypeScript / ESLint / Testes)',
+      title: 'Qualidade de Codigo (TypeScript / ESLint / Testes)',
       results: [
         await runCommand('TypeScript typecheck', 'npm run typecheck', true),
         await runCommand('ESLint', 'npm run lint', true),
@@ -589,12 +589,12 @@ async function main() {
     });
   } else {
     sections.push({
-      title: 'Qualidade de Código (CI)',
+      title: 'Qualidade de Codigo (CI)',
       results: [
         {
           name: 'Checks executados no workflow de CI',
           ok: true,
-          details: 'Pulados aqui para evitar duplicidade (typecheck/lint/tests já rodando em outros jobs)',
+          details: 'Pulados aqui para evitar duplicidade (typecheck/lint/tests ja rodando em outros jobs)',
         },
       ],
     });
@@ -606,15 +606,15 @@ async function main() {
     results: [await checkEdgeFunctionsConfig()],
   });
 
-  // 4. Banco – segurança e multi-tenancy
+  // 4. Banco ? seguranca e multi-tenancy
   sections.push({
-    title: 'Segurança no Banco (HMAC, Multi-tenant)',
+    title: 'Seguranca no Banco (HMAC, Multi-tenant)',
     results: [await checkAgentHMAC(), await checkTenantIsolation()],
   });
 
-  // 5. Operacional – jobs e migração v3
+  // 5. Operacional ? jobs e migracao v3
   sections.push({
-    title: 'Métricas Operacionais (Jobs v1/v3)',
+    title: 'Metricas Operacionais (Jobs v1/v3)',
     results: [
       await checkRecentCompletedJobs(),
       await checkJobsDistribution(),
@@ -629,7 +629,7 @@ async function main() {
   for (const section of sections) {
     console.log(`\n=== ${section.title} ===`);
     for (const r of section.results) {
-      const status = r.ok ? '✅' : '❌';
+      const status = r.ok ? '[OK] ' : '[ERROR] ';
       console.log(`${status} ${r.name}`);
       if (r.details) {
         const details =
@@ -642,13 +642,13 @@ async function main() {
     }
   }
 
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('\n??????????????????????????????');
   if (globalOk) {
-    console.log('✅ Sistema validado sem erros críticos.');
+    console.log('[OK]  Sistema validado sem erros criticos.');
   } else {
-    console.log('❌ Validação encontrou problemas – revisar seções acima.');
+    console.log('[ERROR]  Validacao encontrou problemas ? revisar secoes acima.');
   }
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  console.log('??????????????????????????????\n');
 
   if (!globalOk) {
     process.exitCode = 1;
@@ -656,6 +656,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('Erro inesperado na validação:', err);
+  console.error('Erro inesperado na validacao:', err);
   process.exitCode = 1;
 });

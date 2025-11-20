@@ -1,9 +1,9 @@
 -- ============================================================================
--- P1.4: Query de Diagnóstico de Consistência de Limites
--- Verifica discrepâncias entre subscription_plans e tenant_features
+-- P1.4: Query de Diagnostico de Consistencia de Limites
+-- Verifica discrepancias entre subscription_plans e tenant_features
 -- ============================================================================
 
--- Buscar discrepâncias de max_users
+-- Buscar discrepancias de max_users
 SELECT 
   t.id as tenant_id,
   t.name as tenant_name,
@@ -11,11 +11,11 @@ SELECT
   sp.max_users AS plan_max_users,
   tf.quota_limit AS feature_max_users,
   CASE 
-    WHEN tf.quota_limit IS NULL THEN '⚠️ Feature não criada'
-    WHEN sp.max_users IS NULL AND tf.quota_limit IS NOT NULL THEN '⚠️ Plan ilimitado mas feature tem limite'
-    WHEN sp.max_users IS NOT NULL AND tf.quota_limit IS NULL THEN '⚠️ Plan tem limite mas feature é ilimitada'
-    WHEN sp.max_users != tf.quota_limit THEN '❌ Divergência detectada'
-    ELSE '✅ OK'
+    WHEN tf.quota_limit IS NULL THEN '[WARN] ? Feature nao criada'
+    WHEN sp.max_users IS NULL AND tf.quota_limit IS NOT NULL THEN '[WARN] ? Plan ilimitado mas feature tem limite'
+    WHEN sp.max_users IS NOT NULL AND tf.quota_limit IS NULL THEN '[WARN] ? Plan tem limite mas feature e ilimitada'
+    WHEN sp.max_users != tf.quota_limit THEN '[ERROR]  Divergencia detectada'
+    ELSE '[OK]  OK'
   END as status,
   CASE
     WHEN tf.quota_limit IS NULL THEN 'Criar feature: SELECT public.ensure_tenant_features(''' || t.id || '''::uuid, ''' || sp.name || ''', ' || COALESCE(sp.max_devices::text, '1') || ');'
@@ -30,11 +30,11 @@ WHERE sp.max_users IS DISTINCT FROM tf.quota_limit
    OR tf.quota_limit IS NULL
 ORDER BY t.created_at DESC;
 
--- Resumo de divergências
+-- Resumo de divergencias
 SELECT 
   CASE 
-    WHEN COUNT(*) = 0 THEN '✅ NENHUMA DIVERGÊNCIA'
-    ELSE '⚠️ ' || COUNT(*) || ' DIVERGÊNCIAS ENCONTRADAS'
+    WHEN COUNT(*) = 0 THEN '[OK]  NENHUMA DIVERGENCIA'
+    ELSE '[WARN] ? ' || COUNT(*) || ' DIVERGENCIAS ENCONTRADAS'
   END as resultado
 FROM public.tenants t
 JOIN public.tenant_subscriptions ts ON ts.tenant_id = t.id

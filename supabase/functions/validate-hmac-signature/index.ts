@@ -55,7 +55,7 @@ serve(async (req) => {
     
     const { hmac_secret, test_payload } = validatedData;
     
-    // Test HEX → bytes conversion
+    // Test HEX ? bytes conversion
     let keyBytes: Uint8Array;
     try {
       keyBytes = hexToBytes(hmac_secret);
@@ -97,7 +97,7 @@ serve(async (req) => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
     
-    console.log(`[${requestId}] ✅ HMAC validation successful`);
+    console.log(`[${requestId}] [OK]  HMAC validation successful`);
     
     return new Response(JSON.stringify({
       valid: true,

@@ -12,15 +12,15 @@ const ContactFormSchema = z.object({
   name: z.string()
     .min(2, "Nome muito curto")
     .max(100, "Nome muito longo")
-    .regex(/^[a-zA-ZÀ-ÿ\s\-']+$/, "Nome contém caracteres inválidos"),
+    .regex(/^[a-zA-ZA-?\s\-']+$/, "Nome contem caracteres invalidos"),
   email: z.string()
-    .email("Email inválido")
+    .email("Email invalido")
     .max(255, "Email muito longo"),
   company: z.string()
     .max(200, "Nome da empresa muito longo")
     .optional(),
   phone: z.string()
-    .regex(/^[\d\s\(\)\+\-]*$/, "Telefone inválido")
+    .regex(/^[\d\s\(\)\+\-]*$/, "Telefone invalido")
     .max(20, "Telefone muito longo")
     .optional(),
   endpoints: z.string()
@@ -70,8 +70,8 @@ export const ContactForm = () => {
         });
         setErrors(fieldErrors);
         toast({
-          title: "Erro de validação",
-          description: "Verifique os campos do formulário",
+          title: "Erro de validacao",
+          description: "Verifique os campos do formulario",
           variant: "destructive",
         });
         return;
@@ -107,7 +107,7 @@ export const ContactForm = () => {
 
       toast({
         title: "Mensagem enviada!",
-        description: "Nossa equipe entrará em contato em até 24 horas.",
+        description: "Nossa equipe entrara em contato em ate 24 horas.",
       });
 
       setFormData({
@@ -158,7 +158,7 @@ export const ContactForm = () => {
           <Shield className="w-8 h-8 text-primary" />
           <div>
             <h3 className="text-2xl font-bold">Fale com vendas</h3>
-            <p className="text-muted-foreground">Resposta em até 24 horas</p>
+            <p className="text-muted-foreground">Resposta em ate 24 horas</p>
           </div>
         </div>
 
@@ -216,7 +216,7 @@ export const ContactForm = () => {
             <Input
               name="endpoints"
               type="number"
-              placeholder="Número de endpoints"
+              placeholder="Numero de endpoints"
               value={formData.endpoints}
               onChange={handleChange}
               className={`bg-background/50 border-border/50 focus:border-primary transition-colors ${errors.endpoints ? 'border-destructive' : ''}`}

@@ -33,7 +33,7 @@ export function RecentAuditActivity({ tenantId }: RecentAuditActivityProps) {
         <div key={log.id} className="flex justify-between text-sm border-b pb-2">
           <div>
             <span className="font-medium">{log.action}</span>
-            <span className="text-muted-foreground"> · {log.resource_type}</span>
+            <span className="text-muted-foreground"> ? {log.resource_type}</span>
           </div>
           <span className="text-xs text-muted-foreground">
             {format(new Date(log.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}

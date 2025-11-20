@@ -8,10 +8,10 @@ import * as path from 'path';
  * 
  * Testa o fluxo end-to-end:
  * 1. Login como admin
- * 2. Validação de nome do agente
- * 3. Geração de instalador Windows
- * 4. Download e validação de conteúdo PS1
- * 5. Validação SHA256
+ * 2. Validacao de nome do agente
+ * 3. Geracao de instalador Windows
+ * 4. Download e validacao de conteudo PS1
+ * 5. Validacao SHA256
  * 6. Teste de Circuit Breaker
  */
 
@@ -31,8 +31,8 @@ test.describe('Fluxo completo do instalador do agente', () => {
     await page.waitForURL('**/agent-installer', { timeout: 10000 });
   });
 
-  test('Gerar instalador Windows e validar conteúdo completo', async ({ page }) => {
-    console.log('[TEST] Iniciando teste de geração de instalador Windows');
+  test('Gerar instalador Windows e validar conteudo completo', async ({ page }) => {
+    console.log('[TEST] Iniciando teste de geracao de instalador Windows');
 
     // 1. Navegar para /agent-installer
     await page.goto('/agent-installer');
@@ -43,27 +43,27 @@ test.describe('Fluxo completo do instalador do agente', () => {
     const nameInput = page.locator('input[placeholder*="servidor"]');
     await nameInput.fill(TEST_AGENT_NAME);
     
-    // Aguardar validação (debounce + API call)
+    // Aguardar validacao (debounce + API call)
     await page.waitForTimeout(1500);
     
-    // Verificar se nome está disponível
-    const nameValidation = page.locator('text=/✅|Nome disponível/');
+    // Verificar se nome esta disponivel
+    const nameValidation = page.locator('text=/[OK] |Nome disponivel/');
     await expect(nameValidation).toBeVisible({ timeout: 10000 });
-    console.log('[TEST] ✅ Nome validado como disponível');
+    console.log('[TEST] [OK]  Nome validado como disponivel');
 
     // 3. Selecionar Windows
     await page.click('input[value="windows"]');
-    console.log('[TEST] ✅ Plataforma Windows selecionada');
+    console.log('[TEST] [OK]  Plataforma Windows selecionada');
 
-    // 4. Gerar instalador (método: Generate Command para ser mais rápido)
-    console.log('[TEST] Gerando comando de instalação...');
+    // 4. Gerar instalador (metodo: Generate Command para ser mais rapido)
+    console.log('[TEST] Gerando comando de instalacao...');
     await page.click('button:has-text("Gerar Comando")');
 
-    // Aguardar geração completar
+    // Aguardar geracao completar
     await expect(page.locator('text=/Comando gerado/i')).toBeVisible({ timeout: 30000 });
-    console.log('[TEST] ✅ Comando gerado com sucesso');
+    console.log('[TEST] [OK]  Comando gerado com sucesso');
 
-    // 5. Verificar que comando está visível
+    // 5. Verificar que comando esta visivel
     const commandElement = page.locator('code').filter({ hasText: 'irm' });
     await expect(commandElement).toBeVisible();
 
@@ -75,11 +75,11 @@ test.describe('Fluxo completo do instalador do agente', () => {
     expect(commandText).toContain('functions/v1/serve-installer');
     expect(commandText).toContain('iex');
     
-    console.log('[TEST] ✅ Estrutura do comando validada');
+    console.log('[TEST] [OK]  Estrutura do comando validada');
   });
 
   test('Gerar instalador Linux e validar script SH', async ({ page }) => {
-    console.log('[TEST] Iniciando teste de geração de instalador Linux');
+    console.log('[TEST] Iniciando teste de geracao de instalador Linux');
 
     await page.goto('/agent-installer');
     
@@ -90,7 +90,7 @@ test.describe('Fluxo completo do instalador do agente', () => {
     
     // Selecionar Linux
     await page.click('input[value="linux"]');
-    console.log('[TEST] ✅ Plataforma Linux selecionada');
+    console.log('[TEST] [OK]  Plataforma Linux selecionada');
 
     // Gerar comando
     await page.click('button:has-text("Gerar Comando")');
@@ -105,7 +105,7 @@ test.describe('Fluxo completo do instalador do agente', () => {
     expect(command).toContain('bash');
     expect(command).toContain('functions/v1/serve-installer');
 
-    console.log('[TEST] ✅ Comando Linux gerado e validado');
+    console.log('[TEST] [OK]  Comando Linux gerado e validado');
   });
 
   test('Validar comportamento do Circuit Breaker', async ({ page }) => {
@@ -113,17 +113,17 @@ test.describe('Fluxo completo do instalador do agente', () => {
 
     await page.goto('/agent-installer');
 
-    // Verificar que circuit breaker NÃO está aberto inicialmente
+    // Verificar que circuit breaker NAO esta aberto inicialmente
     await expect(page.locator('text=/Circuit Breaker Ativo/i')).not.toBeVisible();
-    console.log('[TEST] ✅ Circuit breaker inicialmente fechado');
+    console.log('[TEST] [OK]  Circuit breaker inicialmente fechado');
 
     // Se circuit breaker estiver aberto por algum motivo, resetar
     const resetButton = page.locator('button:has-text("Resetar Bloqueio")');
     if (await resetButton.isVisible()) {
-      console.log('[TEST] Circuit breaker está aberto, resetando...');
+      console.log('[TEST] Circuit breaker esta aberto, resetando...');
       await resetButton.click();
       await expect(page.locator('text=/Circuit Breaker Ativo/i')).not.toBeVisible({ timeout: 5000 });
-      console.log('[TEST] ✅ Circuit breaker resetado com sucesso');
+      console.log('[TEST] [OK]  Circuit breaker resetado com sucesso');
     }
 
     // Tentar gerar instalador normalmente
@@ -134,7 +134,7 @@ test.describe('Fluxo completo do instalador do agente', () => {
 
     // Deve funcionar sem problemas
     await expect(page.locator('text=/Comando gerado/i')).toBeVisible({ timeout: 30000 });
-    console.log('[TEST] ✅ Geração funcionou com circuit breaker fechado');
+    console.log('[TEST] [OK]  Geracao funcionou com circuit breaker fechado');
   });
 
   test('Validar mensagens de erro claras', async ({ page }) => {
@@ -148,15 +148,15 @@ test.describe('Fluxo completo do instalador do agente', () => {
     
     const errorMessage = page.locator('text=/pelo menos 3 caracteres/i');
     await expect(errorMessage).toBeVisible({ timeout: 10000 });
-    console.log('[TEST] ✅ Mensagem de erro para nome curto exibida');
+    console.log('[TEST] [OK]  Mensagem de erro para nome curto exibida');
 
-    // Testar caracteres inválidos
+    // Testar caracteres invalidos
     await page.fill('input[placeholder*="servidor"]', 'test@#$');
     await page.waitForTimeout(1500);
     
-    const invalidCharsError = page.locator('text=/apenas letras, números/i');
+    const invalidCharsError = page.locator('text=/apenas letras, numeros/i');
     await expect(invalidCharsError).toBeVisible({ timeout: 10000 });
-    console.log('[TEST] ✅ Mensagem de erro para caracteres inválidos exibida');
+    console.log('[TEST] [OK]  Mensagem de erro para caracteres invalidos exibida');
   });
 
   test('Validar interface do instalador EXE Build', async ({ page }) => {
@@ -171,16 +171,16 @@ test.describe('Fluxo completo do instalador do agente', () => {
     await expect(page.locator('text=/Compilar para EXE/i')).toBeVisible();
     await expect(page.locator('text=/GitHub Actions/i')).toBeVisible();
     
-    console.log('[TEST] ✅ Interface de EXE Build carregada corretamente');
+    console.log('[TEST] [OK]  Interface de EXE Build carregada corretamente');
   });
 });
 
-test.describe('Validação de conteúdo do instalador', () => {
-  test.skip('Baixar e validar conteúdo PS1 (requer download real)', async ({ page }) => {
-    // Este teste é marcado como skip porque requer download real de arquivo
+test.describe('Validacao de conteudo do instalador', () => {
+  test.skip('Baixar e validar conteudo PS1 (requer download real)', async ({ page }) => {
+    // Este teste e marcado como skip porque requer download real de arquivo
     // Para habilitar, remover .skip e configurar download path
 
-    console.log('[TEST] Teste de download de PS1 (SKIP - requer configuração manual)');
+    console.log('[TEST] Teste de download de PS1 (SKIP - requer configuracao manual)');
     
     // Exemplo de como seria implementado:
     // const downloadPromise = page.waitForEvent('download');
@@ -188,7 +188,7 @@ test.describe('Validação de conteúdo do instalador', () => {
     // const download = await downloadPromise;
     // const filePath = await download.path();
     // 
-    // // Validar conteúdo
+    // // Validar conteudo
     // const content = fs.readFileSync(filePath, 'utf-8');
     // expect(content.length).toBeGreaterThan(50000); // > 50KB
     // expect(content).not.toMatch(/\{\{[A-Z_]+\}\}/); // Sem placeholders

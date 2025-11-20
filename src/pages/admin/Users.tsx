@@ -59,7 +59,7 @@ export default function Users() {
     },
   });
 
-  // CORREÇÃO: Memoização de filtros complexos para performance
+  // CORRECAO: Memoizacao de filtros complexos para performance
   const filteredUsers = useMemo(() => {
     if (!usersData) return [];
     
@@ -85,7 +85,7 @@ export default function Users() {
 
   const updateRole = useMutation({
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: AppRole }) => {
-      // CORREÇÃO: Validação de role em runtime
+      // CORRECAO: Validacao de role em runtime
       assertValidRole(newRole, 'newRole');
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
@@ -117,7 +117,7 @@ export default function Users() {
       if (data.updated) {
         toast({ title: 'Role atualizada com sucesso!' });
       } else {
-        toast({ title: 'Role já estava definida', variant: 'default' });
+        toast({ title: 'Role ja estava definida', variant: 'default' });
       }
     },
     onError: (error: Error) => {
@@ -150,7 +150,7 @@ export default function Users() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      toast({ title: 'Status do usuário atualizado!' });
+      toast({ title: 'Status do usuario atualizado!' });
       setStatusDialogOpen(false);
       setSelectedUser(null);
     },
@@ -159,7 +159,7 @@ export default function Users() {
     },
   });
 
-  // CORREÇÃO: Função movida para src/lib/badges.ts (centralizada)
+  // CORRECAO: Funcao movida para src/lib/badges.ts (centralizada)
 
   const handleStatusChange = (user: any) => {
     setSelectedUser(user);
@@ -170,13 +170,13 @@ export default function Users() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold">Gerenciar Usuários</h2>
-          <p className="text-muted-foreground">Gerencie os usuários e suas permissões no sistema</p>
+          <h2 className="text-3xl font-bold">Gerenciar Usuarios</h2>
+          <p className="text-muted-foreground">Gerencie os usuarios e suas permissoes no sistema</p>
         </div>
         <Link to="/admin/invites">
           <Button>
             <Mail className="h-4 w-4 mr-2" />
-            Convidar Usuário
+            Convidar Usuario
           </Button>
         </Link>
       </div>
@@ -184,7 +184,7 @@ export default function Users() {
       <Card>
         <CardHeader>
           <CardTitle>Filtros</CardTitle>
-          <CardDescription>Busque e filtre os usuários</CardDescription>
+          <CardDescription>Busque e filtre os usuarios</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -220,9 +220,9 @@ export default function Users() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Usuários</CardTitle>
+          <CardTitle>Usuarios</CardTitle>
           <CardDescription>
-            Mostrando {paginatedUsers.length} de {totalCount} usuários
+            Mostrando {paginatedUsers.length} de {totalCount} usuarios
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -239,7 +239,7 @@ export default function Users() {
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Cadastrado em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-right">Acoes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -268,7 +268,7 @@ export default function Users() {
                         <Select
                           value={user.role}
                           onValueChange={(value) => {
-                            // CORREÇÃO: Validação antes de mutation
+                            // CORRECAO: Validacao antes de mutation
                             if (isValidRole(value)) {
                               updateRole.mutate({ 
                                 userId: user.user_id, 
@@ -316,7 +316,7 @@ export default function Users() {
                   Anterior
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  Página {page + 1} de {totalPages}
+                  Pagina {page + 1} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
@@ -324,7 +324,7 @@ export default function Users() {
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
                 >
-                  Próxima
+                  Proxima
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
@@ -338,14 +338,14 @@ export default function Users() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {selectedUser?.is_active ? 'Desativar' : 'Ativar'} Usuário
+              {selectedUser?.is_active ? 'Desativar' : 'Ativar'} Usuario
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja {selectedUser?.is_active ? 'desativar' : 'ativar'} o usuário{' '}
+              Tem certeza que deseja {selectedUser?.is_active ? 'desativar' : 'ativar'} o usuario{' '}
               <strong>{selectedUser?.email}</strong>?
               {selectedUser?.is_active && (
                 <span className="block mt-2 text-destructive">
-                  O usuário não poderá mais acessar o sistema.
+                  O usuario nao podera mais acessar o sistema.
                 </span>
               )}
             </AlertDialogDescription>

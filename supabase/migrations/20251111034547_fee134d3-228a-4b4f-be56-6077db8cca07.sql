@@ -1,8 +1,8 @@
 -- ============================================================================
--- FASE 1: CORREÇÕES DE SEGURANÇA PRIORITÁRIAS
+-- FASE 1: CORRECOES DE SEGURANCA PRIORITARIAS
 -- ============================================================================
 
--- 1. Corrigir search_path da função calculate_next_run
+-- 1. Corrigir search_path da funcao calculate_next_run
 -- Previne ataques de schema poisoning
 CREATE OR REPLACE FUNCTION public.calculate_next_run(
   pattern text, 
@@ -10,7 +10,7 @@ CREATE OR REPLACE FUNCTION public.calculate_next_run(
 )
 RETURNS timestamp with time zone
 LANGUAGE plpgsql
-SET search_path = public  -- ✅ FIX: Adicionar search_path
+SET search_path = public  -- [OK]  FIX: Adicionar search_path
 AS $function$
 DECLARE
   next_time timestamp with time zone;
@@ -39,7 +39,7 @@ END;
 $function$;
 
 -- ============================================================================
--- 2. Criar RLS Policies Explícitas (Opção 2: Acesso Super Admin)
+-- 2. Criar RLS Policies Explicitas (Opcao 2: Acesso Super Admin)
 -- ============================================================================
 
 -- 2.1 Policies para failed_login_attempts
@@ -49,7 +49,7 @@ ON public.failed_login_attempts
 FOR SELECT
 USING (public.is_super_admin(auth.uid()));
 
--- Bloquear todas as modificações para usuários (WITH CHECK para INSERT/UPDATE/DELETE)
+-- Bloquear todas as modificacoes para usuarios (WITH CHECK para INSERT/UPDATE/DELETE)
 CREATE POLICY "Block all modifications to failed_login_attempts"
 ON public.failed_login_attempts
 FOR INSERT
@@ -90,20 +90,20 @@ FOR UPDATE
 WITH CHECK (false);
 
 -- ============================================================================
--- COMENTÁRIOS E DOCUMENTAÇÃO
+-- COMENTARIOS E DOCUMENTACAO
 -- ============================================================================
 
 COMMENT ON POLICY "Super admins can view failed login attempts" ON public.failed_login_attempts IS 
-  'Permite que super admins visualizem tentativas de login falhadas para debugging e análise de segurança';
+  'Permite que super admins visualizem tentativas de login falhadas para debugging e analise de seguranca';
 
 COMMENT ON POLICY "Block all modifications to failed_login_attempts" ON public.failed_login_attempts IS 
-  'Bloqueia INSERT por usuários - apenas edge functions (SERVICE_ROLE_KEY) podem inserir registros';
+  'Bloqueia INSERT por usuarios - apenas edge functions (SERVICE_ROLE_KEY) podem inserir registros';
 
 COMMENT ON POLICY "Super admins can view ip blocklist" ON public.ip_blocklist IS 
-  'Permite que super admins visualizem IPs bloqueados para monitoramento de segurança';
+  'Permite que super admins visualizem IPs bloqueados para monitoramento de seguranca';
 
 COMMENT ON POLICY "Super admins can unblock IPs" ON public.ip_blocklist IS 
-  'Permite que super admins desbloqueiem IPs manualmente quando necessário';
+  'Permite que super admins desbloqueiem IPs manualmente quando necessario';
 
 COMMENT ON POLICY "Block inserts to ip_blocklist" ON public.ip_blocklist IS 
-  'Bloqueia INSERT por usuários - apenas edge functions (SERVICE_ROLE_KEY) podem bloquear IPs';
+  'Bloqueia INSERT por usuarios - apenas edge functions (SERVICE_ROLE_KEY) podem bloquear IPs';

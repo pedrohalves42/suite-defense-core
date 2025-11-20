@@ -1,4 +1,4 @@
--- FASE 4: View para identificar jobs problemáticos e função de cleanup
+-- FASE 4: View para identificar jobs problematicos e funcao de cleanup
 
 -- View para identificar jobs com problemas
 CREATE OR REPLACE VIEW public.v_problematic_jobs AS
@@ -31,17 +31,17 @@ SELECT
   EXTRACT(EPOCH FROM (NOW() - j.created_at))/60 as age_minutes
 FROM public.jobs j
 WHERE 
-  -- Jobs delivered há mais de 10min
+  -- Jobs delivered ha mais de 10min
   (j.status = 'delivered' AND j.delivered_at < NOW() - INTERVAL '10 minutes')
   OR
-  -- Jobs queued há mais de 1h
+  -- Jobs queued ha mais de 1h
   (j.status = 'queued' AND j.created_at < NOW() - INTERVAL '1 hour')
   OR
   -- Jobs com problemas de dados
   (j.payload IS NULL OR j.type IS NULL OR j.type = '')
 ORDER BY j.created_at DESC;
 
--- Função para deletar jobs problemáticos antigos
+-- Funcao para deletar jobs problematicos antigos
 CREATE OR REPLACE FUNCTION public.cleanup_old_problematic_jobs(
   p_days_old INTEGER DEFAULT 7
 )
@@ -53,7 +53,7 @@ DECLARE
 BEGIN
   v_cutoff_date := NOW() - (p_days_old || ' days')::INTERVAL;
   
-  -- Deletar jobs problemáticos antigos
+  -- Deletar jobs problematicos antigos
   WITH deleted AS (
     DELETE FROM public.jobs
     WHERE id IN (

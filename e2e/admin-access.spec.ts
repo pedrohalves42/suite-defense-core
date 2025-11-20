@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * E2E Tests for Admin Access Control
  * 
  * Verifies that:
- * 1. Admin users see the "Administração" section in sidebar
+ * 1. Admin users see the "Administracao" section in sidebar
  * 2. Admin users can access /admin/* routes
  * 3. Non-admin users are redirected from /admin/* routes
  */
@@ -15,7 +15,7 @@ test.describe('Admin Access Control', () => {
     await page.goto('/login');
   });
 
-  test('Admin user sees Administração section and can access admin routes', async ({ page }) => {
+  test('Admin user sees Administracao section and can access admin routes', async ({ page }) => {
     // Login as admin
     await page.fill('input[type="email"]', process.env.TEST_ADMIN_EMAIL || 'admin@test.com');
     await page.fill('input[type="password"]', process.env.TEST_ADMIN_PASSWORD || 'admin123');
@@ -24,8 +24,8 @@ test.describe('Admin Access Control', () => {
     // Wait for navigation to dashboard
     await page.waitForURL('**/dashboard');
 
-    // Verify "Administração" section is visible in sidebar
-    const adminSection = page.locator('text=Administração');
+    // Verify "Administracao" section is visible in sidebar
+    const adminSection = page.locator('text=Administracao');
     await expect(adminSection).toBeVisible({ timeout: 10000 });
 
     // Test access to /admin/dashboard
@@ -36,15 +36,15 @@ test.describe('Admin Access Control', () => {
     // Test access to /admin/users
     await page.goto('/admin/users');
     await expect(page).toHaveURL(/\/admin\/users/);
-    await expect(page.locator('h1, h2').filter({ hasText: /usuários|users/i })).toBeVisible();
+    await expect(page.locator('h1, h2').filter({ hasText: /usuarios|users/i })).toBeVisible();
 
     // Test access to /admin/settings
     await page.goto('/admin/settings');
     await expect(page).toHaveURL(/\/admin\/settings/);
-    await expect(page.locator('h1, h2').filter({ hasText: /configurações|settings/i })).toBeVisible();
+    await expect(page.locator('h1, h2').filter({ hasText: /configuracoes|settings/i })).toBeVisible();
   });
 
-  test('Non-admin user does not see Administração section', async ({ page }) => {
+  test('Non-admin user does not see Administracao section', async ({ page }) => {
     // Login as regular user
     await page.fill('input[type="email"]', process.env.TEST_USER_EMAIL || 'user@test.com');
     await page.fill('input[type="password"]', process.env.TEST_USER_PASSWORD || 'user123');
@@ -53,8 +53,8 @@ test.describe('Admin Access Control', () => {
     // Wait for navigation to dashboard
     await page.waitForURL('**/dashboard');
 
-    // Verify "Administração" section is NOT visible
-    const adminSection = page.locator('text=Administração');
+    // Verify "Administracao" section is NOT visible
+    const adminSection = page.locator('text=Administracao');
     await expect(adminSection).not.toBeVisible();
   });
 
@@ -87,12 +87,12 @@ test.describe('Admin Access Control', () => {
     // Wait for dashboard
     await page.waitForURL('**/dashboard');
 
-    // Find and click "Usuários" in admin section
-    await page.locator('aside').locator('text=Usuários').click();
+    // Find and click "Usuarios" in admin section
+    await page.locator('aside').locator('text=Usuarios').click();
     await expect(page).toHaveURL(/\/admin\/users/);
 
-    // Find and click "Configurações" in admin section
-    await page.locator('aside').locator('text=Configurações').click();
+    // Find and click "Configuracoes" in admin section
+    await page.locator('aside').locator('text=Configuracoes').click();
     await expect(page).toHaveURL(/\/admin\/settings/);
   });
 });

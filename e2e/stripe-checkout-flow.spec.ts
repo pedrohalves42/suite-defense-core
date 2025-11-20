@@ -17,7 +17,7 @@ test.describe('Stripe Checkout Flow', () => {
     await page.goto('/admin/plan-upgrade-new');
     
     // Wait for page to load
-    await page.waitForSelector('h1:has-text("Planos e Preços")', { timeout: 10000 });
+    await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Should show all plan cards
     await expect(page.locator('text=Starter').or(page.locator('text=starter'))).toBeVisible();
@@ -25,7 +25,7 @@ test.describe('Stripe Checkout Flow', () => {
     await expect(page.locator('text=Enterprise').or(page.locator('text=enterprise'))).toBeVisible();
 
     // Should show pricing
-    await expect(page.locator('text=/R\\$.*\\/mês/i')).toBeVisible();
+    await expect(page.locator('text=/R\\$.*\\/mes/i')).toBeVisible();
 
     // Should show device quantity inputs for paid plans
     const deviceInputs = page.locator('input[type="number"]');
@@ -34,7 +34,7 @@ test.describe('Stripe Checkout Flow', () => {
 
   test('should update device quantity and recalculate price', async ({ page }) => {
     await page.goto('/admin/plan-upgrade-new');
-    await page.waitForSelector('h1:has-text("Planos e Preços")', { timeout: 10000 });
+    await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Find Starter plan device input
     const starterCard = page.locator('text=Starter').locator('..').locator('..').locator('..');
@@ -45,13 +45,13 @@ test.describe('Stripe Checkout Flow', () => {
     await page.waitForTimeout(500);
 
     // Price should update
-    const priceText = await starterCard.locator('text=/R\\$.*\\/mês/i').textContent();
+    const priceText = await starterCard.locator('text=/R\\$.*\\/mes/i').textContent();
     expect(priceText).toBeTruthy();
   });
 
   test('should create checkout session for Starter plan', async ({ page, context }) => {
     await page.goto('/admin/plan-upgrade-new');
-    await page.waitForSelector('h1:has-text("Planos e Preços")', { timeout: 10000 });
+    await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Track navigation
     let checkoutUrlOpened = false;
@@ -83,7 +83,7 @@ test.describe('Stripe Checkout Flow', () => {
 
   test('should open customer portal for existing subscription', async ({ page }) => {
     await page.goto('/admin/plan-upgrade-new');
-    await page.waitForSelector('h1:has-text("Planos e Preços")', { timeout: 10000 });
+    await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Check if user has existing subscription
     const manageButton = page.locator('button:has-text("Gerenciar Assinatura")');
@@ -110,7 +110,7 @@ test.describe('Stripe Checkout Flow', () => {
 
   test('should show current subscription details', async ({ page }) => {
     await page.goto('/admin/plan-upgrade-new');
-    await page.waitForSelector('h1:has-text("Planos e Preços")', { timeout: 10000 });
+    await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Check for subscription card
     const currentPlanCard = page.locator('text=Plano Atual');
@@ -162,7 +162,7 @@ test.describe('Stripe Checkout Flow', () => {
 
   test('should enforce device quantity limits', async ({ page }) => {
     await page.goto('/admin/plan-upgrade-new');
-    await page.waitForSelector('h1:has-text("Planos e Preços")', { timeout: 10000 });
+    await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Find Starter plan (max 30 devices)
     const starterCard = page.locator('text=Starter').locator('..').locator('..').locator('..');
@@ -179,12 +179,12 @@ test.describe('Stripe Checkout Flow', () => {
 
   test('should show correct features for each plan', async ({ page }) => {
     await page.goto('/admin/plan-upgrade-new');
-    await page.waitForSelector('h1:has-text("Planos e Preços")', { timeout: 10000 });
+    await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Starter plan features
     const starterCard = page.locator('text=Starter').locator('..').locator('..').locator('..');
     await expect(starterCard.locator('text=/30 dispositivos/i')).toBeVisible();
-    await expect(starterCard.locator('text=/2 scans avançados/i')).toBeVisible();
+    await expect(starterCard.locator('text=/2 scans avancados/i')).toBeVisible();
 
     // Pro plan features
     const proCard = page.locator('text=Pro').locator('..').locator('..').locator('..');
@@ -194,7 +194,7 @@ test.describe('Stripe Checkout Flow', () => {
 
   test('should handle errors gracefully', async ({ page }) => {
     await page.goto('/admin/plan-upgrade-new');
-    await page.waitForSelector('h1:has-text("Planos e Preços")', { timeout: 10000 });
+    await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Monitor console for errors
     const errors = [];

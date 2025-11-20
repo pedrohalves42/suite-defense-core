@@ -24,24 +24,24 @@ while [[ \$# -gt 0 ]]; do
     --hmac-secret) HMAC_SECRET="\$2"; shift 2;;
     --agent-name) AGENT_NAME="\$2"; shift 2;;
     --agent-version) AGENT_VERSION="\$2"; shift 2;;
-    *) echo "❌ Parâmetro desconhecido: \$1" >&2; exit 1;;
+    *) echo "[ERROR]  Parametro desconhecido: \$1" >&2; exit 1;;
   esac
 done
 
 if [[ -z "\$SERVER_URL" ]]; then
-  echo "❌ SERVER_URL não definido" >&2
+  echo "[ERROR]  SERVER_URL nao definido" >&2
   echo "Use: --server-url URL ou SERVER_URL=... ou CYBERSHIELD_SERVER_URL=..." >&2
   exit 1
 fi
 
 if [[ -z "\$AGENT_TOKEN" ]]; then
-  echo "❌ AGENT_TOKEN não definido" >&2
+  echo "[ERROR]  AGENT_TOKEN nao definido" >&2
   echo "Use: --agent-token TOKEN ou AGENT_TOKEN=... ou CYBERSHIELD_AGENT_TOKEN=..." >&2
   exit 1
 fi
 
 if [[ -z "\$HMAC_SECRET" ]]; then
-  echo "❌ HMAC_SECRET não definido" >&2
+  echo "[ERROR]  HMAC_SECRET nao definido" >&2
   echo "Use: --hmac-secret SECRET ou HMAC_SECRET=... ou CYBERSHIELD_HMAC_SECRET=..." >&2
   exit 1
 fi
@@ -63,7 +63,7 @@ log() {
 
 validate_hmac_secret() {
   if [[ ! "\$HMAC_SECRET" =~ ^[0-9a-fA-F]{64}\$ ]]; then
-    log "ERROR" "HMAC_SECRET inválido. Esperado 64 hex chars, length=\${#HMAC_SECRET}"
+    log "ERROR" "HMAC_SECRET invalido. Esperado 64 hex chars, length=\${#HMAC_SECRET}"
     exit 1
   fi
 }
@@ -103,7 +103,7 @@ secure_request() {
     [[ "\$http_code" -ge 200 && "\$http_code" -lt 300 ]] && return 0
 
     retry_count=\$((retry_count+1))
-    (( retry_count >= max_retries )) && { log "ERROR" "Falha após \$max_retries tentativas"; return 1; }
+    (( retry_count >= max_retries )) && { log "ERROR" "Falha apos \$max_retries tentativas"; return 1; }
 
     log "WARN" "Retry \$retry_count, aguardando \${retry_delay}s..."
     sleep "\$retry_delay"
@@ -194,7 +194,7 @@ execute_job() {
       ;;
     *)
       status="failed"
-      error_msg="Tipo job não suportado: \$job_type"
+      error_msg="Tipo job nao suportado: \$job_type"
       output_json="\$(jq -n --arg error "\$error_msg" '{error:\$error}')"
       ;;
   esac

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { createHmac } from 'crypto';
 
-// Helper para gerar HMAC válido seguindo especificação
+// Helper para gerar HMAC valido seguindo especificacao
 function generateHMAC(agentToken: string, hmacSecret: string, body: string = '') {
   const timestamp = Date.now().toString(); // milissegundos
   const nonce = crypto.randomUUID();
@@ -16,7 +16,7 @@ function generateHMAC(agentToken: string, hmacSecret: string, body: string = '')
 
 test.describe('Agent HMAC Improvements', () => {
   test('Health check should return structured error codes', async ({ request }) => {
-    // Teste com token inválido
+    // Teste com token invalido
     const response = await request.post('/functions/v1/agent-health-check', {
       headers: { 'X-Agent-Token': 'invalid-token' },
     });
@@ -29,7 +29,7 @@ test.describe('Agent HMAC Improvements', () => {
   });
 
   test('Health check with valid HMAC should succeed', async ({ request }) => {
-    // Setup: usar token e secret de teste (em produção, viria do seed)
+    // Setup: usar token e secret de teste (em producao, viria do seed)
     const agentToken = process.env.TEST_AGENT_TOKEN || 'test-agent-token-123';
     const hmacSecret = process.env.TEST_HMAC_SECRET || '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
     
@@ -47,14 +47,14 @@ test.describe('Agent HMAC Improvements', () => {
       data: body,
     });
     
-    // Se não houver agente configurado, pode retornar 401 (válido)
+    // Se nao houver agente configurado, pode retornar 401 (valido)
     // Se houver, deve retornar 200 com hmac.valid: true
     if (response.status() === 200) {
       const data = await response.json();
       expect(data.status).toBe('ok');
       expect(data.hmac?.valid).toBe(true);
     } else {
-      // Token não existe no banco (aceitável em ambiente de teste)
+      // Token nao existe no banco (aceitavel em ambiente de teste)
       expect(response.status()).toBe(401);
     }
   });
@@ -104,10 +104,10 @@ test.describe('Agent HMAC Improvements', () => {
       'X-Nonce': nonce,
     };
     
-    // Primeira requisição (pode passar ou falhar se token não existe)
+    // Primeira requisicao (pode passar ou falhar se token nao existe)
     const firstResponse = await request.post('/functions/v1/agent-health-check', { headers });
     
-    // Segunda requisição com MESMA signature/nonce (deve ser bloqueada)
+    // Segunda requisicao com MESMA signature/nonce (deve ser bloqueada)
     const secondResponse = await request.post('/functions/v1/agent-health-check', { headers });
     
     // Se primeira passou, segunda DEVE falhar com replay error

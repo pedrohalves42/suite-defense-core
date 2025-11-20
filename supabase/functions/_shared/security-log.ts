@@ -15,7 +15,7 @@ export interface SecurityLogParams {
 }
 
 /**
- * Log tentativas de ataque e validações de segurança falhadas
+ * Log tentativas de ataque e validacoes de seguranca falhadas
  */
 export async function logSecurityEvent(params: SecurityLogParams): Promise<void> {
   try {
@@ -48,10 +48,10 @@ export async function logSecurityEvent(params: SecurityLogParams): Promise<void>
         request_id: requestId || null,
       });
 
-    // Log também no console para monitoramento
+    // Log tambem no console para monitoramento
     console.log(`[SECURITY] ${severity.toUpperCase()} - ${attackType} blocked at ${endpoint} from ${ipAddress}`);
 
-    // Enviar email para admins se for evento crítico
+    // Enviar email para admins se for evento critico
     if (severity === 'critical' || severity === 'high') {
       try {
         const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
@@ -84,7 +84,7 @@ export async function logSecurityEvent(params: SecurityLogParams): Promise<void>
       }
     }
   } catch (error) {
-    // Não falhar a requisição se não conseguir logar
+    // Nao falhar a requisicao se nao conseguir logar
     console.error('[SECURITY-LOG] Failed to log security event:', error);
   }
 }
@@ -101,16 +101,16 @@ export function extractIpAddress(req: Request): string {
   if (cfConnectingIp) return cfConnectingIp;
   if (realIp) return realIp;
   if (forwardedFor) {
-    // X-Forwarded-For pode conter múltiplos IPs, pegar o primeiro
+    // X-Forwarded-For pode conter multiplos IPs, pegar o primeiro
     return forwardedFor.split(',')[0].trim();
   }
   
-  // Fallback para IP genérico se não conseguir extrair
+  // Fallback para IP generico se nao conseguir extrair
   return 'unknown';
 }
 
 /**
- * Verifica se IP está em lista de bloqueio (múltiplas tentativas)
+ * Verifica se IP esta em lista de bloqueio (multiplas tentativas)
  */
 export async function checkIpBlocklist(
   supabase: SupabaseClient,
@@ -132,7 +132,7 @@ export async function checkIpBlocklist(
     .order('created_at', { ascending: false })
     .limit(10);
 
-  // Se tiver 5+ tentativas bloqueadas na última hora, bloquear temporariamente
+  // Se tiver 5+ tentativas bloqueadas na ultima hora, bloquear temporariamente
   if (count && count >= 5) {
     const resetAt = new Date(now.getTime() + 60 * 60 * 1000); // 1 hora
     return {

@@ -1,18 +1,18 @@
 -- ============================================
--- FASE 1.2: HMAC OBRIGATÓRIO (CORRIGIDO)
+-- FASE 1.2: HMAC OBRIGATORIO (CORRIGIDO)
 -- ============================================
 
--- 1. Popular hmac_secret em agents existentes que não têm
+-- 1. Popular hmac_secret em agents existentes que nao tem
 UPDATE public.agents
 SET hmac_secret = encode(gen_random_bytes(32), 'hex')
 WHERE hmac_secret IS NULL;
 
--- 2. Corrigir agents com hmac_secret inválido (comprimento != 64)
+-- 2. Corrigir agents com hmac_secret invalido (comprimento != 64)
 UPDATE public.agents
 SET hmac_secret = encode(gen_random_bytes(32), 'hex')
 WHERE hmac_secret IS NOT NULL AND length(hmac_secret) != 64;
 
--- 3. Tornar hmac_secret NOT NULL (obrigatório)
+-- 3. Tornar hmac_secret NOT NULL (obrigatorio)
 ALTER TABLE public.agents
 ALTER COLUMN hmac_secret SET NOT NULL;
 
@@ -28,7 +28,7 @@ CHECK (length(hmac_secret) = 64);
 -- Drop view existente (se houver)
 DROP VIEW IF EXISTS public.enrollment_keys_safe CASCADE;
 
--- Criar view com máscara para enrollment keys
+-- Criar view com mascara para enrollment keys
 CREATE VIEW public.enrollment_keys_safe 
 WITH (security_invoker = on)
 AS
@@ -49,27 +49,27 @@ SELECT
   installer_size_bytes,
   installer_generated_at,
   expiration_notified_at,
-  -- Mascara a chave: mostra apenas primeiros 8 + últimos 4 caracteres
+  -- Mascara a chave: mostra apenas primeiros 8 + ultimos 4 caracteres
   CASE 
     WHEN is_active = true AND expires_at > NOW() THEN
       substring(key from 1 for 8) || '...' || substring(key from length(key) - 3 for 4)
     ELSE
       '****-****-****-****' -- Chaves expiradas/inativas totalmente mascaradas
   END as key_masked,
-  -- Inclui chave completa apenas para função interna (RPC) - não exposto via RLS
+  -- Inclui chave completa apenas para funcao interna (RPC) - nao exposto via RLS
   key as key_full
 FROM public.enrollment_keys;
 
 COMMENT ON VIEW public.enrollment_keys_safe IS 
-'View segura de enrollment keys com máscara. Nunca expõe a chave completa via frontend.
+'View segura de enrollment keys com mascara. Nunca expoe a chave completa via frontend.
 Formato mascarado: "abc12345...xyz9" para chaves ativas, "****-****-****-****" para expiradas.
-View usa security_invoker, então herda RLS policies da tabela enrollment_keys.';
+View usa security_invoker, entao herda RLS policies da tabela enrollment_keys.';
 
 -- ============================================
--- FASE 1.2: FUNÇÃO RPC PARA OBTER CHAVE COMPLETA (USO INTERNO)
+-- FASE 1.2: FUNCAO RPC PARA OBTER CHAVE COMPLETA (USO INTERNO)
 -- ============================================
 
--- Função segura para Edge Functions obterem chave completa
+-- Funcao segura para Edge Functions obterem chave completa
 CREATE OR REPLACE FUNCTION public.get_enrollment_key_full(p_key_id uuid)
 RETURNS TEXT
 LANGUAGE plpgsql
@@ -92,4 +92,4 @@ $$;
 
 COMMENT ON FUNCTION public.get_enrollment_key_full IS 
 'INTERNAL USE ONLY: Retorna enrollment key completa para Edge Functions.
-Não deve ser chamada diretamente pelo frontend.';
+Nao deve ser chamada diretamente pelo frontend.';

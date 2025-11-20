@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
     const agentToken = req.headers.get('X-Agent-Token')
     if (!agentToken) {
       return new Response(
-        JSON.stringify({ error: 'Token do agente necessário' }),
+        JSON.stringify({ error: 'Token do agente necessario' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
     }
@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     const tokenValidation = AgentTokenSchema.safeParse(agentToken)
     if (!tokenValidation.success) {
       return new Response(
-        JSON.stringify({ error: 'Formato de token inválido' }),
+        JSON.stringify({ error: 'Formato de token invalido' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
 
     if (!token?.agents) {
       return new Response(
-        JSON.stringify({ error: 'Token inválido' }),
+        JSON.stringify({ error: 'Token invalido' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
     }
@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     if (!agent.tenant_id) {
       console.error(`[${requestId}] Agent ${agent.agent_name} has no tenant_id`)
       return new Response(
-        JSON.stringify({ error: 'Configuração inválida do agente' }),
+        JSON.stringify({ error: 'Configuracao invalida do agente' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       )
     }
@@ -109,12 +109,12 @@ Deno.serve(async (req) => {
     let fileContent: string
 
     if (contentType.includes('application/json')) {
-      // Processar report de execução de job (JSON)
+      // Processar report de execucao de job (JSON)
       const { job_id, result, timestamp } = await req.json()
 
       if (!job_id || !result) {
         return new Response(
-          JSON.stringify({ error: 'Campos obrigatórios faltando (job_id, result)' }),
+          JSON.stringify({ error: 'Campos obrigatorios faltando (job_id, result)' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         )
       }
@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
 
       if (!kind || !file) {
         return new Response(
-          JSON.stringify({ error: 'Campos obrigatórios faltando (kind, file)' }),
+          JSON.stringify({ error: 'Campos obrigatorios faltando (kind, file)' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         )
       }
@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
       // Validar tamanho do arquivo
       if (!validateFileSize(file.size)) {
         return new Response(
-          JSON.stringify({ error: 'Arquivo muito grande (máximo 10MB)' }),
+          JSON.stringify({ error: 'Arquivo muito grande (maximo 10MB)' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 413 }
         )
       }
@@ -185,10 +185,10 @@ Deno.serve(async (req) => {
       sanitizedKind = validation.data.kind
       fileContent = await file.text()
 
-      console.log('Upload de relatório:', sanitizedKind, 'por agente:', agent.agent_name)
+      console.log('Upload de relatorio:', sanitizedKind, 'por agente:', agent.agent_name)
     }
 
-    // Salvar relatório no banco com validação explícita de tenant_id
+    // Salvar relatorio no banco com validacao explicita de tenant_id
     const { data: report, error } = await supabase
       .from('reports')
       .insert({

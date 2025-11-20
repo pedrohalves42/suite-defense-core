@@ -1,4 +1,4 @@
--- Corrigir função cleanup_expired_keys com search_path seguro
+-- Corrigir funcao cleanup_expired_keys com search_path seguro
 CREATE OR REPLACE FUNCTION public.cleanup_expired_keys()
 RETURNS void
 LANGUAGE plpgsql

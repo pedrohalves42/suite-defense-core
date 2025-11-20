@@ -2,7 +2,7 @@
 -- Jobs v3 Migration Monitoring Queries
 -- ============================================================
 -- 
--- Use estas queries para monitorar a adoção da migração de Jobs v1 para v3
+-- Use estas queries para monitorar a adocao da migracao de Jobs v1 para v3
 -- Jobs v1: usam ack-job, status='done', output IS NULL
 -- Jobs v3: usam submit-job-result, status='completed'/'failed', output IS NOT NULL
 --
@@ -10,7 +10,7 @@
 -- Data: 2025-11-19
 -- ============================================================
 
--- 1️⃣ Taxa de adoção v3 (últimos 7 dias) - Evolução diária
+-- 1?? Taxa de adocao v3 (ultimos 7 dias) - Evolucao diaria
 -- Mostra quantos jobs foram criados por dia e qual % usou v3
 SELECT 
   DATE(created_at) AS date,
@@ -23,8 +23,8 @@ WHERE created_at > NOW() - INTERVAL '7 days'
 GROUP BY DATE(created_at)
 ORDER BY date DESC;
 
--- 2️⃣ Agentes ainda usando v1 (últimos 3 dias)
--- Identifica quais agentes ainda não migraram para v3
+-- 2?? Agentes ainda usando v1 (ultimos 3 dias)
+-- Identifica quais agentes ainda nao migraram para v3
 SELECT 
   agent_name,
   COUNT(*) FILTER (WHERE output IS NULL) AS v1_jobs,
@@ -32,9 +32,9 @@ SELECT
   MAX(created_at) FILTER (WHERE output IS NULL) AS last_v1_job,
   MAX(created_at) FILTER (WHERE output IS NOT NULL) AS last_v3_job,
   CASE 
-    WHEN COUNT(*) FILTER (WHERE output IS NOT NULL) = 0 THEN '❌ NUNCA usou v3'
-    WHEN COUNT(*) FILTER (WHERE output IS NULL) > COUNT(*) FILTER (WHERE output IS NOT NULL) THEN '⚠️ Usa MAIS v1 que v3'
-    ELSE '✅ Usa MAIS v3 que v1'
+    WHEN COUNT(*) FILTER (WHERE output IS NOT NULL) = 0 THEN '[ERROR]  NUNCA usou v3'
+    WHEN COUNT(*) FILTER (WHERE output IS NULL) > COUNT(*) FILTER (WHERE output IS NOT NULL) THEN '[WARN] ? Usa MAIS v1 que v3'
+    ELSE '[OK]  Usa MAIS v3 que v1'
   END AS status
 FROM jobs
 WHERE created_at > NOW() - INTERVAL '3 days'
@@ -42,8 +42,8 @@ GROUP BY agent_name
 HAVING COUNT(*) FILTER (WHERE output IS NULL) > 0
 ORDER BY last_v1_job DESC;
 
--- 3️⃣ Recomendação de deprecação de ack-job
--- Analisa se é seguro deprecar o endpoint ack-job
+-- 3?? Recomendacao de deprecacao de ack-job
+-- Analisa se e seguro deprecar o endpoint ack-job
 WITH stats AS (
   SELECT 
     COUNT(*) FILTER (WHERE output IS NOT NULL) AS v3_count,
@@ -56,23 +56,23 @@ SELECT
   total AS total_jobs_last_7_days,
   ROUND(100.0 * v3_count / NULLIF(total, 0), 1) AS adoption_pct,
   CASE 
-    WHEN total = 0 THEN '⏸️ No jobs in last 7 days - Cannot recommend'
-    WHEN ROUND(100.0 * v3_count / total, 1) >= 95 THEN '✅ SAFE TO DEPRECATE ack-job'
-    WHEN ROUND(100.0 * v3_count / total, 1) >= 80 THEN '⚠️ CAUTION - Almost ready (>80%)'
-    WHEN ROUND(100.0 * v3_count / total, 1) >= 50 THEN '⏳ WAIT - Test more before deprecating (>50%)'
-    ELSE '❌ NOT READY - Still < 50% adoption'
+    WHEN total = 0 THEN '?? No jobs in last 7 days - Cannot recommend'
+    WHEN ROUND(100.0 * v3_count / total, 1) >= 95 THEN '[OK]  SAFE TO DEPRECATE ack-job'
+    WHEN ROUND(100.0 * v3_count / total, 1) >= 80 THEN '[WARN] ? CAUTION - Almost ready (>80%)'
+    WHEN ROUND(100.0 * v3_count / total, 1) >= 50 THEN '? WAIT - Test more before deprecating (>50%)'
+    ELSE '[ERROR]  NOT READY - Still < 50% adoption'
   END AS recommendation,
   CASE 
     WHEN total = 0 THEN 'Aguardar atividade de jobs'
-    WHEN ROUND(100.0 * v3_count / total, 1) >= 95 THEN 'Pode deprecar ack-job com segurança'
-    WHEN ROUND(100.0 * v3_count / total, 1) >= 80 THEN 'Comunicar deprecação em 2 semanas'
+    WHEN ROUND(100.0 * v3_count / total, 1) >= 95 THEN 'Pode deprecar ack-job com seguranca'
+    WHEN ROUND(100.0 * v3_count / total, 1) >= 80 THEN 'Comunicar deprecacao em 2 semanas'
     WHEN ROUND(100.0 * v3_count / total, 1) >= 50 THEN 'Identificar agentes v1 e atualizar'
-    ELSE 'Validar implementação de Submit-JobResult nos agentes'
+    ELSE 'Validar implementacao de Submit-JobResult nos agentes'
   END AS next_steps
 FROM stats;
 
--- 4️⃣ Jobs v3 com erro (diagnóstico) - Últimas 24h
--- Identifica problemas na implementação v3
+-- 4?? Jobs v3 com erro (diagnostico) - Ultimas 24h
+-- Identifica problemas na implementacao v3
 SELECT 
   id,
   agent_name,
@@ -91,7 +91,7 @@ WHERE output IS NOT NULL
 ORDER BY created_at DESC
 LIMIT 20;
 
--- 5️⃣ Performance de Jobs v3 - Tempo médio de execução por tipo
+-- 5?? Performance de Jobs v3 - Tempo medio de execucao por tipo
 -- Analisa a performance dos diferentes tipos de jobs v3
 SELECT 
   type AS job_type,
@@ -108,8 +108,8 @@ WHERE output IS NOT NULL
 GROUP BY type
 ORDER BY total_jobs DESC;
 
--- 6️⃣ Comparação v1 vs v3 - Última semana
--- Resumo executivo da migração
+-- 6?? Comparacao v1 vs v3 - Ultima semana
+-- Resumo executivo da migracao
 WITH v1_stats AS (
   SELECT 
     COUNT(*) AS v1_total,
@@ -139,7 +139,7 @@ SELECT
   ROUND(100.0 * v3_total / NULLIF(v1_total + v3_total, 0), 1) AS "v3 Adoption %"
 FROM v1_stats, v3_stats;
 
--- 7️⃣ Diagnóstico de agentes sem output (podem precisar atualização)
+-- 7?? Diagnostico de agentes sem output (podem precisar atualizacao)
 -- Identifica agentes que nunca enviaram resultado v3
 SELECT 
   a.agent_name,
@@ -161,14 +161,14 @@ ORDER BY total_jobs DESC;
 -- ============================================================
 --
 -- 1. Copie e cole no SQL Editor do Supabase
--- 2. Execute individualmente cada query conforme necessário
--- 3. Monitore a adoção v3 semanalmente
--- 4. Quando atingir >95% de adoção por 2 semanas: deprecar ack-job
+-- 2. Execute individualmente cada query conforme necessario
+-- 3. Monitore a adocao v3 semanalmente
+-- 4. Quando atingir >95% de adocao por 2 semanas: deprecar ack-job
 --
 -- CRONOGRAMA SUGERIDO:
--- Semana 1-2: Monitorar adoção inicial (esperado: 10-30%)
+-- Semana 1-2: Monitorar adocao inicial (esperado: 10-30%)
 -- Semana 3-4: Identificar agentes v1, atualizar scripts
--- Semana 5-6: Validar >80% adoção
--- Semana 7+: Se >95%, comunicar deprecação de ack-job
+-- Semana 5-6: Validar >80% adocao
+-- Semana 7+: Se >95%, comunicar deprecacao de ack-job
 --
 -- ============================================================

@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 
 /**
  * Hook para debounce de valores
- * Útil para campos de busca e inputs que disparam queries
+ * Util para campos de busca e inputs que disparam queries
  * 
  * @param value - Valor a ser debounced
- * @param delay - Delay em milissegundos (padrão: 500ms)
+ * @param delay - Delay em milissegundos (padrao: 500ms)
  * @returns Valor debounced
  */
 export function useDebounce<T>(value: T, delay: number = 500): T {

@@ -1,4 +1,4 @@
--- Atualizar função handle_new_user para criar tenant individual com admin apenas para usuários não convidados
+-- Atualizar funcao handle_new_user para criar tenant individual com admin apenas para usuarios nao convidados
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -22,13 +22,13 @@ BEGIN
     AND expires_at > now()
   ) INTO has_pending_invite;
   
-  -- Se tem convite pendente, não criar tenant próprio
-  -- O tenant será atribuído quando aceitar o convite
+  -- Se tem convite pendente, nao criar tenant proprio
+  -- O tenant sera atribuido quando aceitar o convite
   IF has_pending_invite THEN
     RETURN NEW;
   END IF;
   
-  -- Criar tenant para novo usuário (apenas se não foi convidado)
+  -- Criar tenant para novo usuario (apenas se nao foi convidado)
   tenant_slug := lower(replace(COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email), ' ', '-')) || '-' || substring(NEW.id::text from 1 for 8);
   
   INSERT INTO public.tenants (name, slug, owner_user_id)
@@ -39,7 +39,7 @@ BEGIN
   )
   RETURNING id INTO new_tenant_id;
   
-  -- Todo novo usuário que cria conta diretamente (sem convite) é admin do seu próprio tenant
+  -- Todo novo usuario que cria conta diretamente (sem convite) e admin do seu proprio tenant
   INSERT INTO public.user_roles (user_id, role, tenant_id)
   VALUES (NEW.id, 'admin', new_tenant_id);
   

@@ -17,7 +17,7 @@ Deno.serve(async (req: Request) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Autenticação necessária' }),
+        JSON.stringify({ error: 'Autenticacao necessaria' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
 
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Usuário não autenticado' }),
+        JSON.stringify({ error: 'Usuario nao autenticado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -81,7 +81,7 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Configurações não encontradas',
+          error: 'Configuracoes nao encontradas',
           message: 'Configure o webhook URL antes de testar'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -102,8 +102,8 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Webhook URL não configurado',
-          message: 'Configure o webhook URL nas configurações de alertas'
+          error: 'Webhook URL nao configurado',
+          message: 'Configure o webhook URL nas configuracoes de alertas'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -217,7 +217,7 @@ Deno.serve(async (req: Request) => {
           success: false, 
           error: isTimeout ? 'Timeout ao conectar com webhook' : 'Erro ao conectar com webhook',
           message: isTimeout 
-            ? 'O webhook não respondeu em 10 segundos. Verifique se a URL está correta e acessível.'
+            ? 'O webhook nao respondeu em 10 segundos. Verifique se a URL esta correta e acessivel.'
             : `Erro: ${errorMessage}`,
           details: {
             url: settings.alert_webhook_url,

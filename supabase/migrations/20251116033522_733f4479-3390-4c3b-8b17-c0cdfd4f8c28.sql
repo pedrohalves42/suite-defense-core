@@ -17,4 +17,4 @@ WITH CHECK (
 );
 
 COMMENT ON POLICY "Super admins can manage all jobs" ON jobs IS
-'Super admins têm acesso global à tabela jobs para debug, suporte e testes de integração. Esta policy permite que super admins criem jobs de teste sem violar RLS.';
+'Super admins tem acesso global a tabela jobs para debug, suporte e testes de integracao. Esta policy permite que super admins criem jobs de teste sem violar RLS.';

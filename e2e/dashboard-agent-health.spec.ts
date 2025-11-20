@@ -16,19 +16,19 @@ test.describe('Agent Health Monitor Dashboard', () => {
   });
 
   test('should load health metrics', async ({ page }) => {
-    await expect(page.locator('text=Saúde Geral')).toBeVisible();
+    await expect(page.locator('text=Saude Geral')).toBeVisible();
     await expect(page.locator('text=Heartbeats Live')).toBeVisible();
     
     // Check percentage display
-    const healthCard = page.locator('text=Saúde Geral').locator('..');
+    const healthCard = page.locator('text=Saude Geral').locator('..');
     await expect(healthCard.locator('div.text-2xl')).toContainText(/%/);
   });
 
   test('should display agent heatmap by health status', async ({ page }) => {
     // Check for health status cards
-    await expect(page.locator('text=Saudáveis')).toBeVisible();
-    await expect(page.locator('text=Atenção')).toBeVisible();
-    await expect(page.locator('text=Crítico')).toBeVisible();
+    await expect(page.locator('text=Saudaveis')).toBeVisible();
+    await expect(page.locator('text=Atencao')).toBeVisible();
+    await expect(page.locator('text=Critico')).toBeVisible();
   });
 
   test('should show agents grouped by health', async ({ page }) => {
@@ -67,7 +67,7 @@ test.describe('Agent Health Monitor Dashboard', () => {
     // Wait for health status tabs/buttons
     await page.waitForTimeout(1000);
     
-    const healthyButton = page.locator('text=Saudáveis');
+    const healthyButton = page.locator('text=Saudaveis');
     if (await healthyButton.isVisible()) {
       await healthyButton.click();
       await page.waitForTimeout(500);
@@ -88,7 +88,7 @@ test.describe('Agent Health Monitor Dashboard', () => {
     
     await page.reload();
     
-    await expect(page.locator('text=Erro ao Carregar Monitor de Saúde')).toBeVisible();
+    await expect(page.locator('text=Erro ao Carregar Monitor de Saude')).toBeVisible();
     await expect(page.locator('button:has-text("Tentar Novamente")')).toBeVisible();
   });
 });

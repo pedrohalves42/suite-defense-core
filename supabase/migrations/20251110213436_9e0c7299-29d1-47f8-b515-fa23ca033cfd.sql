@@ -1,6 +1,6 @@
 -- Habilitar RLS na tabela failed_login_attempts
 ALTER TABLE public.failed_login_attempts ENABLE ROW LEVEL SECURITY;
 
--- Esta tabela é apenas para uso interno (edge functions)
--- Não criar políticas = nenhum acesso público
+-- Esta tabela e apenas para uso interno (edge functions)
+-- Nao criar politicas = nenhum acesso publico
 COMMENT ON TABLE public.failed_login_attempts IS 'Uso interno: rastreamento de tentativas de login falhadas para CAPTCHA';

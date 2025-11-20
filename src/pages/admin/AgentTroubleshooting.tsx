@@ -25,11 +25,11 @@ export default function AgentTroubleshooting() {
   const navigate = useNavigate();
   const [regeneratingAgent, setRegeneratingAgent] = useState<string | null>(null);
 
-  // Query para buscar agentes problemáticos
+  // Query para buscar agentes problematicos
   const { data: problematicAgents, isLoading, refetch } = useQuery({
     queryKey: ["problematic-agents"],
     queryFn: async () => {
-      // Buscar agentes em pending sem heartbeat há mais de 5 minutos
+      // Buscar agentes em pending sem heartbeat ha mais de 5 minutos
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       
       const { data: agents, error: agentsError } = await supabase
@@ -43,7 +43,7 @@ export default function AgentTroubleshooting() {
       if (agentsError) throw agentsError;
       if (!agents) return [];
 
-      // Buscar telemetria de instalação para esses agentes
+      // Buscar telemetria de instalacao para esses agentes
       const agentIds = agents.map(a => a.id);
       if (agentIds.length === 0) return [];
 
@@ -94,18 +94,18 @@ export default function AgentTroubleshooting() {
         { duration: 3000 }
       );
 
-      // Redirecionar para página de instalação com query params
+      // Redirecionar para pagina de instalacao com query params
       setTimeout(() => {
         navigate(
           `/installer?agent_name=${encodeURIComponent(agentName)}&regenerated=true`
         );
-      }, 1500); // Delay para usuário ler o toast
+      }, 1500); // Delay para usuario ler o toast
       
     } catch (error: any) {
       toast.error(`Erro ao regenerar credenciais: ${error.message}`);
       setRegeneratingAgent(null);
     }
-    // Nota: não resetamos regeneratingAgent aqui porque vamos sair da página
+    // Nota: nao resetamos regeneratingAgent aqui porque vamos sair da pagina
   };
 
   if (isLoading) {
@@ -126,19 +126,19 @@ export default function AgentTroubleshooting() {
           Agent Troubleshooting
         </h1>
         <p className="text-muted-foreground mt-2">
-          Diagnóstico avançado de agentes com problemas de instalação ou conectividade
+          Diagnostico avancado de agentes com problemas de instalacao ou conectividade
         </p>
       </div>
 
-      {/* Script de Validação */}
+      {/* Script de Validacao */}
       <Card className="border-primary/20 bg-primary/5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Script de Validação Local
+            Script de Validacao Local
           </CardTitle>
           <CardDescription>
-            Valide installers localmente antes da instalação para detectar problemas de encoding, sintaxe e integridade
+            Valide installers localmente antes da instalacao para detectar problemas de encoding, sintaxe e integridade
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -146,10 +146,10 @@ export default function AgentTroubleshooting() {
             <p>O script verifica:</p>
             <ul className="list-disc list-inside space-y-1 ml-4">
               <li>Encoding correto (UTF-8 sem BOM / ASCII)</li>
-              <li>Ausência de emojis e caracteres Unicode</li>
-              <li>Sintaxe PowerShell 5.1 válida</li>
-              <li>Presença de funções críticas do agente</li>
-              <li>Parâmetros essenciais (StartedAt para Jobs v3)</li>
+              <li>Ausencia de emojis e caracteres Unicode</li>
+              <li>Sintaxe PowerShell 5.1 valida</li>
+              <li>Presenca de funcoes criticas do agente</li>
+              <li>Parametros essenciais (StartedAt para Jobs v3)</li>
             </ul>
           </div>
           <Button
@@ -159,14 +159,14 @@ export default function AgentTroubleshooting() {
 window.open('https://github.com/your-repo/cybershield/blob/main/scripts/verificar-installer-agente.ps1', '_blank')`;
               
               toast.info(
-                "Script de validação disponível no repositório. Consulte a documentação para instruções de uso.",
+                "Script de validacao disponivel no repositorio. Consulte a documentacao para instrucoes de uso.",
                 { duration: 5000 }
               );
             }}
             className="w-full gap-2"
           >
             <Shield className="h-4 w-4" />
-            Ver Script de Validação
+            Ver Script de Validacao
           </Button>
           <p className="text-xs text-muted-foreground">
             Execute com: <code className="bg-muted px-1 py-0.5 rounded">.\verificar-installer-agente.ps1 -ScriptPath "caminho\do\installer.ps1"</code>
@@ -174,24 +174,24 @@ window.open('https://github.com/your-repo/cybershield/blob/main/scripts/verifica
         </CardContent>
       </Card>
 
-      {/* Sumário de Problemas */}
+      {/* Sumario de Problemas */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Agentes Problemáticos</CardTitle>
+            <CardTitle className="text-sm font-medium">Agentes Problematicos</CardTitle>
             <AlertCircle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{problematicAgents?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Agentes sem heartbeat há mais de 5 minutos
+              Agentes sem heartbeat ha mais de 5 minutos
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Instalação Bem-Sucedida</CardTitle>
+            <CardTitle className="text-sm font-medium">Instalacao Bem-Sucedida</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
@@ -199,7 +199,7 @@ window.open('https://github.com/your-repo/cybershield/blob/main/scripts/verifica
               {problematicAgents?.filter((a) => a.installation_success).length || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Telemetria de instalação recebida
+              Telemetria de instalacao recebida
             </p>
           </CardContent>
         </Card>
@@ -225,22 +225,22 @@ window.open('https://github.com/your-repo/cybershield/blob/main/scripts/verifica
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Problemas Comuns e Soluções
+            Problemas Comuns e Solucoes
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
-              <AccordionTrigger>🔴 Agente não aparece após instalação</AccordionTrigger>
+              <AccordionTrigger>? Agente nao aparece apos instalacao</AccordionTrigger>
               <AccordionContent className="space-y-2">
-                <p className="font-semibold">Possíveis Causas:</p>
+                <p className="font-semibold">Possiveis Causas:</p>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li>Credenciais inválidas (AgentToken ou HmacSecret)</li>
-                  <li>Firewall bloqueando conexão na porta 443</li>
-                  <li>Proxy corporativo sem configuração adequada</li>
-                  <li>Tarefa agendada não foi criada ou não está rodando</li>
+                  <li>Credenciais invalidas (AgentToken ou HmacSecret)</li>
+                  <li>Firewall bloqueando conexao na porta 443</li>
+                  <li>Proxy corporativo sem configuracao adequada</li>
+                  <li>Tarefa agendada nao foi criada ou nao esta rodando</li>
                 </ul>
-                <p className="font-semibold mt-4">Solução:</p>
+                <p className="font-semibold mt-4">Solucao:</p>
                 <ul className="list-disc pl-6 space-y-1">
                   <li>Verificar logs: <code className="bg-muted px-2 py-1 rounded">C:\CyberShield\logs\agent.log</code></li>
                   <li>Verificar tarefa: <code className="bg-muted px-2 py-1 rounded">Get-ScheduledTask -TaskName "CyberShield Agent"</code></li>
@@ -250,34 +250,34 @@ window.open('https://github.com/your-repo/cybershield/blob/main/scripts/verifica
             </AccordionItem>
 
             <AccordionItem value="item-2">
-              <AccordionTrigger>🟡 Agente offline após funcionar</AccordionTrigger>
+              <AccordionTrigger>? Agente offline apos funcionar</AccordionTrigger>
               <AccordionContent className="space-y-2">
-                <p className="font-semibold">Possíveis Causas:</p>
+                <p className="font-semibold">Possiveis Causas:</p>
                 <ul className="list-disc pl-6 space-y-1">
                   <li>Tarefa agendada foi parada manualmente</li>
-                  <li>Servidor foi reiniciado e tarefa não iniciou automaticamente</li>
+                  <li>Servidor foi reiniciado e tarefa nao iniciou automaticamente</li>
                   <li>Rate limiting por envios excessivos</li>
                 </ul>
-                <p className="font-semibold mt-4">Solução:</p>
+                <p className="font-semibold mt-4">Solucao:</p>
                 <ul className="list-disc pl-6 space-y-1">
                   <li>Reiniciar tarefa: <code className="bg-muted px-2 py-1 rounded">Start-ScheduledTask -TaskName "CyberShield Agent"</code></li>
-                  <li>Verificar último erro: <code className="bg-muted px-2 py-1 rounded">Get-ScheduledTaskInfo -TaskName "CyberShield Agent"</code></li>
+                  <li>Verificar ultimo erro: <code className="bg-muted px-2 py-1 rounded">Get-ScheduledTaskInfo -TaskName "CyberShield Agent"</code></li>
                 </ul>
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-3">
-              <AccordionTrigger>🟢 Telemetria de instalação não recebida</AccordionTrigger>
+              <AccordionTrigger>? Telemetria de instalacao nao recebida</AccordionTrigger>
               <AccordionContent className="space-y-2">
-                <p className="font-semibold">Possíveis Causas:</p>
+                <p className="font-semibold">Possiveis Causas:</p>
                 <ul className="list-disc pl-6 space-y-1">
                   <li>Instalador interrompido antes de enviar telemetria</li>
                   <li>Edge Function post-installation-telemetry offline</li>
-                  <li>Timeout na requisição de telemetria</li>
+                  <li>Timeout na requisicao de telemetria</li>
                 </ul>
-                <p className="font-semibold mt-4">Solução:</p>
+                <p className="font-semibold mt-4">Solucao:</p>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li>Verificar logs de instalação: <code className="bg-muted px-2 py-1 rounded">C:\CyberShield\logs\install.log</code></li>
+                  <li>Verificar logs de instalacao: <code className="bg-muted px-2 py-1 rounded">C:\CyberShield\logs\install.log</code></li>
                   <li>Reinstalar agente com novo instalador</li>
                 </ul>
               </AccordionContent>
@@ -286,14 +286,14 @@ window.open('https://github.com/your-repo/cybershield/blob/main/scripts/verifica
         </CardContent>
       </Card>
 
-      {/* Lista de Agentes Problemáticos */}
+      {/* Lista de Agentes Problematicos */}
       <Card>
         <CardHeader>
-          <CardTitle>Agentes Problemáticos Detectados</CardTitle>
+          <CardTitle>Agentes Problematicos Detectados</CardTitle>
           <CardDescription>
             {problematicAgents?.length === 0
-              ? "🎉 Nenhum agente problemático encontrado!"
-              : `${problematicAgents?.length} agente(s) requerem atenção`}
+              ? "? Nenhum agente problematico encontrado!"
+              : `${problematicAgents?.length} agente(s) requerem atencao`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -302,7 +302,7 @@ window.open('https://github.com/your-repo/cybershield/blob/main/scripts/verifica
               <CheckCircle2 className="h-4 w-4" />
               <AlertTitle>Tudo OK!</AlertTitle>
               <AlertDescription>
-                Todos os agentes estão funcionando corretamente.
+                Todos os agentes estao funcionando corretamente.
               </AlertDescription>
             </Alert>
           ) : (
@@ -314,16 +314,16 @@ window.open('https://github.com/your-repo/cybershield/blob/main/scripts/verifica
                       <div>
                         <CardTitle className="text-lg">{agent.agent_name}</CardTitle>
                         <CardDescription>
-                          Criado há {Math.round(agent.minutes_since_creation)} minutos
+                          Criado ha {Math.round(agent.minutes_since_creation)} minutos
                         </CardDescription>
                       </div>
                       <Badge variant="destructive">{agent.status}</Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Checklist de Validação */}
+                    {/* Checklist de Validacao */}
                     <div className="space-y-2">
-                      <p className="font-semibold text-sm">Checklist de Validação:</p>
+                      <p className="font-semibold text-sm">Checklist de Validacao:</p>
                       <div className="grid gap-2">
                         <div className="flex items-center gap-2">
                           {agent.installation_success ? (
@@ -331,7 +331,7 @@ window.open('https://github.com/your-repo/cybershield/blob/main/scripts/verifica
                           ) : (
                             <XCircle className="h-4 w-4 text-destructive" />
                           )}
-                          <span className="text-sm">Telemetria de instalação recebida</span>
+                          <span className="text-sm">Telemetria de instalacao recebida</span>
                         </div>
                         
                         <div className="flex items-center gap-2">
@@ -363,7 +363,7 @@ window.open('https://github.com/your-repo/cybershield/blob/main/scripts/verifica
                         
                         <div className="flex items-center gap-2">
                           <XCircle className="h-4 w-4 text-destructive" />
-                          <span className="text-sm font-semibold">Primeiro heartbeat (FALTANDO ⚠️)</span>
+                          <span className="text-sm font-semibold">Primeiro heartbeat (FALTANDO [WARN] ?)</span>
                         </div>
                       </div>
                     </div>
@@ -376,7 +376,7 @@ window.open('https://github.com/your-repo/cybershield/blob/main/scripts/verifica
                       </div>
                     )}
 
-                    {/* Ações */}
+                    {/* Acoes */}
                     <div className="flex gap-2">
                       <Button
                         variant="destructive"

@@ -1,4 +1,4 @@
-// Limites de membros por plano (ajuste conforme necessário)
+// Limites de membros por plano (ajuste conforme necessario)
 const PLAN_MEMBER_LIMITS = {
   free: 5,
   starter: 20,
@@ -24,8 +24,8 @@ export interface SubscriptionData {
 
 /**
  * Retorna o limite de membros do tenant:
- * - número → limite definido
- * - null   → ilimitado
+ * - numero ? limite definido
+ * - null   ? ilimitado
  */
 export function getMemberLimit(
   subscription?: SubscriptionData | null,
@@ -39,7 +39,7 @@ export function getMemberLimit(
     return quotaFromFeature;
   }
 
-  // 2) Caso contrário, usa o limite do plano
+  // 2) Caso contrario, usa o limite do plano
   const planIdRaw =
     subscription.plan_name ||
     subscription.plan_id ||
@@ -67,6 +67,6 @@ export function buildDisplayName(user: any, profile?: any): string {
     profile?.full_name?.trim() ||
     user?.user_metadata?.full_name?.trim() ||
     emailName ||
-    'Usuário'
+    'Usuario'
   );
 }

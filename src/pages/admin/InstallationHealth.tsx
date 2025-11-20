@@ -42,7 +42,7 @@ export default function InstallationHealth() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Agentes problemáticos
+      // Agentes problematicos
       const { data: agents, error: agentsError } = await supabase
         .from('agents')
         .select('agent_name, status, enrolled_at, last_heartbeat')
@@ -52,7 +52,7 @@ export default function InstallationHealth() {
 
       if (agentsError) {
         console.error('Error fetching agents:', agentsError);
-        toast.error('Erro ao carregar agentes problemáticos');
+        toast.error('Erro ao carregar agentes problematicos');
       } else {
         const formatted: ProblematicAgent[] = (agents || []).map(a => ({
           agent_name: a.agent_name,
@@ -88,7 +88,7 @@ export default function InstallationHealth() {
         setStuckJobs(formatted);
       }
 
-      // Erros recentes de instalação
+      // Erros recentes de instalacao
       const { data: errors, error: errorsError } = await supabase
         .from('installation_analytics')
         .select('agent_name, platform, error_message, created_at')
@@ -100,7 +100,7 @@ export default function InstallationHealth() {
 
       if (errorsError) {
         console.error('Error fetching errors:', errorsError);
-        toast.error('Erro ao carregar erros de instalação');
+        toast.error('Erro ao carregar erros de instalacao');
       } else {
         setRecentErrors(errors || []);
       }
@@ -134,12 +134,12 @@ export default function InstallationHealth() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Installation Health Monitor</h1>
           <p className="text-muted-foreground mt-1">
-            Monitoramento em tempo real de instalações e agentes problemáticos
+            Monitoramento em tempo real de instalacoes e agentes problematicos
           </p>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            Última atualização: {lastUpdate.toLocaleTimeString('pt-BR')}
+            Ultima atualizacao: {lastUpdate.toLocaleTimeString('pt-BR')}
           </span>
           <Button
             variant="outline"
@@ -160,7 +160,7 @@ export default function InstallationHealth() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="agents" className="gap-2">
             <AlertCircle className="h-4 w-4" />
-            Agentes Problemáticos
+            Agentes Problematicos
             {problematicAgents.length > 0 && (
               <Badge variant="destructive" className="ml-2">
                 {problematicAgents.length}
@@ -182,19 +182,19 @@ export default function InstallationHealth() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Agentes problemáticos */}
+        {/* Agentes problematicos */}
         <TabsContent value="agents" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Activity className="h-5 w-5" />
-                Agentes Pending ou Sem Heartbeat (últimas 24h)
+                Agentes Pending ou Sem Heartbeat (ultimas 24h)
               </CardTitle>
             </CardHeader>
             <CardContent>
               {problematicAgents.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  ✅ Nenhum agente problemático detectado
+                  [OK]  Nenhum agente problematico detectado
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -214,7 +214,7 @@ export default function InstallationHealth() {
                           )}
                         </div>
                         <div className="text-sm text-muted-foreground mt-1">
-                          Criado há {agent.minutes_since_enrollment} minutos
+                          Criado ha {agent.minutes_since_enrollment} minutos
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -236,13 +236,13 @@ export default function InstallationHealth() {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Clock className="h-5 w-5" />
-                Jobs em estado 'delivered' há mais de 1 hora
+                Jobs em estado 'delivered' ha mais de 1 hora
               </CardTitle>
             </CardHeader>
             <CardContent>
               {stuckJobs.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  ✅ Nenhum job travado detectado
+                  [OK]  Nenhum job travado detectado
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -258,7 +258,7 @@ export default function InstallationHealth() {
                           <Badge variant="secondary">{job.status}</Badge>
                         </div>
                         <div className="text-sm text-muted-foreground mt-1">
-                          Travado há {job.hours_stuck}h • ID: {job.id.substring(0, 8)}...
+                          Travado ha {job.hours_stuck}h ? ID: {job.id.substring(0, 8)}...
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -278,13 +278,13 @@ export default function InstallationHealth() {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5" />
-                Últimos 10 erros de instalação (24h)
+                Ultimos 10 erros de instalacao (24h)
               </CardTitle>
             </CardHeader>
             <CardContent>
               {recentErrors.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  ✅ Nenhum erro de instalação detectado
+                  [OK]  Nenhum erro de instalacao detectado
                 </div>
               ) : (
                 <div className="space-y-3">

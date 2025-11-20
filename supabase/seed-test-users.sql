@@ -1,8 +1,8 @@
 -- =====================================================
--- SEED: Usuários de Teste para E2E
+-- SEED: Usuarios de Teste para E2E
 -- =====================================================
--- IMPORTANTE: Este script assume que os usuários já existem no auth.users
--- Use o script tests/setup-test-users.ts para criar os usuários primeiro
+-- IMPORTANTE: Este script assume que os usuarios ja existem no auth.users
+-- Use o script tests/setup-test-users.ts para criar os usuarios primeiro
 -- =====================================================
 
 -- Limpar dados de teste anteriores
@@ -24,7 +24,7 @@ VALUES (
 )
 ON CONFLICT (slug) DO NOTHING;
 
--- Criar profiles para os usuários de teste
+-- Criar profiles para os usuarios de teste
 INSERT INTO public.profiles (user_id, full_name)
 SELECT 
   u.id,
@@ -51,7 +51,7 @@ WHERE u.email IN ('admin@test.com', 'viewer@test.com')
 ON CONFLICT (user_id, tenant_id) DO UPDATE SET
   role = EXCLUDED.role;
 
--- Verificação
+-- Verificacao
 SELECT 
   u.email,
   p.full_name,

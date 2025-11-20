@@ -38,14 +38,14 @@ export const CookieConsent = () => {
           <div className="flex-1 space-y-3">
             <h3 className="text-lg font-semibold">Uso de Cookies e Dados</h3>
             <p className="text-sm text-muted-foreground">
-              Utilizamos cookies e armazenamento local para melhorar sua experiência, manter sua sessão ativa e analisar o uso do sistema. 
-              Seus dados são tratados de acordo com a LGPD e GDPR. Ao continuar, você concorda com nossa{' '}
+              Utilizamos cookies e armazenamento local para melhorar sua experiencia, manter sua sessao ativa e analisar o uso do sistema. 
+              Seus dados sao tratados de acordo com a LGPD e GDPR. Ao continuar, voce concorda com nossa{' '}
               <Link to="/privacy" className="text-primary hover:underline">
-                Política de Privacidade
+                Politica de Privacidade
               </Link>{' '}
               e{' '}
               <Link to="/terms" className="text-primary hover:underline">
-                Termos de Serviço
+                Termos de Servico
               </Link>.
             </p>
             <div className="flex gap-3 pt-2">

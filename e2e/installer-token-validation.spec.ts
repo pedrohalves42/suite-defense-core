@@ -42,7 +42,7 @@ test.describe('Installer Token Validation', () => {
 
     tenantId = tenantData.tenant_id;
 
-    // Gerar nome único para o agente
+    // Gerar nome unico para o agente
     agentName = `test-token-validation-${Date.now()}`;
 
     console.log('[Setup] Login successful', {
@@ -101,7 +101,7 @@ test.describe('Installer Token Validation', () => {
     const expectedToken = data.agent_token;
     expect(expectedToken).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 
-    // Armazenar para próximo teste
+    // Armazenar para proximo teste
     test.info().annotations.push({ type: 'expectedToken', description: expectedToken });
   });
 
@@ -148,10 +148,10 @@ test.describe('Installer Token Validation', () => {
     const tokenInInstaller = tokenMatch![1];
     console.log('[Test 2] Token in installer:', tokenInInstaller.substring(0, 8));
 
-    // VALIDAÇÃO CRÍTICA: Token no instalador DEVE ser idêntico ao token ativo no DB
+    // VALIDACAO CRITICA: Token no instalador DEVE ser identico ao token ativo no DB
     expect(tokenInInstaller).toBe(activeTokenFromDB);
 
-    console.log('[Test 2] ✅ Token consistency validated!');
+    console.log('[Test 2] [OK]  Token consistency validated!');
   });
 
   test('3. Validate installer has self-test', async () => {
@@ -170,16 +170,16 @@ test.describe('Installer Token Validation', () => {
     expect(installerResponse.status).toBe(200);
     const installerScript = await installerResponse.text();
 
-    // Validar presença do self-test
+    // Validar presenca do self-test
     expect(installerScript).toContain('FASE 3: SELF-TEST');
     expect(installerScript).toContain('Executando self-test de conectividade');
     expect(installerScript).toContain('/functions/v1/heartbeat');
     expect(installerScript).toContain('Self-test PASSOU');
     expect(installerScript).toContain('Self-test FALHOU');
-    expect(installerScript).toContain('TOKEN OU HMAC SECRET INVÁLIDOS');
+    expect(installerScript).toContain('TOKEN OU HMAC SECRET INVALIDOS');
     expect(installerScript).toContain('exit 401');
 
-    console.log('[Test 3] ✅ Self-test is present in installer');
+    console.log('[Test 3] [OK]  Self-test is present in installer');
   });
 
   test('4. Validate installer has cleanup logic', async () => {
@@ -198,15 +198,15 @@ test.describe('Installer Token Validation', () => {
     expect(installerResponse.status).toBe(200);
     const installerScript = await installerResponse.text();
 
-    // Validar presença do cleanup
-    expect(installerScript).toContain('FASE 1: CLEANUP DE INSTALAÇÕES ANTIGAS');
-    expect(installerScript).toContain('Limpando instalações anteriores');
+    // Validar presenca do cleanup
+    expect(installerScript).toContain('FASE 1: CLEANUP DE INSTALACOES ANTIGAS');
+    expect(installerScript).toContain('Limpando instalacoes anteriores');
     expect(installerScript).toContain('Get-ScheduledTask');
     expect(installerScript).toContain('Unregister-ScheduledTask');
     expect(installerScript).toContain('Stop-Process');
     expect(installerScript).toContain('cybershield-agent');
 
-    console.log('[Test 4] ✅ Cleanup logic is present in installer');
+    console.log('[Test 4] [OK]  Cleanup logic is present in installer');
   });
 
   test('5. Validate installer uses absolute PowerShell path', async () => {
@@ -228,7 +228,7 @@ test.describe('Installer Token Validation', () => {
     // Validar uso de caminho absoluto do PowerShell
     expect(installerScript).toContain('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe');
 
-    console.log('[Test 5] ✅ Absolute PowerShell path is used');
+    console.log('[Test 5] [OK]  Absolute PowerShell path is used');
   });
 
   test('6. Validate installer logs token/HMAC prefixes', async () => {
@@ -253,6 +253,6 @@ test.describe('Installer Token Validation', () => {
     expect(installerScript).toContain('AgentToken:');
     expect(installerScript).toContain('HmacSecret:');
 
-    console.log('[Test 6] ✅ Token/HMAC prefix logging is present');
+    console.log('[Test 6] [OK]  Token/HMAC prefix logging is present');
   });
 });

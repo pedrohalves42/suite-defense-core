@@ -98,7 +98,7 @@ export default function SystemLogs() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Logs do Sistema</h1>
         <p className="text-muted-foreground">
-          Histórico de execuções de cron jobs, alertas e eventos de segurança
+          Historico de execucoes de cron jobs, alertas e eventos de seguranca
         </p>
       </div>
 
@@ -195,7 +195,7 @@ export default function SystemLogs() {
             Logs de Auditoria
           </CardTitle>
           <CardDescription>
-            Ações de usuários e eventos de sistema
+            Acoes de usuarios e eventos de sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -208,10 +208,10 @@ export default function SystemLogs() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Logs de Segurança
+            Logs de Seguranca
           </CardTitle>
           <CardDescription>
-            Eventos de segurança e tentativas de ataque detectadas
+            Eventos de seguranca e tentativas de ataque detectadas
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -261,7 +261,7 @@ export default function SystemLogs() {
               ))
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                Nenhum evento de segurança registrado
+                Nenhum evento de seguranca registrado
               </div>
             )}
           </div>

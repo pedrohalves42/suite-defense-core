@@ -1,4 +1,4 @@
--- Corrigir trigger para auto-atribuir role admin ao primeiro usuário
+-- Corrigir trigger para auto-atribuir role admin ao primeiro usuario
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -12,15 +12,15 @@ BEGIN
   INSERT INTO public.profiles (user_id, full_name)
   VALUES (NEW.id, NEW.raw_user_meta_data->>'full_name');
   
-  -- Contar usuários existentes
+  -- Contar usuarios existentes
   SELECT COUNT(*) INTO user_count FROM auth.users;
   
-  -- Se for o primeiro usuário, torná-lo admin
+  -- Se for o primeiro usuario, torna-lo admin
   IF user_count = 1 THEN
     INSERT INTO public.user_roles (user_id, role)
     VALUES (NEW.id, 'admin');
   ELSE
-    -- Usuários subsequentes recebem role viewer por padrão
+    -- Usuarios subsequentes recebem role viewer por padrao
     INSERT INTO public.user_roles (user_id, role)
     VALUES (NEW.id, 'viewer');
   END IF;

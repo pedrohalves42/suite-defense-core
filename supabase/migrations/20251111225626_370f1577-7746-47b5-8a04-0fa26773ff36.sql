@@ -1,16 +1,16 @@
 -- ==========================================
--- FASE 3: CORREÇÕES DE BANCO DE DADOS
+-- FASE 3: CORRECOES DE BANCO DE DADOS
 -- ==========================================
 
--- 1. Limpar agentes "pending" órfãos sem heartbeat há mais de 24h
--- Estes são agentes que nunca se conectaram e estão poluindo o sistema
+-- 1. Limpar agentes "pending" orfaos sem heartbeat ha mais de 24h
+-- Estes sao agentes que nunca se conectaram e estao poluindo o sistema
 DELETE FROM public.agents 
 WHERE status = 'pending' 
   AND last_heartbeat IS NULL 
   AND enrolled_at < NOW() - INTERVAL '24 hours';
 
--- 2. Corrigir inconsistências em enrollment_keys
--- Marcar como inativas keys expiradas que ainda estão ativas
+-- 2. Corrigir inconsistencias em enrollment_keys
+-- Marcar como inativas keys expiradas que ainda estao ativas
 UPDATE public.enrollment_keys
 SET is_active = false
 WHERE expires_at < NOW() 
@@ -22,7 +22,7 @@ SET used_at = NOW()
 WHERE current_uses > 0 
   AND used_at IS NULL;
 
--- 3. Adicionar índices de performance para queries frequentes
+-- 3. Adicionar indices de performance para queries frequentes
 CREATE INDEX IF NOT EXISTS idx_agents_last_heartbeat 
 ON public.agents(last_heartbeat DESC) 
 WHERE status = 'active';
@@ -47,7 +47,7 @@ ON public.security_logs(tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_failed_login_attempts_ip_created 
 ON public.failed_login_attempts(ip_address, created_at DESC);
 
--- 4. Criar função para limpar dados antigos automaticamente
+-- 4. Criar funcao para limpar dados antigos automaticamente
 CREATE OR REPLACE FUNCTION public.cleanup_old_data()
 RETURNS void
 LANGUAGE plpgsql
@@ -71,7 +71,7 @@ BEGIN
   DELETE FROM public.ip_blocklist
   WHERE blocked_until < NOW();
   
-  -- Limpar métricas antigas (>30 dias)
+  -- Limpar metricas antigas (>30 dias)
   DELETE FROM public.agent_system_metrics
   WHERE collected_at < NOW() - INTERVAL '30 days';
   
@@ -79,7 +79,7 @@ BEGIN
   DELETE FROM public.security_logs
   WHERE created_at < NOW() - INTERVAL '90 days';
   
-  RAISE NOTICE 'Limpeza de dados antigos concluída em %', NOW();
+  RAISE NOTICE 'Limpeza de dados antigos concluida em %', NOW();
 END;
 $$;
 
@@ -108,7 +108,7 @@ SELECT
   (SELECT COUNT(*) FROM public.jobs WHERE agent_name = a.agent_name AND status = 'completed') AS completed_jobs
 FROM public.agents a;
 
--- 6. Criar função para diagnóstico de problemas comuns
+-- 6. Criar funcao para diagnostico de problemas comuns
 CREATE OR REPLACE FUNCTION public.diagnose_agent_issues(p_agent_name TEXT)
 RETURNS TABLE(
   issue_type TEXT,
@@ -126,7 +126,7 @@ BEGIN
     RETURN QUERY SELECT 
       'agent_not_found'::TEXT,
       'critical'::TEXT,
-      'Agente não encontrado no sistema'::TEXT,
+      'Agente nao encontrado no sistema'::TEXT,
       jsonb_build_object('agent_name', p_agent_name);
     RETURN;
   END IF;
@@ -151,7 +151,7 @@ BEGIN
   SELECT 
     'stale_heartbeat'::TEXT,
     'high'::TEXT,
-    'Último heartbeat há mais de 5 minutos'::TEXT,
+    'Ultimo heartbeat ha mais de 5 minutos'::TEXT,
     jsonb_build_object(
       'agent_name', p_agent_name,
       'last_heartbeat', a.last_heartbeat,
@@ -161,7 +161,7 @@ BEGIN
   WHERE a.agent_name = p_agent_name 
     AND a.last_heartbeat < NOW() - INTERVAL '5 minutes';
   
-  -- Verificar token inválido/expirado
+  -- Verificar token invalido/expirado
   RETURN QUERY
   SELECT 
     'invalid_token'::TEXT,
@@ -185,7 +185,7 @@ BEGIN
   SELECT 
     'stuck_jobs'::TEXT,
     'medium'::TEXT,
-    'Jobs em estado "delivered" há mais de 1 hora sem conclusão'::TEXT,
+    'Jobs em estado "delivered" ha mais de 1 hora sem conclusao'::TEXT,
     jsonb_build_object(
       'agent_name', p_agent_name,
       'stuck_job_count', COUNT(*)
@@ -197,12 +197,12 @@ BEGIN
   GROUP BY j.agent_name
   HAVING COUNT(*) > 0;
   
-  -- Verificar métricas ausentes
+  -- Verificar metricas ausentes
   RETURN QUERY
   SELECT 
     'no_metrics'::TEXT,
     'medium'::TEXT,
-    'Nenhuma métrica de sistema registrada'::TEXT,
+    'Nenhuma metrica de sistema registrada'::TEXT,
     jsonb_build_object(
       'agent_name', p_agent_name,
       'agent_id', a.id
@@ -233,7 +233,7 @@ BEGIN
   WHERE a.agent_name = p_agent_name 
     AND (ek.expires_at < NOW() OR NOT ek.is_active);
   
-  -- Se não há issues, retornar OK
+  -- Se nao ha issues, retornar OK
   IF NOT FOUND THEN
     RETURN QUERY SELECT 
       'healthy'::TEXT,
@@ -244,7 +244,7 @@ BEGIN
 END;
 $$;
 
--- 7. Comentários para documentação
-COMMENT ON FUNCTION public.cleanup_old_data() IS 'Limpa dados antigos de rate_limits, hmac_signatures, failed_login_attempts, ip_blocklist, métricas e security logs';
-COMMENT ON FUNCTION public.diagnose_agent_issues(TEXT) IS 'Diagnostica problemas comuns com um agente específico';
-COMMENT ON VIEW public.agents_health_view IS 'View de monitoramento de saúde dos agentes com status em tempo real';
+-- 7. Comentarios para documentacao
+COMMENT ON FUNCTION public.cleanup_old_data() IS 'Limpa dados antigos de rate_limits, hmac_signatures, failed_login_attempts, ip_blocklist, metricas e security logs';
+COMMENT ON FUNCTION public.diagnose_agent_issues(TEXT) IS 'Diagnostica problemas comuns com um agente especifico';
+COMMENT ON VIEW public.agents_health_view IS 'View de monitoramento de saude dos agentes com status em tempo real';

@@ -1,7 +1,7 @@
 -- PHASE 1: Garantir colunas Jobs v3 (IDEMPOTENTE)
 DO $$
 BEGIN
-  -- Adicionar colunas se não existirem
+  -- Adicionar colunas se nao existirem
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'jobs' AND column_name = 'output') THEN
     ALTER TABLE public.jobs ADD COLUMN output jsonb;
   END IF;
@@ -58,7 +58,7 @@ SELECT
   j.execution_time_seconds,
   -- Campos legado
   j.completed_at,
-  -- Duração calculada
+  -- Duracao calculada
   COALESCE(
     j.execution_time_seconds,
     CASE 
@@ -69,9 +69,9 @@ SELECT
   ) AS duration_seconds
 FROM public.jobs j;
 
--- Comentários para documentação
+-- Comentarios para documentacao
 COMMENT ON VIEW public.jobs_normalized IS 'View unificada Jobs v1/v3 com retrocompatibilidade. is_v3=true indica jobs com output estruturado.';
 COMMENT ON COLUMN public.jobs.output IS 'JSON estruturado do resultado (v3)';
-COMMENT ON COLUMN public.jobs.finished_at IS 'Timestamp de conclusão (v3, substitui completed_at)';
-COMMENT ON COLUMN public.jobs.started_at IS 'Timestamp de início da execução (v3)';
-COMMENT ON COLUMN public.jobs.execution_time_seconds IS 'Duração da execução em segundos (v3)';
+COMMENT ON COLUMN public.jobs.finished_at IS 'Timestamp de conclusao (v3, substitui completed_at)';
+COMMENT ON COLUMN public.jobs.started_at IS 'Timestamp de inicio da execucao (v3)';
+COMMENT ON COLUMN public.jobs.execution_time_seconds IS 'Duracao da execucao em segundos (v3)';

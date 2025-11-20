@@ -238,10 +238,10 @@ export default function Quarantine() {
                   <TableRow>
                     <TableHead>Arquivo</TableHead>
                     <TableHead>Agente</TableHead>
-                    <TableHead>Detecções</TableHead>
+                    <TableHead>Deteccoes</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Data</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="text-right">Acoes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -296,14 +296,14 @@ export default function Quarantine() {
                     Anterior
                   </Button>
                   <span className="text-sm text-muted-foreground">
-                    Página {page} de {totalPages}
+                    Pagina {page} de {totalPages}
                   </span>
                   <Button
                     variant="outline"
                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                   >
-                    Próxima
+                    Proxima
                   </Button>
                 </div>
               )}
@@ -321,8 +321,8 @@ export default function Quarantine() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {actionType === 'restore'
-                ? 'Tem certeza que deseja restaurar este arquivo? Ele voltará a estar acessível no sistema.'
-                : 'Tem certeza que deseja marcar este arquivo como deletado? Esta ação não pode ser desfeita.'}
+                ? 'Tem certeza que deseja restaurar este arquivo? Ele voltara a estar acessivel no sistema.'
+                : 'Tem certeza que deseja marcar este arquivo como deletado? Esta acao nao pode ser desfeita.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -154,8 +154,8 @@ Deno.serve(async (req) => {
           tenant_id: tenantId,
           alert_type: 'pending_agents',
           severity: agentsPending30Min.length > 0 ? 'high' : 'medium',
-          title: `${agentsList.length} agente(s) pendente(s) de instalação`,
-          message: `Os seguintes agentes foram gerados mas ainda não foram executados: ${agentsList.map(a => a.agent_name).join(', ')}`,
+          title: `${agentsList.length} agente(s) pendente(s) de instalacao`,
+          message: `Os seguintes agentes foram gerados mas ainda nao foram executados: ${agentsList.map(a => a.agent_name).join(', ')}`,
           details: {
             agents: agentsList.map(a => ({
               id: a.id,
@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
           const agentList = agentsPending30Min
             .map(a => {
               const mins = Math.floor((Date.now() - new Date(a.enrolled_at).getTime()) / 1000 / 60);
-              return `• ${a.agent_name} (pendente há ${mins} minutos)`;
+              return `? ${a.agent_name} (pendente ha ${mins} minutos)`;
             })
             .join('\n');
 
@@ -193,15 +193,15 @@ Deno.serve(async (req) => {
             await resend.emails.send({
               from: 'CyberShield Alerts <alerts@resend.dev>',
               to: adminEmails,
-              subject: `⚠️ ${agentsPending30Min.length} agente(s) pendente(s) há mais de 30 minutos`,
+              subject: `[WARN] ? ${agentsPending30Min.length} agente(s) pendente(s) ha mais de 30 minutos`,
               html: `
-                <h1>Alerta: Agentes Pendentes de Instalação</h1>
-                <p>Os seguintes agentes foram gerados mas ainda não executaram seus instaladores:</p>
+                <h1>Alerta: Agentes Pendentes de Instalacao</h1>
+                <p>Os seguintes agentes foram gerados mas ainda nao executaram seus instaladores:</p>
                 <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px;">
 ${agentList}
                 </pre>
-                <p><strong>Recomendação:</strong> Verifique se os instaladores foram executados corretamente nos servidores Windows.</p>
-                <p>Acesse o painel de administração para mais detalhes.</p>
+                <p><strong>Recomendacao:</strong> Verifique se os instaladores foram executados corretamente nos servidores Windows.</p>
+                <p>Acesse o painel de administracao para mais detalhes.</p>
               `,
             });
 

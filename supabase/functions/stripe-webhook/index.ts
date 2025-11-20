@@ -180,7 +180,7 @@ Deno.serve(async (request) => {
               alert_type: "payment_failed",
               severity: "high",
               title: "Falha no Pagamento",
-              message: `O pagamento da fatura ${invoice.number} falhou. Por favor, atualize seu método de pagamento.`,
+              message: `O pagamento da fatura ${invoice.number} falhou. Por favor, atualize seu metodo de pagamento.`,
               details: {
                 invoice_id: invoice.id,
                 amount_due: invoice.amount_due,

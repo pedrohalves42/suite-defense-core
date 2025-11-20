@@ -71,8 +71,8 @@ serve(async (req) => {
           tenant_id: stat.tenant_id,
           alert_type: 'high_failure_rate',
           severity: stat.failure_rate_pct > 50 ? 'high' : 'medium',
-          title: 'Alta Taxa de Falha nas Instalações',
-          message: `Taxa de falha de ${stat.failure_rate_pct}% detectada (${stat.failed_attempts} de ${stat.total_attempts} instalações falharam na última hora). Limiar: 30%.`,
+          title: 'Alta Taxa de Falha nas Instalacoes',
+          message: `Taxa de falha de ${stat.failure_rate_pct}% detectada (${stat.failed_attempts} de ${stat.total_attempts} instalacoes falharam na ultima hora). Limiar: 30%.`,
           details: {
             tenant_name: tenant?.name,
             failure_rate_pct: stat.failure_rate_pct,
@@ -108,12 +108,12 @@ serve(async (req) => {
               tenant_name: tenant?.name,
               alert_type: 'high_failure_rate',
               severity: stat.failure_rate_pct > 50 ? 'high' : 'medium',
-              message: `Taxa de falha de ${stat.failure_rate_pct}% detectada nas instalações.`,
+              message: `Taxa de falha de ${stat.failure_rate_pct}% detectada nas instalacoes.`,
               details: {
                 failure_rate: `${stat.failure_rate_pct}%`,
                 total_attempts: stat.total_attempts,
                 failed_attempts: stat.failed_attempts,
-                period: 'última hora',
+                period: 'ultima hora',
                 threshold: '30%'
               }
             }

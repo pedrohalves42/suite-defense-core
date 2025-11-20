@@ -39,13 +39,13 @@ Write-Host ""
 # ============================================
 # CHECK 1: Verify Administrator Privileges
 # ============================================
-Write-Host "[1/8] Verificando privilégios..." -ForegroundColor Yellow
+Write-Host "[1/8] Verificando privilegios..." -ForegroundColor Yellow
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
 if ($isAdmin) {
-    Write-Host "  ✅ Executando como Administrador" -ForegroundColor Green
+    Write-Host "  [OK]  Executando como Administrador" -ForegroundColor Green
 } else {
-    Write-Host "  ❌ NÃO está executando como Administrador" -ForegroundColor Red
-    Write-Host "  ⚠️  Este script DEVE ser executado como Administrador" -ForegroundColor Yellow
+    Write-Host "  [ERROR]  NAO esta executando como Administrador" -ForegroundColor Red
+    Write-Host "  [WARN] ?  Este script DEVE ser executado como Administrador" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Por favor, execute novamente com 'Executar como Administrador'" -ForegroundColor Yellow
     exit 1
@@ -55,14 +55,14 @@ if ($isAdmin) {
 # CHECK 2: PowerShell Environment
 # ============================================
 Write-Host "[2/8] Verificando PowerShell..." -ForegroundColor Yellow
-Write-Host "  Versão: $($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)" -ForegroundColor Gray
+Write-Host "  Versao: $($PSVersionTable.PSVersion.Major).$($PSVersionTable.PSVersion.Minor)" -ForegroundColor Gray
 Write-Host "  ExecutionPolicy: $(Get-ExecutionPolicy)" -ForegroundColor Gray
 Write-Host "  Edition: $($PSVersionTable.PSEdition)" -ForegroundColor Gray
 
 if ($PSVersionTable.PSVersion.Major -lt 5) {
-    Write-Host "  ⚠️  PowerShell 5.1+ recomendado (versão atual: $($PSVersionTable.PSVersion))" -ForegroundColor Yellow
+    Write-Host "  [WARN] ?  PowerShell 5.1+ recomendado (versao atual: $($PSVersionTable.PSVersion))" -ForegroundColor Yellow
 } else {
-    Write-Host "  ✅ Versão adequada do PowerShell" -ForegroundColor Green
+    Write-Host "  [OK]  Versao adequada do PowerShell" -ForegroundColor Green
 }
 
 # ============================================
@@ -70,7 +70,7 @@ if ($PSVersionTable.PSVersion.Major -lt 5) {
 # ============================================
 Write-Host "[3/8] Verificando arquivo do instalador..." -ForegroundColor Yellow
 if (Test-Path $InstallerPath) {
-    Write-Host "  ✅ Arquivo existe: $InstallerPath" -ForegroundColor Green
+    Write-Host "  [OK]  Arquivo existe: $InstallerPath" -ForegroundColor Green
     
     # Get file size
     $fileSize = (Get-Item $InstallerPath).Length
@@ -82,26 +82,26 @@ if (Test-Path $InstallerPath) {
         $hasZoneId = $streams | Where-Object { $_.Stream -eq 'Zone.Identifier:$DATA' }
         
         if ($hasZoneId) {
-            Write-Host "  ⚠️  Arquivo está BLOQUEADO (baixado da internet)" -ForegroundColor Yellow
+            Write-Host "  [WARN] ?  Arquivo esta BLOQUEADO (baixado da internet)" -ForegroundColor Yellow
             Write-Host "  Executando: Unblock-File..." -ForegroundColor Gray
             Unblock-File $InstallerPath
-            Write-Host "  ✅ Arquivo desbloqueado" -ForegroundColor Green
+            Write-Host "  [OK]  Arquivo desbloqueado" -ForegroundColor Green
         } else {
-            Write-Host "  ✅ Arquivo não está bloqueado" -ForegroundColor Green
+            Write-Host "  [OK]  Arquivo nao esta bloqueado" -ForegroundColor Green
         }
     } catch {
-        Write-Host "  ⚠️  Não foi possível verificar Zone.Identifier: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "  [WARN] ?  Nao foi possivel verificar Zone.Identifier: $($_.Exception.Message)" -ForegroundColor Yellow
     }
     
     # Check file content for basic validity
     $firstLine = Get-Content $InstallerPath -First 1 -ErrorAction SilentlyContinue
     if ($firstLine -match '#Requires -RunAsAdministrator') {
-        Write-Host "  ✅ Script tem requisito de Admin (válido)" -ForegroundColor Green
+        Write-Host "  [OK]  Script tem requisito de Admin (valido)" -ForegroundColor Green
     } else {
-        Write-Host "  ⚠️  Script pode não ter requisito de Admin" -ForegroundColor Yellow
+        Write-Host "  [WARN] ?  Script pode nao ter requisito de Admin" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "  ❌ Arquivo NÃO encontrado: $InstallerPath" -ForegroundColor Red
+    Write-Host "  [ERROR]  Arquivo NAO encontrado: $InstallerPath" -ForegroundColor Red
     Write-Host "  Certifique-se de que o arquivo do instalador existe no caminho especificado." -ForegroundColor Yellow
     exit 1
 }
@@ -117,7 +117,7 @@ try {
     $response = Invoke-WebRequest -Uri $healthUrl -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
     
     if ($response.StatusCode -eq 200) {
-        Write-Host "  ✅ Health check: HTTP $($response.StatusCode)" -ForegroundColor Green
+        Write-Host "  [OK]  Health check: HTTP $($response.StatusCode)" -ForegroundColor Green
         
         # Try to parse response
         try {
@@ -129,16 +129,16 @@ try {
             # Content may not be JSON
         }
     } else {
-        Write-Host "  ⚠️  Health check: HTTP $($response.StatusCode)" -ForegroundColor Yellow
+        Write-Host "  [WARN] ?  Health check: HTTP $($response.StatusCode)" -ForegroundColor Yellow
     }
 } catch {
-    Write-Host "  ❌ Falha na conexão com o backend" -ForegroundColor Red
+    Write-Host "  [ERROR]  Falha na conexao com o backend" -ForegroundColor Red
     Write-Host "  Erro: $($_.Exception.Message)" -ForegroundColor Red
     
-    if ($_.Exception.Message -match "não foi possível resolver") {
-        Write-Host "  💡 Problema de DNS - verifique conectividade com a internet" -ForegroundColor Yellow
+    if ($_.Exception.Message -match "nao foi possivel resolver") {
+        Write-Host "  ? Problema de DNS - verifique conectividade com a internet" -ForegroundColor Yellow
     } elseif ($_.Exception.Message -match "timeout") {
-        Write-Host "  💡 Timeout - firewall ou proxy pode estar bloqueando" -ForegroundColor Yellow
+        Write-Host "  ? Timeout - firewall ou proxy pode estar bloqueando" -ForegroundColor Yellow
     }
 }
 
@@ -148,30 +148,30 @@ try {
 Write-Host "[5/8] Validando credenciais do agente..." -ForegroundColor Yellow
 
 if ($AgentToken -eq "COLOCAR_TOKEN_AQUI" -or [string]::IsNullOrWhiteSpace($AgentToken)) {
-    Write-Host "  ⚠️  AgentToken não configurado (usando placeholder)" -ForegroundColor Yellow
-    Write-Host "  💡 Execute com: -AgentToken '<seu-token-uuid>'" -ForegroundColor Cyan
+    Write-Host "  [WARN] ?  AgentToken nao configurado (usando placeholder)" -ForegroundColor Yellow
+    Write-Host "  ? Execute com: -AgentToken '<seu-token-uuid>'" -ForegroundColor Cyan
 } else {
     Write-Host "  AgentToken (primeiros 8 chars): $($AgentToken.Substring(0, [Math]::Min(8, $AgentToken.Length)))..." -ForegroundColor Gray
     
     # Validate UUID format
     if ($AgentToken -match '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$') {
-        Write-Host "  ✅ Token formato UUID válido" -ForegroundColor Green
+        Write-Host "  [OK]  Token formato UUID valido" -ForegroundColor Green
     } else {
-        Write-Host "  ❌ Token NÃO é um UUID válido" -ForegroundColor Red
+        Write-Host "  [ERROR]  Token NAO e um UUID valido" -ForegroundColor Red
     }
 }
 
 if ($HmacSecret -eq "COLOCAR_HMAC_64_HEX_AQUI" -or [string]::IsNullOrWhiteSpace($HmacSecret)) {
-    Write-Host "  ⚠️  HmacSecret não configurado (usando placeholder)" -ForegroundColor Yellow
-    Write-Host "  💡 Execute com: -HmacSecret '<seu-hmac-64-hex>'" -ForegroundColor Cyan
+    Write-Host "  [WARN] ?  HmacSecret nao configurado (usando placeholder)" -ForegroundColor Yellow
+    Write-Host "  ? Execute com: -HmacSecret '<seu-hmac-64-hex>'" -ForegroundColor Cyan
 } else {
     Write-Host "  HmacSecret (primeiros 8 chars): $($HmacSecret.Substring(0, [Math]::Min(8, $HmacSecret.Length)))..." -ForegroundColor Gray
     
     # Validate HMAC format (64 hex chars)
     if ($HmacSecret -match '^[0-9a-f]{64}$') {
-        Write-Host "  ✅ HMAC formato SHA256-HEX válido (64 chars)" -ForegroundColor Green
+        Write-Host "  [OK]  HMAC formato SHA256-HEX valido (64 chars)" -ForegroundColor Green
     } else {
-        Write-Host "  ❌ HMAC NÃO é SHA256-HEX válido (deve ter 64 caracteres hexadecimais)" -ForegroundColor Red
+        Write-Host "  [ERROR]  HMAC NAO e SHA256-HEX valido (deve ter 64 caracteres hexadecimais)" -ForegroundColor Red
         Write-Host "  Tamanho atual: $($HmacSecret.Length) chars" -ForegroundColor Gray
     }
 }
@@ -181,46 +181,46 @@ Write-Host "  AgentName: $AgentName" -ForegroundColor Gray
 # ============================================
 # CHECK 6: Test Directory Creation
 # ============================================
-Write-Host "[6/8] Testando criação de pasta..." -ForegroundColor Yellow
+Write-Host "[6/8] Testando criacao de pasta..." -ForegroundColor Yellow
 try {
     $testPath = "C:\CyberShield\test-diagnostic"
     New-Item -ItemType Directory -Path $testPath -Force -ErrorAction Stop | Out-Null
-    Write-Host "  ✅ Pasta criada: $testPath" -ForegroundColor Green
+    Write-Host "  [OK]  Pasta criada: $testPath" -ForegroundColor Green
     
     # Try to write a test file
     $testFile = Join-Path $testPath "test.txt"
     "Diagnostic test" | Out-File -FilePath $testFile -Force -ErrorAction Stop
-    Write-Host "  ✅ Arquivo de teste criado" -ForegroundColor Green
+    Write-Host "  [OK]  Arquivo de teste criado" -ForegroundColor Green
     
     # Cleanup
     Remove-Item $testPath -Recurse -Force -ErrorAction SilentlyContinue
-    Write-Host "  ✅ Limpeza concluída" -ForegroundColor Green
+    Write-Host "  [OK]  Limpeza concluida" -ForegroundColor Green
 } catch {
-    Write-Host "  ❌ Erro ao criar pasta/arquivo de teste" -ForegroundColor Red
+    Write-Host "  [ERROR]  Erro ao criar pasta/arquivo de teste" -ForegroundColor Red
     Write-Host "  Erro: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host "  💡 Verifique permissões no disco C:" -ForegroundColor Yellow
+    Write-Host "  ? Verifique permissoes no disco C:" -ForegroundColor Yellow
 }
 
 # ============================================
 # CHECK 7: Check Existing Installation
 # ============================================
-Write-Host "[7/8] Verificando instalações existentes..." -ForegroundColor Yellow
+Write-Host "[7/8] Verificando instalacoes existentes..." -ForegroundColor Yellow
 
 $existingPath = "C:\CyberShield"
 if (Test-Path $existingPath) {
-    Write-Host "  ⚠️  Pasta C:\CyberShield já existe" -ForegroundColor Yellow
+    Write-Host "  [WARN] ?  Pasta C:\CyberShield ja existe" -ForegroundColor Yellow
     
     # Check for agent script
     $agentScripts = Get-ChildItem -Path $existingPath -Filter "cybershield-agent*.ps1" -ErrorAction SilentlyContinue
     if ($agentScripts) {
-        Write-Host "  ⚠️  Scripts de agente encontrados: $($agentScripts.Count)" -ForegroundColor Yellow
+        Write-Host "  [WARN] ?  Scripts de agente encontrados: $($agentScripts.Count)" -ForegroundColor Yellow
         $agentScripts | ForEach-Object { Write-Host "    - $($_.Name)" -ForegroundColor Gray }
     }
     
     # Check for scheduled task
     $existingTasks = Get-ScheduledTask -TaskName "CyberShieldAgent*" -ErrorAction SilentlyContinue
     if ($existingTasks) {
-        Write-Host "  ⚠️  Scheduled Tasks encontradas: $($existingTasks.Count)" -ForegroundColor Yellow
+        Write-Host "  [WARN] ?  Scheduled Tasks encontradas: $($existingTasks.Count)" -ForegroundColor Yellow
         $existingTasks | ForEach-Object { 
             Write-Host "    - $($_.TaskName) (Estado: $($_.State))" -ForegroundColor Gray
         }
@@ -229,18 +229,18 @@ if (Test-Path $existingPath) {
     # Check for running processes
     $agentProcesses = Get-Process -Name "*cybershield*" -ErrorAction SilentlyContinue
     if ($agentProcesses) {
-        Write-Host "  ⚠️  Processos do agente em execução: $($agentProcesses.Count)" -ForegroundColor Yellow
+        Write-Host "  [WARN] ?  Processos do agente em execucao: $($agentProcesses.Count)" -ForegroundColor Yellow
         $agentProcesses | ForEach-Object {
             Write-Host "    - PID $($_.Id): $($_.ProcessName)" -ForegroundColor Gray
         }
     }
     
-    Write-Host "  💡 Considere fazer limpeza manual antes de reinstalar:" -ForegroundColor Cyan
+    Write-Host "  ? Considere fazer limpeza manual antes de reinstalar:" -ForegroundColor Cyan
     Write-Host "     Stop-Process -Name '*cybershield*' -Force" -ForegroundColor Gray
     Write-Host "     Unregister-ScheduledTask -TaskName 'CyberShieldAgent*' -Confirm:`$false" -ForegroundColor Gray
     Write-Host "     Remove-Item -Path 'C:\CyberShield' -Recurse -Force" -ForegroundColor Gray
 } else {
-    Write-Host "  ✅ Nenhuma instalação prévia encontrada" -ForegroundColor Green
+    Write-Host "  [OK]  Nenhuma instalacao previa encontrada" -ForegroundColor Green
 }
 
 # ============================================
@@ -254,7 +254,7 @@ Write-Host ""
 $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $logFile = "C:\install-debug-$timestamp.log"
 
-Write-Host "Log será salvo em: $logFile" -ForegroundColor Cyan
+Write-Host "Log sera salvo em: $logFile" -ForegroundColor Cyan
 Write-Host ""
 
 try {
@@ -280,20 +280,20 @@ try {
     Write-Host ""
     Write-Host "---------------------------------------------------" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "✅ Execução concluída" -ForegroundColor Green
+    Write-Host "[OK]  Execucao concluida" -ForegroundColor Green
 } catch {
     Write-Host ""
     Write-Host "---------------------------------------------------" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "❌ Erro durante execução do instalador" -ForegroundColor Red
+    Write-Host "[ERROR]  Erro durante execucao do instalador" -ForegroundColor Red
     Write-Host "Erro: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host "Log parcial salvo em: $logFile" -ForegroundColor Yellow
 }
 
 Write-Host ""
-Write-Host "=== Diagnóstico Concluído ===" -ForegroundColor Cyan
+Write-Host "=== Diagnostico Concluido ===" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "📋 Próximos passos:" -ForegroundColor Yellow
+Write-Host "? Proximos passos:" -ForegroundColor Yellow
 Write-Host "  1. Revisar log completo:" -ForegroundColor White
 Write-Host "     notepad $logFile" -ForegroundColor Gray
 Write-Host ""

@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
 });
 
 async function handleRequest(req: Request, requestId: string, startTime: number) {
-  // ⚡ FASE 1.2: LOGS EXPLÍCITOS NO INÍCIO
+  // ? FASE 1.2: LOGS EXPLICITOS NO INICIO
   logger.info(`[${requestId}] ========== REQUEST START ==========`);
   logger.info(`[${requestId}] Method: ${req.method}`);
   logger.info(`[${requestId}] URL: ${req.url}`);
@@ -161,7 +161,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       // Continue - blocklist issues shouldn't block enrollment
     }
 
-    // ✅ FASE 1.3: Rate limiting ajustado para melhor UX (wrap em try/catch)
+    // [OK]  FASE 1.3: Rate limiting ajustado para melhor UX (wrap em try/catch)
     try {
       const rateLimitResult = await checkRateLimit(supabase, ipAddress, 'auto-generate-enrollment', {
         maxRequests: 20, // Aumentado para 20 enrollment keys por minuto
@@ -240,7 +240,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       });
     }
 
-    // ✅ FASE 1.2: Parse request body com error handling melhorado
+    // [OK]  FASE 1.2: Parse request body com error handling melhorado
     let body;
     try {
       body = await req.json();
@@ -410,13 +410,13 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
         ['sign']
       );
       await crypto.subtle.sign('HMAC', cryptoKey, messageData);
-      logger.info(`[${requestId}] ✅ HMAC secret auto-validation: PASSED`);
+      logger.info(`[${requestId}] [OK]  HMAC secret auto-validation: PASSED`);
     } catch (hmacError: any) {
-      logger.error(`[${requestId}] ⚠️ HMAC secret auto-validation: FAILED`, { 
+      logger.error(`[${requestId}] [WARN] ? HMAC secret auto-validation: FAILED`, { 
         error: hmacError.message,
         secretPrefix: hmacSecret.substring(0, 8)
       });
-      // Não bloqueia, mas registra problema crítico
+      // Nao bloqueia, mas registra problema critico
     }
 
     // Check if agent exists
@@ -456,7 +456,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
     } else {
       // Create new agent
       logger.info(`[${requestId}] Creating new agent`, { agentName });
-    // ✅ FASE 1.2: Create agent record com enrolled_at sempre definido
+    // [OK]  FASE 1.2: Create agent record com enrolled_at sempre definido
     const { data: newAgent, error: agentError } = await supabase
         .from('agents')
         .insert({
@@ -464,12 +464,12 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
           tenant_id: tenantId,
           hmac_secret: hmacSecret,
           status: 'pending',
-          enrolled_at: new Date().toISOString(), // ✅ Garantir enrolled_at sempre definido
+          enrolled_at: new Date().toISOString(), // [OK]  Garantir enrolled_at sempre definido
         })
         .select('id')
         .maybeSingle();
 
-      // ✅ FASE 1.2: Error handling com mapeamento SQL -> mensagens user-friendly
+      // [OK]  FASE 1.2: Error handling com mapeamento SQL -> mensagens user-friendly
       if (agentError || !newAgent) {
         logger.error(`[${requestId}] Failed to create agent`, { 
           error: agentError?.message,
@@ -479,7 +479,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
           tenantId
         });
         
-        // Mapear códigos de erro SQL para mensagens user-friendly
+        // Mapear codigos de erro SQL para mensagens user-friendly
         let userMessage = 'Failed to create agent';
         if (agentError?.code === '23505') {
           userMessage = `Agent name "${agentName}" already exists. Please choose a different name.`;
@@ -574,7 +574,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
     const duration = Date.now() - startTime;
     logger.success(`[${requestId}] Successfully generated credentials for agent ${agentName} in ${duration}ms`);
     
-    // FASE 3: Buscar installer hash (será populado por serve-installer)
+    // FASE 3: Buscar installer hash (sera populado por serve-installer)
     const { data: enrollmentData, error: enrollmentError } = await supabase
       .from('enrollment_keys')
       .select('installer_sha256, installer_size_bytes')
@@ -605,14 +605,14 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       }
     );
   } catch (error: any) {
-    // ✅ FASE 1.2: Final error handler sempre inclui requestId e detalhes
+    // [OK]  FASE 1.2: Final error handler sempre inclui requestId e detalhes
     const duration = Date.now() - startTime;
     logger.error(`[${requestId}] Unexpected error in auto-generate-enrollment after ${duration}ms: ${error.message}`);
     
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
       message: error.message || 'An unexpected error occurred. Please try again or contact support.',
-      requestId, // ✅ Sempre incluir requestId
+      requestId, // [OK]  Sempre incluir requestId
       timestamp: new Date().toISOString()
     }), {
       status: 500,

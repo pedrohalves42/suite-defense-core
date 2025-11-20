@@ -1,8 +1,8 @@
 -- =============================================
--- FASE 2: IA com Ações Aprovadas (Actionable AI)
+-- FASE 2: IA com Acoes Aprovadas (Actionable AI)
 -- =============================================
 
--- 1. Tabela de configuração de ações permitidas (Whitelist)
+-- 1. Tabela de configuracao de acoes permitidas (Whitelist)
 CREATE TABLE IF NOT EXISTS public.ai_action_configs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   action_type TEXT NOT NULL UNIQUE,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS public.ai_action_configs (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 2. Tabela de execuções de ações (Audit log)
+-- 2. Tabela de execucoes de acoes (Audit log)
 CREATE TABLE IF NOT EXISTS public.ai_action_executions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   action_id UUID REFERENCES public.ai_actions(id) ON DELETE CASCADE,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS public.ai_action_executions (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 3. Índices para performance
+-- 3. Indices para performance
 CREATE INDEX IF NOT EXISTS idx_ai_action_executions_tenant ON public.ai_action_executions(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_ai_action_executions_action ON public.ai_action_executions(action_id);
 CREATE INDEX IF NOT EXISTS idx_ai_action_executions_status ON public.ai_action_executions(execution_status);
@@ -78,22 +78,22 @@ CREATE POLICY "System can update executions"
   FOR UPDATE
   USING (true);
 
--- 6. Seed data - Ações permitidas (TODAS requerem aprovação inicialmente)
+-- 6. Seed data - Acoes permitidas (TODAS requerem aprovacao inicialmente)
 INSERT INTO public.ai_action_configs (action_type, is_enabled, requires_approval, risk_level, description, max_executions_per_day)
 VALUES
-  ('create_diagnostic_job', true, true, 'low', 'Criar job de diagnóstico para agente com problemas', 20),
+  ('create_diagnostic_job', true, true, 'low', 'Criar job de diagnostico para agente com problemas', 20),
   ('create_system_alert', true, true, 'low', 'Criar alerta no sistema para notificar administradores', 30),
-  ('suggest_agent_restart', true, true, 'medium', 'Sugerir restart de agente (não executa automaticamente)', 10),
-  ('suggest_config_change', true, true, 'medium', 'Sugerir mudança de configuração (não aplica automaticamente)', 10),
+  ('suggest_agent_restart', true, true, 'medium', 'Sugerir restart de agente (nao executa automaticamente)', 10),
+  ('suggest_config_change', true, true, 'medium', 'Sugerir mudanca de configuracao (nao aplica automaticamente)', 10),
   ('suggest_job_cleanup', true, true, 'medium', 'Sugerir limpeza de jobs antigos ou travados', 5),
-  ('quarantine_agent', false, true, 'high', 'Colocar agente em quarentena (DESABILITADO por padrão)', 3),
-  ('delete_old_data', false, true, 'high', 'Deletar dados antigos (DESABILITADO por padrão)', 2)
+  ('quarantine_agent', false, true, 'high', 'Colocar agente em quarentena (DESABILITADO por padrao)', 3),
+  ('delete_old_data', false, true, 'high', 'Deletar dados antigos (DESABILITADO por padrao)', 2)
 ON CONFLICT (action_type) DO NOTHING;
 
 -- 7. Feature flags para controle por tenant
--- Nota: será inserido via código quando tenant for criado, ou manualmente para tenants existentes
+-- Nota: sera inserido via codigo quando tenant for criado, ou manualmente para tenants existentes
 
--- 8. Função para verificar rate limit de ações
+-- 8. Funcao para verificar rate limit de acoes
 CREATE OR REPLACE FUNCTION public.check_action_rate_limit(
   p_action_type TEXT,
   p_tenant_id UUID
@@ -108,10 +108,10 @@ BEGIN
   WHERE action_type = p_action_type AND is_enabled = true;
   
   IF v_max_executions IS NULL THEN
-    RETURN false; -- Ação não existe ou está desabilitada
+    RETURN false; -- Acao nao existe ou esta desabilitada
   END IF;
   
-  -- Contar execuções hoje
+  -- Contar execucoes hoje
   SELECT COUNT(*) INTO v_today_executions
   FROM public.ai_action_executions ae
   JOIN public.ai_actions a ON ae.action_id = a.id

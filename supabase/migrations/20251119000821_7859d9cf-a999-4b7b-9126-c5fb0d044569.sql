@@ -1,5 +1,5 @@
--- Migration: Invalidar tokens antigos quando novo agente com mesmo nome é criado
--- Previne conflitos de múltiplos instaladores para o mesmo agent_name
+-- Migration: Invalidar tokens antigos quando novo agente com mesmo nome e criado
+-- Previne conflitos de multiplos instaladores para o mesmo agent_name
 
 CREATE OR REPLACE FUNCTION public.invalidate_old_agent_tokens()
 RETURNS TRIGGER
@@ -10,7 +10,7 @@ AS $$
 DECLARE
   v_existing_agent_id UUID;
 BEGIN
-  -- Verificar se já existe agente com mesmo nome no tenant
+  -- Verificar se ja existe agente com mesmo nome no tenant
   SELECT id INTO v_existing_agent_id
   FROM public.agents
   WHERE agent_name = NEW.agent_name
@@ -37,7 +37,7 @@ BEGIN
 END;
 $$;
 
--- Criar trigger para executar a função após inserção de novo agente
+-- Criar trigger para executar a funcao apos insercao de novo agente
 DROP TRIGGER IF EXISTS trg_invalidate_old_agent_tokens ON public.agents;
 
 CREATE TRIGGER trg_invalidate_old_agent_tokens
@@ -46,4 +46,4 @@ CREATE TRIGGER trg_invalidate_old_agent_tokens
   EXECUTE FUNCTION public.invalidate_old_agent_tokens();
 
 COMMENT ON FUNCTION public.invalidate_old_agent_tokens() IS 
-  'Invalida tokens e marca como inactive agentes anteriores com mesmo nome no tenant (previne conflitos de instalação)';
+  'Invalida tokens e marca como inactive agentes anteriores com mesmo nome no tenant (previne conflitos de instalacao)';

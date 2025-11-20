@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     if (!internalSecret) {
       return new Response(
         JSON.stringify({ 
-          error: 'INTERNAL_FUNCTION_SECRET não está configurado',
+          error: 'INTERNAL_FUNCTION_SECRET nao esta configurado',
           status: 'failed',
           requestId
         }),

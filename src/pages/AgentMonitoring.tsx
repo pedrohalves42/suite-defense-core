@@ -220,7 +220,7 @@ const AgentMonitoring = () => {
     switch (status) {
       case 'done':
       case 'completed':
-        return <Badge className="bg-green-500">Concluído</Badge>;
+        return <Badge className="bg-green-500">Concluido</Badge>;
       case 'queued':
         return <Badge className="bg-blue-500">Fila</Badge>;
       case 'delivered':
@@ -240,11 +240,11 @@ const AgentMonitoring = () => {
     const diffMins = Math.floor(diffMs / (1000 * 60));
     
     if (diffMins < 1) return 'Agora mesmo';
-    if (diffMins < 60) return `${diffMins}min atrás`;
+    if (diffMins < 60) return `${diffMins}min atras`;
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h atrás`;
+    if (diffHours < 24) return `${diffHours}h atras`;
     const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d atrás`;
+    return `${diffDays}d atras`;
   };
 
   // Prepare chart data
@@ -348,7 +348,7 @@ const AgentMonitoring = () => {
           <CardContent>
             <div className="text-2xl font-bold text-red-500">{offlineAgents}</div>
             <p className="text-xs text-muted-foreground">
-              Requerem atenção imediata
+              Requerem atencao imediata
             </p>
           </CardContent>
         </Card>
@@ -361,7 +361,7 @@ const AgentMonitoring = () => {
           <CardContent>
             <div className="text-2xl font-bold">{successRate}%</div>
             <p className="text-xs text-muted-foreground">
-              Últimos 10 jobs
+              Ultimos 10 jobs
             </p>
           </CardContent>
         </Card>
@@ -374,9 +374,9 @@ const AgentMonitoring = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <LineChartIcon className="h-5 w-5 text-primary" />
-              Tendência de Scans (7 dias)
+              Tendencia de Scans (7 dias)
             </CardTitle>
-            <CardDescription>Volume de scans de vírus realizados</CardDescription>
+            <CardDescription>Volume de scans de virus realizados</CardDescription>
           </CardHeader>
           <CardContent>
             {scansTrendData.every(d => d.total === 0) ? (
@@ -409,9 +409,9 @@ const AgentMonitoring = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" />
-              Tendência de Jobs (7 dias)
+              Tendencia de Jobs (7 dias)
             </CardTitle>
-            <CardDescription>Execução de jobs ao longo do tempo</CardDescription>
+            <CardDescription>Execucao de jobs ao longo do tempo</CardDescription>
           </CardHeader>
           <CardContent>
             {jobsTrendData.every(d => d.total === 0) ? (
@@ -430,7 +430,7 @@ const AgentMonitoring = () => {
                     }} 
                   />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  <Bar dataKey="completed" fill="hsl(var(--success))" name="Concluídos" />
+                  <Bar dataKey="completed" fill="hsl(var(--success))" name="Concluidos" />
                   <Bar dataKey="pending" fill="hsl(var(--warning))" name="Pendentes" />
                   <Bar dataKey="failed" fill="hsl(var(--destructive))" name="Falhados" />
                 </BarChart>
@@ -480,7 +480,7 @@ const AgentMonitoring = () => {
             <Zap className="h-5 w-5 text-primary" />
             Status dos Agentes
           </CardTitle>
-          <CardDescription>Atualização em tempo real via WebSocket</CardDescription>
+          <CardDescription>Atualizacao em tempo real via WebSocket</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -504,7 +504,7 @@ const AgentMonitoring = () => {
                       <p className="font-medium">{agent.agent_name}</p>
                       <p className="text-sm text-muted-foreground flex items-center gap-2">
                         <Clock className="w-3 h-3" />
-                        Último heartbeat: {getTimeSince(agent.last_heartbeat)}
+                        Ultimo heartbeat: {getTimeSince(agent.last_heartbeat)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Registrado: {format(new Date(agent.enrolled_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
@@ -531,7 +531,7 @@ const AgentMonitoring = () => {
             <Activity className="h-5 w-5 text-primary" />
             Jobs Recentes
           </CardTitle>
-          <CardDescription>Últimos 10 jobs executados</CardDescription>
+          <CardDescription>Ultimos 10 jobs executados</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -546,7 +546,7 @@ const AgentMonitoring = () => {
                   <div>
                     <p className="font-medium text-sm">{job.type}</p>
                     <p className="text-xs text-muted-foreground">
-                      Agente: {job.agent_name} • {format(new Date(job.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                      Agente: {job.agent_name} ? {format(new Date(job.created_at), "dd/MM HH:mm", { locale: ptBR })}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">

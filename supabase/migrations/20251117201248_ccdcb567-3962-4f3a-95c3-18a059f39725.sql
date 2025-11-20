@@ -1,4 +1,4 @@
--- FASE 3: Criar função para calcular saúde real dos agentes
+-- FASE 3: Criar funcao para calcular saude real dos agentes
 CREATE OR REPLACE FUNCTION get_agent_health_metrics(p_tenant_id UUID)
 RETURNS TABLE (
   agent_name TEXT,

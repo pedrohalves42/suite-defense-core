@@ -122,7 +122,7 @@ export default function Dashboard() {
     enabled: !!tenant?.id,
   });
 
-  // Query para alertas críticos
+  // Query para alertas criticos
   const { data: criticalAlerts } = useQuery({
     queryKey: ['critical-alerts', tenant?.id],
     queryFn: async () => {
@@ -155,22 +155,22 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold">Dashboard de Estatísticas</h2>
+        <h2 className="text-3xl font-bold">Dashboard de Estatisticas</h2>
         <p className="text-muted-foreground">
-          Visão geral do tenant {tenant?.name}
+          Visao geral do tenant {tenant?.name}
         </p>
       </div>
 
-      {/* Alertas Críticos */}
+      {/* Alertas Criticos */}
       {criticalAlerts && criticalAlerts.length > 0 && (
         <Card className="border-red-500 bg-red-50 dark:bg-red-950">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
-              Alertas Críticos ({criticalAlerts.length})
+              Alertas Criticos ({criticalAlerts.length})
             </CardTitle>
             <CardDescription>
-              Requerem atenção imediata
+              Requerem atencao imediata
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -185,7 +185,7 @@ export default function Dashboard() {
                     {alert.message}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
-                    {format(new Date(alert.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    {format(new Date(alert.created_at), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}
                   </div>
                 </div>
                 <Badge 
@@ -206,7 +206,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Atividade Recente</CardTitle>
-            <CardDescription>Principais ações de segurança no seu tenant</CardDescription>
+            <CardDescription>Principais acoes de seguranca no seu tenant</CardDescription>
           </CardHeader>
           <CardContent>
             <RecentAuditActivity tenantId={tenant?.id} />
@@ -216,7 +216,7 @@ export default function Dashboard() {
         {/* Recent Jobs */}
         <Card>
           <CardHeader>
-            <CardTitle>Últimos Jobs Executados</CardTitle>
+            <CardTitle>Ultimos Jobs Executados</CardTitle>
             <CardDescription>Jobs recentes processados pelos agentes</CardDescription>
           </CardHeader>
           <CardContent>
@@ -274,7 +274,7 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalJobs || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats?.completedJobs || 0} concluídos, {stats?.pendingJobs || 0} pendentes
+              {stats?.completedJobs || 0} concluidos, {stats?.pendingJobs || 0} pendentes
             </p>
           </CardContent>
         </Card>
@@ -285,7 +285,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Scans Recentes</CardTitle>
-            <CardDescription>Últimos 5 scans de vírus realizados</CardDescription>
+            <CardDescription>Ultimos 5 scans de virus realizados</CardDescription>
           </CardHeader>
           <CardContent>
             {scansLoading ? (
@@ -339,7 +339,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Atividades Recentes</CardTitle>
-            <CardDescription>Últimas 10 ações no sistema</CardDescription>
+            <CardDescription>Ultimas 10 acoes no sistema</CardDescription>
           </CardHeader>
           <CardContent>
             {activityLoading ? (
@@ -351,10 +351,10 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <p className="text-sm font-medium">{activity.action}</p>
                       <p className="text-xs text-muted-foreground">
-                        {activity.resource_type} {activity.resource_id && `· ${activity.resource_id}`}
+                        {activity.resource_type} {activity.resource_id && `? ${activity.resource_id}`}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(activity.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        {format(new Date(activity.created_at), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}
                       </p>
                     </div>
                     <Badge variant={activity.success ? 'default' : 'destructive'} className="shrink-0">
@@ -376,8 +376,8 @@ export default function Dashboard() {
       {/* Health Status */}
       <Card>
         <CardHeader>
-          <CardTitle>Status de Saúde do Sistema</CardTitle>
-          <CardDescription>Indicadores de saúde do seu tenant</CardDescription>
+          <CardTitle>Status de Saude do Sistema</CardTitle>
+          <CardDescription>Indicadores de saude do seu tenant</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -402,9 +402,9 @@ export default function Dashboard() {
                 <AlertTriangle className="h-8 w-8 text-red-500" />
               )}
               <div>
-                <p className="font-medium">Ameaças Detectadas</p>
+                <p className="font-medium">Ameacas Detectadas</p>
                 <p className="text-sm text-muted-foreground">
-                  {(stats?.maliciousFiles || 0) === 0 ? 'Nenhuma ameaça' : `${stats?.maliciousFiles} ameaças`}
+                  {(stats?.maliciousFiles || 0) === 0 ? 'Nenhuma ameaca' : `${stats?.maliciousFiles} ameacas`}
                 </p>
               </div>
             </div>

@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     return await withTimeout(async () => {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-      // Buscar builds em "building" há mais de 10 minutos
+      // Buscar builds em "building" ha mais de 10 minutos
       const { data: stuckBuilds, error: queryError } = await supabase
         .from('agent_builds')
         .select('id, github_run_id, created_at')
@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
         let shouldFail = false;
         let reason = 'Unknown';
 
-        // Se não tem github_run_id, falhar imediatamente
+        // Se nao tem github_run_id, falhar imediatamente
         if (!build.github_run_id) {
           shouldFail = true;
           reason = 'No GitHub run ID - likely failed before workflow started';
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
             }
           } catch (ghError) {
             logger.error(`[build-watchdog] GitHub API error for build ${build.id}`, ghError);
-            // Não falhar o build se GitHub API estiver down
+            // Nao falhar o build se GitHub API estiver down
           }
         }
 

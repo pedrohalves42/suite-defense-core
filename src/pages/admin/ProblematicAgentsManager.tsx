@@ -103,7 +103,7 @@ export default function ProblematicAgentsManager() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Limpeza em massa concluída",
+        title: "Limpeza em massa concluida",
         description: `${data.total_cleaned} agentes foram limpos com sucesso`,
       });
       queryClient.invalidateQueries({ queryKey: ['problematic-agents'] });
@@ -145,9 +145,9 @@ export default function ProblematicAgentsManager() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Agentes Problemáticos</h1>
+          <h1 className="text-3xl font-bold">Agentes Problematicos</h1>
           <p className="text-muted-foreground mt-1">
-            Agentes em estado pending sem heartbeat há mais de 10 minutos
+            Agentes em estado pending sem heartbeat ha mais de 10 minutos
           </p>
         </div>
         
@@ -174,9 +174,9 @@ export default function ProblematicAgentsManager() {
           <CardContent className="py-8">
             <div className="flex flex-col items-center gap-2">
               <CheckCircle className="h-12 w-12 text-green-600" />
-              <p className="text-lg font-semibold">Nenhum agente problemático encontrado</p>
+              <p className="text-lg font-semibold">Nenhum agente problematico encontrado</p>
               <p className="text-sm text-muted-foreground">
-                Todos os agentes estão funcionando corretamente
+                Todos os agentes estao funcionando corretamente
               </p>
             </div>
           </CardContent>
@@ -206,7 +206,7 @@ export default function ProblematicAgentsManager() {
                           <span>Inscrito: {format(new Date(agent.enrolled_at), 'dd/MM/yyyy HH:mm')}</span>
                           <span>Tempo decorrido: <strong>{Math.floor(agent.minutes_since_enrollment)}min</strong></span>
                           <span>Jobs pendentes: <strong>{agent.pending_jobs_count}</strong></span>
-                          <span>Último heartbeat: <strong>{agent.last_heartbeat ? format(new Date(agent.last_heartbeat), 'dd/MM HH:mm') : 'Nunca'}</strong></span>
+                          <span>Ultimo heartbeat: <strong>{agent.last_heartbeat ? format(new Date(agent.last_heartbeat), 'dd/MM HH:mm') : 'Nunca'}</strong></span>
                         </div>
                       </CardDescription>
                     </div>
@@ -237,7 +237,7 @@ export default function ProblematicAgentsManager() {
                           {agent.pending_jobs_count} job{agent.pending_jobs_count > 1 ? 's' : ''} pendente{agent.pending_jobs_count > 1 ? 's' : ''}
                         </p>
                         <p className="text-yellow-700">
-                          Estes jobs serão removidos durante a limpeza
+                          Estes jobs serao removidos durante a limpeza
                         </p>
                       </div>
                     </div>
@@ -255,14 +255,14 @@ export default function ProblematicAgentsManager() {
           <AlertDialogHeader>
             <AlertDialogTitle>Limpar agente {selectedAgent?.agent_name}?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>Esta ação irá:</p>
+              <p>Esta acao ira:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li>Invalidar todos os tokens ativos ({selectedAgent?.token_count || 0})</li>
                 <li>Remover jobs pendentes ({selectedAgent?.pending_jobs_count || 0})</li>
                 <li>Resetar o status do agente para "pending"</li>
               </ul>
               <p className="font-semibold mt-3">
-                Após a limpeza, você precisará regenerar as credenciais e reinstalar o agente.
+                Apos a limpeza, voce precisara regenerar as credenciais e reinstalar o agente.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -282,19 +282,19 @@ export default function ProblematicAgentsManager() {
       <AlertDialog open={showCleanupAllDialog} onOpenChange={setShowCleanupAllDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Limpar todos os agentes problemáticos?</AlertDialogTitle>
+            <AlertDialogTitle>Limpar todos os agentes problematicos?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>Esta ação irá limpar <strong>{agents?.length || 0} agentes</strong>:</p>
+              <p>Esta acao ira limpar <strong>{agents?.length || 0} agentes</strong>:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li>Invalidar todos os tokens ativos</li>
                 <li>Remover todos os jobs pendentes</li>
                 <li>Resetar status de todos os agentes</li>
               </ul>
               <p className="font-semibold mt-3 text-destructive">
-                ⚠️ Esta é uma operação em massa. Use com cautela!
+                [WARN] ? Esta e uma operacao em massa. Use com cautela!
               </p>
               <p className="text-sm">
-                Após a limpeza, você precisará regenerar credenciais e reinstalar cada agente individualmente.
+                Apos a limpeza, voce precisara regenerar credenciais e reinstalar cada agente individualmente.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -4,7 +4,7 @@ import { logger } from '../_shared/logger.ts';
 
 /**
  * Monitor Slow Operations - FASE 4.1
- * Monitora operações lentas (> 2s) e envia alertas
+ * Monitora operacoes lentas (> 2s) e envia alertas
  * Executado via cron job a cada 5 minutos
  */
 
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Query de métricas lentas (> 2s nos últimos 5 min)
+    // Query de metricas lentas (> 2s nos ultimos 5 min)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     
     const { data: slowOps, error: queryError } = await supabase
@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
         threshold_ms: 2000,
       });
 
-      // Agrupar por função para análise
+      // Agrupar por funcao para analise
       const byFunction: Record<string, number> = {};
       slowOps!.forEach((op) => {
         byFunction[op.function_name] = (byFunction[op.function_name] || 0) + 1;
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
 
       logger.info('[MONITOR] Slow operations by function', byFunction);
 
-      // TODO: Enviar notificação (email/webhook) para admins
+      // TODO: Enviar notificacao (email/webhook) para admins
       // Exemplo:
       // await supabase.functions.invoke('send-system-alert', {
       //   body: {

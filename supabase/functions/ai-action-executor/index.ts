@@ -24,7 +24,7 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
-    // Verificar autenticação do usuário
+    // Verificar autenticacao do usuario
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
@@ -40,7 +40,7 @@ serve(async (req) => {
 
     console.log(`[ai-action-executor] Processing action ${action_id} for user ${user.id}`);
 
-    // 1. Buscar ação
+    // 1. Buscar acao
     const { data: action, error: actionError } = await supabase
       .from('ai_actions')
       .select('*, ai_insights(*)')
@@ -51,7 +51,7 @@ serve(async (req) => {
       throw new Error('Action not found');
     }
 
-    // 2. Verificar se usuário é admin do tenant
+    // 2. Verificar se usuario e admin do tenant
     const { data: userRole, error: roleError } = await supabase
       .from('user_roles')
       .select('role, tenant_id')
@@ -63,7 +63,7 @@ serve(async (req) => {
       throw new Error('Forbidden: Only admins can execute actions');
     }
 
-    // 3. Verificar se ação está na whitelist
+    // 3. Verificar se acao esta na whitelist
     const { data: actionConfig, error: configError } = await supabase
       .from('ai_action_configs')
       .select('*')
@@ -78,7 +78,7 @@ serve(async (req) => {
       throw new Error(`Action type ${action.action_type} is disabled`);
     }
 
-    // 4. Verificar se requer aprovação
+    // 4. Verificar se requer aprovacao
     if (actionConfig.requires_approval && action.status !== 'pending') {
       throw new Error('Action already processed');
     }
@@ -106,7 +106,7 @@ serve(async (req) => {
       throw new Error('Safe mode blocks high-risk actions');
     }
 
-    // 7. Executar ação baseada no tipo
+    // 7. Executar acao baseada no tipo
     let executionResult: any = {};
     let executionStatus = 'executed';
     let errorMessage = null;
@@ -196,7 +196,7 @@ serve(async (req) => {
         }
 
         case 'suggest_job_cleanup': {
-          // Manter case existente sem validação específica por enquanto
+          // Manter case existente sem validacao especifica por enquanto
           executionResult = {
             suggestion_type: action.action_type,
             payload: action.action_payload,
@@ -215,7 +215,7 @@ serve(async (req) => {
       executionResult = { error: execError.message };
     }
 
-    // 8. Registrar execução no audit log
+    // 8. Registrar execucao no audit log
     const { error: execLogError } = await supabase
       .from('ai_action_executions')
       .insert({
@@ -232,7 +232,7 @@ serve(async (req) => {
       console.error('[ai-action-executor] Failed to log execution:', execLogError);
     }
 
-    // 9. Atualizar status da ação
+    // 9. Atualizar status da acao
     const { error: updateError } = await supabase
       .from('ai_actions')
       .update({
@@ -249,7 +249,7 @@ serve(async (req) => {
 
     console.log(`[ai-action-executor] Action ${action_id} executed with status: ${executionStatus}`);
 
-    // 10. Security logging: registrar ação de IA executada
+    // 10. Security logging: registrar acao de IA executada
     if (executionStatus === 'executed') {
       const { error: securityLogError } = await supabase
         .from('security_logs')

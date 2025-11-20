@@ -19,7 +19,7 @@ export const AGENT_SCRIPT_MACOS_SH = `#!/usr/bin/env bash
 set -euo pipefail
 
 ########################################
-# PARÂMETROS
+# PARAMETROS
 ########################################
 
 # Prioridade: argumentos > env vars curtas > env vars prefixadas CYBERSHIELD_*
@@ -42,14 +42,14 @@ while [[ \\$# -gt 0 ]]; do
     --agent-version)
       AGENT_VERSION="\\$2"; shift 2;;
     *)
-      echo "❌ Parâmetro desconhecido: \\$1" >&2
+      echo "[ERROR]  Parametro desconhecido: \\$1" >&2
       echo "Uso: \\$0 --server-url URL --agent-token TOKEN --hmac-secret SECRET [--agent-name NAME] [--agent-version VERSION]"
       exit 1;;
   esac
 done
 
 if [[ -z "\\$SERVER_URL" ]]; then
-  echo "❌ SERVER_URL não definido" >&2
+  echo "[ERROR]  SERVER_URL nao definido" >&2
   echo "Use: --server-url URL" >&2
   echo "  ou: SERVER_URL=... (env var)" >&2
   echo "  ou: CYBERSHIELD_SERVER_URL=... (env var prefixada)" >&2
@@ -57,13 +57,13 @@ if [[ -z "\\$SERVER_URL" ]]; then
 fi
 
 if [[ -z "\\$AGENT_TOKEN" ]]; then
-  echo "❌ AGENT_TOKEN não definido" >&2
+  echo "[ERROR]  AGENT_TOKEN nao definido" >&2
   echo "Use: --agent-token TOKEN ou AGENT_TOKEN=... ou CYBERSHIELD_AGENT_TOKEN=..." >&2
   exit 1
 fi
 
 if [[ -z "\\$HMAC_SECRET" ]]; then
-  echo "❌ HMAC_SECRET não definido" >&2
+  echo "[ERROR]  HMAC_SECRET nao definido" >&2
   echo "Use: --hmac-secret SECRET ou HMAC_SECRET=... ou CYBERSHIELD_HMAC_SECRET=..." >&2
   exit 1
 fi
@@ -95,7 +95,7 @@ log() {
 
 validate_hmac_secret() {
   if [[ ! "\\$HMAC_SECRET" =~ ^[0-9a-fA-F]\{64\}\\$ ]]; then
-    log "ERROR" "HMAC_SECRET inválido. Esperado 64 caracteres hexadecimais, recebido length=\\$\{#HMAC_SECRET\}"
+    log "ERROR" "HMAC_SECRET invalido. Esperado 64 caracteres hexadecimais, recebido length=\\$\{#HMAC_SECRET\}"
     exit 1
   fi
 }
@@ -108,7 +108,7 @@ hmac_sign() {
 }
 
 ########################################
-# REQUISIÇÃO SEGURA
+# REQUISICAO SEGURA
 ########################################
 
 SECURE_RESP_STATUS=""
@@ -161,7 +161,7 @@ secure_request() {
     log "DEBUG" "Response \\$http_code from \\$url"
 
     if [[ "\\$http_code" == "401" ]]; then
-      log "ERROR" "Erro de autenticação (401). Verifique AgentToken / HmacSecret / clock."
+      log "ERROR" "Erro de autenticacao (401). Verifique AgentToken / HmacSecret / clock."
       return 1
     fi
 
@@ -171,7 +171,7 @@ secure_request() {
 
     retry_count=\\$((retry_count+1))
     if (( retry_count >= max_retries )); then
-      log "ERROR" "Falha definitiva após \\$max_retries tentativas em \\$url (status=\\$http_code)"
+      log "ERROR" "Falha definitiva apos \\$max_retries tentativas em \\$url (status=\\$http_code)"
       return 1
     fi
 
@@ -366,7 +366,7 @@ submit_job_result() {
 }
 
 ########################################
-# EXECUÇÃO DE JOB
+# EXECUCAO DE JOB
 ########################################
 
 execute_job() {
@@ -419,7 +419,7 @@ execute_job() {
       ;;
     *)
       status="failed"
-      error_msg="Tipo de job não suportado: \\$job_type"
+      error_msg="Tipo de job nao suportado: \\$job_type"
       output_json="\\$(jq -n --arg error "\\$error_msg" '\{error: \\$error\}')"
       ;;
   esac
@@ -468,7 +468,7 @@ poll_jobs() {
   fi
 
   if [[ "\\$count" -eq 0 ]]; then
-    log "INFO" "Nenhum job disponível"
+    log "INFO" "Nenhum job disponivel"
     return
   fi
 
@@ -505,7 +505,7 @@ main() {
   send_heartbeat
 
   bootstrap_elapsed=\\$(( \\$(date +%s) - bootstrap_start ))
-  log "INFO" "Bootstrap concluído em \\$\{bootstrap_elapsed\}s"
+  log "INFO" "Bootstrap concluido em \\$\{bootstrap_elapsed\}s"
 
   log "INFO" "Entrando no loop principal (heartbeat=\\$\{heartbeat_interval\}s, poll=\\$\{poll_interval\}s)"
 

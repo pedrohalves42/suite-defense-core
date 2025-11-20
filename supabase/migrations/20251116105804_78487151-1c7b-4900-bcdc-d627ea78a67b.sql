@@ -6,7 +6,7 @@
 
 -- 1. FIX: v_problematic_jobs
 -- Problema: View permite ver jobs de outros tenants
--- Solução: Adicionar security_invoker + filtro tenant_id
+-- Solucao: Adicionar security_invoker + filtro tenant_id
 
 DROP VIEW IF EXISTS public.v_problematic_jobs CASCADE;
 
@@ -42,17 +42,17 @@ SELECT
   EXTRACT(EPOCH FROM (NOW() - j.created_at))/60 as age_minutes
 FROM public.jobs j
 WHERE 
-  -- CRITICAL FIX: Filtrar apenas jobs do(s) tenant(s) do usuário
+  -- CRITICAL FIX: Filtrar apenas jobs do(s) tenant(s) do usuario
   j.tenant_id IN (
     SELECT tenant_id 
     FROM public.user_roles 
     WHERE user_id = auth.uid()
   )
   AND (
-    -- Jobs delivered há mais de 10min
+    -- Jobs delivered ha mais de 10min
     (j.status = 'delivered' AND j.delivered_at < NOW() - INTERVAL '10 minutes')
     OR
-    -- Jobs queued há mais de 1h
+    -- Jobs queued ha mais de 1h
     (j.status = 'queued' AND j.created_at < NOW() - INTERVAL '1 hour')
     OR
     -- Jobs com problemas de dados
@@ -61,13 +61,13 @@ WHERE
 ORDER BY j.created_at DESC;
 
 COMMENT ON VIEW public.v_problematic_jobs IS 
-'View segura de jobs problemáticos com isolamento multi-tenant via security_invoker=true';
+'View segura de jobs problematicos com isolamento multi-tenant via security_invoker=true';
 
 -- ============================================================================
 
 -- 2. FIX: installation_error_summary
--- Problema: View permite ver erros de instalação de outros tenants
--- Solução: Adicionar security_invoker + filtro tenant_id
+-- Problema: View permite ver erros de instalacao de outros tenants
+-- Solucao: Adicionar security_invoker + filtro tenant_id
 
 DROP VIEW IF EXISTS public.installation_error_summary CASCADE;
 
@@ -75,7 +75,7 @@ CREATE VIEW public.installation_error_summary
 WITH (security_invoker = true)
 AS
 WITH user_tenants AS (
-  -- Subquery para obter tenant_id(s) do usuário
+  -- Subquery para obter tenant_id(s) do usuario
   SELECT tenant_id 
   FROM public.user_roles 
   WHERE user_id = auth.uid()
@@ -94,7 +94,7 @@ error_stats AS (
   WHERE ia.success = false 
     AND ia.error_message IS NOT NULL
     AND ia.created_at > NOW() - INTERVAL '90 days'
-    -- CRITICAL FIX: Filtrar apenas dados do(s) tenant(s) do usuário
+    -- CRITICAL FIX: Filtrar apenas dados do(s) tenant(s) do usuario
     AND ia.tenant_id IN (SELECT tenant_id FROM user_tenants)
   GROUP BY ia.tenant_id, ia.platform, ia.error_message
 )
@@ -126,13 +126,13 @@ ORDER BY es.occurrence_count DESC
 LIMIT 100;
 
 COMMENT ON VIEW public.installation_error_summary IS 
-'View segura de resumo de erros de instalação com isolamento multi-tenant via security_invoker=true';
+'View segura de resumo de erros de instalacao com isolamento multi-tenant via security_invoker=true';
 
 -- ============================================================================
 
 -- 3. FIX: installation_health_status
--- Problema: View permite ver saúde de instalações de outros tenants
--- Solução: Adicionar security_invoker + filtro tenant_id
+-- Problema: View permite ver saude de instalacoes de outros tenants
+-- Solucao: Adicionar security_invoker + filtro tenant_id
 
 DROP VIEW IF EXISTS public.installation_health_status CASCADE;
 
@@ -170,7 +170,7 @@ SELECT
   
 FROM public.installation_analytics ia
 WHERE 
-  -- CRITICAL FIX: Filtrar apenas dados do(s) tenant(s) do usuário
+  -- CRITICAL FIX: Filtrar apenas dados do(s) tenant(s) do usuario
   ia.tenant_id IN (
     SELECT tenant_id 
     FROM public.user_roles 
@@ -181,10 +181,10 @@ GROUP BY ia.tenant_id
 ORDER BY ia.tenant_id;
 
 COMMENT ON VIEW public.installation_health_status IS 
-'View segura de status de saúde de instalações com isolamento multi-tenant via security_invoker=true';
+'View segura de status de saude de instalacoes com isolamento multi-tenant via security_invoker=true';
 
 -- ============================================================================
--- VALIDAÇÃO: Confirmar que views foram criadas corretamente
+-- VALIDACAO: Confirmar que views foram criadas corretamente
 -- ============================================================================
 
 DO $$
@@ -195,7 +195,7 @@ BEGIN
     WHERE schemaname = 'public' 
       AND viewname IN ('v_problematic_jobs', 'installation_error_summary', 'installation_health_status')
   ) THEN
-    RAISE EXCEPTION 'Uma ou mais views não foram criadas corretamente';
+    RAISE EXCEPTION 'Uma ou mais views nao foram criadas corretamente';
   END IF;
   
   RAISE NOTICE 'P0 FIX aplicado com sucesso: 3 views agora isolam dados por tenant';

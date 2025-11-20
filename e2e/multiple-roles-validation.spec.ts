@@ -30,7 +30,7 @@ test.describe('Multiple Roles Validation', () => {
     await expect(membersCard).toBeVisible();
 
     // Should show subscription info
-    const subscriptionCard = page.locator('text=Informações da Assinatura').first();
+    const subscriptionCard = page.locator('text=Informacoes da Assinatura').first();
     await expect(subscriptionCard).toBeVisible();
   });
 
@@ -39,14 +39,14 @@ test.describe('Multiple Roles Validation', () => {
     await page.goto('/admin/plan-upgrade');
     
     // Wait for page to load
-    await page.waitForSelector('h1:has-text("Planos e Preços")', { timeout: 10000 });
+    await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Should not show error messages
     await expect(page.locator('text=Tenant not found')).not.toBeVisible();
     await expect(page.locator('text=500')).not.toBeVisible();
 
     // Should show plans
-    await expect(page.locator('text=Free').or(page.locator('text=Grátis'))).toBeVisible();
+    await expect(page.locator('text=Free').or(page.locator('text=Gratis'))).toBeVisible();
     await expect(page.locator('text=Pro')).toBeVisible();
   });
 

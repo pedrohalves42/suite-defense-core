@@ -19,7 +19,7 @@ export default function AuditLogs() {
   const [userFilter, setUserFilter] = useState('all');
   const [searchInput, setSearchInput] = useState('');
   
-  // CORREÇÃO: Debounce no search para reduzir queries (500ms)
+  // CORRECAO: Debounce no search para reduzir queries (500ms)
   const searchTerm = useDebounce(searchInput, 500);
 
   const { data: logs, isLoading } = useQuery({
@@ -73,7 +73,7 @@ export default function AuditLogs() {
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold">Logs de Auditoria</h2>
-        <p className="text-muted-foreground">Histórico de todas as ações realizadas no sistema</p>
+        <p className="text-muted-foreground">Historico de todas as acoes realizadas no sistema</p>
       </div>
 
       <Card>
@@ -85,7 +85,7 @@ export default function AuditLogs() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Input
-                placeholder="Buscar por ação ou recurso..."
+                placeholder="Buscar por acao ou recurso..."
                 value={searchInput}
                 onChange={(e) => {
                   setSearchInput(e.target.value);
@@ -99,10 +99,10 @@ export default function AuditLogs() {
                 setPage(0);
               }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todas as ações" />
+                  <SelectValue placeholder="Todas as acoes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas as ações</SelectItem>
+                  <SelectItem value="all">Todas as acoes</SelectItem>
                   <SelectItem value="agent_enrolled">Agente Registrado</SelectItem>
                   <SelectItem value="agent_enrollment_failed">Falha no Registro</SelectItem>
                   <SelectItem value="job_created">Job Criado</SelectItem>
@@ -116,10 +116,10 @@ export default function AuditLogs() {
                 setPage(0);
               }}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos os usuários" />
+                  <SelectValue placeholder="Todos os usuarios" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os usuários</SelectItem>
+                  <SelectItem value="all">Todos os usuarios</SelectItem>
                   {users?.map((user) => (
                     <SelectItem key={user.user_id} value={user.user_id}>
                       {user.full_name || user.user_id}
@@ -148,8 +148,8 @@ export default function AuditLogs() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data/Hora</TableHead>
-                    <TableHead>Usuário</TableHead>
-                    <TableHead>Ação</TableHead>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Acao</TableHead>
                     <TableHead>Recurso</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>IP</TableHead>
@@ -198,7 +198,7 @@ export default function AuditLogs() {
                     Anterior
                   </Button>
                   <span className="text-sm text-muted-foreground">
-                    Página {page + 1} de {totalPages}
+                    Pagina {page + 1} de {totalPages}
                   </span>
                   <Button
                     variant="outline"
@@ -206,7 +206,7 @@ export default function AuditLogs() {
                     onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                     disabled={page >= totalPages - 1}
                   >
-                    Próxima
+                    Proxima
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>

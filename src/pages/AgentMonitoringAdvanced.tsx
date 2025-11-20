@@ -168,9 +168,9 @@ export default function AgentMonitoringAdvanced() {
   };
 
   const getOsIcon = (osType: string) => {
-    if (osType === 'windows') return '🪟';
-    if (osType === 'linux') return '🐧';
-    return '❓';
+    if (osType === 'windows') return '?';
+    if (osType === 'linux') return '?';
+    return '?';
   };
 
   const getUsageBadge = (value: number | null, threshold: number) => {
@@ -220,14 +220,14 @@ export default function AgentMonitoringAdvanced() {
           <CardContent>
             <div className="text-2xl font-bold">{summary?.total_agents || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {summary?.online_agents} online • {summary?.offline_agents} offline
+              {summary?.online_agents} online ? {summary?.offline_agents} offline
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">CPU Média</CardTitle>
+            <CardTitle className="text-sm font-medium">CPU Media</CardTitle>
             <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -235,13 +235,13 @@ export default function AgentMonitoringAdvanced() {
               {summary?.avg_cpu_usage || 'N/A'}
               {summary?.avg_cpu_usage && '%'}
             </div>
-            <p className="text-xs text-muted-foreground">Uso médio de CPU</p>
+            <p className="text-xs text-muted-foreground">Uso medio de CPU</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">RAM Média</CardTitle>
+            <CardTitle className="text-sm font-medium">RAM Media</CardTitle>
             <MemoryStick className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -249,13 +249,13 @@ export default function AgentMonitoringAdvanced() {
               {summary?.avg_memory_usage || 'N/A'}
               {summary?.avg_memory_usage && '%'}
             </div>
-            <p className="text-xs text-muted-foreground">Uso médio de memória</p>
+            <p className="text-xs text-muted-foreground">Uso medio de memoria</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Disco Médio</CardTitle>
+            <CardTitle className="text-sm font-medium">Disco Medio</CardTitle>
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -263,7 +263,7 @@ export default function AgentMonitoringAdvanced() {
               {summary?.avg_disk_usage || 'N/A'}
               {summary?.avg_disk_usage && '%'}
             </div>
-            <p className="text-xs text-muted-foreground">Uso médio de disco</p>
+            <p className="text-xs text-muted-foreground">Uso medio de disco</p>
           </CardContent>
         </Card>
       </div>
@@ -274,7 +274,7 @@ export default function AgentMonitoringAdvanced() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-destructive" />
-              Alertas Não Reconhecidos ({alerts.length})
+              Alertas Nao Reconhecidos ({alerts.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -337,14 +337,14 @@ export default function AgentMonitoringAdvanced() {
                 onClick={() => setOsFilter('windows')}
                 size="sm"
               >
-                🪟 Windows ({summary?.windows_agents})
+                ? Windows ({summary?.windows_agents})
               </Button>
               <Button
                 variant={osFilter === 'linux' ? 'default' : 'outline'}
                 onClick={() => setOsFilter('linux')}
                 size="sm"
               >
-                🐧 Linux ({summary?.linux_agents})
+                ? Linux ({summary?.linux_agents})
               </Button>
             </div>
             <div className="flex gap-2">
@@ -392,7 +392,7 @@ export default function AgentMonitoringAdvanced() {
                   <th className="text-left p-2">RAM</th>
                   <th className="text-left p-2">Disco</th>
                   <th className="text-left p-2">Uptime</th>
-                  <th className="text-left p-2">Último Heartbeat</th>
+                  <th className="text-left p-2">Ultimo Heartbeat</th>
                 </tr>
               </thead>
               <tbody>

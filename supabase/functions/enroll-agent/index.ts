@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
 
       return new Response(
         JSON.stringify({ 
-          error: 'Chave de enrollment inválida ou não encontrada',
+          error: 'Chave de enrollment invalida ou nao encontrada',
           code: 'INVALID_ENROLLMENT_KEY',
           requestId
         }),

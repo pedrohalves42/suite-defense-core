@@ -7,10 +7,10 @@ CREATE TABLE IF NOT EXISTS public.failed_login_attempts (
   user_agent TEXT
 );
 
--- Index para consultas rápidas
+-- Index para consultas rapidas
 CREATE INDEX idx_failed_login_ip ON public.failed_login_attempts(ip_address, created_at DESC);
 
--- Função para limpar tentativas antigas (últimas 24h)
+-- Funcao para limpar tentativas antigas (ultimas 24h)
 CREATE OR REPLACE FUNCTION public.cleanup_old_failed_attempts()
 RETURNS void
 LANGUAGE plpgsql

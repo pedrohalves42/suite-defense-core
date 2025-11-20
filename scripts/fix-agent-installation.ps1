@@ -2,27 +2,27 @@
 
 <#
 .SYNOPSIS
-    Script de correção definitiva para instalação do CyberShield Agent
+    Script de correcao definitiva para instalacao do CyberShield Agent
     
 .DESCRIPTION
-    Executa o plano completo de diagnóstico e correção:
+    Executa o plano completo de diagnostico e correcao:
     1. Desbloqueia arquivos
     2. Limpa processos e tasks antigas
     3. Recria Scheduled Task com logging agressivo
     4. Verifica logs e Event Viewer
-    5. Fornece diagnóstico detalhado
+    5. Fornece diagnostico detalhado
     
 .PARAMETER AgentToken
-    Token de autenticação do agente (obrigatório)
+    Token de autenticacao do agente (obrigatorio)
     
 .PARAMETER HmacSecret
-    Segredo HMAC de 64 caracteres (obrigatório)
+    Segredo HMAC de 64 caracteres (obrigatorio)
     
 .PARAMETER AgentName
-    Nome do agente (obrigatório)
+    Nome do agente (obrigatorio)
     
 .PARAMETER ServerUrl
-    URL do servidor (padrão: https://iavbnmduxpxhwubqrzzn.supabase.co)
+    URL do servidor (padrao: https://iavbnmduxpxhwubqrzzn.supabase.co)
     
 .EXAMPLE
     .\fix-agent-installation.ps1 -AgentToken "seu_token_aqui" -HmacSecret "seu_hmac_64_chars_aqui" -AgentName "teste"
@@ -43,10 +43,10 @@ param(
 
 $ErrorActionPreference = "Continue"
 
-Write-Host "`n╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║  CYBER SHIELD - FIX AGENT INSTALLATION                    ║" -ForegroundColor Cyan
-Write-Host "║  Diagnóstico e Correção Definitiva                        ║" -ForegroundColor Cyan
-Write-Host "╚═══════════════════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+Write-Host "`n?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
+Write-Host "?  CYBER SHIELD - FIX AGENT INSTALLATION                    ?" -ForegroundColor Cyan
+Write-Host "?  Diagnostico e Correcao Definitiva                        ?" -ForegroundColor Cyan
+Write-Host "?????????????????????????????????????????????????????????????`n" -ForegroundColor Cyan
 
 $BaseDir = "C:\CyberShield"
 $LogDir = "$BaseDir\logs"
@@ -54,16 +54,16 @@ $ScriptPath = "$BaseDir\cybershield-agent-$AgentName.ps1"
 $TaskName = "CyberShieldAgent-$AgentName"
 
 # ============================================
-# PASSO 1: Verificações Iniciais
+# PASSO 1: Verificacoes Iniciais
 # ============================================
-Write-Host "[PASSO 1] Verificações Iniciais..." -ForegroundColor Yellow
+Write-Host "[PASSO 1] Verificacoes Iniciais..." -ForegroundColor Yellow
 
 if (-not (Test-Path $ScriptPath)) {
-    Write-Host "❌ ERRO: Script não encontrado em: $ScriptPath" -ForegroundColor Red
+    Write-Host "[ERROR]  ERRO: Script nao encontrado em: $ScriptPath" -ForegroundColor Red
     Write-Host "   Execute primeiro o instalador para gerar o script." -ForegroundColor Yellow
     exit 1
 }
-Write-Host "✓ Script encontrado: $ScriptPath" -ForegroundColor Green
+Write-Host "? Script encontrado: $ScriptPath" -ForegroundColor Green
 
 # ============================================
 # PASSO 2: Desbloquear Arquivo
@@ -72,15 +72,15 @@ Write-Host "`n[PASSO 2] Desbloqueando arquivo (remover Zone.Identifier)..." -For
 
 try {
     Unblock-File -Path $ScriptPath -ErrorAction Stop
-    Write-Host "✓ Arquivo desbloqueado com sucesso" -ForegroundColor Green
+    Write-Host "? Arquivo desbloqueado com sucesso" -ForegroundColor Green
 } catch {
-    Write-Host "⚠ Aviso ao desbloquear: $_" -ForegroundColor Yellow
+    Write-Host "[WARN]  Aviso ao desbloquear: $_" -ForegroundColor Yellow
 }
 
 # Verificar se ainda tem marca de bloqueio
 $hasZoneId = Get-Item -Path $ScriptPath -Stream Zone.Identifier -ErrorAction SilentlyContinue
 if ($hasZoneId) {
-    Write-Host "⚠ Arquivo ainda tem Zone.Identifier. Tentando remover manualmente..." -ForegroundColor Yellow
+    Write-Host "[WARN]  Arquivo ainda tem Zone.Identifier. Tentando remover manualmente..." -ForegroundColor Yellow
     Remove-Item -Path "$ScriptPath`:Zone.Identifier" -Force -ErrorAction SilentlyContinue
 }
 
@@ -96,13 +96,13 @@ if ($oldProcesses) {
     $oldProcesses | ForEach-Object { 
         try {
             Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop
-            Write-Host "  ✓ Processo $($_.ProcessId) finalizado" -ForegroundColor Gray
+            Write-Host "  ? Processo $($_.ProcessId) finalizado" -ForegroundColor Gray
         } catch {
-            Write-Host "  ⚠ Não foi possível finalizar processo $($_.ProcessId)" -ForegroundColor Yellow
+            Write-Host "  [WARN]  Nao foi possivel finalizar processo $($_.ProcessId)" -ForegroundColor Yellow
         }
     }
 } else {
-    Write-Host "✓ Nenhum processo antigo encontrado" -ForegroundColor Green
+    Write-Host "? Nenhum processo antigo encontrado" -ForegroundColor Green
 }
 
 # Remover task existente
@@ -112,24 +112,24 @@ try {
         Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
         Start-Sleep -Seconds 2
         Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction Stop
-        Write-Host "✓ Task removida: $TaskName" -ForegroundColor Green
+        Write-Host "? Task removida: $TaskName" -ForegroundColor Green
     } else {
-        Write-Host "✓ Nenhuma task existente encontrada" -ForegroundColor Green
+        Write-Host "? Nenhuma task existente encontrada" -ForegroundColor Green
     }
 } catch {
-    Write-Host "⚠ Aviso ao remover task: $_" -ForegroundColor Yellow
+    Write-Host "[WARN]  Aviso ao remover task: $_" -ForegroundColor Yellow
 }
 
 # ============================================
-# PASSO 4: Criar Diretório de Logs
+# PASSO 4: Criar Diretorio de Logs
 # ============================================
-Write-Host "`n[PASSO 4] Criando diretório de logs..." -ForegroundColor Yellow
+Write-Host "`n[PASSO 4] Criando diretorio de logs..." -ForegroundColor Yellow
 
 if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
-    Write-Host "✓ Diretório criado: $LogDir" -ForegroundColor Green
+    Write-Host "? Diretorio criado: $LogDir" -ForegroundColor Green
 } else {
-    Write-Host "✓ Diretório já existe: $LogDir" -ForegroundColor Green
+    Write-Host "? Diretorio ja existe: $LogDir" -ForegroundColor Green
 }
 
 # Limpar logs antigos para teste limpo
@@ -179,16 +179,16 @@ try {
         -Principal $principal `
         -Settings $settings `
         -Force | Out-Null
-    Write-Host "✓ Task registrada: $TaskName" -ForegroundColor Green
+    Write-Host "? Task registrada: $TaskName" -ForegroundColor Green
 } catch {
-    Write-Host "❌ ERRO ao registrar task: $_" -ForegroundColor Red
+    Write-Host "[ERROR]  ERRO ao registrar task: $_" -ForegroundColor Red
     exit 1
 }
 
 # Iniciar a task imediatamente
 Write-Host "`n[PASSO 6] Iniciando task..." -ForegroundColor Yellow
 Start-ScheduledTask -TaskName $TaskName
-Write-Host "✓ Task iniciada. Aguardando 30 segundos..." -ForegroundColor Green
+Write-Host "? Task iniciada. Aguardando 30 segundos..." -ForegroundColor Green
 
 # ============================================
 # PASSO 7: Aguardar e Monitorar
@@ -210,12 +210,12 @@ Write-Host "`n[PASSO 8] Verificando logs gerados..." -ForegroundColor Yellow
 
 $logFiles = Get-ChildItem "$LogDir\*.log" -ErrorAction SilentlyContinue
 if ($logFiles) {
-    Write-Host "✓ Logs encontrados:" -ForegroundColor Green
+    Write-Host "? Logs encontrados:" -ForegroundColor Green
     $logFiles | ForEach-Object {
         Write-Host "  - $($_.Name) ($('{0:N0}' -f $_.Length) bytes, $($_.LastWriteTime))" -ForegroundColor Gray
     }
     
-    Write-Host "`n--- Últimas 30 linhas do log principal ---" -ForegroundColor Cyan
+    Write-Host "`n--- Ultimas 30 linhas do log principal ---" -ForegroundColor Cyan
     $mainLog = "$LogDir\cybershield-agent-v3.log"
     if (Test-Path $mainLog) {
         Get-Content $mainLog -Tail 30 -ErrorAction SilentlyContinue | ForEach-Object {
@@ -223,18 +223,18 @@ if ($logFiles) {
                 Write-Host $_ -ForegroundColor Red
             } elseif ($_ -match '\[WARN\]') {
                 Write-Host $_ -ForegroundColor Yellow
-            } elseif ($_ -match '\[SUCCESS\]|✅') {
+            } elseif ($_ -match '\[SUCCESS\]|[OK] ') {
                 Write-Host $_ -ForegroundColor Green
             } else {
                 Write-Host $_
             }
         }
     } else {
-        Write-Host "⚠ Log principal não foi criado: $mainLog" -ForegroundColor Yellow
+        Write-Host "[WARN]  Log principal nao foi criado: $mainLog" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "❌ NENHUM LOG ENCONTRADO!" -ForegroundColor Red
-    Write-Host "   Isso indica que o script NÃO foi executado." -ForegroundColor Yellow
+    Write-Host "[ERROR]  NENHUM LOG ENCONTRADO!" -ForegroundColor Red
+    Write-Host "   Isso indica que o script NAO foi executado." -ForegroundColor Yellow
 }
 
 # ============================================
@@ -252,60 +252,60 @@ try {
         Select-Object TimeCreated, LevelDisplayName, Message -First 5
     
     if ($events) {
-        Write-Host "✓ Eventos encontrados:" -ForegroundColor Green
+        Write-Host "? Eventos encontrados:" -ForegroundColor Green
         $events | ForEach-Object {
             Write-Host "`n--- Event: $($_.TimeCreated) [$($_.LevelDisplayName)] ---" -ForegroundColor Cyan
             Write-Host $_.Message -ForegroundColor Gray
         }
     } else {
-        Write-Host "ℹ Nenhum evento relevante nos últimos 20 eventos" -ForegroundColor Gray
+        Write-Host "[INFO]  Nenhum evento relevante nos ultimos 20 eventos" -ForegroundColor Gray
     }
 } catch {
-    Write-Host "⚠ Não foi possível acessar Event Viewer: $_" -ForegroundColor Yellow
+    Write-Host "[WARN]  Nao foi possivel acessar Event Viewer: $_" -ForegroundColor Yellow
 }
 
 # ============================================
-# PASSO 10: Diagnóstico Final
+# PASSO 10: Diagnostico Final
 # ============================================
-Write-Host "`n╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║  DIAGNÓSTICO FINAL                                        ║" -ForegroundColor Cyan
-Write-Host "╚═══════════════════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+Write-Host "`n?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
+Write-Host "?  DIAGNOSTICO FINAL                                        ?" -ForegroundColor Cyan
+Write-Host "?????????????????????????????????????????????????????????????`n" -ForegroundColor Cyan
 
 $success = $false
 $mainLog = "$LogDir\cybershield-agent-v3.log"
 
 if (Test-Path $mainLog) {
     $logContent = Get-Content $mainLog -Raw
-    if ($logContent -match '✅ Autenticado com sucesso') {
-        Write-Host "✅ SUCESSO! Agente está rodando e autenticado!" -ForegroundColor Green
+    if ($logContent -match '[OK]  Autenticado com sucesso') {
+        Write-Host "[OK]  SUCESSO! Agente esta rodando e autenticado!" -ForegroundColor Green
         $success = $true
     } elseif ($logContent -match '\[ERROR\].*401') {
-        Write-Host "❌ ERRO: Credenciais inválidas (401)" -ForegroundColor Red
+        Write-Host "[ERROR]  ERRO: Credenciais invalidas (401)" -ForegroundColor Red
         Write-Host "   - Verifique AgentToken e HmacSecret" -ForegroundColor Yellow
         Write-Host "   - Regenere as credenciais no dashboard" -ForegroundColor Yellow
     } elseif ($logContent -match '\[FATAL\]') {
-        Write-Host "❌ ERRO FATAL no script" -ForegroundColor Red
+        Write-Host "[ERROR]  ERRO FATAL no script" -ForegroundColor Red
         Write-Host "   - Verifique o log acima para detalhes" -ForegroundColor Yellow
     } else {
-        Write-Host "⚠ Agente iniciou mas sem confirmação de autenticação" -ForegroundColor Yellow
+        Write-Host "[WARN]  Agente iniciou mas sem confirmacao de autenticacao" -ForegroundColor Yellow
         Write-Host "   - Aguarde mais 1-2 minutos e verifique o dashboard" -ForegroundColor Yellow
     }
 } else {
-    Write-Host "❌ FALHA CRÍTICA: Script não foi executado" -ForegroundColor Red
-    Write-Host "`nPossíveis causas:" -ForegroundColor Yellow
-    Write-Host "1. AppLocker ou outro software de segurança bloqueando" -ForegroundColor Gray
+    Write-Host "[ERROR]  FALHA CRITICA: Script nao foi executado" -ForegroundColor Red
+    Write-Host "`nPossiveis causas:" -ForegroundColor Yellow
+    Write-Host "1. AppLocker ou outro software de seguranca bloqueando" -ForegroundColor Gray
     Write-Host "2. ExecutionPolicy ainda restritiva (mesmo com Unrestricted)" -ForegroundColor Gray
-    Write-Host "3. Permissões insuficientes (verifique se rodou como Admin)" -ForegroundColor Gray
+    Write-Host "3. Permissoes insuficientes (verifique se rodou como Admin)" -ForegroundColor Gray
     Write-Host "4. Problema com credenciais SYSTEM" -ForegroundColor Gray
     
     if ($taskInfo.LastTaskResult -ne 0) {
-        Write-Host "`nCódigo de erro da task: 0x$([Convert]::ToString($taskInfo.LastTaskResult, 16).ToUpper())" -ForegroundColor Red
+        Write-Host "`nCodigo de erro da task: 0x$([Convert]::ToString($taskInfo.LastTaskResult, 16).ToUpper())" -ForegroundColor Red
     }
 }
 
-Write-Host "`n╔═══════════════════════════════════════════════════════════╗" -ForegroundColor $(if ($success) { 'Green' } else { 'Yellow' })
-Write-Host "║  PRÓXIMOS PASSOS                                          ║" -ForegroundColor $(if ($success) { 'Green' } else { 'Yellow' })
-Write-Host "╚═══════════════════════════════════════════════════════════╝`n" -ForegroundColor $(if ($success) { 'Green' } else { 'Yellow' })
+Write-Host "`n?????????????????????????????????????????????????????????????" -ForegroundColor $(if ($success) { 'Green' } else { 'Yellow' })
+Write-Host "?  PROXIMOS PASSOS                                          ?" -ForegroundColor $(if ($success) { 'Green' } else { 'Yellow' })
+Write-Host "?????????????????????????????????????????????????????????????`n" -ForegroundColor $(if ($success) { 'Green' } else { 'Yellow' })
 
 if ($success) {
     Write-Host "1. Verifique o dashboard em /admin/agent-health" -ForegroundColor Green
@@ -313,10 +313,10 @@ if ($success) {
     Write-Host "3. Monitore os logs periodicamente:" -ForegroundColor Green
     Write-Host "   Get-Content '$mainLog' -Tail 50 -Wait" -ForegroundColor White
 } else {
-    Write-Host "1. Compartilhe a saída COMPLETA deste script com o suporte" -ForegroundColor Yellow
-    Write-Host "2. Se possível, execute:" -ForegroundColor Yellow
+    Write-Host "1. Compartilhe a saida COMPLETA deste script com o suporte" -ForegroundColor Yellow
+    Write-Host "2. Se possivel, execute:" -ForegroundColor Yellow
     Write-Host "   Get-Content '$mainLog' -ErrorAction SilentlyContinue" -ForegroundColor White
-    Write-Host "3. Verifique se há software de segurança bloqueando (antivírus, AppLocker)" -ForegroundColor Yellow
+    Write-Host "3. Verifique se ha software de seguranca bloqueando (antivirus, AppLocker)" -ForegroundColor Yellow
 }
 
 Write-Host ""

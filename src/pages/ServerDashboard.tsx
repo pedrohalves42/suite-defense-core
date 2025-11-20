@@ -100,7 +100,7 @@ const ServerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<number>(0);
 
-  // Buscar mapeamento de tenant_id → tenant_name
+  // Buscar mapeamento de tenant_id ? tenant_name
   const [tenantNames, setTenantNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -206,14 +206,14 @@ const ServerDashboard = () => {
     return acc;
   }, {} as Record<string, number>);
 
-  // Jobs completados nas últimas 24h
+  // Jobs completados nas ultimas 24h
   const recentJobs = jobs.filter(j => {
     if (!j.completed_at) return false;
     const completed = new Date(j.completed_at);
     return (new Date().getTime() - completed.getTime()) < 24 * 60 * 60 * 1000;
   }).length;
 
-  // Preparar dados para gráficos
+  // Preparar dados para graficos
   const getLast7Days = () => {
     const days = [];
     for (let i = 6; i >= 0; i--) {
@@ -226,7 +226,7 @@ const ServerDashboard = () => {
 
   const last7Days = getLast7Days();
 
-  // Dados para gráfico de tendência de jobs
+  // Dados para grafico de tendencia de jobs
   const jobsTrendData = last7Days.map(day => {
     const dayJobs = jobs.filter(j => j.created_at.startsWith(day));
     return {
@@ -237,7 +237,7 @@ const ServerDashboard = () => {
     };
   });
 
-  // Dados para gráfico de scans de vírus
+  // Dados para grafico de scans de virus
   const scansTrendData = last7Days.map(day => {
     const dayScans = virusScans.filter(s => s.scanned_at.startsWith(day));
     return {
@@ -248,7 +248,7 @@ const ServerDashboard = () => {
     };
   });
 
-  // Dados para distribuição por tipo de job
+  // Dados para distribuicao por tipo de job
   const jobTypeData = Object.entries(
     jobs.reduce((acc, job) => {
       acc[job.type] = (acc[job.type] || 0) + 1;
@@ -267,7 +267,7 @@ const ServerDashboard = () => {
     .slice(0, 10)
     .map(([agent, count]) => ({ agent, jobs: count }));
 
-  // Timeline de eventos de segurança
+  // Timeline de eventos de seguranca
   const securityEvents = auditLogs.slice(0, 10).map(log => ({
     time: new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
     action: log.action,
@@ -289,7 +289,7 @@ const ServerDashboard = () => {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Dashboard Principal
             </h1>
-            <p className="text-sm text-muted-foreground">Visão geral do sistema</p>
+            <p className="text-sm text-muted-foreground">Visao geral do sistema</p>
           </div>
         </div>
 
@@ -335,7 +335,7 @@ const ServerDashboard = () => {
             <CardContent>
               <div className="text-3xl font-bold text-foreground">{pendingJobs}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {recentJobs} nas últimas 24h
+                {recentJobs} nas ultimas 24h
               </p>
             </CardContent>
           </Card>
@@ -344,25 +344,25 @@ const ServerDashboard = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <FileText className="h-4 w-4 text-success" />
-                Relatórios
+                Relatorios
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">{reports.length}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {completedJobs} jobs concluídos
+                {completedJobs} jobs concluidos
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Stats Cards - Linha 2 - Métricas Adicionais */}
+        {/* Stats Cards - Linha 2 - Metricas Adicionais */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card className="bg-gradient-card border-primary/10">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
                 <Network className="h-3 w-3" />
-                Taxa de Conexão
+                Taxa de Conexao
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -425,13 +425,13 @@ const ServerDashboard = () => {
           </Card>
         </div>
 
-        {/* Visão Geral por Tenant */}
+        {/* Visao Geral por Tenant */}
         {Object.keys(agentsByTenant).length > 0 && (
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Network className="h-5 w-5 text-primary" />
-                Distribuição por Tenant
+                Distribuicao por Tenant
               </CardTitle>
               <CardDescription>Agentes agrupados por ambiente</CardDescription>
             </CardHeader>
@@ -451,14 +451,14 @@ const ServerDashboard = () => {
           </Card>
         )}
 
-        {/* Gráficos e Visualizações */}
+        {/* Graficos e Visualizacoes */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Tendência de Jobs */}
+          {/* Tendencia de Jobs */}
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LineChart className="h-5 w-5 text-primary" />
-                Tendência de Jobs (7 dias)
+                Tendencia de Jobs (7 dias)
               </CardTitle>
               <CardDescription>Volume de jobs criados por dia</CardDescription>
             </CardHeader>
@@ -476,7 +476,7 @@ const ServerDashboard = () => {
                     <Tooltip contentStyle={{ backgroundColor: 'hsl(222 47% 11%)', border: '1px solid hsl(215 20% 25%)', borderRadius: '6px' }} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Line type="monotone" dataKey="total" stroke="hsl(195 100% 50%)" strokeWidth={2} name="Total" dot={{ fill: 'hsl(195 100% 50%)' }} />
-                    <Line type="monotone" dataKey="completed" stroke="hsl(142 76% 45%)" strokeWidth={2} name="Concluídos" dot={{ fill: 'hsl(142 76% 45%)' }} />
+                    <Line type="monotone" dataKey="completed" stroke="hsl(142 76% 45%)" strokeWidth={2} name="Concluidos" dot={{ fill: 'hsl(142 76% 45%)' }} />
                     <Line type="monotone" dataKey="failed" stroke="hsl(0 70% 55%)" strokeWidth={2} name="Falhados" dot={{ fill: 'hsl(0 70% 55%)' }} />
                   </RechartsLineChart>
                 </ResponsiveContainer>
@@ -484,12 +484,12 @@ const ServerDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Tendência de Scans de Vírus */}
+          {/* Tendencia de Scans de Virus */}
           <Card className="bg-gradient-card border-accent/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-accent" />
-                Scans de Vírus (7 dias)
+                Scans de Virus (7 dias)
               </CardTitle>
               <CardDescription>Arquivos escaneados por dia</CardDescription>
             </CardHeader>
@@ -515,14 +515,14 @@ const ServerDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Distribuição por Tipo de Job */}
+          {/* Distribuicao por Tipo de Job */}
           <Card className="bg-gradient-card border-warning/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PieChart className="h-5 w-5 text-warning" />
                 Tipos de Jobs
               </CardTitle>
-              <CardDescription>Distribuição por categoria</CardDescription>
+              <CardDescription>Distribuicao por categoria</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -582,14 +582,14 @@ const ServerDashboard = () => {
           </Card>
         </div>
 
-        {/* Timeline de Eventos de Segurança */}
+        {/* Timeline de Eventos de Seguranca */}
         <Card className="bg-gradient-card border-destructive/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-destructive" />
-              Timeline de Eventos de Segurança
+              Timeline de Eventos de Seguranca
             </CardTitle>
-            <CardDescription>Últimas ações registradas no sistema</CardDescription>
+            <CardDescription>Ultimas acoes registradas no sistema</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -625,8 +625,8 @@ const ServerDashboard = () => {
           <TabsList className="grid w-full grid-cols-4 bg-secondary">
             <TabsTrigger value="agents">Agentes</TabsTrigger>
             <TabsTrigger value="jobs">Jobs</TabsTrigger>
-            <TabsTrigger value="reports">Relatórios</TabsTrigger>
-            <TabsTrigger value="security">Segurança</TabsTrigger>
+            <TabsTrigger value="reports">Relatorios</TabsTrigger>
+            <TabsTrigger value="security">Seguranca</TabsTrigger>
           </TabsList>
 
           <TabsContent value="agents" className="mt-4">
@@ -683,7 +683,7 @@ const ServerDashboard = () => {
                                     <p className="font-semibold text-foreground">{agentJobs.length}</p>
                                   </div>
                                   <div>
-                                    <p className="text-muted-foreground">Relatórios</p>
+                                    <p className="text-muted-foreground">Relatorios</p>
                                     <p className="font-semibold text-foreground">{agentReports.length}</p>
                                   </div>
                                   <div>
@@ -693,7 +693,7 @@ const ServerDashboard = () => {
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-muted-foreground">Último Heartbeat</p>
+                                    <p className="text-muted-foreground">Ultimo Heartbeat</p>
                                     <p className="font-semibold text-foreground">
                                       {agent.last_heartbeat 
                                         ? new Date(agent.last_heartbeat).toLocaleTimeString()
@@ -704,7 +704,7 @@ const ServerDashboard = () => {
 
                                 {lastJob && (
                                   <div className="pt-2 border-t border-border">
-                                    <p className="text-xs text-muted-foreground mb-1">Último Job:</p>
+                                    <p className="text-xs text-muted-foreground mb-1">Ultimo Job:</p>
                                     <div className="flex items-center gap-2">
                                       <Badge variant="outline" className="text-xs font-mono">
                                         {lastJob.type}
@@ -738,7 +738,7 @@ const ServerDashboard = () => {
             <Card className="bg-gradient-card border-primary/20">
               <CardHeader>
                 <CardTitle>Jobs do Sistema</CardTitle>
-                <CardDescription>Histórico e status dos jobs executados</CardDescription>
+                <CardDescription>Historico e status dos jobs executados</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -775,7 +775,7 @@ const ServerDashboard = () => {
                           </Badge>
                           {job.completed_at && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              Concluído: {new Date(job.completed_at).toLocaleString()}
+                              Concluido: {new Date(job.completed_at).toLocaleString()}
                             </p>
                           )}
                         </div>
@@ -790,14 +790,14 @@ const ServerDashboard = () => {
           <TabsContent value="reports" className="mt-4">
             <Card className="bg-gradient-card border-primary/20">
               <CardHeader>
-                <CardTitle>Relatórios Recebidos</CardTitle>
-                <CardDescription>Relatórios de segurança enviados pelos agentes</CardDescription>
+                <CardTitle>Relatorios Recebidos</CardTitle>
+                <CardDescription>Relatorios de seguranca enviados pelos agentes</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
                   <p className="text-center text-muted-foreground py-8">Carregando...</p>
                 ) : reports.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">Nenhum relatório encontrado</p>
+                  <p className="text-center text-muted-foreground py-8">Nenhum relatorio encontrado</p>
                 ) : (
                   <div className="space-y-2 max-h-[600px] overflow-y-auto">
                     {reports.map((report) => (
@@ -914,7 +914,7 @@ const ServerDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-primary" />
-                  Últimos Heartbeats
+                  Ultimos Heartbeats
                 </CardTitle>
                 <CardDescription>Atividade recente dos agentes</CardDescription>
               </CardHeader>
@@ -950,9 +950,9 @@ const ServerDashboard = () => {
                             </div>
                             <div className="text-right">
                               <p className="text-xs text-muted-foreground">
-                                {timeSince < 60 ? `${timeSince}s atrás` : 
-                                 timeSince < 3600 ? `${Math.floor(timeSince / 60)}m atrás` :
-                                 `${Math.floor(timeSince / 3600)}h atrás`}
+                                {timeSince < 60 ? `${timeSince}s atras` : 
+                                 timeSince < 3600 ? `${Math.floor(timeSince / 60)}m atras` :
+                                 `${Math.floor(timeSince / 3600)}h atras`}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {new Date(agent.last_heartbeat!).toLocaleTimeString()}
@@ -973,7 +973,7 @@ const ServerDashboard = () => {
                   <Key className="h-5 w-5 text-warning" />
                   Tokens Expirados e Inativos
                 </CardTitle>
-                <CardDescription>Tokens que precisam de atenção</CardDescription>
+                <CardDescription>Tokens que precisam de atencao</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -986,7 +986,7 @@ const ServerDashboard = () => {
                   return expiredOrInactive.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Key className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Todos os tokens estão ativos e válidos</p>
+                      <p>Todos os tokens estao ativos e validos</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -1016,7 +1016,7 @@ const ServerDashboard = () => {
                               )}
                               {token.last_used_at && (
                                 <p className="text-xs text-muted-foreground">
-                                  Último uso: {new Date(token.last_used_at).toLocaleDateString()}
+                                  Ultimo uso: {new Date(token.last_used_at).toLocaleDateString()}
                                 </p>
                               )}
                             </div>
@@ -1029,14 +1029,14 @@ const ServerDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Estatísticas de Rate Limiting */}
+            {/* Estatisticas de Rate Limiting */}
             <Card className="bg-gradient-card border-destructive/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ShieldAlert className="h-5 w-5 text-destructive" />
-                  Estatísticas de Rate Limiting
+                  Estatisticas de Rate Limiting
                 </CardTitle>
-                <CardDescription>Proteção contra abuso de recursos</CardDescription>
+                <CardDescription>Protecao contra abuso de recursos</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -1048,7 +1048,7 @@ const ServerDashboard = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {/* Estatísticas por Endpoint */}
+                    {/* Estatisticas por Endpoint */}
                     <div>
                       <h4 className="text-sm font-semibold text-foreground mb-3">Por Endpoint</h4>
                       <div className="space-y-2">
@@ -1071,7 +1071,7 @@ const ServerDashboard = () => {
                             <div>
                               <p className="font-mono font-semibold text-sm text-foreground">{endpoint}</p>
                               <p className="text-xs text-muted-foreground mt-1">
-                                {stats.count} requests · {stats.blocked} bloqueados
+                                {stats.count} requests ? {stats.blocked} bloqueados
                               </p>
                             </div>
                             <Badge variant={stats.blocked > 0 ? "destructive" : "default"} className="text-xs">
@@ -1106,7 +1106,7 @@ const ServerDashboard = () => {
                                     Bloqueado
                                   </Badge>
                                   <p className="text-xs text-muted-foreground">
-                                    Até: {new Date(limit.blocked_until!).toLocaleTimeString()}
+                                    Ate: {new Date(limit.blocked_until!).toLocaleTimeString()}
                                   </p>
                                 </div>
                               </div>

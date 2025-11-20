@@ -13,8 +13,8 @@ interface MemberCardProps {
 }
 
 /**
- * CORREÇÃO: Componente extraído para melhor organização
- * Renderiza um card de membro com controles de role e remoção
+ * CORRECAO: Componente extraido para melhor organizacao
+ * Renderiza um card de membro com controles de role e remocao
  */
 export const MemberCard = ({ member, onRoleChange, onRemove, isUpdating }: MemberCardProps) => {
   const getRoleBadge = (role: AppRole) => {
@@ -36,17 +36,17 @@ export const MemberCard = ({ member, onRoleChange, onRemove, isUpdating }: Membe
     );
   };
 
-  // CORREÇÃO: Usar isValidRole e não rebaixar super_admin
+  // CORRECAO: Usar isValidRole e nao rebaixar super_admin
   const validRole = isValidRole(member.role) ? member.role : 'viewer';
 
   return (
     <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
       <div className="flex-1 space-y-1">
         <div className="flex items-center gap-2">
-          <p className="font-medium">{member.profiles?.full_name || 'Nome não disponível'}</p>
+          <p className="font-medium">{member.profiles?.full_name || 'Nome nao disponivel'}</p>
           {getRoleBadge(validRole)}
         </div>
-        <p className="text-sm text-muted-foreground">{member.email || 'Email não disponível'}</p>
+        <p className="text-sm text-muted-foreground">{member.email || 'Email nao disponivel'}</p>
         <p className="text-xs text-muted-foreground">
           Entrou em: {new Date(member.created_at).toLocaleDateString('pt-BR')}
         </p>

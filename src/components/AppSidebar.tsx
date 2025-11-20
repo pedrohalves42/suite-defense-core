@@ -14,7 +14,7 @@ export const AppSidebar = () => {
     return saved === 'true';
   });
 
-  // CORREÇÃO: Logger removido em produção
+  // CORRECAO: Logger removido em producao
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', collapsed.toString());
@@ -22,13 +22,13 @@ export const AppSidebar = () => {
     window.dispatchEvent(new Event('sidebar-toggle'));
   }, [collapsed]);
 
-  // CORREÇÃO: Memoizar arrays para evitar re-renders desnecessários
+  // CORRECAO: Memoizar arrays para evitar re-renders desnecessarios
   const menuItems = useMemo(() => [
     { icon: Home, label: 'Dashboard', to: '/dashboard', end: true },
     { icon: Server, label: 'Monitoramento', to: '/monitoring' },
     { icon: Server, label: 'Gerenciar Agentes', to: '/agents' },
     { icon: Zap, label: 'Criar Jobs', to: '/jobs' },
-    { icon: Shield, label: 'Scans de Vírus', to: '/virus-scans' },
+    { icon: Shield, label: 'Scans de Virus', to: '/virus-scans' },
     { icon: Shield, label: 'Quarentena', to: '/quarantine' },
     { icon: Package, label: 'Instalador', to: '/installer' },
     { icon: FileDown, label: 'Exportar Dados', to: '/export' },
@@ -38,10 +38,10 @@ export const AppSidebar = () => {
   const adminItems = useMemo(() => [
     { icon: Home, label: 'Dashboard', to: '/admin/dashboard', end: true },
     { icon: Activity, label: 'Monitoramento RT', to: '/admin/monitoring-advanced' },
-    { icon: Activity, label: 'Saúde Agentes', to: '/admin/agent-health' },
-    { icon: Package, label: 'Instalações', to: '/admin/installations' },
+    { icon: Activity, label: 'Saude Agentes', to: '/admin/agent-health' },
+    { icon: Package, label: 'Instalacoes', to: '/admin/installations' },
     { icon: Brain, label: 'IA Insights', to: '/admin/ai-insights' },
-    { icon: CheckCircle, label: 'IA Ações', to: '/admin/ai-actions' },
+    { icon: CheckCircle, label: 'IA Acoes', to: '/admin/ai-actions' },
     { icon: Users, label: 'Membros', to: '/admin/members' },
     { icon: Settings, label: 'Tenant', to: '/admin/tenant' },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
@@ -51,21 +51,21 @@ export const AppSidebar = () => {
   const superAdminItems = useMemo(() => [
     { icon: Home, label: 'Meu Tenant (Admin)', to: '/admin/dashboard', end: false },
     { icon: Package, label: 'Gerenciar Tenants', to: '/super-admin/tenants', end: true },
-    { icon: BarChart3, label: 'Métricas Globais', to: '/super-admin/metrics' },
-    { icon: Activity, label: 'Diagnóstico Agentes', to: '/admin/agent-diagnostics' },
+    { icon: BarChart3, label: 'Metricas Globais', to: '/super-admin/metrics' },
+    { icon: Activity, label: 'Diagnostico Agentes', to: '/admin/agent-diagnostics' },
     { icon: Terminal, label: 'Troubleshooting', to: '/admin/agent-troubleshooting' },
-    { icon: AlertTriangle, label: 'Agentes Problemáticos', to: '/admin/problematic-agents' },
+    { icon: AlertTriangle, label: 'Agentes Problematicos', to: '/admin/problematic-agents' },
     { icon: BarChart3, label: 'Analytics Subs', to: '/super-admin/subscription-analytics' },
     { icon: CreditCard, label: 'Config Stripe', to: '/super-admin/stripe-setup' },
-    { icon: Users, label: 'Todos Usuários', to: '/super-admin/users' },
+    { icon: Users, label: 'Todos Usuarios', to: '/super-admin/users' },
     { icon: Shield, label: 'Features', to: '/super-admin/features' },
     { icon: Key, label: 'Chaves API', to: '/super-admin/api-keys' },
     { icon: Key, label: 'Enrollment Keys', to: '/super-admin/enrollment-keys' },
     { icon: Mail, label: 'Convites', to: '/super-admin/invites' },
-    { icon: AlertTriangle, label: 'Segurança', to: '/super-admin/security' },
+    { icon: AlertTriangle, label: 'Seguranca', to: '/super-admin/security' },
     { icon: ScrollText, label: 'Logs Auditoria', to: '/super-admin/audit-logs' },
     { icon: Activity, label: 'Logs Sistema', to: '/super-admin/system-logs' },
-    { icon: Settings, label: 'Configurações', to: '/super-admin/settings' },
+    { icon: Settings, label: 'Configuracoes', to: '/super-admin/settings' },
   ], []);
 
   return (
@@ -160,7 +160,7 @@ export const AppSidebar = () => {
             <div className="space-y-1 px-2">
               {!collapsed && (
                 <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
-                  Administração
+                  Administracao
                 </p>
               )}
               {adminItems.map((item) => {

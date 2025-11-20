@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -27,12 +27,12 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Buscar tenant_id do usuário autenticado primeiro
+    // Buscar tenant_id do usuario autenticado primeiro
     const { data: userRole } = await supabaseAdmin
       .from('user_roles')
       .select('tenant_id')
@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    // Verificar se o usuário tem permissão (admin, operator ou super_admin)
+    // Verificar se o usuario tem permissao (admin, operator ou super_admin)
     const { data: hasAdminRole } = await supabaseAdmin.rpc('has_role', { _user_id: user.id, _role: 'admin' });
     const { data: hasOperatorRole } = await supabaseAdmin.rpc('has_role', { _user_id: user.id, _role: 'operator' });
     const { data: hasSuperAdminRole } = await supabaseAdmin.rpc('is_super_admin', { _user_id: user.id });
@@ -65,14 +65,14 @@ Deno.serve(async (req) => {
         JSON.stringify({ 
           error: {
             code: 'FORBIDDEN',
-            message: 'Acesso negado. Necessário ser admin, operator ou super_admin.'
+            message: 'Acesso negado. Necessario ser admin, operator ou super_admin.'
           }
         }), 
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Rate limiting por usuário (prevenir flooding de jobs)
+    // Rate limiting por usuario (prevenir flooding de jobs)
     const rateLimitResult = await checkRateLimit(supabaseAdmin, user.id, 'create-job', {
       maxRequests: 60,
       windowMinutes: 1,
@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
           JSON.stringify({ 
             error: {
               code: 'AGENT_NOT_FOUND',
-              message: 'Agente não encontrado ou não pertence a nenhum tenant.'
+              message: 'Agente nao encontrado ou nao pertence a nenhum tenant.'
             }
           }), 
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ 
           error: {
             code: 'TENANT_NOT_FOUND',
-            message: 'Tenant não encontrado.'
+            message: 'Tenant nao encontrado.'
           }
         }), 
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

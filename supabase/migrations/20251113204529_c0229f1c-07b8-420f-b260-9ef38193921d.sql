@@ -1,4 +1,4 @@
--- ✅ FASE 2: Criar função RPC para buscar agentes problemáticos
+-- [OK]  FASE 2: Criar funcao RPC para buscar agentes problematicos
 CREATE OR REPLACE FUNCTION public.get_problematic_agents()
 RETURNS TABLE (
   id uuid,

@@ -1,6 +1,6 @@
--- FASE 5: SQL Functions para Identificação e Limpeza de Agentes Problemáticos
+-- FASE 5: SQL Functions para Identificacao e Limpeza de Agentes Problematicos
 
--- View materializada para identificar agentes problemáticos
+-- View materializada para identificar agentes problematicos
 CREATE OR REPLACE VIEW v_problematic_agents AS
 SELECT 
   a.id,
@@ -27,7 +27,7 @@ WHERE a.status = 'pending'
   AND a.enrolled_at < NOW() - INTERVAL '10 minutes'
 GROUP BY a.id, a.agent_name, a.status, a.enrolled_at, a.last_heartbeat, a.tenant_id, t.name;
 
--- Function para limpar um agente específico
+-- Function para limpar um agente especifico
 CREATE OR REPLACE FUNCTION cleanup_problematic_agent(p_agent_id UUID)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -40,7 +40,7 @@ DECLARE
   v_tokens_invalidated INT;
   v_jobs_deleted INT;
 BEGIN
-  -- Buscar informações do agente
+  -- Buscar informacoes do agente
   SELECT agent_name, tenant_id INTO v_agent_name, v_tenant_id
   FROM agents
   WHERE id = p_agent_id;
@@ -74,7 +74,7 @@ BEGIN
     last_heartbeat = NULL
   WHERE id = p_agent_id;
   
-  -- Log da operação
+  -- Log da operacao
   INSERT INTO audit_logs (
     tenant_id,
     user_id,
@@ -107,7 +107,7 @@ BEGIN
 END;
 $$;
 
--- Function para limpar todos os agentes problemáticos de um tenant
+-- Function para limpar todos os agentes problematicos de um tenant
 CREATE OR REPLACE FUNCTION cleanup_all_problematic_agents(p_tenant_id UUID)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -119,7 +119,7 @@ DECLARE
   v_results jsonb[] := '{}';
   v_total_cleaned INT := 0;
 BEGIN
-  -- Verificar permissão (apenas admin do tenant)
+  -- Verificar permissao (apenas admin do tenant)
   IF NOT EXISTS (
     SELECT 1 FROM user_roles
     WHERE user_id = auth.uid()
@@ -132,7 +132,7 @@ BEGIN
     );
   END IF;
   
-  -- Limpar cada agente problemático
+  -- Limpar cada agente problematico
   FOR v_agent_record IN 
     SELECT id, agent_name 
     FROM v_problematic_agents
@@ -150,7 +150,7 @@ BEGIN
 END;
 $$;
 
--- Function para diagnóstico rápido de um agente
+-- Function para diagnostico rapido de um agente
 CREATE OR REPLACE FUNCTION diagnose_agent(p_agent_name TEXT)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -248,6 +248,6 @@ END;
 $$;
 
 COMMENT ON VIEW v_problematic_agents IS 'View para identificar agentes com problemas (pending sem heartbeat por >10min)';
-COMMENT ON FUNCTION cleanup_problematic_agent IS 'Limpa um agente problemático específico (invalida tokens, remove jobs pendentes, reseta status)';
-COMMENT ON FUNCTION cleanup_all_problematic_agents IS 'Limpa todos os agentes problemáticos de um tenant';
-COMMENT ON FUNCTION diagnose_agent IS 'Diagnóstico completo de um agente específico';
+COMMENT ON FUNCTION cleanup_problematic_agent IS 'Limpa um agente problematico especifico (invalida tokens, remove jobs pendentes, reseta status)';
+COMMENT ON FUNCTION cleanup_all_problematic_agents IS 'Limpa todos os agentes problematicos de um tenant';
+COMMENT ON FUNCTION diagnose_agent IS 'Diagnostico completo de um agente especifico';

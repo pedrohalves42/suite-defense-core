@@ -10,7 +10,7 @@ import { getTenantIdForUser } from '../_shared/tenant.ts';
 const InviteSchema = z.object({
   email: EmailSchema,
   role: z.enum(['admin', 'operator', 'viewer'], { 
-    errorMap: () => ({ message: 'Role inválida' }) 
+    errorMap: () => ({ message: 'Role invalida' }) 
   }),
 });
 
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       console.error(`[${requestId}] Role check error:`, roleError);
       return createErrorResponse(
         ErrorCode.INTERNAL_ERROR, 
-        'Falha ao verificar permissões de admin', 
+        'Falha ao verificar permissoes de admin', 
         500, 
         requestId
       );
@@ -75,10 +75,10 @@ Deno.serve(async (req) => {
     const tenantId = await getTenantIdForUser(supabaseAdmin, user.id);
 
     if (!tenantId) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant nao encontrado', 400, requestId);
     }
 
-    // ✅ P0 FIX: Usar tenant_features como fonte de verdade única (consistente com frontend)
+    // [OK]  P0 FIX: Usar tenant_features como fonte de verdade unica (consistente com frontend)
     const { data: maxUsersFeature } = await supabaseAdmin
       .from('tenant_features')
       .select('quota_limit')
@@ -86,10 +86,10 @@ Deno.serve(async (req) => {
       .eq('feature_key', 'max_users')
       .maybeSingle();
 
-    // Fallback para plano Free se não encontrar feature
+    // Fallback para plano Free se nao encontrar feature
     const maxUsers = maxUsersFeature?.quota_limit || 5;
 
-    // Contar usuários atuais do tenant
+    // Contar usuarios atuais do tenant
     const { count: currentUsersCount } = await supabaseAdmin
       .from('user_roles')
       .select('*', { count: 'exact', head: true })
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
     if (currentUsersCount && currentUsersCount >= maxUsers) {
       return createErrorResponse(
         ErrorCode.FORBIDDEN, 
-        `Limite de usuários atingido. Seu plano permite no máximo ${maxUsers} usuários.`, 
+        `Limite de usuarios atingido. Seu plano permite no maximo ${maxUsers} usuarios.`, 
         403, 
         requestId
       );
@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
     const userExists = existingUser.users.some(u => u.email === email);
 
     if (userExists) {
-      return createErrorResponse(ErrorCode.CONFLICT, 'Usuário já cadastrado', 409, requestId);
+      return createErrorResponse(ErrorCode.CONFLICT, 'Usuario ja cadastrado', 409, requestId);
     }
 
     // Generate unique token
@@ -154,16 +154,16 @@ Deno.serve(async (req) => {
       await resend.emails.send({
         from: 'CyberShield <onboarding@resend.dev>',
         to: [email],
-        subject: 'Você foi convidado para o CyberShield',
+        subject: 'Voce foi convidado para o CyberShield',
         html: `
           <h1>Bem-vindo ao CyberShield!</h1>
-          <p>Você foi convidado para participar como <strong>${role}</strong>.</p>
+          <p>Voce foi convidado para participar como <strong>${role}</strong>.</p>
           <p>Clique no link abaixo para aceitar o convite e criar sua conta:</p>
           <a href="${inviteLink}" style="display: inline-block; padding: 12px 24px; background: #0066ff; color: white; text-decoration: none; border-radius: 6px; margin: 16px 0;">
             Aceitar Convite
           </a>
           <p>Este convite expira em 7 dias.</p>
-          <p>Se você não solicitou este convite, pode ignorar este email.</p>
+          <p>Se voce nao solicitou este convite, pode ignorar este email.</p>
         `,
       });
     } catch (emailError) {

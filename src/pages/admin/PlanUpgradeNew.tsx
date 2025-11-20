@@ -59,7 +59,7 @@ export default function PlanUpgradeNew() {
       if (data.url) {
         toast({
           title: 'Redirecionando para o checkout',
-          description: 'Você será redirecionado para completar o pagamento.',
+          description: 'Voce sera redirecionado para completar o pagamento.',
         });
         // Redirect in the same tab for better UX (avoids popup blockers)
         window.location.href = data.url;
@@ -83,7 +83,7 @@ export default function PlanUpgradeNew() {
     },
     onSuccess: (data) => {
       toast({
-        title: '✅ Produtos criados no Stripe!',
+        title: '[OK]  Produtos criados no Stripe!',
         description: `Starter: ${data.products.starter.price_id}\nPro: ${data.products.pro.price_id}`,
       });
       // Refetch plans to get updated stripe_price_id
@@ -109,7 +109,7 @@ export default function PlanUpgradeNew() {
       if (data.url) {
         toast({
           title: 'Redirecionando para o portal',
-          description: 'Você será redirecionado para gerenciar sua assinatura.',
+          description: 'Voce sera redirecionado para gerenciar sua assinatura.',
         });
         // Redirect in the same tab for better UX
         window.location.href = data.url;
@@ -132,11 +132,11 @@ export default function PlanUpgradeNew() {
       icon: Zap,
       color: 'text-blue-500',
       bgColor: 'bg-blue-500/10',
-      description: 'Perfeito para começar',
+      description: 'Perfeito para comecar',
       features: [
-        'Até 5 dispositivos',
-        '2 scans avançados por dia',
-        'Dashboard básico',
+        'Ate 5 dispositivos',
+        '2 scans avancados por dia',
+        'Dashboard basico',
         'Suporte por email',
       ],
     },
@@ -146,9 +146,9 @@ export default function PlanUpgradeNew() {
       bgColor: 'bg-purple-500/10',
       description: 'Ideal para pequenas empresas',
       features: [
-        'Até 30 dispositivos',
-        '2 scans avançados por dia',
-        'Dashboard avançado',
+        'Ate 30 dispositivos',
+        '2 scans avancados por dia',
+        'Dashboard avancado',
         'Suporte por email',
         '30 dias de trial gratuito',
       ],
@@ -160,12 +160,12 @@ export default function PlanUpgradeNew() {
       bgColor: 'bg-yellow-500/10',
       description: 'Para equipes em crescimento',
       features: [
-        'Até 200 dispositivos',
-        'Scans avançados ilimitados',
-        'Dashboard avançado com analytics',
-        'Suporte prioritário',
+        'Ate 200 dispositivos',
+        'Scans avancados ilimitados',
+        'Dashboard avancado com analytics',
+        'Suporte prioritario',
         'API access',
-        'Relatórios customizados',
+        'Relatorios customizados',
         '30 dias de trial gratuito',
       ],
     },
@@ -173,7 +173,7 @@ export default function PlanUpgradeNew() {
       icon: Crown,
       color: 'text-red-500',
       bgColor: 'bg-red-500/10',
-      description: 'Para grandes organizações',
+      description: 'Para grandes organizacoes',
       features: [
         'Dispositivos ilimitados',
         'Scans ilimitados',
@@ -213,10 +213,10 @@ export default function PlanUpgradeNew() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
               <Zap className="h-5 w-5" />
-              Configuração Necessária
+              Configuracao Necessaria
             </CardTitle>
             <CardDescription className="text-yellow-700 dark:text-yellow-300">
-              Os planos ainda não estão conectados ao Stripe. Clique abaixo para criar os produtos automaticamente.
+              Os planos ainda nao estao conectados ao Stripe. Clique abaixo para criar os produtos automaticamente.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -242,7 +242,7 @@ export default function PlanUpgradeNew() {
       )}
 
       <div>
-        <h1 className="text-3xl font-bold">Planos e Preços</h1>
+        <h1 className="text-3xl font-bold">Planos e Precos</h1>
         <p className="text-muted-foreground mt-1">
           Escolha o plano ideal para sua equipe
         </p>
@@ -255,11 +255,11 @@ export default function PlanUpgradeNew() {
               <div>
                 <CardTitle>Plano Atual: {subscription.plan_name.toUpperCase()}</CardTitle>
                 <CardDescription>
-                  {subscription.device_quantity} dispositivo(s) • Status: {subscription.status}
+                  {subscription.device_quantity} dispositivo(s) ? Status: {subscription.status}
                 </CardDescription>
                 {subscription.trial_end && new Date(subscription.trial_end) > new Date() && (
                   <Badge variant="secondary" className="mt-2">
-                    Trial até {new Date(subscription.trial_end).toLocaleDateString('pt-BR')}
+                    Trial ate {new Date(subscription.trial_end).toLocaleDateString('pt-BR')}
                   </Badge>
                 )}
               </div>
@@ -328,22 +328,22 @@ export default function PlanUpgradeNew() {
                         className="mt-1"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        Máximo: {plan.max_devices} dispositivos
+                        Maximo: {plan.max_devices} dispositivos
                       </p>
                     </div>
                     <div className="pt-2 border-t">
                       <p className="text-sm text-muted-foreground">
-                        {formatPrice(plan.price_per_device)}/dispositivo/mês
+                        {formatPrice(plan.price_per_device)}/dispositivo/mes
                       </p>
                       <p className="text-3xl font-bold mt-1">
-                        {calculateTotal(plan.name, plan)}/mês
+                        {calculateTotal(plan.name, plan)}/mes
                       </p>
                     </div>
                   </div>
                 ) : (
                   <div className="mt-4">
                     <span className="text-3xl font-bold">
-                      {plan.name === 'enterprise' ? 'Customizado' : 'Grátis'}
+                      {plan.name === 'enterprise' ? 'Customizado' : 'Gratis'}
                     </span>
                   </div>
                 )}
@@ -381,7 +381,7 @@ export default function PlanUpgradeNew() {
                   </Button>
                 ) : (
                   <Button className="w-full" variant="outline" disabled={isCurrent}>
-                    {isCurrent ? 'Plano Atual' : 'Grátis'}
+                    {isCurrent ? 'Plano Atual' : 'Gratis'}
                   </Button>
                 )}
               </CardContent>

@@ -1,4 +1,4 @@
-// FASE 2: Função de cleanup de jobs travados
+// FASE 2: Funcao de cleanup de jobs travados
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
 
@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Timeout: 10 minutos (jobs em "delivered" há mais de 10min voltam para "queued")
+    // Timeout: 10 minutos (jobs em "delivered" ha mais de 10min voltam para "queued")
     const timeoutMinutes = 10
     const cutoffTime = new Date(Date.now() - timeoutMinutes * 60 * 1000).toISOString()
 

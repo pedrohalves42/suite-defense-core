@@ -17,9 +17,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { z } from 'zod';
 
 const ApiKeyNameSchema = z.string()
-  .min(3, 'Nome deve ter no mínimo 3 caracteres')
-  .max(50, 'Nome deve ter no máximo 50 caracteres')
-  .regex(/^[a-zA-Z0-9\s\-_]+$/, 'Nome deve conter apenas letras, números, espaços, hífens e underscores');
+  .min(3, 'Nome deve ter no minimo 3 caracteres')
+  .max(50, 'Nome deve ter no maximo 50 caracteres')
+  .regex(/^[a-zA-Z0-9\s\-_]+$/, 'Nome deve conter apenas letras, numeros, espacos, hifens e underscores');
 
 export default function ApiKeys() {
   const { toast } = useToast();
@@ -52,7 +52,7 @@ export default function ApiKeys() {
 
   const createApiKey = useMutation({
     mutationFn: async () => {
-      if (!tenant?.id) throw new Error('Tenant não encontrado');
+      if (!tenant?.id) throw new Error('Tenant nao encontrado');
 
       // Validate name
       const nameValidation = ApiKeyNameSchema.safeParse(name);
@@ -138,7 +138,7 @@ export default function ApiKeys() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: 'Copiado para área de transferência!' });
+    toast({ title: 'Copiado para area de transferencia!' });
   };
 
   return (
@@ -146,7 +146,7 @@ export default function ApiKeys() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold">Chaves de API</h2>
-          <p className="text-muted-foreground">Gerencie chaves de API para integração externa</p>
+          <p className="text-muted-foreground">Gerencie chaves de API para integracao externa</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -170,7 +170,7 @@ export default function ApiKeys() {
                   <AlertDescription>
                     <p className="font-semibold mb-2">Sua chave de API foi criada com sucesso!</p>
                     <p className="text-sm text-muted-foreground mb-2">
-                      Copie esta chave agora. Você não poderá vê-la novamente.
+                      Copie esta chave agora. Voce nao podera ve-la novamente.
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <code className="flex-1 p-2 bg-muted rounded text-sm">
@@ -211,11 +211,11 @@ export default function ApiKeys() {
                   />
                   {nameError && <p className="text-xs text-destructive mt-1">{nameError}</p>}
                   <p className="text-xs text-muted-foreground mt-1">
-                    3-50 caracteres: letras, números, espaços, hífens e underscores
+                    3-50 caracteres: letras, numeros, espacos, hifens e underscores
                   </p>
                 </div>
                 <div>
-                  <Label>Permissões</Label>
+                  <Label>Permissoes</Label>
                   <Select
                     value={scopes[0]}
                     onValueChange={(value) => setScopes([value])}
@@ -256,7 +256,7 @@ export default function ApiKeys() {
       <Card>
         <CardHeader>
           <CardTitle>Chaves Ativas</CardTitle>
-          <CardDescription>Suas chaves de API para integração</CardDescription>
+          <CardDescription>Suas chaves de API para integracao</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -267,11 +267,11 @@ export default function ApiKeys() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Chave</TableHead>
-                  <TableHead>Permissões</TableHead>
+                  <TableHead>Permissoes</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Último Uso</TableHead>
+                  <TableHead>Ultimo Uso</TableHead>
                   <TableHead>Expira em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="text-right">Acoes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -338,23 +338,23 @@ export default function ApiKeys() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Documentação da API</CardTitle>
+          <CardTitle>Documentacao da API</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h3 className="font-semibold mb-2">Endpoints Disponíveis:</h3>
+            <h3 className="font-semibold mb-2">Endpoints Disponiveis:</h3>
             <div className="space-y-2 text-sm">
               <div className="p-3 bg-muted rounded">
                 <code className="text-primary">GET /functions/v1/api-tenant-info</code>
-                <p className="text-muted-foreground mt-1">Retorna informações básicas do tenant</p>
+                <p className="text-muted-foreground mt-1">Retorna informacoes basicas do tenant</p>
               </div>
               <div className="p-3 bg-muted rounded">
                 <code className="text-primary">GET /functions/v1/api-tenant-features</code>
-                <p className="text-muted-foreground mt-1">Lista features e quotas disponíveis</p>
+                <p className="text-muted-foreground mt-1">Lista features e quotas disponiveis</p>
               </div>
               <div className="p-3 bg-muted rounded">
                 <code className="text-primary">GET /functions/v1/api-tenant-stats</code>
-                <p className="text-muted-foreground mt-1">Estatísticas de uso (agentes, scans, jobs)</p>
+                <p className="text-muted-foreground mt-1">Estatisticas de uso (agentes, scans, jobs)</p>
               </div>
             </div>
           </div>

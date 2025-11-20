@@ -63,12 +63,12 @@ Deno.serve(async (req) => {
         .upsert({
           ip_address: ipAddress,
           blocked_until: blockedUntil.toISOString(),
-          reason: 'Múltiplas tentativas de login falhadas',
+          reason: 'Multiplas tentativas de login falhadas',
         }, {
           onConflict: 'ip_address',
         });
 
-      // Logar evento de segurança como bloqueado
+      // Logar evento de seguranca como bloqueado
       await supabaseAdmin
         .from('security_logs')
         .insert({
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
         console.error('[BRUTE-FORCE] Failed to send alert:', alertError);
       }
     } else {
-      // Logar evento de segurança
+      // Logar evento de seguranca
       await supabaseAdmin
         .from('security_logs')
         .insert({

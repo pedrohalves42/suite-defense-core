@@ -47,10 +47,10 @@ if ($HmacSecret.Length -lt 32) {
     exit 1
 }
 
-# Validar versão do PowerShell
+# Validar versao do PowerShell
 if ($PSVersionTable.PSVersion.Major -lt 3) {
     Write-Host "ERRO: Este script requer PowerShell 3.0 ou superior" -ForegroundColor Red
-    Write-Host "Versão atual: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
+    Write-Host "Versao atual: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
     Write-Host "Por favor, atualize o PowerShell" -ForegroundColor Yellow
     exit 1
 }
@@ -60,26 +60,26 @@ $osVersion = [System.Environment]::OSVersion.Version
 $osName = (Get-WmiObject -Class Win32_OperatingSystem).Caption
 
 Write-Host "Sistema operacional: $osName" -ForegroundColor Cyan
-Write-Host "Versão: $($osVersion.Major).$($osVersion.Minor)" -ForegroundColor Cyan
+Write-Host "Versao: $($osVersion.Major).$($osVersion.Minor)" -ForegroundColor Cyan
 
 # Windows Server 2012 = 6.2, 2012 R2 = 6.3, 2016 = 10.0, etc
 if ($osVersion.Major -lt 6 -or ($osVersion.Major -eq 6 -and $osVersion.Minor -lt 2)) {
     Write-Host "AVISO: Este agente foi testado em Windows Server 2012+ e Windows 8+" -ForegroundColor Yellow
-    Write-Host "Sua versão pode não ser totalmente suportada" -ForegroundColor Yellow
+    Write-Host "Sua versao pode nao ser totalmente suportada" -ForegroundColor Yellow
 }
 
-# Configuração de logging
+# Configuracao de logging
 $LogDir = "C:\CyberShield\logs"
 $LogFile = Join-Path $LogDir "agent.log"
 $MaxLogSizeMB = 10
 $MaxLogFiles = 7
 
-# Criar diretório de logs se não existir
+# Criar diretorio de logs se nao existir
 if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 }
 
-#region Funções de Logging
+#region Funcoes de Logging
 
 function Write-Log {
     param(
@@ -91,7 +91,7 @@ function Write-Log {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logEntry = "[$timestamp] [$Level] $Message"
     
-    # Rotação de logs
+    # Rotacao de logs
     if (Test-Path $LogFile) {
         $logSize = (Get-Item $LogFile).Length / 1MB
         if ($logSize -gt $MaxLogSizeMB) {
@@ -122,9 +122,9 @@ function Write-Log {
 
 #endregion
 
-#region Configurações
+#region Configuracoes
 
-# ✅ FASE 2.2: Configurar TLS 1.2 e proxy globalmente
+# [OK]  FASE 2.2: Configurar TLS 1.2 e proxy globalmente
 Write-Log "Configurando rede..." "INFO"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
@@ -134,7 +134,7 @@ $proxy = [System.Net.WebRequest]::GetSystemWebProxy()
 
 Write-Log "TLS 1.2 habilitado" "SUCCESS"
 
-# ✅ FASE 2.1: Validação APÓS LOG INICIAL
+# [OK]  FASE 2.1: Validacao APOS LOG INICIAL
 if ([string]::IsNullOrWhiteSpace($AgentToken)) {
     Write-Log "FATAL: AgentToken vazio" "ERROR"
     exit 1
@@ -160,7 +160,7 @@ Write-Log "Log Directory: $LogDir" "INFO"
 
 #endregion
 
-#region Funções de Autenticação
+#region Funcoes de Autenticacao
 
 function Convert-HexToBytes {
     param([string]$HexString)
@@ -278,7 +278,7 @@ function Send-Heartbeat {
             $heartbeatUrl = "$ServerUrl/functions/v1/heartbeat"
             Write-Log "    Endpoint: $heartbeatUrl" "DEBUG"
             
-            # Incluir informações do OS no heartbeat
+            # Incluir informacoes do OS no heartbeat
             $os = Get-CimInstance Win32_OperatingSystem
             Write-Log "    OS: $($os.Caption)" "DEBUG"
             Write-Log "    Hostname: $env:COMPUTERNAME" "DEBUG"
@@ -292,16 +292,16 @@ function Send-Heartbeat {
             $response = Invoke-SecureRequest -Url $heartbeatUrl -Method "POST" -Body $body -MaxRetries 1
             
             if ($IsBootHeartbeat) {
-                Write-Log "    ✓ Heartbeat inicial aceito pelo servidor" "SUCCESS"
+                Write-Log "    ? Heartbeat inicial aceito pelo servidor" "SUCCESS"
             } else {
-                Write-Log "    ✓ Heartbeat OK" "DEBUG"
+                Write-Log "    ? Heartbeat OK" "DEBUG"
             }
             
             return $response
         }
         catch {
             $retryCount++
-            Write-Log "    ✗ Heartbeat erro (tentativa $retryCount/$maxRetries): $_" "ERROR"
+            Write-Log "    ? Heartbeat erro (tentativa $retryCount/$maxRetries): $_" "ERROR"
             Write-Log "    Stack: $($_.ScriptStackTrace)" "DEBUG"
             if ($retryCount -lt $maxRetries) {
                 Start-Sleep -Seconds (2 * $retryCount)
@@ -352,7 +352,7 @@ function Execute-Job {
     try {
         switch ($Job.type) {
             "scan_virus" {
-                # Implementar scan de vírus
+                # Implementar scan de virus
                 if ($Job.payload.file_path) {
                     $filePath = $Job.payload.file_path
                     if (Test-Path $filePath) {
@@ -378,7 +378,7 @@ function Execute-Job {
             }
             
             "collect_info" {
-                # Coletar informações do sistema
+                # Coletar informacoes do sistema
                 Write-Log "Collecting system information..." "INFO"
                 $os = Get-CimInstance Win32_OperatingSystem
                 $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
@@ -401,7 +401,7 @@ function Execute-Job {
             }
             
             "update_config" {
-                # Atualizar configurações do agent
+                # Atualizar configuracoes do agent
                 Write-Log "Updating agent configuration..." "INFO"
                 if ($Job.payload.poll_interval) {
                     $script:PollInterval = $Job.payload.poll_interval
@@ -418,7 +418,7 @@ function Execute-Job {
             }
             
             "run_command" {
-                # Executar comando (com validação de segurança)
+                # Executar comando (com validacao de seguranca)
                 Write-Log "Running command..." "INFO"
                 if ($Job.payload.command) {
                     # IMPORTANTE: Apenas comandos seguros permitidos
@@ -477,7 +477,7 @@ function Upload-Report {
     param([string]$JobId, [object]$Result)
     
     try {
-        # Fix #1: Passar hashtable diretamente, não JSON string
+        # Fix #1: Passar hashtable diretamente, nao JSON string
         $reportData = @{
             job_id = $JobId
             result = $Result
@@ -517,7 +517,7 @@ function Ack-Job {
                     Write-Log "Job $JobId acknowledged successfully (ok=true)" "SUCCESS"
                     return $true
                 } elseif ($response.error) {
-                    if ($response.error -match "já foi confirmado|already") {
+                    if ($response.error -match "ja foi confirmado|already") {
                         Write-Log "Job $JobId already acknowledged (idempotent)" "INFO"
                         return $true
                     } else {
@@ -588,12 +588,12 @@ function Send-SystemMetrics {
         $metricsUrl = "$ServerUrl/functions/v1/submit-system-metrics"
         $response = Invoke-SecureRequest -Url $metricsUrl -Method "POST" -Body $metrics
         
-        # Fix #5: Apenas logar sucesso se response não for null
+        # Fix #5: Apenas logar sucesso se response nao for null
         if ($response) {
             Write-Log "System metrics sent successfully (CPU: $($metrics.cpu_usage_percent)%, RAM: $($metrics.memory_usage_percent)%, Disk: $($metrics.disk_usage_percent)%)" "SUCCESS"
             
             if ($response.alerts_generated -and $response.alerts_generated -gt 0) {
-                Write-Log "⚠️ $($response.alerts_generated) alert(s) generated" "WARN"
+                Write-Log "[WARN] ? $($response.alerts_generated) alert(s) generated" "WARN"
             }
         } else {
             Write-Log "Metrics request completed but no response received" "WARN"
@@ -613,29 +613,29 @@ function Send-SystemMetrics {
 
 function Test-SystemHealth {
     Write-Log "========================================" "INFO"
-    Write-Log "🔍 DIAGNÓSTICO COMPLETO DE SISTEMA" "INFO"
+    Write-Log "[SCAN]  DIAGNOSTICO COMPLETO DE SISTEMA" "INFO"
     Write-Log "========================================" "INFO"
     
     # 1. Validar PowerShell
     Write-Log "  [1/6] Validando PowerShell..." "INFO"
     if ($PSVersionTable.PSVersion.Major -lt 3) {
-        Write-Log "  ✗ PowerShell muito antigo! Requer 3.0+" "ERROR"
+        Write-Log "  ? PowerShell muito antigo! Requer 3.0+" "ERROR"
         return $false
     }
-    Write-Log "  ✓ PowerShell $($PSVersionTable.PSVersion) OK" "SUCCESS"
+    Write-Log "  ? PowerShell $($PSVersionTable.PSVersion) OK" "SUCCESS"
     
     # 2. Testar conectividade DNS
     Write-Log "  [2/6] Testando conectividade DNS..." "INFO"
     try {
         $dnsTest = Test-Connection -ComputerName "google.com" -Count 1 -Quiet -ErrorAction Stop
         if ($dnsTest) {
-            Write-Log "  ✓ DNS OK - Internet acessível" "SUCCESS"
+            Write-Log "  ? DNS OK - Internet acessivel" "SUCCESS"
         } else {
-            Write-Log "  ✗ DNS FALHOU - Sem internet" "ERROR"
+            Write-Log "  ? DNS FALHOU - Sem internet" "ERROR"
             return $false
         }
     } catch {
-        Write-Log "  ✗ Erro DNS: $_" "ERROR"
+        Write-Log "  ? Erro DNS: $_" "ERROR"
         return $false
     }
     
@@ -644,19 +644,19 @@ function Test-SystemHealth {
     $serverHost = $ServerUrl -replace "https://","" -replace "http://","" -replace "/.*",""
     Write-Log "  Hostname: $serverHost" "INFO"
     
-    # 4. Testar conexão TCP com servidor backend
+    # 4. Testar conexao TCP com servidor backend
     Write-Log "  [4/6] Testando conectividade TCP:443 com $serverHost..." "INFO"
     try {
         $tcpTest = Test-NetConnection -ComputerName $serverHost -Port 443 -WarningAction SilentlyContinue -ErrorAction Stop
         if ($tcpTest.TcpTestSucceeded) {
-            Write-Log "  ✓ Conectividade TCP:443 OK" "SUCCESS"
+            Write-Log "  ? Conectividade TCP:443 OK" "SUCCESS"
         } else {
-            Write-Log "  ✗ TCP:443 falhou - Firewall pode estar bloqueando" "ERROR"
+            Write-Log "  ? TCP:443 falhou - Firewall pode estar bloqueando" "ERROR"
             Write-Log "    Verifique regras de firewall para $serverHost:443" "WARN"
             return $false
         }
     } catch {
-        Write-Log "  ✗ Erro ao testar TCP: $_" "ERROR"
+        Write-Log "  ? Erro ao testar TCP: $_" "ERROR"
         return $false
     }
     
@@ -665,21 +665,21 @@ function Test-SystemHealth {
     try {
         $memory = Get-WmiObject Win32_OperatingSystem
         $freeMemoryMB = [math]::Round($memory.FreePhysicalMemory / 1024, 2)
-        Write-Log "    Memória livre: $freeMemoryMB MB" "INFO"
+        Write-Log "    Memoria livre: $freeMemoryMB MB" "INFO"
         
         if ($freeMemoryMB -lt 100) {
-            Write-Log "    ⚠ AVISO: Memória disponível baixa" "WARN"
+            Write-Log "    [WARN]  AVISO: Memoria disponivel baixa" "WARN"
         }
         
         $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
         $freeSpaceGB = [math]::Round($disk.FreeSpace / 1GB, 2)
-        Write-Log "    Espaço livre C:: $freeSpaceGB GB" "INFO"
+        Write-Log "    Espaco livre C:: $freeSpaceGB GB" "INFO"
         
         if ($freeSpaceGB -lt 1) {
-            Write-Log "    ⚠ AVISO: Espaço em disco baixo" "WARN"
+            Write-Log "    [WARN]  AVISO: Espaco em disco baixo" "WARN"
         }
     } catch {
-        Write-Log "    ⚠ Não foi possível verificar recursos: $_" "WARN"
+        Write-Log "    [WARN]  Nao foi possivel verificar recursos: $_" "WARN"
     }
     
     # 6. RETRY DE HEARTBEAT COM BACKOFF EXPONENCIAL
@@ -694,10 +694,10 @@ function Test-SystemHealth {
         
         $result = Send-Heartbeat -IsBootHeartbeat
         if ($result) {
-            Write-Log "  ✓ Heartbeat inicial enviado com SUCESSO!" "SUCCESS"
+            Write-Log "  ? Heartbeat inicial enviado com SUCESSO!" "SUCCESS"
             $heartbeatSuccess = $true
         } else {
-            Write-Log "    ✗ Heartbeat falhou" "WARN"
+            Write-Log "    ? Heartbeat falhou" "WARN"
             
             if ($retryCount -lt $maxRetries) {
                 $backoffSeconds = [math]::Pow(2, $retryCount)
@@ -709,15 +709,15 @@ function Test-SystemHealth {
     
     if (-not $heartbeatSuccess) {
         Write-Log "========================================" "ERROR"
-        Write-Log "✗ FALHA CRÍTICA: Heartbeat não enviado após $maxRetries tentativas" "ERROR"
+        Write-Log "? FALHA CRITICA: Heartbeat nao enviado apos $maxRetries tentativas" "ERROR"
         Write-Log "========================================" "ERROR"
-        Write-Log "Possíveis causas:" "ERROR"
-        Write-Log "  1. Credenciais inválidas (AgentToken ou HmacSecret)" "ERROR"
+        Write-Log "Possiveis causas:" "ERROR"
+        Write-Log "  1. Credenciais invalidas (AgentToken ou HmacSecret)" "ERROR"
         Write-Log "  2. Rate limiting ativo no servidor" "ERROR"
         Write-Log "  3. Endpoint /heartbeat offline ou com erro" "ERROR"
         Write-Log "  4. Firewall corporativo bloqueando HTTPS" "ERROR"
         Write-Log "" "ERROR"
-        Write-Log "SOLUÇÃO:" "WARN"
+        Write-Log "SOLUCAO:" "WARN"
         Write-Log "  - Verifique os logs do servidor backend" "WARN"
         Write-Log "  - Valide as credenciais no dashboard" "WARN"
         Write-Log "  - Teste conectividade: Test-NetConnection $serverHost -Port 443" "WARN"
@@ -725,7 +725,7 @@ function Test-SystemHealth {
     }
     
     Write-Log "========================================" "SUCCESS"
-    Write-Log "✅ AGENTE INICIALIZADO COM SUCESSO!" "SUCCESS"
+    Write-Log "[OK]  AGENTE INICIALIZADO COM SUCESSO!" "SUCCESS"
     Write-Log "========================================" "SUCCESS"
     return $true
     catch {
@@ -779,7 +779,7 @@ function Start-Agent {
                 $lastHeartbeat = $now
             }
             
-            # Métricas de sistema a cada 5 minutos
+            # Metricas de sistema a cada 5 minutos
             if (($now - $lastMetrics).TotalSeconds -ge $metricsInterval) {
                 Send-SystemMetrics | Out-Null
                 $lastMetrics = $now

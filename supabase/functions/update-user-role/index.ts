@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { z } from 'https://esm.sh/zod@3.23.8';
 import { corsHeaders } from '../_shared/error-handler.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
-import { logger } from '../_shared/logger.ts'; // CORREÇÃO: Adicionar logger
+import { logger } from '../_shared/logger.ts'; // CORRECAO: Adicionar logger
 
 // CRITICAL SECURITY: Block super_admin role modifications via this endpoint
 // super_admin can only be assigned via direct database operations
@@ -71,11 +71,11 @@ Deno.serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
-      logger.error('Authentication failed', authError); // CORREÇÃO: Usar logger
+      logger.error('Authentication failed', authError); // CORRECAO: Usar logger
       return createError('UNAUTHORIZED', 'Authentication required', requestId, 401);
     }
 
-    logger.info(`[${requestId}] Checking role for user: ${user.id}`); // CORREÇÃO: Usar logger
+    logger.info(`[${requestId}] Checking role for user: ${user.id}`); // CORRECAO: Usar logger
     
     // Check if user is admin and get tenant
     const { data: actorRole, error: roleError } = await supabaseAdmin
@@ -84,15 +84,15 @@ Deno.serve(async (req) => {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    logger.debug(`[${requestId}] Actor role query result`, { actorRole, roleError }); // CORREÇÃO: Usar logger
+    logger.debug(`[${requestId}] Actor role query result`, { actorRole, roleError }); // CORRECAO: Usar logger
 
     if (roleError) {
-      logger.error(`[${requestId}] Error fetching actor role`, roleError); // CORREÇÃO: Usar logger
+      logger.error(`[${requestId}] Error fetching actor role`, roleError); // CORRECAO: Usar logger
       return createError('INTERNAL', 'Internal server error', requestId, 500);
     }
 
     if (!actorRole || actorRole.role !== 'admin') {
-      logger.warn(`[${requestId}] User ${user.id} is not admin, role: ${actorRole?.role}`); // CORREÇÃO: Usar logger
+      logger.warn(`[${requestId}] User ${user.id} is not admin, role: ${actorRole?.role}`); // CORRECAO: Usar logger
       // Audit failed attempt
       await supabaseAdmin.from('audit_logs').insert({
         tenant_id: actorRole?.tenant_id || null,
@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
       return createError('BAD_REQUEST', errorMessage, requestId, 400);
     }
 
-    // CORREÇÃO: Suportar ambos os formatos
+    // CORRECAO: Suportar ambos os formatos
     const { userId: userIdCamel, user_id: userIdSnake, roles: newRoles } = validationResult.data;
     const userId = userIdCamel || userIdSnake!;
 
@@ -148,7 +148,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (targetError) {
-      logger.error('Error fetching target user', targetError); // CORREÇÃO: Usar logger
+      logger.error('Error fetching target user', targetError); // CORRECAO: Usar logger
       return createError('INTERNAL', 'Internal server error', requestId, 500);
     }
 
@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
         .eq('tenant_id', actorTenantId);
 
       if (countError) {
-        logger.error('Error counting admins', countError); // CORREÇÃO: Usar logger
+        logger.error('Error counting admins', countError); // CORRECAO: Usar logger
         return createError('INTERNAL', 'Internal server error', requestId, 500);
       }
 
@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    logger.error('Unexpected error in update-user-role', error); // CORREÇÃO: Usar logger
+    logger.error('Unexpected error in update-user-role', error); // CORRECAO: Usar logger
     
     return createError(
       'INTERNAL',

@@ -11,7 +11,7 @@ test.describe('Installation Health Card', () => {
   });
 
   test('should display Installation Health card with metrics', async ({ page }) => {
-    // Verificar se o card está presente
+    // Verificar se o card esta presente
     await expect(page.locator('text=Installation Health')).toBeVisible();
     
     // Verificar se tem tooltip de ajuda
@@ -21,7 +21,7 @@ test.describe('Installation Health Card', () => {
       await expect(page.locator('text=Taxa de sucesso de post_installation')).toBeVisible();
     }
 
-    // Verificar se os cards de OS estão presentes
+    // Verificar se os cards de OS estao presentes
     await expect(page.locator('text=macOS')).toBeVisible();
     await expect(page.locator('text=Windows')).toBeVisible();
     await expect(page.locator('text=Linux')).toBeVisible();
@@ -41,7 +41,7 @@ test.describe('Installation Health Card', () => {
       const percentText = await macosCard.locator('text=/\\d+\\.\\d+%/').first().textContent();
       expect(percentText).toMatch(percentagePattern);
     } else {
-      // Se não há dados, deve mostrar "Sem dados"
+      // Se nao ha dados, deve mostrar "Sem dados"
       await expect(macosCard.locator('text=Sem dados')).toBeVisible();
     }
   });
@@ -83,13 +83,13 @@ test.describe('Installation Health Card', () => {
   });
 
   test('should handle error state gracefully', async ({ page }) => {
-    // Simular erro desconectando rede (se possível via context)
-    // Por simplicidade, apenas verificar que não quebra se houver erro
+    // Simular erro desconectando rede (se possivel via context)
+    // Por simplicidade, apenas verificar que nao quebra se houver erro
     
     await page.waitForTimeout(2000);
     
     // Se houver erro, deve mostrar mensagem
-    const errorMsg = page.locator('text=Erro ao carregar métricas');
+    const errorMsg = page.locator('text=Erro ao carregar metricas');
     if (await errorMsg.count() > 0) {
       await expect(errorMsg).toBeVisible();
     }
@@ -111,7 +111,7 @@ test.describe('Installation Health Card', () => {
   test('should show progress bars', async ({ page }) => {
     await page.waitForTimeout(2000);
     
-    // Verificar se há barras de progresso (elementos com h-1.5)
+    // Verificar se ha barras de progresso (elementos com h-1.5)
     const progressBars = page.locator('[class*="h-1.5"][class*="rounded-full"]');
     const count = await progressBars.count();
     

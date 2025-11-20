@@ -1,4 +1,4 @@
--- Função para incrementar/decrementar quota
+-- Funcao para incrementar/decrementar quota
 CREATE OR REPLACE FUNCTION public.update_quota_usage(
   p_tenant_id uuid,
   p_feature_key text,
@@ -80,7 +80,7 @@ CREATE TRIGGER trigger_increment_scan_quota
   FOR EACH ROW
   EXECUTE FUNCTION public.increment_scan_quota();
 
--- Trigger para contar usuários ao criar
+-- Trigger para contar usuarios ao criar
 CREATE OR REPLACE FUNCTION public.increment_user_quota()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -88,7 +88,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Incrementar quota de usuários
+  -- Incrementar quota de usuarios
   PERFORM public.update_quota_usage(NEW.tenant_id, 'max_users', 1);
   RETURN NEW;
 END;
@@ -100,7 +100,7 @@ CREATE TRIGGER trigger_increment_user_quota
   FOR EACH ROW
   EXECUTE FUNCTION public.increment_user_quota();
 
--- Trigger para decrementar ao deletar usuário
+-- Trigger para decrementar ao deletar usuario
 CREATE OR REPLACE FUNCTION public.decrement_user_quota()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -108,7 +108,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  -- Decrementar quota de usuários
+  -- Decrementar quota de usuarios
   PERFORM public.update_quota_usage(OLD.tenant_id, 'max_users', -1);
   RETURN OLD;
 END;
@@ -138,12 +138,12 @@ BEGIN
     SET quota_used = agent_count
     WHERE tenant_id = tenant_record.id AND feature_key = 'max_agents';
     
-    -- Contar usuários
+    -- Contar usuarios
     SELECT COUNT(*) INTO user_count
     FROM public.user_roles
     WHERE tenant_id = tenant_record.id;
     
-    -- Atualizar quota de usuários
+    -- Atualizar quota de usuarios
     UPDATE public.tenant_features
     SET quota_used = user_count
     WHERE tenant_id = tenant_record.id AND feature_key = 'max_users';

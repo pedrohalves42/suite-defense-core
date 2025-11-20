@@ -75,7 +75,7 @@ export default function TenantSettings() {
     onSuccess: () => {
       toast({
         title: "Tenant atualizado",
-        description: "As informações do tenant foram salvas com sucesso",
+        description: "As informacoes do tenant foram salvas com sucesso",
       });
       queryClient.invalidateQueries({ queryKey: ["tenant"] });
     },
@@ -104,14 +104,14 @@ export default function TenantSettings() {
     },
     onSuccess: () => {
       toast({
-        title: "Configurações salvas",
-        description: "As configurações foram atualizadas com sucesso",
+        title: "Configuracoes salvas",
+        description: "As configuracoes foram atualizadas com sucesso",
       });
       queryClient.invalidateQueries({ queryKey: ["tenant-settings"] });
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao salvar configurações",
+        title: "Erro ao salvar configuracoes",
         description: error.message,
         variant: "destructive",
       });
@@ -125,9 +125,9 @@ export default function TenantSettings() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold">Configurações do Tenant</h1>
+        <h1 className="text-3xl font-bold">Configuracoes do Tenant</h1>
         <p className="text-muted-foreground">
-          Gerencie as configurações e preferências do seu tenant
+          Gerencie as configuracoes e preferencias do seu tenant
         </p>
       </div>
 
@@ -135,7 +135,7 @@ export default function TenantSettings() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
-            <CardTitle>Informações Básicas</CardTitle>
+            <CardTitle>Informacoes Basicas</CardTitle>
           </div>
           <CardDescription>
             Configure o nome e identificador do seu tenant
@@ -168,7 +168,7 @@ export default function TenantSettings() {
             disabled={updateTenant.isPending}
           >
             <Save className="mr-2 h-4 w-4" />
-            Salvar Alterações
+            Salvar Alteracoes
           </Button>
         </CardContent>
       </Card>
@@ -177,16 +177,16 @@ export default function TenantSettings() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
-            <CardTitle>Notificações</CardTitle>
+            <CardTitle>Notificacoes</CardTitle>
           </div>
           <CardDescription>
-            Configure as preferências de notificações
+            Configure as preferencias de notificacoes
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Notificações de Email</Label>
+              <Label>Notificacoes de Email</Label>
               <p className="text-sm text-muted-foreground">
                 Receber alertas por email sobre eventos importantes
               </p>
@@ -201,9 +201,9 @@ export default function TenantSettings() {
           <Separator />
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label>Alertas de Segurança</Label>
+              <Label>Alertas de Seguranca</Label>
               <p className="text-sm text-muted-foreground">
-                Notificações sobre atividades suspeitas
+                Notificacoes sobre atividades suspeitas
               </p>
             </div>
             <Switch
@@ -218,10 +218,10 @@ export default function TenantSettings() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            <CardTitle>Segurança e Auditoria</CardTitle>
+            <CardTitle>Seguranca e Auditoria</CardTitle>
           </div>
           <CardDescription>
-            Configure opções de segurança e registro
+            Configure opcoes de seguranca e registro
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -229,7 +229,7 @@ export default function TenantSettings() {
             <div className="space-y-0.5">
               <Label>Logs de Auditoria</Label>
               <p className="text-sm text-muted-foreground">
-                Registrar todas as ações realizadas no sistema
+                Registrar todas as acoes realizadas no sistema
               </p>
             </div>
             <Switch
@@ -253,7 +253,7 @@ export default function TenantSettings() {
         <CardContent className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Máximo de Agentes</Label>
+              <Label>Maximo de Agentes</Label>
               <Input
                 type="number"
                 value={5}
@@ -262,7 +262,7 @@ export default function TenantSettings() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Máximo de Usuários</Label>
+              <Label>Maximo de Usuarios</Label>
               <Input
                 type="number"
                 value={10}
@@ -272,7 +272,7 @@ export default function TenantSettings() {
             </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            Para aumentar esses limites, faça upgrade do seu plano.
+            Para aumentar esses limites, faca upgrade do seu plano.
           </p>
         </CardContent>
       </Card>

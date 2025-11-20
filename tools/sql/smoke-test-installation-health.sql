@@ -1,9 +1,9 @@
 -- ============================================
--- 🔍 SMOKE TEST: Installation Health (24h)
+-- [SCAN]  SMOKE TEST: Installation Health (24h)
 -- ============================================
--- Análise de métricas de instalação:
+-- Analise de metricas de instalacao:
 -- - Taxa de sucesso por platform
--- - Tempo médio de instalação
+-- - Tempo medio de instalacao
 -- - Erros mais comuns
 -- - Agentes com falhas recorrentes
 
@@ -21,10 +21,10 @@ SELECT
     END, 1
   ) AS success_rate_pct,
   CASE
-    WHEN COUNT(*) = 0 THEN '⚪ Sem dados'
-    WHEN ROUND(100.0 * COUNT(*) FILTER (WHERE success IS TRUE) / COUNT(*), 1) >= 95 THEN '🟢 HEALTHY'
-    WHEN ROUND(100.0 * COUNT(*) FILTER (WHERE success IS TRUE) / COUNT(*), 1) >= 80 THEN '🟡 WARNING'
-    ELSE '🔴 CRITICAL'
+    WHEN COUNT(*) = 0 THEN '? Sem dados'
+    WHEN ROUND(100.0 * COUNT(*) FILTER (WHERE success IS TRUE) / COUNT(*), 1) >= 95 THEN '? HEALTHY'
+    WHEN ROUND(100.0 * COUNT(*) FILTER (WHERE success IS TRUE) / COUNT(*), 1) >= 80 THEN '? WARNING'
+    ELSE '? CRITICAL'
   END AS status
 FROM installation_analytics
 WHERE event_type IN ('post_installation', 'post_installation_unverified')
@@ -41,12 +41,12 @@ ORDER BY
 -- Resultado esperado (exemplo):
 -- platform | total_events | successful | failed | success_rate_pct | status
 -- ---------|--------------|-----------|--------|-----------------|----------
--- macos    |           10 |        10 |      0 |           100.0 | 🟢 HEALTHY
--- windows  |           25 |        23 |      2 |            92.0 | 🟡 WARNING
--- linux    |            5 |         5 |      0 |           100.0 | 🟢 HEALTHY
+-- macos    |           10 |        10 |      0 |           100.0 | ? HEALTHY
+-- windows  |           25 |        23 |      2 |            92.0 | ? WARNING
+-- linux    |            5 |         5 |      0 |           100.0 | ? HEALTHY
 
 
--- Query 2: Tempo Médio de Instalação
+-- Query 2: Tempo Medio de Instalacao
 -- ============================================
 SELECT
   platform,
@@ -56,9 +56,9 @@ SELECT
   ROUND(MAX(installation_time_seconds), 1) AS max_seconds,
   ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY installation_time_seconds), 1) AS median_seconds,
   CASE
-    WHEN AVG(installation_time_seconds) < 60 THEN '🟢 Rápido (< 1min)'
-    WHEN AVG(installation_time_seconds) < 120 THEN '🟡 Normal (1-2min)'
-    ELSE '🔴 Lento (> 2min)'
+    WHEN AVG(installation_time_seconds) < 60 THEN '? Rapido (< 1min)'
+    WHEN AVG(installation_time_seconds) < 120 THEN '? Normal (1-2min)'
+    ELSE '? Lento (> 2min)'
   END AS speed_status
 FROM installation_analytics
 WHERE event_type IN ('post_installation', 'post_installation_unverified')
@@ -70,9 +70,9 @@ ORDER BY avg_seconds DESC;
 -- Resultado esperado (exemplo):
 -- platform | samples | avg_seconds | min | max | median | speed_status
 -- ---------|---------|------------|-----|-----|--------|---------------
--- windows  |      23 |        45.2 |  30 |  90 |   42.0 | 🟢 Rápido
--- macos    |      10 |        38.5 |  25 |  55 |   37.0 | 🟢 Rápido
--- linux    |       5 |        52.1 |  40 |  70 |   50.0 | 🟢 Rápido
+-- windows  |      23 |        45.2 |  30 |  90 |   42.0 | ? Rapido
+-- macos    |      10 |        38.5 |  25 |  55 |   37.0 | ? Rapido
+-- linux    |       5 |        52.1 |  40 |  70 |   50.0 | ? Rapido
 
 
 -- Query 3: Top 5 Erros Mais Comuns
@@ -97,7 +97,7 @@ LIMIT 5;
 -- Se tudo estiver OK, nenhuma linha retornada.
 -- Se houver erros, lista os mais frequentes.
 
--- Exemplo de saída (com erros):
+-- Exemplo de saida (com erros):
 -- platform | error_message              | occurrences | affected_agents
 -- ---------|---------------------------|-------------|------------------
 -- windows  | HMAC verification failed  |           2 | {agent-01, agent-02}
@@ -116,9 +116,9 @@ SELECT
   MIN(created_at) AS first_attempt,
   MAX(created_at) AS last_attempt,
   CASE
-    WHEN COUNT(*) FILTER (WHERE success IS FALSE) >= 3 THEN '🔴 CRITICAL (≥3 falhas)'
-    WHEN COUNT(*) FILTER (WHERE success IS FALSE) >= 2 THEN '🟡 WARNING (2 falhas)'
-    ELSE '🟠 1 falha'
+    WHEN COUNT(*) FILTER (WHERE success IS FALSE) >= 3 THEN '? CRITICAL (?3 falhas)'
+    WHEN COUNT(*) FILTER (WHERE success IS FALSE) >= 2 THEN '? WARNING (2 falhas)'
+    ELSE '? 1 falha'
   END AS severity
 FROM installation_analytics
 WHERE event_type IN ('post_installation', 'post_installation_unverified')
@@ -132,7 +132,7 @@ ORDER BY failed DESC, last_attempt DESC;
 -- Se houver falhas recorrentes, investigue esses agentes.
 
 
--- Query 5: Distribuição Temporal de Instalações (últimas 24h)
+-- Query 5: Distribuicao Temporal de Instalacoes (ultimas 24h)
 -- ============================================
 SELECT
   DATE_TRUNC('hour', created_at) AS hour,
@@ -180,12 +180,12 @@ HAVING COUNT(*) FILTER (WHERE network_connectivity IS FALSE) > 0
 ORDER BY pct_no_connectivity DESC;
 
 -- Resultado esperado:
--- Se não houver problemas de rede, nenhuma linha retornada.
--- Se houver, mostra quais platforms têm mais problemas de conectividade.
+-- Se nao houver problemas de rede, nenhuma linha retornada.
+-- Se houver, mostra quais platforms tem mais problemas de conectividade.
 
 
 -- ============================================
--- 🎯 RESUMO EXECUTIVO
+-- ? RESUMO EXECUTIVO
 -- ============================================
 WITH summary AS (
   SELECT
@@ -208,22 +208,22 @@ SELECT
   agents_installed_ok,
   avg_time_sec,
   CASE
-    WHEN total_installations = 0 THEN '⚪ Sem instalações nas últimas 24h'
-    WHEN ROUND(100.0 * successful / total_installations, 1) >= 95 THEN '🟢 SISTEMA HEALTHY'
-    WHEN ROUND(100.0 * successful / total_installations, 1) >= 80 THEN '🟡 ATENÇÃO: Taxa de sucesso abaixo do ideal'
-    ELSE '🔴 CRÍTICO: Problemas graves de instalação'
+    WHEN total_installations = 0 THEN '? Sem instalacoes nas ultimas 24h'
+    WHEN ROUND(100.0 * successful / total_installations, 1) >= 95 THEN '? SISTEMA HEALTHY'
+    WHEN ROUND(100.0 * successful / total_installations, 1) >= 80 THEN '? ATENCAO: Taxa de sucesso abaixo do ideal'
+    ELSE '? CRITICO: Problemas graves de instalacao'
   END AS overall_health
 FROM summary;
 
 -- ============================================
--- 📊 Como Interpretar os Resultados
+-- ? Como Interpretar os Resultados
 -- ============================================
--- 🟢 success_rate >= 95%  → Sistema funcionando normalmente
--- 🟡 success_rate >= 80%  → Investigar causas de falha
--- 🔴 success_rate < 80%   → Problema crítico, parar deploys
+-- ? success_rate >= 95%  ? Sistema funcionando normalmente
+-- ? success_rate >= 80%  ? Investigar causas de falha
+-- ? success_rate < 80%   ? Problema critico, parar deploys
 --
--- 🚨 ALERTAS CRÍTICOS:
--- - Agentes com ≥3 falhas → Verificar enrollment_key / HMAC
--- - Tempo médio > 2min   → Investigar performance de rede/servidor
--- - Muitos "no connectivity" → Problema de firewall/DNS
+-- ? ALERTAS CRITICOS:
+-- - Agentes com ?3 falhas ? Verificar enrollment_key / HMAC
+-- - Tempo medio > 2min   ? Investigar performance de rede/servidor
+-- - Muitos "no connectivity" ? Problema de firewall/DNS
 -- ============================================

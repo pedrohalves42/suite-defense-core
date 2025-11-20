@@ -42,7 +42,7 @@ export function RecentJobsActivity({ tenantId }: RecentJobsActivityProps) {
         <div key={job.id} className="flex justify-between items-start text-sm border-b pb-2">
           <div className="flex-1">
             <div className="font-medium flex items-center gap-2">
-              <span>{job.type} · {job.agent_name}</span>
+              <span>{job.type} ? {job.agent_name}</span>
               {job.is_v3 && (
                 <Badge variant="outline" className="text-xs px-1 py-0">v3</Badge>
               )}
@@ -54,7 +54,7 @@ export function RecentJobsActivity({ tenantId }: RecentJobsActivityProps) {
             )}
             {job.duration_seconds !== null && job.duration_seconds !== undefined && (
               <div className="text-xs text-muted-foreground mt-1">
-                Duração: {job.duration_seconds}s
+                Duracao: {job.duration_seconds}s
               </div>
             )}
           </div>

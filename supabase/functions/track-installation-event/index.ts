@@ -94,11 +94,11 @@ Deno.serve(async (req) => {
     const hmacSignature = req.headers.get('X-HMAC-Signature');
 
     if (agentToken && hmacSignature && event.event_type === 'installation_failed') {
-      // Modo telemetria de falha: não exige JWT, usa agent credentials
+      // Modo telemetria de falha: nao exige JWT, usa agent credentials
       logger.info('[track-installation-event] Using agent-token mode for failure telemetry', { requestId });
       
       try {
-        // Buscar agent pré-existente (pode não existir ainda se instalação está falhando antes de registrar)
+        // Buscar agent pre-existente (pode nao existir ainda se instalacao esta falhando antes de registrar)
         const { data: agentData } = await supabase
           .from('agents')
           .select('id, tenant_id, hmac_secret')
@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (!agentData) {
-          // Agent não existe ainda (instalação falhando antes de registrar)
+          // Agent nao existe ainda (instalacao falhando antes de registrar)
           // Tentar usar enrollment_key_prefix do metadata para encontrar tenant
           const tokenPrefix = event.metadata?.token_prefix as string | undefined;
           
@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
             .from('installation_analytics')
             .insert({
               tenant_id: tenantId,
-              agent_id: null, // Agent não existe ainda
+              agent_id: null, // Agent nao existe ainda
               agent_name: event.agent_name,
               event_type: 'installation_failed',
               platform: event.platform,

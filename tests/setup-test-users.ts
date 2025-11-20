@@ -1,7 +1,7 @@
 /**
- * Setup de Usuários de Teste
+ * Setup de Usuarios de Teste
  * 
- * Este script cria os usuários de teste necessários para os testes E2E.
+ * Este script cria os usuarios de teste necessarios para os testes E2E.
  * Deve ser executado ANTES de rodar o seed SQL.
  * 
  * Uso:
@@ -14,7 +14,7 @@ const SUPABASE_URL = process.env.VITE_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  console.error('❌ Variáveis de ambiente faltando:');
+  console.error('[ERROR]  Variaveis de ambiente faltando:');
   console.error('   - VITE_SUPABASE_URL');
   console.error('   - SUPABASE_SERVICE_ROLE_KEY');
   process.exit(1);
@@ -43,18 +43,18 @@ const TEST_USERS = [
 ];
 
 async function createTestUser(email: string, password: string, fullName: string) {
-  console.log(`\n📝 Criando usuário: ${email}`);
+  console.log(`\n? Criando usuario: ${email}`);
 
-  // Verificar se já existe
+  // Verificar se ja existe
   const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
   const userExists = existingUser?.users.find((u) => u.email === email);
 
   if (userExists) {
-    console.log(`✅ Usuário já existe: ${email} (${userExists.id})`);
+    console.log(`[OK]  Usuario ja existe: ${email} (${userExists.id})`);
     return userExists.id;
   }
 
-  // Criar novo usuário
+  // Criar novo usuario
   const { data, error } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -65,27 +65,27 @@ async function createTestUser(email: string, password: string, fullName: string)
   });
 
   if (error) {
-    console.error(`❌ Erro ao criar ${email}:`, error.message);
+    console.error(`[ERROR]  Erro ao criar ${email}:`, error.message);
     throw error;
   }
 
-  console.log(`✅ Usuário criado: ${email} (${data.user.id})`);
+  console.log(`[OK]  Usuario criado: ${email} (${data.user.id})`);
   return data.user.id;
 }
 
 async function main() {
-  console.log('🚀 Iniciando setup de usuários de teste...\n');
+  console.log('? Iniciando setup de usuarios de teste...\n');
 
   try {
-    // Criar usuários
+    // Criar usuarios
     const userIds: string[] = [];
     for (const user of TEST_USERS) {
       const userId = await createTestUser(user.email, user.password, user.fullName);
       userIds.push(userId);
     }
 
-    console.log('\n✅ Todos os usuários criados com sucesso!');
-    console.log('\n📋 Próximos passos:');
+    console.log('\n[OK]  Todos os usuarios criados com sucesso!');
+    console.log('\n? Proximos passos:');
     console.log('   1. Execute o seed SQL:');
     console.log('      psql $DATABASE_URL -f supabase/seed-test-users.sql');
     console.log('   2. Ou use a UI do Supabase para executar o SQL');
@@ -93,7 +93,7 @@ async function main() {
     console.log('      npx playwright test e2e/update-user-role.spec.ts');
 
   } catch (error) {
-    console.error('\n❌ Erro no setup:', error);
+    console.error('\n[ERROR]  Erro no setup:', error);
     process.exit(1);
   }
 }

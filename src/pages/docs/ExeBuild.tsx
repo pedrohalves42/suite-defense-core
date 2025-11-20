@@ -15,8 +15,8 @@ const ExeBuild = () => {
         const text = await response.text();
         setContent(text);
       } catch (error) {
-        logger.error("Erro ao carregar documentação", error);
-        setContent("# Erro ao carregar documentação\n\nPor favor, tente novamente mais tarde.");
+        logger.error("Erro ao carregar documentacao", error);
+        setContent("# Erro ao carregar documentacao\n\nPor favor, tente novamente mais tarde.");
       } finally {
         setIsLoading(false);
       }
@@ -42,14 +42,14 @@ const ExeBuild = () => {
         <div>
           <h1 className="text-3xl font-bold">Guia de Build EXE</h1>
           <p className="text-muted-foreground">
-            Como compilar o instalador Windows para arquivo executável
+            Como compilar o instalador Windows para arquivo executavel
           </p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Documentação Completa</CardTitle>
+          <CardTitle>Documentacao Completa</CardTitle>
         </CardHeader>
         <CardContent className="prose dark:prose-invert max-w-none">
           <ReactMarkdown

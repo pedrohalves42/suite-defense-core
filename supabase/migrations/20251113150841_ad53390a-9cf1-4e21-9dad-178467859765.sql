@@ -12,21 +12,21 @@ CREATE TABLE IF NOT EXISTS public.agent_versions (
   UNIQUE(version, platform)
 );
 
--- Criar índice para buscar última versão
+-- Criar indice para buscar ultima versao
 CREATE INDEX IF NOT EXISTS idx_agent_versions_latest 
 ON public.agent_versions(platform, is_latest, created_at DESC);
 
 -- Habilitar RLS
 ALTER TABLE public.agent_versions ENABLE ROW LEVEL SECURITY;
 
--- Política: Agentes podem ler versões (para auto-update)
+-- Politica: Agentes podem ler versoes (para auto-update)
 CREATE POLICY "agents_can_read_versions"
 ON public.agent_versions
 FOR SELECT
 TO authenticated
 USING (true);
 
--- Política: Super admins podem gerenciar versões
+-- Politica: Super admins podem gerenciar versoes
 CREATE POLICY "super_admins_can_manage_versions"
 ON public.agent_versions
 FOR ALL
@@ -34,12 +34,12 @@ TO authenticated
 USING (public.is_super_admin(auth.uid()))
 WITH CHECK (public.is_super_admin(auth.uid()));
 
--- Trigger para garantir apenas uma versão latest por plataforma
+-- Trigger para garantir apenas uma versao latest por plataforma
 CREATE OR REPLACE FUNCTION public.ensure_single_latest_version()
 RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.is_latest = true THEN
-    -- Marcar todas as outras versões da mesma plataforma como não-latest
+    -- Marcar todas as outras versoes da mesma plataforma como nao-latest
     UPDATE public.agent_versions
     SET is_latest = false
     WHERE platform = NEW.platform
@@ -55,11 +55,11 @@ BEFORE INSERT OR UPDATE ON public.agent_versions
 FOR EACH ROW
 EXECUTE FUNCTION public.ensure_single_latest_version();
 
-COMMENT ON TABLE public.agent_versions IS 'Armazena versões do agente Python para auto-update';
-COMMENT ON COLUMN public.agent_versions.version IS 'Versão semântica (e.g., 1.0.0)';
+COMMENT ON TABLE public.agent_versions IS 'Armazena versoes do agente Python para auto-update';
+COMMENT ON COLUMN public.agent_versions.version IS 'Versao semantica (e.g., 1.0.0)';
 COMMENT ON COLUMN public.agent_versions.platform IS 'Plataforma (windows ou linux)';
-COMMENT ON COLUMN public.agent_versions.sha256 IS 'Hash SHA256 do executável';
+COMMENT ON COLUMN public.agent_versions.sha256 IS 'Hash SHA256 do executavel';
 COMMENT ON COLUMN public.agent_versions.size_bytes IS 'Tamanho do arquivo em bytes';
-COMMENT ON COLUMN public.agent_versions.download_url IS 'URL pública para download';
-COMMENT ON COLUMN public.agent_versions.is_latest IS 'Se é a versão mais recente para a plataforma';
-COMMENT ON COLUMN public.agent_versions.release_notes IS 'Notas de lançamento em Markdown';
+COMMENT ON COLUMN public.agent_versions.download_url IS 'URL publica para download';
+COMMENT ON COLUMN public.agent_versions.is_latest IS 'Se e a versao mais recente para a plataforma';
+COMMENT ON COLUMN public.agent_versions.release_notes IS 'Notas de lancamento em Markdown';

@@ -40,7 +40,7 @@ export default function JobsV3Migration() {
       const v1Jobs = total - v3Jobs;
       const v3Percentage = total > 0 ? (v3Jobs / total) * 100 : 0;
 
-      // Estatísticas por agente
+      // Estatisticas por agente
       const agentStatsMap = new Map<string, { v3: number; v1: number }>();
       for (const job of data) {
         if (!agentStatsMap.has(job.agent_name)) {
@@ -87,7 +87,7 @@ export default function JobsV3Migration() {
   if (isLoading || !migrationStats) {
     return (
       <div className="container mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">Migração Jobs v1 → v3</h1>
+        <h1 className="text-3xl font-bold mb-6">Migracao Jobs v1 ? v3</h1>
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-center">
@@ -106,17 +106,17 @@ export default function JobsV3Migration() {
   };
 
   const getStatusBadge = (percentage: number) => {
-    if (percentage >= 80) return <Badge variant="default" className="bg-success">Ótimo</Badge>;
+    if (percentage >= 80) return <Badge variant="default" className="bg-success">Otimo</Badge>;
     if (percentage >= 50) return <Badge variant="secondary">Em Progresso</Badge>;
-    return <Badge variant="destructive">Atenção</Badge>;
+    return <Badge variant="destructive">Atencao</Badge>;
   };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Migração Jobs v1 → v3</h1>
+        <h1 className="text-3xl font-bold mb-2">Migracao Jobs v1 ? v3</h1>
         <p className="text-muted-foreground">
-          Monitoramento do processo de migração do protocolo de jobs (últimos 7 dias)
+          Monitoramento do processo de migracao do protocolo de jobs (ultimos 7 dias)
         </p>
       </div>
 
@@ -125,14 +125,14 @@ export default function JobsV3Migration() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Status Geral da Migração
+            Status Geral da Migracao
           </CardTitle>
-          <CardDescription>Progresso de adoção do protocolo v3 (submit-job-result)</CardDescription>
+          <CardDescription>Progresso de adocao do protocolo v3 (submit-job-result)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
             <div className="flex justify-between mb-2">
-              <span className="text-sm font-medium">Adoção v3</span>
+              <span className="text-sm font-medium">Adocao v3</span>
               <span className={`text-sm font-bold ${getStatusColor(migrationStats.v3Percentage)}`}>
                 {migrationStats.v3Jobs} / {migrationStats.total} ({migrationStats.v3Percentage.toFixed(1)}%)
               </span>
@@ -169,9 +169,9 @@ export default function JobsV3Migration() {
             <div className="flex items-start gap-2 p-3 border border-destructive/50 bg-destructive/10 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-destructive">Migração Abaixo do Esperado</p>
+                <p className="text-sm font-medium text-destructive">Migracao Abaixo do Esperado</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Menos de 50% dos jobs estão usando v3. Verifique logs dos agentes e Edge Function submit-job-result.
+                  Menos de 50% dos jobs estao usando v3. Verifique logs dos agentes e Edge Function submit-job-result.
                 </p>
               </div>
             </div>
@@ -181,7 +181,7 @@ export default function JobsV3Migration() {
             <div className="flex items-start gap-2 p-3 border border-warning/50 bg-warning/10 rounded-lg">
               <Activity className="h-5 w-5 text-warning mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-warning">Migração em Progresso</p>
+                <p className="text-sm font-medium text-warning">Migracao em Progresso</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {migrationStats.v3Percentage.toFixed(1)}% dos jobs usam v3. Continue monitorando o rollout.
                 </p>
@@ -193,7 +193,7 @@ export default function JobsV3Migration() {
             <div className="flex items-start gap-2 p-3 border border-success/50 bg-success/10 rounded-lg">
               <CheckCircle2 className="h-5 w-5 text-success mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-success">Migração Bem-Sucedida</p>
+                <p className="text-sm font-medium text-success">Migracao Bem-Sucedida</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {migrationStats.v3Percentage.toFixed(1)}% dos jobs usam v3. Sistema operando no novo protocolo.
                 </p>
@@ -207,7 +207,7 @@ export default function JobsV3Migration() {
       <Card>
         <CardHeader>
           <CardTitle>Status por Agente</CardTitle>
-          <CardDescription>Detalhamento da adoção v3 por agente individual</CardDescription>
+          <CardDescription>Detalhamento da adocao v3 por agente individual</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -241,7 +241,7 @@ export default function JobsV3Migration() {
 
           {migrationStats.agentStats.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              Nenhum job executado nos últimos 7 dias
+              Nenhum job executado nos ultimos 7 dias
             </div>
           )}
         </CardContent>

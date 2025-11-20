@@ -13,14 +13,14 @@ import { logger } from '@/lib/logger';
 const passwordSchema = z.object({
   password: z
     .string()
-    .min(8, 'A senha deve ter no mínimo 8 caracteres')
-    .max(72, 'A senha deve ter no máximo 72 caracteres')
-    .regex(/[A-Z]/, 'A senha deve conter pelo menos uma letra maiúscula')
-    .regex(/[a-z]/, 'A senha deve conter pelo menos uma letra minúscula')
-    .regex(/[0-9]/, 'A senha deve conter pelo menos um número'),
+    .min(8, 'A senha deve ter no minimo 8 caracteres')
+    .max(72, 'A senha deve ter no maximo 72 caracteres')
+    .regex(/[A-Z]/, 'A senha deve conter pelo menos uma letra maiuscula')
+    .regex(/[a-z]/, 'A senha deve conter pelo menos uma letra minuscula')
+    .regex(/[0-9]/, 'A senha deve conter pelo menos um numero'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: 'As senhas não coincidem',
+  message: 'As senhas nao coincidem',
   path: ['confirmPassword'],
 });
 
@@ -40,7 +40,7 @@ const UpdatePassword = () => {
       } else {
         toast({
           title: 'Erro',
-          description: 'Link de recuperação inválido ou expirado',
+          description: 'Link de recuperacao invalido ou expirado',
           variant: 'destructive',
         });
         navigate('/login');
@@ -75,7 +75,7 @@ const UpdatePassword = () => {
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
-          title: 'Erro de validação',
+          title: 'Erro de validacao',
           description: error.issues[0].message,
           variant: 'destructive',
         });

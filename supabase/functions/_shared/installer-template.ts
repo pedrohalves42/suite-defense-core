@@ -43,7 +43,7 @@ Write-InstallerLog "ServerUrl: $ServerUrl" "INFO"
 Write-InstallerLog "AgentName: $AgentName" "INFO"
 
 # ============= FASE 1: Cleanup =============
-Write-InstallerLog "FASE 1: Limpando instalações anteriores..." "INFO"
+Write-InstallerLog "FASE 1: Limpando instalacoes anteriores..." "INFO"
 
 # Stop old processes
 try {
@@ -65,9 +65,9 @@ try {
     Write-InstallerLog "Aviso ao remover tasks: $($_.Exception.Message)" "WARN"
 }
 
-Write-InstallerLog "FASE 1: Cleanup concluído" "SUCCESS"
+Write-InstallerLog "FASE 1: Cleanup concluido" "SUCCESS"
 
-# ============= FASE 2: Instalação =============
+# ============= FASE 2: Instalacao =============
 Write-InstallerLog "FASE 2: Criando script do agente..." "INFO"
 
 $AgentScriptContent = @'
@@ -76,33 +76,33 @@ $AgentScriptContent = @'
 
 $AgentScriptPath = Join-Path $BasePath "cybershield-agent-$AgentName.ps1"
 
-# Salvar script do agente em UTF-8 SEM BOM (compatível com PowerShell 5.1 e Task Scheduler)
+# Salvar script do agente em UTF-8 SEM BOM (compativel com PowerShell 5.1 e Task Scheduler)
 Write-InstallerLog "Salvando script do agente em UTF-8 sem BOM..." "INFO"
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($AgentScriptPath, $AgentScriptContent, $utf8NoBom)
 
 Write-InstallerLog "Script criado: $AgentScriptPath ($(([System.IO.FileInfo]$AgentScriptPath).Length) bytes)" "SUCCESS"
 
-# Validação crítica de encoding
+# Validacao critica de encoding
 Write-InstallerLog "Validando encoding do script..." "INFO"
 try {
     $bytes = [System.IO.File]::ReadAllBytes($AgentScriptPath)
     
-    # Detectar UTF-16 LE (0xFF 0xFE) - isso impede execução
+    # Detectar UTF-16 LE (0xFF 0xFE) - isso impede execucao
     if ($bytes.Length -ge 2 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xFE) {
-        Write-InstallerLog "❌ ERRO CRÍTICO: Script salvo em UTF-16 LE - instalação falhará!" "ERROR"
-        throw "Encoding incorreto detectado (UTF-16 LE). Script não será executável."
+        Write-InstallerLog "[ERROR]  ERRO CRITICO: Script salvo em UTF-16 LE - instalacao falhara!" "ERROR"
+        throw "Encoding incorreto detectado (UTF-16 LE). Script nao sera executavel."
     }
     
-    # Detectar UTF-8 com BOM (aceitável mas não ideal)
+    # Detectar UTF-8 com BOM (aceitavel mas nao ideal)
     if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF) {
-        Write-InstallerLog "⚠️  AVISO: Script tem BOM UTF-8 (funciona, mas não é ideal)" "WARN"
+        Write-InstallerLog "[WARN] ?  AVISO: Script tem BOM UTF-8 (funciona, mas nao e ideal)" "WARN"
     } else {
-        Write-InstallerLog "✅ Encoding validado: UTF-8 sem BOM (IDEAL)" "SUCCESS"
+        Write-InstallerLog "[OK]  Encoding validado: UTF-8 sem BOM (IDEAL)" "SUCCESS"
     }
 } catch {
-    Write-InstallerLog "⚠️  Falha na validação de encoding: $($_.Exception.Message)" "WARN"
-    Write-InstallerLog "Continuando instalação..." "INFO"
+    Write-InstallerLog "[WARN] ?  Falha na validacao de encoding: $($_.Exception.Message)" "WARN"
+    Write-InstallerLog "Continuando instalacao..." "INFO"
 }
 
 # ============= FASE 3: Self-test =============
@@ -114,26 +114,26 @@ try {
     Write-InstallerLog "Health check OK: $($response.StatusCode)" "SUCCESS"
 } catch {
     Write-InstallerLog "AVISO: Health check falhou: $($_.Exception.Message)" "WARN"
-    Write-InstallerLog "Continuando instalação (agente tentará conectar depois)..." "INFO"
+    Write-InstallerLog "Continuando instalacao (agente tentara conectar depois)..." "INFO"
 }
 
-Write-InstallerLog "FASE 3: Self-test concluído" "SUCCESS"
+Write-InstallerLog "FASE 3: Self-test concluido" "SUCCESS"
 
-# ============= VALIDAÇÃO CRÍTICA: Script do Agente =============
+# ============= VALIDACAO CRITICA: Script do Agente =============
 Write-InstallerLog "Validando script do agente..." "INFO"
 
 if (-not (Test-Path $AgentScriptPath)) {
-    Write-InstallerLog "❌ ERRO CRÍTICO: Script do agente não foi criado" "ERROR"
-    throw "Script do agente não encontrado em: $AgentScriptPath"
+    Write-InstallerLog "[ERROR]  ERRO CRITICO: Script do agente nao foi criado" "ERROR"
+    throw "Script do agente nao encontrado em: $AgentScriptPath"
 }
 
 $scriptSize = (Get-Item $AgentScriptPath).Length
 if ($scriptSize -lt 10000) {  # Script completo deve ter ~50KB+
-    Write-InstallerLog "❌ ERRO: Script do agente incompleto ($scriptSize bytes)" "ERROR"
+    Write-InstallerLog "[ERROR]  ERRO: Script do agente incompleto ($scriptSize bytes)" "ERROR"
     throw "Script do agente muito pequeno. Esperado >10KB, encontrado: $scriptSize bytes"
 }
 
-Write-InstallerLog "✅ Script do agente validado: $scriptSize bytes" "SUCCESS"
+Write-InstallerLog "[OK]  Script do agente validado: $scriptSize bytes" "SUCCESS"
 
 # ============= FASE 4: Scheduled Task =============
 Write-InstallerLog "FASE 4: Criando Scheduled Task..." "INFO"
@@ -173,16 +173,16 @@ Register-ScheduledTask \`
 
 Write-InstallerLog "Scheduled Task criada: $TaskName" "SUCCESS"
 
-# ============= FASE 5: Inicialização =============
+# ============= FASE 5: Inicializacao =============
 Write-InstallerLog "FASE 5: Iniciando agente..." "INFO"
 
 Start-ScheduledTask -TaskName $TaskName
 Write-InstallerLog "Scheduled Task iniciada" "INFO"
 
-# Aguardar execução inicial
+# Aguardar execucao inicial
 Start-Sleep -Seconds 5
 
-# Validação completa da task
+# Validacao completa da task
 $taskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
 $taskState = Get-ScheduledTask -TaskName $TaskName
 
@@ -191,8 +191,8 @@ Write-InstallerLog "Last Run Time: $($taskInfo.LastRunTime)" "INFO"
 Write-InstallerLog "Last Task Result: $($taskInfo.LastTaskResult)" "INFO"
 
 if ($taskInfo.LastTaskResult -ne 0 -and $taskInfo.LastTaskResult -ne $null) {
-    Write-InstallerLog "⚠️  AVISO: Task retornou código de erro: $($taskInfo.LastTaskResult)" "WARN"
-    Write-InstallerLog "Isso pode indicar problema com argumentos ou permissões" "WARN"
+    Write-InstallerLog "[WARN] ?  AVISO: Task retornou codigo de erro: $($taskInfo.LastTaskResult)" "WARN"
+    Write-InstallerLog "Isso pode indicar problema com argumentos ou permissoes" "WARN"
 }
 
 # Verificar se o agente conseguiu iniciar (log criado)
@@ -201,17 +201,17 @@ Start-Sleep -Seconds 10
 $agentLogPath = Join-Path $LogsPath "cybershield-agent-v3.log"
 if (Test-Path $agentLogPath) {
     $logSize = (Get-Item $agentLogPath).Length
-    Write-InstallerLog "✅ Log do agente detectado: $agentLogPath ($logSize bytes)" "SUCCESS"
+    Write-InstallerLog "[OK]  Log do agente detectado: $agentLogPath ($logSize bytes)" "SUCCESS"
 } else {
-    Write-InstallerLog "⚠️  AVISO: Log do agente não encontrado após 10s" "WARN"
+    Write-InstallerLog "[WARN] ?  AVISO: Log do agente nao encontrado apos 10s" "WARN"
     Write-InstallerLog "Path esperado: $agentLogPath" "INFO"
-    Write-InstallerLog "Verifique se a Scheduled Task está executando corretamente" "WARN"
+    Write-InstallerLog "Verifique se a Scheduled Task esta executando corretamente" "WARN"
 }
 
 Write-InstallerLog "FASE 5: Agente iniciado" "SUCCESS"
 
 # ============= FASE 6: Telemetria =============
-Write-InstallerLog "FASE 6: Enviando telemetria de instalação..." "INFO"
+Write-InstallerLog "FASE 6: Enviando telemetria de instalacao..." "INFO"
 
 try {
     $telemetryUrl = "$ServerUrl/functions/v1/track-installation-event"
@@ -243,26 +243,26 @@ try {
     Write-InstallerLog "Telemetria enviada com sucesso" "SUCCESS"
 } catch {
     Write-InstallerLog "AVISO: Falha ao enviar telemetria: $($_.Exception.Message)" "WARN"
-    Write-InstallerLog "Instalação concluída, mas telemetria não foi enviada" "INFO"
+    Write-InstallerLog "Instalacao concluida, mas telemetria nao foi enviada" "INFO"
 }
 
-# ============= Conclusão =============
+# ============= Conclusao =============
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Green
-Write-Host "✅ Instalação concluída com sucesso!" -ForegroundColor Green
+Write-Host "[OK]  Instalacao concluida com sucesso!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "Detalhes da instalação:" -ForegroundColor Cyan
-Write-Host "  • Agente: $AgentName" -ForegroundColor White
-Write-Host "  • Pasta: $BasePath" -ForegroundColor White
-Write-Host "  • Logs: $LogFile" -ForegroundColor White
-Write-Host "  • Task: $TaskName" -ForegroundColor White
+Write-Host "Detalhes da instalacao:" -ForegroundColor Cyan
+Write-Host "  ? Agente: $AgentName" -ForegroundColor White
+Write-Host "  ? Pasta: $BasePath" -ForegroundColor White
+Write-Host "  ? Logs: $LogFile" -ForegroundColor White
+Write-Host "  ? Task: $TaskName" -ForegroundColor White
 Write-Host ""
-Write-Host "O agente está rodando em background e enviará heartbeats automaticamente." -ForegroundColor White
+Write-Host "O agente esta rodando em background e enviara heartbeats automaticamente." -ForegroundColor White
 Write-Host "Verifique o status no dashboard em alguns minutos." -ForegroundColor White
 Write-Host ""
 
-Write-InstallerLog "=== Instalação concluída com sucesso ===" "SUCCESS"
+Write-InstallerLog "=== Instalacao concluida com sucesso ===" "SUCCESS"
 `;
 
 // Linux Installer Template (v3)
@@ -315,7 +315,7 @@ systemctl daemon-reload
 systemctl enable cybershield-agent.service
 systemctl start cybershield-agent.service
 
-echo "✅ CyberShield Agent installed successfully!"
+echo "[OK]  CyberShield Agent installed successfully!"
 `;
 
 // macOS Installer Template (v3)
@@ -378,5 +378,5 @@ EOF
 # Load service
 sudo launchctl load /Library/LaunchDaemons/com.cybershield.agent.plist
 
-echo "✅ CyberShield Agent installed successfully!"
+echo "[OK]  CyberShield Agent installed successfully!"
 `;

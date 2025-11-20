@@ -133,7 +133,7 @@ $$;
 
 -- user_roles policies
 DROP POLICY IF EXISTS "Admins podem gerenciar todos os roles" ON public.user_roles;
-DROP POLICY IF EXISTS "Usuários podem ver seus próprios roles" ON public.user_roles;
+DROP POLICY IF EXISTS "Usuarios podem ver seus proprios roles" ON public.user_roles;
 
 CREATE POLICY "Users can view their own roles"
   ON public.user_roles FOR SELECT

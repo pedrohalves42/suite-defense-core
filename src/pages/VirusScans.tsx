@@ -136,7 +136,7 @@ export default function VirusScans() {
               Detalhes do Scan
             </DialogTitle>
             <DialogDescription>
-              Informações completas da análise do arquivo
+              Informacoes completas da analise do arquivo
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -157,7 +157,7 @@ export default function VirusScans() {
                 <p className="text-sm mt-1">{format(new Date(scan.scanned_at), 'dd/MM/yyyy HH:mm:ss')}</p>
               </div>
               <div>
-                <p className="text-sm font-semibold text-muted-foreground">Detecções</p>
+                <p className="text-sm font-semibold text-muted-foreground">Deteccoes</p>
                 <p className="text-sm mt-1">{scan.positives || 0} / {scan.total_scans || 0}</p>
               </div>
             </div>
@@ -182,7 +182,7 @@ export default function VirusScans() {
                   className="w-full"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Ver Relatório Completo no VirusTotal
+                  Ver Relatorio Completo no VirusTotal
                 </Button>
               </div>
             )}
@@ -211,8 +211,8 @@ export default function VirusScans() {
             <Shield className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">Scans de Vírus</h1>
-            <p className="text-muted-foreground">Resultados das análises do VirusTotal</p>
+            <h1 className="text-3xl font-bold">Scans de Virus</h1>
+            <p className="text-muted-foreground">Resultados das analises do VirusTotal</p>
           </div>
         </div>
       </div>
@@ -334,8 +334,8 @@ export default function VirusScans() {
                       <TableHead>Arquivo</TableHead>
                       <TableHead>Hash</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Detecções</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
+                      <TableHead>Deteccoes</TableHead>
+                      <TableHead className="text-right">Acoes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -393,7 +393,7 @@ export default function VirusScans() {
                       Anterior
                     </Button>
                     <span className="text-sm text-muted-foreground">
-                      Página {page + 1} de {totalPages}
+                      Pagina {page + 1} de {totalPages}
                     </span>
                     <Button
                       variant="outline"
@@ -401,7 +401,7 @@ export default function VirusScans() {
                       onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                       disabled={page >= totalPages - 1}
                     >
-                      Próxima
+                      Proxima
                       <ChevronRight className="h-4 w-4 ml-2" />
                     </Button>
                   </div>

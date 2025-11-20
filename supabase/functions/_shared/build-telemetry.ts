@@ -1,5 +1,5 @@
 /**
- * 📊 Build Telemetry Tracker
+ * ? Build Telemetry Tracker
  * Monitora performance e eventos de cada build em tempo real
  */
 
@@ -92,7 +92,7 @@ export class BuildTelemetry {
   }
 
   /**
-   * Log genérico de informação
+   * Log generico de informacao
    */
   info(message: string, metadata?: Record<string, any>): void {
     console.log(JSON.stringify({

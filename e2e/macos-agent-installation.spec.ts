@@ -54,14 +54,14 @@ test.describe('macOS Agent Installation', () => {
 
     const script = await response.text();
 
-    // Validações básicas
+    // Validacoes basicas
     expect(script).toContain('#!/bin/bash');
     expect(script).toContain('CyberShield Agent Installer - macOS');
     expect(script).toContain('AGENT_TOKEN=');
     expect(script).toContain('HMAC_SECRET=');
     expect(script).toContain('SERVER_URL=');
 
-    // Não deve conter placeholders
+    // Nao deve conter placeholders
     expect(script).not.toContain('{{AGENT_TOKEN}}');
     expect(script).not.toContain('{{HMAC_SECRET}}');
     expect(script).not.toContain('{{SERVER_URL}}');
@@ -87,7 +87,7 @@ test.describe('macOS Agent Installation', () => {
     expect(response.ok()).toBeTruthy();
     const script = await response.text();
 
-    // Verificar que conteúdo do agente está embarcado
+    // Verificar que conteudo do agente esta embarcado
     expect(script.length).toBeGreaterThan(5000);
     expect(script).toContain('generate_nonce');
     expect(script).toContain('generate_hmac_signature');
@@ -109,7 +109,7 @@ test.describe('macOS Agent Installation', () => {
     expect(script).toContain('X-Timestamp');
     expect(script).toContain('X-Nonce');
 
-    // Não deve conter fallback inseguro
+    // Nao deve conter fallback inseguro
     expect(script).not.toContain('heartbeat-fallback');
   });
 
@@ -137,7 +137,7 @@ test.describe('macOS Agent Installation', () => {
     expect(response.ok()).toBeTruthy();
     const script = await response.text();
 
-    // Verificar validação de versão do macOS
+    // Verificar validacao de versao do macOS
     expect(script).toContain('sw_vers -productVersion');
     expect(script).toContain('10.15');
   });
@@ -150,7 +150,7 @@ test.describe('macOS Agent Installation', () => {
     expect(response.ok()).toBeTruthy();
     const script = await response.text();
 
-    // Verificar validação do plist
+    // Verificar validacao do plist
     expect(script).toContain('plutil -lint');
     expect(script).toContain('Invalid plist file');
   });

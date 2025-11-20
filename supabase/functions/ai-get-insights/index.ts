@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Verificar autenticação
+    // Verificar autenticacao
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return new Response(
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Buscar roles do usuário (permite múltiplos)
+    // Buscar roles do usuario (permite multiplos)
     const { data: roles, error: rolesError } = await supabase
       .from('user_roles')
       .select('tenant_id, role')
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
       throw error;
     }
 
-    // Buscar estatísticas gerais
+    // Buscar estatisticas gerais
     const { data: stats } = await supabase
       .from('ai_insights')
       .select('severity, acknowledged')

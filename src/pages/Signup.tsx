@@ -13,21 +13,21 @@ import { logger } from '@/lib/logger';
 const signupSchema = z.object({
   email: z.string()
     .trim()
-    .min(1, 'Email é obrigatório')
-    .email('Email inválido')
+    .min(1, 'Email e obrigatorio')
+    .email('Email invalido')
     .max(255, 'Email muito longo'),
   password: z.string()
     .min(8, 'Senha deve ter pelo menos 8 caracteres')
     .max(72, 'Senha muito longa')
-    .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
-    .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
-    .regex(/[0-9]/, 'Senha deve conter pelo menos um número')
+    .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiuscula')
+    .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minuscula')
+    .regex(/[0-9]/, 'Senha deve conter pelo menos um numero')
     .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Senha deve conter pelo menos um caractere especial'),
   fullName: z.string()
     .trim()
     .min(2, 'Nome deve ter pelo menos 2 caracteres')
     .max(100, 'Nome muito longo')
-    .regex(/^[a-zA-ZÀ-ÿ\s]+$/, 'Nome deve conter apenas letras e espaços'),
+    .regex(/^[a-zA-ZA-?\s]+$/, 'Nome deve conter apenas letras e espacos'),
 });
 
 export default function Signup() {
@@ -48,7 +48,7 @@ export default function Signup() {
       const firstError = validation.error.issues[0];
       toast({
         variant: 'destructive',
-        title: 'Erro de validação',
+        title: 'Erro de validacao',
         description: firstError.message,
       });
       setLoading(false);
@@ -87,7 +87,7 @@ export default function Signup() {
     if (error) {
       // Generic error messages to prevent account enumeration
       const message = error.message.includes('already registered') || error.message.includes('already exists')
-        ? 'Já existe uma conta com este email'
+        ? 'Ja existe uma conta com este email'
         : 'Erro ao processar seu cadastro. Tente novamente.';
       
       toast({
@@ -98,7 +98,7 @@ export default function Signup() {
     } else {
       toast({
         title: 'Cadastro realizado com sucesso',
-        description: 'Você já pode fazer login.',
+        description: 'Voce ja pode fazer login.',
       });
       navigate('/login');
     }
@@ -150,7 +150,7 @@ export default function Signup() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="????????"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -158,7 +158,7 @@ export default function Signup() {
                 maxLength={72}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Mínimo 8 caracteres, incluindo maiúscula, minúscula, número e caractere especial
+                Minimo 8 caracteres, incluindo maiuscula, minuscula, numero e caractere especial
               </p>
             </div>
           </CardContent>
@@ -167,7 +167,7 @@ export default function Signup() {
               {loading ? 'Criando conta...' : 'Criar Conta'}
             </Button>
             <div className="text-sm text-center text-muted-foreground">
-              Já tem uma conta?{' '}
+              Ja tem uma conta?{' '}
               <Link to="/login" className="text-primary hover:underline">
                 Entrar
               </Link>

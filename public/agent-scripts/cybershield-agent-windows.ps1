@@ -47,10 +47,10 @@ if ($HmacSecret.Length -lt 32) {
     exit 1
 }
 
-# Validar versão do PowerShell
+# Validar versao do PowerShell
 if ($PSVersionTable.PSVersion.Major -lt 3) {
     Write-Host "ERRO: Este script requer PowerShell 3.0 ou superior" -ForegroundColor Red
-    Write-Host "Versão atual: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
+    Write-Host "Versao atual: $($PSVersionTable.PSVersion)" -ForegroundColor Yellow
     Write-Host "Por favor, atualize o PowerShell" -ForegroundColor Yellow
     exit 1
 }
@@ -60,26 +60,26 @@ $osVersion = [System.Environment]::OSVersion.Version
 $osName = (Get-WmiObject -Class Win32_OperatingSystem).Caption
 
 Write-Host "Sistema operacional: $osName" -ForegroundColor Cyan
-Write-Host "Versão: $($osVersion.Major).$($osVersion.Minor)" -ForegroundColor Cyan
+Write-Host "Versao: $($osVersion.Major).$($osVersion.Minor)" -ForegroundColor Cyan
 
 # Windows Server 2012 = 6.2, 2012 R2 = 6.3, 2016 = 10.0, etc
 if ($osVersion.Major -lt 6 -or ($osVersion.Major -eq 6 -and $osVersion.Minor -lt 2)) {
     Write-Host "AVISO: Este agente foi testado em Windows Server 2012+ e Windows 8+" -ForegroundColor Yellow
-    Write-Host "Sua versão pode não ser totalmente suportada" -ForegroundColor Yellow
+    Write-Host "Sua versao pode nao ser totalmente suportada" -ForegroundColor Yellow
 }
 
-# Configuração de logging
+# Configuracao de logging
 $LogDir = "C:\CyberShield\logs"
 $LogFile = Join-Path $LogDir "agent.log"
 $MaxLogSizeMB = 10
 $MaxLogFiles = 7
 
-# Criar diretório de logs se não existir
+# Criar diretorio de logs se nao existir
 if (-not (Test-Path $LogDir)) {
     New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
 }
 
-#region Funções de Logging
+#region Funcoes de Logging
 
 function Write-Log {
     param(
@@ -91,7 +91,7 @@ function Write-Log {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     $logEntry = "[$timestamp] [$Level] $Message"
     
-    # Rotação de logs
+    # Rotacao de logs
     if (Test-Path $LogFile) {
         $logSize = (Get-Item $LogFile).Length / 1MB
         if ($logSize -gt $MaxLogSizeMB) {
@@ -122,9 +122,9 @@ function Write-Log {
 
 #endregion
 
-#region Configurações
+#region Configuracoes
 
-# ✅ FASE 2.2: Configurar TLS 1.2 e proxy globalmente
+# [OK]  FASE 2.2: Configurar TLS 1.2 e proxy globalmente
 Write-Log "Configurando rede..." "INFO"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
@@ -134,7 +134,7 @@ $proxy = [System.Net.WebRequest]::GetSystemWebProxy()
 
 Write-Log "TLS 1.2 habilitado" "SUCCESS"
 
-# ✅ FASE 2.1: Validação APÓS LOG INICIAL
+# [OK]  FASE 2.1: Validacao APOS LOG INICIAL
 if ([string]::IsNullOrWhiteSpace($AgentToken)) {
     Write-Log "FATAL: AgentToken vazio" "ERROR"
     exit 1
@@ -160,7 +160,7 @@ Write-Log "Log Directory: $LogDir" "INFO"
 
 #endregion
 
-#region Funções de Autenticação
+#region Funcoes de Autenticacao
 
 function Convert-HexToBytes {
     param(
@@ -168,9 +168,9 @@ function Convert-HexToBytes {
         [string]$HexString
     )
 
-    # Validação: 64 caracteres hexadecimais (32 bytes)
+    # Validacao: 64 caracteres hexadecimais (32 bytes)
     if ($HexString -notmatch '^[0-9a-fA-F]{64}$') {
-        Write-Log "ERROR: HMAC_SECRET inválido. Esperado 64 caracteres hex (32 bytes). Length: $($HexString.Length)" "ERROR"
+        Write-Log "ERROR: HMAC_SECRET invalido. Esperado 64 caracteres hex (32 bytes). Length: $($HexString.Length)" "ERROR"
         throw "Invalid HMAC_SECRET format. Expected 64 hex characters, got: $($HexString.Length)"
     }
 
@@ -203,7 +203,7 @@ function Get-HmacSignature {
     $messageBytes   = [Text.Encoding]::UTF8.GetBytes($Message)
     $signatureBytes = $hmac.ComputeHash($messageBytes)
 
-    # Retorna em hex minúsculo (compatível com backend)
+    # Retorna em hex minusculo (compativel com backend)
     return ([System.BitConverter]::ToString($signatureBytes) -replace '-', '').ToLower()
 }
 
@@ -273,40 +273,40 @@ function Invoke-SecureRequest {
                 $params.Body = $bodyJson
             }
 
-            Write-Log "DEBUG: Requisição segura → $Method $Url" "DEBUG"
+            Write-Log "DEBUG: Requisicao segura ? $Method $Url" "DEBUG"
             Write-Log "DEBUG: Payload HMAC: $timestamp:$nonce:[body_length=$($bodyJson.Length)]" "DEBUG"
 
             $response = Invoke-RestMethod @params
 
-            Write-Log "SUCCESS: Requisição bem-sucedida → $Method $Url (StatusCode=200)" "SUCCESS"
+            Write-Log "SUCCESS: Requisicao bem-sucedida ? $Method $Url (StatusCode=200)" "SUCCESS"
             return $response
         }
         catch {
             $retryCount++
             $errorDetails = $_.Exception.Message
             
-            # Extrair status code se disponível
+            # Extrair status code se disponivel
             $statusCode = $null
             if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
                 $statusCode = $_.Exception.Response.StatusCode.value__
             }
 
-            Write-Log "ERROR: Requisição falhou (tentativa $retryCount/$MaxRetries) → $errorDetails" "ERROR"
+            Write-Log "ERROR: Requisicao falhou (tentativa $retryCount/$MaxRetries) ? $errorDetails" "ERROR"
             
             if ($statusCode) {
                 Write-Log "ERROR: Status Code = $statusCode" "ERROR"
             }
 
-            # 🔴 401 → Erro de autenticação, não adianta retentar
+            # ? 401 ? Erro de autenticacao, nao adianta retentar
             if ($statusCode -eq 401) {
-                Write-Log "❌ ERRO DE AUTENTICAÇÃO (401): AgentToken ou HMAC inválido" "ERROR"
-                Write-Log "   → Verifique: AgentToken, HmacSecret, sincronização do relógio do sistema" "ERROR"
+                Write-Log "[ERROR]  ERRO DE AUTENTICACAO (401): AgentToken ou HMAC invalido" "ERROR"
+                Write-Log "   ? Verifique: AgentToken, HmacSecret, sincronizacao do relogio do sistema" "ERROR"
                 throw "Authentication failed (401). Cannot retry."
             }
 
             # Outros erros: respeitar limite de retries
             if ($retryCount -ge $MaxRetries) {
-                Write-Log "❌ Falha após $MaxRetries tentativas → $Method $Url" "ERROR"
+                Write-Log "[ERROR]  Falha apos $MaxRetries tentativas ? $Method $Url" "ERROR"
                 throw
             }
 
@@ -337,7 +337,7 @@ function Invoke-SecureRequest {
 
 function Send-Heartbeat {
     param(
-        [switch]$IsBootHeartbeat  # ✅ FASE 2.3: NOVO PARÂMETRO
+        [switch]$IsBootHeartbeat  # [OK]  FASE 2.3: NOVO PARAMETRO
     )
     
     $maxRetries = $IsBootHeartbeat ? 5 : 3  # Mais retries no boot
@@ -346,13 +346,13 @@ function Send-Heartbeat {
     while ($retryCount -lt $maxRetries) {
         try {
             if ($IsBootHeartbeat) {
-                Write-Log "🔥 ENVIANDO HEARTBEAT DE BOOT (crítico)" "INFO"
+                Write-Log "? ENVIANDO HEARTBEAT DE BOOT (critico)" "INFO"
             } else {
                 Write-Log "Sending heartbeat..." "DEBUG"
             }
             $heartbeatUrl = "$ServerUrl/functions/v1/heartbeat"
             
-            # Incluir informações do OS no heartbeat
+            # Incluir informacoes do OS no heartbeat
             $os = Get-CimInstance Win32_OperatingSystem
             $body = @{
                 os_type = "windows"
@@ -416,7 +416,7 @@ function Execute-Job {
     try {
         switch ($Job.type) {
             "scan_virus" {
-                # Implementar scan de vírus
+                # Implementar scan de virus
                 if ($Job.payload.file_path) {
                     $filePath = $Job.payload.file_path
                     if (Test-Path $filePath) {
@@ -442,7 +442,7 @@ function Execute-Job {
             }
             
             "collect_info" {
-                # Coletar informações do sistema
+                # Coletar informacoes do sistema
                 Write-Log "Collecting system information..." "INFO"
                 $os = Get-CimInstance Win32_OperatingSystem
                 $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
@@ -465,7 +465,7 @@ function Execute-Job {
             }
             
             "update_config" {
-                # Atualizar configurações do agent
+                # Atualizar configuracoes do agent
                 Write-Log "Updating agent configuration..." "INFO"
                 if ($Job.payload.poll_interval) {
                     $script:PollInterval = $Job.payload.poll_interval
@@ -482,7 +482,7 @@ function Execute-Job {
             }
             
             "run_command" {
-                # Executar comando (com validação de segurança)
+                # Executar comando (com validacao de seguranca)
                 Write-Log "Running command..." "INFO"
                 if ($Job.payload.command) {
                     # IMPORTANTE: Apenas comandos seguros permitidos
@@ -541,7 +541,7 @@ function Upload-Report {
     param([string]$JobId, [object]$Result)
     
     try {
-        # Fix #1: Passar hashtable diretamente, não JSON string
+        # Fix #1: Passar hashtable diretamente, nao JSON string
         $reportData = @{
             job_id = $JobId
             result = $Result
@@ -581,7 +581,7 @@ function Ack-Job {
                     Write-Log "Job $JobId acknowledged successfully (ok=true)" "SUCCESS"
                     return $true
                 } elseif ($response.error) {
-                    if ($response.error -match "já foi confirmado|already") {
+                    if ($response.error -match "ja foi confirmado|already") {
                         Write-Log "Job $JobId already acknowledged (idempotent)" "INFO"
                         return $true
                     } else {
@@ -652,12 +652,12 @@ function Send-SystemMetrics {
         $metricsUrl = "$ServerUrl/functions/v1/submit-system-metrics"
         $response = Invoke-SecureRequest -Url $metricsUrl -Method "POST" -Body $metrics
         
-        # Fix #5: Apenas logar sucesso se response não for null
+        # Fix #5: Apenas logar sucesso se response nao for null
         if ($response) {
             Write-Log "System metrics sent successfully (CPU: $($metrics.cpu_usage_percent)%, RAM: $($metrics.memory_usage_percent)%, Disk: $($metrics.disk_usage_percent)%)" "SUCCESS"
             
             if ($response.alerts_generated -and $response.alerts_generated -gt 0) {
-                Write-Log "⚠️ $($response.alerts_generated) alert(s) generated" "WARN"
+                Write-Log "[WARN] ? $($response.alerts_generated) alert(s) generated" "WARN"
             }
         } else {
             Write-Log "Metrics request completed but no response received" "WARN"
@@ -690,15 +690,15 @@ function Send-PostInstallationEvent {
         $response = Invoke-SecureRequest -Url $postInstallUrl -Method "POST" -Body $body -MaxRetries 2
 
         if ($response) {
-            Write-Log "✅ Evento post_installation registrado com sucesso" "SUCCESS"
+            Write-Log "[OK]  Evento post_installation registrado com sucesso" "SUCCESS"
         } else {
-            Write-Log "⚠ Falha ao registrar post_installation" "WARN"
+            Write-Log "[WARN]  Falha ao registrar post_installation" "WARN"
         }
         
         return $response
     }
     catch {
-        Write-Log "⚠ Exceção em Send-PostInstallationEvent: $_" "WARN"
+        Write-Log "[WARN]  Excecao em Send-PostInstallationEvent: $_" "WARN"
         return $null
     }
 }
@@ -814,7 +814,7 @@ function Start-Agent {
                 $lastHeartbeat = $now
             }
             
-            # Métricas de sistema a cada 5 minutos
+            # Metricas de sistema a cada 5 minutos
             if (($now - $lastMetrics).TotalSeconds -ge $metricsInterval) {
                 Send-SystemMetrics | Out-Null
                 $lastMetrics = $now

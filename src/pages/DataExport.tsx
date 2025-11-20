@@ -52,7 +52,7 @@ export default function DataExport() {
 
   const exportData = async () => {
     if (!tenant?.id) {
-      toast.error('Tenant não identificado');
+      toast.error('Tenant nao identificado');
       return;
     }
 
@@ -86,7 +86,7 @@ export default function DataExport() {
             'Nome do Agente': a.agent_name,
             'Status': a.status,
             'Data de Registro': format(new Date(a.enrolled_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
-            'Último Heartbeat': a.last_heartbeat 
+            'Ultimo Heartbeat': a.last_heartbeat 
               ? format(new Date(a.last_heartbeat), 'dd/MM/yyyy HH:mm', { locale: ptBR })
               : 'Nunca',
             'Tenant ID': a.tenant_id,
@@ -113,7 +113,7 @@ export default function DataExport() {
             'Arquivo': s.file_path,
             'Hash': s.file_hash,
             'Resultado': s.is_malicious ? 'Malicioso' : 'Limpo',
-            'Detecções': `${s.positives}/${s.total_scans}`,
+            'Deteccoes': `${s.positives}/${s.total_scans}`,
             'Data do Scan': format(new Date(s.scanned_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
             'Link VirusTotal': s.virustotal_permalink || '',
           }));
@@ -142,14 +142,14 @@ export default function DataExport() {
             'Entregue em': j.delivered_at 
               ? format(new Date(j.delivered_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })
               : '-',
-            'Concluído em': j.completed_at 
+            'Concluido em': j.completed_at 
               ? format(new Date(j.completed_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })
               : '-',
-            'Aprovado': j.approved ? 'Sim' : 'Não',
+            'Aprovado': j.approved ? 'Sim' : 'Nao',
             'Agendado para': j.scheduled_at 
               ? format(new Date(j.scheduled_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })
               : '-',
-            'Recorrente': j.is_recurring ? 'Sim' : 'Não',
+            'Recorrente': j.is_recurring ? 'Sim' : 'Nao',
           }));
 
           filename = `jobs_${format(new Date(), 'yyyy-MM-dd_HHmm')}`;
@@ -197,10 +197,10 @@ export default function DataExport() {
           if (error) throw error;
 
           data = logs.map(l => ({
-            'Ação': l.action,
+            'Acao': l.action,
             'Tipo de Recurso': l.resource_type,
             'ID do Recurso': l.resource_id || '-',
-            'Sucesso': l.success ? 'Sim' : 'Não',
+            'Sucesso': l.success ? 'Sim' : 'Nao',
             'Data': format(new Date(l.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR }),
             'IP': l.ip_address || '-',
             'User Agent': l.user_agent || '-',
@@ -212,7 +212,7 @@ export default function DataExport() {
       }
 
       if (data.length === 0) {
-        toast.error('Nenhum dado disponível para exportar');
+        toast.error('Nenhum dado disponivel para exportar');
         return;
       }
 
@@ -285,7 +285,7 @@ export default function DataExport() {
 
   const exportOptions = [
     { value: 'agents', label: 'Agentes', count: stats?.agents || 0, icon: CheckCircle },
-    { value: 'scans', label: 'Scans de Vírus', count: stats?.scans || 0, icon: FileText },
+    { value: 'scans', label: 'Scans de Virus', count: stats?.scans || 0, icon: FileText },
     { value: 'jobs', label: 'Jobs', count: stats?.jobs || 0, icon: Calendar },
     { value: 'quarantine', label: 'Quarentena', count: stats?.quarantine || 0, icon: Download },
     { value: 'audit_logs', label: 'Logs de Auditoria', count: stats?.auditLogs || 0, icon: FileText },
@@ -298,9 +298,9 @@ export default function DataExport() {
           <FileSpreadsheet className="h-8 w-8 text-primary" />
         </div>
         <div>
-          <h2 className="text-3xl font-bold">Exportação de Dados</h2>
+          <h2 className="text-3xl font-bold">Exportacao de Dados</h2>
           <p className="text-muted-foreground">
-            Exporte dados para análise offline e integração com ferramentas de BI
+            Exporte dados para analise offline e integracao com ferramentas de BI
           </p>
         </div>
       </div>
@@ -326,9 +326,9 @@ export default function DataExport() {
       {/* Export Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Configuração de Exportação</CardTitle>
+          <CardTitle>Configuracao de Exportacao</CardTitle>
           <CardDescription>
-            Selecione o tipo de dados, período e formato para exportar
+            Selecione o tipo de dados, periodo e formato para exportar
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -352,15 +352,15 @@ export default function DataExport() {
 
             {/* Date Range */}
             <div className="space-y-2">
-              <Label>Período</Label>
+              <Label>Periodo</Label>
               <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="7">Últimos 7 dias</SelectItem>
-                  <SelectItem value="30">Últimos 30 dias</SelectItem>
-                  <SelectItem value="90">Últimos 90 dias</SelectItem>
+                  <SelectItem value="7">Ultimos 7 dias</SelectItem>
+                  <SelectItem value="30">Ultimos 30 dias</SelectItem>
+                  <SelectItem value="90">Ultimos 90 dias</SelectItem>
                   <SelectItem value="all">Todos os registros</SelectItem>
                 </SelectContent>
               </Select>
@@ -394,9 +394,9 @@ export default function DataExport() {
           {/* Export Button */}
           <div className="flex items-center justify-between pt-4 border-t">
             <div className="text-sm text-muted-foreground">
-              {exportType === 'agents' && `${stats?.agents || 0} agentes disponíveis`}
-              {exportType === 'scans' && `${stats?.scans || 0} scans disponíveis`}
-              {exportType === 'jobs' && `${stats?.jobs || 0} jobs disponíveis`}
+              {exportType === 'agents' && `${stats?.agents || 0} agentes disponiveis`}
+              {exportType === 'scans' && `${stats?.scans || 0} scans disponiveis`}
+              {exportType === 'jobs' && `${stats?.jobs || 0} jobs disponiveis`}
               {exportType === 'quarantine' && `${stats?.quarantine || 0} arquivos em quarentena`}
               {exportType === 'audit_logs' && `${stats?.auditLogs || 0} logs de auditoria`}
             </div>
@@ -429,10 +429,10 @@ export default function DataExport() {
             <CardTitle className="text-base">Formato CSV</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>• Compatível com Excel, Google Sheets e outras ferramentas</p>
-            <p>• Tamanho de arquivo menor</p>
-            <p>• Ideal para importação em bancos de dados</p>
-            <p>• Codificação UTF-8 com BOM para suporte completo de caracteres</p>
+            <p>? Compativel com Excel, Google Sheets e outras ferramentas</p>
+            <p>? Tamanho de arquivo menor</p>
+            <p>? Ideal para importacao em bancos de dados</p>
+            <p>? Codificacao UTF-8 com BOM para suporte completo de caracteres</p>
           </CardContent>
         </Card>
 
@@ -441,10 +441,10 @@ export default function DataExport() {
             <CardTitle className="text-base">Formato Excel (XLSX)</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-2">
-            <p>• Formato nativo do Microsoft Excel</p>
-            <p>• Colunas com largura automática</p>
-            <p>• Preserva formatação e tipos de dados</p>
-            <p>• Ideal para análise avançada e gráficos</p>
+            <p>? Formato nativo do Microsoft Excel</p>
+            <p>? Colunas com largura automatica</p>
+            <p>? Preserva formatacao e tipos de dados</p>
+            <p>? Ideal para analise avancada e graficos</p>
           </CardContent>
         </Card>
       </div>
@@ -460,16 +460,16 @@ export default function DataExport() {
             <div className="space-y-2">
               <h4 className="font-medium flex items-center gap-2">
                 <FileSpreadsheet className="h-4 w-4 text-primary" />
-                Análise Offline
+                Analise Offline
               </h4>
               <p className="text-sm text-muted-foreground">
-                Abra os dados no Excel ou Google Sheets para criar gráficos personalizados e relatórios
+                Abra os dados no Excel ou Google Sheets para criar graficos personalizados e relatorios
               </p>
             </div>
             <div className="space-y-2">
               <h4 className="font-medium flex items-center gap-2">
                 <FileText className="h-4 w-4 text-primary" />
-                Integração BI
+                Integracao BI
               </h4>
               <p className="text-sm text-muted-foreground">
                 Importe para Power BI, Tableau, Looker ou outras ferramentas de Business Intelligence

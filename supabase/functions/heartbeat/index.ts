@@ -19,12 +19,12 @@ Deno.serve(async (req) => {
     const agentToken = req.headers.get('X-Agent-Token')
     if (!agentToken) {
       return new Response(
-        JSON.stringify({ error: 'Token do agente necessário' }),
+        JSON.stringify({ error: 'Token do agente necessario' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
-    // CORREÇÃO: Interface explícita para OS info
+    // CORRECAO: Interface explicita para OS info
     interface OSInfo {
       os_type?: string;
       os_version?: string;
@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     const tokenValidation = AgentTokenSchema.safeParse(agentToken)
     if (!tokenValidation.success) {
       return new Response(
-        JSON.stringify({ error: 'Formato de token inválido' }),
+        JSON.stringify({ error: 'Formato de token invalido' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
@@ -52,12 +52,12 @@ Deno.serve(async (req) => {
 
     if (!token?.agents) {
       return new Response(
-        JSON.stringify({ error: 'Token inválido' }),
+        JSON.stringify({ error: 'Token invalido' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
-    // CORREÇÃO: Schema garante agents como objeto único com tipagem explícita
+    // CORRECAO: Schema garante agents como objeto unico com tipagem explicita
     const agent = token.agents as unknown as { 
       id: string; 
       agent_name: string; 
@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
       status: string;
     }
     
-    // FASE 1.2: HMAC OBRIGATÓRIO - Agora hmac_secret é NOT NULL
+    // FASE 1.2: HMAC OBRIGATORIO - Agora hmac_secret e NOT NULL
     if (!agent.hmac_secret) {
       logger.error('CRITICAL SECURITY: Agent without HMAC secret', { agentName: agent.agent_name })
       return new Response(
@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Verificar HMAC (obrigatório)
+    // Verificar HMAC (obrigatorio)
     const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
     if (!hmacResult.valid) {
       logger.warn('HMAC verification failed', { 
@@ -94,14 +94,14 @@ Deno.serve(async (req) => {
       )
     }
 
-    // CRÍTICO: Parsear body DEPOIS da verificação HMAC, usando o rawBody retornado
+    // CRITICO: Parsear body DEPOIS da verificacao HMAC, usando o rawBody retornado
     let osInfo: OSInfo = {}
     if (hmacResult.rawBody) {
       try {
         const parsedBody = JSON.parse(hmacResult.rawBody)
         osInfo = parsedBody || {}
       } catch {
-        // Body vazio ou inválido é OK para heartbeats legacy
+        // Body vazio ou invalido e OK para heartbeats legacy
       }
     }
 
@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
     logger.debug('Heartbeat received', { agentName: agent.agent_name })
     logger.info('Heartbeat received successfully')
 
-    // CORREÇÃO: Interface explícita em vez de any
+    // CORRECAO: Interface explicita em vez de any
     interface AgentUpdate {
       last_heartbeat: string;
       status: string;
@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
       .eq('id', agent.id)
 
     if (updateError) {
-      // Log detalhado do erro mas não bloqueia o heartbeat
+      // Log detalhado do erro mas nao bloqueia o heartbeat
       logger.error('Failed to update agent heartbeat', {
         error: updateError,
         errorMessage: updateError.message,

@@ -3,7 +3,7 @@
     Re-deploy de agente CyberShield para usar script v3
 .DESCRIPTION
     Para a Scheduled Task antiga, baixa o script v3 atualizado
-    do backend e recria a tarefa apontando para a nova versão.
+    do backend e recria a tarefa apontando para a nova versao.
 .EXAMPLE
     .\redeploy-agents-v3.ps1 `
       -ServerUrl "https://iavbnmduxpxhwubqrzzn.supabase.co" `
@@ -31,7 +31,7 @@ $ErrorActionPreference = "Stop"
 $TaskName   = "CyberShieldAgent"
 $ScriptPath = "C:\CyberShield\cybershield-agent-windows-v3.ps1"
 
-Write-Host "🔄 Re-deploy do agente '$AgentName' para v3..." -ForegroundColor Cyan
+Write-Host "? Re-deploy do agente '$AgentName' para v3..." -ForegroundColor Cyan
 
 # 1) Parar e remover task antiga
 Write-Host "[1/4] Parando Scheduled Task antiga..." -ForegroundColor Yellow
@@ -39,7 +39,7 @@ try {
     Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 } catch {
-    Write-Host "⚠ Não foi possível parar/remover task antiga (pode já não existir): $($_.Exception.Message)" -ForegroundColor DarkYellow
+    Write-Host "[WARN]  Nao foi possivel parar/remover task antiga (pode ja nao existir): $($_.Exception.Message)" -ForegroundColor DarkYellow
 }
 
 # 2) Baixar script v3 do backend
@@ -60,13 +60,13 @@ try {
     $hasSubmitJobResult = Select-String -Path $ScriptPath -Pattern "Submit-JobResult" -Quiet
 
     if (-not $hasSubmitJobResult) {
-        throw "Script baixado não contém a função Submit-JobResult (não é v3)."
+        throw "Script baixado nao contem a funcao Submit-JobResult (nao e v3)."
     }
 
-    Write-Host "✅ Script v3 baixado e validado" -ForegroundColor Green
+    Write-Host "[OK]  Script v3 baixado e validado" -ForegroundColor Green
 }
 catch {
-    Write-Host "❌ Erro ao baixar/validar script v3: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "[ERROR]  Erro ao baixar/validar script v3: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 
@@ -101,18 +101,18 @@ Register-ScheduledTask `
     -Description "CyberShield Security Agent v3" `
     -Force | Out-Null
 
-# 4) Start e validação rápida
+# 4) Start e validacao rapida
 Write-Host "[4/4] Iniciando nova Scheduled Task..." -ForegroundColor Yellow
 Start-ScheduledTask -TaskName $TaskName
 Start-Sleep -Seconds 5
 
 try {
     $taskInfo = Get-ScheduledTaskInfo -TaskName $TaskName
-    Write-Host "Última execução: $($taskInfo.LastRunTime), código: $($taskInfo.LastTaskResult)" -ForegroundColor DarkGray
+    Write-Host "Ultima execucao: $($taskInfo.LastRunTime), codigo: $($taskInfo.LastTaskResult)" -ForegroundColor DarkGray
 } catch {
-    Write-Host "⚠ Não foi possível obter informações da task: $($_.Exception.Message)" -ForegroundColor DarkYellow
+    Write-Host "[WARN]  Nao foi possivel obter informacoes da task: $($_.Exception.Message)" -ForegroundColor DarkYellow
 }
 
 Write-Host ""
-Write-Host "✅ Redeploy concluído. Verifique o log do agente em:" -ForegroundColor Green
+Write-Host "[OK]  Redeploy concluido. Verifique o log do agente em:" -ForegroundColor Green
 Write-Host "   C:\CyberShield\logs\cybershield-agent-v3.log" -ForegroundColor Cyan

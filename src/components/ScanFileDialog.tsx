@@ -32,7 +32,7 @@ export function ScanFileDialog() {
   const createScanJob = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Não autenticado');
+      if (!user) throw new Error('Nao autenticado');
 
       const { data, error } = await supabase.functions.invoke('create-job', {
         body: {
@@ -50,7 +50,7 @@ export function ScanFileDialog() {
     onSuccess: () => {
       toast({
         title: 'Job de Scan Criado',
-        description: `O agente ${agentName} irá escanear o arquivo em breve.`,
+        description: `O agente ${agentName} ira escanear o arquivo em breve.`,
       });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       setOpen(false);
@@ -70,7 +70,7 @@ export function ScanFileDialog() {
     e.preventDefault();
     if (!agentName || !filePath) {
       toast({
-        title: 'Campos Obrigatórios',
+        title: 'Campos Obrigatorios',
         description: 'Selecione um agente e informe o caminho do arquivo.',
         variant: 'destructive',
       });
@@ -91,7 +91,7 @@ export function ScanFileDialog() {
         <DialogHeader>
           <DialogTitle>Escanear Arquivo</DialogTitle>
           <DialogDescription>
-            Crie um job de scan para verificar um arquivo específico em um agente.
+            Crie um job de scan para verificar um arquivo especifico em um agente.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -114,7 +114,7 @@ export function ScanFileDialog() {
                   ))
                 ) : (
                   <div className="p-2 text-sm text-muted-foreground">
-                    Nenhum agente ativo disponível
+                    Nenhum agente ativo disponivel
                   </div>
                 )}
               </SelectContent>

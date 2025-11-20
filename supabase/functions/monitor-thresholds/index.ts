@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
         // Build alert message
         const issues = [];
         if (alert.virus_count >= alert.settings.alert_threshold_virus_positive) {
-          issues.push(`${alert.virus_count} vírus detectados (threshold: ${alert.settings.alert_threshold_virus_positive})`);
+          issues.push(`${alert.virus_count} virus detectados (threshold: ${alert.settings.alert_threshold_virus_positive})`);
         }
         if (alert.failed_jobs_count >= alert.settings.alert_threshold_failed_jobs) {
           issues.push(`${alert.failed_jobs_count} jobs falhados (threshold: ${alert.settings.alert_threshold_failed_jobs})`);
@@ -171,7 +171,7 @@ Deno.serve(async (req) => {
 
         const message = `Alertas de threshold excedidos para ${alert.tenant_name}`;
         const details = {
-          timeframe: 'Últimas 24 horas',
+          timeframe: 'Ultimas 24 horas',
           issues,
           virus_count: alert.virus_count,
           failed_jobs_count: alert.failed_jobs_count,

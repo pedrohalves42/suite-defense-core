@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
     // Create Supabase client with service role
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // FASE 1 CRÍTICO: Use inline agent script
+    // FASE 1 CRITICO: Use inline agent script
     console.log(`[${requestId}] Using inline agent script`);
 const { getAgentScriptWindows } = await import('../_shared/agent-script-windows-content.ts');
 const { validateAgentScriptContent } = await import('../_shared/agent-script-validator.ts');
