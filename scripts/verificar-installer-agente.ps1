@@ -212,6 +212,43 @@ if ($content -match 'CyberShield Agent') {
 }
 
 # =========================
+# 8) Validar versao do installer (se baixado via HTTP)
+# =========================
+Write-Host ""
+Write-Host "=== 7) Versao do Installer (se aplicavel) ===" -ForegroundColor Cyan
+
+# Tentar extrair URL do script se estiver em comentario
+$urlMatch = $content | Select-String -Pattern 'Downloaded from: (https?://[^\s]+)' -AllMatches
+if ($urlMatch) {
+    $installerUrl = $urlMatch.Matches[0].Groups[1].Value
+    Write-Host "URL detectada: $installerUrl" -ForegroundColor DarkGray
+    
+    try {
+        $response = Invoke-WebRequest -Uri $installerUrl -Method Head -UseBasicParsing -ErrorAction Stop
+        $version = $response.Headers['X-Installer-Version']
+        $updated = $response.Headers['X-Installer-Updated']
+        
+        if ($version) {
+            Write-Host "Versao do servidor: $version" -ForegroundColor White
+            Write-Host "Atualizado em: $updated" -ForegroundColor White
+            
+            if ($version -match '3\.1\.1-PARSERERROR-FIX') {
+                Write-Host "[OK] Versao CORRETA (ParserError fix aplicado)" -ForegroundColor Green
+            } else {
+                Write-Host "[WARN] Versao ANTIGA detectada no servidor" -ForegroundColor Yellow
+                $validationPassed = $false
+            }
+        } else {
+            Write-Host "[INFO] Servidor nao retorna header X-Installer-Version" -ForegroundColor DarkGray
+        }
+    } catch {
+        Write-Host "[INFO] Nao foi possivel verificar versao do servidor (OK se validando arquivo local)" -ForegroundColor DarkGray
+    }
+} else {
+    Write-Host "[INFO] Script local - validacao de versao do servidor nao aplicavel" -ForegroundColor DarkGray
+}
+
+# =========================
 # RESULTADO FINAL
 # =========================
 Write-Host ""
