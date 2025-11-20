@@ -23,6 +23,7 @@ import {
 } from '../_shared/installer-template-envvars.ts';
 import { AGENT_SCRIPT_MACOS_SH } from '../_shared/agent-script-macos-content.ts';
 import { AGENT_SCRIPT_LINUX_SH } from '../_shared/agent-script-linux-content.ts';
+import { INSTALLER_VERSION, LAST_UPDATED, getVersionInfo } from '../_shared/installer-version.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 
@@ -142,6 +143,8 @@ Deno.serve(async (req) => {
 
   try {
     return await withTimeout(async () => {
+      // Log da versão do installer template
+      console.log(`[${requestId}] ${getVersionInfo()}`);
       console.log(`[${requestId}] Processing request - ${req.method} ${req.url}`);
 
       const url = new URL(req.url);
@@ -614,7 +617,7 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
     const duration = Date.now() - startTime;
     console.log(`[${requestId}] Completed successfully in ${duration}ms`);
 
-      // FASE 2: Return script with SHA256 in header
+      // FASE 2: Return script with SHA256 and version in headers
       return new Response(templateContent, {
         headers: {
           ...corsHeaders,
@@ -622,6 +625,8 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
           'Content-Disposition': `attachment; filename="${fileName}"`,
           'X-Script-SHA256': installerSha256,
           'X-Script-Size': installerSizeBytes.toString(),
+          'X-Installer-Version': INSTALLER_VERSION,
+          'X-Installer-Updated': LAST_UPDATED,
           'X-Content-Type-Options': 'nosniff',
           'X-Frame-Options': 'DENY',
         },

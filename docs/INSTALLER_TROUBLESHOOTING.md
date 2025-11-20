@@ -4,6 +4,41 @@ Guia completo para diagnosticar e resolver problemas com instaladores do agente.
 
 ---
 
+## 📌 Versionamento do Installer Template
+
+### Versão Atual
+- **Versão**: `3.1.1-PARSERERROR-FIX`
+- **Data**: 2025-11-20
+- **Correção Principal**: InvalidVariableReferenceWithDrive em PowerShell 5.1
+
+### Como Verificar a Versão Servida
+
+```powershell
+# Baixar headers HTTP do installer
+$url = "https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/serve-installer/<TOKEN>"
+$response = Invoke-WebRequest -Uri $url -Method Head -UseBasicParsing
+Write-Host "Versao: $($response.Headers['X-Installer-Version'])"
+Write-Host "Atualizado: $($response.Headers['X-Installer-Updated'])"
+Write-Host "SHA256: $($response.Headers['X-Script-SHA256'])"
+```
+
+**Saída esperada:**
+```
+Versao: 3.1.1-PARSERERROR-FIX
+Atualizado: 2025-11-20T20:00:00Z
+SHA256: abc123...
+```
+
+### Histórico de Versões
+
+| Versão | Data | Correções |
+|--------|------|-----------|
+| 3.1.1-PARSERERROR-FIX | 2025-11-20 | Corrigido `: $_` → `: $($_.Exception.Message)` em 6 blocos catch |
+| 3.1.0-HARDENED | 2025-11-19 | Validação robusta de script embedded, tamanho mínimo 10KB |
+| 3.0.0 | 2025-11-18 | Jobs v3 + StartedAt timestamp, HMAC validation |
+
+---
+
 ## ⚡ Checklist Rápido (5 minutos)
 
 Execute estas verificações após rodar o instalador:
