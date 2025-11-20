@@ -223,12 +223,12 @@ function Invoke-SecureRequest {
             Write-Log "Erro na requisição \$Method \$uri (tentativa \$retryCount/\$MaxRetries): \$(\$_.Exception.Message)" "ERROR"
 
             if (\$statusCode -eq 401) {
-                Write-Log "❌ Erro de autenticação (401). Verifique AgentToken / HmacSecret / clock." "ERROR"
+                Write-Log "[ERROR] Erro de autenticação (401). Verifique AgentToken / HmacSecret / clock." "ERROR"
                 throw
             }
 
             if (\$retryCount -ge \$MaxRetries) {
-                Write-Log "❌ Falha definitiva após \$MaxRetries tentativas em \$uri" "ERROR"
+                Write-Log "[ERROR] Falha definitiva após \$MaxRetries tentativas em \$uri" "ERROR"
                 throw
             }
 
@@ -311,12 +311,12 @@ function Send-PostInstallationEvent {
             -TimeoutSec 20
 
         if (\$result.Success -and \$result.StatusCode -eq 200) {
-            Write-Log "✅ post_installation registrado com sucesso" "SUCCESS"
+            Write-Log "[SUCCESS] post_installation registrado com sucesso" "SUCCESS"
         } else {
-            Write-Log "⚠️ Falha ao registrar post_installation (Status=\$(\$result.StatusCode))" "WARN"
+            Write-Log "[WARN] Falha ao registrar post_installation (Status=\$(\$result.StatusCode))" "WARN"
         }
     } catch {
-        Write-Log "⚠️ Erro ao enviar post_installation: \$(\$_.Exception.Message)" "WARN"
+        Write-Log "[WARN] Erro ao enviar post_installation: \$(\$_.Exception.Message)" "WARN"
     }
 }
 
@@ -345,12 +345,12 @@ function Send-Heartbeat {
             -TimeoutSec 15
 
         if (\$result.Success -and \$result.StatusCode -eq 200) {
-            Write-Log "✅ Heartbeat OK (200)" "SUCCESS"
+            Write-Log "[SUCCESS] Heartbeat OK (200)" "SUCCESS"
         } else {
-            Write-Log "❌ Heartbeat falhou (Status=\$(\$result.StatusCode))" "ERROR"
+            Write-Log "[ERROR] Heartbeat falhou (Status=\$(\$result.StatusCode))" "ERROR"
         }
     } catch {
-        Write-Log "❌ Erro ao enviar heartbeat: \$(\$_.Exception.Message)" "ERROR"
+        Write-Log "[ERROR] Erro ao enviar heartbeat: \$(\$_.Exception.Message)" "ERROR"
     }
 }
 
@@ -404,15 +404,15 @@ function Submit-JobResult {
             -TimeoutSec 30
 
         if (\$result.Success -and \$result.StatusCode -eq 200) {
-            Write-Log "✅ Resultado do job \$JobId enviado com sucesso" "SUCCESS"
+            Write-Log "[SUCCESS] Resultado do job \$JobId enviado com sucesso" "SUCCESS"
             return \$true
         } else {
-            Write-Log "❌ Falha ao enviar resultado (Status=\$(\$result.StatusCode))" "ERROR"
+            Write-Log "[ERROR] Falha ao enviar resultado (Status=\$(\$result.StatusCode))" "ERROR"
             Write-Log "Response body: \$(\$result.Body)" "ERROR"
             return \$false
         }
     } catch {
-        Write-Log "❌ Erro ao enviar resultado do job \${JobId}: \$(\$_.Exception.Message)" "ERROR"
+        Write-Log "[ERROR] Erro ao enviar resultado do job \${JobId}: \$(\$_.Exception.Message)" "ERROR"
         Write-Log "Stack trace: \$(\$_.ScriptStackTrace)" "ERROR"
         return \$false
     }
@@ -510,7 +510,7 @@ function Execute-Job {
 
                     # QUARENTENA FÍSICA (necessária pois backend não tem acesso ao filesystem)
                     if (\$scanData.isMalicious) {
-                        Write-Log "⚠️ MALWARE DETECTADO: \$(\$scanData.positives)/\$(\$scanData.totalScans) engines" "WARN"
+                        Write-Log "[WARN] MALWARE DETECTADO: \$(\$scanData.positives)/\$(\$scanData.totalScans) engines" "WARN"
                         
                         \$quarantineRoot = "C:\\CyberShield\\Quarantine"
                         if (-not (Test-Path \$quarantineRoot)) {
@@ -522,12 +522,12 @@ function Execute-Job {
                         \$quarantinePath = Join-Path \$quarantineRoot "\$guid\`_\$fileName"
 
                         Move-Item -Path \$filePath -Destination \$quarantinePath -Force
-                        Write-Log "✅ Arquivo movido para quarentena: \$quarantinePath" "SUCCESS"
+                        Write-Log "[SUCCESS] Arquivo movido para quarentena: \$quarantinePath" "SUCCESS"
 
                         \$output.quarantined = \$true
                         \$output.quarantinePath = \$quarantinePath
                     } else {
-                        Write-Log "✅ Arquivo limpo" "SUCCESS"
+                        Write-Log "[SUCCESS] Arquivo limpo" "SUCCESS"
                     }
 
                     \$result.success = \$true
@@ -535,14 +535,14 @@ function Execute-Job {
                 }
                 catch {
                     \$err = \$_.Exception.Message
-                    Write-Log "❌ Erro ao processar job 'scan': \$err" "ERROR"
+                    Write-Log "[ERROR] Erro ao processar job 'scan': \$err" "ERROR"
                     \$result.success = \$false
                     \$result.error = \$err
                 }
             }
             "update_agent" {
                 try {
-                    Write-Log "🔄 Job 'update_agent' recebido" "INFO"
+                    Write-Log "[INFO] Job 'update_agent' recebido" "INFO"
 
                     # Chama serve-agent-update
                     \$updateResult = Invoke-SecureRequest \`
@@ -585,7 +585,7 @@ function Execute-Job {
                         throw "SHA256 mismatch! Esperado: \$expectedHash, Obtido: \$actualHash"
                     }
 
-                    Write-Log "✅ SHA256 validado: \$actualHash" "SUCCESS"
+                    Write-Log "[SUCCESS] SHA256 validado: \$actualHash" "SUCCESS"
 
                     # Backup do script atual
                     Copy-Item -Path \$currentScript -Destination \$backupScript -Force
@@ -595,7 +595,7 @@ function Execute-Job {
                     Copy-Item -Path \$tempScript -Destination \$currentScript -Force
                     Remove-Item \$tempScript -Force
 
-                    Write-Log "✅ Script atualizado para \$newVersion" "SUCCESS"
+                    Write-Log "[SUCCESS] Script atualizado para \$newVersion" "SUCCESS"
 
                     # Reiniciar task
                     Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
@@ -615,7 +615,7 @@ function Execute-Job {
                 }
                 catch {
                     \$err = \$_.Exception.Message
-                    Write-Log "❌ Erro no auto-update: \$err" "ERROR"
+                    Write-Log "[ERROR] Erro no auto-update: \$err" "ERROR"
                     \$result.success = \$false
                     \$result.error   = \$err
                     break
@@ -672,12 +672,12 @@ function Poll-Jobs {
             -TimeoutSec 20
 
         if (-not \$result.Success -or \$result.StatusCode -ne 200) {
-            Write-Log "❌ poll-jobs falhou (Status=\$(\$result.StatusCode))" "ERROR"
+            Write-Log "[ERROR] poll-jobs falhou (Status=\$(\$result.StatusCode))" "ERROR"
             return
         }
 
         if ([string]::IsNullOrWhiteSpace(\$result.Body)) {
-            Write-Log "⚠️ Resposta de poll-jobs vazia" "WARN"
+            Write-Log "[WARN] Resposta de poll-jobs vazia" "WARN"
             return
         }
 
@@ -694,7 +694,7 @@ function Poll-Jobs {
             Execute-Job -Job \$job
         }
     } catch {
-        Write-Log "❌ Erro no poll-jobs: \$(\$_.Exception.Message)" "ERROR"
+        Write-Log "[ERROR] Erro no poll-jobs: \$(\$_.Exception.Message)" "ERROR"
     }
 }
 
@@ -702,9 +702,9 @@ function Poll-Jobs {
 #  LOOP PRINCIPAL
 # ============================================
 Write-Log "============================================" "INFO"
-Write-Log "🚀 Iniciando CyberShield Agent - Windows v\$Global:AgentVersion" "INFO"
-Write-Log "🌐 ServerUrl: \$Global:ServerUrl" "DEBUG"
-Write-Log "🏷️  AgentName: \$Global:AgentName" "DEBUG"
+Write-Log "[START] Iniciando CyberShield Agent - Windows v\$Global:AgentVersion" "INFO"
+Write-Log "[INFO] ServerUrl: \$Global:ServerUrl" "DEBUG"
+Write-Log "[INFO] AgentName: \$Global:AgentName" "DEBUG"
 Write-Log "============================================" "INFO"
 
 try {
@@ -717,9 +717,9 @@ try {
     Send-Heartbeat
 
     \$bootstrapElapsed = [int]((Get-Date) - \$bootstrapStart).TotalSeconds
-    Write-Log "✅ Bootstrap concluído em \${bootstrapElapsed}s" "SUCCESS"
+    Write-Log "[SUCCESS] Bootstrap concluído em \${bootstrapElapsed}s" "SUCCESS"
 
-    Write-Log "🔄 Entrando no loop principal (intervalo=\$(\$Global:PollIntervalSeconds)s)" "INFO"
+    Write-Log "[INFO] Entrando no loop principal (intervalo=\$(\$Global:PollIntervalSeconds)s)" "INFO"
 
     \$lastHeartbeat = Get-Date
     \$lastPoll      = Get-Date
@@ -740,14 +740,14 @@ try {
                 \$lastPoll = Get-Date
             }
         } catch {
-            Write-Log "❌ Erro no loop principal: \$(\$_.Exception.Message)" "ERROR"
+            Write-Log "[ERROR] Erro no loop principal: \$(\$_.Exception.Message)" "ERROR"
         }
 
         Start-Sleep -Seconds 2
     }
 }
 catch {
-    Write-Log "💥 Erro fatal no agente: \$(\$_.Exception.Message)" "ERROR"
+    Write-Log "[FATAL] Erro fatal no agente: \$(\$_.Exception.Message)" "ERROR"
     Write-Log "Stack trace: \$(\$_.ScriptStackTrace)" "ERROR"
     exit 1
 }
