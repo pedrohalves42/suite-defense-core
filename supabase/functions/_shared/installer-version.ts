@@ -7,8 +7,8 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = '3.1.1-PARSERERROR-FIX';
-export const LAST_UPDATED = '2025-11-20T20:00:00Z';
+export const INSTALLER_VERSION = '3.1.1-PARSERERROR-FIX-REBUILD';
+export const LAST_UPDATED = '2025-11-20T20:50:00Z'; // Force rebuild at 2025-11-20T20:50:00Z
 
 export const CHANGES = [
   'Corrigido InvalidVariableReferenceWithDrive em 6 blocos catch',
