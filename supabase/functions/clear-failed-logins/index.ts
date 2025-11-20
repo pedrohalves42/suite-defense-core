@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Limpar tentativas falhadas após login bem-sucedido
+    // Limpar tentativas falhadas apos login bem-sucedido
     await supabaseAdmin
       .from('failed_login_attempts')
       .delete()

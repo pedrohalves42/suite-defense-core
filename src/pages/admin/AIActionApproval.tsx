@@ -43,7 +43,7 @@ export default function AIActionApproval() {
   const queryClient = useQueryClient();
   const [executingActions, setExecutingActions] = useState<Set<string>>(new Set());
 
-  // Buscar ações pendentes
+  // Buscar acoes pendentes
   const { data: pendingActions, isLoading } = useQuery({
     queryKey: ['ai-actions-pending'],
     queryFn: async () => {
@@ -63,7 +63,7 @@ export default function AIActionApproval() {
     refetchInterval: 10000, // Atualiza a cada 10s
   });
 
-  // Buscar configurações de ações
+  // Buscar configuracoes de acoes
   const { data: actionConfigs } = useQuery({
     queryKey: ['ai-action-configs'],
     queryFn: async () => {
@@ -77,7 +77,7 @@ export default function AIActionApproval() {
     },
   });
 
-  // Mutation para executar ação
+  // Mutation para executar acao
   const executeAction = useMutation({
     mutationFn: async (actionId: string) => {
       const { data, error } = await supabase.functions.invoke('ai-action-executor', {
@@ -97,8 +97,8 @@ export default function AIActionApproval() {
       });
       
       toast({
-        title: 'Ação Executada',
-        description: 'A ação foi executada com sucesso.',
+        title: 'Acao Executada',
+        description: 'A acao foi executada com sucesso.',
       });
     },
     onError: (error: any, actionId) => {
@@ -109,14 +109,14 @@ export default function AIActionApproval() {
       });
       
       toast({
-        title: 'Erro ao Executar Ação',
+        title: 'Erro ao Executar Acao',
         description: error.message,
         variant: 'destructive',
       });
     },
   });
 
-  // Mutation para rejeitar ação
+  // Mutation para rejeitar acao
   const rejectAction = useMutation({
     mutationFn: async (actionId: string) => {
       const { error } = await supabase
@@ -129,8 +129,8 @@ export default function AIActionApproval() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-actions-pending'] });
       toast({
-        title: 'Ação Rejeitada',
-        description: 'A ação foi marcada como rejeitada.',
+        title: 'Acao Rejeitada',
+        description: 'A acao foi marcada como rejeitada.',
       });
     },
   });
@@ -188,9 +188,9 @@ export default function AIActionApproval() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Aprovação de Ações da IA</h1>
+        <h1 className="text-3xl font-bold">Aprovacao de Acoes da IA</h1>
         <p className="text-muted-foreground mt-2">
-          Revise e aprove ações sugeridas pela IA de autoaprendizado
+          Revise e aprove acoes sugeridas pela IA de autoaprendizado
         </p>
       </div>
 
@@ -198,7 +198,7 @@ export default function AIActionApproval() {
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            Nenhuma ação pendente de aprovação no momento.
+            Nenhuma acao pendente de aprovacao no momento.
           </AlertDescription>
         </Alert>
       )}
@@ -214,7 +214,7 @@ export default function AIActionApproval() {
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <CardTitle className="flex items-center gap-2">
-                      {action.ai_insights?.title || 'Ação Sugerida'}
+                      {action.ai_insights?.title || 'Acao Sugerida'}
                       <Badge variant="outline" className="gap-1">
                         <Clock className="h-3 w-3" />
                         Pendente
@@ -232,9 +232,9 @@ export default function AIActionApproval() {
               </CardHeader>
 
               <CardContent className="space-y-4">
-                {/* Tipo de Ação */}
+                {/* Tipo de Acao */}
                 <div>
-                  <h3 className="font-semibold text-sm mb-2">Tipo de Ação</h3>
+                  <h3 className="font-semibold text-sm mb-2">Tipo de Acao</h3>
                   <div className="flex items-center gap-2">
                     <code className="text-sm bg-muted px-2 py-1 rounded">
                       {action.action_type}
@@ -249,7 +249,7 @@ export default function AIActionApproval() {
 
                 {/* Payload */}
                 <div>
-                  <h3 className="font-semibold text-sm mb-2">Detalhes da Ação</h3>
+                  <h3 className="font-semibold text-sm mb-2">Detalhes da Acao</h3>
                   <div className="bg-muted p-3 rounded text-sm">
                     <pre className="whitespace-pre-wrap">
                       {JSON.stringify(action.action_payload, null, 2)}
@@ -257,10 +257,10 @@ export default function AIActionApproval() {
                   </div>
                 </div>
 
-                {/* Evidências */}
+                {/* Evidencias */}
                 {action.ai_insights?.evidence && (
                   <div>
-                    <h3 className="font-semibold text-sm mb-2">Evidências</h3>
+                    <h3 className="font-semibold text-sm mb-2">Evidencias</h3>
                     <div className="bg-muted p-3 rounded text-sm">
                       <pre className="whitespace-pre-wrap">
                         {JSON.stringify(action.ai_insights.evidence, null, 2)}
@@ -269,10 +269,10 @@ export default function AIActionApproval() {
                   </div>
                 )}
 
-                {/* Confiança da IA */}
+                {/* Confianca da IA */}
                 {action.ai_insights?.confidence_score && (
                   <div>
-                    <h3 className="font-semibold text-sm mb-2">Confiança da IA</h3>
+                    <h3 className="font-semibold text-sm mb-2">Confianca da IA</h3>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-muted rounded-full h-2">
                         <div
@@ -290,14 +290,14 @@ export default function AIActionApproval() {
                 {/* Rate Limit */}
                 {config && (
                   <div>
-                    <h3 className="font-semibold text-sm mb-2">Limite de Execuções</h3>
+                    <h3 className="font-semibold text-sm mb-2">Limite de Execucoes</h3>
                     <p className="text-sm text-muted-foreground">
-                      Máximo de {config.max_executions_per_day} execuções por dia
+                      Maximo de {config.max_executions_per_day} execucoes por dia
                     </p>
                   </div>
                 )}
 
-                {/* Botões de Ação */}
+                {/* Botoes de Acao */}
                 <div className="flex gap-2 pt-4 border-t">
                   <Button
                     onClick={() => handleApprove(action.id)}

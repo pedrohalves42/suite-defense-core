@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData.user) throw new Error("Unauthorized");
 
-    // Verificar se é admin
+    // Verificar se e admin
     const { data: roles, error: rolesError } = await supabase
       .from('user_roles')
       .select('role, tenant_id')
@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
         )
       `);
 
-    // Filtrar por tenant se não for super admin
+    // Filtrar por tenant se nao for super admin
     if (!isSuperAdmin && tenantId) {
       subsQuery = subsQuery.eq('tenant_id', tenantId);
     }
@@ -95,11 +95,11 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Calcular métricas dos últimos 6 meses
+    // Calcular metricas dos ultimos 6 meses
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-    // Buscar audit logs para calcular churn e conversões
+    // Buscar audit logs para calcular churn e conversoes
     let auditQuery = supabase
       .from('audit_logs')
       .select('action, resource_type, created_at, details')
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
     // Processar dados mensais
     const monthlyDataMap = new Map<string, MonthlyData>();
     
-    // Inicializar últimos 6 meses
+    // Inicializar ultimos 6 meses
     for (let i = 5; i >= 0; i--) {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Contar novos e cancelados por mês
+    // Contar novos e cancelados por mes
     let totalTrials = 0;
     let convertedTrials = 0;
 
@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
         const monthData = monthlyDataMap.get(monthKey)!;
         monthData.new++;
         
-        // Calcular MRR histórico (simplificado)
+        // Calcular MRR historico (simplificado)
         if (sub.status === 'active' || sub.status === 'trialing') {
           const pricePerDevice = sub.subscription_plans.price_per_device || 0;
           const quantity = sub.device_quantity || 1;
@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
       churned,
     }));
 
-    // Calcular churn rate (média dos últimos 3 meses)
+    // Calcular churn rate (media dos ultimos 3 meses)
     const recentChurns = newVsChurned.slice(-3);
     const totalChurned = recentChurns.reduce((sum, m) => sum + m.churned, 0);
     const totalActive = activeCount + trialingCount;
@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
     // Calcular trial conversion rate
     const trialConversionRate = totalTrials > 0 ? (convertedTrials / totalTrials) * 100 : 0;
 
-    // Calcular receita média por cliente
+    // Calcular receita media por cliente
     const avgRevenuePerCustomer = activeCount > 0 ? totalMrr / activeCount : 0;
 
     const response = {

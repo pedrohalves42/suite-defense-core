@@ -24,7 +24,7 @@ CREATE TABLE public.jobs (
   completed_at TIMESTAMPTZ
 );
 
--- Tabela de relatórios
+-- Tabela de relatorios
 CREATE TABLE public.reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   agent_name TEXT NOT NULL,
@@ -34,7 +34,7 @@ CREATE TABLE public.reports (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX idx_jobs_agent_status ON public.jobs(agent_name, status);
 CREATE INDEX idx_reports_agent ON public.reports(agent_name, created_at DESC);
 
@@ -43,7 +43,7 @@ ALTER TABLE public.agents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
 
--- Políticas RLS (permitir acesso público para desenvolvimento - ajustar em produção)
+-- Politicas RLS (permitir acesso publico para desenvolvimento - ajustar em producao)
 CREATE POLICY "Allow public access to agents" ON public.agents FOR ALL USING (true);
 CREATE POLICY "Allow public access to jobs" ON public.jobs FOR ALL USING (true);
 CREATE POLICY "Allow public access to reports" ON public.reports FOR ALL USING (true);

@@ -64,7 +64,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           available: false,
-          reason: 'Erro de configuração do servidor',
+          reason: 'Erro de configuracao do servidor',
           requestId
         }),
         { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -77,7 +77,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           available: false,
-          reason: 'Não autorizado - faça login novamente',
+          reason: 'Nao autorizado - faca login novamente',
           requestId
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -97,7 +97,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           available: false,
-          reason: 'Não autorizado - faça login novamente' 
+          reason: 'Nao autorizado - faca login novamente' 
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -111,7 +111,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           available: false,
-          reason: 'Usuário não possui tenant atribuído' 
+          reason: 'Usuario nao possui tenant atribuido' 
         }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -119,7 +119,7 @@ serve(async (req) => {
 
     const { agentName } = await req.json();
 
-    // Validação de tamanho mínimo
+    // Validacao de tamanho minimo
     if (!agentName || agentName.length < 3) {
       logger.debug('Invalid agent name length', { agentName });
       return new Response(
@@ -131,26 +131,26 @@ serve(async (req) => {
       );
     }
 
-    // Validação de caracteres permitidos (alfanuméricos, hífen, underscore)
+    // Validacao de caracteres permitidos (alfanumericos, hifen, underscore)
     const validNameRegex = /^[a-zA-Z0-9_-]+$/;
     if (!validNameRegex.test(agentName)) {
       logger.debug('Invalid agent name characters', { agentName });
       return new Response(
         JSON.stringify({ 
           available: false, 
-          reason: 'Nome pode conter apenas letras, números, hífen e underscore' 
+          reason: 'Nome pode conter apenas letras, numeros, hifen e underscore' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Validação de tamanho máximo
+    // Validacao de tamanho maximo
     if (agentName.length > 50) {
       logger.debug('Agent name too long', { agentName });
       return new Response(
         JSON.stringify({ 
           available: false, 
-          reason: 'Nome deve ter no máximo 50 caracteres' 
+          reason: 'Nome deve ter no maximo 50 caracteres' 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -158,7 +158,7 @@ serve(async (req) => {
 
     logger.info('Checking agent name availability', { agentName, tenantId });
 
-    // Verificar se já existe (using service role for query)
+    // Verificar se ja existe (using service role for query)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -188,7 +188,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         available: isAvailable,
-        reason: existingAgent ? 'Nome já está em uso neste tenant' : null
+        reason: existingAgent ? 'Nome ja esta em uso neste tenant' : null
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -35,28 +35,28 @@ export default function CheckoutSuccess() {
         <CardContent className="space-y-4">
           <div className="bg-muted p-4 rounded-lg space-y-3">
             <div>
-              <p className="text-sm font-medium mb-1">✨ Período de Trial</p>
+              <p className="text-sm font-medium mb-1">? Periodo de Trial</p>
               <p className="text-sm text-muted-foreground">
                 30 dias gratuitos para testar todos os recursos
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium mb-1">💳 Próximos Passos</p>
+              <p className="text-sm font-medium mb-1">? Proximos Passos</p>
               <p className="text-sm text-muted-foreground">
-                Você não será cobrado durante o período de teste. Após o término, sua cobrança será automática mensalmente.
+                Voce nao sera cobrado durante o periodo de teste. Apos o termino, sua cobranca sera automatica mensalmente.
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium mb-1">🔧 Gerenciar Assinatura</p>
+              <p className="text-sm font-medium mb-1">[JOB]  Gerenciar Assinatura</p>
               <p className="text-sm text-muted-foreground">
-                Você pode cancelar ou modificar sua assinatura a qualquer momento através do portal do cliente.
+                Voce pode cancelar ou modificar sua assinatura a qualquer momento atraves do portal do cliente.
               </p>
             </div>
           </div>
           
           {sessionId && (
             <p className="text-xs text-muted-foreground text-center">
-              ID da Sessão: {sessionId}
+              ID da Sessao: {sessionId}
             </p>
           )}
 

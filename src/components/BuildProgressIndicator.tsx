@@ -20,9 +20,9 @@ export const BuildProgressIndicator = ({ progress }: BuildProgressIndicatorProps
   const steps: Array<{ key: BuildProgressStep; icon: any; label: string; description: string }> = [
     { key: 'preparing', icon: Zap, label: 'Preparando', description: 'Gerando credenciais' },
     { key: 'dispatching', icon: ExternalLink, label: 'Disparando Build', description: 'Enviando para GitHub Actions' },
-    { key: 'compiling', icon: Terminal, label: 'Compilando EXE', description: 'Convertendo PS1 → EXE (2-3 min)' },
+    { key: 'compiling', icon: Terminal, label: 'Compilando EXE', description: 'Convertendo PS1 ? EXE (2-3 min)' },
     { key: 'uploading', icon: Upload, label: 'Enviando Arquivo', description: 'Upload para storage' },
-    { key: 'completed', icon: CheckCircle2, label: 'Concluído', description: 'Pronto para download' },
+    { key: 'completed', icon: CheckCircle2, label: 'Concluido', description: 'Pronto para download' },
   ];
 
   const currentStepIndex = steps.findIndex(s => s.key === progress.currentStep);
@@ -46,7 +46,7 @@ export const BuildProgressIndicator = ({ progress }: BuildProgressIndicatorProps
 
             return (
               <div key={step.key} className="flex items-start gap-4">
-                {/* Ícone de status */}
+                {/* Icone de status */}
                 <div className={`
                   flex items-center justify-center w-10 h-10 rounded-full border-2 flex-shrink-0
                   ${isCompleted ? 'bg-green-500 border-green-500 text-white' : ''}
@@ -73,7 +73,7 @@ export const BuildProgressIndicator = ({ progress }: BuildProgressIndicatorProps
 
                 {/* Badge de status */}
                 <div className="flex-shrink-0">
-                  {isCompleted && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">✓</Badge>}
+                  {isCompleted && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">?</Badge>}
                   {isActive && <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300 animate-pulse">Em andamento</Badge>}
                 </div>
               </div>
@@ -93,7 +93,7 @@ export const BuildProgressIndicator = ({ progress }: BuildProgressIndicatorProps
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline text-sm flex items-center gap-1 mt-1"
               >
-                Ver logs completos do build no GitHub Actions →
+                Ver logs completos do build no GitHub Actions ?
               </a>
             </AlertDescription>
           </Alert>

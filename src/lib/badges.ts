@@ -1,12 +1,12 @@
 /**
- * CORREÇÃO: Utility functions para badges (status e roles)
- * Centraliza lógica duplicada de UI
+ * CORRECAO: Utility functions para badges (status e roles)
+ * Centraliza logica duplicada de UI
  */
 
 import { AppRole } from '@/types/roles';
 
 /**
- * Retorna a variante do Badge para um role específico
+ * Retorna a variante do Badge para um role especifico
  */
 export function getRoleBadgeVariant(
   role: AppRole
@@ -26,7 +26,7 @@ export function getRoleBadgeVariant(
 }
 
 /**
- * Retorna a variante do Badge para status de usuário
+ * Retorna a variante do Badge para status de usuario
  */
 export function getUserStatusVariant(
   isActive: boolean
@@ -35,7 +35,7 @@ export function getUserStatusVariant(
 }
 
 /**
- * Retorna o texto formatado para status de usuário
+ * Retorna o texto formatado para status de usuario
  */
 export function getUserStatusText(isActive: boolean): string {
   return isActive ? 'Ativo' : 'Inativo';
@@ -53,11 +53,11 @@ export function getTimeSince(date: string | null): string {
   const diffMins = Math.floor(diffMs / (1000 * 60));
 
   if (diffMins < 1) return 'Agora mesmo';
-  if (diffMins < 60) return `${diffMins}min atrás`;
+  if (diffMins < 60) return `${diffMins}min atras`;
   
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h atrás`;
+  if (diffHours < 24) return `${diffHours}h atras`;
   
   const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d atrás`;
+  return `${diffDays}d atras`;
 }

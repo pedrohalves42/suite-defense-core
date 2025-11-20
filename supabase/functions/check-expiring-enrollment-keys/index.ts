@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Buscar keys expirando em 1 hora que não foram notificadas
+    // Buscar keys expirando em 1 hora que nao foram notificadas
     const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000).toISOString();
     const now = new Date().toISOString();
 
@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       return acc;
     }, {});
 
-    // Para cada tenant, buscar admins e criar log de notificação
+    // Para cada tenant, buscar admins e criar log de notificacao
     for (const [tenantId, data] of Object.entries(keysByTenant) as [string, any][]) {
       const { tenant, keys } = data;
 
@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
       // Log para tracking
       console.log(`[EXPIRATION ALERT] Tenant: ${tenant.name}, Keys expiring: ${keys.length}, Admins: ${admins.length}`);
       
-      // Criar log de segurança para cada admin
+      // Criar log de seguranca para cada admin
       for (const admin of admins) {
         await supabaseClient
           .from('security_logs')

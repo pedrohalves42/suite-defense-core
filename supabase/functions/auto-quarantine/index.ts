@@ -149,7 +149,7 @@ Deno.serve(async (req: Request) => {
           total_scans,
           quarantine_id: quarantined.id,
           virus_scan_id,
-          message: `Arquivo malicioso em quarentena: ${file_path} (${positives}/${total_scans} detecções)`
+          message: `Arquivo malicioso em quarentena: ${file_path} (${positives}/${total_scans} deteccoes)`
         }
       }
     });

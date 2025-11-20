@@ -105,13 +105,13 @@ test.describe('Stripe Payment Flow E2E', () => {
     const webhookResponse = await request.post(`${SUPABASE_URL}/functions/v1/stripe-webhook`, {
       headers: {
         'Content-Type': 'application/json',
-        'stripe-signature': 'test_signature', // Nota: em produção, precisa ser assinatura válida
+        'stripe-signature': 'test_signature', // Nota: em producao, precisa ser assinatura valida
       },
       data: webhookPayload,
     });
 
-    // Em ambiente de teste sem assinatura válida, pode retornar 401
-    // Em produção, deve validar a assinatura
+    // Em ambiente de teste sem assinatura valida, pode retornar 401
+    // Em producao, deve validar a assinatura
     expect([200, 400, 401]).toContain(webhookResponse.status());
   });
 
@@ -160,7 +160,7 @@ test.describe('Stripe Payment Flow E2E', () => {
       },
       data: {
         planName: 'starter',
-        deviceQuantity: 50, // Limite é 30
+        deviceQuantity: 50, // Limite e 30
       },
     });
 
@@ -178,7 +178,7 @@ test.describe('Stripe Payment Flow E2E', () => {
       },
       data: {
         planName: 'pro',
-        deviceQuantity: 250, // Limite é 200
+        deviceQuantity: 250, // Limite e 200
       },
     });
 
@@ -209,7 +209,7 @@ test.describe('Stripe Payment Flow E2E', () => {
       },
     });
 
-    // Pode retornar 200 com URL ou 404 se não tiver customer
+    // Pode retornar 200 com URL ou 404 se nao tiver customer
     expect([200, 404]).toContain(portalResponse.status());
     
     if (portalResponse.ok()) {
@@ -232,7 +232,7 @@ test.describe('Stripe Payment Flow E2E', () => {
     if (featuresResponse.ok()) {
       const features = await featuresResponse.json();
       
-      // Verificar features específicas do Starter
+      // Verificar features especificas do Starter
       const advancedScans = features.find((f: any) => f.feature_key === 'advanced_scans_daily');
       if (advancedScans) {
         expect(advancedScans.quota_limit).toBe(2);

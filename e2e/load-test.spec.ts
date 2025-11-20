@@ -86,7 +86,7 @@ test.describe('Load Testing - Multiple Agents', () => {
 
     agents = await Promise.all(enrollmentPromises);
     expect(agents.length).toBe(CONCURRENT_AGENTS);
-    console.log(`✓ ${CONCURRENT_AGENTS} agents enrolled successfully`);
+    console.log(`? ${CONCURRENT_AGENTS} agents enrolled successfully`);
   });
 
   test('2. Load Test - Concurrent heartbeats', async ({ request }) => {
@@ -147,7 +147,7 @@ test.describe('Load Testing - Multiple Agents', () => {
 
     await Promise.all(jobCreationPromises);
 
-    // Realizar múltiplas iterações de poll
+    // Realizar multiplas iteracoes de poll
     const pollResults = [];
     for (let iteration = 0; iteration < POLL_ITERATIONS; iteration++) {
       const startTime = Date.now();
@@ -180,7 +180,7 @@ test.describe('Load Testing - Multiple Agents', () => {
         failCount: responses.filter(r => !r.ok()).length,
       });
 
-      // Aguardar 1 segundo entre iterações
+      // Aguardar 1 segundo entre iteracoes
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
@@ -298,7 +298,7 @@ test.describe('Load Testing - Multiple Agents', () => {
     console.log(`Min: ${minResponseTime}ms`);
     console.log(`Max: ${maxResponseTime}ms`);
 
-    expect(avgResponseTime).toBeLessThan(5000); // Média < 5 segundos
+    expect(avgResponseTime).toBeLessThan(5000); // Media < 5 segundos
   });
 
   test('6. Load Test - Concurrent system metrics submission', async ({ request }) => {

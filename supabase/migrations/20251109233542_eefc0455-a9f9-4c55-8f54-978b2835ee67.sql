@@ -1,6 +1,6 @@
--- Corrigir vulnerabilidades críticas encontradas no scan de segurança
+-- Corrigir vulnerabilidades criticas encontradas no scan de seguranca
 
--- 1. sales_contacts: Adicionar política SELECT apenas para admins (se não existir)
+-- 1. sales_contacts: Adicionar politica SELECT apenas para admins (se nao existir)
 DROP POLICY IF EXISTS "Admins can view contacts" ON public.sales_contacts;
 
 CREATE POLICY "Admins can view contacts" 
@@ -38,7 +38,7 @@ FROM public.agents;
 
 GRANT SELECT ON public.agents_safe TO authenticated;
 
--- Atualizar política de agents - apenas admins podem ver tudo incluindo hmac_secret
+-- Atualizar politica de agents - apenas admins podem ver tudo incluindo hmac_secret
 DROP POLICY IF EXISTS "Operators and viewers can read agents in their tenant" ON public.agents;
 DROP POLICY IF EXISTS "Operators can read safe agent data in their tenant" ON public.agents;
 

@@ -11,13 +11,13 @@ interface SafeSelectProps {
 }
 
 /**
- * CORREÇÃO: Select com valor garantido (nunca undefined)
+ * CORRECAO: Select com valor garantido (nunca undefined)
  * Previne erro "changing from uncontrolled to controlled"
  * 
  * Este componente garante que:
  * 1. O valor nunca seja undefined
  * 2. O valor esteja sempre presente nas options
- * 3. Não haja values vazios ("") nos SelectItems
+ * 3. Nao haja values vazios ("") nos SelectItems
  */
 export const SafeSelect: React.FC<SafeSelectProps> = ({
   value,
@@ -27,19 +27,19 @@ export const SafeSelect: React.FC<SafeSelectProps> = ({
   className,
   disabled = false
 }) => {
-  // CORREÇÃO: Guard para options vazias
+  // CORRECAO: Guard para options vazias
   if (!options || options.length === 0) {
     return (
       <div className={className}>
-        <span className="text-sm text-muted-foreground">{placeholder || 'Sem opções'}</span>
+        <span className="text-sm text-muted-foreground">{placeholder || 'Sem opcoes'}</span>
       </div>
     );
   }
 
-  // SEGURANÇA: Garantir que value nunca seja undefined
+  // SEGURANCA: Garantir que value nunca seja undefined
   const safeValue = value || options[0]?.value || '';
   
-  // VALIDAÇÃO: Garantir que value está nas options
+  // VALIDACAO: Garantir que value esta nas options
   const validValue = options.some(opt => opt.value === safeValue) 
     ? safeValue 
     : options[0]?.value || '';

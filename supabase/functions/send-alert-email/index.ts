@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
 
     if (!alertType || !message) {
       return new Response(
-        JSON.stringify({ error: 'alertType e message são obrigatórios' }),
+        JSON.stringify({ error: 'alertType e message sao obrigatorios' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Se não fornecido, buscar emails de todos os admins
+    // Se nao fornecido, buscar emails de todos os admins
     let emails = recipientEmails;
     if (!emails || emails.length === 0) {
       const { data: adminRoles } = await supabaseAdmin
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
 
     if (!emails || emails.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'Nenhum destinatário encontrado' }),
+        JSON.stringify({ error: 'Nenhum destinatario encontrado' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
         <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
           <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
             <h1 style="color: #e53e3e; border-bottom: 2px solid #e53e3e; padding-bottom: 10px;">
-              🚨 CyberShield Alert: ${alertType}
+              ? CyberShield Alert: ${alertType}
             </h1>
             <div style="margin: 20px 0; padding: 15px; background-color: #fff5f5; border-left: 4px solid #e53e3e; border-radius: 4px;">
               <p style="margin: 0; color: #333; font-size: 16px;">${message}</p>
@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
               </div>
             ` : ''}
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #718096; font-size: 12px;">
-              <p>Este é um alerta automático do sistema CyberShield.</p>
+              <p>Este e um alerta automatico do sistema CyberShield.</p>
               <p>Data/Hora: ${new Date().toLocaleString('pt-BR')}</p>
             </div>
           </div>

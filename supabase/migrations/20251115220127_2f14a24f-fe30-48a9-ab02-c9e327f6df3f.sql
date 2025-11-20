@@ -1,5 +1,5 @@
 -- FASE 1: IA de Autoaprendizado - Tabelas Isoladas (Zero Risco)
--- Estas tabelas são 100% independentes e não afetam o funcionamento existente
+-- Estas tabelas sao 100% independentes e nao afetam o funcionamento existente
 
 -- Tabela de insights gerados pela IA
 CREATE TABLE IF NOT EXISTS public.ai_insights (
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS public.ai_insights (
   severity TEXT NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
   title TEXT NOT NULL,
   description TEXT NOT NULL,
-  evidence JSONB NOT NULL DEFAULT '{}', -- Dados que levaram à conclusão
+  evidence JSONB NOT NULL DEFAULT '{}', -- Dados que levaram a conclusao
   recommendation TEXT,
   confidence_score NUMERIC(3,2) CHECK (confidence_score >= 0 AND confidence_score <= 1),
   metadata JSONB DEFAULT '{}',
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.ai_insights (
   acknowledged_at TIMESTAMPTZ
 );
 
--- Tabela de ações sugeridas/executadas pela IA
+-- Tabela de acoes sugeridas/executadas pela IA
 CREATE TABLE IF NOT EXISTS public.ai_actions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   insight_id UUID REFERENCES public.ai_insights(id) ON DELETE CASCADE,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public.ai_actions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Tabela de padrões aprendidos ao longo do tempo
+-- Tabela de padroes aprendidos ao longo do tempo
 CREATE TABLE IF NOT EXISTS public.ai_learned_patterns (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS public.ai_learned_patterns (
   metadata JSONB DEFAULT '{}'
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX IF NOT EXISTS idx_ai_insights_tenant_created ON public.ai_insights(tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ai_insights_severity ON public.ai_insights(severity) WHERE acknowledged = FALSE;
 CREATE INDEX IF NOT EXISTS idx_ai_actions_status ON public.ai_actions(status, tenant_id);

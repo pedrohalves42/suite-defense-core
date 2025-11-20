@@ -21,7 +21,7 @@ export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
   const { isAdmin, loading: adminLoading } = useIsAdmin();
   const navigate = useNavigate();
   
-  // Banner de diagnóstico (removível por env)
+  // Banner de diagnostico (removivel por env)
   const showDiagnostics = import.meta.env.VITE_SHOW_DIAGNOSTICS === 'true';
 
   const handleLogout = async () => {
@@ -40,8 +40,8 @@ export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
         <Alert className="fixed top-0 right-0 left-60 z-50 rounded-none border-x-0 border-t-0 bg-yellow-500/10 border-yellow-500/50">
           <Bug className="h-4 w-4 text-yellow-600" />
           <AlertDescription className="text-xs flex gap-4 text-yellow-800 dark:text-yellow-200">
-            <span>Auth: {authLoading ? '⏳' : user ? '✓' : '✗'}</span>
-            <span>Admin: {adminLoading ? '⏳' : isAdmin ? '✓' : '✗'}</span>
+            <span>Auth: {authLoading ? '?' : user ? '?' : '?'}</span>
+            <span>Admin: {adminLoading ? '?' : isAdmin ? '?' : '?'}</span>
             <span className="truncate max-w-[200px]">Email: {user?.email || 'N/A'}</span>
           </AlertDescription>
         </Alert>

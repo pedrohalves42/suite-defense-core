@@ -133,7 +133,7 @@ test.describe('Agent Creation After RLS Fix', () => {
     expect(generateResponse.ok()).toBeTruthy();
     const { agentId } = await generateResponse.json();
 
-    // Simular evento de instalação
+    // Simular evento de instalacao
     const trackResponse = await request.post(`${baseUrl}/functions/v1/track-installation-event`, {
       headers: {
         'Content-Type': 'application/json',
@@ -170,7 +170,7 @@ test.describe('Agent Creation After RLS Fix', () => {
   });
 
   test('should handle get-agent-dashboard-data with multiple roles correctly', async ({ request }) => {
-    // Chamar a função que estava falhando antes da correção
+    // Chamar a funcao que estava falhando antes da correcao
     const dashboardResponse = await request.post(`${baseUrl}/functions/v1/get-agent-dashboard-data`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,

@@ -1,6 +1,6 @@
 -- Fase 0: Adicionar colunas Jobs v3 e criar view de compatibilidade
 
--- 1. Adicionar colunas v3 se não existirem
+-- 1. Adicionar colunas v3 se nao existirem
 ALTER TABLE public.jobs
   ADD COLUMN IF NOT EXISTS output jsonb,
   ADD COLUMN IF NOT EXISTS error_message text,
@@ -8,7 +8,7 @@ ALTER TABLE public.jobs
   ADD COLUMN IF NOT EXISTS finished_at timestamptz,
   ADD COLUMN IF NOT EXISTS execution_time_seconds integer;
 
--- 2. Criar índices para performance
+-- 2. Criar indices para performance
 CREATE INDEX IF NOT EXISTS idx_jobs_status_output 
   ON public.jobs(status) 
   WHERE output IS NOT NULL;
@@ -17,18 +17,18 @@ CREATE INDEX IF NOT EXISTS idx_jobs_finished_at
   ON public.jobs(finished_at DESC) 
   WHERE finished_at IS NOT NULL;
 
--- 3. Comentários para documentação
-COMMENT ON COLUMN public.jobs.output IS 'Jobs v3: Resultado estruturado da execução em JSON';
+-- 3. Comentarios para documentacao
+COMMENT ON COLUMN public.jobs.output IS 'Jobs v3: Resultado estruturado da execucao em JSON';
 COMMENT ON COLUMN public.jobs.error_message IS 'Jobs v3: Mensagem de erro se status=failed';
-COMMENT ON COLUMN public.jobs.execution_time_seconds IS 'Jobs v3: Tempo de execução em segundos';
-COMMENT ON COLUMN public.jobs.started_at IS 'Jobs v3: Timestamp de início da execução';
-COMMENT ON COLUMN public.jobs.finished_at IS 'Jobs v3: Timestamp de conclusão da execução';
+COMMENT ON COLUMN public.jobs.execution_time_seconds IS 'Jobs v3: Tempo de execucao em segundos';
+COMMENT ON COLUMN public.jobs.started_at IS 'Jobs v3: Timestamp de inicio da execucao';
+COMMENT ON COLUMN public.jobs.finished_at IS 'Jobs v3: Timestamp de conclusao da execucao';
 
 -- 4. Criar view de compatibilidade v1/v3
 CREATE OR REPLACE VIEW public.jobs_normalized AS
 SELECT
   j.*,
-  -- Normalizar status: done (v1) → completed (v3)
+  -- Normalizar status: done (v1) ? completed (v3)
   CASE 
     WHEN j.status = 'done' THEN 'completed'
     WHEN j.status = 'failed' THEN 'failed'
@@ -38,10 +38,10 @@ SELECT
     ELSE j.status
   END AS normalized_status,
   
-  -- Flag indicando se é v3 (tem output estruturado)
+  -- Flag indicando se e v3 (tem output estruturado)
   (j.output IS NOT NULL) AS is_v3,
   
-  -- Duração calculada se não tiver execution_time_seconds
+  -- Duracao calculada se nao tiver execution_time_seconds
   COALESCE(
     j.execution_time_seconds,
     CASE 

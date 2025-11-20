@@ -67,7 +67,7 @@ export default function InstallationLogsExplorer() {
       'downloaded': { label: 'Baixado', variant: 'secondary' },
       'command_copied': { label: 'Copiado', variant: 'default' },
       'post_installation': { label: 'Instalado', variant: 'default' },
-      'post_installation_unverified': { label: 'Instalado (Não Verificado)', variant: 'secondary' },
+      'post_installation_unverified': { label: 'Instalado (Nao Verificado)', variant: 'secondary' },
       'failed': { label: 'Falhado', variant: 'destructive' },
     };
     return badges[eventType] || { label: eventType, variant: 'outline' };
@@ -89,7 +89,7 @@ export default function InstallationLogsExplorer() {
         <ErrorState 
           error={errorData!} 
           onRetry={refetch}
-          title="Erro ao Carregar Logs de Instalação"
+          title="Erro ao Carregar Logs de Instalacao"
         />
       </div>
     );
@@ -100,8 +100,8 @@ export default function InstallationLogsExplorer() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Explorador de Logs de Instalação</h1>
-          <p className="text-muted-foreground">Busca avançada e análise de logs do pipeline de instalação</p>
+          <h1 className="text-3xl font-bold">Explorador de Logs de Instalacao</h1>
+          <p className="text-muted-foreground">Busca avancada e analise de logs do pipeline de instalacao</p>
         </div>
         <Button
           onClick={() => {
@@ -114,7 +114,7 @@ export default function InstallationLogsExplorer() {
               logs.map(log => ({
                 agent_name: log.agent_name,
                 event_type: log.event_type,
-                success: log.success ? 'Sim' : 'Não',
+                success: log.success ? 'Sim' : 'Nao',
                 platform: log.platform,
                 error_message: log.error_message || '',
                 created_at: format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR }),
@@ -147,7 +147,7 @@ export default function InstallationLogsExplorer() {
             <Search className="h-5 w-5" />
             Filtros de Busca
           </CardTitle>
-          <CardDescription>Refine a busca de logs para encontrar eventos específicos</CardDescription>
+          <CardDescription>Refine a busca de logs para encontrar eventos especificos</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
@@ -173,7 +173,7 @@ export default function InstallationLogsExplorer() {
                   <SelectItem value="downloaded">Baixado</SelectItem>
                   <SelectItem value="command_copied">Comando Copiado</SelectItem>
                   <SelectItem value="post_installation">Instalado</SelectItem>
-                  <SelectItem value="post_installation_unverified">Instalado (Não Verificado)</SelectItem>
+                  <SelectItem value="post_installation_unverified">Instalado (Nao Verificado)</SelectItem>
                   <SelectItem value="failed">Falhado</SelectItem>
                 </SelectContent>
               </Select>
@@ -228,7 +228,7 @@ export default function InstallationLogsExplorer() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="dateTo">Até</Label>
+              <Label htmlFor="dateTo">Ate</Label>
               <Input
                 id="dateTo"
                 type="date"
@@ -267,7 +267,7 @@ export default function InstallationLogsExplorer() {
                 <TableHead>Status</TableHead>
                 <TableHead>Tempo</TableHead>
                 <TableHead>Rede</TableHead>
-                <TableHead>Ações</TableHead>
+                <TableHead>Acoes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -316,7 +316,7 @@ export default function InstallationLogsExplorer() {
                           <ScrollArea className="h-[calc(100vh-120px)] mt-4">
                             <div className="space-y-4">
                               <div>
-                                <h4 className="font-semibold mb-2">Informações Básicas</h4>
+                                <h4 className="font-semibold mb-2">Informacoes Basicas</h4>
                                 <div className="space-y-2 text-sm">
                                   <div className="flex justify-between">
                                     <span className="text-muted-foreground">Evento:</span>
@@ -328,11 +328,11 @@ export default function InstallationLogsExplorer() {
                                   </div>
                                   <div className="flex justify-between">
                                     <span className="text-muted-foreground">Sucesso:</span>
-                                    <span>{log.success === true ? 'Sim' : log.success === false ? 'Não' : 'N/A'}</span>
+                                    <span>{log.success === true ? 'Sim' : log.success === false ? 'Nao' : 'N/A'}</span>
                                   </div>
                                   {log.installation_time_seconds && (
                                     <div className="flex justify-between">
-                                      <span className="text-muted-foreground">Tempo de Instalação:</span>
+                                      <span className="text-muted-foreground">Tempo de Instalacao:</span>
                                       <span>{log.installation_time_seconds}s</span>
                                     </div>
                                   )}

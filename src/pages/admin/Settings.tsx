@@ -109,7 +109,7 @@ export default function Settings() {
 
   const updateTenant = useMutation({
     mutationFn: async () => {
-      if (!tenant) throw new Error('Tenant não encontrado');
+      if (!tenant) throw new Error('Tenant nao encontrado');
       
       const { error } = await supabase
         .from('tenants')
@@ -129,16 +129,16 @@ export default function Settings() {
 
   const updateSettings = useMutation({
     mutationFn: async (newSettings: Partial<TenantSettings>) => {
-      if (!tenant) throw new Error('Tenant não encontrado');
+      if (!tenant) throw new Error('Tenant nao encontrado');
       
       // Validate email if provided
       if (newSettings.alert_email && !newSettings.alert_email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-        throw new Error('Email inválido');
+        throw new Error('Email invalido');
       }
       
       // Validate webhook URL if provided
       if (newSettings.alert_webhook_url && !newSettings.alert_webhook_url.match(/^https?:\/\/.+/)) {
-        throw new Error('URL do webhook inválida');
+        throw new Error('URL do webhook invalida');
       }
       
       const { error } = await supabase
@@ -150,10 +150,10 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
-      toast({ title: 'Configurações atualizadas com sucesso!' });
+      toast({ title: 'Configuracoes atualizadas com sucesso!' });
     },
     onError: (error: Error) => {
-      toast({ title: error.message || 'Erro ao atualizar configurações', variant: 'destructive' });
+      toast({ title: error.message || 'Erro ao atualizar configuracoes', variant: 'destructive' });
     },
   });
 
@@ -184,7 +184,7 @@ export default function Settings() {
         message: error instanceof Error ? error.message : 'Erro desconhecido'
       });
       toast({ 
-        title: 'Erro ao testar integração', 
+        title: 'Erro ao testar integracao', 
         description: 'Verifique os logs para mais detalhes',
         variant: 'destructive' 
       });
@@ -220,7 +220,7 @@ export default function Settings() {
         message: error instanceof Error ? error.message : 'Erro desconhecido'
       });
       toast({ 
-        title: 'Erro ao testar integração', 
+        title: 'Erro ao testar integracao', 
         description: 'Verifique os logs para mais detalhes',
         variant: 'destructive' 
       });
@@ -278,15 +278,15 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold">Configurações</h2>
-        <p className="text-muted-foreground">Gerencie as configurações do seu tenant</p>
+        <h2 className="text-3xl font-bold">Configuracoes</h2>
+        <p className="text-muted-foreground">Gerencie as configuracoes do seu tenant</p>
       </div>
 
       <Tabs defaultValue="tenant" className="w-full">
         <TabsList>
           <TabsTrigger value="tenant">Tenant</TabsTrigger>
           <TabsTrigger value="alerts">Alertas</TabsTrigger>
-          <TabsTrigger value="integrations">Integrações</TabsTrigger>
+          <TabsTrigger value="integrations">Integracoes</TabsTrigger>
           <TabsTrigger value="features">Features</TabsTrigger>
         </TabsList>
 
@@ -294,8 +294,8 @@ export default function Settings() {
         <TabsContent value="tenant" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Informações do Tenant</CardTitle>
-              <CardDescription>Configure as informações básicas do tenant</CardDescription>
+              <CardTitle>Informacoes do Tenant</CardTitle>
+              <CardDescription>Configure as informacoes basicas do tenant</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -315,7 +315,7 @@ export default function Settings() {
                   className="bg-muted"
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  O slug não pode ser alterado
+                  O slug nao pode ser alterado
                 </p>
               </div>
               <div>
@@ -331,7 +331,7 @@ export default function Settings() {
                   onClick={() => updateTenant.mutate()}
                   disabled={updateTenant.isPending || !tenantName}
                 >
-                  Salvar Alterações
+                  Salvar Alteracoes
                 </Button>
               )}
             </CardContent>
@@ -339,8 +339,8 @@ export default function Settings() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Informações do Sistema</CardTitle>
-              <CardDescription>Detalhes técnicos do tenant</CardDescription>
+              <CardTitle>Informacoes do Sistema</CardTitle>
+              <CardDescription>Detalhes tecnicos do tenant</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between py-2 border-b">
@@ -348,7 +348,7 @@ export default function Settings() {
                 <span>{tenant?.created_at ? new Date(tenant.created_at).toLocaleDateString('pt-BR') : '-'}</span>
               </div>
               <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Última atualização</span>
+                <span className="text-muted-foreground">Ultima atualizacao</span>
                 <span>{tenant?.updated_at ? new Date(tenant.updated_at).toLocaleDateString('pt-BR') : '-'}</span>
               </div>
             </CardContent>
@@ -359,7 +359,7 @@ export default function Settings() {
         <TabsContent value="alerts" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Configurações de Alertas</CardTitle>
+              <CardTitle>Configuracoes de Alertas</CardTitle>
               <CardDescription>Configure emails, webhooks e limiares de alerta</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -373,7 +373,7 @@ export default function Settings() {
                   disabled={!canWrite}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  Email que receberá notificações de segurança
+                  Email que recebera notificacoes de seguranca
                 </p>
               </div>
 
@@ -387,7 +387,7 @@ export default function Settings() {
                   disabled={!canWrite}
                 />
                 <p className="text-sm text-muted-foreground mt-1">
-                  URL para receber notificações via webhook (POST requests com JSON payload)
+                  URL para receber notificacoes via webhook (POST requests com JSON payload)
                 </p>
               </div>
 
@@ -432,7 +432,7 @@ export default function Settings() {
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label>Limiar de Vírus Detectados</Label>
+                  <Label>Limiar de Virus Detectados</Label>
                   <Input 
                     type="number"
                     min="1"
@@ -468,7 +468,7 @@ export default function Settings() {
                   onClick={() => updateSettings.mutate(settings)}
                   disabled={updateSettings.isPending}
                 >
-                  Salvar Configurações de Alertas
+                  Salvar Configuracoes de Alertas
                 </Button>
               )}
             </CardContent>
@@ -480,14 +480,14 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle>VirusTotal</CardTitle>
-              <CardDescription>Integração com VirusTotal para análise de malware</CardDescription>
+              <CardDescription>Integracao com VirusTotal para analise de malware</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <Label>Ativar VirusTotal</Label>
                   <p className="text-sm text-muted-foreground">
-                    Usar VirusTotal API para análise de arquivos
+                    Usar VirusTotal API para analise de arquivos
                   </p>
                 </div>
                 <Switch
@@ -497,7 +497,7 @@ export default function Settings() {
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                A chave da API do VirusTotal é configurada globalmente nos secrets do projeto
+                A chave da API do VirusTotal e configurada globalmente nos secrets do projeto
               </p>
               
               <div className="pt-4 border-t">
@@ -510,10 +510,10 @@ export default function Settings() {
                   {testingVirusTotal ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Testando conexão...
+                      Testando conexao...
                     </>
                   ) : (
-                    'Testar Conexão VirusTotal'
+                    'Testar Conexao VirusTotal'
                   )}
                 </Button>
                 
@@ -544,7 +544,7 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle>Stripe</CardTitle>
-              <CardDescription>Integração com Stripe para pagamentos (futuro)</CardDescription>
+              <CardDescription>Integracao com Stripe para pagamentos (futuro)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
@@ -571,10 +571,10 @@ export default function Settings() {
                   {testingStripe ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Testando conexão...
+                      Testando conexao...
                     </>
                   ) : (
-                    'Testar Conexão Stripe'
+                    'Testar Conexao Stripe'
                   )}
                 </Button>
                 
@@ -607,7 +607,7 @@ export default function Settings() {
               onClick={() => updateSettings.mutate(settings)}
               disabled={updateSettings.isPending}
             >
-              Salvar Configurações de Integrações
+              Salvar Configuracoes de Integracoes
             </Button>
           )}
         </TabsContent>
@@ -617,14 +617,14 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle>Feature Flags</CardTitle>
-              <CardDescription>Ative ou desative funcionalidades específicas</CardDescription>
+              <CardDescription>Ative ou desative funcionalidades especificas</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between py-3 border-b">
                 <div>
                   <Label>Alertas por Email</Label>
                   <p className="text-sm text-muted-foreground">
-                    Enviar notificações por email
+                    Enviar notificacoes por email
                   </p>
                 </div>
                 <Switch
@@ -638,7 +638,7 @@ export default function Settings() {
                 <div>
                   <Label>Alertas por Webhook</Label>
                   <p className="text-sm text-muted-foreground">
-                    Enviar notificações via webhook
+                    Enviar notificacoes via webhook
                   </p>
                 </div>
                 <Switch
@@ -650,7 +650,7 @@ export default function Settings() {
 
               <div className="flex items-center justify-between py-3">
                 <div>
-                  <Label>Quarentena Automática</Label>
+                  <Label>Quarentena Automatica</Label>
                   <p className="text-sm text-muted-foreground">
                     Isolar automaticamente arquivos maliciosos detectados
                   </p>

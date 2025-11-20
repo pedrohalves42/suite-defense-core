@@ -9,7 +9,7 @@ CREATE TABLE public.agent_tokens (
   is_active BOOLEAN NOT NULL DEFAULT true
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX idx_agent_tokens_token ON public.agent_tokens(token) WHERE is_active = true;
 CREATE INDEX idx_agent_tokens_agent_id ON public.agent_tokens(agent_id);
 
@@ -38,7 +38,7 @@ CREATE TABLE public.rate_limits (
   blocked_until TIMESTAMP WITH TIME ZONE
 );
 
--- Índice composto para lookup rápido
+-- Indice composto para lookup rapido
 CREATE UNIQUE INDEX idx_rate_limits_identifier_endpoint 
   ON public.rate_limits(identifier, endpoint);
 
@@ -54,7 +54,7 @@ CREATE POLICY "Service role tem acesso total aos rate limits"
 -- Adicionar campo hmac_secret na tabela agents
 ALTER TABLE public.agents ADD COLUMN hmac_secret TEXT;
 
--- Criar tabela para armazenar assinaturas HMAC usadas (prevenção de replay)
+-- Criar tabela para armazenar assinaturas HMAC usadas (prevencao de replay)
 CREATE TABLE public.hmac_signatures (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   signature TEXT NOT NULL,
@@ -62,16 +62,16 @@ CREATE TABLE public.hmac_signatures (
   used_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Índice para verificação rápida
+-- Indice para verificacao rapida
 CREATE UNIQUE INDEX idx_hmac_signatures_signature ON public.hmac_signatures(signature);
 
--- Limpeza automática de assinaturas antigas (mais de 5 minutos)
+-- Limpeza automatica de assinaturas antigas (mais de 5 minutos)
 CREATE INDEX idx_hmac_signatures_used_at ON public.hmac_signatures(used_at);
 
 -- RLS para hmac_signatures
 ALTER TABLE public.hmac_signatures ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Service role tem acesso total às assinaturas HMAC"
+CREATE POLICY "Service role tem acesso total as assinaturas HMAC"
   ON public.hmac_signatures
   FOR ALL
   USING (true)
@@ -91,7 +91,7 @@ CREATE TABLE public.virus_scans (
   virustotal_permalink TEXT
 );
 
--- Índices
+-- Indices
 CREATE INDEX idx_virus_scans_agent_name ON public.virus_scans(agent_name);
 CREATE INDEX idx_virus_scans_file_hash ON public.virus_scans(file_hash);
 CREATE INDEX idx_virus_scans_is_malicious ON public.virus_scans(is_malicious);
@@ -116,7 +116,7 @@ CREATE POLICY "Service role tem acesso total aos virus scans"
   USING (true)
   WITH CHECK (true);
 
--- Função para limpar assinaturas HMAC antigas
+-- Funcao para limpar assinaturas HMAC antigas
 CREATE OR REPLACE FUNCTION public.cleanup_old_hmac_signatures()
 RETURNS void
 LANGUAGE plpgsql
@@ -129,7 +129,7 @@ BEGIN
 END;
 $$;
 
--- Função para limpar rate limits antigos
+-- Funcao para limpar rate limits antigos
 CREATE OR REPLACE FUNCTION public.cleanup_old_rate_limits()
 RETURNS void
 LANGUAGE plpgsql

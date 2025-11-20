@@ -5,7 +5,7 @@ import { createAuditLog } from '../_shared/audit.ts';
 import { getTenantIdForUser, verifyUserTenant } from '../_shared/tenant.ts';
 
 const UpdateStatusSchema = z.object({
-  user_id: z.string().uuid({ message: 'ID de usuário inválido' }),
+  user_id: z.string().uuid({ message: 'ID de usuario invalido' }),
   is_active: z.boolean({ message: 'Status deve ser booleano' }),
 });
 
@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
       console.error(`[${requestId}] Role check error:`, roleError);
       return createErrorResponse(
         ErrorCode.INTERNAL_ERROR, 
-        'Falha ao verificar permissões de admin', 
+        'Falha ao verificar permissoes de admin', 
         500, 
         requestId
       );
@@ -77,19 +77,19 @@ Deno.serve(async (req) => {
     const adminTenantId = await getTenantIdForUser(supabaseAdmin, user.id);
 
     if (!adminTenantId) {
-      return createErrorResponse(ErrorCode.FORBIDDEN, 'Tenant do admin não encontrado', 403, requestId);
+      return createErrorResponse(ErrorCode.FORBIDDEN, 'Tenant do admin nao encontrado', 403, requestId);
     }
 
     // Verify target user belongs to same tenant
     const isInSameTenant = await verifyUserTenant(supabaseAdmin, user_id, adminTenantId);
 
     if (!isInSameTenant) {
-      return createErrorResponse(ErrorCode.FORBIDDEN, 'Usuário não encontrado no seu tenant', 403, requestId);
+      return createErrorResponse(ErrorCode.FORBIDDEN, 'Usuario nao encontrado no seu tenant', 403, requestId);
     }
 
     // Prevent self-deactivation
     if (user_id === user.id) {
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Não é possível desativar sua própria conta', 400, requestId);
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Nao e possivel desativar sua propria conta', 400, requestId);
     }
 
     // Update user status using Admin API

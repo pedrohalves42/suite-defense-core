@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
 const emailSchema = z.object({
-  email: z.string().email('E-mail inválido').max(255, 'E-mail muito longo'),
+  email: z.string().email('E-mail invalido').max(255, 'E-mail muito longo'),
 });
 
 const ForgotPassword = () => {
@@ -34,8 +34,8 @@ const ForgotPassword = () => {
       });
 
       toast({
-        title: 'Instruções enviadas',
-        description: 'Se o e-mail existir, enviaremos instruções para redefinir sua senha.',
+        title: 'Instrucoes enviadas',
+        description: 'Se o e-mail existir, enviaremos instrucoes para redefinir sua senha.',
       });
 
       setEmail('');
@@ -49,8 +49,8 @@ const ForgotPassword = () => {
       } else {
         // Generic message - don't reveal if email exists
         toast({
-          title: 'Instruções enviadas',
-          description: 'Se o e-mail existir, enviaremos instruções para redefinir sua senha.',
+          title: 'Instrucoes enviadas',
+          description: 'Se o e-mail existir, enviaremos instrucoes para redefinir sua senha.',
         });
       }
     } finally {
@@ -67,7 +67,7 @@ const ForgotPassword = () => {
           </div>
           <CardTitle className="text-2xl font-bold text-center">Recuperar senha</CardTitle>
           <CardDescription className="text-center">
-            Insira seu e-mail para receber instruções de recuperação
+            Insira seu e-mail para receber instrucoes de recuperacao
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -86,7 +86,7 @@ const ForgotPassword = () => {
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Enviando...' : 'Enviar instruções'}
+              {loading ? 'Enviando...' : 'Enviar instrucoes'}
             </Button>
             <div className="text-center text-sm">
               <Link to="/login" className="text-primary hover:underline">

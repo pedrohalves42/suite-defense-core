@@ -3,15 +3,15 @@
 -- ============================================================
 --
 -- Use este script para limpar completamente um agente do banco de dados
--- antes de reinstalar. Útil para resolver agentes "stuck" em pending.
+-- antes de reinstalar. Util para resolver agentes "stuck" em pending.
 --
 -- IMPORTANTE: Este script remove TODOS os dados relacionados ao agente,
--- incluindo jobs, métricas, logs, etc. Use com cautela!
+-- incluindo jobs, metricas, logs, etc. Use com cautela!
 --
 -- COMO USAR:
 -- 1. Substitua 'NOME_DO_AGENTE' pelo nome real do agente
 -- 2. Execute no SQL Editor do Supabase
--- 3. Limpe também a VM (ver comandos PowerShell abaixo)
+-- 3. Limpe tambem a VM (ver comandos PowerShell abaixo)
 -- 4. Gere novo instalador e reinstale
 --
 -- ============================================================
@@ -32,42 +32,42 @@ BEGIN
   WHERE agent_name = 'NOME_DO_AGENTE';
   
   IF v_agent_id IS NULL THEN
-    RAISE NOTICE '❌ Agente "NOME_DO_AGENTE" não encontrado no banco de dados';
+    RAISE NOTICE '[ERROR]  Agente "NOME_DO_AGENTE" nao encontrado no banco de dados';
     RETURN;
   END IF;
   
-  RAISE NOTICE '🔍 Encontrado agente: % (ID: %, Tenant: %)', 'NOME_DO_AGENTE', v_agent_id, v_tenant_id;
+  RAISE NOTICE '[SCAN]  Encontrado agente: % (ID: %, Tenant: %)', 'NOME_DO_AGENTE', v_agent_id, v_tenant_id;
   
   -- 1) Limpar tokens
   DELETE FROM agent_tokens WHERE agent_id = v_agent_id;
   GET DIAGNOSTICS v_tokens_deleted = ROW_COUNT;
-  RAISE NOTICE '✅ Tokens deletados: %', v_tokens_deleted;
+  RAISE NOTICE '[OK]  Tokens deletados: %', v_tokens_deleted;
   
   -- 2) Limpar jobs
   DELETE FROM jobs WHERE agent_id = v_agent_id;
   GET DIAGNOSTICS v_jobs_deleted = ROW_COUNT;
-  RAISE NOTICE '✅ Jobs deletados: %', v_jobs_deleted;
+  RAISE NOTICE '[OK]  Jobs deletados: %', v_jobs_deleted;
   
-  -- 3) Limpar métricas de sistema
+  -- 3) Limpar metricas de sistema
   DELETE FROM agent_system_metrics WHERE agent_id = v_agent_id;
   GET DIAGNOSTICS v_metrics_deleted = ROW_COUNT;
-  RAISE NOTICE '✅ Métricas deletadas: %', v_metrics_deleted;
+  RAISE NOTICE '[OK]  Metricas deletadas: %', v_metrics_deleted;
   
-  -- 4) Limpar analytics de instalação
+  -- 4) Limpar analytics de instalacao
   DELETE FROM installation_analytics WHERE agent_id = v_agent_id;
   GET DIAGNOSTICS v_analytics_deleted = ROW_COUNT;
-  RAISE NOTICE '✅ Installation analytics deletados: %', v_analytics_deleted;
+  RAISE NOTICE '[OK]  Installation analytics deletados: %', v_analytics_deleted;
   
   -- 5) Limpar enrollment keys usadas por este agente
   DELETE FROM enrollment_keys WHERE used_by_agent = 'NOME_DO_AGENTE';
   GET DIAGNOSTICS v_keys_deleted = ROW_COUNT;
-  RAISE NOTICE '✅ Enrollment keys deletadas: %', v_keys_deleted;
+  RAISE NOTICE '[OK]  Enrollment keys deletadas: %', v_keys_deleted;
   
   -- 6) Deletar o agente
   DELETE FROM agents WHERE id = v_agent_id;
-  RAISE NOTICE '✅ Agente "NOME_DO_AGENTE" deletado com sucesso';
+  RAISE NOTICE '[OK]  Agente "NOME_DO_AGENTE" deletado com sucesso';
   
-  -- 7) Criar audit log da operação
+  -- 7) Criar audit log da operacao
   INSERT INTO audit_logs (
     tenant_id,
     user_id,
@@ -95,11 +95,11 @@ BEGIN
   );
   
   RAISE NOTICE '';
-  RAISE NOTICE '═══════════════════════════════════════════════════════════════';
-  RAISE NOTICE '✅ LIMPEZA CONCLUÍDA - Agente "NOME_DO_AGENTE" removido do banco';
-  RAISE NOTICE '═══════════════════════════════════════════════════════════════';
+  RAISE NOTICE '???????????????????????????????????????????????????????????????';
+  RAISE NOTICE '[OK]  LIMPEZA CONCLUIDA - Agente "NOME_DO_AGENTE" removido do banco';
+  RAISE NOTICE '???????????????????????????????????????????????????????????????';
   RAISE NOTICE '';
-  RAISE NOTICE '📝 PRÓXIMOS PASSOS:';
+  RAISE NOTICE '? PROXIMOS PASSOS:';
   RAISE NOTICE '1. Limpar VM com PowerShell (ver comandos abaixo)';
   RAISE NOTICE '2. Gerar novo instalador no dashboard (/admin/agent-installer)';
   RAISE NOTICE '3. Executar instalador como Administrador na VM';
@@ -127,7 +127,7 @@ END $$;
 --
 -- # Resultado esperado:
 -- # - Nenhuma task encontrada
--- # - C:\CyberShield não existe (False)
+-- # - C:\CyberShield nao existe (False)
 --
 -- ============================================================
 
@@ -166,7 +166,7 @@ END $$;
 --     RAISE NOTICE 'Limpo: % (enrolled: %)', v_agent_record.agent_name, v_agent_record.enrolled_at;
 --   END LOOP;
 --   
---   RAISE NOTICE '✅ Total de agentes órfãos limpos: %', v_total_cleaned;
+--   RAISE NOTICE '[OK]  Total de agentes orfaos limpos: %', v_total_cleaned;
 -- END $$;
 --
 -- ============================================================

@@ -14,34 +14,34 @@ $ColorSuccess = "Green"
 $ColorWarning = "Yellow"
 $ColorError = "Red"
 
-Write-Host "`n🧹 CyberShield Agent Cleanup Tool" -ForegroundColor $ColorInfo
+Write-Host "`n? CyberShield Agent Cleanup Tool" -ForegroundColor $ColorInfo
 Write-Host "================================`n" -ForegroundColor $ColorInfo
 
 if ($ValidTokenPrefixes.Count -eq 0) {
-    Write-Host "⚠️  AVISO: Nenhum token válido especificado!" -ForegroundColor $ColorWarning
-    Write-Host "   Todos os agentes serão considerados fantasmas.`n" -ForegroundColor $ColorWarning
+    Write-Host "[WARN] ?  AVISO: Nenhum token valido especificado!" -ForegroundColor $ColorWarning
+    Write-Host "   Todos os agentes serao considerados fantasmas.`n" -ForegroundColor $ColorWarning
     $confirm = Read-Host "   Deseja continuar? (S/N)"
     if ($confirm -ne "S") {
-        Write-Host "❌ Operação cancelada pelo usuário" -ForegroundColor $ColorError
+        Write-Host "[ERROR]  Operacao cancelada pelo usuario" -ForegroundColor $ColorError
         exit 1
     }
 }
 
 if ($DryRun) {
-    Write-Host "🔍 Modo DRY-RUN ativado - nenhuma mudança será feita`n" -ForegroundColor $ColorWarning
+    Write-Host "[SCAN]  Modo DRY-RUN ativado - nenhuma mudanca sera feita`n" -ForegroundColor $ColorWarning
 }
 
 # ====================
-# FASE 1: DIAGNÓSTICO
+# FASE 1: DIAGNOSTICO
 # ====================
-Write-Host "📊 Fase 1: Diagnosticando processos..." -ForegroundColor $ColorInfo
+Write-Host "? Fase 1: Diagnosticando processos..." -ForegroundColor $ColorInfo
 
 $allProcesses = Get-CimInstance Win32_Process | Where-Object {
     $_.CommandLine -like '*cybershield-agent*'
 }
 
 if ($allProcesses.Count -eq 0) {
-    Write-Host "✅ Nenhum processo do agente encontrado" -ForegroundColor $ColorSuccess
+    Write-Host "[OK]  Nenhum processo do agente encontrado" -ForegroundColor $ColorSuccess
 } else {
     Write-Host "   Processos encontrados: $($allProcesses.Count)" -ForegroundColor $ColorInfo
     
@@ -55,7 +55,7 @@ if ($allProcesses.Count -eq 0) {
 # ====================
 # FASE 2: MATAR PROCESSOS FANTASMA
 # ====================
-Write-Host "`n🔪 Fase 2: Identificando processos fantasma..." -ForegroundColor $ColorInfo
+Write-Host "`n? Fase 2: Identificando processos fantasma..." -ForegroundColor $ColorInfo
 
 $killed = 0
 $valid = 0
@@ -64,10 +64,10 @@ foreach ($process in $allProcesses) {
     $isValid = $false
     
     if ($ValidTokenPrefixes.Count -eq 0) {
-        # Se não há tokens válidos, todos são fantasmas
+        # Se nao ha tokens validos, todos sao fantasmas
         $isValid = $false
     } else {
-        # Verificar se o processo contém algum dos tokens válidos
+        # Verificar se o processo contem algum dos tokens validos
         foreach ($prefix in $ValidTokenPrefixes) {
             if ($process.CommandLine -like "*$prefix*") {
                 $isValid = $true
@@ -79,37 +79,37 @@ foreach ($process in $allProcesses) {
     if ($isValid) {
         $valid++
         if ($Verbose) {
-            Write-Host "   ✅ VÁLIDO PID $($process.ProcessId)" -ForegroundColor $ColorSuccess
+            Write-Host "   [OK]  VALIDO PID $($process.ProcessId)" -ForegroundColor $ColorSuccess
         }
     } else {
         if ($DryRun) {
             Write-Host "   [DRY-RUN] Mataria PID $($process.ProcessId)" -ForegroundColor $ColorWarning
         } else {
-            Write-Host "   ❌ Matando PID $($process.ProcessId)..." -ForegroundColor $ColorWarning
+            Write-Host "   [ERROR]  Matando PID $($process.ProcessId)..." -ForegroundColor $ColorWarning
             try {
                 Stop-Process -Id $process.ProcessId -Force -ErrorAction Stop
                 $killed++
             } catch {
-                Write-Host "   ⚠️  Erro ao matar PID $($process.ProcessId): $_" -ForegroundColor $ColorError
+                Write-Host "   [WARN] ?  Erro ao matar PID $($process.ProcessId): $_" -ForegroundColor $ColorError
             }
         }
     }
 }
 
-Write-Host "   Processos válidos mantidos: $valid" -ForegroundColor $ColorSuccess
+Write-Host "   Processos validos mantidos: $valid" -ForegroundColor $ColorSuccess
 Write-Host "   Processos fantasma removidos: $killed" -ForegroundColor $ColorSuccess
 
 # ====================
 # FASE 3: LIMPAR SCHEDULED TASKS
 # ====================
-Write-Host "`n🗑️  Fase 3: Limpando Scheduled Tasks..." -ForegroundColor $ColorInfo
+Write-Host "`n??  Fase 3: Limpando Scheduled Tasks..." -ForegroundColor $ColorInfo
 
 $tasks = Get-ScheduledTask | Where-Object {
     $_.TaskName -like '*CyberShield*'
 }
 
 if ($tasks.Count -eq 0) {
-    Write-Host "   ✅ Nenhuma task encontrada" -ForegroundColor $ColorSuccess
+    Write-Host "   [OK]  Nenhuma task encontrada" -ForegroundColor $ColorSuccess
 } else {
     Write-Host "   Tasks encontradas: $($tasks.Count)" -ForegroundColor $ColorInfo
     
@@ -118,13 +118,13 @@ if ($tasks.Count -eq 0) {
         if ($DryRun) {
             Write-Host "   [DRY-RUN] Removeria task: $($task.TaskName)" -ForegroundColor $ColorWarning
         } else {
-            Write-Host "   🗑️  Removendo task: $($task.TaskName)..." -ForegroundColor $ColorWarning
+            Write-Host "   ??  Removendo task: $($task.TaskName)..." -ForegroundColor $ColorWarning
             try {
                 Stop-ScheduledTask -TaskName $task.TaskName -ErrorAction SilentlyContinue
                 Unregister-ScheduledTask -TaskName $task.TaskName -Confirm:$false -ErrorAction Stop
                 $removed++
             } catch {
-                Write-Host "   ⚠️  Erro ao remover task $($task.TaskName): $_" -ForegroundColor $ColorError
+                Write-Host "   [WARN] ?  Erro ao remover task $($task.TaskName): $_" -ForegroundColor $ColorError
             }
         }
     }
@@ -133,9 +133,9 @@ if ($tasks.Count -eq 0) {
 }
 
 # ====================
-# FASE 4: VERIFICAÇÃO FINAL
+# FASE 4: VERIFICACAO FINAL
 # ====================
-Write-Host "`n📋 Fase 4: Verificação final..." -ForegroundColor $ColorInfo
+Write-Host "`n? Fase 4: Verificacao final..." -ForegroundColor $ColorInfo
 
 $remainingProcesses = (Get-CimInstance Win32_Process | Where-Object {
     $_.CommandLine -like '*cybershield-agent*'
@@ -151,26 +151,26 @@ Write-Host "   Tasks restantes: $remainingTasks" -ForegroundColor $ColorInfo
 # ====================
 # RESUMO
 # ====================
-Write-Host "`n📊 RESUMO DA LIMPEZA" -ForegroundColor $ColorInfo
+Write-Host "`n? RESUMO DA LIMPEZA" -ForegroundColor $ColorInfo
 Write-Host "===================" -ForegroundColor $ColorInfo
-Write-Host "   Processos válidos: $valid" -ForegroundColor $ColorSuccess
+Write-Host "   Processos validos: $valid" -ForegroundColor $ColorSuccess
 Write-Host "   Processos mortos: $killed" -ForegroundColor $ColorWarning
 Write-Host "   Tasks removidas: $removed" -ForegroundColor $ColorWarning
 Write-Host "   Processos restantes: $remainingProcesses" -ForegroundColor $ColorInfo
 Write-Host "   Tasks restantes: $remainingTasks" -ForegroundColor $ColorInfo
 
 if ($DryRun) {
-    Write-Host "`n⚠️  DRY-RUN concluído - nenhuma mudança foi feita" -ForegroundColor $ColorWarning
-    Write-Host "   Execute sem -DryRun para aplicar as mudanças" -ForegroundColor $ColorWarning
+    Write-Host "`n[WARN] ?  DRY-RUN concluido - nenhuma mudanca foi feita" -ForegroundColor $ColorWarning
+    Write-Host "   Execute sem -DryRun para aplicar as mudancas" -ForegroundColor $ColorWarning
 } else {
-    Write-Host "`n🎉 Limpeza concluída com sucesso!" -ForegroundColor $ColorSuccess
+    Write-Host "`n? Limpeza concluida com sucesso!" -ForegroundColor $ColorSuccess
 }
 
 Write-Host ""
 
 # Exit code
 if ($killed -gt 0 -or $removed -gt 0) {
-    exit 0  # Sucesso com mudanças
+    exit 0  # Sucesso com mudancas
 } else {
-    exit 0  # Sucesso sem mudanças necessárias
+    exit 0  # Sucesso sem mudancas necessarias
 }

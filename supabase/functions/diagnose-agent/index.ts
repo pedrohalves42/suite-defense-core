@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
 
   try {
-    // Verificar autenticação
+    // Verificar autenticacao
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
       }
     });
 
-    // Verificar se o usuário é admin
+    // Verificar se o usuario e admin
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return new Response(
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       userId: user.id 
     });
 
-    // Chamar função de diagnóstico
+    // Chamar funcao de diagnostico
     const { data: diagnosis, error: diagnosisError } = await supabase.rpc('diagnose_agent', {
       p_agent_name: agentName
     });

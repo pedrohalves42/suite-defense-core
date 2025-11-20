@@ -5,8 +5,8 @@ import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 
 Deno.serve(async (req) => {
-  // ⚠️ DEPRECATION WARNING - This endpoint is being phased out
-  console.warn('[ack-job] ⚠️ DEPRECATED: This endpoint is being phased out. Use /submit-job-result instead.');
+  // [WARN] ? DEPRECATION WARNING - This endpoint is being phased out
+  console.warn('[ack-job] [WARN] ? DEPRECATED: This endpoint is being phased out. Use /submit-job-result instead.');
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     const agentToken = req.headers.get('X-Agent-Token')
     if (!agentToken) {
       return new Response(
-        JSON.stringify({ error: 'Token do agente necessário' }),
+        JSON.stringify({ error: 'Token do agente necessario' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
     }
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     const tokenValidation = AgentTokenSchema.safeParse(agentToken)
     if (!tokenValidation.success) {
       return new Response(
-        JSON.stringify({ error: 'Formato de token inválido' }),
+        JSON.stringify({ error: 'Formato de token invalido' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
@@ -47,14 +47,14 @@ Deno.serve(async (req) => {
 
     if (!token?.agents) {
       return new Response(
-        JSON.stringify({ error: 'Token inválido' }),
+        JSON.stringify({ error: 'Token invalido' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
     }
 
     const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents
     
-    // FASE 1.2: HMAC OBRIGATÓRIO - Agora hmac_secret é NOT NULL
+    // FASE 1.2: HMAC OBRIGATORIO - Agora hmac_secret e NOT NULL
     if (!agent.hmac_secret) {
       console.error('[ack-job] CRITICAL SECURITY: Agent without HMAC secret:', agent.agent_name)
       return new Response(
@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Verificar HMAC (obrigatório)
+    // Verificar HMAC (obrigatorio)
     const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
     if (!hmacResult.valid) {
       console.warn('[ack-job] HMAC verification failed:', {
@@ -117,13 +117,13 @@ Deno.serve(async (req) => {
       jobId = jobIdFromUrl
     }
 
-    // Prioridade 2: job_id no body (para consistência com upload-report)
+    // Prioridade 2: job_id no body (para consistencia com upload-report)
     if (!jobId) {
       try {
         const body = await req.json()
         jobId = body.job_id
       } catch {
-        // Ignore parse errors, será tratado abaixo
+        // Ignore parse errors, sera tratado abaixo
       }
     }
 
@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
     const jobIdValidation = JobIdSchema.safeParse(jobId)
     if (!jobIdValidation.success) {
       return new Response(
-        JSON.stringify({ error: 'Formato de job ID inválido' }),
+        JSON.stringify({ error: 'Formato de job ID invalido' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
@@ -157,9 +157,9 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (fetchError || !existingJob) {
-      console.error('[ACK] Job não encontrado:', validatedJobId, fetchError)
+      console.error('[ACK] Job nao encontrado:', validatedJobId, fetchError)
       return new Response(
-        JSON.stringify({ error: 'Job não encontrado' }),
+        JSON.stringify({ error: 'Job nao encontrado' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       )
     }
@@ -188,13 +188,13 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Idempotência: se já está done, retornar sucesso
+    // Idempotencia: se ja esta done, retornar sucesso
     if (existingJob.status === 'done') {
-      console.log('[ACK] Job já estava confirmado (idempotente):', validatedJobId)
+      console.log('[ACK] Job ja estava confirmado (idempotente):', validatedJobId)
       return new Response(
         JSON.stringify({ 
           ok: true, 
-          message: 'Job já estava confirmado (v1 - DEPRECATED)',
+          message: 'Job ja estava confirmado (v1 - DEPRECATED)',
           deprecation_warning: 'This endpoint will be removed. Use submit-job-result'
         }),
         { 

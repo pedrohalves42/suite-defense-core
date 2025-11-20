@@ -60,11 +60,11 @@ Deno.serve(async (req) => {
       try {
         console.log(`[ai-system-analyzer] Analyzing tenant: ${tenant.name} (${tenant.id})`);
 
-        // Coletar dados dos últimos 7 dias para análise
+        // Coletar dados dos ultimos 7 dias para analise
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - 7);
 
-        // 1. Jobs problemáticos
+        // 1. Jobs problematicos
         const { data: problematicJobs } = await supabase
           .from('v_problematic_jobs')
           .select('*')
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
           .gte('created_at', cutoffDate.toISOString())
           .limit(100);
 
-        // 2. Métricas de instalação
+        // 2. Metricas de instalacao
         const { data: installationStats } = await supabase
           .from('installation_analytics')
           .select('*')
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
           .order('created_at', { ascending: false })
           .limit(500);
 
-        // 3. Métricas de agentes
+        // 3. Metricas de agentes
         const { data: agentMetrics } = await supabase
           .from('agent_system_metrics')
           .select('*')
@@ -99,13 +99,13 @@ Deno.serve(async (req) => {
           .order('created_at', { ascending: false })
           .limit(100);
 
-        // 5. Estatísticas de jobs
+        // 5. Estatisticas de jobs
         const { data: jobStats } = await supabase
           .from('jobs')
           .select('status, type, created_at')
           .eq('tenant_id', tenant.id)
           .gte('created_at', cutoffDate.toISOString())
-          .limit(1000); // ✅ CRÍTICO: Previne DoS em escala (P0 fix)
+          .limit(1000); // [OK]  CRITICO: Previne DoS em escala (P0 fix)
 
         const analysisData: AnalysisData = {
           problematicJobs: problematicJobs || [],
@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
           systemAlerts: systemAlerts || [],
         };
 
-        // Se não há dados suficientes, pular este tenant
+        // Se nao ha dados suficientes, pular este tenant
         const totalDataPoints = 
           analysisData.problematicJobs.length +
           analysisData.failurePatterns.length +
@@ -127,13 +127,13 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // Chamar IA para análise
+        // Chamar IA para analise
         const tenantInsights = await analyzeWithAI(tenant.id, tenant.name, analysisData, jobStats || []);
         insights.push(...tenantInsights);
 
       } catch (tenantError) {
         console.error(`[ai-system-analyzer] Error analyzing tenant ${tenant.name}:`, tenantError);
-        // Continuar com próximo tenant em caso de erro
+        // Continuar com proximo tenant em caso de erro
         continue;
       }
     }
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
 
       console.log(`[ai-system-analyzer] Successfully saved ${insights.length} insights`);
 
-      // FASE 2: Gerar ações sugeridas baseadas nos insights
+      // FASE 2: Gerar acoes sugeridas baseadas nos insights
       if (insertedInsights && insertedInsights.length > 0) {
         const suggestedActions = await generateSuggestedActions(insertedInsights);
         
@@ -211,7 +211,7 @@ async function analyzeWithAI(
   }
 
   try {
-    // Calcular estatísticas resumidas
+    // Calcular estatisticas resumidas
     const failureRate = data.installationStats.length > 0
       ? (data.failurePatterns.length / data.installationStats.length) * 100
       : 0;
@@ -229,46 +229,46 @@ async function analyzeWithAI(
       return acc;
     }, {} as Record<string, number>);
 
-    const prompt = `Você é um especialista em análise de sistemas de monitoramento de agentes. Analise os dados abaixo e identifique problemas, anomalias, e oportunidades de otimização.
+    const prompt = `Voce e um especialista em analise de sistemas de monitoramento de agentes. Analise os dados abaixo e identifique problemas, anomalias, e oportunidades de otimizacao.
 
 **Dados do Tenant: ${tenantName}**
 
-**Métricas de Instalação (últimos 7 dias):**
+**Metricas de Instalacao (ultimos 7 dias):**
 - Total de tentativas: ${data.installationStats.length}
 - Falhas: ${data.failurePatterns.length}
 - Taxa de falha: ${failureRate.toFixed(1)}%
 
-**Jobs Problemáticos:**
-- Total de jobs problemáticos: ${data.problematicJobs.length}
+**Jobs Problematicos:**
+- Total de jobs problematicos: ${data.problematicJobs.length}
 - Status dos jobs: ${JSON.stringify(jobStatusCounts)}
 
-**Métricas de Performance dos Agentes:**
+**Metricas de Performance dos Agentes:**
 - Amostras coletadas: ${data.agentMetrics.length}
-- CPU média: ${avgCpuUsage.toFixed(1)}%
-- Memória média: ${avgMemoryUsage.toFixed(1)}%
+- CPU media: ${avgCpuUsage.toFixed(1)}%
+- Memoria media: ${avgMemoryUsage.toFixed(1)}%
 
 **Alertas do Sistema:**
 - Total de alertas: ${data.systemAlerts.length}
-- Alertas críticos: ${data.systemAlerts.filter(a => a.severity === 'critical').length}
+- Alertas criticos: ${data.systemAlerts.filter(a => a.severity === 'critical').length}
 
 **Sua tarefa:**
-1. Identifique até 3 insights mais relevantes
+1. Identifique ate 3 insights mais relevantes
 2. Para cada insight, retorne um objeto JSON com:
    - insight_type: 'anomaly_detection', 'optimization', 'prediction', ou 'root_cause'
    - severity: 'info', 'warning', ou 'critical'
-   - title: título curto e descritivo
-   - description: descrição detalhada do problema (2-3 frases)
-   - recommendation: recomendação clara de ação
+   - title: titulo curto e descritivo
+   - description: descricao detalhada do problema (2-3 frases)
+   - recommendation: recomendacao clara de acao
    - confidence_score: valor entre 0.0 e 1.0
 
-Responda APENAS com um array JSON válido de insights. Exemplo:
+Responda APENAS com um array JSON valido de insights. Exemplo:
 [
   {
     "insight_type": "anomaly_detection",
     "severity": "warning",
     "title": "Taxa de falha acima do normal",
-    "description": "A taxa de falha de instalação está 40% acima da baseline dos últimos 30 dias. Concentração de erros no horário noturno.",
-    "recommendation": "Investigar conectividade de rede durante o período noturno e considerar aumentar timeout de instalação.",
+    "description": "A taxa de falha de instalacao esta 40% acima da baseline dos ultimos 30 dias. Concentracao de erros no horario noturno.",
+    "recommendation": "Investigar conectividade de rede durante o periodo noturno e considerar aumentar timeout de instalacao.",
     "confidence_score": 0.85
   }
 ]`;
@@ -284,7 +284,7 @@ Responda APENAS com um array JSON válido de insights. Exemplo:
         messages: [
           { 
             role: 'system', 
-            content: 'Você é um especialista em análise de sistemas. Responda APENAS com JSON válido, sem texto adicional.' 
+            content: 'Voce e um especialista em analise de sistemas. Responda APENAS com JSON valido, sem texto adicional.' 
           },
           { role: 'user', content: prompt }
         ],
@@ -356,22 +356,22 @@ Responda APENAS com um array JSON válido de insights. Exemplo:
   }
 }
 
-// FASE 2: Função para gerar ações sugeridas baseadas em insights
+// FASE 2: Funcao para gerar acoes sugeridas baseadas em insights
 async function generateSuggestedActions(insights: any[]) {
   const actions: any[] = [];
 
   for (const insight of insights) {
-    // Só gerar ações para insights de alta severidade ou críticos
+    // So gerar acoes para insights de alta severidade ou criticos
     if (!['high', 'critical'].includes(insight.severity)) continue;
 
-    // Determinar tipo de ação baseado no tipo de insight
+    // Determinar tipo de acao baseado no tipo de insight
     let actionType = null;
     let actionPayload: any = {};
 
     switch (insight.insight_type) {
       case 'agent_health':
       case 'performance_degradation': {
-        // Sugerir diagnóstico para agentes com problemas
+        // Sugerir diagnostico para agentes com problemas
         const agentName = insight.evidence?.agent_name;
         if (agentName) {
           actionType = 'create_diagnostic_job';
@@ -386,7 +386,7 @@ async function generateSuggestedActions(insights: any[]) {
 
       case 'failure_pattern':
       case 'anomaly': {
-        // Criar alerta para padrões críticos
+        // Criar alerta para padroes criticos
         actionType = 'create_system_alert';
         actionPayload = {
           title: `AI Alert: ${insight.title}`,
@@ -423,14 +423,14 @@ async function generateSuggestedActions(insights: any[]) {
       }
     }
 
-    // Se encontrou uma ação apropriada, adicionar à lista
+    // Se encontrou uma acao apropriada, adicionar a lista
     if (actionType) {
       actions.push({
         insight_id: insight.id,
         tenant_id: insight.tenant_id,
         action_type: actionType,
         action_payload: actionPayload,
-        status: 'pending', // Sempre pending - requer aprovação humana
+        status: 'pending', // Sempre pending - requer aprovacao humana
       });
     }
   }

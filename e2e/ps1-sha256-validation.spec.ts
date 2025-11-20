@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { createHash } from 'crypto';
 
-test.describe('SHA256 Validation - Scripts de Instalação', () => {
+test.describe('SHA256 Validation - Scripts de Instalacao', () => {
   const agentName = `test-sha256-${Date.now()}`;
   let enrollmentKey: string;
   let serverHash: string;
@@ -38,7 +38,7 @@ test.describe('SHA256 Validation - Scripts de Instalação', () => {
     const generateData = await generateResponse.json();
     enrollmentKey = generateData.enrollmentKey;
     
-    console.log(`✅ Credenciais geradas: enrollmentKey=${enrollmentKey}`);
+    console.log(`[OK]  Credenciais geradas: enrollmentKey=${enrollmentKey}`);
   });
 
   test('deve retornar hash SHA256 no header X-Script-SHA256 para Windows', async ({ request }) => {
@@ -52,7 +52,7 @@ test.describe('SHA256 Validation - Scripts de Instalação', () => {
     expect(hashHeader).toMatch(/^[a-f0-9]{64}$/i); // 64 caracteres hexadecimais
     
     serverHash = hashHeader;
-    console.log(`✅ Hash no header: ${serverHash.slice(0, 16)}...`);
+    console.log(`[OK]  Hash no header: ${serverHash.slice(0, 16)}...`);
   });
 
   test('deve retornar tamanho do script no header X-Script-Size', async ({ request }) => {
@@ -64,7 +64,7 @@ test.describe('SHA256 Validation - Scripts de Instalação', () => {
     expect(sizeHeader).toBeTruthy();
     expect(parseInt(sizeHeader)).toBeGreaterThan(0);
     
-    console.log(`✅ Tamanho do script: ${(parseInt(sizeHeader) / 1024).toFixed(2)} KB`);
+    console.log(`[OK]  Tamanho do script: ${(parseInt(sizeHeader) / 1024).toFixed(2)} KB`);
   });
 
   test('deve calcular hash SHA256 do script baixado corretamente', async ({ request }) => {
@@ -81,11 +81,11 @@ test.describe('SHA256 Validation - Scripts de Instalação', () => {
     // Comparar hashes
     expect(calculatedHash.toLowerCase()).toBe(serverHash.toLowerCase());
     
-    console.log(`✅ Hash validado: ${calculatedHash.slice(0, 16)}... === ${serverHash.slice(0, 16)}...`);
+    console.log(`[OK]  Hash validado: ${calculatedHash.slice(0, 16)}... === ${serverHash.slice(0, 16)}...`);
   });
 
   test('deve persistir hash no banco de dados enrollment_keys', async ({ request }) => {
-    // Download do script para forçar persistência
+    // Download do script para forcar persistencia
     const downloadResponse = await request.get(`${process.env.VITE_SUPABASE_URL}/functions/v1/serve-installer/${enrollmentKey}`);
     expect(downloadResponse.ok()).toBeTruthy();
     
@@ -120,10 +120,10 @@ test.describe('SHA256 Validation - Scripts de Instalação', () => {
     expect(dbData.installer_size_bytes).toBeGreaterThan(0);
     expect(dbData.installer_generated_at).toBeTruthy();
     
-    console.log(`✅ Hash persistido no DB: ${dbData.installer_sha256.slice(0, 16)}...`);
+    console.log(`[OK]  Hash persistido no DB: ${dbData.installer_sha256.slice(0, 16)}...`);
   });
 
-  test('deve detectar mismatch quando hash é modificado', async ({ request }) => {
+  test('deve detectar mismatch quando hash e modificado', async ({ request }) => {
     const response = await request.get(`${process.env.VITE_SUPABASE_URL}/functions/v1/serve-installer/${enrollmentKey}`);
     
     expect(response.ok()).toBeTruthy();
@@ -131,16 +131,16 @@ test.describe('SHA256 Validation - Scripts de Instalação', () => {
     let scriptContent = await response.text();
     const serverHash = response.headers()['x-script-sha256'];
     
-    // Modificar conteúdo do script para simular ataque MITM
+    // Modificar conteudo do script para simular ataque MITM
     scriptContent += '\n# MALICIOUS CODE INJECTED';
     
     // Calcular hash do script modificado
     const calculatedHash = createHash('sha256').update(scriptContent).digest('hex');
     
-    // Verificar que os hashes são DIFERENTES (mismatch detectado)
+    // Verificar que os hashes sao DIFERENTES (mismatch detectado)
     expect(calculatedHash.toLowerCase()).not.toBe(serverHash.toLowerCase());
     
-    console.log(`✅ Mismatch detectado:`);
+    console.log(`[OK]  Mismatch detectado:`);
     console.log(`   Servidor:  ${serverHash.slice(0, 16)}...`);
     console.log(`   Calculado: ${calculatedHash.slice(0, 16)}...`);
   });
@@ -195,10 +195,10 @@ test.describe('SHA256 Validation - Scripts de Instalação', () => {
     
     expect(calculatedLinuxHash.toLowerCase()).toBe(linuxHash.toLowerCase());
     
-    console.log(`✅ SHA256 validado para Linux: ${linuxHash.slice(0, 16)}...`);
+    console.log(`[OK]  SHA256 validado para Linux: ${linuxHash.slice(0, 16)}...`);
   });
 
-  test('deve validar que scripts sem modificação têm hash consistente', async ({ request }) => {
+  test('deve validar que scripts sem modificacao tem hash consistente', async ({ request }) => {
     // Download 1
     const response1 = await request.get(`${process.env.VITE_SUPABASE_URL}/functions/v1/serve-installer/${enrollmentKey}`);
     const hash1 = response1.headers()['x-script-sha256'];
@@ -212,16 +212,16 @@ test.describe('SHA256 Validation - Scripts de Instalação', () => {
     const hash2 = response2.headers()['x-script-sha256'];
     const content2 = await response2.text();
     
-    // Verificar que hashes são idênticos
+    // Verificar que hashes sao identicos
     expect(hash1).toBe(hash2);
     
-    // Verificar que conteúdo é idêntico
+    // Verificar que conteudo e identico
     expect(content1).toBe(content2);
     
-    console.log(`✅ Hash consistente em múltiplas requisições: ${hash1.slice(0, 16)}...`);
+    console.log(`[OK]  Hash consistente em multiplas requisicoes: ${hash1.slice(0, 16)}...`);
   });
 
-  test('deve rejeitar enrollment key inválido', async ({ request }) => {
+  test('deve rejeitar enrollment key invalido', async ({ request }) => {
     const invalidKey = 'invalid-key-12345';
     const response = await request.get(`${process.env.VITE_SUPABASE_URL}/functions/v1/serve-installer/${invalidKey}`);
     
@@ -229,23 +229,23 @@ test.describe('SHA256 Validation - Scripts de Instalação', () => {
     const text = await response.text();
     expect(text).toContain('Invalid or expired enrollment key');
     
-    console.log(`✅ Enrollment key inválido rejeitado corretamente`);
+    console.log(`[OK]  Enrollment key invalido rejeitado corretamente`);
   });
 
-  test('deve incluir headers de segurança na resposta', async ({ request }) => {
+  test('deve incluir headers de seguranca na resposta', async ({ request }) => {
     const response = await request.get(`${process.env.VITE_SUPABASE_URL}/functions/v1/serve-installer/${enrollmentKey}`);
     
     expect(response.ok()).toBeTruthy();
     
     const headers = response.headers();
     
-    // Verificar headers de segurança
+    // Verificar headers de seguranca
     expect(headers['x-content-type-options']).toBe('nosniff');
     expect(headers['x-frame-options']).toBe('DENY');
     expect(headers['content-type']).toContain('text/plain');
     expect(headers['content-disposition']).toContain('attachment');
     
-    console.log(`✅ Headers de segurança presentes`);
+    console.log(`[OK]  Headers de seguranca presentes`);
   });
 });
 
@@ -259,7 +259,7 @@ test.describe('SHA256 Validation - Frontend Integration', () => {
     await page.waitForURL('/');
   });
 
-  test('deve exibir hash SHA256 após validação bem-sucedida', async ({ page }) => {
+  test('deve exibir hash SHA256 apos validacao bem-sucedida', async ({ page }) => {
     const agentName = `ui-test-${Date.now()}`;
     
     await page.goto('/agent-installer');
@@ -268,22 +268,22 @@ test.describe('SHA256 Validation - Frontend Integration', () => {
     await page.fill('input[name="agentName"]', agentName);
     await page.waitForTimeout(1000); // Debounce
     
-    // Clicar em "Baixar Script (.PS1) com Validação SHA256"
-    await page.click('button:has-text("Baixar Script (.PS1) com Validação SHA256")');
+    // Clicar em "Baixar Script (.PS1) com Validacao SHA256"
+    await page.click('button:has-text("Baixar Script (.PS1) com Validacao SHA256")');
     
-    // Aguardar validação
+    // Aguardar validacao
     await expect(page.locator('text=Verificando Integridade')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=✅ Integridade verificada')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=[OK]  Integridade verificada')).toBeVisible({ timeout: 15000 });
     
-    // Verificar que hash é exibido no UI
+    // Verificar que hash e exibido no UI
     const hashDisplay = page.locator('text=/SHA256: [a-f0-9]{16}\.\.\.[a-f0-9]{16}/i');
     await expect(hashDisplay).toBeVisible();
     
-    // Verificar badge verde de validação
-    const validationBadge = page.locator('text=✅ Integridade verificada');
+    // Verificar badge verde de validacao
+    const validationBadge = page.locator('text=[OK]  Integridade verificada');
     await expect(validationBadge).toBeVisible();
     
-    console.log(`✅ UI exibe hash SHA256 corretamente após validação`);
+    console.log(`[OK]  UI exibe hash SHA256 corretamente apos validacao`);
   });
 
   test('deve permitir copiar hash SHA256 completo', async ({ page, context }) => {
@@ -297,26 +297,26 @@ test.describe('SHA256 Validation - Frontend Integration', () => {
     await page.fill('input[name="agentName"]', agentName);
     await page.waitForTimeout(1000);
     
-    await page.click('button:has-text("Baixar Script (.PS1) com Validação SHA256")');
-    await expect(page.locator('text=✅ Integridade verificada')).toBeVisible({ timeout: 15000 });
+    await page.click('button:has-text("Baixar Script (.PS1) com Validacao SHA256")');
+    await expect(page.locator('text=[OK]  Integridade verificada')).toBeVisible({ timeout: 15000 });
     
-    // Clicar no botão de copiar hash
+    // Clicar no botao de copiar hash
     const copyButton = page.locator('button:has(svg.lucide-copy)').first();
     await copyButton.click();
     
-    // Verificar toast de confirmação
+    // Verificar toast de confirmacao
     await expect(page.locator('text=Hash copiado')).toBeVisible();
     
     // Verificar que hash foi copiado para clipboard
     const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
     expect(clipboardText).toMatch(/^[a-f0-9]{64}$/i);
     
-    console.log(`✅ Hash copiado para clipboard: ${clipboardText.slice(0, 16)}...`);
+    console.log(`[OK]  Hash copiado para clipboard: ${clipboardText.slice(0, 16)}...`);
   });
 
-  test('deve bloquear download se hash SHA256 não corresponder (simulação)', async ({ page, context }) => {
-    // Este teste é conceitual - simular mismatch no frontend é difícil
-    // Na prática, o mismatch seria detectado via fetch interceptor
+  test('deve bloquear download se hash SHA256 nao corresponder (simulacao)', async ({ page, context }) => {
+    // Este teste e conceitual - simular mismatch no frontend e dificil
+    // Na pratica, o mismatch seria detectado via fetch interceptor
     
     const agentName = `mismatch-test-${Date.now()}`;
     
@@ -342,12 +342,12 @@ test.describe('SHA256 Validation - Frontend Integration', () => {
       });
     });
     
-    await page.click('button:has-text("Baixar Script (.PS1) com Validação SHA256")');
+    await page.click('button:has-text("Baixar Script (.PS1) com Validacao SHA256")');
     
-    // Deve exibir erro de segurança
-    await expect(page.locator('text=❌ FALHA DE SEGURANÇA')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text=Hash SHA256 do script não corresponde')).toBeVisible();
+    // Deve exibir erro de seguranca
+    await expect(page.locator('text=[ERROR]  FALHA DE SEGURANCA')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Hash SHA256 do script nao corresponde')).toBeVisible();
     
-    console.log(`✅ Frontend detectou e bloqueou mismatch SHA256`);
+    console.log(`[OK]  Frontend detectou e bloqueou mismatch SHA256`);
   });
 });

@@ -1,8 +1,8 @@
--- Criar campos de quota na tabela tenant_features se não existirem
+-- Criar campos de quota na tabela tenant_features se nao existirem
 ALTER TABLE public.tenant_features 
 ADD COLUMN IF NOT EXISTS quota_warning_threshold integer DEFAULT 80;
 
--- Função para verificar quota e enviar alertas
+-- Funcao para verificar quota e enviar alertas
 CREATE OR REPLACE FUNCTION public.check_quota_threshold()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -40,7 +40,7 @@ CREATE TRIGGER trigger_check_quota_threshold
   WHEN (NEW.quota_limit IS NOT NULL AND NEW.quota_limit > 0)
   EXECUTE FUNCTION public.check_quota_threshold();
 
--- Inserir features padrão de quota para tenants existentes
+-- Inserir features padrao de quota para tenants existentes
 INSERT INTO public.tenant_features (tenant_id, feature_key, enabled, quota_limit, quota_used, quota_warning_threshold)
 SELECT 
   t.id,
@@ -86,7 +86,7 @@ WHERE NOT EXISTS (
 )
 ON CONFLICT DO NOTHING;
 
--- Função para resetar contador de scans mensalmente
+-- Funcao para resetar contador de scans mensalmente
 CREATE OR REPLACE FUNCTION public.reset_monthly_scan_quota()
 RETURNS void
 LANGUAGE plpgsql

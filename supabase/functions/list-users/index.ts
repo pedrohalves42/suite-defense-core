@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
     }
 
     const token = authHeader.replace('Bearer ', '');
@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
-      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Não autorizado', 401, requestId);
+      return createErrorResponse(ErrorCode.UNAUTHORIZED, 'Nao autorizado', 401, requestId);
     }
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       console.error(`[${requestId}] Role check error:`, roleError);
       return createErrorResponse(
         ErrorCode.INTERNAL_ERROR, 
-        'Falha ao verificar permissões de admin', 
+        'Falha ao verificar permissoes de admin', 
         500, 
         requestId
       );
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       console.error(`[${requestId}] Error fetching tenant:`, tenantError);
       return createErrorResponse(
         ErrorCode.INTERNAL_ERROR, 
-        'Erro ao buscar tenant do usuário', 
+        'Erro ao buscar tenant do usuario', 
         500, 
         requestId
       );
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
 
     if (!userRole?.tenant_id) {
       console.warn(`[${requestId}] No tenant found for user:`, user.id);
-      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant não encontrado', 400, requestId);
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Tenant nao encontrado', 400, requestId);
     }
 
     console.log(`[${requestId}] Found tenant:`, userRole.tenant_id);

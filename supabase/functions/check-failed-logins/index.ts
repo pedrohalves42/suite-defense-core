@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se IP está bloqueado
+    // Verificar se IP esta bloqueado
     const { data: blockedIp } = await supabaseAdmin
       .from('ip_blocklist')
       .select('blocked_until')
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           blocked: true,
           blockedUntil: blockedIp.blocked_until,
-          message: 'IP temporariamente bloqueado devido a múltiplas tentativas de login falhadas',
+          message: 'IP temporariamente bloqueado devido a multiplas tentativas de login falhadas',
         }),
         {
           status: 403,
@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Buscar tentativas falhadas nas últimas 24h
+    // Buscar tentativas falhadas nas ultimas 24h
     const { data: attempts, count } = await supabaseAdmin
       .from('failed_login_attempts')
       .select('*', { count: 'exact', head: false })

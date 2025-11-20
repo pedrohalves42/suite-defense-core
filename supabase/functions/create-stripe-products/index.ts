@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     console.log("[CREATE-STRIPE-PRODUCTS] Creating Starter product");
     const starterProduct = await stripe.products.create({
       name: "CyberShield Starter",
-      description: "Proteção avançada para até 30 dispositivos",
+      description: "Protecao avancada para ate 30 dispositivos",
     });
 
     const starterPrice = await stripe.prices.create({
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     console.log("[CREATE-STRIPE-PRODUCTS] Creating Pro product");
     const proProduct = await stripe.products.create({
       name: "CyberShield Pro",
-      description: "Proteção completa para até 200 dispositivos",
+      description: "Protecao completa para ate 200 dispositivos",
     });
 
     const proPrice = await stripe.prices.create({

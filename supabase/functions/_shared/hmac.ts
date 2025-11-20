@@ -5,11 +5,11 @@ export interface HmacVerificationResult {
   errorCode?: string;
   errorMessage?: string;
   transient?: boolean;
-  rawBody?: string;  // Body lido durante a verificação
+  rawBody?: string;  // Body lido durante a verificacao
 }
 
 /**
- * Verifica assinatura HMAC com códigos de erro estruturados
+ * Verifica assinatura HMAC com codigos de erro estruturados
  */
 /**
  * Convert HEX string to Uint8Array (32 bytes for SHA-256)
@@ -50,7 +50,7 @@ export async function verifyHmacSignature(
     };
   }
 
-  // Verificar timestamp (máximo 5 minutos de diferença)
+  // Verificar timestamp (maximo 5 minutos de diferenca)
   const requestTime = parseInt(timestamp);
   const now = Date.now();
   const maxDiff = 5 * 60 * 1000; // 5 minutos
@@ -60,12 +60,12 @@ export async function verifyHmacSignature(
     return { 
       valid: false, 
       errorCode: 'AUTH_TIMESTAMP_OUT_OF_RANGE',
-      errorMessage: `Timestamp expirado (skew: ${skewSeconds.toFixed(1)}s, máx: 300s)`,
-      transient: true // Clock skew pode ser transitório
+      errorMessage: `Timestamp expirado (skew: ${skewSeconds.toFixed(1)}s, max: 300s)`,
+      transient: true // Clock skew pode ser transitorio
     };
   }
 
-  // Verificar se a assinatura já foi usada (prevenir replay)
+  // Verificar se a assinatura ja foi usada (prevenir replay)
   const { data: usedSignature } = await supabase
     .from('hmac_signatures')
     .select('id')
@@ -78,12 +78,12 @@ export async function verifyHmacSignature(
     return { 
       valid: false, 
       errorCode: 'AUTH_REPLAY_DETECTED',
-      errorMessage: 'Assinatura já utilizada (replay attack detectado)',
+      errorMessage: 'Assinatura ja utilizada (replay attack detectado)',
       transient: false
     };
   }
 
-  // Construir payload para verificação
+  // Construir payload para verificacao
   let body = '';
   try {
     const clonedRequest = request.clone();
@@ -125,7 +125,7 @@ export async function verifyHmacSignature(
     return { 
       valid: false, 
       errorCode: 'AUTH_INVALID_SIGNATURE',
-      errorMessage: 'Assinatura HMAC inválida',
+      errorMessage: 'Assinatura HMAC invalida',
       transient: false
     };
   }
@@ -136,7 +136,7 @@ export async function verifyHmacSignature(
     agent_name: agentName,
   });
 
-  // CRÍTICO: Cleanup com debounce para evitar race conditions
+  // CRITICO: Cleanup com debounce para evitar race conditions
   await debouncedCleanup(supabase);
 
   return { valid: true, rawBody: body };
@@ -144,7 +144,7 @@ export async function verifyHmacSignature(
 
 /**
  * Debounce Map para controlar chamadas de cleanup
- * Previne race conditions onde múltiplos agentes chamam cleanup simultaneamente
+ * Previne race conditions onde multiplos agentes chamam cleanup simultaneamente
  */
 const cleanupTimers = new Map<string, number>();
 const CLEANUP_DEBOUNCE_MS = 5000; // 5 segundos

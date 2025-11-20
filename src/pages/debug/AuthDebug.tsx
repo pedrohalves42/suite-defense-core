@@ -65,7 +65,7 @@ export default function AuthDebug() {
         .maybeSingle();
       
       if (error) throw error;
-      if (!data) throw new Error('Tenant não encontrado');
+      if (!data) throw new Error('Tenant nao encontrado');
     });
   };
 
@@ -95,7 +95,7 @@ export default function AuthDebug() {
     <div className="container mx-auto p-6 max-w-6xl space-y-6">
       <div className="flex items-center gap-2 mb-6">
         <Shield className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold">Diagnóstico de Autenticação</h1>
+        <h1 className="text-3xl font-bold">Diagnostico de Autenticacao</h1>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -104,14 +104,14 @@ export default function AuthDebug() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Informações da Sessão
+              Informacoes da Sessao
             </CardTitle>
-            <CardDescription>Detalhes do usuário autenticado</CardDescription>
+            <CardDescription>Detalhes do usuario autenticado</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm font-medium text-muted-foreground">User ID</p>
-              <p className="text-sm font-mono break-all">{user?.id || 'Não autenticado'}</p>
+              <p className="text-sm font-mono break-all">{user?.id || 'Nao autenticado'}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-muted-foreground">Email</p>
@@ -120,11 +120,11 @@ export default function AuthDebug() {
             <div>
               <p className="text-sm font-medium text-muted-foreground">Email Confirmado</p>
               <Badge variant={user?.email_confirmed_at ? 'default' : 'destructive'}>
-                {user?.email_confirmed_at ? 'Sim' : 'Não'}
+                {user?.email_confirmed_at ? 'Sim' : 'Nao'}
               </Badge>
             </div>
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Último Login</p>
+              <p className="text-sm font-medium text-muted-foreground">Ultimo Login</p>
               <p className="text-sm">
                 {user?.last_sign_in_at 
                   ? new Date(user.last_sign_in_at).toLocaleString('pt-BR')
@@ -139,9 +139,9 @@ export default function AuthDebug() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              Permissões e Roles
+              Permissoes e Roles
             </CardTitle>
-            <CardDescription>Roles atribuídas ao usuário</CardDescription>
+            <CardDescription>Roles atribuidas ao usuario</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {roleLoading ? (
@@ -158,7 +158,7 @@ export default function AuthDebug() {
                   </Badge>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-muted-foreground">Verificações</p>
+                  <p className="text-sm font-medium text-muted-foreground">Verificacoes</p>
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       {isAdmin ? (
@@ -204,9 +204,9 @@ export default function AuthDebug() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
-              Informações do Tenant
+              Informacoes do Tenant
             </CardTitle>
-            <CardDescription>Dados da organização</CardDescription>
+            <CardDescription>Dados da organizacao</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {tenantLoading ? (
@@ -287,7 +287,7 @@ export default function AuthDebug() {
               {testing === 'Admin Users' && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {testResults['Admin Users']?.success && <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />}
               {testResults['Admin Users']?.success === false && <XCircle className="h-4 w-4 mr-2 text-red-500" />}
-              Testar Admin - Listar Usuários
+              Testar Admin - Listar Usuarios
             </Button>
 
             {Object.entries(testResults).map(([name, result]) => (
@@ -301,15 +301,15 @@ export default function AuthDebug() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Informações do Console</CardTitle>
+          <CardTitle>Informacoes do Console</CardTitle>
           <CardDescription>
-            Os logs detalhados estão sendo enviados para o console do navegador
+            Os logs detalhados estao sendo enviados para o console do navegador
           </CardDescription>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
             Abra as Ferramentas do Desenvolvedor (F12) e verifique a aba Console para ver logs detalhados
-            das verificações de role, tenant e autenticação.
+            das verificacoes de role, tenant e autenticacao.
           </p>
         </CardContent>
       </Card>

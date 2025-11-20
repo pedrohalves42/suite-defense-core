@@ -31,11 +31,11 @@ export function ErrorState({ error, onRetry, title = "Erro ao Carregar Dados" }:
             variant="outline" 
             onClick={() => window.location.reload()}
           >
-            Recarregar Página
+            Recarregar Pagina
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Se o erro persistir, verifique sua conexão ou contate o suporte.
+          Se o erro persistir, verifique sua conexao ou contate o suporte.
         </p>
       </CardContent>
     </Card>

@@ -130,7 +130,7 @@ test.describe('Installation Analytics', () => {
     // Check for key metrics
     await expect(page.locator('text=Instaladores Gerados')).toBeVisible();
     await expect(page.locator('text=Downloads')).toBeVisible();
-    await expect(page.locator('text=Instalações Sucesso')).toBeVisible();
+    await expect(page.locator('text=Instalacoes Sucesso')).toBeVisible();
   });
 
   test('should calculate correct metrics', async ({ page }) => {

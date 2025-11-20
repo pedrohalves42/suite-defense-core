@@ -14,14 +14,14 @@ describe('Role System', () => {
   });
 
   describe('isValidRole', () => {
-    it('deve aceitar todos os roles válidos', () => {
+    it('deve aceitar todos os roles validos', () => {
       expect(isValidRole('viewer')).toBe(true);
       expect(isValidRole('operator')).toBe(true);
       expect(isValidRole('admin')).toBe(true);
       expect(isValidRole('super_admin')).toBe(true);
     });
 
-    it('deve rejeitar roles inválidos', () => {
+    it('deve rejeitar roles invalidos', () => {
       expect(isValidRole('invalid')).toBe(false);
       expect(isValidRole('owner')).toBe(false);
       expect(isValidRole('')).toBe(false);
@@ -36,12 +36,12 @@ describe('Role System', () => {
   });
 
   describe('assertValidRole', () => {
-    it('deve retornar role válido sem erro', () => {
+    it('deve retornar role valido sem erro', () => {
       expect(assertValidRole('admin')).toBe('admin');
       expect(assertValidRole('super_admin')).toBe('super_admin');
     });
 
-    it('deve lançar erro para role inválido', () => {
+    it('deve lancar erro para role invalido', () => {
       expect(() => assertValidRole('invalid')).toThrow('Invalid role');
     });
 

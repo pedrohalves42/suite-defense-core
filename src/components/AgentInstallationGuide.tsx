@@ -46,7 +46,7 @@ export default function AgentInstallationGuide({
             <div className="flex-1">
               <div className="font-medium">1. Instalador Gerado</div>
               <div className="text-sm text-muted-foreground">
-                {format(new Date(agent.enrolled_at), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                {format(new Date(agent.enrolled_at), "dd/MM/yyyy 'as' HH:mm:ss", { locale: ptBR })}
               </div>
             </div>
             <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
@@ -70,7 +70,7 @@ export default function AgentInstallationGuide({
                   <Alert className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20">
                     <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
                     <AlertDescription className="text-sm text-yellow-800 dark:text-yellow-200">
-                      <strong>Instalador ainda não foi executado.</strong>
+                      <strong>Instalador ainda nao foi executado.</strong>
                       <ol className="mt-2 ml-4 list-decimal space-y-1">
                         <li>Abra <strong>PowerShell como Administrador</strong></li>
                         <li>Cole e execute o comando abaixo</li>
@@ -84,7 +84,7 @@ export default function AgentInstallationGuide({
                           onClick={copyCommand}
                         >
                           <Copy className="h-4 w-4 mr-2" />
-                          Copiar Comando de Instalação
+                          Copiar Comando de Instalacao
                         </Button>
                       )}
                     </AlertDescription>
@@ -92,7 +92,7 @@ export default function AgentInstallationGuide({
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">
-                  Instalação concluída com sucesso
+                  Instalacao concluida com sucesso
                 </div>
               )}
             </div>
@@ -122,15 +122,15 @@ export default function AgentInstallationGuide({
                 <div className="text-sm text-muted-foreground">
                   {hasPostInstallation ? (
                     <>
-                      Verificando conexão... ({timeSinceEnrollment}m decorridos)
+                      Verificando conexao... ({timeSinceEnrollment}m decorridos)
                     </>
                   ) : (
-                    'Aguardando execução do instalador'
+                    'Aguardando execucao do instalador'
                   )}
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">
-                  Último heartbeat: {format(new Date(agent.last_heartbeat), "dd/MM/yyyy 'às' HH:mm:ss", { locale: ptBR })}
+                  Ultimo heartbeat: {format(new Date(agent.last_heartbeat), "dd/MM/yyyy 'as' HH:mm:ss", { locale: ptBR })}
                 </div>
               )}
             </div>
@@ -159,10 +159,10 @@ export default function AgentInstallationGuide({
               <div className="text-sm text-muted-foreground">
                 {hasHeartbeat ? (
                   <span className="text-green-600 dark:text-green-400 font-medium">
-                    ✓ Agente conectado e funcionando
+                    ? Agente conectado e funcionando
                   </span>
                 ) : (
-                  'Aguardando ativação'
+                  'Aguardando ativacao'
                 )}
               </div>
             </div>

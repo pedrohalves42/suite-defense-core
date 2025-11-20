@@ -80,7 +80,7 @@ export default function TenantInvites() {
     },
     onSuccess: () => {
       toast({
-        title: "Convite excluído",
+        title: "Convite excluido",
         description: "O convite foi removido com sucesso",
       });
       queryClient.invalidateQueries({ queryKey: ["tenant-invites"] });
@@ -111,7 +111,7 @@ export default function TenantInvites() {
         <CardHeader>
           <CardTitle>Enviar Novo Convite</CardTitle>
           <CardDescription>
-            Convide um novo membro para sua organização
+            Convide um novo membro para sua organizacao
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -127,7 +127,7 @@ export default function TenantInvites() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">Função</Label>
+              <Label htmlFor="role">Funcao</Label>
               <Select value={newInviteRole} onValueChange={(value: any) => setNewInviteRole(value)}>
                 <SelectTrigger id="role">
                   <SelectValue />
@@ -157,7 +157,7 @@ export default function TenantInvites() {
         <CardHeader>
           <CardTitle>Convites Pendentes</CardTitle>
           <CardDescription>
-            Convites aguardando aceitação
+            Convites aguardando aceitacao
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -165,11 +165,11 @@ export default function TenantInvites() {
             <TableHeader>
               <TableRow>
                 <TableHead>Email</TableHead>
-                <TableHead>Função</TableHead>
+                <TableHead>Funcao</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Expira em</TableHead>
                 <TableHead>Enviado</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="text-right">Acoes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

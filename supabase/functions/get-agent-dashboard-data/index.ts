@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Verificar autenticação
+    // Verificar autenticacao
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization' }), {
@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar tenant do usuário usando helper (lida com múltiplos roles)
+    // Buscar tenant do usuario usando helper (lida com multiplos roles)
     const tenantId = await getTenantIdForUser(supabase, user.id);
 
     if (!tenantId) {
@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar dados consolidados usando a função do banco
+    // Buscar dados consolidados usando a funcao do banco
     const { data: agentsWithMetrics, error: metricsError } = await supabase
       .rpc('get_latest_agent_metrics', { p_tenant_id: tenantId });
 
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar alertas não reconhecidos
+    // Buscar alertas nao reconhecidos
     const { data: recentAlerts, error: alertsError } = await supabase
       .from('system_alerts')
       .select('*')
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       console.error('[get-agent-dashboard-data] Alerts error:', alertsError);
     }
 
-    // Calcular estatísticas agregadas
+    // Calcular estatisticas agregadas
     const now = new Date();
     const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000);
 

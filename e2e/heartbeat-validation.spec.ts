@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * FASE 2: Teste de Validação de Heartbeat
+ * FASE 2: Teste de Validacao de Heartbeat
  * 
  * Valida que agentes conseguem enviar heartbeats
- * e que o status é atualizado corretamente
+ * e que o status e atualizado corretamente
  */
 
 test.describe('Heartbeat Validation Tests', () => {
@@ -56,7 +56,7 @@ test.describe('Heartbeat Validation Tests', () => {
       hostname: 'TEST-SERVER',
     });
 
-    // Mock HMAC (em produção seria calculado corretamente)
+    // Mock HMAC (em producao seria calculado corretamente)
     const signature = 'mock-signature';
 
     const response = await request.post(`${baseUrl}/functions/v1/heartbeat`, {
@@ -70,7 +70,7 @@ test.describe('Heartbeat Validation Tests', () => {
       data: bodyJson,
     });
 
-    // Aceitar 200 (sucesso) ou 401/403 (HMAC inválido mas autenticação OK)
+    // Aceitar 200 (sucesso) ou 401/403 (HMAC invalido mas autenticacao OK)
     expect([200, 401, 403]).toContain(response.status());
   });
 

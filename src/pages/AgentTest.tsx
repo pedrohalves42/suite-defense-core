@@ -92,7 +92,7 @@ export default function AgentTest() {
   const runIntegrationTest = useMutation({
     mutationFn: async (agentName: string) => {
       if (!tenant) {
-        throw new Error("Tenant não encontrado");
+        throw new Error("Tenant nao encontrado");
       }
 
       setTestResults([]);
@@ -119,9 +119,9 @@ export default function AgentTest() {
         const errorMessage = errorData?.message || jobError.message || "Erro ao criar job";
 
         if (errorCode === 'FORBIDDEN') {
-          throw new Error("Acesso negado. É necessário ter papel admin, operator ou super_admin.");
+          throw new Error("Acesso negado. E necessario ter papel admin, operator ou super_admin.");
         } else if (errorCode === 'AGENT_NOT_FOUND') {
-          throw new Error("Agente não encontrado ou não pertence ao tenant selecionado.");
+          throw new Error("Agente nao encontrado ou nao pertence ao tenant selecionado.");
         } else {
           throw new Error(`Erro ao criar job: ${errorMessage}`);
         }
@@ -140,7 +140,7 @@ export default function AgentTest() {
       addTestResult({
         step: "2. Aguardar Polling do Agent",
         status: "running",
-        message: "Aguardando agent fazer polling (máx 120s)..."
+        message: "Aguardando agent fazer polling (max 120s)..."
       });
 
       let polled = false;
@@ -164,21 +164,21 @@ export default function AgentTest() {
           addTestResult({
             step: "2. Aguardar Polling do Agent",
             status: "success",
-            message: `Agent fez polling após ${attempts * 5}s`,
+            message: `Agent fez polling apos ${attempts * 5}s`,
             data: updatedJob
           });
         }
       }
 
       if (!polled) {
-        throw new Error("Agent não fez polling após 120s. Verifique se o agent está rodando.");
+        throw new Error("Agent nao fez polling apos 120s. Verifique se o agent esta rodando.");
       }
 
       // Step 3: Wait for report upload
       addTestResult({
         step: "3. Aguardar Report Upload",
         status: "running",
-        message: "Aguardando agent enviar report (máx 60s)..."
+        message: "Aguardando agent enviar report (max 60s)..."
       });
 
       let reportUploaded = false;
@@ -206,7 +206,7 @@ export default function AgentTest() {
             addTestResult({
               step: "3. Aguardar Report Upload",
               status: "success",
-              message: `Report enviado após ${attempts * 5}s`,
+              message: `Report enviado apos ${attempts * 5}s`,
               data: latestReport
             });
           }
@@ -214,14 +214,14 @@ export default function AgentTest() {
       }
 
       if (!reportUploaded) {
-        throw new Error("Agent não enviou report após 60s. Verifique os logs do agent.");
+        throw new Error("Agent nao enviou report apos 60s. Verifique os logs do agent.");
       }
 
       // Step 4: Wait for ACK
       addTestResult({
         step: "4. Aguardar ACK do Job",
         status: "running",
-        message: "Aguardando agent confirmar job (máx 30s)..."
+        message: "Aguardando agent confirmar job (max 30s)..."
       });
 
       let acked = false;
@@ -245,21 +245,21 @@ export default function AgentTest() {
           addTestResult({
             step: "4. Aguardar ACK do Job",
             status: "success",
-            message: `Job confirmado após ${attempts * 5}s`,
+            message: `Job confirmado apos ${attempts * 5}s`,
             data: updatedJob
           });
         }
       }
 
       if (!acked) {
-        throw new Error("Agent não confirmou job após 30s. Verifique os logs do agent.");
+        throw new Error("Agent nao confirmou job apos 30s. Verifique os logs do agent.");
       }
 
       // Success!
       addTestResult({
         step: "5. Teste Completo",
         status: "success",
-        message: "✅ Fluxo completo funcionando corretamente!"
+        message: "[OK]  Fluxo completo funcionando corretamente!"
       });
 
       return { success: true };
@@ -280,7 +280,7 @@ export default function AgentTest() {
     onSuccess: () => {
       toast({
         title: "Teste Completo",
-        description: "Fluxo de integração validado com sucesso!",
+        description: "Fluxo de integracao validado com sucesso!",
       });
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       queryClient.invalidateQueries({ queryKey: ["reports"] });
@@ -319,9 +319,9 @@ export default function AgentTest() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Teste de Integração de Agentes</h1>
+          <h1 className="text-3xl font-bold">Teste de Integracao de Agentes</h1>
           <p className="text-muted-foreground mt-2">
-            Valide o fluxo completo: criar job → polling → execução → report → ACK
+            Valide o fluxo completo: criar job ? polling ? execucao ? report ? ACK
           </p>
         </div>
         <AlertDialog>
@@ -336,16 +336,16 @@ export default function AgentTest() {
               <AlertDialogTitle>Confirmar Limpeza de Dados</AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="space-y-2">
-                  <p>Esta ação irá remover permanentemente:</p>
+                  <p>Esta acao ira remover permanentemente:</p>
                   <ul className="list-disc list-inside space-y-1 text-sm">
                     <li>Todos os agentes</li>
                     <li>Todos os tokens de agente</li>
                     <li>Todos os eventos de telemetria</li>
-                    <li>Todas as métricas de sistema</li>
+                    <li>Todas as metricas de sistema</li>
                     <li>Chaves de enrollment usadas</li>
                   </ul>
-                  <p className="font-semibold mt-4">Os usuários serão mantidos.</p>
-                  <p className="text-destructive">Esta ação não pode ser desfeita.</p>
+                  <p className="font-semibold mt-4">Os usuarios serao mantidos.</p>
+                  <p className="text-destructive">Esta acao nao pode ser desfeita.</p>
                 </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -373,7 +373,7 @@ export default function AgentTest() {
               Selecionar Agent para Teste
             </CardTitle>
             <CardDescription>
-              Escolha um agent ativo para executar o teste de integração
+              Escolha um agent ativo para executar o teste de integracao
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -412,7 +412,7 @@ export default function AgentTest() {
               size="lg"
             >
               <PlayCircle className="h-5 w-5 mr-2" />
-              {runIntegrationTest.isPending ? "Executando Teste..." : "Iniciar Teste de Integração"}
+              {runIntegrationTest.isPending ? "Executando Teste..." : "Iniciar Teste de Integracao"}
             </Button>
           </CardContent>
         </Card>
@@ -422,7 +422,7 @@ export default function AgentTest() {
           <CardHeader>
             <CardTitle>Resultados do Teste</CardTitle>
             <CardDescription>
-              Timeline de execução do fluxo de integração
+              Timeline de execucao do fluxo de integracao
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -481,25 +481,25 @@ export default function AgentTest() {
               <strong>Criar Job de Teste:</strong> Sistema cria um job tipo "report" para o agent selecionado
             </li>
             <li>
-              <strong>Polling do Agent:</strong> Aguarda até 120s para o agent fazer polling e receber o job
+              <strong>Polling do Agent:</strong> Aguarda ate 120s para o agent fazer polling e receber o job
             </li>
             <li>
-              <strong>Upload de Report:</strong> Aguarda até 60s para o agent executar o job e enviar o report
+              <strong>Upload de Report:</strong> Aguarda ate 60s para o agent executar o job e enviar o report
             </li>
             <li>
-              <strong>ACK do Job:</strong> Aguarda até 30s para o agent confirmar a conclusão do job
+              <strong>ACK do Job:</strong> Aguarda ate 30s para o agent confirmar a conclusao do job
             </li>
             <li>
-              <strong>Validação:</strong> Se todas as etapas completarem com sucesso, o fluxo está funcionando corretamente
+              <strong>Validacao:</strong> Se todas as etapas completarem com sucesso, o fluxo esta funcionando corretamente
             </li>
           </ol>
 
           <div className="mt-4 p-4 bg-muted rounded-lg">
             <p className="text-sm font-medium mb-2">Troubleshooting:</p>
             <ul className="text-sm space-y-1">
-              <li>• Se o polling falhar: Verifique se o agent está rodando e conectado</li>
-              <li>• Se o report falhar: Verifique os logs do agent para erros de execução</li>
-              <li>• Se o ACK falhar: Verifique a conectividade do agent com o servidor</li>
+              <li>? Se o polling falhar: Verifique se o agent esta rodando e conectado</li>
+              <li>? Se o report falhar: Verifique os logs do agent para erros de execucao</li>
+              <li>? Se o ACK falhar: Verifique a conectividade do agent com o servidor</li>
             </ul>
           </div>
         </CardContent>

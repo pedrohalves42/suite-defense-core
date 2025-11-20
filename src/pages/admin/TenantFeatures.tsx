@@ -24,15 +24,15 @@ interface TenantFeature {
 const featureDefinitions = [
   {
     key: 'virus_scans',
-    name: 'Scans de Vírus',
-    description: 'Análise de arquivos com detecção de malware',
+    name: 'Scans de Virus',
+    description: 'Analise de arquivos com deteccao de malware',
     icon: Shield,
     hasQuota: true,
   },
   {
     key: 'agents',
     name: 'Agentes',
-    description: 'Número máximo de agentes que podem ser registrados',
+    description: 'Numero maximo de agentes que podem ser registrados',
     icon: Database,
     hasQuota: true,
   },
@@ -59,36 +59,36 @@ const featureDefinitions = [
   },
   {
     key: 'api_access',
-    name: 'Acesso à API',
-    description: 'Permissão para usar a API REST',
+    name: 'Acesso a API',
+    description: 'Permissao para usar a API REST',
     icon: Database,
     hasQuota: false,
   },
   {
     key: 'advanced_reporting',
-    name: 'Relatórios Avançados',
-    description: 'Dashboards e relatórios detalhados',
+    name: 'Relatorios Avancados',
+    description: 'Dashboards e relatorios detalhados',
     icon: BarChart,
     hasQuota: false,
   },
   {
     key: 'webhook_alerts',
     name: 'Alertas via Webhook',
-    description: 'Notificações via webhook HTTP',
+    description: 'Notificacoes via webhook HTTP',
     icon: Bell,
     hasQuota: false,
   },
   {
     key: 'email_alerts',
     name: 'Alertas via Email',
-    description: 'Notificações por email',
+    description: 'Notificacoes por email',
     icon: Bell,
     hasQuota: false,
   },
   {
     key: 'auto_quarantine',
-    name: 'Quarentena Automática',
-    description: 'Isolamento automático de ameaças',
+    name: 'Quarentena Automatica',
+    description: 'Isolamento automatico de ameacas',
     icon: Shield,
     hasQuota: false,
   },
@@ -199,7 +199,7 @@ export default function TenantFeatures() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold">Permissões e Features</h2>
+        <h2 className="text-3xl font-bold">Permissoes e Features</h2>
         <p className="text-muted-foreground">
           Gerencie recursos e limites do tenant {tenant?.name}
         </p>
@@ -207,7 +207,7 @@ export default function TenantFeatures() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Features Disponíveis</CardTitle>
+          <CardTitle>Features Disponiveis</CardTitle>
           <CardDescription>
             Ative ou desative recursos e configure limites de uso
           </CardDescription>
@@ -220,7 +220,7 @@ export default function TenantFeatures() {
                 <TableHead>Status</TableHead>
                 <TableHead>Quota</TableHead>
                 <TableHead>Uso</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="text-right">Acoes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -279,7 +279,7 @@ export default function TenantFeatures() {
                               {feature.quota_used} / {feature.quota_limit}
                             </span>
                             {quotaPercentage !== null && quotaPercentage >= 90 && (
-                              <Badge variant="destructive">Limite próximo</Badge>
+                              <Badge variant="destructive">Limite proximo</Badge>
                             )}
                           </div>
                           {quotaPercentage !== null && (
@@ -323,20 +323,20 @@ export default function TenantFeatures() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Sobre Permissões</CardTitle>
+          <CardTitle>Sobre Permissoes</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>
-            • <strong>Features desativadas</strong> não podem ser usadas pelos usuários do tenant.
+            ? <strong>Features desativadas</strong> nao podem ser usadas pelos usuarios do tenant.
           </p>
           <p>
-            • <strong>Quotas</strong> definem o limite de uso para cada recurso. Deixe em branco para ilimitado.
+            ? <strong>Quotas</strong> definem o limite de uso para cada recurso. Deixe em branco para ilimitado.
           </p>
           <p>
-            • O <strong>uso atual</strong> é rastreado automaticamente e exibido em tempo real.
+            ? O <strong>uso atual</strong> e rastreado automaticamente e exibido em tempo real.
           </p>
           <p>
-            • Quando uma quota atinge 90%, um alerta é exibido.
+            ? Quando uma quota atinge 90%, um alerta e exibido.
           </p>
         </CardContent>
       </Card>

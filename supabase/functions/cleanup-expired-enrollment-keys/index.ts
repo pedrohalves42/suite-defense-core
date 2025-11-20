@@ -7,7 +7,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Extrair token de autorização
+    // Extrair token de autorizacao
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Verificar se usuário é admin
+    // Verificar se usuario e admin
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError || !user) {
       return new Response(
@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Deletar enrollment keys expiradas há mais de 48 horas e inativas
+    // Deletar enrollment keys expiradas ha mais de 48 horas e inativas
     const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
     const { data, error } = await supabaseClient
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         deleted_count: deletedCount,
-        message: `Limpeza concluída: ${deletedCount} chaves expiradas removidas`,
+        message: `Limpeza concluida: ${deletedCount} chaves expiradas removidas`,
         timestamp: new Date().toISOString()
       }),
       { 

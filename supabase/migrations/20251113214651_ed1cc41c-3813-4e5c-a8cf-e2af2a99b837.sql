@@ -27,7 +27,7 @@ DECLARE
   v_old_role app_role;
   v_admin_count integer;
 BEGIN
-  -- Verificar se o ator está autenticado
+  -- Verificar se o ator esta autenticado
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'Unauthorized: Authentication required';
   END IF;
@@ -42,7 +42,7 @@ BEGIN
     RAISE EXCEPTION 'Forbidden: Only admins can update roles';
   END IF;
 
-  -- Buscar tenant_id e role atual do usuário alvo
+  -- Buscar tenant_id e role atual do usuario alvo
   SELECT tenant_id, role INTO v_target_tenant_id, v_old_role
   FROM public.user_roles
   WHERE user_id = p_user_id
@@ -52,17 +52,17 @@ BEGIN
     RAISE EXCEPTION 'User not found';
   END IF;
 
-  -- Verificar se estão no mesmo tenant
+  -- Verificar se estao no mesmo tenant
   IF v_target_tenant_id != v_actor_tenant_id THEN
     RAISE EXCEPTION 'Forbidden: Cannot update users from different tenants';
   END IF;
 
-  -- Impedir admin de mudar o próprio role
+  -- Impedir admin de mudar o proprio role
   IF p_user_id = auth.uid() THEN
     RAISE EXCEPTION 'Bad Request: Cannot change your own role';
   END IF;
 
-  -- Impedir remoção do último admin
+  -- Impedir remocao do ultimo admin
   IF v_old_role = 'admin' AND p_new_role != 'admin' THEN
     SELECT COUNT(*) INTO v_admin_count
     FROM public.user_roles
@@ -111,10 +111,10 @@ BEGIN
 END;
 $$;
 
--- Garantir permissões
+-- Garantir permissoes
 REVOKE ALL ON FUNCTION public.update_user_role_rpc(uuid, app_role) FROM public;
 GRANT EXECUTE ON FUNCTION public.update_user_role_rpc(uuid, app_role) TO authenticated;
 
--- Criar comentário na função
+-- Criar comentario na funcao
 COMMENT ON FUNCTION public.update_user_role_rpc(uuid, app_role) IS 
 'SECURITY DEFINER function to update user roles. Only admins can call this function.';

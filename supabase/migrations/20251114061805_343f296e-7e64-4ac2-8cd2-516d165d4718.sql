@@ -1,11 +1,11 @@
--- Corrigir schema da extensão pgcrypto
--- A extensão estava em extensions schema, precisa estar em public para ser acessível
+-- Corrigir schema da extensao pgcrypto
+-- A extensao estava em extensions schema, precisa estar em public para ser acessivel
 
 DROP EXTENSION IF EXISTS pgcrypto CASCADE;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 
--- Verificar que a função digest está acessível
+-- Verificar que a funcao digest esta acessivel
 DO $$
 BEGIN
   IF NOT EXISTS (

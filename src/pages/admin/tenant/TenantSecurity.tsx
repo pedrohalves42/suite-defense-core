@@ -78,9 +78,9 @@ export default function TenantSecurity() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-3xl font-bold">Segurança</h1>
+        <h1 className="text-3xl font-bold">Seguranca</h1>
         <p className="text-muted-foreground">
-          Monitore eventos de segurança e atividades suspeitas
+          Monitore eventos de seguranca e atividades suspeitas
         </p>
       </div>
 
@@ -107,27 +107,27 @@ export default function TenantSecurity() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{failedLogins?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Últimas 24 horas</p>
+            <p className="text-xs text-muted-foreground">Ultimas 24 horas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Status de Segurança</CardTitle>
+            <CardTitle className="text-sm font-medium">Status de Seguranca</CardTitle>
             <Shield className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-500">Seguro</div>
-            <p className="text-xs text-muted-foreground">Sem ameaças detectadas</p>
+            <p className="text-xs text-muted-foreground">Sem ameacas detectadas</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Logs de Segurança</CardTitle>
+          <CardTitle>Logs de Seguranca</CardTitle>
           <CardDescription>
-            Eventos de segurança registrados no seu tenant
+            Eventos de seguranca registrados no seu tenant
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -168,7 +168,7 @@ export default function TenantSecurity() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    Nenhum evento de segurança registrado
+                    Nenhum evento de seguranca registrado
                   </TableCell>
                 </TableRow>
               )}

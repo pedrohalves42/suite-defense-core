@@ -21,7 +21,7 @@ export async function checkRateLimit(
   const now = new Date();
   const windowStart = new Date(now.getTime() - config.windowMinutes * 60 * 1000);
 
-  // Verificar se está bloqueado
+  // Verificar se esta bloqueado
   const { data: existing } = await supabase
     .from('rate_limits')
     .select('*')

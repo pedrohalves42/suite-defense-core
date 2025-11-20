@@ -61,7 +61,7 @@ export default function TenantLogs() {
       <div>
         <h1 className="text-3xl font-bold">Logs de Auditoria</h1>
         <p className="text-muted-foreground">
-          Histórico completo de ações realizadas no seu tenant
+          Historico completo de acoes realizadas no seu tenant
         </p>
       </div>
 
@@ -75,7 +75,7 @@ export default function TenantLogs() {
             <div className="relative">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Pesquisar ações, recursos..."
+                placeholder="Pesquisar acoes, recursos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
@@ -83,14 +83,14 @@ export default function TenantLogs() {
             </div>
             <Select value={filterAction} onValueChange={setFilterAction}>
               <SelectTrigger>
-                <SelectValue placeholder="Filtrar por ação" />
+                <SelectValue placeholder="Filtrar por acao" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas as ações</SelectItem>
+                <SelectItem value="all">Todas as acoes</SelectItem>
                 <SelectItem value="create">Criar</SelectItem>
                 <SelectItem value="update">Atualizar</SelectItem>
                 <SelectItem value="delete">Excluir</SelectItem>
-                <SelectItem value="update_role">Alterar Função</SelectItem>
+                <SelectItem value="update_role">Alterar Funcao</SelectItem>
                 <SelectItem value="login">Login</SelectItem>
                 <SelectItem value="logout">Logout</SelectItem>
               </SelectContent>
@@ -113,8 +113,8 @@ export default function TenantLogs() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Usuário</TableHead>
-                <TableHead>Ação</TableHead>
+                <TableHead>Usuario</TableHead>
+                <TableHead>Acao</TableHead>
                 <TableHead>Recurso</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Detalhes</TableHead>

@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
             body: {
               tenantId: agent.tenant_id,
               alertType: 'agent_offline',
-              subject: `⚠️ Agente Offline: ${agent.agent_name}`,
+              subject: `[WARN] ? Agente Offline: ${agent.agent_name}`,
               data: {
                 agentName: agent.agent_name,
                 minutesOffline: agent.minutesOffline,
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
             body: {
               tenantId,
               alertType: 'jobs_failed',
-              subject: `❌ ${jobs.length} Job(s) Falharam`,
+              subject: `[ERROR]  ${jobs.length} Job(s) Falharam`,
               data: {
                 failedCount: jobs.length,
                 jobs: jobs.map((j: any) => ({

@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.quarantined_files (
   created_at timestamp with time zone NOT NULL DEFAULT now()
 );
 
--- Criar índices para performance
+-- Criar indices para performance
 CREATE INDEX idx_quarantined_files_tenant ON public.quarantined_files(tenant_id);
 CREATE INDEX idx_quarantined_files_status ON public.quarantined_files(status);
 CREATE INDEX idx_quarantined_files_agent ON public.quarantined_files(agent_name);
@@ -22,7 +22,7 @@ CREATE INDEX idx_quarantined_files_agent ON public.quarantined_files(agent_name)
 -- Habilitar RLS
 ALTER TABLE public.quarantined_files ENABLE ROW LEVEL SECURITY;
 
--- Políticas RLS para quarantined_files
+-- Politicas RLS para quarantined_files
 CREATE POLICY "Admins can manage quarantined files in their tenant"
 ON public.quarantined_files
 FOR ALL
@@ -43,7 +43,7 @@ TO service_role
 USING (true)
 WITH CHECK (true);
 
--- Atualizar TODOS os usuários existentes para admin
+-- Atualizar TODOS os usuarios existentes para admin
 UPDATE public.user_roles
 SET role = 'admin'::app_role
 WHERE role != 'admin'::app_role;
@@ -59,9 +59,9 @@ BEGIN
   FROM auth.users
   WHERE email = 'pedrohalves42@gmail.com';
   
-  -- Se o usuário existe
+  -- Se o usuario existe
   IF target_user_id IS NOT NULL THEN
-    -- Buscar tenant_id do usuário
+    -- Buscar tenant_id do usuario
     SELECT tenant_id INTO target_tenant_id
     FROM public.user_roles
     WHERE user_id = target_user_id

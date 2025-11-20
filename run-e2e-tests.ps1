@@ -1,23 +1,23 @@
-# 🧪 Script de Execução de Testes E2E - CyberShield (Windows)
-# Execute este script para validar o fluxo completo de instalação de agentes
+# ? Script de Execucao de Testes E2E - CyberShield (Windows)
+# Execute este script para validar o fluxo completo de instalacao de agentes
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "🚀 INICIANDO TESTES E2E - CyberShield" -ForegroundColor Cyan
+Write-Host "? INICIANDO TESTES E2E - CyberShield" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Verificar se Node.js está instalado
+# Verificar se Node.js esta instalado
 try {
     $nodeVersion = node --version
-    Write-Host "✓ Node.js detectado: $nodeVersion" -ForegroundColor Gray
+    Write-Host "? Node.js detectado: $nodeVersion" -ForegroundColor Gray
 } catch {
-    Write-Host "❌ ERRO: Node.js não encontrado. Instale Node.js primeiro." -ForegroundColor Red
+    Write-Host "[ERROR]  ERRO: Node.js nao encontrado. Instale Node.js primeiro." -ForegroundColor Red
     exit 1
 }
 
-# Função para executar teste
+# Funcao para executar teste
 function Run-Test {
     param(
         [string]$TestFile,
@@ -25,16 +25,16 @@ function Run-Test {
     )
     
     Write-Host ""
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
-    Write-Host "🧪 Executando: $TestName" -ForegroundColor Cyan
-    Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Gray
+    Write-Host "??????????????????????????????????????????????" -ForegroundColor Gray
+    Write-Host "? Executando: $TestName" -ForegroundColor Cyan
+    Write-Host "??????????????????????????????????????????????" -ForegroundColor Gray
     
     try {
         npx playwright test $TestFile --reporter=list
-        Write-Host "✅ PASSOU: $TestName" -ForegroundColor Green
+        Write-Host "[OK]  PASSOU: $TestName" -ForegroundColor Green
         return $true
     } catch {
-        Write-Host "❌ FALHOU: $TestName" -ForegroundColor Red
+        Write-Host "[ERROR]  FALHOU: $TestName" -ForegroundColor Red
         return $false
     }
 }
@@ -52,9 +52,9 @@ if (Run-Test "e2e/installer-download.spec.ts" "Download de Instaladores") {
     $failedTests++
 }
 
-# Teste 2: Validação de Heartbeat
+# Teste 2: Validacao de Heartbeat
 $totalTests++
-if (Run-Test "e2e/heartbeat-validation.spec.ts" "Validação de Heartbeat") {
+if (Run-Test "e2e/heartbeat-validation.spec.ts" "Validacao de Heartbeat") {
     $passedTests++
 } else {
     $failedTests++
@@ -71,12 +71,12 @@ if (Run-Test "e2e/complete-agent-flow.spec.ts" "Fluxo Completo de Agente") {
 # Resumo Final
 Write-Host ""
 Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "📊 RESUMO DOS TESTES E2E" -ForegroundColor Cyan
+Write-Host "? RESUMO DOS TESTES E2E" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Total de Testes: $totalTests"
-Write-Host "✅ Passaram: $passedTests" -ForegroundColor Green
-Write-Host "❌ Falharam: $failedTests" -ForegroundColor Red
+Write-Host "[OK]  Passaram: $passedTests" -ForegroundColor Green
+Write-Host "[ERROR]  Falharam: $failedTests" -ForegroundColor Red
 Write-Host ""
 
 # Taxa de sucesso
@@ -86,19 +86,19 @@ Write-Host ""
 
 # Verificar se todos os testes passaram
 if ($failedTests -eq 0) {
-    Write-Host "🎉 TODOS OS TESTES PASSARAM!" -ForegroundColor Green
+    Write-Host "? TODOS OS TESTES PASSARAM!" -ForegroundColor Green
     Write-Host ""
-    Write-Host "✅ O sistema está funcionando corretamente:" -ForegroundColor Green
-    Write-Host "   • Instaladores são gerados corretamente"
-    Write-Host "   • Agentes conectam e enviam heartbeats"
-    Write-Host "   • Jobs são criados e executados"
-    Write-Host "   • Métricas são coletadas"
+    Write-Host "[OK]  O sistema esta funcionando corretamente:" -ForegroundColor Green
+    Write-Host "   ? Instaladores sao gerados corretamente"
+    Write-Host "   ? Agentes conectam e enviam heartbeats"
+    Write-Host "   ? Jobs sao criados e executados"
+    Write-Host "   ? Metricas sao coletadas"
     Write-Host ""
     exit 0
 } else {
-    Write-Host "⚠️  ALGUNS TESTES FALHARAM!" -ForegroundColor Yellow
+    Write-Host "[WARN] ?  ALGUNS TESTES FALHARAM!" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "🔍 Próximos passos:"
+    Write-Host "[SCAN]  Proximos passos:"
     Write-Host "   1. Verifique os logs acima para detalhes dos erros"
     Write-Host "   2. Execute: npx playwright show-report"
     Write-Host "   3. Revise: AGENT_DIAGNOSTICS_REPORT.md"

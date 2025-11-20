@@ -20,7 +20,7 @@ export default function CheckoutCancel() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground text-center">
-            Nenhuma cobrança foi realizada. Você pode tentar novamente quando estiver pronto.
+            Nenhuma cobranca foi realizada. Voce pode tentar novamente quando estiver pronto.
           </p>
 
           <div className="space-y-2">

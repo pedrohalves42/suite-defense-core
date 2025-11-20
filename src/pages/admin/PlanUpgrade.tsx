@@ -25,7 +25,7 @@ export default function PlanUpgrade() {
   const { data: currentSubscription, isLoading: subscriptionLoading } = useQuery({
     queryKey: ['current-subscription', tenant?.id],
     queryFn: async () => {
-      if (!tenant?.id) throw new Error('Tenant não encontrado');
+      if (!tenant?.id) throw new Error('Tenant nao encontrado');
 
       const { data, error } = await supabase
         .from('tenant_subscriptions')
@@ -49,7 +49,7 @@ export default function PlanUpgrade() {
     enabled: !!tenant?.id,
   });
 
-  // Buscar todos os planos disponíveis
+  // Buscar todos os planos disponiveis
   const { data: allPlans = [] } = useQuery({
     queryKey: ['all-plans'],
     queryFn: async () => {
@@ -70,29 +70,29 @@ export default function PlanUpgrade() {
       icon: Zap,
       color: 'text-blue-500',
       bgColor: 'bg-blue-500/10',
-      price: 'Grátis',
-      description: 'Perfeito para começar',
+      price: 'Gratis',
+      description: 'Perfeito para comecar',
       features: [
-        'Até 2 usuários',
-        'Até 5 agentes',
-        '100 scans por mês',
+        'Ate 2 usuarios',
+        'Ate 5 agentes',
+        '100 scans por mes',
         'Suporte por email',
-        'Dashboard básico',
+        'Dashboard basico',
       ],
     },
     pro: {
       icon: Crown,
       color: 'text-purple-500',
       bgColor: 'bg-purple-500/10',
-      price: 'R$ 99/mês',
+      price: 'R$ 99/mes',
       description: 'Para equipes em crescimento',
       features: [
-        'Até 10 usuários',
-        'Até 50 agentes',
-        '1000 scans por mês',
-        'Suporte prioritário',
-        'Dashboard avançado',
-        'Relatórios customizados',
+        'Ate 10 usuarios',
+        'Ate 50 agentes',
+        '1000 scans por mes',
+        'Suporte prioritario',
+        'Dashboard avancado',
+        'Relatorios customizados',
         'API access',
       ],
       popular: true,
@@ -102,9 +102,9 @@ export default function PlanUpgrade() {
       color: 'text-yellow-500',
       bgColor: 'bg-yellow-500/10',
       price: 'Customizado',
-      description: 'Para grandes organizações',
+      description: 'Para grandes organizacoes',
       features: [
-        'Usuários ilimitados',
+        'Usuarios ilimitados',
         'Agentes ilimitados',
         'Scans ilimitados',
         'Suporte 24/7',
@@ -127,7 +127,7 @@ export default function PlanUpgrade() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Planos e Preços</h1>
+        <h1 className="text-3xl font-bold">Planos e Precos</h1>
         <p className="text-muted-foreground mt-1">
           Escolha o plano ideal para sua equipe
         </p>
@@ -138,7 +138,7 @@ export default function PlanUpgrade() {
           <CardHeader>
             <CardTitle>Plano Atual</CardTitle>
             <CardDescription>
-              Você está no plano <Badge variant="secondary">{currentPlanName}</Badge>
+              Voce esta no plano <Badge variant="secondary">{currentPlanName}</Badge>
             </CardDescription>
           </CardHeader>
         </Card>

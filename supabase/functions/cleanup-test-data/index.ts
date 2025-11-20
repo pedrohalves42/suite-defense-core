@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // Verificar autenticação e role de admin
+    // Verificar autenticacao e role de admin
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se é admin
+    // Verificar se e admin
     const { data: roles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
       console.log(`[cleanup-test-data] Cleaned ${results.installation_analytics} installation_analytics records`);
     }
 
-    // 2. Limpar métricas de sistema
+    // 2. Limpar metricas de sistema
     const { error: metricsError, count: metricsCount } = await supabaseAdmin
       .from('agent_system_metrics')
       .delete()

@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 /**
  * FASE 2: Teste de Download de Instaladores
  * 
- * Valida que os instaladores são gerados corretamente
+ * Valida que os instaladores sao gerados corretamente
  * para Windows e Linux
  */
 

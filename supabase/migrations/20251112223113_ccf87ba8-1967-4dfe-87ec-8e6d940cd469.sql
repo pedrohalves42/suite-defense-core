@@ -48,7 +48,7 @@ BEGIN
   DELETE FROM public.performance_metrics
   WHERE created_at < NOW() - INTERVAL '90 days';
   
-  RAISE NOTICE 'Limpeza de métricas antigas concluída em %', NOW();
+  RAISE NOTICE 'Limpeza de metricas antigas concluida em %', NOW();
 END;
 $function$;
 

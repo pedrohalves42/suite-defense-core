@@ -101,8 +101,8 @@ export default function StripeSetup() {
     // Check if products already exist
     if (healthStatus?.checks.products_configured.status === 'ok') {
       toast({
-        title: 'Produtos já configurados',
-        description: 'Os produtos Starter e Pro já estão configurados.',
+        title: 'Produtos ja configurados',
+        description: 'Os produtos Starter e Pro ja estao configurados.',
         variant: 'destructive',
       });
       return;
@@ -120,7 +120,7 @@ export default function StripeSetup() {
     navigator.clipboard.writeText(text);
     toast({
       title: 'Copiado!',
-      description: `${label} copiado para a área de transferência.`,
+      description: `${label} copiado para a area de transferencia.`,
     });
   };
 
@@ -162,10 +162,10 @@ export default function StripeSetup() {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <CreditCard className="h-8 w-8" />
-          Configuração Stripe
+          Configuracao Stripe
         </h1>
         <p className="text-muted-foreground mt-1">
-          Configure e monitore a integração de pagamentos
+          Configure e monitore a integracao de pagamentos
         </p>
       </div>
 
@@ -179,9 +179,9 @@ export default function StripeSetup() {
                 {healthLoading && <Loader2 className="h-4 w-4 animate-spin" />}
               </CardTitle>
               <CardDescription>
-                {healthStatus?.overall_status === 'healthy' && '✓ Sistema operacional'}
-                {healthStatus?.overall_status === 'degraded' && '⚠️ Configuração parcial'}
-                {healthStatus?.overall_status === 'down' && '✗ Sistema não configurado'}
+                {healthStatus?.overall_status === 'healthy' && '? Sistema operacional'}
+                {healthStatus?.overall_status === 'degraded' && '[WARN] ? Configuracao parcial'}
+                {healthStatus?.overall_status === 'down' && '? Sistema nao configurado'}
               </CardDescription>
             </div>
             <Button
@@ -206,7 +206,7 @@ export default function StripeSetup() {
               <div className="flex items-center gap-2">
                 {getStatusIcon(healthStatus.checks.products_configured.status)}
                 <span className="text-sm">
-                  Produtos Configurados: {healthStatus.checks.products_configured.status === 'ok' ? 'Sim' : 'Não'}
+                  Produtos Configurados: {healthStatus.checks.products_configured.status === 'ok' ? 'Sim' : 'Nao'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export default function StripeSetup() {
       {healthStatus?.recommendations && healthStatus.recommendations.length > 0 && (
         <Alert>
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Recomendações</AlertTitle>
+          <AlertTitle>Recomendacoes</AlertTitle>
           <AlertDescription>
             <ul className="list-disc list-inside space-y-1 mt-2">
               {healthStatus.recommendations.map((rec, index) => (
@@ -238,8 +238,8 @@ export default function StripeSetup() {
       {/* Setup Wizard */}
       <Card>
         <CardHeader>
-          <CardTitle>Assistente de Configuração</CardTitle>
-          <CardDescription>Configure sua integração Stripe em 3 passos</CardDescription>
+          <CardTitle>Assistente de Configuracao</CardTitle>
+          <CardDescription>Configure sua integracao Stripe em 3 passos</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Step 1: API Connection */}
@@ -248,7 +248,7 @@ export default function StripeSetup() {
               1
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold mb-1">Validar Conexão</h3>
+              <h3 className="font-semibold mb-1">Validar Conexao</h3>
               <p className="text-sm text-muted-foreground mb-2">
                 Verificar conectividade com a API do Stripe
               </p>
@@ -341,7 +341,7 @@ export default function StripeSetup() {
                 ) : (
                   <>
                     <XCircle className="h-4 w-4 text-red-500" />
-                    Não Configurado
+                    Nao Configurado
                   </>
                 )}
               </p>
@@ -357,11 +357,11 @@ export default function StripeSetup() {
             <div className="grid grid-cols-2 gap-2 pt-2 border-t">
               <div>
                 <p className="text-xs text-muted-foreground">Valor</p>
-                <p className="font-semibold">R$ 30/mês</p>
+                <p className="font-semibold">R$ 30/mes</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Dispositivos</p>
-                <p className="font-semibold">Até 30</p>
+                <p className="font-semibold">Ate 30</p>
               </div>
             </div>
           </CardContent>
@@ -389,7 +389,7 @@ export default function StripeSetup() {
                 ) : (
                   <>
                     <XCircle className="h-4 w-4 text-red-500" />
-                    Não Configurado
+                    Nao Configurado
                   </>
                 )}
               </p>
@@ -405,11 +405,11 @@ export default function StripeSetup() {
             <div className="grid grid-cols-2 gap-2 pt-2 border-t">
               <div>
                 <p className="text-xs text-muted-foreground">Valor</p>
-                <p className="font-semibold">R$ 50/mês</p>
+                <p className="font-semibold">R$ 50/mes</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Dispositivos</p>
-                <p className="font-semibold">Até 200</p>
+                <p className="font-semibold">Ate 200</p>
               </div>
             </div>
           </CardContent>
@@ -419,7 +419,7 @@ export default function StripeSetup() {
       {/* Webhook Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle>Configuração de Webhook</CardTitle>
+          <CardTitle>Configuracao de Webhook</CardTitle>
           <CardDescription>
             Configure o webhook no Stripe Dashboard para sincronizar assinaturas
           </CardDescription>
@@ -442,7 +442,7 @@ export default function StripeSetup() {
           </div>
 
           <div>
-            <p className="text-sm font-medium mb-2">Eventos necessários</p>
+            <p className="text-sm font-medium mb-2">Eventos necessarios</p>
             <ul className="space-y-1">
               <li className="text-sm flex items-center gap-2">
                 <CheckCircle2 className="h-3 w-3 text-green-500" />
@@ -477,36 +477,36 @@ export default function StripeSetup() {
       {/* Troubleshooting */}
       <Card>
         <CardHeader>
-          <CardTitle>Solução de Problemas</CardTitle>
-          <CardDescription>Perguntas frequentes e soluções</CardDescription>
+          <CardTitle>Solucao de Problemas</CardTitle>
+          <CardDescription>Perguntas frequentes e solucoes</CardDescription>
         </CardHeader>
         <CardContent>
           <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
               <AccordionTrigger>
-                ❌ Erro: "STRIPE_SECRET_KEY is not set"
+                [ERROR]  Erro: "STRIPE_SECRET_KEY is not set"
               </AccordionTrigger>
               <AccordionContent>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Este erro indica que a chave secreta do Stripe não foi configurada.
+                  Este erro indica que a chave secreta do Stripe nao foi configurada.
                 </p>
                 <p className="text-sm">
-                  <strong>Solução:</strong> Configure o secret STRIPE_SECRET_KEY nas configurações
-                  do projeto Supabase em Settings → Edge Functions → Secrets.
+                  <strong>Solucao:</strong> Configure o secret STRIPE_SECRET_KEY nas configuracoes
+                  do projeto Supabase em Settings ? Edge Functions ? Secrets.
                 </p>
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="item-2">
               <AccordionTrigger>
-                ⚠️ Produtos já existem no Stripe
+                [WARN] ? Produtos ja existem no Stripe
               </AccordionTrigger>
               <AccordionContent>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Se você já criou produtos manualmente no Stripe, precisará copiar os price_id manualmente.
+                  Se voce ja criou produtos manualmente no Stripe, precisara copiar os price_id manualmente.
                 </p>
                 <p className="text-sm">
-                  <strong>Solução:</strong> Acesse o Stripe Dashboard, copie os price_id dos produtos
+                  <strong>Solucao:</strong> Acesse o Stripe Dashboard, copie os price_id dos produtos
                   e atualize-os no banco de dados na tabela subscription_plans.
                 </p>
               </AccordionContent>
@@ -514,18 +514,18 @@ export default function StripeSetup() {
 
             <AccordionItem value="item-3">
               <AccordionTrigger>
-                🔄 Webhook não está recebendo eventos
+                ? Webhook nao esta recebendo eventos
               </AccordionTrigger>
               <AccordionContent>
                 <p className="text-sm text-muted-foreground mb-2">
                   Verifique se o webhook foi registrado corretamente no Stripe.
                 </p>
                 <p className="text-sm">
-                  <strong>Solução:</strong> 
+                  <strong>Solucao:</strong> 
                   <ol className="list-decimal list-inside mt-2 space-y-1">
-                    <li>Acesse Stripe Dashboard → Developers → Webhooks</li>
-                    <li>Verifique se o endpoint está listado</li>
-                    <li>Confirme que os 4 eventos estão selecionados</li>
+                    <li>Acesse Stripe Dashboard ? Developers ? Webhooks</li>
+                    <li>Verifique se o endpoint esta listado</li>
+                    <li>Confirme que os 4 eventos estao selecionados</li>
                     <li>Teste enviando um evento de teste</li>
                   </ol>
                 </p>
@@ -534,18 +534,18 @@ export default function StripeSetup() {
 
             <AccordionItem value="item-4">
               <AccordionTrigger>
-                🧪 Como testar em modo sandbox?
+                ? Como testar em modo sandbox?
               </AccordionTrigger>
               <AccordionContent>
                 <p className="text-sm text-muted-foreground mb-2">
-                  Use uma chave de teste do Stripe (começa com sk_test_).
+                  Use uma chave de teste do Stripe (comeca com sk_test_).
                 </p>
                 <p className="text-sm">
-                  <strong>Cartões de teste:</strong>
+                  <strong>Cartoes de teste:</strong>
                   <ul className="list-disc list-inside mt-2 space-y-1">
                     <li>Sucesso: 4242 4242 4242 4242</li>
                     <li>Falha: 4000 0000 0000 0002</li>
-                    <li>Requer autenticação: 4000 0025 0000 3155</li>
+                    <li>Requer autenticacao: 4000 0025 0000 3155</li>
                   </ul>
                 </p>
               </AccordionContent>

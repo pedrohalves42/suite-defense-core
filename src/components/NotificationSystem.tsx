@@ -75,7 +75,7 @@ export const NotificationSystem = () => {
             toast.warning(
               `Agente Offline`,
               {
-                description: `${newAgent.agent_name} está desconectado`,
+                description: `${newAgent.agent_name} esta desconectado`,
                 icon: <Server className="h-5 w-5" />,
                 duration: 8000
               }
@@ -114,9 +114,9 @@ export const NotificationSystem = () => {
           // Only notify for malicious files
           if (scan.is_malicious && scan.positives > 0) {
             toast.warning(
-              `Ameaça Detectada`,
+              `Ameaca Detectada`,
               {
-                description: `${scan.file_path} - ${scan.positives}/${scan.total_scans} detecções`,
+                description: `${scan.file_path} - ${scan.positives}/${scan.total_scans} deteccoes`,
                 icon: <FileWarning className="h-5 w-5" />,
                 duration: 8000
               }
@@ -162,5 +162,5 @@ export const NotificationSystem = () => {
     };
   }, [tenant?.id, loading]);
 
-  return null; // Este componente não renderiza nada, apenas gerencia notificações
+  return null; // Este componente nao renderiza nada, apenas gerencia notificacoes
 };

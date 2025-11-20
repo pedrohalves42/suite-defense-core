@@ -75,7 +75,7 @@ interface InstallationHealthStatus {
 export default function InstallationMetrics() {
   const { toast } = useToast();
 
-  // Query para métricas consolidadas
+  // Query para metricas consolidadas
   const { data: metrics, isLoading: metricsLoading } = useQuery({
     queryKey: ['agent-installation-metrics'],
     queryFn: async () => {
@@ -104,7 +104,7 @@ export default function InstallationMetrics() {
     }
   });
 
-  // Query para status de saúde
+  // Query para status de saude
   const { data: healthStatus, isLoading: healthLoading } = useQuery({
     queryKey: ['installation-health-status'],
     queryFn: async () => {
@@ -119,7 +119,7 @@ export default function InstallationMetrics() {
 
   const isLoading = metricsLoading || errorsLoading || healthLoading;
 
-  // Agregar métricas globais
+  // Agregar metricas globais
   const totalMetrics = metrics?.reduce((acc, curr) => ({
     total_attempts: acc.total_attempts + curr.total_attempts,
     successful_installs: acc.successful_installs + curr.successful_installs,
@@ -152,7 +152,7 @@ export default function InstallationMetrics() {
     ? (totalMetrics!.avg_install_time_sec / metrics.length).toFixed(1)
     : '0';
 
-  // Preparar dados para gráficos
+  // Preparar dados para graficos
   const platformData = [
     { name: 'Windows', value: totalMetrics?.windows_count || 0, color: COLORS.windows },
     { name: 'Linux', value: totalMetrics?.linux_count || 0, color: COLORS.linux }
@@ -164,11 +164,11 @@ export default function InstallationMetrics() {
   ];
 
   const networkHealthData = [
-    { name: 'Conexão OK', value: totalMetrics?.network_ok || 0, color: COLORS.success },
-    { name: 'Sem Conexão', value: totalMetrics?.network_failed || 0, color: COLORS.failed }
+    { name: 'Conexao OK', value: totalMetrics?.network_ok || 0, color: COLORS.success },
+    { name: 'Sem Conexao', value: totalMetrics?.network_failed || 0, color: COLORS.failed }
   ];
 
-  // Dados de timeline (últimos 30 dias)
+  // Dados de timeline (ultimos 30 dias)
   const timelineData = metrics
     ?.slice(0, 30)
     .reverse()
@@ -196,7 +196,7 @@ export default function InstallationMetrics() {
   const platformChartData = Object.entries(platformComparison || {}).map(([name, stats]) => ({
     name: name.charAt(0).toUpperCase() + name.slice(1),
     'Taxa de Sucesso (%)': ((stats.success / stats.total) * 100).toFixed(1),
-    'Tempo Médio (s)': (stats.avgTime / stats.count).toFixed(1),
+    'Tempo Medio (s)': (stats.avgTime / stats.count).toFixed(1),
     Sucessos: stats.success,
     Falhas: stats.failed
   }));
@@ -225,9 +225,9 @@ export default function InstallationMetrics() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Métricas de Instalação</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Metricas de Instalacao</h1>
           <p className="text-muted-foreground">
-            Análise consolidada com dados das views SQL otimizadas
+            Analise consolidada com dados das views SQL otimizadas
           </p>
         </div>
         <Activity className="h-8 w-8 text-primary" />
@@ -244,14 +244,14 @@ export default function InstallationMetrics() {
             }>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium">Status de Saúde (24h)</CardTitle>
+                  <CardTitle className="text-sm font-medium">Status de Saude (24h)</CardTitle>
                   <Badge variant={
                     health.health_status === 'healthy' ? 'default' : 
                     health.health_status === 'unhealthy' ? 'destructive' : 
                     'secondary'
                   }>
-                    {health.health_status === 'healthy' ? 'Saudável' : 
-                     health.health_status === 'unhealthy' ? 'Crítico' : 
+                    {health.health_status === 'healthy' ? 'Saudavel' : 
+                     health.health_status === 'unhealthy' ? 'Critico' : 
                      'Sem Dados'}
                   </Badge>
                 </div>
@@ -293,14 +293,14 @@ export default function InstallationMetrics() {
           <CardContent>
             <div className="text-2xl font-bold">{successRate}%</div>
             <p className="text-xs text-muted-foreground">
-              {totalMetrics?.successful_installs} de {totalMetrics?.total_attempts} instalações
+              {totalMetrics?.successful_installs} de {totalMetrics?.total_attempts} instalacoes
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tempo Médio</CardTitle>
+            <CardTitle className="text-sm font-medium">Tempo Medio</CardTitle>
             <Clock className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -313,26 +313,26 @@ export default function InstallationMetrics() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Instalações com Falha</CardTitle>
+            <CardTitle className="text-sm font-medium">Instalacoes com Falha</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalMetrics?.failed_installs}</div>
             <p className="text-xs text-muted-foreground">
-              {errors?.length || 0} tipos de erro únicos
+              {errors?.length || 0} tipos de erro unicos
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Verificação HMAC</CardTitle>
+            <CardTitle className="text-sm font-medium">Verificacao HMAC</CardTitle>
             <Zap className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalMetrics?.verified_count}</div>
             <p className="text-xs text-muted-foreground">
-              {totalMetrics?.unverified_count} não verificados
+              {totalMetrics?.unverified_count} nao verificados
             </p>
           </CardContent>
         </Card>
@@ -343,8 +343,8 @@ export default function InstallationMetrics() {
         {/* Success vs Failure Pie Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Distribuição de Sucesso/Falha</CardTitle>
-            <CardDescription>Visão geral de todas as instalações</CardDescription>
+            <CardTitle>Distribuicao de Sucesso/Falha</CardTitle>
+            <CardDescription>Visao geral de todas as instalacoes</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -373,7 +373,7 @@ export default function InstallationMetrics() {
         {/* Platform Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Distribuição por Plataforma</CardTitle>
+            <CardTitle>Distribuicao por Plataforma</CardTitle>
             <CardDescription>Windows vs Linux</CardDescription>
           </CardHeader>
           <CardContent>
@@ -403,8 +403,8 @@ export default function InstallationMetrics() {
         {/* Timeline Chart */}
         <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle>Tendência de Taxa de Sucesso (Últimos 30 Dias)</CardTitle>
-            <CardDescription>Evolução temporal da taxa de sucesso</CardDescription>
+            <CardTitle>Tendencia de Taxa de Sucesso (Ultimos 30 Dias)</CardTitle>
+            <CardDescription>Evolucao temporal da taxa de sucesso</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -437,8 +437,8 @@ export default function InstallationMetrics() {
         {platformChartData.length > 0 && (
           <Card className="md:col-span-2">
             <CardHeader>
-              <CardTitle>Comparação entre Plataformas</CardTitle>
-              <CardDescription>Métricas detalhadas por sistema operacional</CardDescription>
+              <CardTitle>Comparacao entre Plataformas</CardTitle>
+              <CardDescription>Metricas detalhadas por sistema operacional</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -450,7 +450,7 @@ export default function InstallationMetrics() {
                   <Tooltip />
                   <Legend />
                   <Bar yAxisId="left" dataKey="Taxa de Sucesso (%)" fill={COLORS.success} />
-                  <Bar yAxisId="right" dataKey="Tempo Médio (s)" fill={COLORS.info} />
+                  <Bar yAxisId="right" dataKey="Tempo Medio (s)" fill={COLORS.info} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -460,8 +460,8 @@ export default function InstallationMetrics() {
         {/* Network Health */}
         <Card>
           <CardHeader>
-            <CardTitle>Saúde da Rede</CardTitle>
-            <CardDescription>Conectividade durante instalações</CardDescription>
+            <CardTitle>Saude da Rede</CardTitle>
+            <CardDescription>Conectividade durante instalacoes</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -490,8 +490,8 @@ export default function InstallationMetrics() {
         {/* Installation Time Trend */}
         <Card>
           <CardHeader>
-            <CardTitle>Tempo de Instalação</CardTitle>
-            <CardDescription>Evolução do tempo médio (últimos 30 dias)</CardDescription>
+            <CardTitle>Tempo de Instalacao</CardTitle>
+            <CardDescription>Evolucao do tempo medio (ultimos 30 dias)</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -521,7 +521,7 @@ export default function InstallationMetrics() {
           <CardHeader>
             <CardTitle>Resumo de Erros Mais Comuns</CardTitle>
             <CardDescription>
-              Top {errors.length} erros identificados com maior ocorrência
+              Top {errors.length} erros identificados com maior ocorrencia
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -549,10 +549,10 @@ export default function InstallationMetrics() {
                         </div>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span>{error.percentage_of_failures.toFixed(1)}% das falhas</span>
-                          <span>•</span>
+                          <span>?</span>
                           <span>{error.unique_agents_affected} agentes afetados</span>
-                          <span>•</span>
-                          <span>Última vez: {new Date(error.last_seen).toLocaleDateString('pt-BR')}</span>
+                          <span>?</span>
+                          <span>Ultima vez: {new Date(error.last_seen).toLocaleDateString('pt-BR')}</span>
                         </div>
                         {error.affected_agents && error.affected_agents.length > 0 && (
                           <div className="mt-2 pt-2 border-t">
@@ -577,10 +577,10 @@ export default function InstallationMetrics() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Activity className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Nenhum dado disponível</h3>
+            <h3 className="text-lg font-semibold mb-2">Nenhum dado disponivel</h3>
             <p className="text-sm text-muted-foreground text-center max-w-md">
-              As métricas consolidadas aparecerão aqui assim que houver instalações registradas.
-              Gere uma nova enrollment key e execute uma instalação para popular os dados.
+              As metricas consolidadas aparecerao aqui assim que houver instalacoes registradas.
+              Gere uma nova enrollment key e execute uma instalacao para popular os dados.
             </p>
           </CardContent>
         </Card>

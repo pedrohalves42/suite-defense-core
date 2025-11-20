@@ -1,5 +1,5 @@
 # CyberShield Load Test Suite
-# Simula múltiplos agents e jobs para testar escalabilidade
+# Simula multiplos agents e jobs para testar escalabilidade
 
 param(
     [Parameter(Mandatory=$true)]
@@ -40,9 +40,9 @@ $script:Stats = @{
 $script:EnrolledAgents = @()
 
 Write-Host ""
-Write-Host "╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║          CyberShield Load Test Suite                     ║" -ForegroundColor Cyan
-Write-Host "╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
+Write-Host "?          CyberShield Load Test Suite                     ?" -ForegroundColor Cyan
+Write-Host "?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Configuration:" -ForegroundColor Yellow
 Write-Host "  - Server: $ServerUrl" -ForegroundColor Gray
@@ -56,7 +56,7 @@ Write-Host ""
 # PHASE 1: ENROLL AGENTS
 # ============================================
 
-Write-Host "═══ PHASE 1: Agent Enrollment ===" -ForegroundColor Cyan
+Write-Host "??? PHASE 1: Agent Enrollment ===" -ForegroundColor Cyan
 Write-Host ""
 
 $enrollmentStartTime = Get-Date
@@ -86,18 +86,18 @@ for ($i = 1; $i -le $NumAgents; $i++) {
                 Secret = $response.hmac_secret
             }
             $script:Stats.EnrolledAgents++
-            Write-Host " ✓ OK ($($stopwatch.ElapsedMilliseconds)ms)" -ForegroundColor Green
+            Write-Host " ? OK ($($stopwatch.ElapsedMilliseconds)ms)" -ForegroundColor Green
         } else {
             $script:Stats.FailedEnrollments++
-            Write-Host " ✗ FAILED (invalid response)" -ForegroundColor Red
+            Write-Host " ? FAILED (invalid response)" -ForegroundColor Red
         }
     } catch {
         $script:Stats.FailedEnrollments++
         $script:Stats.FailedRequests++
-        Write-Host " ✗ FAILED ($($_.Exception.Message))" -ForegroundColor Red
+        Write-Host " ? FAILED ($($_.Exception.Message))" -ForegroundColor Red
     }
     
-    # Pequeno delay para não sobrecarregar
+    # Pequeno delay para nao sobrecarregar
     Start-Sleep -Milliseconds 100
 }
 
@@ -112,7 +112,7 @@ Write-Host "  - Rate: $([math]::Round($NumAgents / $enrollmentDuration, 2)) agen
 Write-Host ""
 
 if ($script:EnrolledAgents.Count -eq 0) {
-    Write-Host "✗ No agents enrolled. Cannot continue." -ForegroundColor Red
+    Write-Host "? No agents enrolled. Cannot continue." -ForegroundColor Red
     exit 1
 }
 
@@ -120,7 +120,7 @@ if ($script:EnrolledAgents.Count -eq 0) {
 # PHASE 2: HEARTBEAT STORM
 # ============================================
 
-Write-Host "═══ PHASE 2: Heartbeat Storm ===" -ForegroundColor Cyan
+Write-Host "??? PHASE 2: Heartbeat Storm ===" -ForegroundColor Cyan
 Write-Host ""
 
 $heartbeatStartTime = Get-Date
@@ -156,11 +156,11 @@ foreach ($agent in $script:EnrolledAgents) {
         $script:Stats.TotalRequests++
         $heartbeatSuccess++
         
-        Write-Host "  ✓ $($agent.Name): $($stopwatch.ElapsedMilliseconds)ms" -ForegroundColor Green
+        Write-Host "  ? $($agent.Name): $($stopwatch.ElapsedMilliseconds)ms" -ForegroundColor Green
     } catch {
         $script:Stats.FailedRequests++
         $heartbeatFailed++
-        Write-Host "  ✗ $($agent.Name): $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  ? $($agent.Name): $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
@@ -178,7 +178,7 @@ Write-Host ""
 # PHASE 3: JOB POLLING STORM
 # ============================================
 
-Write-Host "═══ PHASE 3: Job Polling Storm ===" -ForegroundColor Cyan
+Write-Host "??? PHASE 3: Job Polling Storm ===" -ForegroundColor Cyan
 Write-Host ""
 
 $pollStartTime = Get-Date
@@ -214,11 +214,11 @@ foreach ($agent in $script:EnrolledAgents) {
         $script:Stats.TotalRequests++
         $pollSuccess++
         
-        Write-Host "  ✓ $($agent.Name): $($jobs.Count) job(s), $($stopwatch.ElapsedMilliseconds)ms" -ForegroundColor Green
+        Write-Host "  ? $($agent.Name): $($jobs.Count) job(s), $($stopwatch.ElapsedMilliseconds)ms" -ForegroundColor Green
     } catch {
         $script:Stats.FailedRequests++
         $pollFailed++
-        Write-Host "  ✗ $($agent.Name): $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "  ? $($agent.Name): $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
@@ -236,7 +236,7 @@ Write-Host ""
 # PHASE 4: SUSTAINED LOAD TEST
 # ============================================
 
-Write-Host "═══ PHASE 4: Sustained Load Test (60 seconds) ===" -ForegroundColor Cyan
+Write-Host "??? PHASE 4: Sustained Load Test (60 seconds) ===" -ForegroundColor Cyan
 Write-Host ""
 
 $sustainedStartTime = Get-Date
@@ -247,7 +247,7 @@ $sustainedErrors = 0
 Write-Host "Running sustained load test..." -ForegroundColor Gray
 
 while ((Get-Date) -lt $sustainedEndTime) {
-    # Selecionar agente aleatório
+    # Selecionar agente aleatorio
     $agent = $script:EnrolledAgents | Get-Random
     
     try {
@@ -319,9 +319,9 @@ $totalDuration = ((Get-Date) - $enrollmentStartTime).TotalSeconds
 $successRate = (($script:Stats.TotalRequests - $script:Stats.FailedRequests) / $script:Stats.TotalRequests) * 100
 
 Write-Host ""
-Write-Host "╔═══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║                   FINAL STATISTICS                        ║" -ForegroundColor Cyan
-Write-Host "╚═══════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
+Write-Host "?                   FINAL STATISTICS                        ?" -ForegroundColor Cyan
+Write-Host "?????????????????????????????????????????????????????????????" -ForegroundColor Cyan
 Write-Host ""
 
 Write-Host "Agents:" -ForegroundColor Yellow
@@ -351,10 +351,10 @@ Write-Host ""
 $passed = $successRate -ge 95 -and $avgResponseTime -lt 2000 -and $script:Stats.EnrolledAgents -ge ($NumAgents * 0.9)
 
 if ($passed) {
-    Write-Host "✓ LOAD TEST: PASSED" -ForegroundColor Green
+    Write-Host "? LOAD TEST: PASSED" -ForegroundColor Green
     Write-Host "  System is ready for production scale" -ForegroundColor Gray
 } else {
-    Write-Host "✗ LOAD TEST: NEEDS IMPROVEMENT" -ForegroundColor Yellow
+    Write-Host "? LOAD TEST: NEEDS IMPROVEMENT" -ForegroundColor Yellow
     Write-Host "  Review performance metrics above" -ForegroundColor Gray
 }
 

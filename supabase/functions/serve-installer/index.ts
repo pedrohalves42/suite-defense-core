@@ -27,7 +27,7 @@ import { AGENT_SCRIPT_LINUX_SH } from '../_shared/agent-script-linux-content.ts'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 
 /**
- * Valida que não há placeholders não substituídos no script
+ * Valida que nao ha placeholders nao substituidos no script
  */
 function validateNoPlaceholders(
   script: string,
@@ -40,7 +40,7 @@ function validateNoPlaceholders(
 
   const placeholderList = remaining.join(', ');
 
-  console.error('[serve-installer] Placeholders não substituídos', {
+  console.error('[serve-installer] Placeholders nao substituidos', {
     scriptType,
     placeholders: placeholderList,
     count: remaining.length,
@@ -58,22 +58,22 @@ function validateNoPlaceholders(
   });
 
   throw new Error(
-    `Script gerado contém ${remaining.length} placeholders não substituídos: ${placeholderList}`,
+    `Script gerado contem ${remaining.length} placeholders nao substituidos: ${placeholderList}`,
   );
 }
 
 /**
- * ✅ PHASE 1 & 2 COMPLETE: Centralized Templates
+ * [OK]  PHASE 1 & 2 COMPLETE: Centralized Templates
  * 
  * All installer templates are now imported from the single source of truth:
  * - supabase/functions/_shared/installer-template.ts (args mode)
  * - supabase/functions/_shared/installer-template-envvars.ts (envvars mode)
  * 
  * This ensures:
- * ✅ No duplicate templates
- * ✅ All security features (cleanup, self-test, telemetry)
- * ✅ Consistent behavior across serve-installer and build-agent-exe
- * ✅ Single point of maintenance
+ * [OK]  No duplicate templates
+ * [OK]  All security features (cleanup, self-test, telemetry)
+ * [OK]  Consistent behavior across serve-installer and build-agent-exe
+ * [OK]  Single point of maintenance
  */
 
 // Deno server to handle POST requests
@@ -210,7 +210,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FASE 1 CORREÇÃO CRÍTICA: Fetch token from agent_tokens
+    // FASE 1 CORRECAO CRITICA: Fetch token from agent_tokens
     const { data: tokenData, error: tokenError } = await supabaseClient
       .from('agent_tokens')
       .select('token')
@@ -228,7 +228,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FASE 1 CORREÇÃO CRÍTICA: Fetch agent info AND hmac_secret from agents table
+    // FASE 1 CORRECAO CRITICA: Fetch agent info AND hmac_secret from agents table
     const { data: agentData, error: agentError } = await supabaseClient
       .from('agents')
       .select('agent_name, os_type, hmac_secret')
@@ -245,7 +245,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FASE 1 CRÍTICO: Use inline agent script (always available)
+    // FASE 1 CRITICO: Use inline agent script (always available)
     console.log(`[${requestId}] Using inline agent script`);
     
 const { getAgentScriptWindows } = await import('../_shared/agent-script-windows-content.ts');
@@ -378,9 +378,9 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
       );
     }
 
-    // ============= VALIDAÇÃO CRÍTICA ADICIONAL =============
+    // ============= VALIDACAO CRITICA ADICIONAL =============
 
-    // 🔥 BUG FIX P0: Validar TODOS os placeholders críticos foram substituídos
+    // ? BUG FIX P0: Validar TODOS os placeholders criticos foram substituidos
     const criticalPlaceholders = ['{{AGENT_NAME}}', '{{AGENT_TOKEN}}', '{{HMAC_SECRET}}', '{{SERVER_URL}}'];
     const unsubstitutedCritical = criticalPlaceholders.filter(ph => templateContent.includes(ph));
     
@@ -405,7 +405,7 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
       );
     }
 
-    // 1) Garantir que AGENT_SCRIPT_CONTENT foi substituído (específico para Windows)
+    // 1) Garantir que AGENT_SCRIPT_CONTENT foi substituido (especifico para Windows)
     if (platform === 'windows' && templateContent.includes('{{AGENT_SCRIPT_CONTENT}}')) {
       console.error(`[${requestId}] CRITICAL: AGENT_SCRIPT_CONTENT placeholder not replaced`, {
         platform,
@@ -427,8 +427,8 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
       );
     }
 
-    // 2) Validar tamanho mínimo do script gerado (detectar truncamento)
-    const MIN_INSTALLER_SIZE = 10000; // ~10KB mínimo para um instalador válido
+    // 2) Validar tamanho minimo do script gerado (detectar truncamento)
+    const MIN_INSTALLER_SIZE = 10000; // ~10KB minimo para um instalador valido
 
     if (templateContent.length < MIN_INSTALLER_SIZE) {
       console.error(`[${requestId}] CRITICAL: Generated installer too small`, {
@@ -452,7 +452,7 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
       );
     }
 
-    // 3) 🔥 BUG FIX P2: Para Windows, validar que o script do agente embutido não está vazio ou truncado
+    // 3) ? BUG FIX P2: Para Windows, validar que o script do agente embutido nao esta vazio ou truncado
     // Regex melhorado: aceita @' e @" para here-strings
     if (platform === 'windows') {
       const hereStringPattern = /\$AgentScriptContent\s*=\s*@['"]\s*([\s\S]*?)\s*['"]\@/;
@@ -478,7 +478,7 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
         );
       }
 
-      // 🔥 BUG FIX P2: Validar presença de funções críticas no script embutido
+      // ? BUG FIX P2: Validar presenca de funcoes criticas no script embutido
       const embeddedScript = scriptContentMatch[1];
       const criticalFunctions = ['Submit-JobResult', 'Send-Heartbeat', 'Poll-Jobs'];
       const missingFunctions = criticalFunctions.filter(fn => !embeddedScript.includes(fn));
@@ -503,7 +503,7 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
         );
       }
 
-      // 🔥 PHASE 4: Validação adicional para StartedAt (Jobs v3)
+      // ? PHASE 4: Validacao adicional para StartedAt (Jobs v3)
       console.log(`[${requestId}] Validating StartedAt parameter presence...`);
       
       if (!embeddedScript.includes('StartedAt')) {
@@ -526,11 +526,11 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
         );
       }
       
-      console.log(`[${requestId}] ✅ StartedAt parameter validation passed`);
+      console.log(`[${requestId}] [OK]  StartedAt parameter validation passed`);
     }
 
-    // 🔥 BUG FIX P3: Log consolidado de sucesso com TODAS as validações
-    console.log(`[${requestId}] ✅ All installer validations passed`, {
+    // ? BUG FIX P3: Log consolidado de sucesso com TODAS as validacoes
+    console.log(`[${requestId}] [OK]  All installer validations passed`, {
       installerSize: templateContent.length,
       installerSizeKB: (templateContent.length / 1024).toFixed(2),
       platform,
@@ -545,7 +545,7 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
       }
     });
 
-    // ✅ PHASE 3: Security validation - detect dangerous patterns
+    // [OK]  PHASE 3: Security validation - detect dangerous patterns
     console.log(`[${requestId}] Validating script security...`);
     
     const dangerousPatterns = [
@@ -571,9 +571,9 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
       }
     }
     
-    console.log(`[${requestId}] ✓ Script security validation passed`);
+    console.log(`[${requestId}] ? Script security validation passed`);
 
-    // Validação final: garantir que não sobrou nenhum {{PLACEHOLDER}}
+    // Validacao final: garantir que nao sobrou nenhum {{PLACEHOLDER}}
     validateNoPlaceholders(templateContent, platform, requestId);
 
     // FASE 2: Calculate SHA256 hash of complete installer script

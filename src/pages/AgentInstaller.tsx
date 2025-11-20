@@ -56,7 +56,7 @@ const validateInstallerIntegrity = async (
   expectedSha256: string
 ): Promise<boolean> => {
   try {
-    logger.info('[SHA256] Iniciando validação de integridade', {
+    logger.info('[SHA256] Iniciando validacao de integridade', {
       expectedSha256,
       blobSize: blob.size
     });
@@ -79,14 +79,14 @@ const validateInstallerIntegrity = async (
       });
       
       toast.error(
-        '🚨 ERRO DE SEGURANÇA: Hash SHA256 não corresponde! O instalador pode estar corrompido.',
+        '? ERRO DE SEGURANCA: Hash SHA256 nao corresponde! O instalador pode estar corrompido.',
         { duration: 8000 }
       );
       
       return false;
     }
     
-    toast.success('✅ Integridade do instalador validada com sucesso!');
+    toast.success('[OK]  Integridade do instalador validada com sucesso!');
     return true;
   } catch (error) {
     logger.error('[SHA256] Erro ao validar hash', error);
@@ -108,7 +108,7 @@ const AgentInstaller = () => {
   const [agentNameError, setAgentNameError] = useState("");
   const [isCheckingName, setIsCheckingName] = useState(false);
 
-  // Detectar se veio de regeneração de credenciais
+  // Detectar se veio de regeneracao de credenciais
   useEffect(() => {
     const agentNameFromUrl = searchParams.get("agent_name");
     const isRegenerated = searchParams.get("regenerated") === "true";
@@ -119,7 +119,7 @@ const AgentInstaller = () => {
 
     if (agentNameFromUrl && isRegenerated) {
       toast.info(
-        `🔄 Agente "${agentNameFromUrl}" teve credenciais regeneradas. O instalador antigo NÃO funciona mais. Gere um novo abaixo.`,
+        `? Agente "${agentNameFromUrl}" teve credenciais regeneradas. O instalador antigo NAO funciona mais. Gere um novo abaixo.`,
         { duration: 8000 }
       );
     }
@@ -141,7 +141,7 @@ const AgentInstaller = () => {
   const [buildProgress, setBuildProgress] = useState<BuildProgressState>({
     currentStep: 'preparing',
     status: 'pending',
-    message: 'Aguardando início...'
+    message: 'Aguardando inicio...'
   });
   
   // Step 2: Generation states
@@ -171,9 +171,9 @@ const AgentInstaller = () => {
   
   // FASE 3: Circuit Breaker - Ajustado conforme plano definitivo
   const [enrollmentCircuitBreaker] = useState(() => new CircuitBreaker({
-    failureThreshold: 10,       // ✅ FASE 3: Aumentado de 5 para 10 (mais tolerante)
-    successThreshold: 3,        // ✅ FASE 3: Aumentado de 2 para 3 (mais estável)
-    timeout: 60000,             // ✅ FASE 3: Aumentado para 60s (eliminar timeouts prematuros)
+    failureThreshold: 10,       // [OK]  FASE 3: Aumentado de 5 para 10 (mais tolerante)
+    successThreshold: 3,        // [OK]  FASE 3: Aumentado de 2 para 3 (mais estavel)
+    timeout: 60000,             // [OK]  FASE 3: Aumentado para 60s (eliminar timeouts prematuros)
     name: 'auto-generate-enrollment'
   }));
   const [circuitBreakerOpen, setCircuitBreakerOpen] = useState(false);
@@ -189,11 +189,11 @@ const AgentInstaller = () => {
       
       // Log state changes
       if (!wasOpen && isNowOpen) {
-        logger.warn('Circuit breaker ABERTO - backend temporariamente indisponível', {
+        logger.warn('Circuit breaker ABERTO - backend temporariamente indisponivel', {
           circuitName: 'auto-generate-enrollment'
         });
       } else if (wasOpen && !isNowOpen) {
-        logger.info('Circuit breaker FECHADO - backend disponível novamente', {
+        logger.info('Circuit breaker FECHADO - backend disponivel novamente', {
           circuitName: 'auto-generate-enrollment'
         });
       }
@@ -216,7 +216,7 @@ const AgentInstaller = () => {
         setGithubHealthy(healthy);
         
         if (!healthy) {
-          logger.warn('[Health Check] GitHub não configurado corretamente', data);
+          logger.warn('[Health Check] GitHub nao configurado corretamente', data);
         } else {
           logger.info('[Health Check] GitHub configurado e pronto');
         }
@@ -229,7 +229,7 @@ const AgentInstaller = () => {
     checkGithubHealth();
   }, []);
 
-  // Solicitar permissão para notificações
+  // Solicitar permissao para notificacoes
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
@@ -251,7 +251,7 @@ const AgentInstaller = () => {
       setExeBuildStatus('building');
       
       // Continuar polling
-      // A lógica de polling será acionada automaticamente quando exeBuildId for definido
+      // A logica de polling sera acionada automaticamente quando exeBuildId for definido
     }
   }, []);
 
@@ -264,17 +264,17 @@ const AgentInstaller = () => {
 
     const invalidChars = /[^a-zA-Z0-9\-_]/;
     if (invalidChars.test(agentName)) {
-      setAgentNameError("❌ Use apenas letras, números, hífens e underscores");
+      setAgentNameError("[ERROR]  Use apenas letras, numeros, hifens e underscores");
       return;
     }
 
     if (agentName.length < 3) {
-      setAgentNameError("❌ Nome deve ter pelo menos 3 caracteres");
+      setAgentNameError("[ERROR]  Nome deve ter pelo menos 3 caracteres");
       return;
     }
 
     if (agentName.length > 50) {
-      setAgentNameError("❌ Máximo de 50 caracteres");
+      setAgentNameError("[ERROR]  Maximo de 50 caracteres");
       return;
     }
 
@@ -297,7 +297,7 @@ const AgentInstaller = () => {
           if (!session) {
             logger.warn('No active session during agent name validation');
             if (isMounted) {
-              setAgentNameError('❌ Sessão expirada. Faça login novamente.');
+              setAgentNameError('[ERROR]  Sessao expirada. Faca login novamente.');
               setIsCheckingName(false);
             }
             return;
@@ -324,16 +324,16 @@ const AgentInstaller = () => {
 
           if (isMounted) {
             if (!data.available) {
-              setAgentNameError(`❌ ${data.reason || 'Nome indisponível'}`);
+              setAgentNameError(`[ERROR]  ${data.reason || 'Nome indisponivel'}`);
             } else {
-              setAgentNameError('✅ Nome disponível');
+              setAgentNameError('[OK]  Nome disponivel');
             }
           }
         } catch (err: any) {
           if (err.name === 'AbortError') {
             logger.warn('Agent name check timeout');
             if (isMounted) {
-              setAgentNameError('⏱️ Timeout - tente novamente');
+              setAgentNameError('?? Timeout - tente novamente');
             }
           } else if (retries > 0) {
             logger.info('Retrying agent name check', { retriesLeft: retries });
@@ -343,7 +343,7 @@ const AgentInstaller = () => {
             if (abortController.signal.aborted || !isMounted) return;
             logger.error('Agent name validation error', { error: err, agentName });
             if (isMounted) {
-              setAgentNameError('❌ Erro ao validar - verifique sua conexão');
+              setAgentNameError('[ERROR]  Erro ao validar - verifique sua conexao');
             }
           }
         } finally {
@@ -364,14 +364,14 @@ const AgentInstaller = () => {
     };
   }, [agentName]);
 
-  const isNameValid = agentName.length >= 3 && agentName.length <= 50 && !/[^a-zA-Z0-9\-_]/.test(agentName) && !agentNameError.startsWith('❌');
+  const isNameValid = agentName.length >= 3 && agentName.length <= 50 && !/[^a-zA-Z0-9\-_]/.test(agentName) && !agentNameError.startsWith('[ERROR] ');
 
   // Smart timeout para builds
   useEffect(() => {
     if (exeBuildStatus === 'building' && exeBuildId) {
       const timeout = setTimeout(() => {
-        toast.error('⚠️ Build Timeout', {
-          description: 'Build está demorando mais que o esperado. Verifique os logs do GitHub Actions.',
+        toast.error('[WARN] ? Build Timeout', {
+          description: 'Build esta demorando mais que o esperado. Verifique os logs do GitHub Actions.',
           duration: 10000,
         });
         setExeBuildStatus('failed');
@@ -382,13 +382,13 @@ const AgentInstaller = () => {
     }
   }, [exeBuildStatus, exeBuildId]);
 
-  // Monitorar conclusão de build e enviar notificação
+  // Monitorar conclusao de build e enviar notificacao
   useEffect(() => {
     if (exeBuildStatus === 'completed' && exeDownloadUrl) {
-      // Notificação browser
+      // Notificacao browser
       if (Notification.permission === 'granted') {
-        const notification = new Notification('🎉 Build EXE Concluído!', {
-          body: `${agentName} está pronto para download`,
+        const notification = new Notification('? Build EXE Concluido!', {
+          body: `${agentName} esta pronto para download`,
           icon: '/favicon.ico',
           tag: `build-${exeBuildId}`,
           requireInteraction: true,
@@ -402,14 +402,14 @@ const AgentInstaller = () => {
         };
       }
 
-      // Piscar título da página
+      // Piscar titulo da pagina
       let flash = true;
       const titleInterval = setInterval(() => {
-        document.title = flash ? '✅ EXE Pronto! | CyberShield' : 'CyberShield Agent Installer';
+        document.title = flash ? '[OK]  EXE Pronto! | CyberShield' : 'CyberShield Agent Installer';
         flash = !flash;
       }, 1000);
 
-      // Parar após 10 segundos ou quando usuário focar a página
+      // Parar apos 10 segundos ou quando usuario focar a pagina
       const stopFlashing = () => {
         clearInterval(titleInterval);
         document.title = 'CyberShield Agent Installer';
@@ -420,22 +420,22 @@ const AgentInstaller = () => {
       document.addEventListener('visibilitychange', stopFlashing);
 
       // Toast persistente
-      toast.success('✅ EXE Pronto para Download!', {
-        description: 'Seu instalador está pronto',
+      toast.success('[OK]  EXE Pronto para Download!', {
+        description: 'Seu instalador esta pronto',
         duration: 30000,
       });
     }
   }, [exeBuildStatus, exeDownloadUrl, agentName, exeBuildId]);
 
-  // Função para baixar e verificar integridade SHA256 do EXE
+  // Funcao para baixar e verificar integridade SHA256 do EXE
   const downloadAndVerifyExe = async () => {
     if (!exeDownloadUrl || !exeSha256) {
-      toast.error("Informações de download incompletas");
+      toast.error("Informacoes de download incompletas");
       return;
     }
 
     try {
-      toast.info("🔒 Baixando e verificando integridade...", { duration: Infinity });
+      toast.info("? Baixando e verificando integridade...", { duration: Infinity });
 
       // Download do arquivo
       const response = await fetch(exeDownloadUrl);
@@ -452,12 +452,12 @@ const AgentInstaller = () => {
       // Comparar hashes
       if (calculatedHash.toLowerCase() !== exeSha256.toLowerCase()) {
         toast.dismiss();
-        toast.error("❌ FALHA DE SEGURANÇA: Hash SHA256 não corresponde!", {
+        toast.error("[ERROR]  FALHA DE SEGURANCA: Hash SHA256 nao corresponde!", {
           description: `Esperado: ${exeSha256.slice(0, 16)}...\nRecebido: ${calculatedHash.slice(0, 16)}...`,
           duration: Infinity,
         });
 
-        // Log de segurança
+        // Log de seguranca
         logger.error('SHA256 mismatch detected', {
           expected: exeSha256,
           calculated: calculatedHash,
@@ -465,7 +465,7 @@ const AgentInstaller = () => {
           agentName
         });
 
-        // Enviar alerta de segurança
+        // Enviar alerta de seguranca
         await supabase.functions.invoke('send-security-alert', {
           body: {
             alertType: 'integrity_failure',
@@ -483,9 +483,9 @@ const AgentInstaller = () => {
         return;
       }
 
-      // Hash válido - prosseguir com download
+      // Hash valido - prosseguir com download
       toast.dismiss();
-      toast.success("✅ Integridade verificada! Iniciando download...");
+      toast.success("[OK]  Integridade verificada! Iniciando download...");
 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -496,7 +496,7 @@ const AgentInstaller = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      toast.success("📥 Download concluído com segurança!");
+      toast.success("? Download concluido com seguranca!");
 
     } catch (error: any) {
       toast.dismiss();
@@ -510,13 +510,13 @@ const AgentInstaller = () => {
 
   const generateCredentials = async () => {
     if (!isNameValid) {
-      toast.error("Nome do agente inválido");
+      toast.error("Nome do agente invalido");
       return null;
     }
 
     const circuitState = enrollmentCircuitBreaker.getState();
     if (circuitState === CircuitState.OPEN) {
-      throw new Error('Backend temporariamente indisponível. Aguarde alguns instantes.');
+      throw new Error('Backend temporariamente indisponivel. Aguarde alguns instantes.');
     }
 
     const { data: credentials, error: credError } = await retryWithBackoff(
@@ -530,7 +530,7 @@ const AgentInstaller = () => {
     if (credError) throw credError;
     if (!credentials) throw new Error("Nenhuma credencial retornada");
 
-    // FASE 2.2: Reset circuit breaker após sucesso
+    // FASE 2.2: Reset circuit breaker apos sucesso
     logger.info('Credenciais geradas com sucesso - resetting circuit breaker', {
       agentName: agentName.trim(),
       circuitState: enrollmentCircuitBreaker.getState()
@@ -569,19 +569,19 @@ const AgentInstaller = () => {
           if (validationError || !validationResult?.valid) {
             console.error('[HMAC Validation] Failed:', { validationResult, validationError });
             toast.warning(
-              "⚠️ Aviso de segurança", 
+              "[WARN] ? Aviso de seguranca", 
               { 
-                description: "A assinatura HMAC pode estar incorreta. Contate o suporte se a instalação falhar.",
+                description: "A assinatura HMAC pode estar incorreta. Contate o suporte se a instalacao falhar.",
                 duration: 10000 
               }
             );
           } else {
-            console.log('[HMAC Validation] ✅ Passed:', validationResult);
-            toast.success("✅ Validação de segurança OK", { duration: 3000 });
+            console.log('[HMAC Validation] [OK]  Passed:', validationResult);
+            toast.success("[OK]  Validacao de seguranca OK", { duration: 3000 });
           }
         } catch (validationException) {
           console.error('[HMAC Validation] Exception:', validationException);
-          // Não bloqueia em caso de erro de rede
+          // Nao bloqueia em caso de erro de rede
         }
       }
 
@@ -606,7 +606,7 @@ const AgentInstaller = () => {
         }
       }).catch(err => logger.warn('[telemetry] Exception tracking event', err));
 
-      toast.success("✅ Comando gerado!", {
+      toast.success("[OK]  Comando gerado!", {
         description: "Copie e execute no servidor"
       });
 
@@ -627,7 +627,7 @@ const AgentInstaller = () => {
   // FASE 4: Download and validate PS1/SH SHA256
   const downloadAndVerifyScript = async (enrollmentKey: string, platform: 'windows' | 'linux' | 'macos') => {
     if (!enrollmentKey) {
-      toast.error("Enrollment key não disponível");
+      toast.error("Enrollment key nao disponivel");
       return;
     }
 
@@ -635,7 +635,7 @@ const AgentInstaller = () => {
 
     try {
       const scriptType = platform === 'windows' ? '.PS1' : '.SH';
-      toast.info(`🔒 Baixando script ${scriptType} e verificando integridade...`, { duration: Infinity });
+      toast.info(`? Baixando script ${scriptType} e verificando integridade...`, { duration: Infinity });
 
       const installUrl = `${SUPABASE_URL}/functions/v1/serve-installer/${enrollmentKey}`;
       const response = await fetch(installUrl);
@@ -652,7 +652,7 @@ const AgentInstaller = () => {
       const serverSize = parseInt(response.headers.get('X-Script-Size') || '0', 10);
 
       if (!serverHash) {
-        toast.warning(`⚠️ Aviso: Hash SHA256 não fornecido pelo servidor. Download ${scriptType} continuará sem validação.`);
+        toast.warning(`[WARN] ? Aviso: Hash SHA256 nao fornecido pelo servidor. Download ${scriptType} continuara sem validacao.`);
         logger.warn('Server did not provide X-Script-SHA256 header', { platform });
       }
 
@@ -665,7 +665,7 @@ const AgentInstaller = () => {
       // Compare hashes
       if (serverHash && calculatedHash.toLowerCase() !== serverHash.toLowerCase()) {
         toast.dismiss();
-        toast.error(`❌ FALHA DE SEGURANÇA: Hash SHA256 do script ${scriptType} não corresponde!`, {
+        toast.error(`[ERROR]  FALHA DE SEGURANCA: Hash SHA256 do script ${scriptType} nao corresponde!`, {
           description: `Esperado: ${serverHash.slice(0, 16)}...\nRecebido: ${calculatedHash.slice(0, 16)}...`,
           duration: Infinity,
         });
@@ -699,7 +699,7 @@ const AgentInstaller = () => {
 
       // Validation successful
       toast.dismiss();
-      toast.success(`✅ Integridade ${scriptType} verificada com sucesso!`, {
+      toast.success(`[OK]  Integridade ${scriptType} verificada com sucesso!`, {
         description: `SHA256: ${calculatedHash.slice(0, 16)}... (${(arrayBuffer.byteLength / 1024).toFixed(2)} KB)`,
         duration: 5000,
       });
@@ -725,7 +725,7 @@ const AgentInstaller = () => {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      toast.success(`📥 Script ${scriptType} baixado com sucesso`);
+      toast.success(`? Script ${scriptType} baixado com sucesso`);
 
     } catch (error: any) {
       logger.error(`${platform.toUpperCase()} script download/validation error`, error);
@@ -780,13 +780,13 @@ const AgentInstaller = () => {
   // FASE 2.1: Gerar credenciais + build EXE em um clique
   const handleGenerateExeDirectly = async () => {
     if (!isNameValid) {
-      toast.error('Informe um nome válido para o agente');
+      toast.error('Informe um nome valido para o agente');
       return;
     }
 
     // FASE 1.1: Verificar health do GitHub
     if (githubHealthy === false) {
-      toast.error('❌ GitHub não configurado. Contate o administrador.');
+      toast.error('[ERROR]  GitHub nao configurado. Contate o administrador.');
       return;
     }
 
@@ -797,9 +797,9 @@ const AgentInstaller = () => {
         status: 'active', 
         message: 'Gerando credenciais e preparando ambiente...' 
       });
-      toast.info('🔐 Gerando credenciais...');
+      toast.info('? Gerando credenciais...');
       
-      // Se não tem enrollment_key, gerar automaticamente
+      // Se nao tem enrollment_key, gerar automaticamente
       if (!lastEnrollmentKey) {
         const credentials = await generateCredentials();
         if (!credentials) {
@@ -834,7 +834,7 @@ const AgentInstaller = () => {
 
     // Check connectivity before starting
     if (!isOnline) {
-      toast.error('Sem conexão com a internet. Verifique sua conexão e tente novamente.');
+      toast.error('Sem conexao com a internet. Verifique sua conexao e tente novamente.');
       return;
     }
 
@@ -846,7 +846,7 @@ const AgentInstaller = () => {
     setGithubActionsUrl(null);
     setPollAttempts(0);
     
-    toast.info('🚀 Iniciando build do EXE... Aguarde 2-3 minutos');
+    toast.info('? Iniciando build do EXE... Aguarde 2-3 minutos');
 
     try {
       // FASE 2.2: Update progress to dispatching
@@ -883,7 +883,7 @@ const AgentInstaller = () => {
       setBuildProgress({
         currentStep: 'compiling',
         status: 'active',
-        message: 'Compilando PS1 → EXE (aguarde 2-3 minutos)...',
+        message: 'Compilando PS1 ? EXE (aguarde 2-3 minutos)...',
         githubRunUrl: github_actions_url
       });
 
@@ -913,9 +913,9 @@ const AgentInstaller = () => {
         if (attempts > maxAttempts) {
           clearInterval(pollInterval);
           
-          // Retry automático
+          // Retry automatico
           if (retryCount < MAX_RETRIES) {
-            toast.warning('⚠️ Build timeout', {
+            toast.warning('[WARN] ? Build timeout', {
               description: `Tentando novamente (${retryCount + 1}/${MAX_RETRIES}) em 30s...`,
               duration: 5000,
             });
@@ -927,7 +927,7 @@ const AgentInstaller = () => {
             }, 30000);
           } else {
             setExeBuildStatus('failed');
-            toast.error('Timeout: Build demorou mais de 5 minutos após múltiplas tentativas');
+            toast.error('Timeout: Build demorou mais de 5 minutos apos multiplas tentativas');
             setRetryCount(0);
             storage.remove('current-build');
           }
@@ -965,21 +965,21 @@ const AgentInstaller = () => {
             setBuildProgress({
               currentStep: 'completed',
               status: 'completed',
-              message: 'Build concluído com sucesso!',
+              message: 'Build concluido com sucesso!',
               githubRunUrl: buildData.github_run_url || githubActionsUrl || undefined
             });
             
             const duration = buildData.build_duration_seconds || 0;
-            toast.success(`✅ EXE gerado em ${duration}s!`, {
+            toast.success(`[OK]  EXE gerado em ${duration}s!`, {
               description: 'Clique em Download para baixar'
             });
           } else if (buildData.build_status === 'failed') {
             clearInterval(pollInterval);
             storage.remove('current-build');
             
-            // Retry automático
+            // Retry automatico
             if (retryCount < MAX_RETRIES) {
-              toast.warning('⚠️ Build falhou', {
+              toast.warning('[WARN] ? Build falhou', {
                 description: `Tentando novamente (${retryCount + 1}/${MAX_RETRIES}) em 30s...`,
                 duration: 5000,
               });
@@ -991,7 +991,7 @@ const AgentInstaller = () => {
               }, 30000);
             } else {
               setExeBuildStatus('failed');
-              toast.error(`Falha: ${buildData.error_message || 'Erro desconhecido'} após múltiplas tentativas`);
+              toast.error(`Falha: ${buildData.error_message || 'Erro desconhecido'} apos multiplas tentativas`);
               setRetryCount(0);
             }
           }
@@ -1029,12 +1029,12 @@ const AgentInstaller = () => {
         setExeDownloadUrl(buildData.download_url);
         setExeSha256(buildData.sha256_hash);
         setExeFileSize(buildData.file_size_bytes);
-        toast.success(`✅ EXE pronto!`);
+        toast.success(`[OK]  EXE pronto!`);
       } else if (buildData.build_status === 'failed') {
         setExeBuildStatus('failed');
         toast.error(`Falha: ${buildData.error_message}`);
       } else {
-        toast.info('Build ainda em execução...');
+        toast.info('Build ainda em execucao...');
       }
     } catch (e) {
       logger.error('Refresh exception', e);
@@ -1058,7 +1058,7 @@ const AgentInstaller = () => {
       }
     }).catch(err => logger.warn('[telemetry] Exception tracking event', err));
     
-    toast.success("✅ Comando copiado!");
+    toast.success("[OK]  Comando copiado!");
   };
 
   return (
@@ -1071,12 +1071,12 @@ const AgentInstaller = () => {
         <div>
           <h1 className="text-3xl font-bold">Gerador de Instaladores CyberShield</h1>
           <p className="text-muted-foreground">
-            Instalação simplificada em 3 passos - sem configuração manual
+            Instalacao simplificada em 3 passos - sem configuracao manual
           </p>
         </div>
       </div>
 
-      {/* Alerta de regeneração de credenciais */}
+      {/* Alerta de regeneracao de credenciais */}
       {searchParams.get("regenerated") === "true" && (
         <Alert className="border-yellow-500/50 bg-yellow-500/10">
           <AlertTriangle className="h-5 w-5 text-yellow-500" />
@@ -1086,10 +1086,10 @@ const AgentInstaller = () => {
           <AlertDescription className="text-sm text-muted-foreground space-y-3">
             <p>
               O agente <strong>{agentName}</strong> teve suas credenciais invalidadas. 
-              O instalador antigo não funciona mais.
+              O instalador antigo nao funciona mais.
             </p>
             <p>
-              Gere um novo método de instalação abaixo e reinstale o agente na máquina alvo.
+              Gere um novo metodo de instalacao abaixo e reinstale o agente na maquina alvo.
             </p>
             <Button
               variant="outline"
@@ -1110,7 +1110,7 @@ const AgentInstaller = () => {
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Circuit Breaker Ativo</AlertTitle>
           <AlertDescription className="flex items-center justify-between gap-4">
-            <span>Backend temporariamente indisponível. Tentativas sendo bloqueadas para proteção.</span>
+            <span>Backend temporariamente indisponivel. Tentativas sendo bloqueadas para protecao.</span>
             <Button 
               size="sm" 
               variant="outline"
@@ -1131,9 +1131,9 @@ const AgentInstaller = () => {
       {!isOnline && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Sem Conexão</AlertTitle>
+          <AlertTitle>Sem Conexao</AlertTitle>
           <AlertDescription>
-            Você está offline. Polling de builds pausado. Aguardando reconexão...
+            Voce esta offline. Polling de builds pausado. Aguardando reconexao...
           </AlertDescription>
         </Alert>
       )}
@@ -1143,7 +1143,7 @@ const AgentInstaller = () => {
           <Loader2 className="h-4 w-4 animate-spin" />
           <AlertTitle>Tentando Reconectar</AlertTitle>
           <AlertDescription>
-            Houve uma falha na conexão. Tentando novamente automaticamente...
+            Houve uma falha na conexao. Tentando novamente automaticamente...
           </AlertDescription>
         </Alert>
       )}
@@ -1156,7 +1156,7 @@ const AgentInstaller = () => {
             Configurar Agente
           </CardTitle>
           <CardDescription>
-            Defina um nome único e escolha a plataforma
+            Defina um nome unico e escolha a plataforma
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -1169,7 +1169,7 @@ const AgentInstaller = () => {
                 value={agentName}
                 onChange={(e) => setAgentName(e.target.value)}
                 disabled={isGenerating || exeBuildStatus === 'building'}
-                className={agentNameError && agentNameError.startsWith('❌') ? 'border-red-500' : ''}
+                className={agentNameError && agentNameError.startsWith('[ERROR] ') ? 'border-red-500' : ''}
               />
               {isCheckingName && (
                 <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
@@ -1177,7 +1177,7 @@ const AgentInstaller = () => {
             </div>
             {agentNameError && (
               <p className={`text-sm mt-1 ${
-                agentNameError.startsWith('✅') ? 'text-green-600' : 'text-red-600'
+                agentNameError.startsWith('[OK] ') ? 'text-green-600' : 'text-red-600'
               }`}>
                 {agentNameError}
               </p>
@@ -1198,7 +1198,7 @@ const AgentInstaller = () => {
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="macos" id="macos" />
                 <Label htmlFor="macos" className="cursor-pointer flex items-center gap-2">
-                  <span>🍎</span> macOS (Bash)
+                  <span>?</span> macOS (Bash)
                 </Label>
               </div>
             </RadioGroup>
@@ -1222,7 +1222,7 @@ const AgentInstaller = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Badge variant="outline" className="rounded-full w-8 h-8 flex items-center justify-center">2</Badge>
-            Escolher Método de Instalação
+            Escolher Metodo de Instalacao
           </CardTitle>
           <CardDescription>
             Selecione como deseja instalar o agente no servidor
@@ -1248,34 +1248,34 @@ const AgentInstaller = () => {
             <TabsContent value="one-click" className="space-y-4 mt-4">
               <Alert>
                 <Terminal className="h-4 w-4" />
-                <AlertTitle>Instalação Instantânea</AlertTitle>
+                <AlertTitle>Instalacao Instantanea</AlertTitle>
                 <AlertDescription>
-                  Gere um comando temporário que instala o agente automaticamente. Válido por 24h.
+                  Gere um comando temporario que instala o agente automaticamente. Valido por 24h.
                 </AlertDescription>
               </Alert>
 
               {platform === 'macos' && (
                 <Alert className="mt-4">
                   <Terminal className="h-4 w-4" />
-                  <AlertTitle>Instruções para macOS</AlertTitle>
+                  <AlertTitle>Instrucoes para macOS</AlertTitle>
                   <AlertDescription className="space-y-2 text-sm">
                     <ol className="list-decimal list-inside space-y-2">
                       <li>
-                        <strong>Abra o Terminal</strong> no macOS (⌘ + Espaço → "Terminal")
+                        <strong>Abra o Terminal</strong> no macOS (? + Espaco ? "Terminal")
                       </li>
                       <li>
                         <strong>Execute o comando gerado</strong> abaixo com <code className="bg-muted px-1 rounded">sudo</code>
                       </li>
                       <li>
-                        O instalador criará um <strong>LaunchDaemon</strong> que iniciará automaticamente
+                        O instalador criara um <strong>LaunchDaemon</strong> que iniciara automaticamente
                       </li>
                       <li>
                         Verifique o status com: <code className="bg-muted px-1 rounded">launchctl list | grep cybershield</code>
                       </li>
                     </ol>
                     <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-950 rounded text-xs">
-                      <strong>⚠️ Permissões:</strong> O instalador precisa de privilégios de administrador (sudo). 
-                      O agente será instalado em <code>/Library/Application Support/CyberShield</code>.
+                      <strong>[WARN] ? Permissoes:</strong> O instalador precisa de privilegios de administrador (sudo). 
+                      O agente sera instalado em <code>/Library/Application Support/CyberShield</code>.
                     </div>
                   </AlertDescription>
                 </Alert>
@@ -1301,7 +1301,7 @@ const AgentInstaller = () => {
 
               {installCommand && (
                 <div className="space-y-2">
-                  <Label>Comando de Instalação</Label>
+                  <Label>Comando de Instalacao</Label>
                   <div className="flex gap-2">
                     <Input value={installCommand} readOnly className="font-mono text-xs" />
                     <Button onClick={copyToClipboard} variant="outline" size="icon">
@@ -1320,7 +1320,7 @@ const AgentInstaller = () => {
                 <Download className="h-4 w-4" />
                 <AlertTitle>Download Manual</AlertTitle>
                 <AlertDescription>
-                  Baixe o script de instalação completo para executar manualmente no servidor.
+                  Baixe o script de instalacao completo para executar manualmente no servidor.
                 </AlertDescription>
               </Alert>
 
@@ -1329,18 +1329,18 @@ const AgentInstaller = () => {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <Shield className="h-4 w-4 text-green-600" />
-                      Segurança Validada
+                      Seguranca Validada
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="text-xs space-y-1">
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-3 w-3 text-green-600" />
-                        <span>SHA256 será validado automaticamente</span>
+                        <span>SHA256 sera validado automaticamente</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-3 w-3 text-green-600" />
-                        <span>Download bloqueado se hash não corresponder</span>
+                        <span>Download bloqueado se hash nao corresponder</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="h-3 w-3 text-green-600" />
@@ -1369,7 +1369,7 @@ const AgentInstaller = () => {
                 ) : (
                   <>
                     <Download className="h-4 w-4 mr-2" />
-                    Baixar Script {platform === 'windows' ? '(.PS1)' : '(.SH)'} com Validação SHA256
+                    Baixar Script {platform === 'windows' ? '(.PS1)' : '(.SH)'} com Validacao SHA256
                   </>
                 )}
               </Button>
@@ -1393,7 +1393,7 @@ const AgentInstaller = () => {
                     </Button>
                   </p>
                   <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                    ✅ Integridade verificada ({(ps1SizeBytes! / 1024).toFixed(2)} KB) - {platform === 'windows' ? 'Windows PowerShell' : 'Linux Bash'}
+                    [OK]  Integridade verificada ({(ps1SizeBytes! / 1024).toFixed(2)} KB) - {platform === 'windows' ? 'Windows PowerShell' : 'Linux Bash'}
                   </p>
                 </div>
               )}
@@ -1402,24 +1402,24 @@ const AgentInstaller = () => {
             <TabsContent value="exe-build" className="space-y-4 mt-4">
               <Alert>
                 <FileCheck className="h-4 w-4" />
-                <AlertTitle>Build Automático de EXE</AlertTitle>
+                <AlertTitle>Build Automatico de EXE</AlertTitle>
                 <AlertDescription>
-                  Gera um instalador Windows .exe através do GitHub Actions. Processo leva 2-3 minutos.
+                  Gera um instalador Windows .exe atraves do GitHub Actions. Processo leva 2-3 minutos.
                 </AlertDescription>
               </Alert>
 
-              {/* FASE 1.1: Alerta de GitHub não configurado */}
+              {/* FASE 1.1: Alerta de GitHub nao configurado */}
               {githubHealthy === false && (
                 <Alert variant="destructive">
                   <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>GitHub Não Configurado</AlertTitle>
+                  <AlertTitle>GitHub Nao Configurado</AlertTitle>
                   <AlertDescription>
-                    O build automático requer configuração do GitHub. Contate o administrador do sistema.
+                    O build automatico requer configuracao do GitHub. Contate o administrador do sistema.
                   </AlertDescription>
                 </Alert>
               )}
 
-              {/* FASE 2.1: Botão simplificado - gera credenciais + build em um clique */}
+              {/* FASE 2.1: Botao simplificado - gera credenciais + build em um clique */}
               <Button 
                 onClick={handleGenerateExeDirectly} 
                 disabled={!isNameValid || exeBuildStatus === 'building' || circuitBreakerOpen || githubHealthy === false}
@@ -1440,13 +1440,13 @@ const AgentInstaller = () => {
               </Button>
               
               <p className="text-sm text-muted-foreground text-center">
-                Gera automaticamente credenciais e compila instalador executável
+                Gera automaticamente credenciais e compila instalador executavel
               </p>
 
-              {/* Opção avançada: build manual (para quem já tem credenciais) */}
+              {/* Opcao avancada: build manual (para quem ja tem credenciais) */}
               {lastEnrollmentKey && exeBuildStatus !== 'building' && (
                 <div className="mt-4 p-3 border rounded-lg bg-muted/30">
-                  <p className="text-xs text-muted-foreground mb-2">Opção Avançada:</p>
+                  <p className="text-xs text-muted-foreground mb-2">Opcao Avancada:</p>
                   <Button 
                     onClick={handleBuildExe} 
                     disabled={!isNameValid || !lastEnrollmentKey || circuitBreakerOpen}
@@ -1472,7 +1472,7 @@ const AgentInstaller = () => {
               Status do Build
             </CardTitle>
             <CardDescription>
-              Acompanhe o progresso da geração do executável
+              Acompanhe o progresso da geracao do executavel
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1510,7 +1510,7 @@ const AgentInstaller = () => {
                     Build Falhando? Compile Manualmente
                   </CardTitle>
                   <CardDescription>
-                    Se o build automático não funcionar, você pode compilar o instalador localmente
+                    Se o build automatico nao funcionar, voce pode compilar o instalador localmente
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -1542,14 +1542,14 @@ const AgentInstaller = () => {
                     onClick={() => window.open('/docs/BUILD_WINDOWS_INSTALLER.md', '_blank')}
                   >
                     <BookOpen className="mr-2 h-4 w-4" />
-                    Ver guia completo de compilação manual
+                    Ver guia completo de compilacao manual
                   </Button>
                   
                   <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
                     <HelpCircle className="h-4 w-4 text-blue-600" />
                     <AlertTitle className="text-blue-800 dark:text-blue-200">Dica</AlertTitle>
                     <AlertDescription className="text-blue-700 dark:text-blue-300 text-xs">
-                      A compilação manual é útil para ambientes offline ou com restrições de firewall que bloqueiam GitHub Actions.
+                      A compilacao manual e util para ambientes offline ou com restricoes de firewall que bloqueiam GitHub Actions.
                     </AlertDescription>
                   </Alert>
                 </CardContent>
@@ -1561,11 +1561,11 @@ const AgentInstaller = () => {
             {exeBuildStatus === 'completed' && (
               <Alert id="exe-download" className="border-green-500 bg-green-50 dark:bg-green-950">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <AlertTitle className="text-green-800 dark:text-green-200">✅ Build Concluído com Segurança!</AlertTitle>
+                <AlertTitle className="text-green-800 dark:text-green-200">[OK]  Build Concluido com Seguranca!</AlertTitle>
                 <AlertDescription className="space-y-3">
                   <div className="space-y-2 p-3 bg-green-100 dark:bg-green-900 rounded-md">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-green-800 dark:text-green-200">🔒 Verificação de Integridade</span>
+                      <span className="text-xs font-semibold text-green-800 dark:text-green-200">? Verificacao de Integridade</span>
                       <Badge variant="outline" className="bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200 border-green-400">
                         SHA-256
                       </Badge>
@@ -1588,12 +1588,12 @@ const AgentInstaller = () => {
                       <div>Tamanho: <strong>{(exeFileSize! / 1024 / 1024).toFixed(2)} MB</strong></div>
                     </div>
                     <p className="text-xs text-green-600 dark:text-green-400 italic">
-                      ✓ O download será validado automaticamente antes da instalação
+                      ? O download sera validado automaticamente antes da instalacao
                     </p>
                   </div>
                   <Button onClick={downloadAndVerifyExe} className="w-full bg-green-600 hover:bg-green-700">
                     <Shield className="h-4 w-4 mr-2" />
-                    Download Seguro com Validação SHA-256
+                    Download Seguro com Validacao SHA-256
                   </Button>
                 </AlertDescription>
               </Alert>
@@ -1606,8 +1606,8 @@ const AgentInstaller = () => {
                 <AlertDescription className="space-y-2">
                   <p>
                     {retryCount > 0 
-                      ? `Falhou após ${retryCount} tentativa(s) automática(s)` 
-                      : 'Ocorreu um erro durante a compilação do executável.'
+                      ? `Falhou apos ${retryCount} tentativa(s) automatica(s)` 
+                      : 'Ocorreu um erro durante a compilacao do executavel.'
                     }
                   </p>
                   {githubActionsUrl && (
@@ -1640,7 +1640,7 @@ const AgentInstaller = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BookOpen className="h-5 w-5" />
-            Tutorial Rápido
+            Tutorial Rapido
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1653,14 +1653,14 @@ const AgentInstaller = () => {
                     <Badge className="rounded-full">1</Badge>
                     <div>
                       <p className="font-medium">Configure o nome e plataforma</p>
-                      <p className="text-sm text-muted-foreground">Escolha um nome único (ex: servidor-web-01)</p>
+                      <p className="text-sm text-muted-foreground">Escolha um nome unico (ex: servidor-web-01)</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Badge className="rounded-full">2</Badge>
                     <div>
-                      <p className="font-medium">Escolha o método de instalação</p>
-                      <p className="text-sm text-muted-foreground">One-Click é o mais rápido, EXE é o mais portável</p>
+                      <p className="font-medium">Escolha o metodo de instalacao</p>
+                      <p className="text-sm text-muted-foreground">One-Click e o mais rapido, EXE e o mais portavel</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -1673,8 +1673,8 @@ const AgentInstaller = () => {
                   <div className="flex items-start gap-3">
                     <Badge className="rounded-full">4</Badge>
                     <div>
-                      <p className="font-medium">Aguarde a confirmação</p>
-                      <p className="text-sm text-muted-foreground">O agente aparecerá na lista de agentes em até 1 minuto</p>
+                      <p className="font-medium">Aguarde a confirmacao</p>
+                      <p className="text-sm text-muted-foreground">O agente aparecera na lista de agentes em ate 1 minuto</p>
                     </div>
                   </div>
                 </div>
@@ -1682,29 +1682,29 @@ const AgentInstaller = () => {
             </AccordionItem>
 
             <AccordionItem value="faq-methods">
-              <AccordionTrigger>Qual método de instalação escolher?</AccordionTrigger>
+              <AccordionTrigger>Qual metodo de instalacao escolher?</AccordionTrigger>
               <AccordionContent className="space-y-3">
                 <div>
                   <p className="font-medium">Comando One-Click</p>
-                  <p className="text-sm text-muted-foreground">✅ Mais rápido | ⚠️ Requer internet no servidor</p>
+                  <p className="text-sm text-muted-foreground">[OK]  Mais rapido | [WARN] ? Requer internet no servidor</p>
                 </div>
                 <div>
                   <p className="font-medium">Baixar Script</p>
-                  <p className="text-sm text-muted-foreground">✅ Funciona offline | ⚠️ Requer copiar arquivo manualmente</p>
+                  <p className="text-sm text-muted-foreground">[OK]  Funciona offline | [WARN] ? Requer copiar arquivo manualmente</p>
                 </div>
                 <div>
                   <p className="font-medium">Build EXE</p>
-                  <p className="text-sm text-muted-foreground">✅ Executável portável | ⚠️ Leva 2-3 minutos para gerar</p>
+                  <p className="text-sm text-muted-foreground">[OK]  Executavel portavel | [WARN] ? Leva 2-3 minutos para gerar</p>
                 </div>
               </AccordionContent>
             </AccordionItem>
 
             <AccordionItem value="faq-security">
-              <AccordionTrigger>É seguro?</AccordionTrigger>
+              <AccordionTrigger>E seguro?</AccordionTrigger>
               <AccordionContent>
                 <p className="text-sm text-muted-foreground">
                   Sim! O instalador valida o SHA256 do script antes de executar, protegendo contra ataques MITM.
-                  As credenciais expiram em 24h e são únicas para cada agente.
+                  As credenciais expiram em 24h e sao unicas para cada agente.
                 </p>
               </AccordionContent>
             </AccordionItem>

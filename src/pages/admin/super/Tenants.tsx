@@ -45,7 +45,7 @@ export default function SuperAdminTenants() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  // P0 FIX: Paginação para evitar DoS com muitos tenants
+  // P0 FIX: Paginacao para evitar DoS com muitos tenants
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 50;
 
@@ -119,7 +119,7 @@ export default function SuperAdminTenants() {
       
       if (error) throw error;
       
-      // Usar Map<tenant_id, Set<user_id>> para contar usuários únicos
+      // Usar Map<tenant_id, Set<user_id>> para contar usuarios unicos
       const uniqueUsers = new Map<string, Set<string>>();
       
       data.forEach((row) => {
@@ -188,7 +188,7 @@ export default function SuperAdminTenants() {
     enabled: !!tenants && tenants.length > 0,
   });
 
-  // P0 FIX: Queries agregadas para cards de resumo (totais gerais, não apenas da página)
+  // P0 FIX: Queries agregadas para cards de resumo (totais gerais, nao apenas da pagina)
   const { data: totalStats } = useQuery({
     queryKey: ['super-admin-total-stats'],
     queryFn: async () => {
@@ -293,7 +293,7 @@ export default function SuperAdminTenants() {
       <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
         <AlertCircle className="h-4 w-4 text-blue-600" />
         <AlertDescription className="text-blue-800 dark:text-blue-200">
-          <strong>Super Admin:</strong> Você tem acesso total para visualizar e modificar assinaturas de todos os tenants.
+          <strong>Super Admin:</strong> Voce tem acesso total para visualizar e modificar assinaturas de todos os tenants.
         </AlertDescription>
       </Alert>
 
@@ -305,20 +305,20 @@ export default function SuperAdminTenants() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalCount}</div>
-            <p className="text-xs text-muted-foreground">Organizações ativas</p>
+            <p className="text-xs text-muted-foreground">Organizacoes ativas</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Usuarios</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {totalStats?.totalUsers || 0}
             </div>
-            <p className="text-xs text-muted-foreground">Usuários em todos os tenants</p>
+            <p className="text-xs text-muted-foreground">Usuarios em todos os tenants</p>
           </CardContent>
         </Card>
 
@@ -348,7 +348,7 @@ export default function SuperAdminTenants() {
                 <TableHead>Nome do Tenant</TableHead>
                 <TableHead>Slug</TableHead>
                 <TableHead>Plano Atual</TableHead>
-                <TableHead>Usuários</TableHead>
+                <TableHead>Usuarios</TableHead>
                 <TableHead>Agentes</TableHead>
                 <TableHead>Criado em</TableHead>
                 <TableHead>Alterar Plano</TableHead>
@@ -367,7 +367,7 @@ export default function SuperAdminTenants() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2" title="Usuários únicos com acesso ao tenant (fonte: tenant_features.max_users)">
+                    <div className="flex items-center gap-2" title="Usuarios unicos com acesso ao tenant (fonte: tenant_features.max_users)">
                       {(() => {
                         const maxUsers = tenantFeatures?.[tenant.id] ?? tenant.subscription?.subscription_plans.max_users ?? 0;
                         const isOverLimit = maxUsers !== null && tenant.user_count > maxUsers;
@@ -410,7 +410,7 @@ export default function SuperAdminTenants() {
             </TableBody>
           </Table>
           
-          {/* P0 FIX: Controles de paginação */}
+          {/* P0 FIX: Controles de paginacao */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-4 py-4 border-t">
               <div className="text-sm text-muted-foreground">
@@ -427,7 +427,7 @@ export default function SuperAdminTenants() {
                   Anterior
                 </Button>
                 <div className="text-sm text-muted-foreground">
-                  Página {page + 1} de {totalPages}
+                  Pagina {page + 1} de {totalPages}
                 </div>
                 <Button
                   variant="outline"
@@ -435,7 +435,7 @@ export default function SuperAdminTenants() {
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
                 >
-                  Próxima
+                  Proxima
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>

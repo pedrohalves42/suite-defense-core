@@ -7,11 +7,11 @@ CREATE TABLE IF NOT EXISTS public.failed_login_attempts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Índice para melhorar performance nas consultas por IP e data
+-- Indice para melhorar performance nas consultas por IP e data
 CREATE INDEX IF NOT EXISTS idx_failed_login_attempts_ip_created 
 ON public.failed_login_attempts(ip_address, created_at DESC);
 
--- Índice para consultas por email
+-- Indice para consultas por email
 CREATE INDEX IF NOT EXISTS idx_failed_login_attempts_email 
 ON public.failed_login_attempts(email, created_at DESC);
 
@@ -27,14 +27,14 @@ CREATE TABLE IF NOT EXISTS public.ip_blocklist (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Índice para melhorar performance nas consultas por IP
+-- Indice para melhorar performance nas consultas por IP
 CREATE INDEX IF NOT EXISTS idx_ip_blocklist_ip_blocked 
 ON public.ip_blocklist(ip_address, blocked_until);
 
 -- Habilitar RLS (sem policies - apenas edge functions devem acessar)
 ALTER TABLE public.ip_blocklist ENABLE ROW LEVEL SECURITY;
 
--- Função para limpar tentativas antigas (mais de 24 horas)
+-- Funcao para limpar tentativas antigas (mais de 24 horas)
 CREATE OR REPLACE FUNCTION cleanup_old_failed_attempts()
 RETURNS void
 LANGUAGE plpgsql
@@ -49,7 +49,7 @@ BEGIN
 END;
 $$;
 
--- Comentários para documentação
-COMMENT ON TABLE public.failed_login_attempts IS 'Rastreia tentativas de login falhadas para prevenção de brute-force';
+-- Comentarios para documentacao
+COMMENT ON TABLE public.failed_login_attempts IS 'Rastreia tentativas de login falhadas para prevencao de brute-force';
 COMMENT ON TABLE public.ip_blocklist IS 'Lista de IPs temporariamente bloqueados por tentativas excessivas';
 COMMENT ON FUNCTION cleanup_old_failed_attempts IS 'Remove registros antigos de tentativas falhadas e IPs bloqueados expirados';

@@ -1,4 +1,4 @@
--- CORREÇÃO FASE 2.2: Criar RPC seguro para update de roles
+-- CORRECAO FASE 2.2: Criar RPC seguro para update de roles
 -- Isso resolve o erro 403 ao tentar PATCH direto em user_roles via PostgREST
 
 CREATE OR REPLACE FUNCTION public.update_user_role_rpc(
@@ -16,7 +16,7 @@ DECLARE
   v_old_role app_role;
   v_admin_count integer;
 BEGIN
-  -- Verificar se o ator está autenticado
+  -- Verificar se o ator esta autenticado
   IF auth.uid() IS NULL THEN
     RAISE EXCEPTION 'Unauthorized: Authentication required';
   END IF;
@@ -31,7 +31,7 @@ BEGIN
     RAISE EXCEPTION 'Forbidden: Only admins can update roles';
   END IF;
 
-  -- Buscar tenant_id e role atual do usuário alvo
+  -- Buscar tenant_id e role atual do usuario alvo
   SELECT tenant_id, role INTO v_target_tenant_id, v_old_role
   FROM public.user_roles
   WHERE user_id = p_user_id
@@ -41,17 +41,17 @@ BEGIN
     RAISE EXCEPTION 'User not found';
   END IF;
 
-  -- Verificar se estão no mesmo tenant
+  -- Verificar se estao no mesmo tenant
   IF v_target_tenant_id != v_actor_tenant_id THEN
     RAISE EXCEPTION 'Forbidden: Cannot update users from different tenants';
   END IF;
 
-  -- Impedir admin de mudar o próprio role
+  -- Impedir admin de mudar o proprio role
   IF p_user_id = auth.uid() THEN
     RAISE EXCEPTION 'Bad Request: Cannot change your own role';
   END IF;
 
-  -- Impedir remoção do último admin
+  -- Impedir remocao do ultimo admin
   IF v_old_role = 'admin' AND p_new_role != 'admin' THEN
     SELECT COUNT(*) INTO v_admin_count
     FROM public.user_roles
@@ -100,5 +100,5 @@ BEGIN
 END;
 $$;
 
--- Comentário explicativo
-COMMENT ON FUNCTION public.update_user_role_rpc IS 'Atualiza role de usuário com validação de permissões (SECURITY DEFINER para bypass de RLS)';
+-- Comentario explicativo
+COMMENT ON FUNCTION public.update_user_role_rpc IS 'Atualiza role de usuario com validacao de permissoes (SECURITY DEFINER para bypass de RLS)';

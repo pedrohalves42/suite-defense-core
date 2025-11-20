@@ -102,7 +102,7 @@ export function usePipelineMetrics(tenantId: string | undefined, hoursBack: numb
         body: { tenant_id: tenantId, hours_back: hoursBack }
       });
 
-      if (error) throw new Error(`Erro ao buscar métricas: ${error.message}`);
+      if (error) throw new Error(`Erro ao buscar metricas: ${error.message}`);
       if (!data?.success) throw new Error(data?.error || 'Erro desconhecido');
       
       return data.metrics;

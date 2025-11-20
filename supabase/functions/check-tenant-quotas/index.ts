@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
     const alertResults = [];
     for (const alert of alerts) {
       try {
-        const message = `Limite de quota próximo: ${alert.feature_key}`;
+        const message = `Limite de quota proximo: ${alert.feature_key}`;
         const details = {
           feature: alert.feature_key,
           usage: `${alert.quota_used} de ${alert.quota_limit}`,
@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
           tenant: alert.tenant_name,
           warning: alert.usage_percentage >= 100 
             ? 'Quota excedida! Funcionalidade pode ser bloqueada.' 
-            : 'Atenção: Você está próximo do limite de quota.',
+            : 'Atencao: Voce esta proximo do limite de quota.',
         };
 
         // Call send-system-alert edge function

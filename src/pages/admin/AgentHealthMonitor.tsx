@@ -49,7 +49,7 @@ export default function AgentHealthMonitor() {
           setLiveHeartbeats(prev => prev + 1);
           setRecentHeartbeats(prev => [agentName, ...prev.slice(0, 4)]);
           
-          toast.success(`❤️ Heartbeat recebido`, {
+          toast.success(`?? Heartbeat recebido`, {
             description: `Agente: ${agentName}`,
             duration: 2000
           });
@@ -78,7 +78,7 @@ export default function AgentHealthMonitor() {
         <ErrorState 
           error={errorData!} 
           onRetry={refetch}
-          title="Erro ao Carregar Monitor de Saúde"
+          title="Erro ao Carregar Monitor de Saude"
         />
       </div>
     );
@@ -105,7 +105,7 @@ export default function AgentHealthMonitor() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Monitor de Saúde dos Agentes</h1>
+        <h1 className="text-3xl font-bold">Monitor de Saude dos Agentes</h1>
         <p className="text-muted-foreground">Acompanhamento em tempo real do status de todos os agentes</p>
       </div>
 
@@ -116,13 +116,13 @@ export default function AgentHealthMonitor() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saúde Geral</CardTitle>
+            <CardTitle className="text-sm font-medium">Saude Geral</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{healthPercentage}%</div>
             <p className="text-xs text-muted-foreground">
-              {counts.healthy} de {totalAgents} saudáveis
+              {counts.healthy} de {totalAgents} saudaveis
             </p>
           </CardContent>
         </Card>
@@ -135,7 +135,7 @@ export default function AgentHealthMonitor() {
           <CardContent>
             <div className="text-2xl font-bold">{liveHeartbeats}</div>
             <p className="text-xs text-muted-foreground">
-              Recebidos nesta sessão
+              Recebidos nesta sessao
             </p>
           </CardContent>
         </Card>
@@ -148,7 +148,7 @@ export default function AgentHealthMonitor() {
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{counts.critical}</div>
             <p className="text-xs text-muted-foreground">
-              Requerem atenção
+              Requerem atencao
             </p>
           </CardContent>
         </Card>
@@ -196,7 +196,7 @@ export default function AgentHealthMonitor() {
             <div className="flex gap-4 items-center mt-2">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-green-500 rounded" />
-                <span className="text-sm">Saudável</span>
+                <span className="text-sm">Saudavel</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-orange-500 rounded" />
@@ -204,7 +204,7 @@ export default function AgentHealthMonitor() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-red-500 rounded" />
-                <span className="text-sm">Crítico</span>
+                <span className="text-sm">Critico</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-gray-500 rounded" />
@@ -237,7 +237,7 @@ export default function AgentHealthMonitor() {
                       <p className="text-sm capitalize">{agent.health_status}</p>
                       {agent.seconds_since_heartbeat !== null && (
                         <p className="text-xs text-muted-foreground">
-                          Último heartbeat: {Math.floor(agent.seconds_since_heartbeat / 60)}min atrás
+                          Ultimo heartbeat: {Math.floor(agent.seconds_since_heartbeat / 60)}min atras
                         </p>
                       )}
                       {agent.total_jobs_24h > 0 && (
@@ -258,7 +258,7 @@ export default function AgentHealthMonitor() {
         </CardContent>
       </Card>
 
-      {/* Detailed Agent Health List - já implementado acima nas linhas 209-273 */}
+      {/* Detailed Agent Health List - ja implementado acima nas linhas 209-273 */}
     </div>
   );
 }

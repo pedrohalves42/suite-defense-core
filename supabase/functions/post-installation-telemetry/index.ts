@@ -274,7 +274,7 @@ serve(async (req) => {
       .insert(telemetryData);
 
     if (!insertError) {
-      console.log(`[${requestId}] ✅ Telemetry inserted successfully`, {
+      console.log(`[${requestId}] [OK]  Telemetry inserted successfully`, {
         agent_id: agent.id,
         agent_name: body.agent_name,
         event_type: 'post_installation',
@@ -309,7 +309,7 @@ serve(async (req) => {
       success: success
     });
 
-    // FASE 1: Rastrear first_heartbeat esperado após instalação
+    // FASE 1: Rastrear first_heartbeat esperado apos instalacao
     if (success && metadata?.installation_complete) {
       await supabaseClient
         .from('installation_analytics')

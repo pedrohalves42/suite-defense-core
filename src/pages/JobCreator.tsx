@@ -127,7 +127,7 @@ const JobCreator = () => {
     const pendingCount = recentJobs.filter(j => j.status === 'queued').length;
     
     if (pendingCount === 0) {
-      toast.info("Não há jobs pendentes para limpar");
+      toast.info("Nao ha jobs pendentes para limpar");
       return;
     }
     
@@ -181,7 +181,7 @@ const JobCreator = () => {
     }
 
     if (isRecurring && !recurrencePattern) {
-      toast.error("Selecione um padrão de recorrência");
+      toast.error("Selecione um padrao de recorrencia");
       return;
     }
 
@@ -189,7 +189,7 @@ const JobCreator = () => {
     try {
       parsedPayload = JSON.parse(payload);
     } catch (error) {
-      toast.error("Payload JSON inválido");
+      toast.error("Payload JSON invalido");
       return;
     }
 
@@ -222,11 +222,11 @@ const JobCreator = () => {
         const errorMessage = errorData?.message || error.message || "Erro ao criar job";
 
         if (errorCode === 'FORBIDDEN') {
-          toast.error("Acesso negado. É necessário ter papel admin, operator ou super_admin no tenant do agente.");
+          toast.error("Acesso negado. E necessario ter papel admin, operator ou super_admin no tenant do agente.");
         } else if (errorCode === 'AGENT_NOT_FOUND') {
-          toast.error("Agente não encontrado ou não pertence ao tenant selecionado.");
+          toast.error("Agente nao encontrado ou nao pertence ao tenant selecionado.");
         } else if (errorCode === 'TENANT_NOT_FOUND') {
-          toast.error("Tenant não encontrado. Verifique suas permissões.");
+          toast.error("Tenant nao encontrado. Verifique suas permissoes.");
         } else {
           toast.error(errorMessage);
         }
@@ -309,7 +309,7 @@ const JobCreator = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="bg-gradient-card border-primary/20">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Agentes Disponíveis</CardTitle>
+            <CardTitle className="text-sm font-medium">Agentes Disponiveis</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-foreground">{agents.length}</div>
@@ -326,7 +326,7 @@ const JobCreator = () => {
           <CardContent>
             <div className="text-3xl font-bold text-foreground">{recentJobs.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              últimos 20 jobs
+              ultimos 20 jobs
             </p>
           </CardContent>
         </Card>
@@ -340,7 +340,7 @@ const JobCreator = () => {
               {recentJobs.filter(j => j.status === 'queued').length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              aguardando execução
+              aguardando execucao
             </p>
           </CardContent>
         </Card>
@@ -349,7 +349,7 @@ const JobCreator = () => {
       <Tabs defaultValue="create" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="create">Criar Job</TabsTrigger>
-          <TabsTrigger value="history">Histórico</TabsTrigger>
+          <TabsTrigger value="history">Historico</TabsTrigger>
         </TabsList>
 
         {/* Create Job Tab */}
@@ -376,7 +376,7 @@ const JobCreator = () => {
                       <SelectContent>
                         {agents.length === 0 ? (
                           <SelectItem value="none" disabled>
-                            Nenhum agente disponível
+                            Nenhum agente disponivel
                           </SelectItem>
                         ) : (
                           agents.map((agent) => {
@@ -403,10 +403,10 @@ const JobCreator = () => {
                         <SelectValue placeholder="Selecione o tipo" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="scan">Scan (Verificação de segurança)</SelectItem>
-                        <SelectItem value="update">Update (Atualização do agente)</SelectItem>
-                        <SelectItem value="report">Report (Gerar relatório)</SelectItem>
-                        <SelectItem value="config">Config (Alterar configuração)</SelectItem>
+                        <SelectItem value="scan">Scan (Verificacao de seguranca)</SelectItem>
+                        <SelectItem value="update">Update (Atualizacao do agente)</SelectItem>
+                        <SelectItem value="report">Report (Gerar relatorio)</SelectItem>
+                        <SelectItem value="config">Config (Alterar configuracao)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -431,7 +431,7 @@ const JobCreator = () => {
                     <div className="space-y-0.5">
                       <Label htmlFor="scheduled">Agendar para Depois</Label>
                       <p className="text-xs text-muted-foreground">
-                        Job será executado em uma data e hora específica
+                        Job sera executado em uma data e hora especifica
                       </p>
                     </div>
                     <Switch
@@ -458,7 +458,7 @@ const JobCreator = () => {
                         className="font-mono"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Job será executado automaticamente neste horário
+                        Job sera executado automaticamente neste horario
                       </p>
                     </div>
                   )}
@@ -468,7 +468,7 @@ const JobCreator = () => {
                     <div className="space-y-0.5">
                       <Label htmlFor="recurring">Job Recorrente</Label>
                       <p className="text-xs text-muted-foreground">
-                        Job será executado automaticamente em intervalos regulares
+                        Job sera executado automaticamente em intervalos regulares
                       </p>
                     </div>
                     <Switch
@@ -484,10 +484,10 @@ const JobCreator = () => {
                   {/* Recurrence Pattern */}
                   {isRecurring && (
                     <div className="space-y-2">
-                      <Label htmlFor="recurrence">Padrão de Recorrência</Label>
+                      <Label htmlFor="recurrence">Padrao de Recorrencia</Label>
                       <Select value={recurrencePattern} onValueChange={setRecurrencePattern}>
                         <SelectTrigger id="recurrence">
-                          <SelectValue placeholder="Selecione a frequência" />
+                          <SelectValue placeholder="Selecione a frequencia" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="*/5 * * * *">A cada 5 minutos</SelectItem>
@@ -499,7 +499,7 @@ const JobCreator = () => {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Primeira execução ocorrerá no próximo intervalo
+                        Primeira execucao ocorrera no proximo intervalo
                       </p>
                     </div>
                   )}
@@ -507,9 +507,9 @@ const JobCreator = () => {
                   {/* Approved Switch */}
                   <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg border border-border">
                     <div className="space-y-0.5">
-                      <Label htmlFor="approved">Aprovação Automática</Label>
+                      <Label htmlFor="approved">Aprovacao Automatica</Label>
                       <p className="text-xs text-muted-foreground">
-                        Job será executado sem aprovação manual
+                        Job sera executado sem aprovacao manual
                       </p>
                     </div>
                     <Switch
@@ -549,7 +549,7 @@ const JobCreator = () => {
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader>
               <CardTitle>Jobs Recentes</CardTitle>
-              <CardDescription>Últimos 20 jobs criados</CardDescription>
+              <CardDescription>Ultimos 20 jobs criados</CardDescription>
             </CardHeader>
             <CardContent>
               {loadingData ? (
@@ -576,7 +576,7 @@ const JobCreator = () => {
                             {getStatusBadge(job.status)}
                             {!job.approved && (
                               <Badge variant="outline" className="bg-warning/20 text-warning border-warning/30">
-                                Aguardando aprovação
+                                Aguardando aprovacao
                               </Badge>
                             )}
                             {job.scheduled_at && (
@@ -587,7 +587,7 @@ const JobCreator = () => {
                             )}
                             {job.is_recurring && (
                               <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">
-                                🔁 Recorrente
+                                ? Recorrente
                               </Badge>
                             )}
                           </div>
@@ -599,17 +599,17 @@ const JobCreator = () => {
                           </p>
                           {job.scheduled_at && (
                             <p className="text-xs text-accent">
-                              Execução agendada: {new Date(job.scheduled_at).toLocaleString('pt-BR')}
+                              Execucao agendada: {new Date(job.scheduled_at).toLocaleString('pt-BR')}
                             </p>
                           )}
                           {job.is_recurring && job.next_run_at && (
                             <p className="text-xs text-primary">
-                              Próxima execução: {new Date(job.next_run_at).toLocaleString('pt-BR')}
+                              Proxima execucao: {new Date(job.next_run_at).toLocaleString('pt-BR')}
                             </p>
                           )}
                           {job.is_recurring && job.last_run_at && (
                             <p className="text-xs text-muted-foreground">
-                              Última execução: {new Date(job.last_run_at).toLocaleString('pt-BR')}
+                              Ultima execucao: {new Date(job.last_run_at).toLocaleString('pt-BR')}
                             </p>
                           )}
                         </div>

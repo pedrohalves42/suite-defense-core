@@ -1,4 +1,4 @@
--- Correção de segurança: Adicionar search_path à função cleanup_old_problematic_jobs
+-- Correcao de seguranca: Adicionar search_path a funcao cleanup_old_problematic_jobs
 CREATE OR REPLACE FUNCTION public.cleanup_old_problematic_jobs(
   p_days_old INTEGER DEFAULT 7
 )
@@ -14,7 +14,7 @@ DECLARE
 BEGIN
   v_cutoff_date := NOW() - (p_days_old || ' days')::INTERVAL;
   
-  -- Deletar jobs problemáticos antigos
+  -- Deletar jobs problematicos antigos
   WITH deleted AS (
     DELETE FROM public.jobs
     WHERE id IN (

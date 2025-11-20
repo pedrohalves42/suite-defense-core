@@ -30,8 +30,8 @@ export const useAuth = () => {
       if (error) {
         logger.error('Failed to refresh token', error);
         toast({
-          title: 'Sessão expirada',
-          description: 'Por favor, faça login novamente.',
+          title: 'Sessao expirada',
+          description: 'Por favor, faca login novamente.',
           variant: 'destructive',
         });
       } else {
@@ -53,8 +53,8 @@ export const useAuth = () => {
           
           if (skewSeconds > 60) { // More than 1 minute difference
             toast({
-              title: 'Relógio do Sistema Dessincronizado',
-              description: `Diferença de ${Math.floor(skewSeconds / 60)} minutos detectada. Sincronize o relógio para evitar problemas de autenticação.`,
+              title: 'Relogio do Sistema Dessincronizado',
+              description: `Diferenca de ${Math.floor(skewSeconds / 60)} minutos detectada. Sincronize o relogio para evitar problemas de autenticacao.`,
               variant: 'destructive',
               duration: 10000,
             });

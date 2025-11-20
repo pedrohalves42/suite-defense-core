@@ -26,7 +26,7 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     logger.error('ErrorBoundary caught an error', error, { errorInfo });
     
-    // Em produção, você pode enviar o erro para um serviço de monitoramento aqui
+    // Em producao, voce pode enviar o erro para um servico de monitoramento aqui
     // Ex: Sentry.captureException(error);
   }
 
@@ -51,7 +51,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </div>
               <CardTitle className="text-2xl">Algo deu errado</CardTitle>
               <CardDescription>
-                Não se preocupe, já estamos cientes do problema e trabalhando para resolvê-lo.
+                Nao se preocupe, ja estamos cientes do problema e trabalhando para resolve-lo.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -63,7 +63,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 </div>
               )}
               <p className="text-sm text-muted-foreground text-center">
-                Você pode tentar recarregar a página ou voltar ao início.
+                Voce pode tentar recarregar a pagina ou voltar ao inicio.
               </p>
             </CardContent>
             <CardFooter className="flex gap-3">
@@ -80,7 +80,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 className="flex-1"
               >
                 <Home className="mr-2 h-4 w-4" />
-                Voltar ao Início
+                Voltar ao Inicio
               </Button>
             </CardFooter>
           </Card>

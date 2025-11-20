@@ -63,16 +63,16 @@ Deno.serve(async (req) => {
     if (alertType === 'agent_offline') {
       emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #ef4444;">⚠️ Agente Offline</h1>
-          <p>O agente <strong>${data.agentName}</strong> está offline.</p>
+          <h1 style="color: #ef4444;">[WARN] ? Agente Offline</h1>
+          <p>O agente <strong>${data.agentName}</strong> esta offline.</p>
           <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin: 20px 0;">
             <p style="margin: 0;"><strong>Tempo Offline:</strong> ${data.minutesOffline} minutos</p>
-            <p style="margin: 8px 0 0 0;"><strong>Último Heartbeat:</strong> ${new Date(data.lastHeartbeat).toLocaleString('pt-BR')}</p>
+            <p style="margin: 8px 0 0 0;"><strong>Ultimo Heartbeat:</strong> ${new Date(data.lastHeartbeat).toLocaleString('pt-BR')}</p>
           </div>
-          <p>Por favor, verifique a conexão do agente imediatamente.</p>
+          <p>Por favor, verifique a conexao do agente imediatamente.</p>
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
           <p style="color: #6b7280; font-size: 12px;">
-            Este é um alerta automático do sistema CyberShield.
+            Este e um alerta automatico do sistema CyberShield.
           </p>
         </div>
       `;
@@ -86,8 +86,8 @@ Deno.serve(async (req) => {
 
       emailHtml = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #ef4444;">❌ Jobs Falharam</h1>
-          <p><strong>${data.failedCount}</strong> job(s) falharam nos últimos 5 minutos:</p>
+          <h1 style="color: #ef4444;">[ERROR]  Jobs Falharam</h1>
+          <p><strong>${data.failedCount}</strong> job(s) falharam nos ultimos 5 minutos:</p>
           <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin: 20px 0;">
             <ul style="margin: 0; padding-left: 20px;">
               ${jobsList}
@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
           <p>Verifique os logs para mais detalhes sobre as falhas.</p>
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
           <p style="color: #6b7280; font-size: 12px;">
-            Este é um alerta automático do sistema CyberShield.
+            Este e um alerta automatico do sistema CyberShield.
           </p>
         </div>
       `;

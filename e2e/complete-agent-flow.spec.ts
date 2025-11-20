@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test';
 /**
  * FASE 2: Teste E2E Completo do Fluxo de Agentes
  * 
- * Valida: Signup → Login → Gerar Enrollment → Download Installer → 
- *         Simular Instalação → Heartbeat → Métricas → Jobs
+ * Valida: Signup ? Login ? Gerar Enrollment ? Download Installer ? 
+ *         Simular Instalacao ? Heartbeat ? Metricas ? Jobs
  */
 
 test.describe('Complete Agent Lifecycle Flow', () => {
@@ -90,7 +90,7 @@ test.describe('Complete Agent Lifecycle Flow', () => {
   });
 
   test('4. Simulate Agent Heartbeat', async ({ request }) => {
-    // Aguardar 2s para simular instalação
+    // Aguardar 2s para simular instalacao
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     const timestamp = Date.now();
@@ -116,7 +116,7 @@ test.describe('Complete Agent Lifecycle Flow', () => {
       data: bodyJson,
     });
 
-    // Pode falhar por HMAC, mas deve retornar 401 (não 500)
+    // Pode falhar por HMAC, mas deve retornar 401 (nao 500)
     expect([200, 401, 403]).toContain(response.status());
   });
 

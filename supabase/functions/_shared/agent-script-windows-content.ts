@@ -10,9 +10,9 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
-    - Heartbeat periódico
+    - Heartbeat periodico
     - Poll de jobs
-    - Execução de jobs
+    - Execucao de jobs
     - Envio de resultado (submit-job-result)
     - Evento de post_installation
     
@@ -44,7 +44,7 @@ param(
 \$ErrorActionPreference = "Stop"
 
 # ============================================
-#  VARIÁVEIS GLOBAIS
+#  VARIAVEIS GLOBAIS
 # ============================================
 \$Global:ServerUrl    = \$ServerUrl.TrimEnd('/')
 \$Global:AgentToken   = \$AgentToken
@@ -52,7 +52,7 @@ param(
 \$Global:AgentName    = \$AgentName
 \$Global:AgentVersion = \$AgentVersion
 
-# Diretório de log
+# Diretorio de log
 \$logDir = Join-Path -Path \$PSScriptRoot -ChildPath "logs"
 if (-not (Test-Path \$logDir)) {
     New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
@@ -83,7 +83,7 @@ function Write-Log {
     try {
         Add-Content -Path \$Global:LogFilePath -Value \$line
     } catch {
-        # Ignorar erro de escrita no log para não quebrar o agente
+        # Ignorar erro de escrita no log para nao quebrar o agente
     }
 }
 
@@ -97,7 +97,7 @@ function Convert-HexToBytes {
     )
 
     if (\$HexString -notmatch '^[0-9a-fA-F]{64}\$') {
-        Write-Log "HMAC_SECRET inválido. Esperado 64 caracteres hex (32 bytes). Length: \$(\$HexString.Length)" "ERROR"
+        Write-Log "HMAC_SECRET invalido. Esperado 64 caracteres hex (32 bytes). Length: \$(\$HexString.Length)" "ERROR"
         throw "Invalid HMAC_SECRET format. Expected 64 hex characters, got: \$(\$HexString.Length)"
     }
 
@@ -134,7 +134,7 @@ function Get-HmacSignature {
 }
 
 # ============================================
-#  REQUISIÇÃO SEGURA COM HMAC
+#  REQUISICAO SEGURA COM HMAC
 # ============================================
 function Invoke-SecureRequest {
     param(
@@ -220,15 +220,15 @@ function Invoke-SecureRequest {
                 \$statusCode = \$_.Exception.Response.StatusCode.value__
             }
 
-            Write-Log "Erro na requisição \$Method \$uri (tentativa \$retryCount/\$MaxRetries): \$(\$_.Exception.Message)" "ERROR"
+            Write-Log "Erro na requisicao \$Method \$uri (tentativa \$retryCount/\$MaxRetries): \$(\$_.Exception.Message)" "ERROR"
 
             if (\$statusCode -eq 401) {
-                Write-Log "[ERROR] Erro de autenticação (401). Verifique AgentToken / HmacSecret / clock." "ERROR"
+                Write-Log "[ERROR] Erro de autenticacao (401). Verifique AgentToken / HmacSecret / clock." "ERROR"
                 throw
             }
 
             if (\$retryCount -ge \$MaxRetries) {
-                Write-Log "[ERROR] Falha definitiva após \$MaxRetries tentativas em \$uri" "ERROR"
+                Write-Log "[ERROR] Falha definitiva apos \$MaxRetries tentativas em \$uri" "ERROR"
                 throw
             }
 
@@ -259,7 +259,7 @@ function Get-SystemInfo {
             agent_version = \$Global:AgentVersion
         }
     } catch {
-        Write-Log "Erro ao coletar informações do sistema: \$(\$_.Exception.Message)" "WARN"
+        Write-Log "Erro ao coletar informacoes do sistema: \$(\$_.Exception.Message)" "WARN"
         return @{
             os_type      = "Windows"
             hostname     = \$env:COMPUTERNAME
@@ -419,7 +419,7 @@ function Submit-JobResult {
 }
 
 # ============================================
-#  EXECUÇÃO DE JOB
+#  EXECUCAO DE JOB
 # ============================================
 function Execute-Job {
     param(
@@ -433,7 +433,7 @@ function Execute-Job {
 
     \$startTime = Get-Date
 
-    Write-Log "🔧 Executando job \$jobId (type=\$jobType)" "INFO"
+    Write-Log "[JOB] Executando job \$jobId (type=\$jobType)" "INFO"
 
     try {
         \$output = @{}
@@ -463,18 +463,18 @@ function Execute-Job {
                     \$tenantId = \$payload.tenantId
 
                     if (-not \$filePath) {
-                        throw "Payload inválido: 'filePath' não informado"
+                        throw "Payload invalido: 'filePath' nao informado"
                     }
 
                     if (-not (Test-Path \$filePath)) {
-                        throw "Arquivo não encontrado: \$filePath"
+                        throw "Arquivo nao encontrado: \$filePath"
                     }
 
                     # Calcular SHA256
                     \$fileHash = (Get-FileHash -Path \$filePath -Algorithm SHA256).Hash.ToLower()
                     Write-Log "[SCAN] Escaneando: \$filePath (hash: \$fileHash)" "INFO"
 
-                    # Monta body para backend (NÃO converte pra JSON aqui)
+                    # Monta body para backend (NAO converte pra JSON aqui)
                     \$scanBody = @{
                         tenant_id  = \$tenantId
                         agent_name = \$Global:AgentName
@@ -508,7 +508,7 @@ function Execute-Job {
                         quarantined = \$false
                     }
 
-                    # QUARENTENA FÍSICA (necessária pois backend não tem acesso ao filesystem)
+                    # QUARENTENA FISICA (necessaria pois backend nao tem acesso ao filesystem)
                     if (\$scanData.isMalicious) {
                         Write-Log "[WARN] MALWARE DETECTADO: \$(\$scanData.positives)/\$(\$scanData.totalScans) engines" "WARN"
                         
@@ -556,9 +556,9 @@ function Execute-Job {
 
                     \$data = \$updateResult.Body | ConvertFrom-Json
 
-                    # Já está na última versão?
+                    # Ja esta na ultima versao?
                     if (\$data.message -eq "Already up to date") {
-                        Write-Log "[INFO] Agente já está na última versão (\$(\$data.current_version))" "INFO"
+                        Write-Log "[INFO] Agente ja esta na ultima versao (\$(\$data.current_version))" "INFO"
                         \$result.success = \$true
                         \$result.output  = (\$data | ConvertTo-Json -Depth 5)
                         break
@@ -568,9 +568,9 @@ function Execute-Job {
                     \$scriptText   = \$data.script_content
                     \$expectedHash = \$data.sha256
 
-                    Write-Log "[UPDATE] Atualizando agente para versão \$newVersion" "INFO"
+                    Write-Log "[UPDATE] Atualizando agente para versao \$newVersion" "INFO"
 
-                    # Usa o próprio script atual, sem hardcode de caminho
+                    # Usa o proprio script atual, sem hardcode de caminho
                     \$currentScript = \$PSCommandPath
                     \$backupScript  = \$currentScript -replace '\\.ps1\$', "-backup-\$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
                     \$tempScript    = Join-Path \$env:TEMP "cybershield-agent-update-\$newVersion.ps1"
@@ -623,7 +623,7 @@ function Execute-Job {
             }
             
             default {
-                throw "Tipo de job não suportado: \$jobType"
+                throw "Tipo de job nao suportado: \$jobType"
             }
         }
 
@@ -684,11 +684,11 @@ function Poll-Jobs {
         \$jobs = \$result.Body | ConvertFrom-Json
 
         if (\$null -eq \$jobs -or \$jobs.Count -eq 0) {
-            Write-Log "📭 Nenhum job disponível" "INFO"
+            Write-Log "[POLL] Nenhum job disponivel" "INFO"
             return
         }
 
-        Write-Log "📬 Recebidos \$(\$jobs.Count) job(s)" "INFO"
+        Write-Log "[JOBS] Recebidos \$(\$jobs.Count) job(s)" "INFO"
 
         foreach (\$job in \$jobs) {
             Execute-Job -Job \$job
@@ -717,7 +717,7 @@ try {
     Send-Heartbeat
 
     \$bootstrapElapsed = [int]((Get-Date) - \$bootstrapStart).TotalSeconds
-    Write-Log "[SUCCESS] Bootstrap concluído em \${bootstrapElapsed}s" "SUCCESS"
+    Write-Log "[SUCCESS] Bootstrap concluido em \${bootstrapElapsed}s" "SUCCESS"
 
     Write-Log "[INFO] Entrando no loop principal (intervalo=\$(\$Global:PollIntervalSeconds)s)" "INFO"
 

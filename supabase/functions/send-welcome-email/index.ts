@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
                     <tr>
                       <td style="background: linear-gradient(135deg, #00e5a0 0%, #00c896 100%); padding: 40px 30px; text-align: center;">
                         <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold;">
-                          🛡️ CyberShield
+                          ?? CyberShield
                         </h1>
                       </td>
                     </tr>
@@ -95,22 +95,22 @@ Deno.serve(async (req) => {
                     <tr>
                       <td style="padding: 40px 30px;">
                         <h2 style="margin: 0 0 20px 0; color: #1a1a1a; font-size: 24px; font-weight: 600;">
-                          Olá, ${firstName}! 👋
+                          Ola, ${firstName}! ?
                         </h2>
                         
                         <p style="margin: 0 0 20px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
-                          Bem-vindo ao <strong>CyberShield</strong> - sua plataforma de monitoramento e gestão de segurança!
+                          Bem-vindo ao <strong>CyberShield</strong> - sua plataforma de monitoramento e gestao de seguranca!
                         </p>
                         
                         <p style="margin: 0 0 20px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
-                          Estamos felizes em tê-lo como parte do tenant <strong>${tenantName}</strong>. Aqui está o que você pode fazer agora:
+                          Estamos felizes em te-lo como parte do tenant <strong>${tenantName}</strong>. Aqui esta o que voce pode fazer agora:
                         </p>
                         
                         <!-- Features -->
                         <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
                           <tr>
                             <td style="padding: 15px; background-color: #f7fafc; border-left: 4px solid #00e5a0; margin-bottom: 10px;">
-                              <strong style="color: #1a1a1a; font-size: 16px;">✅ Instalar Agentes</strong>
+                              <strong style="color: #1a1a1a; font-size: 16px;">[OK]  Instalar Agentes</strong>
                               <p style="margin: 5px 0 0 0; color: #718096; font-size: 14px;">
                                 Deploy agentes Windows/Linux em seus endpoints
                               </p>
@@ -119,18 +119,18 @@ Deno.serve(async (req) => {
                           <tr><td style="height: 10px;"></td></tr>
                           <tr>
                             <td style="padding: 15px; background-color: #f7fafc; border-left: 4px solid #00e5a0; margin-bottom: 10px;">
-                              <strong style="color: #1a1a1a; font-size: 16px;">🔍 Executar Scans</strong>
+                              <strong style="color: #1a1a1a; font-size: 16px;">[SCAN]  Executar Scans</strong>
                               <p style="margin: 5px 0 0 0; color: #718096; font-size: 14px;">
-                                Scan de vírus, vulnerabilidades e rede
+                                Scan de virus, vulnerabilidades e rede
                               </p>
                             </td>
                           </tr>
                           <tr><td style="height: 10px;"></td></tr>
                           <tr>
                             <td style="padding: 15px; background-color: #f7fafc; border-left: 4px solid #00e5a0;">
-                              <strong style="color: #1a1a1a; font-size: 16px;">📊 Monitorar em Tempo Real</strong>
+                              <strong style="color: #1a1a1a; font-size: 16px;">? Monitorar em Tempo Real</strong>
                               <p style="margin: 5px 0 0 0; color: #718096; font-size: 14px;">
-                                Dashboard com métricas, alertas e relatórios
+                                Dashboard com metricas, alertas e relatorios
                               </p>
                             </td>
                           </tr>
@@ -152,9 +152,9 @@ Deno.serve(async (req) => {
                         </p>
                         
                         <p style="margin: 0 0 10px 0; color: #718096; font-size: 14px; line-height: 1.6;">
-                          📖 <a href="${siteUrl}" style="color: #00e5a0; text-decoration: none;">Documentação Completa</a><br>
-                          🚀 <a href="${siteUrl}" style="color: #00e5a0; text-decoration: none;">Guia de Início Rápido</a><br>
-                          💬 <a href="${siteUrl}#contato" style="color: #00e5a0; text-decoration: none;">Falar com Suporte</a>
+                          ? <a href="${siteUrl}" style="color: #00e5a0; text-decoration: none;">Documentacao Completa</a><br>
+                          ? <a href="${siteUrl}" style="color: #00e5a0; text-decoration: none;">Guia de Inicio Rapido</a><br>
+                          ? <a href="${siteUrl}#contato" style="color: #00e5a0; text-decoration: none;">Falar com Suporte</a>
                         </p>
                       </td>
                     </tr>
@@ -163,10 +163,10 @@ Deno.serve(async (req) => {
                     <tr>
                       <td style="padding: 30px; background-color: #f7fafc; text-align: center; border-top: 1px solid #e2e8f0;">
                         <p style="margin: 0 0 10px 0; color: #a0aec0; font-size: 14px;">
-                          <strong>CyberShield</strong> - Proteção Inteligente para Seus Endpoints
+                          <strong>CyberShield</strong> - Protecao Inteligente para Seus Endpoints
                         </p>
                         <p style="margin: 0; color: #cbd5e0; font-size: 12px;">
-                          © 2025 CyberShield. Todos os direitos reservados.
+                          ? 2025 CyberShield. Todos os direitos reservados.
                         </p>
                       </td>
                     </tr>

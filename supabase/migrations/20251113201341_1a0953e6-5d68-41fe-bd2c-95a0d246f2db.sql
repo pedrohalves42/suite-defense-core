@@ -1,6 +1,6 @@
--- FASE 2: Sistema automático de cleanup de builds travados
+-- FASE 2: Sistema automatico de cleanup de builds travados
 
--- Função para limpar builds que excederam o timeout
+-- Funcao para limpar builds que excederam o timeout
 CREATE OR REPLACE FUNCTION public.cleanup_stuck_builds()
 RETURNS TABLE(
   cleaned_count integer,
@@ -32,7 +32,7 @@ BEGIN
   INTO v_cleaned_count, v_build_ids
   FROM updated_builds;
   
-  -- Log da operação
+  -- Log da operacao
   RAISE NOTICE 'Cleanup completed: % builds marked as failed', COALESCE(v_cleaned_count, 0);
   
   RETURN QUERY SELECT 
@@ -41,6 +41,6 @@ BEGIN
 END;
 $$;
 
--- Comentário da função
+-- Comentario da funcao
 COMMENT ON FUNCTION public.cleanup_stuck_builds() IS 
 'Automatically marks builds that have been in "building" state for more than 30 minutes as failed. Returns count of cleaned builds and their IDs.';

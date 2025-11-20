@@ -12,7 +12,7 @@ if (-not $AgentToken -or -not $HmacSecret) {
     exit 1
 }
 
-# Função simplificada de HMAC
+# Funcao simplificada de HMAC
 function Get-TestHmacSignature {
     param([string]$Data, [string]$Secret)
     $hmac = New-Object System.Security.Cryptography.HMACSHA256
@@ -27,8 +27,8 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Teste de Melhorias do Agent HMAC" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-# Teste 1: Health check com assinatura válida
-Write-Host "`n[Teste 1] Health check com HMAC válido..." -ForegroundColor Yellow
+# Teste 1: Health check com assinatura valida
+Write-Host "`n[Teste 1] Health check com HMAC valido..." -ForegroundColor Yellow
 try {
     $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
     $nonce = [guid]::NewGuid().ToString()
@@ -53,18 +53,18 @@ try {
     $result = $response.Content | ConvertFrom-Json
     
     if ($result.status -eq "ok") {
-        Write-Host "✅ PASSOU: Health check retornou OK" -ForegroundColor Green
+        Write-Host "[OK]  PASSOU: Health check retornou OK" -ForegroundColor Green
         Write-Host "   Agent: $($result.agent.name)" -ForegroundColor Gray
         Write-Host "   Server Time: $($result.server.timestamp)" -ForegroundColor Gray
     } else {
-        Write-Host "❌ FALHOU: Status inesperado" -ForegroundColor Red
+        Write-Host "[ERROR]  FALHOU: Status inesperado" -ForegroundColor Red
     }
 } catch {
-    Write-Host "❌ ERRO: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "[ERROR]  ERRO: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-# Teste 2: Health check com assinatura inválida (deve retornar código estruturado)
-Write-Host "`n[Teste 2] Health check com HMAC inválido..." -ForegroundColor Yellow
+# Teste 2: Health check com assinatura invalida (deve retornar codigo estruturado)
+Write-Host "`n[Teste 2] Health check com HMAC invalido..." -ForegroundColor Yellow
 try {
     $timestamp = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
     $nonce = [guid]::NewGuid().ToString()
@@ -86,7 +86,7 @@ try {
         -UseBasicParsing `
         -ErrorAction Stop
     
-    Write-Host "❌ FALHOU: Deveria ter retornado 401" -ForegroundColor Red
+    Write-Host "[ERROR]  FALHOU: Deveria ter retornado 401" -ForegroundColor Red
 } catch {
     $statusCode = $_.Exception.Response.StatusCode.value__
     
@@ -95,18 +95,18 @@ try {
             $errorBody = $_.ErrorDetails.Message | ConvertFrom-Json
             
             if ($errorBody.code) {
-                Write-Host "✅ PASSOU: Retornou 401 com código estruturado" -ForegroundColor Green
-                Write-Host "   Código: $($errorBody.code)" -ForegroundColor Gray
+                Write-Host "[OK]  PASSOU: Retornou 401 com codigo estruturado" -ForegroundColor Green
+                Write-Host "   Codigo: $($errorBody.code)" -ForegroundColor Gray
                 Write-Host "   Mensagem: $($errorBody.message)" -ForegroundColor Gray
-                Write-Host "   Transitório: $($errorBody.transient)" -ForegroundColor Gray
+                Write-Host "   Transitorio: $($errorBody.transient)" -ForegroundColor Gray
             } else {
-                Write-Host "⚠️  PARCIAL: Retornou 401 mas sem campo 'code'" -ForegroundColor Yellow
+                Write-Host "[WARN] ?  PARCIAL: Retornou 401 mas sem campo 'code'" -ForegroundColor Yellow
             }
         } catch {
-            Write-Host "⚠️  PARCIAL: Retornou 401 mas JSON inválido" -ForegroundColor Yellow
+            Write-Host "[WARN] ?  PARCIAL: Retornou 401 mas JSON invalido" -ForegroundColor Yellow
         }
     } else {
-        Write-Host "❌ FALHOU: Status code incorreto: $statusCode" -ForegroundColor Red
+        Write-Host "[ERROR]  FALHOU: Status code incorreto: $statusCode" -ForegroundColor Red
     }
 }
 
@@ -134,7 +134,7 @@ try {
         -UseBasicParsing `
         -ErrorAction Stop
     
-    Write-Host "❌ FALHOU: Deveria ter rejeitado timestamp antigo" -ForegroundColor Red
+    Write-Host "[ERROR]  FALHOU: Deveria ter rejeitado timestamp antigo" -ForegroundColor Red
 } catch {
     $statusCode = $_.Exception.Response.StatusCode.value__
     
@@ -143,22 +143,22 @@ try {
             $errorBody = $_.ErrorDetails.Message | ConvertFrom-Json
             
             if ($errorBody.code -eq "AUTH_TIMESTAMP_OUT_OF_RANGE" -and $errorBody.transient -eq $true) {
-                Write-Host "✅ PASSOU: Rejeitou timestamp antigo com código correto e flag transient" -ForegroundColor Green
-                Write-Host "   Código: $($errorBody.code)" -ForegroundColor Gray
-                Write-Host "   Transitório: $($errorBody.transient)" -ForegroundColor Gray
+                Write-Host "[OK]  PASSOU: Rejeitou timestamp antigo com codigo correto e flag transient" -ForegroundColor Green
+                Write-Host "   Codigo: $($errorBody.code)" -ForegroundColor Gray
+                Write-Host "   Transitorio: $($errorBody.transient)" -ForegroundColor Gray
             } else {
-                Write-Host "⚠️  PARCIAL: Rejeitou mas código/flags incorretos" -ForegroundColor Yellow
-                Write-Host "   Código: $($errorBody.code)" -ForegroundColor Gray
-                Write-Host "   Transitório: $($errorBody.transient)" -ForegroundColor Gray
+                Write-Host "[WARN] ?  PARCIAL: Rejeitou mas codigo/flags incorretos" -ForegroundColor Yellow
+                Write-Host "   Codigo: $($errorBody.code)" -ForegroundColor Gray
+                Write-Host "   Transitorio: $($errorBody.transient)" -ForegroundColor Gray
             }
         } catch {
-            Write-Host "⚠️  PARCIAL: Retornou 401 mas JSON inválido" -ForegroundColor Yellow
+            Write-Host "[WARN] ?  PARCIAL: Retornou 401 mas JSON invalido" -ForegroundColor Yellow
         }
     } else {
-        Write-Host "❌ FALHOU: Status code incorreto: $statusCode" -ForegroundColor Red
+        Write-Host "[ERROR]  FALHOU: Status code incorreto: $statusCode" -ForegroundColor Red
     }
 }
 
 Write-Host "`n========================================" -ForegroundColor Cyan
-Write-Host "Testes concluídos!" -ForegroundColor Cyan
+Write-Host "Testes concluidos!" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan

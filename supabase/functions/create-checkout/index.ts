@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
 
     if (existingSubscription?.stripe_subscription_id && existingSubscription?.status === "active") {
       logStep("Active subscription exists", { subscriptionId: existingSubscription.stripe_subscription_id });
-      throw new Error("Você já possui uma assinatura ativa. Use o portal do cliente para gerenciar.");
+      throw new Error("Voce ja possui uma assinatura ativa. Use o portal do cliente para gerenciar.");
     }
 
     // Get plan details

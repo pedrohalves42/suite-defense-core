@@ -7,22 +7,22 @@ const ContactFormSchema = z.object({
   name: z.string()
     .min(2, 'Nome muito curto')
     .max(100, 'Nome muito longo')
-    .regex(/^[a-zA-ZÀ-ÿ\s\-']+$/, 'Nome contém caracteres inválidos'),
+    .regex(/^[a-zA-ZA-?\s\-']+$/, 'Nome contem caracteres invalidos'),
   email: z.string()
-    .email('Email inválido')
+    .email('Email invalido')
     .max(255, 'Email muito longo'),
   company: z.string()
     .max(200, 'Nome da empresa muito longo')
     .optional()
     .nullable(),
   phone: z.string()
-    .regex(/^[\d\s\(\)\+\-]*$/, 'Telefone inválido')
+    .regex(/^[\d\s\(\)\+\-]*$/, 'Telefone invalido')
     .max(20, 'Telefone muito longo')
     .optional()
     .nullable(),
   endpoints: z.number()
-    .int('Deve ser número inteiro')
-    .min(1, 'Mínimo 1 endpoint')
+    .int('Deve ser numero inteiro')
+    .min(1, 'Minimo 1 endpoint')
     .max(100000, 'Valor muito alto')
     .optional()
     .nullable(),
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       console.warn(`[${requestId}] Rate limit exceeded for IP: ${clientIp}`);
       return new Response(
         JSON.stringify({
-          error: 'Muitas submissões. Tente novamente mais tarde.',
+          error: 'Muitas submissoes. Tente novamente mais tarde.',
           resetAt: rateLimitResult.resetAt
         }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
       
       return new Response(
         JSON.stringify({
-          error: 'Dados inválidos',
+          error: 'Dados invalidos',
           details: errors
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
     // TODO: Optional - Send notification to sales team
     // await supabase.functions.invoke('send-alert-email', {
     //   headers: { 'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') },
-    //   body: { alertType: 'new_contact', message: `Nova solicitação: ${data.name}`, details: data }
+    //   body: { alertType: 'new_contact', message: `Nova solicitacao: ${data.name}`, details: data }
     // });
 
     return new Response(
@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
     console.error(`[${requestId}] Error:`, error);
     return new Response(
       JSON.stringify({
-        error: 'Erro ao processar solicitação',
+        error: 'Erro ao processar solicitacao',
         message: error instanceof Error ? error.message : 'Erro desconhecido'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

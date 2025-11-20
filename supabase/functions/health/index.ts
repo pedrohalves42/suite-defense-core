@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Testar conexão DB com query simples
+    // Testar conexao DB com query simples
     const { error: dbError } = await supabase
       .from('agents')
       .select('id')

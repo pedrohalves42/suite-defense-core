@@ -84,16 +84,16 @@ test.describe('Serve Installer Edge Function', () => {
     expect(response.ok()).toBeTruthy();
     const script = await response.text();
     
-    // ✅ PHASE 4: Security checks - must use Invoke-SecureRequest
+    // [OK]  PHASE 4: Security checks - must use Invoke-SecureRequest
     expect(script).toContain('Invoke-SecureRequest');
     expect(script).toContain('function Invoke-SecureRequest');
     
-    // ✅ Must NOT contain dangerous $headers indexing patterns
+    // [OK]  Must NOT contain dangerous $headers indexing patterns
     expect(script).not.toMatch(/\$headers\[['"]X-Request-Id['"]\]/);
     expect(script).not.toMatch(/\$headers\[['"]X-Timestamp['"]\]/);
     expect(script).not.toMatch(/Write-Log.*\$headers\[/);
     
-    // ✅ Verify HMAC generation is internal to Invoke-SecureRequest
+    // [OK]  Verify HMAC generation is internal to Invoke-SecureRequest
     expect(script).toContain('Get-HmacSignature');
     expect(script).toContain('X-HMAC-Signature');
   });

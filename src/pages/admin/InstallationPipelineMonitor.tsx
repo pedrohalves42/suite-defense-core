@@ -74,7 +74,7 @@ export default function InstallationPipelineMonitor() {
             refetchAgents();
             refetchMetrics();
           }}
-          title="Erro ao Carregar Pipeline de Instalação"
+          title="Erro ao Carregar Pipeline de Instalacao"
         />
       </div>
     );
@@ -85,19 +85,19 @@ export default function InstallationPipelineMonitor() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Pipeline de Instalação</h1>
-          <p className="text-muted-foreground">Monitoramento em tempo real do fluxo de instalação de agentes</p>
+          <h1 className="text-3xl font-bold">Pipeline de Instalacao</h1>
+          <p className="text-muted-foreground">Monitoramento em tempo real do fluxo de instalacao de agentes</p>
         </div>
         <Select value={hoursBack.toString()} onValueChange={(v) => setHoursBack(parseInt(v))}>
           <SelectTrigger className="w-[180px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="1">Última hora</SelectItem>
-            <SelectItem value="6">Últimas 6 horas</SelectItem>
-            <SelectItem value="24">Últimas 24 horas</SelectItem>
-            <SelectItem value="72">Últimos 3 dias</SelectItem>
-            <SelectItem value="168">Última semana</SelectItem>
+            <SelectItem value="1">Ultima hora</SelectItem>
+            <SelectItem value="6">Ultimas 6 horas</SelectItem>
+            <SelectItem value="24">Ultimas 24 horas</SelectItem>
+            <SelectItem value="72">Ultimos 3 dias</SelectItem>
+            <SelectItem value="168">Ultima semana</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -132,26 +132,26 @@ export default function InstallationPipelineMonitor() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tempo Médio</CardTitle>
+            <CardTitle className="text-sm font-medium">Tempo Medio</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{Math.round(metrics?.avg_install_time_seconds || 0)}s</div>
             <p className="text-xs text-muted-foreground">
-              De instalação
+              De instalacao
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversão</CardTitle>
+            <CardTitle className="text-sm font-medium">Conversao</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{metrics?.conversion_rate_generated_to_installed_pct || 0}%</div>
             <p className="text-xs text-muted-foreground">
-              Gerado → Instalado
+              Gerado ? Instalado
             </p>
           </CardContent>
         </Card>
@@ -164,7 +164,7 @@ export default function InstallationPipelineMonitor() {
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{metrics?.total_stuck || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {'>'}30min sem conclusão
+              {'>'}30min sem conclusao
             </p>
           </CardContent>
         </Card>
@@ -180,7 +180,7 @@ export default function InstallationPipelineMonitor() {
                 Alta Taxa de Falha Detectada
               </CardTitle>
               <CardDescription className="mt-2">
-                Taxa de falha excedeu o limiar de 30% na última hora
+                Taxa de falha excedeu o limiar de 30% na ultima hora
               </CardDescription>
             </div>
             <Badge variant="destructive" className="text-lg px-3 py-1">
@@ -194,11 +194,11 @@ export default function InstallationPipelineMonitor() {
                 <span className="font-semibold">{failureRate.total_attempts}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Instalações Falhadas:</span>
+                <span className="text-muted-foreground">Instalacoes Falhadas:</span>
                 <span className="font-semibold text-destructive">{failureRate.failed_attempts}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Período:</span>
+                <span className="text-muted-foreground">Periodo:</span>
                 <span className="font-semibold">
                   {format(new Date(failureRate.period_start), 'HH:mm', { locale: ptBR })} - {format(new Date(failureRate.period_end), 'HH:mm', { locale: ptBR })}
                 </span>
@@ -218,8 +218,8 @@ export default function InstallationPipelineMonitor() {
       {/* Funnel Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Funil de Instalação</CardTitle>
-          <CardDescription>Visualização do fluxo de instalação de agentes</CardDescription>
+          <CardTitle>Funil de Instalacao</CardTitle>
+          <CardDescription>Visualizacao do fluxo de instalacao de agentes</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -243,7 +243,7 @@ export default function InstallationPipelineMonitor() {
           <div className="flex justify-between items-center">
             <div>
               <CardTitle>Agentes</CardTitle>
-              <CardDescription>Lista detalhada com status atual e ações disponíveis</CardDescription>
+              <CardDescription>Lista detalhada com status atual e acoes disponiveis</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button
@@ -260,16 +260,16 @@ export default function InstallationPipelineMonitor() {
                       status: a.status_badge.label,
                       install_time_seconds: a.metrics.install_time_seconds || 0,
                       last_seen: a.metrics.last_seen ? format(new Date(a.metrics.last_seen), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'Nunca',
-                      is_stuck: a.flags.is_stuck ? 'Sim' : 'Não',
-                      has_errors: a.flags.has_errors ? 'Sim' : 'Não',
+                      is_stuck: a.flags.is_stuck ? 'Sim' : 'Nao',
+                      has_errors: a.flags.has_errors ? 'Sim' : 'Nao',
                     })),
                     'agents-pipeline',
                     [
                       { key: 'agent_name', label: 'Nome do Agente' },
-                      { key: 'lifecycle_stage', label: 'Estágio' },
+                      { key: 'lifecycle_stage', label: 'Estagio' },
                       { key: 'status', label: 'Status' },
-                      { key: 'install_time_seconds', label: 'Tempo Instalação (s)' },
-                      { key: 'last_seen', label: 'Última Visibilidade' },
+                      { key: 'install_time_seconds', label: 'Tempo Instalacao (s)' },
+                      { key: 'last_seen', label: 'Ultima Visibilidade' },
                       { key: 'is_stuck', label: 'Travado' },
                       { key: 'has_errors', label: 'Com Erros' },
                     ]
@@ -286,7 +286,7 @@ export default function InstallationPipelineMonitor() {
               </Button>
               <Select value={stageFilter} onValueChange={setStageFilter}>
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Filtrar por estágio" />
+                  <SelectValue placeholder="Filtrar por estagio" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos ({agents?.length || 0})</SelectItem>
@@ -307,8 +307,8 @@ export default function InstallationPipelineMonitor() {
                 <TableHead>Status</TableHead>
                 <TableHead>Pipeline</TableHead>
                 <TableHead>Tempo</TableHead>
-                <TableHead>Último Visto</TableHead>
-                <TableHead>Ações</TableHead>
+                <TableHead>Ultimo Visto</TableHead>
+                <TableHead>Acoes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

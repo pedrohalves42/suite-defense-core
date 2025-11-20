@@ -42,7 +42,7 @@ export function InstallationHealthCard() {
       if (fetchError) {
         console.error('[InstallationHealthCard] Error fetching health:', fetchError);
         setError(fetchError.message);
-        toast.error('Erro ao carregar métricas de instalação', {
+        toast.error('Erro ao carregar metricas de instalacao', {
           description: fetchError.message
         });
       } else {
@@ -53,7 +53,7 @@ export function InstallationHealthCard() {
       const errorMsg = err instanceof Error ? err.message : 'Erro desconhecido';
       console.error('[InstallationHealthCard] Exception:', err);
       setError(errorMsg);
-      toast.error('Erro ao carregar métricas', { description: errorMsg });
+      toast.error('Erro ao carregar metricas', { description: errorMsg });
     } finally {
       setLoading(false);
     }
@@ -119,13 +119,13 @@ export function InstallationHealthCard() {
                     <AlertCircle className="h-4 w-4 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="text-xs">Taxa de sucesso de post_installation por plataforma (últimas 24h)</p>
+                    <p className="text-xs">Taxa de sucesso de post_installation por plataforma (ultimas 24h)</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              Últimas 24 horas • Atualizado {lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              Ultimas 24 horas ? Atualizado {lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>
           
@@ -140,7 +140,7 @@ export function InstallationHealthCard() {
           <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive">
             <div className="flex items-center gap-2">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>Erro ao carregar métricas: {error}</span>
+              <span>Erro ao carregar metricas: {error}</span>
             </div>
           </div>
         )}
@@ -167,20 +167,20 @@ export function InstallationHealthCard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <OsCard
             label="macOS"
-            emoji="🍎"
+            emoji="?"
             row={macosRow}
             highlight
             getStatus={getStatus}
           />
           <OsCard
             label="Windows"
-            emoji="🪟"
+            emoji="?"
             row={windowsRow}
             getStatus={getStatus}
           />
           <OsCard
             label="Linux"
-            emoji="🐧"
+            emoji="?"
             row={linuxRow}
             getStatus={getStatus}
           />
@@ -188,7 +188,7 @@ export function InstallationHealthCard() {
 
         {!loading && totalEvents === 0 && !error && (
           <div className="text-center py-6 text-muted-foreground text-sm">
-            Nenhuma instalação registrada nas últimas 24 horas
+            Nenhuma instalacao registrada nas ultimas 24 horas
           </div>
         )}
       </CardContent>
@@ -252,7 +252,7 @@ function OsCard({ label, emoji, row, highlight, getStatus }: OsCardProps) {
                   <span className="cursor-help">Total: {total}</span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-xs">✅ {successful} sucesso · ❌ {failed} falhas</p>
+                  <p className="text-xs">[OK]  {successful} sucesso ? [ERROR]  {failed} falhas</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

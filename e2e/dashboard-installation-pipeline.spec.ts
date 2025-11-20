@@ -20,8 +20,8 @@ test.describe('Installation Pipeline Monitor Dashboard', () => {
     // Wait for metrics cards to appear
     await expect(page.locator('text=Taxa de Sucesso')).toBeVisible();
     await expect(page.locator('text=Agentes Ativos')).toBeVisible();
-    await expect(page.locator('text=Tempo Médio de Instalação')).toBeVisible();
-    await expect(page.locator('text=Taxa de Conversão')).toBeVisible();
+    await expect(page.locator('text=Tempo Medio de Instalacao')).toBeVisible();
+    await expect(page.locator('text=Taxa de Conversao')).toBeVisible();
     await expect(page.locator('text=Agentes Travados')).toBeVisible();
 
     // Check that metrics have values
@@ -31,7 +31,7 @@ test.describe('Installation Pipeline Monitor Dashboard', () => {
 
   test('should display funnel chart', async ({ page }) => {
     // Check funnel chart container exists
-    await expect(page.locator('text=Funil de Instalação')).toBeVisible();
+    await expect(page.locator('text=Funil de Instalacao')).toBeVisible();
     
     // Wait for chart to render (recharts)
     await page.waitForSelector('svg', { timeout: 5000 });
@@ -62,10 +62,10 @@ test.describe('Installation Pipeline Monitor Dashboard', () => {
 
   test('should change time period', async ({ page }) => {
     // Click time period dropdown
-    await page.click('text=Últimas 24 horas');
+    await page.click('text=Ultimas 24 horas');
     
     // Select different period
-    await page.click('text=Última hora');
+    await page.click('text=Ultima hora');
     
     // Wait for metrics to reload
     await page.waitForTimeout(1000);
@@ -105,7 +105,7 @@ test.describe('Installation Pipeline Monitor Dashboard', () => {
     await page.reload();
     
     // Wait for error state
-    await expect(page.locator('text=Erro ao Carregar Pipeline de Instalação')).toBeVisible();
+    await expect(page.locator('text=Erro ao Carregar Pipeline de Instalacao')).toBeVisible();
     await expect(page.locator('button:has-text("Tentar Novamente")')).toBeVisible();
   });
 

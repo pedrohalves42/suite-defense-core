@@ -89,7 +89,7 @@ export default function EnrollmentKeys() {
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
 
-  // FASE 1.3: Usar view segura com máscara ao invés de tabela direta
+  // FASE 1.3: Usar view segura com mascara ao inves de tabela direta
   const { data: keys, isLoading } = useQuery({
     queryKey: ['enrollment-keys', page, searchTerm, statusFilter],
     queryFn: async () => {
@@ -235,7 +235,7 @@ export default function EnrollmentKeys() {
       if (error) throw error;
 
       toast({
-        title: "Limpeza concluída!",
+        title: "Limpeza concluida!",
         description: `${data.deleted_count} chaves expiradas foram removidas.`
       });
 
@@ -282,13 +282,13 @@ export default function EnrollmentKeys() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Confirmar Limpeza Manual</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Esta ação irá remover permanentemente todas as enrollment keys que:
+                      Esta acao ira remover permanentemente todas as enrollment keys que:
                       <ul className="list-disc ml-5 mt-2 space-y-1">
-                        <li>Expiraram há mais de 48 horas</li>
-                        <li>Estão marcadas como inativas</li>
+                        <li>Expiraram ha mais de 48 horas</li>
+                        <li>Estao marcadas como inativas</li>
                       </ul>
                       <br />
-                      Esta ação não pode ser desfeita.
+                      Esta acao nao pode ser desfeita.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -318,7 +318,7 @@ export default function EnrollmentKeys() {
                   <DialogHeader>
                     <DialogTitle>Criar Nova Chave</DialogTitle>
                     <DialogDescription>
-                      Configure os parâmetros para a nova chave de enrollment
+                      Configure os parametros para a nova chave de enrollment
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
@@ -332,7 +332,7 @@ export default function EnrollmentKeys() {
                       />
                     </div>
                     <div>
-                      <Label>Usos máximos</Label>
+                      <Label>Usos maximos</Label>
                       <Input 
                         type="number" 
                         value={maxUses}
@@ -341,11 +341,11 @@ export default function EnrollmentKeys() {
                       />
                     </div>
                     <div>
-                      <Label>Descrição</Label>
+                      <Label>Descricao</Label>
                       <Textarea 
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        placeholder="Descrição opcional..."
+                        placeholder="Descricao opcional..."
                       />
                     </div>
                     <Button 
@@ -382,7 +382,7 @@ export default function EnrollmentKeys() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.recentCount || 0}</div>
-            <p className="text-xs text-muted-foreground">Últimos 30 dias</p>
+            <p className="text-xs text-muted-foreground">Ultimos 30 dias</p>
           </CardContent>
         </Card>
         
@@ -393,7 +393,7 @@ export default function EnrollmentKeys() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.usedCount || 0}</div>
-            <p className="text-xs text-muted-foreground">Últimos 30 dias</p>
+            <p className="text-xs text-muted-foreground">Ultimos 30 dias</p>
           </CardContent>
         </Card>
         
@@ -418,7 +418,7 @@ export default function EnrollmentKeys() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Input
-                placeholder="Buscar por descrição ou chave..."
+                placeholder="Buscar por descricao ou chave..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -462,14 +462,14 @@ export default function EnrollmentKeys() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Chave</TableHead>
-                      <TableHead>Descrição</TableHead>
+                      <TableHead>Descricao</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Usos</TableHead>
                       <TableHead>Criado por</TableHead>
                       <TableHead>Criado em</TableHead>
-                      <TableHead>Último uso</TableHead>
+                      <TableHead>Ultimo uso</TableHead>
                       <TableHead>Expira em</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
+                      <TableHead className="text-right">Acoes</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -479,7 +479,7 @@ export default function EnrollmentKeys() {
                       
                       return (
                         <TableRow key={key.id}>
-                          {/* FASE 1.3: Mostrar chave mascarada ao invés da chave completa */}
+                          {/* FASE 1.3: Mostrar chave mascarada ao inves da chave completa */}
                           <TableCell className="font-mono text-sm">{key.key_masked}</TableCell>
                           <TableCell className="max-w-[200px] truncate">{key.description || '-'}</TableCell>
                           <TableCell>
@@ -498,7 +498,7 @@ export default function EnrollmentKeys() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right space-x-2">
-                            {/* FASE 1.3: REMOVIDO botão de copiar - chave não pode ser copiada via frontend */}
+                            {/* FASE 1.3: REMOVIDO botao de copiar - chave nao pode ser copiada via frontend */}
                             {canWrite && key.is_active && (
                               <Button 
                                 size="sm" 
@@ -530,7 +530,7 @@ export default function EnrollmentKeys() {
                   Anterior
                 </Button>
                 <span className="text-sm text-muted-foreground">
-                  Página {page + 1} de {totalPages}
+                  Pagina {page + 1} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
@@ -538,7 +538,7 @@ export default function EnrollmentKeys() {
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
                 >
-                  Próxima
+                  Proxima
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>

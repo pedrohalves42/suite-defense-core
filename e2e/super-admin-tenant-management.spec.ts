@@ -39,7 +39,7 @@ test.describe('Super Admin - Tenant Management', () => {
     
     // Verify summary cards are present
     await expect(page.locator('text=Total de Tenants')).toBeVisible();
-    await expect(page.locator('text=Total de Usuários')).toBeVisible();
+    await expect(page.locator('text=Total de Usuarios')).toBeVisible();
     await expect(page.locator('text=Total de Agentes')).toBeVisible();
   });
 
@@ -52,7 +52,7 @@ test.describe('Super Admin - Tenant Management', () => {
     // Verify table headers
     await expect(page.locator('th:has-text("Nome do Tenant")')).toBeVisible();
     await expect(page.locator('th:has-text("Plano Atual")')).toBeVisible();
-    await expect(page.locator('th:has-text("Usuários")')).toBeVisible();
+    await expect(page.locator('th:has-text("Usuarios")')).toBeVisible();
     await expect(page.locator('th:has-text("Agentes")')).toBeVisible();
     await expect(page.locator('th:has-text("Alterar Plano")')).toBeVisible();
     
@@ -185,7 +185,7 @@ test.describe('Super Admin - Tenant Management', () => {
     expect(parseInt(tenantCount || '0')).toBeGreaterThanOrEqual(0);
     
     // Get user count from card
-    const userCard = page.locator('text=Total de Usuários').locator('..');
+    const userCard = page.locator('text=Total de Usuarios').locator('..');
     const userCount = await userCard.locator('.text-2xl').textContent();
     expect(parseInt(userCount || '0')).toBeGreaterThanOrEqual(0);
     

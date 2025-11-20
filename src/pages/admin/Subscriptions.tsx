@@ -143,7 +143,7 @@ export default function Subscriptions() {
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             {trialDaysRemaining <= 1 ? (
-              <strong>⚠️ Seu trial expira amanhã!</strong>
+              <strong>[WARN] ? Seu trial expira amanha!</strong>
             ) : (
               <strong>Seu trial expira em {trialDaysRemaining} dias</strong>
             )}
@@ -153,7 +153,7 @@ export default function Subscriptions() {
               className="p-0 h-auto"
               onClick={() => navigate('/admin/plan-upgrade')}
             >
-              Escolha um plano agora →
+              Escolha um plano agora ?
             </Button>
           </AlertDescription>
         </Alert>
@@ -191,7 +191,7 @@ export default function Subscriptions() {
           
           {subscription?.current_period_end && (
             <div>
-              <p className="text-sm text-muted-foreground">Próxima Renovação</p>
+              <p className="text-sm text-muted-foreground">Proxima Renovacao</p>
               <p className="text-lg font-medium">
                 {new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}
               </p>
@@ -215,7 +215,7 @@ export default function Subscriptions() {
         <Alert className="mt-4 border-yellow-500 bg-yellow-50">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            ⚠️ Sistema está validando seu plano. Se "Free" persistir mas você é cliente Pro, contate o suporte.
+            [WARN] ? Sistema esta validando seu plano. Se "Free" persistir mas voce e cliente Pro, contate o suporte.
           </AlertDescription>
         </Alert>
       )}
@@ -241,7 +241,7 @@ export default function Subscriptions() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Scans Avançados (Hoje)</CardTitle>
+            <CardTitle className="text-sm font-medium">Scans Avancados (Hoje)</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center justify-between">
@@ -261,9 +261,9 @@ export default function Subscriptions() {
       {!isOnFreePlan && (
         <Card>
           <CardHeader>
-            <CardTitle>Histórico de Faturamento</CardTitle>
+            <CardTitle>Historico de Faturamento</CardTitle>
             <CardDescription>
-              Suas últimas faturas e pagamentos
+              Suas ultimas faturas e pagamentos
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -280,10 +280,10 @@ export default function Subscriptions() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
-                    <TableHead>Número</TableHead>
+                    <TableHead>Numero</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Ações</TableHead>
+                    <TableHead>Acoes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

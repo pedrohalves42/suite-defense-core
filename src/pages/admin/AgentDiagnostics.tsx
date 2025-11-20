@@ -55,7 +55,7 @@ export default function AgentDiagnostics() {
     },
   });
 
-  // Diagnóstico do agente selecionado
+  // Diagnostico do agente selecionado
   const { data: diagnostics = [], isLoading: diagnosticsLoading, refetch: refetchDiagnostics } = useQuery({
     queryKey: ['agent-diagnostics', selectedAgent],
     queryFn: async () => {
@@ -86,8 +86,8 @@ export default function AgentDiagnostics() {
     },
     onSuccess: () => {
       toast({
-        title: 'Health check concluído',
-        description: 'Verificação executada com sucesso',
+        title: 'Health check concluido',
+        description: 'Verificacao executada com sucesso',
       });
       refetchDiagnostics();
     },
@@ -142,9 +142,9 @@ export default function AgentDiagnostics() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Diagnóstico de Agentes</h1>
+          <h1 className="text-3xl font-bold">Diagnostico de Agentes</h1>
           <p className="text-muted-foreground">
-            Análise detalhada de conectividade e problemas
+            Analise detalhada de conectividade e problemas
           </p>
         </div>
         <Button onClick={() => refetchAgents()} variant="outline" size="sm">
@@ -157,15 +157,15 @@ export default function AgentDiagnostics() {
       {agents.filter(a => !a.last_heartbeat).length > 0 && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Agentes sem comunicação detectados</AlertTitle>
+          <AlertTitle>Agentes sem comunicacao detectados</AlertTitle>
           <AlertDescription>
             {agents.filter(a => !a.last_heartbeat).length} agente(s) instalaram mas nunca enviaram heartbeat.
             <br />
-            Possíveis causas:
+            Possiveis causas:
             <ul className="list-disc list-inside mt-2">
-              <li>Scheduled Task sem parâmetros (bug conhecido - corrigido)</li>
-              <li>Firewall bloqueando saída HTTPS</li>
-              <li>Credenciais inválidas (token/HMAC)</li>
+              <li>Scheduled Task sem parametros (bug conhecido - corrigido)</li>
+              <li>Firewall bloqueando saida HTTPS</li>
+              <li>Credenciais invalidas (token/HMAC)</li>
             </ul>
             <div className="mt-3">
               <Button 
@@ -173,7 +173,7 @@ export default function AgentDiagnostics() {
                 size="sm"
                 onClick={() => window.location.href = '/admin/installation-logs'}
               >
-                Ver Logs de Instalação
+                Ver Logs de Instalacao
               </Button>
             </div>
           </AlertDescription>
@@ -188,7 +188,7 @@ export default function AgentDiagnostics() {
               <Terminal className="h-5 w-5" />
               Agentes ({agents.length})
             </CardTitle>
-            <CardDescription>Selecione um agente para diagnóstico</CardDescription>
+            <CardDescription>Selecione um agente para diagnostico</CardDescription>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[600px]">
@@ -223,7 +223,7 @@ export default function AgentDiagnostics() {
                         <p>Host: {agent.hostname}</p>
                         {agent.last_heartbeat && (
                           <p>
-                            Último heartbeat:{' '}
+                            Ultimo heartbeat:{' '}
                             {new Date(agent.last_heartbeat).toLocaleString('pt-BR')}
                           </p>
                         )}
@@ -236,17 +236,17 @@ export default function AgentDiagnostics() {
           </CardContent>
         </Card>
 
-        {/* Diagnóstico Detalhado */}
+        {/* Diagnostico Detalhado */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
-              Diagnóstico Detalhado
+              Diagnostico Detalhado
             </CardTitle>
             <CardDescription>
               {selectedAgent
-                ? `Análise do agente ${agents.find(a => a.id === selectedAgent)?.agent_name}`
-                : 'Selecione um agente para ver o diagnóstico'}
+                ? `Analise do agente ${agents.find(a => a.id === selectedAgent)?.agent_name}`
+                : 'Selecione um agente para ver o diagnostico'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -255,7 +255,7 @@ export default function AgentDiagnostics() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Nenhum agente selecionado</AlertTitle>
                 <AlertDescription>
-                  Selecione um agente na lista à esquerda para ver o diagnóstico detalhado.
+                  Selecione um agente na lista a esquerda para ver o diagnostico detalhado.
                 </AlertDescription>
               </Alert>
             ) : diagnosticsLoading ? (
@@ -309,7 +309,7 @@ export default function AgentDiagnostics() {
                           <CheckCircle className="h-4 w-4" />
                           <AlertTitle>Nenhum problema detectado</AlertTitle>
                           <AlertDescription>
-                            O agente está funcionando corretamente.
+                            O agente esta funcionando corretamente.
                           </AlertDescription>
                         </Alert>
                       ) : (
@@ -352,9 +352,9 @@ export default function AgentDiagnostics() {
                         <p className="font-medium">Checklist de Rede:</p>
                         <ul className="list-disc list-inside text-sm space-y-1">
                           <li>Porta 443 (HTTPS) deve estar aberta</li>
-                          <li>Firewall deve permitir conexões saindo para *.supabase.co</li>
+                          <li>Firewall deve permitir conexoes saindo para *.supabase.co</li>
                           <li>Proxy corporativo deve permitir WebSocket (wss://)</li>
-                          <li>DNS deve resolver o domínio do Supabase</li>
+                          <li>DNS deve resolver o dominio do Supabase</li>
                         </ul>
                       </div>
                     </AlertDescription>
@@ -366,7 +366,7 @@ export default function AgentDiagnostics() {
                     <FileText className="h-4 w-4" />
                     <AlertTitle>Logs do Agente</AlertTitle>
                     <AlertDescription>
-                      Os logs do agente são armazenados localmente em:
+                      Os logs do agente sao armazenados localmente em:
                       <br />
                       <code className="text-xs bg-muted px-2 py-1 rounded mt-2 block">
                         Windows: C:\ProgramData\CyberShield\logs\agent.log

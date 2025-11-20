@@ -1,10 +1,10 @@
 -- ============================================
--- 🔍 SMOKE TEST: Lifecycle por OS (24h)
+-- [SCAN]  SMOKE TEST: Lifecycle por OS (24h)
 -- ============================================
--- Visão geral de distribuição de agentes por OS e lifecycle stage
--- Útil para identificar problemas de instalação rapidamente
+-- Visao geral de distribuicao de agentes por OS e lifecycle stage
+-- Util para identificar problemas de instalacao rapidamente
 
--- Query 1: Visão Geral por OS
+-- Query 1: Visao Geral por OS
 -- ============================================
 WITH recent AS (
   SELECT
@@ -57,7 +57,7 @@ ORDER BY
 -- linux   | active            |     5 | 100.0
 
 
--- Query 2: macOS Específico + Eventos de Instalação
+-- Query 2: macOS Especifico + Eventos de Instalacao
 -- ============================================
 WITH macos_agents AS (
   SELECT
@@ -97,10 +97,10 @@ SELECT
   ie.created_at AS install_event_at,
   ie.metadata->>'os_version' AS macos_version,
   CASE
-    WHEN m.is_stuck THEN '🔴 STUCK'
-    WHEN m.has_errors THEN '🟡 ERRORS'
-    WHEN m.lifecycle_stage = 'active' THEN '🟢 OK'
-    ELSE '⚪ ' || m.lifecycle_stage
+    WHEN m.is_stuck THEN '? STUCK'
+    WHEN m.has_errors THEN '? ERRORS'
+    WHEN m.lifecycle_stage = 'active' THEN '? OK'
+    ELSE '? ' || m.lifecycle_stage
   END AS status_emoji
 FROM macos_agents m
 LEFT JOIN install_events ie
@@ -110,11 +110,11 @@ ORDER BY m.enrolled_at DESC;
 -- Resultado esperado (exemplo):
 -- agent_name        | lifecycle_stage | enrolled_at          | status_emoji
 -- ------------------|----------------|---------------------|---------------
--- fs-auditor-macos  | active         | 2025-01-15 10:30:00 | 🟢 OK
--- test-macos-01     | installing     | 2025-01-15 10:25:00 | ⚪ installing
+-- fs-auditor-macos  | active         | 2025-01-15 10:30:00 | ? OK
+-- test-macos-01     | installing     | 2025-01-15 10:25:00 | ? installing
 
 
--- Query 3: Agentes Problemáticos (STUCK ou COM ERROS)
+-- Query 3: Agentes Problematicos (STUCK ou COM ERROS)
 -- ============================================
 SELECT
   agent_name,
@@ -126,10 +126,10 @@ SELECT
   EXTRACT(EPOCH FROM (NOW() - last_heartbeat_at)) / 60 AS minutes_since_heartbeat,
   agent_version,
   CASE
-    WHEN is_stuck THEN '🔴 Travado em ' || lifecycle_stage || ' (> 30 min)'
-    WHEN has_errors THEN '🟡 Com erros'
-    WHEN lifecycle_stage = 'installing' AND enrolled_at < NOW() - INTERVAL '10 minutes' THEN '🟠 Installing muito tempo'
-    ELSE '⚪ Indefinido'
+    WHEN is_stuck THEN '? Travado em ' || lifecycle_stage || ' (> 30 min)'
+    WHEN has_errors THEN '? Com erros'
+    WHEN lifecycle_stage = 'installing' AND enrolled_at < NOW() - INTERVAL '10 minutes' THEN '? Installing muito tempo'
+    ELSE '? Indefinido'
   END AS problem_description
 FROM v_agent_lifecycle_state
 WHERE 
@@ -164,22 +164,22 @@ SELECT
     ELSE ROUND(100.0 * active_agents / total_agents, 1)
   END AS success_rate_pct,
   CASE
-    WHEN total_agents = 0 THEN '⚪ Sem dados'
-    WHEN ROUND(100.0 * active_agents / total_agents, 1) >= 95 THEN '🟢 HEALTHY'
-    WHEN ROUND(100.0 * active_agents / total_agents, 1) >= 80 THEN '🟡 WARNING'
-    ELSE '🔴 CRITICAL'
+    WHEN total_agents = 0 THEN '? Sem dados'
+    WHEN ROUND(100.0 * active_agents / total_agents, 1) >= 95 THEN '? HEALTHY'
+    WHEN ROUND(100.0 * active_agents / total_agents, 1) >= 80 THEN '? WARNING'
+    ELSE '? CRITICAL'
   END AS health_status
 FROM stats;
 
 -- Resultado esperado (exemplo):
 -- total_agents | active_agents | stuck | errors | success_rate | health_status
 -- -------------|---------------|-------|--------|--------------|---------------
---           38 |            36 |     1 |      1 |         94.7 | 🟡 WARNING
+--           38 |            36 |     1 |      1 |         94.7 | ? WARNING
 
 -- ============================================
--- 🎯 CRITÉRIOS DE SUCESSO
+-- ? CRITERIOS DE SUCESSO
 -- ============================================
--- ✅ success_rate >= 95% → HEALTHY
--- ⚠️ success_rate >= 80% → WARNING
--- 🚨 success_rate < 80%  → CRITICAL
+-- [OK]  success_rate >= 95% ? HEALTHY
+-- [WARN] ? success_rate >= 80% ? WARNING
+-- ? success_rate < 80%  ? CRITICAL
 -- ============================================

@@ -127,8 +127,8 @@ serve(async (req) => {
           tenant_id: tenantId,
           alert_type: "stuck_installations",
           severity: "high",
-          title: `${agentList.length} instalação(ões) travada(s)`,
-          message: `${agentList.length} agente(s) com comando copiado há mais de 30 minutos sem conclusão`,
+          title: `${agentList.length} instalacao(oes) travada(s)`,
+          message: `${agentList.length} agente(s) com comando copiado ha mais de 30 minutos sem conclusao`,
           details: {
             stuck_agents: agentList.map(a => ({
               agent_name: a.agent_name,
@@ -159,8 +159,8 @@ serve(async (req) => {
       const resend = new Resend(resendApiKey);
 
       const emailHtml = `
-        <h2>⚠️ Instalações Travadas Detectadas - ${tenant.name}</h2>
-        <p><strong>${agentList.length}</strong> agente(s) estão com instalação travada há mais de 30 minutos:</p>
+        <h2>[WARN] ? Instalacoes Travadas Detectadas - ${tenant.name}</h2>
+        <p><strong>${agentList.length}</strong> agente(s) estao com instalacao travada ha mais de 30 minutos:</p>
         <ul>
           ${agentList.map(a => `
             <li>
@@ -170,12 +170,12 @@ serve(async (req) => {
             </li>
           `).join('')}
         </ul>
-        <p>Possíveis causas:</p>
+        <p>Possiveis causas:</p>
         <ul>
-          <li>Script não foi executado</li>
-          <li>Erro de autenticação (401)</li>
+          <li>Script nao foi executado</li>
+          <li>Erro de autenticacao (401)</li>
           <li>Problemas de TLS/Proxy</li>
-          <li>Firewall bloqueando conexão</li>
+          <li>Firewall bloqueando conexao</li>
         </ul>
         <p>Acesse o dashboard para mais detalhes.</p>
         <hr/>
@@ -186,7 +186,7 @@ serve(async (req) => {
         const emailResult = await resend.emails.send({
           from: "CyberShield Alerts <alerts@cybershield.com>",
           to: adminEmails,
-          subject: `⚠️ ${agentList.length} Instalação(ões) Travada(s) - ${tenant.name}`,
+          subject: `[WARN] ? ${agentList.length} Instalacao(oes) Travada(s) - ${tenant.name}`,
           html: emailHtml
         });
 

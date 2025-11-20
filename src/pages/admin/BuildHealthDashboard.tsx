@@ -34,11 +34,11 @@ export default function BuildHealthDashboard() {
       return data;
     },
     onSuccess: (data) => {
-      toast.success(`✅ Limpeza concluída: ${data.cleaned_count} build(s) marcados como falhos`);
+      toast.success(`[OK]  Limpeza concluida: ${data.cleaned_count} build(s) marcados como falhos`);
       queryClient.invalidateQueries({ queryKey: ["recent-builds"] });
     },
     onError: (error: Error) => {
-      toast.error(`❌ Erro na limpeza: ${error.message}`);
+      toast.error(`[ERROR]  Erro na limpeza: ${error.message}`);
     }
   });
 
@@ -89,19 +89,19 @@ export default function BuildHealthDashboard() {
           Build Health Dashboard
         </h1>
         <p className="text-muted-foreground mt-2">
-          Monitore a saúde e o desempenho do sistema de builds
+          Monitore a saude e o desempenho do sistema de builds
         </p>
       </div>
 
-      {/* Alertas Críticos */}
+      {/* Alertas Criticos */}
       {stuckBuilds.length > 0 && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>⚠ Builds Travados Detectados</AlertTitle>
+          <AlertTitle>[WARN]  Builds Travados Detectados</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
             <span>
-              {stuckBuilds.length} build(s) estão travados há mais de 15 minutos. 
-              O watchdog deve limpá-los automaticamente.
+              {stuckBuilds.length} build(s) estao travados ha mais de 15 minutos. 
+              O watchdog deve limpa-los automaticamente.
             </span>
             <Button 
               size="sm" 
@@ -116,7 +116,7 @@ export default function BuildHealthDashboard() {
         </Alert>
       )}
 
-      {/* Métricas */}
+      {/* Metricas */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -126,20 +126,20 @@ export default function BuildHealthDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{successRate}%</div>
             <p className="text-xs text-muted-foreground">
-              Últimos 10 builds
+              Ultimos 10 builds
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tempo Médio</CardTitle>
+            <CardTitle className="text-sm font-medium">Tempo Medio</CardTitle>
             <Clock className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{avgBuildTime}s</div>
             <p className="text-xs text-muted-foreground">
-              Duração média de build
+              Duracao media de build
             </p>
           </CardContent>
         </Card>
@@ -154,7 +154,7 @@ export default function BuildHealthDashboard() {
               {builds?.filter(b => b.build_status === 'building').length || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              Aguardando conclusão
+              Aguardando conclusao
             </p>
           </CardContent>
         </Card>
@@ -164,7 +164,7 @@ export default function BuildHealthDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Builds Recentes</CardTitle>
-          <CardDescription>Últimos 10 builds do sistema</CardDescription>
+          <CardDescription>Ultimos 10 builds do sistema</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -176,7 +176,7 @@ export default function BuildHealthDashboard() {
                       Build ID: {build.id.slice(0, 8)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(build.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {format(new Date(build.created_at), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}
                     </p>
                     {build.error_message && (
                       <p className="text-xs text-destructive mt-1">

@@ -63,8 +63,8 @@ import Tenant from "./pages/admin/Tenant";
 import JobsV3Migration from "./pages/admin/JobsV3Migration";
 import InstallationHealth from "./pages/admin/InstallationHealth";
 
-// CORREÇÃO: QueryClient já está inicializado no src/main.tsx
-// Remover duplicação para manter configurações otimizadas
+// CORRECAO: QueryClient ja esta inicializado no src/main.tsx
+// Remover duplicacao para manter configuracoes otimizadas
 
 const App = () => (
   <ErrorBoundary>

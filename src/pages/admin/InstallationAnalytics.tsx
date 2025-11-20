@@ -121,9 +121,9 @@ export default function InstallationAnalytics() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Analytics de Instalação</h1>
+        <h1 className="text-3xl font-bold">Analytics de Instalacao</h1>
         <p className="text-muted-foreground">
-          Acompanhe métricas de instaladores gerados, baixados e instalados
+          Acompanhe metricas de instaladores gerados, baixados e instalados
         </p>
       </div>
 
@@ -170,13 +170,13 @@ export default function InstallationAnalytics() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Taxa de Conversão</CardTitle>
+            <CardTitle className="text-sm font-medium">Taxa de Conversao</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{conversionRate}%</div>
             <p className="text-xs text-muted-foreground">
-              Gerados → Instalados
+              Gerados ? Instalados
             </p>
           </CardContent>
         </Card>
@@ -194,8 +194,8 @@ export default function InstallationAnalytics() {
         <TabsContent value="funnel" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Funil de Conversão de Instalação</CardTitle>
-              <CardDescription>Acompanhe cada etapa do processo de instalação</CardDescription>
+              <CardTitle>Funil de Conversao de Instalacao</CardTitle>
+              <CardDescription>Acompanhe cada etapa do processo de instalacao</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -271,7 +271,7 @@ export default function InstallationAnalytics() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span className="font-semibold">4. Instalação Completa</span>
+                      <span className="font-semibold">4. Instalacao Completa</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-bold text-green-600">{metrics.total_installed}</span>
@@ -294,7 +294,7 @@ export default function InstallationAnalytics() {
                 <div className="mt-6 p-4 bg-muted rounded-lg">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Taxa de Cópia</p>
+                      <p className="text-sm text-muted-foreground">Taxa de Copia</p>
                       <p className="text-xl font-bold">
                         {metrics.total_generated > 0 ? ((metrics.total_copied / metrics.total_generated) * 100).toFixed(1) : '0'}%
                       </p>
@@ -306,7 +306,7 @@ export default function InstallationAnalytics() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Taxa de Instalação</p>
+                      <p className="text-sm text-muted-foreground">Taxa de Instalacao</p>
                       <p className="text-xl font-bold">
                         {metrics.total_generated > 0 ? ((metrics.total_installed / metrics.total_generated) * 100).toFixed(1) : '0'}%
                       </p>
@@ -327,8 +327,8 @@ export default function InstallationAnalytics() {
         <TabsContent value="timeline" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Últimos 7 Dias</CardTitle>
-              <CardDescription>Atividade de instalação ao longo do tempo</CardDescription>
+              <CardTitle>Ultimos 7 Dias</CardTitle>
+              <CardDescription>Atividade de instalacao ao longo do tempo</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -350,7 +350,7 @@ export default function InstallationAnalytics() {
         <TabsContent value="platforms" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Distribuição por Plataforma</CardTitle>
+              <CardTitle>Distribuicao por Plataforma</CardTitle>
               <CardDescription>Windows vs Linux</CardDescription>
             </CardHeader>
             <CardContent>
@@ -381,7 +381,7 @@ export default function InstallationAnalytics() {
           <Card>
             <CardHeader>
               <CardTitle>Tipos de Eventos</CardTitle>
-              <CardDescription>Distribuição de eventos de instalação</CardDescription>
+              <CardDescription>Distribuicao de eventos de instalacao</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -409,7 +409,7 @@ export default function InstallationAnalytics() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Tempo Médio de Instalação
+              Tempo Medio de Instalacao
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -417,7 +417,7 @@ export default function InstallationAnalytics() {
               {avgInstallTime ? `${Math.round(avgInstallTime)}s` : 'N/A'}
             </div>
             <p className="text-sm text-muted-foreground mt-2">
-              Baseado em {analytics?.filter(a => a.event_type === 'post_installation' || a.event_type === 'post_installation_unverified').length || 0} instalações
+              Baseado em {analytics?.filter(a => a.event_type === 'post_installation' || a.event_type === 'post_installation_unverified').length || 0} instalacoes
             </p>
           </CardContent>
         </Card>
@@ -436,7 +436,7 @@ export default function InstallationAnalytics() {
                 : '0%'}
             </div>
             <p className="text-sm text-muted-foreground mt-2">
-              {metrics.total_failed} instalações falharam
+              {metrics.total_failed} instalacoes falharam
             </p>
           </CardContent>
         </Card>

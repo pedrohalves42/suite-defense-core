@@ -12,46 +12,46 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 type Audience = 'business' | 'home';
 
 const Landing = () => {
-  const whatsappLink = "https://wa.me/5534984432835?text=Olá!%20Gostaria%20de%20conhecer%20o%20CyberShield";
+  const whatsappLink = "https://wa.me/5534984432835?text=Ola!%20Gostaria%20de%20conhecer%20o%20CyberShield";
   const [deviceCount, setDeviceCount] = useState<number>(10);
   const [audience, setAudience] = useState<Audience>('business');
 
   const content = {
     business: {
       hero: {
-        badge: "Proteção Empresarial de Verdade",
+        badge: "Protecao Empresarial de Verdade",
         title1: "Proteja os Ativos Digitais",
         title2: "da Sua Empresa",
-        description: "Monitore todos os dispositivos da sua empresa em um único painel centralizado.",
+        description: "Monitore todos os dispositivos da sua empresa em um unico painel centralizado.",
         descriptionBold: " Visibilidade completa e resposta em tempo real.",
         stat2Label: "Dispositivos por plano",
-        ctaButton: "Começar Trial Grátis",
-        reassurance: "✓ 30 dias de trial gratuito • ✓ Instalação em 5 minutos • ✓ Suporte 100% em português"
+        ctaButton: "Comecar Trial Gratis",
+        reassurance: "? 30 dias de trial gratuito ? ? Instalacao em 5 minutos ? ? Suporte 100% em portugues"
       },
       benefits: {
-        card1: { title: "Veja Tudo em Um Só Lugar", description: "Painel centralizado com status de todos os dispositivos da empresa" },
+        card1: { title: "Veja Tudo em Um So Lugar", description: "Painel centralizado com status de todos os dispositivos da empresa" },
         card2: { title: "Haja em Segundos", description: "Resposta em tempo real para proteger seus ativos digitais" },
-        card3: { title: "Economize Tempo e Dinheiro", description: "Automação inteligente reduz custos operacionais" }
+        card3: { title: "Economize Tempo e Dinheiro", description: "Automacao inteligente reduz custos operacionais" }
       },
       calculator: { label: "Quantos dispositivos sua empresa possui?" }
     },
     home: {
       hero: {
-        badge: "Segurança Digital Para Toda a Família",
+        badge: "Seguranca Digital Para Toda a Familia",
         title1: "Proteja os Computadores e Dados",
-        title2: "da Sua Família",
-        description: "Monitore todos os PCs de casa em um único painel.",
-        descriptionBold: " Proteja fotos, documentos e a privacidade da família contra vírus e ameaças.",
+        title2: "da Sua Familia",
+        description: "Monitore todos os PCs de casa em um unico painel.",
+        descriptionBold: " Proteja fotos, documentos e a privacidade da familia contra virus e ameacas.",
         stat2Label: "Ideal para 1-10 PCs",
         ctaButton: "Proteger Minha Casa Agora",
-        reassurance: "✓ 30 dias grátis • ✓ Instale você mesmo em 5min • ✓ Suporte em português via WhatsApp"
+        reassurance: "? 30 dias gratis ? ? Instale voce mesmo em 5min ? ? Suporte em portugues via WhatsApp"
       },
       benefits: {
-        card1: { title: "Veja Tudo em Um Só Lugar", description: "Veja o status de todos os PCs da casa: do seu home office ao computador dos filhos" },
-        card2: { title: "Haja em Segundos", description: "Proteja fotos de família, documentos importantes e a privacidade de todos em tempo real" },
-        card3: { title: "Economize Tempo e Dinheiro", description: "Chega de pagar técnico toda semana. Mantenha os PCs seguros automaticamente" }
+        card1: { title: "Veja Tudo em Um So Lugar", description: "Veja o status de todos os PCs da casa: do seu home office ao computador dos filhos" },
+        card2: { title: "Haja em Segundos", description: "Proteja fotos de familia, documentos importantes e a privacidade de todos em tempo real" },
+        card3: { title: "Economize Tempo e Dinheiro", description: "Chega de pagar tecnico toda semana. Mantenha os PCs seguros automaticamente" }
       },
-      calculator: { label: "Quantos computadores você tem em casa?" }
+      calculator: { label: "Quantos computadores voce tem em casa?" }
     }
   };
 
@@ -120,17 +120,17 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              {audience === 'business' ? "Por Que Escolher o CyberShield" : "Benefícios para Sua Casa"}
+              {audience === 'business' ? "Por Que Escolher o CyberShield" : "Beneficios para Sua Casa"}
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              {audience === 'business' ? "Proteção empresarial simplificada com tecnologia de ponta" : "Segurança digital fácil para proteger sua família e seus dispositivos"}
+              {audience === 'business' ? "Protecao empresarial simplificada com tecnologia de ponta" : "Seguranca digital facil para proteger sua familia e seus dispositivos"}
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div className="bg-card p-8 rounded-2xl border border-border text-center">
               <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-3xl">👀</span>
+                <span className="text-3xl">?</span>
               </div>
               <h3 className="text-xl font-bold mb-3">{currentContent.benefits.card1.title}</h3>
               <p className="text-muted-foreground">
@@ -140,7 +140,7 @@ const Landing = () => {
 
             <div className="bg-card p-8 rounded-2xl border border-border text-center">
               <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-3xl">⚡</span>
+                <span className="text-3xl">?</span>
               </div>
               <h3 className="text-xl font-bold mb-3">{currentContent.benefits.card2.title}</h3>
               <p className="text-muted-foreground">
@@ -150,7 +150,7 @@ const Landing = () => {
 
             <div className="bg-card p-8 rounded-2xl border border-border text-center">
               <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center mb-4 mx-auto">
-                <span className="text-3xl">💰</span>
+                <span className="text-3xl">?</span>
               </div>
               <h3 className="text-xl font-bold mb-3">{currentContent.benefits.card3.title}</h3>
               <p className="text-muted-foreground">
@@ -166,10 +166,10 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              {audience === 'business' ? "Casos de Uso Específicos" : "Como o CyberShield Protege Sua Casa"}
+              {audience === 'business' ? "Casos de Uso Especificos" : "Como o CyberShield Protege Sua Casa"}
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              {audience === 'business' ? "Soluções para diferentes setores e necessidades empresariais" : "Proteção para todos os dispositivos e membros da família"}
+              {audience === 'business' ? "Solucoes para diferentes setores e necessidades empresariais" : "Protecao para todos os dispositivos e membros da familia"}
             </p>
           </div>
 
@@ -183,13 +183,13 @@ const Landing = () => {
                 </div>
                 <div className="bg-card p-8 rounded-2xl border border-border text-center">
                   <Building2 className="mx-auto mb-4 w-12 h-12 text-primary" />
-                  <h3 className="text-xl font-bold mb-2">Pequenas e Médias Empresas</h3>
-                  <p className="text-muted-foreground">Soluções acessíveis para proteger seus ativos digitais.</p>
+                  <h3 className="text-xl font-bold mb-2">Pequenas e Medias Empresas</h3>
+                  <p className="text-muted-foreground">Solucoes acessiveis para proteger seus ativos digitais.</p>
                 </div>
                 <div className="bg-card p-8 rounded-2xl border border-border text-center">
                   <ShieldCheck className="mx-auto mb-4 w-12 h-12 text-primary" />
-                  <h3 className="text-xl font-bold mb-2">Compliance e Segurança</h3>
-                  <p className="text-muted-foreground">Atenda requisitos regulatórios com relatórios detalhados.</p>
+                  <h3 className="text-xl font-bold mb-2">Compliance e Seguranca</h3>
+                  <p className="text-muted-foreground">Atenda requisitos regulatorios com relatorios detalhados.</p>
                 </div>
               </>
             ) : (
@@ -201,13 +201,13 @@ const Landing = () => {
                 </div>
                 <div className="bg-card p-8 rounded-2xl border border-border text-center">
                   <Baby className="mx-auto mb-4 w-12 h-12 text-primary" />
-                  <h3 className="text-xl font-bold mb-2">Proteção para Crianças</h3>
-                  <p className="text-muted-foreground">Mantenha os dispositivos dos filhos seguros contra ameaças.</p>
+                  <h3 className="text-xl font-bold mb-2">Protecao para Criancas</h3>
+                  <p className="text-muted-foreground">Mantenha os dispositivos dos filhos seguros contra ameacas.</p>
                 </div>
                 <div className="bg-card p-8 rounded-2xl border border-border text-center">
                   <Users className="mx-auto mb-4 w-12 h-12 text-primary" />
-                  <h3 className="text-xl font-bold mb-2">Família Conectada</h3>
-                  <p className="text-muted-foreground">Gerencie a segurança de todos os dispositivos da casa.</p>
+                  <h3 className="text-xl font-bold mb-2">Familia Conectada</h3>
+                  <p className="text-muted-foreground">Gerencie a seguranca de todos os dispositivos da casa.</p>
                 </div>
               </>
             )}
@@ -223,7 +223,7 @@ const Landing = () => {
               {audience === 'business' ? "Como Funciona" : "Como Funciona o CyberShield em Casa"}
             </h2>
             <p className="text-xl text-muted-foreground">
-              {audience === 'business' ? "Três passos simples para proteção completa" : "Proteção fácil em três passos para sua família"}
+              {audience === 'business' ? "Tres passos simples para protecao completa" : "Protecao facil em tres passos para sua familia"}
             </p>
           </div>
 
@@ -234,9 +234,9 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
                   <span className="text-2xl font-bold text-primary">1</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Instalação em Minutos" : "Instale em Minutos"}</h3>
+                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Instalacao em Minutos" : "Instale em Minutos"}</h3>
                 <p className="text-muted-foreground text-lg">
-                  {audience === 'business' ? "Instale o agente em cada dispositivo. Processo simplificado, sem necessidade de conhecimento técnico avançado." : "Instale o software facilmente em todos os computadores da sua casa."}
+                  {audience === 'business' ? "Instale o agente em cada dispositivo. Processo simplificado, sem necessidade de conhecimento tecnico avancado." : "Instale o software facilmente em todos os computadores da sua casa."}
                 </p>
               </div>
             </div>
@@ -247,9 +247,9 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
                   <span className="text-2xl font-bold text-primary">2</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Monitoramento Centralizado" : "Monitoramento Fácil"}</h3>
+                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Monitoramento Centralizado" : "Monitoramento Facil"}</h3>
                 <p className="text-muted-foreground text-lg">
-                  {audience === 'business' ? "Dashboard unificado exibe status operacional, ameaças detectadas e anomalias em tempo real." : "Veja o status de todos os PCs da casa em um painel simples e intuitivo."}
+                  {audience === 'business' ? "Dashboard unificado exibe status operacional, ameacas detectadas e anomalias em tempo real." : "Veja o status de todos os PCs da casa em um painel simples e intuitivo."}
                 </p>
               </div>
             </div>
@@ -260,9 +260,9 @@ const Landing = () => {
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-6">
                   <span className="text-2xl font-bold text-primary">3</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Resposta Automatizada" : "Proteção Automatizada"}</h3>
+                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Resposta Automatizada" : "Protecao Automatizada"}</h3>
                 <p className="text-muted-foreground text-lg">
-                  {audience === 'business' ? "Execute correções e atualizações remotamente através da interface centralizada." : "O CyberShield protege automaticamente contra ameaças sem que você precise se preocupar."}
+                  {audience === 'business' ? "Execute correcoes e atualizacoes remotamente atraves da interface centralizada." : "O CyberShield protege automaticamente contra ameacas sem que voce precise se preocupar."}
                 </p>
               </div>
             </div>
@@ -284,9 +284,9 @@ const Landing = () => {
                     <Zap className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg mb-2">{audience === 'business' ? "Scans de Vírus Avançados" : "Proteção Contra Vírus"}</h3>
+                    <h3 className="font-bold text-lg mb-2">{audience === 'business' ? "Scans de Virus Avancados" : "Protecao Contra Virus"}</h3>
                     <p className="text-muted-foreground">
-                      {audience === 'business' ? "Integração com VirusTotal e Hybrid Analysis para detecção de ameaças em tempo real." : "Detecta e remove vírus e malwares automaticamente."}
+                      {audience === 'business' ? "Integracao com VirusTotal e Hybrid Analysis para deteccao de ameacas em tempo real." : "Detecta e remove virus e malwares automaticamente."}
                     </p>
                   </div>
                 </div>
@@ -296,9 +296,9 @@ const Landing = () => {
                     <Lock className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg mb-2">{audience === 'business' ? "Quarentena Automática" : "Isolamento de Ameaças"}</h3>
+                    <h3 className="font-bold text-lg mb-2">{audience === 'business' ? "Quarentena Automatica" : "Isolamento de Ameacas"}</h3>
                     <p className="text-muted-foreground">
-                      {audience === 'business' ? "Arquivos maliciosos são automaticamente isolados para proteger sua rede." : "Arquivos suspeitos são isolados para manter sua casa segura."}
+                      {audience === 'business' ? "Arquivos maliciosos sao automaticamente isolados para proteger sua rede." : "Arquivos suspeitos sao isolados para manter sua casa segura."}
                     </p>
                   </div>
                 </div>
@@ -308,9 +308,9 @@ const Landing = () => {
                     <BarChart className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg mb-2">{audience === 'business' ? "Relatórios Detalhados" : "Relatórios Simples"}</h3>
+                    <h3 className="font-bold text-lg mb-2">{audience === 'business' ? "Relatorios Detalhados" : "Relatorios Simples"}</h3>
                     <p className="text-muted-foreground">
-                      {audience === 'business' ? "Exportação de dados e relatórios customizados para compliance e auditoria." : "Relatórios fáceis de entender sobre a segurança da sua casa."}
+                      {audience === 'business' ? "Exportacao de dados e relatorios customizados para compliance e auditoria." : "Relatorios faceis de entender sobre a seguranca da sua casa."}
                     </p>
                   </div>
                 </div>
@@ -320,9 +320,9 @@ const Landing = () => {
                     <Activity className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-lg mb-2">{audience === 'business' ? "API Completa" : "Suporte Fácil"}</h3>
+                    <h3 className="font-bold text-lg mb-2">{audience === 'business' ? "API Completa" : "Suporte Facil"}</h3>
                     <p className="text-muted-foreground">
-                      {audience === 'business' ? "Integre com seus sistemas existentes através de nossa API RESTful." : "Suporte via WhatsApp para tirar dúvidas e ajudar na instalação."}
+                      {audience === 'business' ? "Integre com seus sistemas existentes atraves de nossa API RESTful." : "Suporte via WhatsApp para tirar duvidas e ajudar na instalacao."}
                     </p>
                   </div>
                 </div>
@@ -338,7 +338,7 @@ const Landing = () => {
                     <span className="text-2xl font-bold text-primary">{audience === 'business' ? "248" : "10"}</span>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                    <span className="font-medium">Ameaças Bloqueadas Hoje</span>
+                    <span className="font-medium">Ameacas Bloqueadas Hoje</span>
                     <span className="text-2xl font-bold text-primary">{audience === 'business' ? "17" : "5"}</span>
                   </div>
                   <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
@@ -347,7 +347,7 @@ const Landing = () => {
                   </div>
                   <div className="flex items-center justify-between p-4 bg-green-500/10 rounded-lg border border-green-500/20">
                     <span className="font-medium">Status Geral</span>
-                    <span className="text-lg font-bold text-green-500">✓ Protegido</span>
+                    <span className="text-lg font-bold text-green-500">? Protegido</span>
                   </div>
                 </div>
               </div>
@@ -364,7 +364,7 @@ const Landing = () => {
               {audience === 'business' ? "Planos Transparentes" : "Planos para Sua Casa"}
             </h2>
             <p className="text-xl text-muted-foreground">
-              {audience === 'business' ? "Escolha o plano ideal para o tamanho da sua empresa" : "Planos acessíveis para proteger todos os computadores da sua casa"}
+              {audience === 'business' ? "Escolha o plano ideal para o tamanho da sua empresa" : "Planos acessiveis para proteger todos os computadores da sua casa"}
             </p>
           </div>
 
@@ -373,25 +373,25 @@ const Landing = () => {
             <div className="p-8 rounded-2xl border-2 border-border hover:border-primary/50 transition-colors bg-card">
               <div className="flex items-center gap-2 mb-4">
                 <Zap className="w-6 h-6 text-primary" />
-                <h3 className="text-2xl font-bold">{audience === 'business' ? "Starter" : "Básico"}</h3>
+                <h3 className="text-2xl font-bold">{audience === 'business' ? "Starter" : "Basico"}</h3>
               </div>
               <div className="mb-6">
                 <span className="text-4xl font-bold">{audience === 'business' ? "R$ 30" : "R$ 15"}</span>
-                <span className="text-muted-foreground">/{audience === 'business' ? "dispositivo/mês" : "computador/mês"}</span>
+                <span className="text-muted-foreground">/{audience === 'business' ? "dispositivo/mes" : "computador/mes"}</span>
               </div>
-              <p className="text-sm text-muted-foreground mb-6">{audience === 'business' ? "Ideal para pequenas empresas (até 30 dispositivos)" : "Ideal para até 3 computadores em casa"}</p>
+              <p className="text-sm text-muted-foreground mb-6">{audience === 'business' ? "Ideal para pequenas empresas (ate 30 dispositivos)" : "Ideal para ate 3 computadores em casa"}</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Dashboard avançado" : "Proteção básica contra vírus"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Dashboard avancado" : "Protecao basica contra virus"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "2 scans avançados por dia" : "Scans automáticos semanais"}</span>
+                  <span className="text-sm">{audience === 'business' ? "2 scans avancados por dia" : "Scans automaticos semanais"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Monitoramento em tempo real" : "Monitoramento básico em tempo real"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Monitoramento em tempo real" : "Monitoramento basico em tempo real"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
@@ -399,12 +399,12 @@ const Landing = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "30 dias de trial gratuito" : "30 dias grátis para testar"}</span>
+                  <span className="text-sm">{audience === 'business' ? "30 dias de trial gratuito" : "30 dias gratis para testar"}</span>
                 </li>
               </ul>
               <Button variant="outline" className="w-full" asChild>
                 <Link to="/signup">
-                  {audience === 'business' ? "Começar Trial Grátis" : "Começar Agora"}
+                  {audience === 'business' ? "Comecar Trial Gratis" : "Comecar Agora"}
                 </Link>
               </Button>
             </div>
@@ -420,34 +420,34 @@ const Landing = () => {
               </div>
               <div className="mb-6">
                 <span className="text-4xl font-bold">{audience === 'business' ? "R$ 50" : "R$ 30"}</span>
-                <span className="opacity-90">/{audience === 'business' ? "dispositivo/mês" : "computador/mês"}</span>
+                <span className="opacity-90">/{audience === 'business' ? "dispositivo/mes" : "computador/mes"}</span>
               </div>
-              <p className="text-sm opacity-90 mb-6">{audience === 'business' ? "Para empresas em crescimento (até 200 dispositivos)" : "Proteção completa para até 10 computadores"}</p>
+              <p className="text-sm opacity-90 mb-6">{audience === 'business' ? "Para empresas em crescimento (ate 200 dispositivos)" : "Protecao completa para ate 10 computadores"}</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Tudo do Starter, mais:" : "Tudo do Básico, mais:"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Tudo do Starter, mais:" : "Tudo do Basico, mais:"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Scans avançados ilimitados" : "Scans diários automáticos"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Scans avancados ilimitados" : "Scans diarios automaticos"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Quarentena automática" : "Isolamento automático de ameaças"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Quarentena automatica" : "Isolamento automatico de ameacas"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Suporte prioritário" : "Suporte dedicado via WhatsApp"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Suporte prioritario" : "Suporte dedicado via WhatsApp"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Relatórios customizados" : "Relatórios simples e claros"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Relatorios customizados" : "Relatorios simples e claros"}</span>
                 </li>
               </ul>
               <Button variant="outline" className="w-full" asChild>
                 <Link to="/signup">
-                  {audience === 'business' ? "Começar Trial Grátis" : "Assinar Agora"}
+                  {audience === 'business' ? "Comecar Trial Gratis" : "Assinar Agora"}
                 </Link>
               </Button>
             </div>
@@ -456,13 +456,13 @@ const Landing = () => {
             <div className="p-8 rounded-2xl border-2 border-border hover:border-primary/50 transition-colors bg-card">
               <div className="flex items-center gap-2 mb-4">
                 <ShieldCheck className="w-6 h-6 text-primary" />
-                <h3 className="text-2xl font-bold">{audience === 'business' ? "Enterprise" : "Avançado"}</h3>
+                <h3 className="text-2xl font-bold">{audience === 'business' ? "Enterprise" : "Avancado"}</h3>
               </div>
               <div className="mb-6">
                 <span className="text-4xl font-bold">{audience === 'business' ? "R$ 100" : "R$ 50"}</span>
-                <span className="text-muted-foreground">/{audience === 'business' ? "dispositivo/mês" : "computador/mês"}</span>
+                <span className="text-muted-foreground">/{audience === 'business' ? "dispositivo/mes" : "computador/mes"}</span>
               </div>
-              <p className="text-sm text-muted-foreground mb-6">{audience === 'business' ? "Para grandes empresas e necessidades avançadas" : "Para casas com muitos dispositivos e necessidades especiais"}</p>
+              <p className="text-sm text-muted-foreground mb-6">{audience === 'business' ? "Para grandes empresas e necessidades avancadas" : "Para casas com muitos dispositivos e necessidades especiais"}</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
@@ -474,11 +474,11 @@ const Landing = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Consultoria personalizada" : "Consultoria para segurança doméstica"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Consultoria personalizada" : "Consultoria para seguranca domestica"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Relatórios avançados e auditoria" : "Relatórios detalhados para sua família"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Relatorios avancados e auditoria" : "Relatorios detalhados para sua familia"}</span>
                 </li>
               </ul>
               <Button variant="outline" className="w-full" asChild>
@@ -496,10 +496,10 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              {audience === 'business' ? "Depoimentos de Clientes" : "O Que Nossos Usuários Dizem"}
+              {audience === 'business' ? "Depoimentos de Clientes" : "O Que Nossos Usuarios Dizem"}
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              {audience === 'business' ? "Veja como ajudamos empresas a proteger seus ativos digitais" : "Famílias confiando no CyberShield para segurança digital"}
+              {audience === 'business' ? "Veja como ajudamos empresas a proteger seus ativos digitais" : "Familias confiando no CyberShield para seguranca digital"}
             </p>
           </div>
 
@@ -508,7 +508,7 @@ const Landing = () => {
               <>
                 <Card>
                   <CardContent>
-                    <p className="mb-4 text-muted-foreground">"O CyberShield transformou nossa segurança digital. Monitoramento em tempo real e resposta rápida salvaram nossa empresa de várias ameaças."</p>
+                    <p className="mb-4 text-muted-foreground">"O CyberShield transformou nossa seguranca digital. Monitoramento em tempo real e resposta rapida salvaram nossa empresa de varias ameacas."</p>
                     <div className="flex items-center gap-4">
                       <ShieldCheck className="w-8 h-8 text-primary" />
                       <div>
@@ -520,23 +520,23 @@ const Landing = () => {
                 </Card>
                 <Card>
                   <CardContent>
-                    <p className="mb-4 text-muted-foreground">"A automação e os relatórios detalhados facilitaram nossa conformidade com a LGPD. Suporte excelente e fácil de usar."</p>
+                    <p className="mb-4 text-muted-foreground">"A automacao e os relatorios detalhados facilitaram nossa conformidade com a LGPD. Suporte excelente e facil de usar."</p>
                     <div className="flex items-center gap-4">
                       <ShieldCheck className="w-8 h-8 text-primary" />
                       <div>
                         <p className="font-bold">Ana Pereira</p>
-                        <p className="text-sm text-muted-foreground">Gerente de Segurança - FinançasPlus</p>
+                        <p className="text-sm text-muted-foreground">Gerente de Seguranca - FinancasPlus</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent>
-                    <p className="mb-4 text-muted-foreground">"Recomendo para qualquer empresa que queira proteger seus dados sem complicação. Interface intuitiva e suporte dedicado."</p>
+                    <p className="mb-4 text-muted-foreground">"Recomendo para qualquer empresa que queira proteger seus dados sem complicacao. Interface intuitiva e suporte dedicado."</p>
                     <div className="flex items-center gap-4">
                       <ShieldCheck className="w-8 h-8 text-primary" />
                       <div>
-                        <p className="font-bold">João Costa</p>
+                        <p className="font-bold">Joao Costa</p>
                         <p className="text-sm text-muted-foreground">CEO - StartUpX</p>
                       </div>
                     </div>
@@ -547,36 +547,36 @@ const Landing = () => {
               <>
                 <Card>
                   <CardContent>
-                    <p className="mb-4 text-muted-foreground">"Finalmente uma solução simples para proteger todos os computadores da minha casa. Fácil de instalar e usar."</p>
+                    <p className="mb-4 text-muted-foreground">"Finalmente uma solucao simples para proteger todos os computadores da minha casa. Facil de instalar e usar."</p>
                     <div className="flex items-center gap-4">
                       <Home className="w-8 h-8 text-green-600" />
                       <div>
                         <p className="font-bold">Mariana Souza</p>
-                        <p className="text-sm text-muted-foreground">Mãe e Usuária</p>
+                        <p className="text-sm text-muted-foreground">Mae e Usuaria</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent>
-                    <p className="mb-4 text-muted-foreground">"O suporte via WhatsApp foi essencial para me ajudar a configurar tudo rapidamente. Recomendo para famílias."</p>
+                    <p className="mb-4 text-muted-foreground">"O suporte via WhatsApp foi essencial para me ajudar a configurar tudo rapidamente. Recomendo para familias."</p>
                     <div className="flex items-center gap-4">
                       <Home className="w-8 h-8 text-green-600" />
                       <div>
                         <p className="font-bold">Lucas Fernandes</p>
-                        <p className="text-sm text-muted-foreground">Pai e Usuário</p>
+                        <p className="text-sm text-muted-foreground">Pai e Usuario</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent>
-                    <p className="mb-4 text-muted-foreground">"Protegeu o computador dos meus filhos contra vírus e ataques. Agora fico mais tranquilo sabendo que estão seguros."</p>
+                    <p className="mb-4 text-muted-foreground">"Protegeu o computador dos meus filhos contra virus e ataques. Agora fico mais tranquilo sabendo que estao seguros."</p>
                     <div className="flex items-center gap-4">
                       <Home className="w-8 h-8 text-green-600" />
                       <div>
                         <p className="font-bold">Fernanda Lima</p>
-                        <p className="text-sm text-muted-foreground">Mãe e Usuária</p>
+                        <p className="text-sm text-muted-foreground">Mae e Usuaria</p>
                       </div>
                     </div>
                   </CardContent>
@@ -592,10 +592,10 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              {audience === 'business' ? "Perguntas Frequentes" : "Dúvidas Frequentes"}
+              {audience === 'business' ? "Perguntas Frequentes" : "Duvidas Frequentes"}
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              {audience === 'business' ? "Respostas para as dúvidas mais comuns sobre o CyberShield empresarial" : "Tire suas dúvidas sobre o uso do CyberShield em casa"}
+              {audience === 'business' ? "Respostas para as duvidas mais comuns sobre o CyberShield empresarial" : "Tire suas duvidas sobre o uso do CyberShield em casa"}
             </p>
           </div>
 
@@ -603,21 +603,21 @@ const Landing = () => {
             {audience === 'business' ? (
               <>
                 <AccordionItem value="q1">
-                  <AccordionTrigger>Como funciona o período de trial?</AccordionTrigger>
+                  <AccordionTrigger>Como funciona o periodo de trial?</AccordionTrigger>
                   <AccordionContent>
-                    Você pode testar o CyberShield gratuitamente por 30 dias com acesso completo a todos os recursos empresariais.
+                    Voce pode testar o CyberShield gratuitamente por 30 dias com acesso completo a todos os recursos empresariais.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="q2">
                   <AccordionTrigger>Posso adicionar mais dispositivos depois?</AccordionTrigger>
                   <AccordionContent>
-                    Sim, você pode escalar seu plano conforme sua empresa cresce, adicionando mais dispositivos facilmente.
+                    Sim, voce pode escalar seu plano conforme sua empresa cresce, adicionando mais dispositivos facilmente.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="q3">
-                  <AccordionTrigger>O suporte é em português?</AccordionTrigger>
+                  <AccordionTrigger>O suporte e em portugues?</AccordionTrigger>
                   <AccordionContent>
-                    Sim, oferecemos suporte 100% em português via email e WhatsApp.
+                    Sim, oferecemos suporte 100% em portugues via email e WhatsApp.
                   </AccordionContent>
                 </AccordionItem>
               </>
@@ -626,19 +626,19 @@ const Landing = () => {
                 <AccordionItem value="q1">
                   <AccordionTrigger>Como instalo o CyberShield em casa?</AccordionTrigger>
                   <AccordionContent>
-                    Basta baixar o software e seguir o assistente de instalação simples para proteger todos os computadores da sua casa.
+                    Basta baixar o software e seguir o assistente de instalacao simples para proteger todos os computadores da sua casa.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="q2">
-                  <AccordionTrigger>Preciso de conhecimento técnico?</AccordionTrigger>
+                  <AccordionTrigger>Preciso de conhecimento tecnico?</AccordionTrigger>
                   <AccordionContent>
-                    Não, o CyberShield foi desenvolvido para ser fácil de usar, mesmo para quem não tem experiência técnica.
+                    Nao, o CyberShield foi desenvolvido para ser facil de usar, mesmo para quem nao tem experiencia tecnica.
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="q3">
                   <AccordionTrigger>Como funciona o suporte?</AccordionTrigger>
                   <AccordionContent>
-                    Oferecemos suporte via WhatsApp para ajudar você a qualquer momento.
+                    Oferecemos suporte via WhatsApp para ajudar voce a qualquer momento.
                   </AccordionContent>
                 </AccordionItem>
               </>
@@ -651,7 +651,7 @@ const Landing = () => {
       <section className="py-20 bg-muted/30">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center">
-            {audience === 'business' ? "Calculadora de Preço" : "Calculadora de Preço para Casa"}
+            {audience === 'business' ? "Calculadora de Preco" : "Calculadora de Preco para Casa"}
           </h2>
           <p className="text-center text-muted-foreground mb-8">
             {currentContent.calculator.label}
@@ -667,11 +667,11 @@ const Landing = () => {
               aria-label={currentContent.calculator.label}
             />
             <div className="text-2xl font-bold">
-              {`R$ ${calculatePrice(deviceCount).toFixed(2)} / ${audience === 'business' ? 'mês' : 'mês'}`}
+              {`R$ ${calculatePrice(deviceCount).toFixed(2)} / ${audience === 'business' ? 'mes' : 'mes'}`}
             </div>
           </div>
           <p className="text-center text-sm text-muted-foreground mt-4">
-            {audience === 'business' ? "Preços baseados no número de dispositivos monitorados." : "Preços baseados no número de computadores protegidos."}
+            {audience === 'business' ? "Precos baseados no numero de dispositivos monitorados." : "Precos baseados no numero de computadores protegidos."}
           </p>
         </div>
       </section>

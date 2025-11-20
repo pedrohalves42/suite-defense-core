@@ -16,7 +16,7 @@ test.describe('Installation Logs Explorer Dashboard', () => {
   });
 
   test('should load logs table', async ({ page }) => {
-    await expect(page.locator('text=Explorador de Logs de Instalação')).toBeVisible();
+    await expect(page.locator('text=Explorador de Logs de Instalacao')).toBeVisible();
     await expect(page.locator('text=Filtros de Busca')).toBeVisible();
     
     // Wait for table

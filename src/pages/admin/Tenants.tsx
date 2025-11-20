@@ -73,16 +73,16 @@ export default function Tenants() {
       
       const rawUsers = await response.json();
       
-      // Agrupar roles por usuário
+      // Agrupar roles por usuario
       const groupedMap = new Map<string, User>();
       
       rawUsers.forEach((user: User) => {
         if (groupedMap.has(user.user_id)) {
-          // Usuário já existe, adicionar role
+          // Usuario ja existe, adicionar role
           const existing = groupedMap.get(user.user_id)!;
           existing.role = `${existing.role}, ${user.role}`;
         } else {
-          // Primeiro registro do usuário
+          // Primeiro registro do usuario
           groupedMap.set(user.user_id, { ...user });
         }
       });
@@ -126,7 +126,7 @@ export default function Tenants() {
 
   const moveUser = useMutation({
     mutationFn: async () => {
-      if (!selectedUser || !targetTenantId) throw new Error('Selecione um usuário e tenant de destino');
+      if (!selectedUser || !targetTenantId) throw new Error('Selecione um usuario e tenant de destino');
 
       const { error } = await supabase
         .from('user_roles')
@@ -137,13 +137,13 @@ export default function Tenants() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-users-with-tenants'] });
-      toast({ title: 'Usuário movido com sucesso!' });
+      toast({ title: 'Usuario movido com sucesso!' });
       setOpenMove(false);
       setSelectedUser(null);
       setTargetTenantId('');
     },
     onError: (error: Error) => {
-      toast({ title: error.message || 'Erro ao mover usuário', variant: 'destructive' });
+      toast({ title: error.message || 'Erro ao mover usuario', variant: 'destructive' });
     },
   });
 
@@ -156,26 +156,26 @@ export default function Tenants() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold">Gerenciamento de Tenants</h2>
-          <p className="text-muted-foreground">Gerencie organizações e mova usuários entre tenants</p>
+          <p className="text-muted-foreground">Gerencie organizacoes e mova usuarios entre tenants</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={openMove} onOpenChange={setOpenMove}>
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Users className="h-4 w-4 mr-2" />
-                Mover Usuário
+                Mover Usuario
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Mover Usuário entre Tenants</DialogTitle>
+                <DialogTitle>Mover Usuario entre Tenants</DialogTitle>
                 <DialogDescription>
-                  Selecione um usuário e o tenant de destino
+                  Selecione um usuario e o tenant de destino
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>Usuário</Label>
+                  <Label>Usuario</Label>
                   <Select 
                     value={selectedUser?.user_id} 
                     onValueChange={(value) => {
@@ -184,7 +184,7 @@ export default function Tenants() {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione um usuário" />
+                      <SelectValue placeholder="Selecione um usuario" />
                     </SelectTrigger>
                     <SelectContent>
                       {users?.map((user) => (
@@ -215,7 +215,7 @@ export default function Tenants() {
                   disabled={moveUser.isPending || !selectedUser || !targetTenantId}
                   className="w-full"
                 >
-                  Mover Usuário
+                  Mover Usuario
                 </Button>
               </div>
             </DialogContent>
@@ -232,14 +232,14 @@ export default function Tenants() {
               <DialogHeader>
                 <DialogTitle>Criar Novo Tenant</DialogTitle>
                 <DialogDescription>
-                  Crie uma nova organização/tenant no sistema
+                  Crie uma nova organizacao/tenant no sistema
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
                   <Label>Nome do Tenant</Label>
                   <Input 
-                    placeholder="Minha Organização"
+                    placeholder="Minha Organizacao"
                     value={newTenantName}
                     onChange={(e) => setNewTenantName(e.target.value)}
                   />
@@ -272,7 +272,7 @@ export default function Tenants() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>Slug</TableHead>
-                  <TableHead>Usuários</TableHead>
+                  <TableHead>Usuarios</TableHead>
                   <TableHead>Criado em</TableHead>
                 </TableRow>
               </TableHeader>
@@ -298,8 +298,8 @@ export default function Tenants() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Usuários por Tenant</CardTitle>
-          <CardDescription>Visualização detalhada de usuários e seus tenants</CardDescription>
+          <CardTitle>Usuarios por Tenant</CardTitle>
+          <CardDescription>Visualizacao detalhada de usuarios e seus tenants</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingUsers ? (

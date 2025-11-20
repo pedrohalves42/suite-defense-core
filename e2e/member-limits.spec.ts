@@ -104,7 +104,7 @@ test.describe('Member Limits Enforcement', () => {
     // 4. Wait for success toast
     await expect(page.locator('text=/convite enviado/i')).toBeVisible({ timeout: 10000 });
     
-    console.log('[E2E] ✅ Invite succeeded when under limit');
+    console.log('[E2E] [OK]  Invite succeeded when under limit');
   });
 
   test('should block invite when at max_users limit', async ({ page, request }) => {
@@ -144,9 +144,9 @@ test.describe('Member Limits Enforcement', () => {
     if (inviteResponse.status() === 403 || inviteResponse.status() === 400) {
       const body = await inviteResponse.json();
       expect(body.error).toContain('limite de membros');
-      console.log('[E2E] ✅ Invite correctly blocked at limit:', body.error);
+      console.log('[E2E] [OK]  Invite correctly blocked at limit:', body.error);
     } else if (inviteResponse.status() === 200) {
-      console.log('[E2E] ⚠️  Invite succeeded (tenant not at limit yet)');
+      console.log('[E2E] [WARN] ?  Invite succeeded (tenant not at limit yet)');
     }
   });
 
@@ -164,7 +164,7 @@ test.describe('Member Limits Enforcement', () => {
     const inviteButton = page.locator('button:has-text("Convidar Membro")');
     
     if (await inviteButton.isDisabled()) {
-      console.log('[E2E] ✅ Invite button correctly disabled at limit');
+      console.log('[E2E] [OK]  Invite button correctly disabled at limit');
     } else {
       await inviteButton.click();
       await page.fill('input[type="email"]', `blocked-ui-${Date.now()}@test.com`);
@@ -173,7 +173,7 @@ test.describe('Member Limits Enforcement', () => {
 
       // Should show error toast
       await expect(page.locator('text=/limite de membros/i')).toBeVisible({ timeout: 10000 });
-      console.log('[E2E] ✅ UI correctly shows limit error');
+      console.log('[E2E] [OK]  UI correctly shows limit error');
     }
   });
 
@@ -200,7 +200,7 @@ test.describe('Member Limits Enforcement', () => {
     const features = await featuresResponse.json();
     expect(features.length).toBeGreaterThan(0);
     
-    console.log('[E2E] ✅ tenant_features.max_users exists and is queryable');
+    console.log('[E2E] [OK]  tenant_features.max_users exists and is queryable');
     console.log('[E2E] Sample:', features[0]);
   });
 });
@@ -208,12 +208,12 @@ test.describe('Member Limits Enforcement', () => {
 /**
  * Test Plan Summary:
  * 
- * ✅ P0 Coverage:
+ * [OK]  P0 Coverage:
  * - max_users limit enforcement in send-invite backend
  * - UI correctly displays member count from tenant_features
  * - Error handling when limit is reached
  * 
- * 🔄 Future Enhancements (P2):
+ * ? Future Enhancements (P2):
  * - Test with multiple tenants and different plan limits
  * - Test invite expiration and acceptance flow
  * - Test role changes and their impact on member count

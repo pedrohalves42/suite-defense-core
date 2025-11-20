@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     const agentToken = req.headers.get('X-Agent-Token')
     if (!agentToken) {
       return new Response(
-        JSON.stringify({ error: 'Token do agente necessário' }),
+        JSON.stringify({ error: 'Token do agente necessario' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
     }
@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     const tokenValidation = AgentTokenSchema.safeParse(agentToken)
     if (!tokenValidation.success) {
       return new Response(
-        JSON.stringify({ error: 'Formato de token inválido' }),
+        JSON.stringify({ error: 'Formato de token invalido' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
 
     if (!token?.agents) {
       return new Response(
-        JSON.stringify({ error: 'Token inválido' }),
+        JSON.stringify({ error: 'Token invalido' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
       )
     }
@@ -90,9 +90,9 @@ Deno.serve(async (req) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('token', agentToken)
 
-    console.log('Listando relatórios para agente:', agent.agent_name)
+    console.log('Listando relatorios para agente:', agent.agent_name)
 
-    // Buscar relatórios do agente (últimos 50)
+    // Buscar relatorios do agente (ultimos 50)
     const { data: reports } = await supabase
       .from('reports')
       .select('id, kind, file_path, created_at')

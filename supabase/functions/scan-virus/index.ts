@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
     
     if (!hybridAnalysisApiKey && !virusTotalApiKey) {
       return new Response(
-        JSON.stringify({ error: 'Nenhum serviço de scan configurado' }),
+        JSON.stringify({ error: 'Nenhum servico de scan configurado' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     const agentToken = req.headers.get('X-Agent-Token');
     if (!agentToken) {
       return new Response(
-        JSON.stringify({ error: 'Token do agente necessário' }),
+        JSON.stringify({ error: 'Token do agente necessario' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
     const tokenValidation = AgentTokenSchema.safeParse(agentToken);
     if (!tokenValidation.success) {
       return new Response(
-        JSON.stringify({ error: 'Formato de token inválido' }),
+        JSON.stringify({ error: 'Formato de token invalido' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
 
     if (!token?.agents) {
       return new Response(
-        JSON.stringify({ error: 'Token inválido' }),
+        JSON.stringify({ error: 'Token invalido' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
     if (!agent.tenant_id) {
       console.error(`[${requestId}] Agent ${agent.agent_name} has no tenant_id`);
       return new Response(
-        JSON.stringify({ error: 'Configuração inválida do agente' }),
+        JSON.stringify({ error: 'Configuracao invalida do agente' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
 
     if (!filePath || !fileHash) {
       return new Response(
-        JSON.stringify({ error: 'filePath e fileHash são obrigatórios' }),
+        JSON.stringify({ error: 'filePath e fileHash sao obrigatorios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -259,8 +259,8 @@ Deno.serve(async (req) => {
       console.log(`[${agent.agent_name}] Daily advanced scan quota exceeded: ${dailyQuotaCheck.current}/${dailyQuotaCheck.limit}`);
       return new Response(
         JSON.stringify({ 
-          error: 'Limite diário de scans avançados atingido',
-          message: 'Você atingiu o limite de scans avançados do dia. Faça upgrade para o plano Pro para scans ilimitados.',
+          error: 'Limite diario de scans avancados atingido',
+          message: 'Voce atingiu o limite de scans avancados do dia. Faca upgrade para o plano Pro para scans ilimitados.',
           quotaUsed: dailyQuotaCheck.current,
           quotaLimit: dailyQuotaCheck.limit
         }),
@@ -268,7 +268,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar scan existente recente (últimas 24h)
+    // Verificar scan existente recente (ultimas 24h)
     const { data: existingScan } = await supabase
       .from('virus_scans')
       .select('*')
@@ -310,8 +310,8 @@ Deno.serve(async (req) => {
     if (!scanResult) {
       return new Response(
         JSON.stringify({ 
-          error: 'Arquivo não encontrado em nenhum serviço de scan',
-          message: 'Envie o arquivo para análise ou tente novamente mais tarde' 
+          error: 'Arquivo nao encontrado em nenhum servico de scan',
+          message: 'Envie o arquivo para analise ou tente novamente mais tarde' 
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );

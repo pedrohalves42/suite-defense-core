@@ -1,5 +1,5 @@
-# CyberShield Agent - Teste Manual de Instalação
-# Este script valida todos os aspectos da instalação do agente
+# CyberShield Agent - Teste Manual de Instalacao
+# Este script valida todos os aspectos da instalacao do agente
 
 #Requires -Version 3.0
 #Requires -RunAsAdministrator
@@ -16,7 +16,7 @@ $ErrorActionPreference = "Continue"
 
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Cyan
-Write-Host "  CyberShield - Teste de Instalação do Agente" -ForegroundColor Cyan
+Write-Host "  CyberShield - Teste de Instalacao do Agente" -ForegroundColor Cyan
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -40,52 +40,52 @@ function Test-Step {
     try {
         $result = & $Test
         if ($result) {
-            Write-Host " ✓ PASSOU" -ForegroundColor Green
+            Write-Host " ? PASSOU" -ForegroundColor Green
             if ($SuccessMessage) {
                 Write-Host "        $SuccessMessage" -ForegroundColor Gray
             }
             $script:testResults.Passed++
             return $true
         } else {
-            Write-Host " ✗ FALHOU" -ForegroundColor Red
+            Write-Host " ? FALHOU" -ForegroundColor Red
             if ($FailMessage) {
                 Write-Host "        $FailMessage" -ForegroundColor Yellow
             }
             $script:testResults.Failed++
             if ($Critical) {
                 Write-Host ""
-                Write-Host "ERRO CRÍTICO: Teste essencial falhou. Abortando." -ForegroundColor Red
+                Write-Host "ERRO CRITICO: Teste essencial falhou. Abortando." -ForegroundColor Red
                 exit 1
             }
             return $false
         }
     } catch {
-        Write-Host " ✗ ERRO" -ForegroundColor Red
+        Write-Host " ? ERRO" -ForegroundColor Red
         Write-Host "        Erro: $($_.Exception.Message)" -ForegroundColor Yellow
         $script:testResults.Failed++
         if ($Critical) {
             Write-Host ""
-            Write-Host "ERRO CRÍTICO: Exceção durante teste essencial. Abortando." -ForegroundColor Red
+            Write-Host "ERRO CRITICO: Excecao durante teste essencial. Abortando." -ForegroundColor Red
             exit 1
         }
         return $false
     }
 }
 
-Write-Host "=== 1. TESTES DE PRÉ-REQUISITOS ===" -ForegroundColor Cyan
+Write-Host "=== 1. TESTES DE PRE-REQUISITOS ===" -ForegroundColor Cyan
 Write-Host ""
 
 # Teste 1: PowerShell Version
 Test-Step `
-    -Name "Versão do PowerShell" `
+    -Name "Versao do PowerShell" `
     -Test { $PSVersionTable.PSVersion.Major -ge 3 } `
     -SuccessMessage "PowerShell $($PSVersionTable.PSVersion) (OK)" `
-    -FailMessage "PowerShell 3.0+ é necessário" `
+    -FailMessage "PowerShell 3.0+ e necessario" `
     -Critical
 
-# Teste 2: Privilégios Admin
+# Teste 2: Privilegios Admin
 Test-Step `
-    -Name "Privilégios Administrativos" `
+    -Name "Privilegios Administrativos" `
     -Test { 
         $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
         $principal = New-Object Security.Principal.WindowsPrincipal($identity)
@@ -97,7 +97,7 @@ Test-Step `
 
 # Teste 3: Sistema Operacional
 Test-Step `
-    -Name "Sistema Operacional Compatível" `
+    -Name "Sistema Operacional Compativel" `
     -Test { 
         $osVersion = [System.Environment]::OSVersion.Version
         ($osVersion.Major -gt 6) -or ($osVersion.Major -eq 6 -and $osVersion.Minor -ge 2)
@@ -112,34 +112,34 @@ Test-Step `
         $dotNetVersion = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -ErrorAction SilentlyContinue
         $dotNetVersion -and $dotNetVersion.Release -ge 378389
     } `
-    -SuccessMessage ".NET 4.5+ disponível" `
+    -SuccessMessage ".NET 4.5+ disponivel" `
     -FailMessage ".NET 4.5+ recomendado para melhor desempenho"
 
 Write-Host ""
-Write-Host "=== 2. TESTES DE INSTALAÇÃO ===" -ForegroundColor Cyan
+Write-Host "=== 2. TESTES DE INSTALACAO ===" -ForegroundColor Cyan
 Write-Host ""
 
-# Teste 5: Diretório do Agente
+# Teste 5: Diretorio do Agente
 Test-Step `
-    -Name "Diretório C:\CyberShield existe" `
+    -Name "Diretorio C:\CyberShield existe" `
     -Test { Test-Path "C:\CyberShield" } `
-    -SuccessMessage "Diretório encontrado" `
+    -SuccessMessage "Diretorio encontrado" `
     -FailMessage "Execute o instalador primeiro" `
     -Critical
 
-# Teste 6: Diretório de Logs
+# Teste 6: Diretorio de Logs
 Test-Step `
-    -Name "Diretório de Logs existe" `
+    -Name "Diretorio de Logs existe" `
     -Test { Test-Path "C:\CyberShield\logs" } `
-    -SuccessMessage "Diretório de logs OK" `
-    -FailMessage "Pasta de logs não foi criada"
+    -SuccessMessage "Diretorio de logs OK" `
+    -FailMessage "Pasta de logs nao foi criada"
 
 # Teste 7: Script do Agente
 Test-Step `
     -Name "Script do agente existe" `
     -Test { Test-Path $ScriptPath } `
     -SuccessMessage "Script encontrado: $ScriptPath" `
-    -FailMessage "Script do agente não foi instalado" `
+    -FailMessage "Script do agente nao foi instalado" `
     -Critical
 
 # Teste 8: Validar sintaxe do script
@@ -150,7 +150,7 @@ Test-Step `
         $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content $ScriptPath -Raw), [ref]$errors)
         $errors.Count -eq 0
     } `
-    -SuccessMessage "Sintaxe válida" `
+    -SuccessMessage "Sintaxe valida" `
     -FailMessage "Erros de sintaxe detectados no script"
 
 Write-Host ""
@@ -164,20 +164,20 @@ Test-Step `
     -Name "Tarefa agendada existe" `
     -Test { $null -ne $task } `
     -SuccessMessage "Tarefa 'CyberShieldAgent' encontrada" `
-    -FailMessage "Tarefa não foi criada no Task Scheduler" `
+    -FailMessage "Tarefa nao foi criada no Task Scheduler" `
     -Critical
 
 if ($task) {
-    # Teste 10: Tarefa está habilitada
+    # Teste 10: Tarefa esta habilitada
     Test-Step `
-        -Name "Tarefa está habilitada" `
+        -Name "Tarefa esta habilitada" `
         -Test { $task.State -ne 'Disabled' } `
         -SuccessMessage "Estado: $($task.State)" `
-        -FailMessage "Tarefa está desabilitada"
+        -FailMessage "Tarefa esta desabilitada"
     
     # Teste 11: Trigger configurado
     Test-Step `
-        -Name "Trigger de inicialização configurado" `
+        -Name "Trigger de inicializacao configurado" `
         -Test { $task.Triggers.Count -gt 0 } `
         -SuccessMessage "$($task.Triggers.Count) trigger(s) configurado(s)" `
         -FailMessage "Nenhum trigger configurado"
@@ -187,37 +187,37 @@ if ($task) {
         -Name "Executando como SYSTEM" `
         -Test { $task.Principal.UserId -eq "SYSTEM" } `
         -SuccessMessage "Configurado corretamente como SYSTEM" `
-        -FailMessage "Não está executando como SYSTEM"
+        -FailMessage "Nao esta executando como SYSTEM"
     
     # Teste 13: RunLevel Highest
     Test-Step `
-        -Name "Privilégios elevados (Highest)" `
+        -Name "Privilegios elevados (Highest)" `
         -Test { $task.Principal.RunLevel -eq "Highest" } `
         -SuccessMessage "RunLevel: $($task.Principal.RunLevel)" `
-        -FailMessage "RunLevel não está configurado como Highest"
+        -FailMessage "RunLevel nao esta configurado como Highest"
     
-    # Teste 14: Última execução
+    # Teste 14: Ultima execucao
     if ($task.LastRunTime -gt (Get-Date).AddDays(-1)) {
         Test-Step `
             -Name "Tarefa foi executada recentemente" `
             -Test { $true } `
-            -SuccessMessage "Última execução: $($task.LastRunTime)"
+            -SuccessMessage "Ultima execucao: $($task.LastRunTime)"
     } else {
         Test-Step `
             -Name "Tarefa foi executada recentemente" `
             -Test { $false } `
-            -FailMessage "Última execução: $($task.LastRunTime) - Muito antiga ou nunca executou"
+            -FailMessage "Ultima execucao: $($task.LastRunTime) - Muito antiga ou nunca executou"
     }
     
-    # Teste 15: Resultado da última execução
+    # Teste 15: Resultado da ultima execucao
     if ($task.LastTaskResult -eq 0) {
         Test-Step `
-            -Name "Última execução bem-sucedida" `
+            -Name "Ultima execucao bem-sucedida" `
             -Test { $true } `
             -SuccessMessage "LastTaskResult: 0x0 (Sucesso)"
     } else {
         Test-Step `
-            -Name "Última execução bem-sucedida" `
+            -Name "Ultima execucao bem-sucedida" `
             -Test { $false } `
             -FailMessage "LastTaskResult: 0x$([Convert]::ToString($task.LastTaskResult, 16))"
     }
@@ -232,35 +232,35 @@ Test-Step `
     -Name "Arquivo de log existe" `
     -Test { Test-Path $LogPath } `
     -SuccessMessage "Log encontrado: $LogPath" `
-    -FailMessage "Arquivo de log não existe - agente pode não ter executado"
+    -FailMessage "Arquivo de log nao existe - agente pode nao ter executado"
 
 if (Test-Path $LogPath) {
-    # Teste 17: Log tem conteúdo
+    # Teste 17: Log tem conteudo
     Test-Step `
-        -Name "Log tem conteúdo" `
+        -Name "Log tem conteudo" `
         -Test { (Get-Content $LogPath).Count -gt 0 } `
         -SuccessMessage "$($(Get-Content $LogPath).Count) linhas no log" `
-        -FailMessage "Arquivo de log está vazio"
+        -FailMessage "Arquivo de log esta vazio"
     
-    # Teste 18: Log recente (última hora)
+    # Teste 18: Log recente (ultima hora)
     Test-Step `
         -Name "Log foi atualizado recentemente" `
         -Test { (Get-Item $LogPath).LastWriteTime -gt (Get-Date).AddHours(-1) } `
-        -SuccessMessage "Última atualização: $((Get-Item $LogPath).LastWriteTime)" `
-        -FailMessage "Log não foi atualizado na última hora"
+        -SuccessMessage "Ultima atualizacao: $((Get-Item $LogPath).LastWriteTime)" `
+        -FailMessage "Log nao foi atualizado na ultima hora"
     
-    # Teste 19: Sem erros críticos no log
+    # Teste 19: Sem erros criticos no log
     $logContent = Get-Content $LogPath -Raw
     Test-Step `
-        -Name "Sem erros críticos no log" `
+        -Name "Sem erros criticos no log" `
         -Test { -not ($logContent -match '\[ERROR\].*critical|CRITICAL ERROR|FATAL') } `
-        -SuccessMessage "Nenhum erro crítico detectado" `
-        -FailMessage "Erros críticos encontrados no log"
+        -SuccessMessage "Nenhum erro critico detectado" `
+        -FailMessage "Erros criticos encontrados no log"
     
-    # Exibir últimas 10 linhas do log
+    # Exibir ultimas 10 linhas do log
     Write-Host ""
-    Write-Host "Últimas 10 linhas do log:" -ForegroundColor Gray
-    Write-Host "─────────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "Ultimas 10 linhas do log:" -ForegroundColor Gray
+    Write-Host "?????????????????????????????????????????????" -ForegroundColor DarkGray
     Get-Content $LogPath -Tail 10 | ForEach-Object {
         $color = "White"
         if ($_ -match '\[ERROR\]') { $color = "Red" }
@@ -268,64 +268,64 @@ if (Test-Path $LogPath) {
         elseif ($_ -match '\[SUCCESS\]') { $color = "Green" }
         Write-Host "  $_" -ForegroundColor $color
     }
-    Write-Host "─────────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "?????????????????????????????????????????????" -ForegroundColor DarkGray
 }
 
 Write-Host ""
 Write-Host "=== 5. TESTES DE CONECTIVIDADE ===" -ForegroundColor Cyan
 Write-Host ""
 
-# Teste 20: Porta 443 acessível
+# Teste 20: Porta 443 acessivel
 Test-Step `
     -Name "Conectividade HTTPS (porta 443)" `
     -Test { 
         $connection = Test-NetConnection -ComputerName "iavbnmduxpxhwubqrzzn.supabase.co" -Port 443 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
         $connection.TcpTestSucceeded
     } `
-    -SuccessMessage "Servidor Supabase acessível" `
-    -FailMessage "Não foi possível conectar ao servidor - verifique firewall"
+    -SuccessMessage "Servidor Supabase acessivel" `
+    -FailMessage "Nao foi possivel conectar ao servidor - verifique firewall"
 
 # Teste 21: DNS resolve
 Test-Step `
-    -Name "Resolução DNS" `
+    -Name "Resolucao DNS" `
     -Test { 
         $null -ne (Resolve-DnsName -Name "iavbnmduxpxhwubqrzzn.supabase.co" -ErrorAction SilentlyContinue)
     } `
     -SuccessMessage "DNS resolvendo corretamente" `
-    -FailMessage "Falha na resolução DNS"
+    -FailMessage "Falha na resolucao DNS"
 
-# Teste 22: TLS 1.2 disponível
+# Teste 22: TLS 1.2 disponivel
 Test-Step `
-    -Name "TLS 1.2 disponível" `
+    -Name "TLS 1.2 disponivel" `
     -Test { 
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $true
     } `
     -SuccessMessage "TLS 1.2 suportado" `
-    -FailMessage "TLS 1.2 não está disponível"
+    -FailMessage "TLS 1.2 nao esta disponivel"
 
 Write-Host ""
-Write-Host "=== 6. TESTES DE SERVIÇOS DO SISTEMA ===" -ForegroundColor Cyan
+Write-Host "=== 6. TESTES DE SERVICOS DO SISTEMA ===" -ForegroundColor Cyan
 Write-Host ""
 
 # Teste 23: Task Scheduler Service
 Test-Step `
-    -Name "Serviço Task Scheduler ativo" `
+    -Name "Servico Task Scheduler ativo" `
     -Test { 
         $service = Get-Service -Name "Schedule" -ErrorAction SilentlyContinue
         $service -and $service.Status -eq "Running"
     } `
-    -SuccessMessage "Serviço Task Scheduler OK" `
-    -FailMessage "Task Scheduler não está rodando"
+    -SuccessMessage "Servico Task Scheduler OK" `
+    -FailMessage "Task Scheduler nao esta rodando"
 
-# Teste 24: Windows Event Log disponível
+# Teste 24: Windows Event Log disponivel
 Test-Step `
-    -Name "Windows Event Log disponível" `
+    -Name "Windows Event Log disponivel" `
     -Test { 
         $null -ne (Get-EventLog -List | Where-Object {$_.Log -eq "Application"})
     } `
-    -SuccessMessage "Event Log acessível" `
-    -FailMessage "Event Log não está acessível"
+    -SuccessMessage "Event Log acessivel" `
+    -FailMessage "Event Log nao esta acessivel"
 
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Cyan
@@ -333,9 +333,9 @@ Write-Host "  RESUMO DOS TESTES" -ForegroundColor Cyan
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host ""
 
-Write-Host "✓ Passou:  $($testResults.Passed) teste(s)" -ForegroundColor Green
-Write-Host "✗ Falhou:  $($testResults.Failed) teste(s)" -ForegroundColor Red
-Write-Host "⚠ Avisos:  $($testResults.Warnings) teste(s)" -ForegroundColor Yellow
+Write-Host "? Passou:  $($testResults.Passed) teste(s)" -ForegroundColor Green
+Write-Host "? Falhou:  $($testResults.Failed) teste(s)" -ForegroundColor Red
+Write-Host "[WARN]  Avisos:  $($testResults.Warnings) teste(s)" -ForegroundColor Yellow
 Write-Host ""
 
 $totalTests = $testResults.Passed + $testResults.Failed + $testResults.Warnings
@@ -345,16 +345,16 @@ Write-Host "Taxa de sucesso: $successRate%" -ForegroundColor $(if ($successRate 
 Write-Host ""
 
 if ($testResults.Failed -eq 0) {
-    Write-Host "🎉 Todos os testes passaram! Agente instalado corretamente." -ForegroundColor Green
+    Write-Host "? Todos os testes passaram! Agente instalado corretamente." -ForegroundColor Green
     Write-Host ""
-    Write-Host "Próximos passos:" -ForegroundColor Cyan
+    Write-Host "Proximos passos:" -ForegroundColor Cyan
     Write-Host "  1. Verifique o dashboard web para confirmar status 'Online'" -ForegroundColor White
     Write-Host "  2. Aguarde 60s para primeiro heartbeat aparecer" -ForegroundColor White
     Write-Host "  3. Teste criar um job no dashboard" -ForegroundColor White
     Write-Host ""
     exit 0
 } else {
-    Write-Host "⚠ Alguns testes falharam. Revise os itens acima." -ForegroundColor Yellow
+    Write-Host "[WARN]  Alguns testes falharam. Revise os itens acima." -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Dicas de troubleshooting:" -ForegroundColor Cyan
     Write-Host "  - Verifique logs: Get-Content '$LogPath' -Tail 50" -ForegroundColor White

@@ -1,4 +1,4 @@
--- Tabela para logar tentativas de ataque e validações falhadas
+-- Tabela para logar tentativas de ataque e validacoes falhadas
 CREATE TABLE IF NOT EXISTS public.security_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.security_logs (
   request_id TEXT
 );
 
--- Index para consultas rápidas
+-- Index para consultas rapidas
 CREATE INDEX idx_security_logs_created_at ON public.security_logs(created_at DESC);
 CREATE INDEX idx_security_logs_tenant_id ON public.security_logs(tenant_id);
 CREATE INDEX idx_security_logs_ip_address ON public.security_logs(ip_address);
@@ -24,7 +24,7 @@ CREATE INDEX idx_security_logs_severity ON public.security_logs(severity);
 -- RLS para security_logs
 ALTER TABLE public.security_logs ENABLE ROW LEVEL SECURITY;
 
--- Admins podem ver logs de segurança do seu tenant
+-- Admins podem ver logs de seguranca do seu tenant
 CREATE POLICY "Admins can view security logs in their tenant"
 ON public.security_logs
 FOR SELECT
@@ -39,7 +39,7 @@ ON public.security_logs
 FOR SELECT
 USING (is_super_admin(auth.uid()));
 
--- Ninguém pode modificar logs (apenas inserção via service role)
+-- Ninguem pode modificar logs (apenas insercao via service role)
 CREATE POLICY "No one can modify security logs"
 ON public.security_logs
 FOR UPDATE
@@ -50,7 +50,7 @@ ON public.security_logs
 FOR DELETE
 USING (false);
 
--- Função para limpar logs antigos (manter últimos 90 dias)
+-- Funcao para limpar logs antigos (manter ultimos 90 dias)
 CREATE OR REPLACE FUNCTION public.cleanup_old_security_logs()
 RETURNS void
 LANGUAGE plpgsql
@@ -63,6 +63,6 @@ BEGIN
 END;
 $$;
 
-COMMENT ON TABLE public.security_logs IS 'Logs de tentativas de ataque e validações de segurança falhadas';
+COMMENT ON TABLE public.security_logs IS 'Logs de tentativas de ataque e validacoes de seguranca falhadas';
 COMMENT ON COLUMN public.security_logs.attack_type IS 'Tipo de ataque: sql_injection, xss, path_traversal, rate_limit, invalid_input, etc';
 COMMENT ON COLUMN public.security_logs.severity IS 'Severidade: low, medium, high, critical';

@@ -22,12 +22,12 @@ BEGIN
     AND expires_at > now()
   ) INTO has_pending_invite;
   
-  -- Se tem convite pendente, não criar tenant próprio
+  -- Se tem convite pendente, nao criar tenant proprio
   IF has_pending_invite THEN
     RETURN NEW;
   END IF;
   
-  -- Criar tenant para novo usuário
+  -- Criar tenant para novo usuario
   tenant_slug := lower(replace(COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email), ' ', '-')) || '-' || substring(NEW.id::text from 1 for 8);
   
   INSERT INTO public.tenants (name, slug, owner_user_id)

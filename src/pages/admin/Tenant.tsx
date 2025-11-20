@@ -15,7 +15,7 @@ const Tenant = () => {
       <div>
         <h1 className="text-3xl font-bold">Gerenciar Tenant</h1>
         <p className="text-muted-foreground">
-          Configurações e monitoramento completo do tenant
+          Configuracoes e monitoramento completo do tenant
         </p>
       </div>
 
@@ -31,7 +31,7 @@ const Tenant = () => {
           </TabsTrigger>
           <TabsTrigger value="security">
             <Shield className="h-4 w-4 mr-2" />
-            Segurança
+            Seguranca
           </TabsTrigger>
           <TabsTrigger value="logs">
             <ScrollText className="h-4 w-4 mr-2" />
@@ -39,7 +39,7 @@ const Tenant = () => {
           </TabsTrigger>
           <TabsTrigger value="settings">
             <Settings className="h-4 w-4 mr-2" />
-            Configurações
+            Configuracoes
           </TabsTrigger>
         </TabsList>
 

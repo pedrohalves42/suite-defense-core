@@ -3,7 +3,7 @@ import { logger } from '@/lib/logger';
 
 /**
  * Hook para detectar status de conectividade online/offline
- * Atualiza automaticamente quando a conexão cai ou volta
+ * Atualiza automaticamente quando a conexao cai ou volta
  */
 export function useOnlineStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -11,7 +11,7 @@ export function useOnlineStatus() {
 
   useEffect(() => {
     const handleOnline = () => {
-      logger.info('[useOnlineStatus] Conexão restaurada');
+      logger.info('[useOnlineStatus] Conexao restaurada');
       setIsOnline(true);
       if (wasOffline) {
         setWasOffline(false);
@@ -19,7 +19,7 @@ export function useOnlineStatus() {
     };
 
     const handleOffline = () => {
-      logger.warn('[useOnlineStatus] Conexão perdida');
+      logger.warn('[useOnlineStatus] Conexao perdida');
       setIsOnline(false);
       setWasOffline(true);
     };

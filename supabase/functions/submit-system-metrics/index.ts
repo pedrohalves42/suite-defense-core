@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Autenticação via HMAC
+    // Autenticacao via HMAC
     const agentToken = req.headers.get('X-Agent-Token');
     if (!agentToken) {
       return new Response(JSON.stringify({ error: 'Missing agent token' }), {
@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
     }
 
     logger.debug('Parsing metrics request');
-    // Parse métricas
+    // Parse metricas
     const metrics: SystemMetrics = await req.json();
     logger.debug('Received metrics', {
       cpu: metrics.cpu_usage_percent,
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
     });
 
     logger.debug('Inserting metrics into database');
-    // Inserir métricas no banco
+    // Inserir metricas no banco
     const { error: insertError } = await supabase
       .from('agent_system_metrics')
       .insert({
@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
         agent_id: agent.id,
         alert_type: 'high_cpu',
         severity: 'critical',
-        title: `CPU Crítico: ${agent.agent_name}`,
+        title: `CPU Critico: ${agent.agent_name}`,
         message: `Uso de CPU em ${metrics.cpu_usage_percent.toFixed(1)}% (limite: 90%)`,
         details: { cpu_usage: metrics.cpu_usage_percent },
       });
@@ -179,8 +179,8 @@ Deno.serve(async (req) => {
         agent_id: agent.id,
         alert_type: 'high_memory',
         severity: 'high',
-        title: `Memória Alta: ${agent.agent_name}`,
-        message: `Uso de memória em ${metrics.memory_usage_percent.toFixed(1)}% (limite: 85%)`,
+        title: `Memoria Alta: ${agent.agent_name}`,
+        message: `Uso de memoria em ${metrics.memory_usage_percent.toFixed(1)}% (limite: 85%)`,
         details: { memory_usage: metrics.memory_usage_percent },
       });
     }
@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
         agent_id: agent.id,
         alert_type: 'high_disk',
         severity: 'critical',
-        title: `Disco Crítico: ${agent.agent_name}`,
+        title: `Disco Critico: ${agent.agent_name}`,
         message: `Uso de disco em ${metrics.disk_usage_percent.toFixed(1)}% (limite: 90%)`,
         details: { disk_usage: metrics.disk_usage_percent },
       });

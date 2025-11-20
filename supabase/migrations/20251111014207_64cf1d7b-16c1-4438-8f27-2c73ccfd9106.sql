@@ -1,4 +1,4 @@
--- FASE 1: Correções de RLS Policies (CRÍTICO)
+-- FASE 1: Correcoes de RLS Policies (CRITICO)
 
 -- 1.1 RLS Policies para user_roles
 CREATE POLICY "users_can_view_own_roles" ON user_roles

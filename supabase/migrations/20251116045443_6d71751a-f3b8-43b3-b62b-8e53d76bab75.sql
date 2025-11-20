@@ -1,7 +1,7 @@
 -- ============================================
--- 🔧 CREATE RPC: installation_health_summary()
+-- [JOB]  CREATE RPC: installation_health_summary()
 -- ============================================
--- Retorna métricas de instalação por OS (últimas 24h)
+-- Retorna metricas de instalacao por OS (ultimas 24h)
 -- Usado pelo componente InstallationHealthCard
 
 CREATE OR REPLACE FUNCTION installation_health_summary()
@@ -51,6 +51,6 @@ $$;
 -- Grant para authenticated users
 GRANT EXECUTE ON FUNCTION installation_health_summary() TO authenticated;
 
--- Comentário descritivo
+-- Comentario descritivo
 COMMENT ON FUNCTION installation_health_summary() IS 
-  'Retorna métricas de instalação por OS (últimas 24h). Usado pelo InstallationHealthCard. Respeita RLS filtrando por tenant_id do usuário autenticado.';
+  'Retorna metricas de instalacao por OS (ultimas 24h). Usado pelo InstallationHealthCard. Respeita RLS filtrando por tenant_id do usuario autenticado.';

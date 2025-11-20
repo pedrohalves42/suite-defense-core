@@ -17,7 +17,7 @@ Deno.serve(async (req: Request) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Autenticação necessária' }),
+        JSON.stringify({ error: 'Autenticacao necessaria' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
 
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ error: 'Usuário não autenticado' }),
+        JSON.stringify({ error: 'Usuario nao autenticado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -74,8 +74,8 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Chave da API do VirusTotal não configurada',
-          message: 'A chave VIRUSTOTAL_API_KEY não está configurada nos secrets do projeto'
+          error: 'Chave da API do VirusTotal nao configurada',
+          message: 'A chave VIRUSTOTAL_API_KEY nao esta configurada nos secrets do projeto'
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -111,7 +111,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({ 
           success: false, 
           error: 'Falha ao conectar com VirusTotal',
-          message: `Status HTTP ${testResponse.status}: Verifique se a chave da API está correta`,
+          message: `Status HTTP ${testResponse.status}: Verifique se a chave da API esta correta`,
           details: testResponse.statusText
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -137,7 +137,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Conexão com VirusTotal estabelecida com sucesso',
+        message: 'Conexao com VirusTotal estabelecida com sucesso',
         details: {
           userId: userData.data?.id,
           quotas: userData.data?.attributes?.quotas
@@ -151,7 +151,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: 'Erro ao testar integração',
+        error: 'Erro ao testar integracao',
         message: error instanceof Error ? error.message : 'Erro desconhecido'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

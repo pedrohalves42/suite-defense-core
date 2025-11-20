@@ -46,7 +46,7 @@ test.describe('Input Validation Security Tests', () => {
         expect(response.status()).toBe(400);
         const data = await response.json();
         expect(data.error).toBeTruthy();
-        console.log(`✓ Blocked SQL injection: ${maliciousName.substring(0, 30)}...`);
+        console.log(`? Blocked SQL injection: ${maliciousName.substring(0, 30)}...`);
       }
     });
 
@@ -69,7 +69,7 @@ test.describe('Input Validation Security Tests', () => {
         });
 
         expect(response.status()).toBe(400);
-        console.log(`✓ Blocked path traversal: ${maliciousName}`);
+        console.log(`? Blocked path traversal: ${maliciousName}`);
       }
     });
 
@@ -92,7 +92,7 @@ test.describe('Input Validation Security Tests', () => {
         });
 
         expect(response.status()).toBe(400);
-        console.log(`✓ Blocked control characters`);
+        console.log(`? Blocked control characters`);
       }
     });
 
@@ -112,7 +112,7 @@ test.describe('Input Validation Security Tests', () => {
         expect(response.status()).toBe(400);
         const data = await response.json();
         expect(data.error).toContain('reservado');
-        console.log(`✓ Blocked reserved name: ${reservedName}`);
+        console.log(`? Blocked reserved name: ${reservedName}`);
       }
     });
 
@@ -129,7 +129,7 @@ test.describe('Input Validation Security Tests', () => {
       expect(response.status()).toBe(400);
       const data = await response.json();
       expect(data.error).toContain('repetidos');
-      console.log(`✓ Blocked excessive repetition`);
+      console.log(`? Blocked excessive repetition`);
     });
 
     test('6. Reject names too short or too long', async ({ request }) => {
@@ -149,7 +149,7 @@ test.describe('Input Validation Security Tests', () => {
         });
 
         expect(response.status()).toBe(400);
-        console.log(`✓ Blocked invalid length: ${name.length} chars`);
+        console.log(`? Blocked invalid length: ${name.length} chars`);
       }
     });
 
@@ -172,7 +172,7 @@ test.describe('Input Validation Security Tests', () => {
         });
 
         expect(response.status()).toBe(400);
-        console.log(`✓ Blocked invalid start/end: ${name}`);
+        console.log(`? Blocked invalid start/end: ${name}`);
       }
     });
 
@@ -200,7 +200,7 @@ test.describe('Input Validation Security Tests', () => {
         const data = await response.json();
         expect(data.enrollmentKey).toBeTruthy();
         expect(data.agentToken).toBeTruthy();
-        console.log(`✓ Accepted valid name: ${name}`);
+        console.log(`? Accepted valid name: ${name}`);
       }
     });
 
@@ -223,7 +223,7 @@ test.describe('Input Validation Security Tests', () => {
         });
 
         expect(response.status()).toBe(400);
-        console.log(`✓ Blocked comment characters: ${name}`);
+        console.log(`? Blocked comment characters: ${name}`);
       }
     });
 
@@ -246,7 +246,7 @@ test.describe('Input Validation Security Tests', () => {
         });
 
         expect(response.status()).toBe(400);
-        console.log(`✓ Blocked XSS attempt`);
+        console.log(`? Blocked XSS attempt`);
       }
     });
   });

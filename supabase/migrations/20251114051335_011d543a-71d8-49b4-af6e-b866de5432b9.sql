@@ -1,7 +1,7 @@
--- FASE 3: Schema de Telemetria com Idempotência e Views Consolidadas (FINAL)
+-- FASE 3: Schema de Telemetria com Idempotencia e Views Consolidadas (FINAL)
 
 -- ============================================================================
--- 1. ADICIONAR COLUNA telemetry_hash PARA IDEMPOTÊNCIA
+-- 1. ADICIONAR COLUNA telemetry_hash PARA IDEMPOTENCIA
 -- ============================================================================
 
 ALTER TABLE public.installation_analytics
@@ -14,7 +14,7 @@ CREATE INDEX IF NOT EXISTS idx_installation_analytics_metrics
 ON public.installation_analytics(tenant_id, event_type, created_at DESC);
 
 -- ============================================================================
--- 2. FUNÇÃO E TRIGGER PARA GERAR HASH AUTOMÁTICO
+-- 2. FUNCAO E TRIGGER PARA GERAR HASH AUTOMATICO
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.generate_telemetry_hash()
@@ -44,7 +44,7 @@ FOR EACH ROW
 EXECUTE FUNCTION public.generate_telemetry_hash();
 
 -- ============================================================================
--- 3. VIEW: MÉTRICAS DE INSTALAÇÃO POR DIA
+-- 3. VIEW: METRICAS DE INSTALACAO POR DIA
 -- ============================================================================
 
 CREATE OR REPLACE VIEW public.agent_installation_metrics AS
@@ -130,7 +130,7 @@ ORDER BY occurrence_count DESC
 LIMIT 100;
 
 -- ============================================================================
--- 5. VIEW: STATUS DE SAÚDE (ÚLTIMAS 24H)
+-- 5. VIEW: STATUS DE SAUDE (ULTIMAS 24H)
 -- ============================================================================
 
 CREATE OR REPLACE VIEW public.installation_health_status AS
@@ -167,7 +167,7 @@ FROM public.installation_analytics
 GROUP BY tenant_id;
 
 -- ============================================================================
--- 6. FUNÇÃO RPC: STATUS DE SAÚDE GERAL
+-- 6. FUNCAO RPC: STATUS DE SAUDE GERAL
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.get_installation_health_status()
@@ -201,17 +201,17 @@ SECURITY DEFINER
 SET search_path = public;
 
 -- ============================================================================
--- 7. DOCUMENTAÇÃO
+-- 7. DOCUMENTACAO
 -- ============================================================================
 
 COMMENT ON COLUMN public.installation_analytics.telemetry_hash IS 
-  'SHA256 hash único para idempotência, gerado automaticamente baseado em agent_id, event_type, timestamp e platform';
+  'SHA256 hash unico para idempotencia, gerado automaticamente baseado em agent_id, event_type, timestamp e platform';
 
 COMMENT ON VIEW public.agent_installation_metrics IS 
-  'Métricas consolidadas de instalação por dia, tenant e plataforma com taxas de sucesso e tempos médios';
+  'Metricas consolidadas de instalacao por dia, tenant e plataforma com taxas de sucesso e tempos medios';
 
 COMMENT ON VIEW public.installation_error_summary IS 
   'Resumo dos erros mais comuns (top 100) com contadores e lista de agentes afetados';
 
 COMMENT ON VIEW public.installation_health_status IS 
-  'Status de saúde das instalações por tenant nas últimas 24h para monitoramento e alertas';
+  'Status de saude das instalacoes por tenant nas ultimas 24h para monitoramento e alertas';

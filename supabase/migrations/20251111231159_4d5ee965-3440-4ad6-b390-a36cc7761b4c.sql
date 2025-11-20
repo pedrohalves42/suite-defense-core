@@ -1,4 +1,4 @@
--- FASE 3: Correções no Banco de Dados
+-- FASE 3: Correcoes no Banco de Dados
 
 -- 1. Trigger para atualizar used_by_agent automaticamente
 CREATE OR REPLACE FUNCTION public.update_enrollment_key_usage()
@@ -29,26 +29,26 @@ BEGIN
 END;
 $$;
 
--- Criar trigger se não existir
+-- Criar trigger se nao existir
 DROP TRIGGER IF EXISTS trg_update_enrollment_usage ON public.agents;
 CREATE TRIGGER trg_update_enrollment_usage
 AFTER INSERT ON public.agents
 FOR EACH ROW
 EXECUTE FUNCTION public.update_enrollment_key_usage();
 
--- 2. Limpar agentes órfãos antigos (nunca conectaram)
+-- 2. Limpar agentes orfaos antigos (nunca conectaram)
 DELETE FROM public.agents
 WHERE status = 'pending'
   AND last_heartbeat IS NULL
   AND enrolled_at < NOW() - INTERVAL '48 hours';
 
--- 3. Adicionar índices para melhorar performance de queries comuns
+-- 3. Adicionar indices para melhorar performance de queries comuns
 CREATE INDEX IF NOT EXISTS idx_agents_last_heartbeat ON public.agents(last_heartbeat DESC) WHERE status = 'active';
 CREATE INDEX IF NOT EXISTS idx_agents_tenant_status ON public.agents(tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_enrollment_keys_active ON public.enrollment_keys(tenant_id, is_active, expires_at) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_agent_tokens_active ON public.agent_tokens(agent_id, is_active) WHERE is_active = true;
 
--- 4. Criar view materializada para métricas de instalação (otimização)
+-- 4. Criar view materializada para metricas de instalacao (otimizacao)
 CREATE MATERIALIZED VIEW IF NOT EXISTS public.installation_metrics_hourly AS
 SELECT 
   date_trunc('hour', created_at) as hour,
@@ -65,11 +65,11 @@ GROUP BY date_trunc('hour', created_at), tenant_id, platform, event_type;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_installation_metrics_hourly 
 ON public.installation_metrics_hourly(hour, tenant_id, platform, event_type);
 
--- 5. Job para refresh automático da view materializada (usar com pg_cron se disponível)
+-- 5. Job para refresh automatico da view materializada (usar com pg_cron se disponivel)
 COMMENT ON MATERIALIZED VIEW public.installation_metrics_hourly IS 
 'Refreshed hourly. Manual refresh: REFRESH MATERIALIZED VIEW CONCURRENTLY public.installation_metrics_hourly;';
 
--- Log da migração
+-- Log da migracao
 DO $$
 BEGIN
   RAISE NOTICE 'Migration completed: Fixed enrollment keys, created triggers, added indexes, created metrics view';

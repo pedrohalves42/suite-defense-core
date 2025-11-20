@@ -10,7 +10,7 @@ interface RetryOptions {
 }
 
 /**
- * Hook para fazer fetch com retry automático e exponential backoff
+ * Hook para fazer fetch com retry automatico e exponential backoff
  * Trata erros de rede de forma resiliente
  */
 export function useRetryFetch() {
@@ -42,7 +42,7 @@ export function useRetryFetch() {
         
         // Check if we should retry this error
         if (!shouldRetry(error)) {
-          logger.error('[useRetryFetch] Error não retryable', error);
+          logger.error('[useRetryFetch] Error nao retryable', error);
           throw error;
         }
 

@@ -24,7 +24,7 @@ export const Navbar = () => {
     }
   };
 
-  const whatsappLink = "https://wa.me/5534984432835?text=Olá!%20Gostaria%20de%20conhecer%20o%20CyberShield";
+  const whatsappLink = "https://wa.me/5534984432835?text=Ola!%20Gostaria%20de%20conhecer%20o%20CyberShield";
 
   return (
     <>
@@ -54,7 +54,7 @@ export const Navbar = () => {
                 onClick={() => scrollToSection("inicio")}
                 className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
               >
-                Início
+                Inicio
               </button>
               <button
                 onClick={() => scrollToSection("recursos")}
@@ -66,7 +66,7 @@ export const Navbar = () => {
                 onClick={() => scrollToSection("precos")}
                 className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors"
               >
-                Preços
+                Precos
               </button>
               <button
                 onClick={() => scrollToSection("contato")}
@@ -115,7 +115,7 @@ export const Navbar = () => {
                 onClick={() => scrollToSection("inicio")}
                 className="block w-full text-left px-4 py-2 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-muted rounded-lg transition-colors"
               >
-                Início
+                Inicio
               </button>
               <button
                 onClick={() => scrollToSection("recursos")}
@@ -127,7 +127,7 @@ export const Navbar = () => {
                 onClick={() => scrollToSection("precos")}
                 className="block w-full text-left px-4 py-2 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-muted rounded-lg transition-colors"
               >
-                Preços
+                Precos
               </button>
               <button
                 onClick={() => scrollToSection("contato")}

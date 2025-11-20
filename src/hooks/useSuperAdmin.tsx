@@ -10,7 +10,7 @@ export const useSuperAdmin = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // CORREÇÃO: Flag para prevenir race condition
+    // CORRECAO: Flag para prevenir race condition
     let isCancelled = false;
 
     const checkSuperAdmin = async () => {
@@ -35,7 +35,7 @@ export const useSuperAdmin = () => {
           throw new Error(`Failed to verify super admin status: ${error.message}`);
         }
         
-        // CORREÇÃO: Só atualiza se não foi cancelado
+        // CORRECAO: So atualiza se nao foi cancelado
         if (!isCancelled) {
           setIsSuperAdmin(data === true);
           setError(null);
@@ -55,7 +55,7 @@ export const useSuperAdmin = () => {
 
     checkSuperAdmin();
 
-    // CORREÇÃO: Cleanup para prevenir memory leak
+    // CORRECAO: Cleanup para prevenir memory leak
     return () => {
       isCancelled = true;
     };
