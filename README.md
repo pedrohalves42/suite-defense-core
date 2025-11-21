@@ -60,6 +60,61 @@ Para informações detalhadas sobre arquitetura e troubleshooting:
 
 ---
 
+## 🛡️ Validacao e Qualidade
+
+### Validacao Completa do Sistema
+
+```bash
+npm run validate:system
+```
+
+Executa validacoes automatizadas em multiplas camadas:
+- Code quality (typecheck, lint, test)
+- ASCII safety (caracteres problematicos)
+- PowerShell patterns (`: $_` bug)
+- Agent functions (Jobs v3, HMAC)
+- SQL migrations (Jobs v3)
+- Edge Functions logic
+- CI/CD configuration
+
+**Resultado:** `guardian-report.json` com analise detalhada.
+
+### Validacao Rapida (ASCII + Agent Sync)
+
+```bash
+npm run validate:all
+```
+
+### Validacao de Instalador (VM)
+
+```powershell
+.\scripts\verificar-installer-agente.ps1 -ScriptPath "path\to\installer.ps1"
+```
+
+### Pre-Commit Checklist
+
+Antes de fazer commit/deploy critico:
+
+```bash
+# 1. Validacao completa
+npm run validate:system
+
+# 2. Sincronizar agent script
+npm run sync:agent
+
+# 3. Validar sincronizacao
+npm run validate:sync
+
+# 4. Se tudo passou:
+git add .
+git commit -m "feat: ..."
+git push
+```
+
+**CI/CD:** GitHub Actions executa `validate:system` automaticamente em push/PR.
+
+---
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/affc1ab5-463f-41f7-ae33-f788e864f6ee

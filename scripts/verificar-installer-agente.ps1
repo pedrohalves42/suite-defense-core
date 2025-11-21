@@ -118,6 +118,29 @@ if ($content -match '[^\x00-\x7F]') {
 }
 
 # =========================
+# 4) Verificar padrao problematico ': $_'
+# =========================
+Write-Host ""
+Write-Host "=== 2.5) Padrao problematico ': `$_' ===" -ForegroundColor Cyan
+
+$badPattern = $content | Select-String -Pattern ':\s*\$_' -AllMatches
+
+if ($badPattern) {
+    Write-Host "[ERROR] Padrao ': `$_' encontrado (causa InvalidVariableReferenceWithDrive)!" -ForegroundColor Red
+    Write-Host "        Este padrao DEVE ser substituido por '`$(`$_.Exception.Message)'" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "        Ocorrencias encontradas:" -ForegroundColor Yellow
+    foreach ($match in $badPattern.Matches) {
+        $lineNum = ($content.Substring(0, $match.Index) -split "`n").Count
+        $line = ($content -split "`n")[$lineNum - 1].Trim()
+        Write-Host ("        Linha {0}: {1}" -f $lineNum, $line) -ForegroundColor Yellow
+    }
+    $validationPassed = $false
+} else {
+    Write-Host "[OK] Nenhuma ocorrencia do padrao ': `$_' encontrada" -ForegroundColor Green
+}
+
+# =========================
 # 4) Validar sintaxe PowerShell 5.1
 # =========================
 Write-Host ""

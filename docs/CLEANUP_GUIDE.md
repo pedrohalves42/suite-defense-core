@@ -300,7 +300,63 @@ Invoke-WebRequest -Uri $url -OutFile "C:\Temp\installer-test.ps1"
 
 ---
 
-## 🔧 Fase 5: Troubleshooting
+## 🛡️ Fase 5: Validacao Automatica
+
+### 5.1 Validacao Completa do Sistema
+
+Antes de commits criticos ou deploys:
+
+```bash
+npm run validate:system
+```
+
+Isso executa validacoes de:
+- ✅ ASCII safety (caracteres nao-ASCII em scripts PowerShell)
+- ✅ Padrao problematico `: $_` (InvalidVariableReferenceWithDrive)
+- ✅ Funcoes criticas do agente (Submit-JobResult, Send-Heartbeat, etc.)
+- ✅ Jobs v3 SQL (migrations + view jobs_normalized)
+- ✅ Edge Functions criticas (submit-job-result, serve-installer)
+- ✅ CI/CD configuration
+- ✅ Qualidade de codigo (typecheck, lint, test)
+
+**Resultado:**
+- Exit code 0 ✅ - Tudo OK, pode fazer deploy
+- Exit code 1 ❌ - Erros encontrados, **NAO fazer deploy**
+- Relatorio detalhado: `guardian-report.json`
+
+### 5.2 Validacao de Instalador Baixado (VM)
+
+Na VM Windows, apos baixar um instalador:
+
+```powershell
+.\scripts\verificar-installer-agente.ps1 -ScriptPath "C:\temp\installer.ps1"
+```
+
+Valida:
+- ✅ Encoding correto (UTF-8 sem BOM / ASCII)
+- ✅ Sintaxe PowerShell 5.1
+- ✅ Padrao `: $_` ausente
+- ✅ Funcoes do agente presentes
+- ✅ Parametro StartedAt (Jobs v3)
+- ✅ Versao do installer (via HTTP headers)
+
+**So execute o instalador se validacao passar!**
+
+### 5.3 CI/CD
+
+O workflow `.github/workflows/code-guardian.yml` executa automaticamente em:
+- Push para `main` ou `develop`
+- Pull requests
+- Manualmente via GitHub Actions UI
+
+Resultados:
+- ✅ Commit/PR aprovado automaticamente se passar
+- ❌ Commit/PR bloqueado se falhar
+- 📊 Artifact `guardian-report.json` disponivel para analise
+
+---
+
+## 🔧 Fase 6: Troubleshooting
 
 ### Problema: Instalador Ainda Tem Erros Após Limpeza
 
