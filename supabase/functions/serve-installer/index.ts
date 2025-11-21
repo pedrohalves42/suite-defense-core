@@ -6,6 +6,7 @@
  * Security: Validates enrollment keys, enforces rate limits, and ensures HMAC secrets.
  * Platforms: Windows (PowerShell), Linux (Bash), macOS (Bash)
  * 
+ * FORCE REBUILD: 2025-11-21T02:35:00Z - ParserError complete fix (build-agent-exe)
  * Last updated: 2025-01-19 - Added StartedAt validation for Jobs v3
  */
 
