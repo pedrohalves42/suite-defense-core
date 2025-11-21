@@ -18,31 +18,31 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `
     - Evento de post_installation
     
     Uso:
-    powershell.exe -ExecutionPolicy Bypass -File .\cybershield-agent-windows-v3.ps1 `
-        -ServerUrl "https://seu-projeto.supabase.co" `
-        -AgentToken "AGENT_TOKEN_AQUI" `
-        -HmacSecret "64_HEX_CHARS_AQUI" `
+    powershell.exe -ExecutionPolicy Bypass -File .\\cybershield-agent-windows-v3.ps1 \`
+        -ServerUrl "https://seu-projeto.supabase.co" \`
+        -AgentToken "AGENT_TOKEN_AQUI" \`
+        -HmacSecret "64_HEX_CHARS_AQUI" \`
         -AgentName "meu-servidor-01"
 #>
 
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$ServerUrl,
+    [Parameter(Mandatory = \$true)]
+    [string]\$ServerUrl,
 
-    [Parameter(Mandatory = $true)]
-    [string]$AgentToken,
+    [Parameter(Mandatory = \$true)]
+    [string]\$AgentToken,
 
-    [Parameter(Mandatory = $true)]
-    [string]$HmacSecret,
+    [Parameter(Mandatory = \$true)]
+    [string]\$HmacSecret,
 
-    [Parameter(Mandatory = $false)]
-    [string]$AgentName = $env:COMPUTERNAME.ToLower(),
+    [Parameter(Mandatory = \$false)]
+    [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
-    [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.0.0"
+    [Parameter(Mandatory = \$false)]
+    [string]\$AgentVersion = "3.0.0"
 )
 
-$ErrorActionPreference = "Stop"
+\$ErrorActionPreference = "Stop"
 
 # ============================================
 #  TRAP GLOBAL PARA ERROS NAO TRATADOS
@@ -332,19 +332,19 @@ function Send-PostInstallationEvent {
     Write-Log "Enviando post_installation..." "INFO"
 
     try {
-        $result = Invoke-SecureRequest `
-            -Path "/functions/v1/track-installation-event" `
-            -Method "POST" `
-            -Body $body `
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/track-installation-event" \`
+            -Method "POST" \`
+            -Body \$body \`
             -TimeoutSec 20
 
-        if ($result.Success -and $result.StatusCode -eq 200) {
+        if (\$result.Success -and \$result.StatusCode -eq 200) {
             Write-Log "[SUCCESS] post_installation registrado com sucesso" "SUCCESS"
         } else {
-            Write-Log "[WARN] Falha ao registrar post_installation (Status=$($result.StatusCode))" "WARN"
+            Write-Log "[WARN] Falha ao registrar post_installation (Status=\$(\$result.StatusCode))" "WARN"
         }
     } catch {
-        Write-Log "[WARN] Erro ao enviar post_installation: $($_.Exception.Message)" "WARN"
+        Write-Log "[WARN] Erro ao enviar post_installation: \$(\$_.Exception.Message)" "WARN"
     }
 }
 
@@ -366,19 +366,19 @@ function Send-Heartbeat {
     Write-Log "Enviando heartbeat..." "INFO"
 
     try {
-        $result = Invoke-SecureRequest `
-            -Path "/functions/v1/heartbeat" `
-            -Method "POST" `
-            -Body $body `
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/heartbeat" \`
+            -Method "POST" \`
+            -Body \$body \`
             -TimeoutSec 15
 
-        if ($result.Success -and $result.StatusCode -eq 200) {
+        if (\$result.Success -and \$result.StatusCode -eq 200) {
             Write-Log "[SUCCESS] Heartbeat OK (200)" "SUCCESS"
         } else {
-            Write-Log "[ERROR] Heartbeat falhou (Status=$($result.StatusCode))" "ERROR"
+            Write-Log "[ERROR] Heartbeat falhou (Status=\$(\$result.StatusCode))" "ERROR"
         }
     } catch {
-        Write-Log "[ERROR] Erro ao enviar heartbeat: $($_.Exception.Message)" "ERROR"
+        Write-Log "[ERROR] Erro ao enviar heartbeat: \$(\$_.Exception.Message)" "ERROR"
     }
 }
 
@@ -425,24 +425,24 @@ function Submit-JobResult {
     Write-Log "Payload: $bodyJson" "DEBUG"
 
     try {
-        $result = Invoke-SecureRequest `
-            -Path "/functions/v1/submit-job-result" `
-            -Method "POST" `
-            -Body $body `
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/submit-job-result" \`
+            -Method "POST" \`
+            -Body \$body \`
             -TimeoutSec 30
 
-        if ($result.Success -and $result.StatusCode -eq 200) {
-            Write-Log "[SUCCESS] Resultado do job $JobId enviado com sucesso" "SUCCESS"
-            return $true
+        if (\$result.Success -and \$result.StatusCode -eq 200) {
+            Write-Log "[SUCCESS] Resultado do job \$JobId enviado com sucesso" "SUCCESS"
+            return \$true
         } else {
-            Write-Log "[ERROR] Falha ao enviar resultado (Status=$($result.StatusCode))" "ERROR"
-            Write-Log "Response body: $($result.Body)" "ERROR"
-            return $false
+            Write-Log "[ERROR] Falha ao enviar resultado (Status=\$(\$result.StatusCode))" "ERROR"
+            Write-Log "Response body: \$(\$result.Body)" "ERROR"
+            return \$false
         }
     } catch {
-        Write-Log "[ERROR] Erro ao enviar resultado do job ${JobId}: $($_.Exception.Message)" "ERROR"
-        Write-Log "Stack trace: $($_.ScriptStackTrace)" "ERROR"
-        return $false
+        Write-Log "[ERROR] Erro ao enviar resultado do job \${JobId}: \$(\$_.Exception.Message)" "ERROR"
+        Write-Log "Stack trace: \$(\$_.ScriptStackTrace)" "ERROR"
+        return \$false
     }
 }
 
@@ -511,10 +511,10 @@ function Execute-Job {
                     }
 
                     # Chama backend scan-virus
-                    $scanResult = Invoke-SecureRequest `
-                        -Uri "$ServerUrl/functions/v1/scan-virus" `
-                        -Method POST `
-                        -Body $scanBody `
+                    \$scanResult = Invoke-SecureRequest \`
+                        -Uri "\$ServerUrl/functions/v1/scan-virus" \`
+                        -Method POST \`
+                        -Body \$scanBody \`
                         -TimeoutSec 60
 
                     if (-not $scanResult.Success) {
@@ -545,9 +545,9 @@ function Execute-Job {
                             New-Item -ItemType Directory -Path $quarantineRoot -Force | Out-Null
                         }
 
-                        $fileName = [System.IO.Path]::GetFileName($filePath)
-                        $guid = [guid]::NewGuid().ToString()
-                        $quarantinePath = Join-Path $quarantineRoot "$guid`_$fileName"
+                        \$fileName = [System.IO.Path]::GetFileName(\$filePath)
+                        \$guid = [guid]::NewGuid().ToString()
+                        \$quarantinePath = Join-Path \$quarantineRoot "\$guid\`_\$fileName"
 
                         Move-Item -Path $filePath -Destination $quarantinePath -Force
                         Write-Log "[SUCCESS] Arquivo movido para quarentena: $quarantinePath" "SUCCESS"
@@ -573,9 +573,9 @@ function Execute-Job {
                     Write-Log "[INFO] Job 'update_agent' recebido" "INFO"
 
                     # Chama serve-agent-update
-                    $updateResult = Invoke-SecureRequest `
-                        -Uri "$ServerUrl/functions/v1/serve-agent-update" `
-                        -Method GET `
+                    \$updateResult = Invoke-SecureRequest \`
+                        -Uri "\$ServerUrl/functions/v1/serve-agent-update" \`
+                        -Method GET \`
                         -TimeoutSec 60
 
                     if (-not $updateResult.Success) {
@@ -655,29 +655,29 @@ function Execute-Job {
             }
         }
 
-        $execTime = [int]((Get-Date) - $startTime).TotalSeconds
-        $startTimeISO = $startTime.ToUniversalTime().ToString("o")
+        \$execTime = [int]((Get-Date) - \$startTime).TotalSeconds
+        \$startTimeISO = \$startTime.ToUniversalTime().ToString("o")
 
-        Submit-JobResult `
-            -JobId $jobId `
-            -Status "completed" `
-            -Output $output `
-            -ExecutionTimeSeconds $execTime `
-            -StartedAt $startTimeISO
+        Submit-JobResult \`
+            -JobId \$jobId \`
+            -Status "completed" \`
+            -Output \$output \`
+            -ExecutionTimeSeconds \$execTime \`
+            -StartedAt \$startTimeISO
     }
     catch {
-        $err = "Erro ao executar job $jobId`: $($_.Exception.Message)"
-        Write-Log $err "ERROR"
+        \$err = "Erro ao executar job \$jobId\`: \$(\$_.Exception.Message)"
+        Write-Log \$err "ERROR"
 
-        $execTime = [int]((Get-Date) - $startTime).TotalSeconds
-        $startTimeISO = $startTime.ToUniversalTime().ToString("o")
+        \$execTime = [int]((Get-Date) - \$startTime).TotalSeconds
+        \$startTimeISO = \$startTime.ToUniversalTime().ToString("o")
 
-        Submit-JobResult `
-            -JobId $jobId `
-            -Status "failed" `
-            -ErrorMessage $err `
-            -ExecutionTimeSeconds $execTime `
-            -StartedAt $startTimeISO
+        Submit-JobResult \`
+            -JobId \$jobId \`
+            -Status "failed" \`
+            -ErrorMessage \$err \`
+            -ExecutionTimeSeconds \$execTime \`
+            -StartedAt \$startTimeISO
     }
 }
 
@@ -693,36 +693,36 @@ function Poll-Jobs {
     Write-Log "Consultando jobs..." "INFO"
 
     try {
-        $result = Invoke-SecureRequest `
-            -Path "/functions/v1/poll-jobs" `
-            -Method "POST" `
-            -Body $body `
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/poll-jobs" \`
+            -Method "POST" \`
+            -Body \$body \`
             -TimeoutSec 20
 
-        if (-not $result.Success -or $result.StatusCode -ne 200) {
-            Write-Log "[ERROR] poll-jobs falhou (Status=$($result.StatusCode))" "ERROR"
+        if (-not \$result.Success -or \$result.StatusCode -ne 200) {
+            Write-Log "[ERROR] poll-jobs falhou (Status=\$(\$result.StatusCode))" "ERROR"
             return
         }
 
-        if ([string]::IsNullOrWhiteSpace($result.Body)) {
+        if ([string]::IsNullOrWhiteSpace(\$result.Body)) {
             Write-Log "[WARN] Resposta de poll-jobs vazia" "WARN"
             return
         }
 
-        $jobs = $result.Body | ConvertFrom-Json
+        \$jobs = \$result.Body | ConvertFrom-Json
 
-        if ($null -eq $jobs -or $jobs.Count -eq 0) {
+        if (\$null -eq \$jobs -or \$jobs.Count -eq 0) {
             Write-Log "[POLL] Nenhum job disponivel" "INFO"
             return
         }
 
-        Write-Log "[JOBS] Recebidos $($jobs.Count) job(s)" "INFO"
+        Write-Log "[JOBS] Recebidos \$(\$jobs.Count) job(s)" "INFO"
 
-        foreach ($job in $jobs) {
-            Execute-Job -Job $job
+        foreach (\$job in \$jobs) {
+            Execute-Job -Job \$job
         }
     } catch {
-        Write-Log "[ERROR] Erro no poll-jobs: $($_.Exception.Message)" "ERROR"
+        Write-Log "[ERROR] Erro no poll-jobs: \$(\$_.Exception.Message)" "ERROR"
     }
 }
 
@@ -744,10 +744,10 @@ try {
     # 2) Primeiro heartbeat
     Send-Heartbeat
 
-    $bootstrapElapsed = [int]((Get-Date) - $bootstrapStart).TotalSeconds
-    Write-Log "[SUCCESS] Bootstrap concluido em ${bootstrapElapsed}s" "SUCCESS"
+    \$bootstrapElapsed = [int]((Get-Date) - \$bootstrapStart).TotalSeconds
+    Write-Log "[SUCCESS] Bootstrap concluido em \${bootstrapElapsed}s" "SUCCESS"
 
-    Write-Log "[INFO] Entrando no loop principal (intervalo=$($Global:PollIntervalSeconds)s)" "INFO"
+    Write-Log "[INFO] Entrando no loop principal (intervalo=\$(\$Global:PollIntervalSeconds)s)" "INFO"
 
     $lastHeartbeat = Get-Date
     $lastPoll      = Get-Date
