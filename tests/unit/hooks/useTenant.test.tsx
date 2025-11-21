@@ -59,7 +59,8 @@ describe('useTenant', () => {
     const mockUserRoleQuery = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
         data: { tenant_id: 'tenant-123' },
         error: null,
       }),
@@ -97,7 +98,8 @@ describe('useTenant', () => {
     const mockUserRoleQuery = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
         data: null,
         error: null,
       }),
@@ -135,7 +137,8 @@ describe('useTenant', () => {
     const mockUserRoleQuery = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
         data: null,
         error: mockError,
       }),
@@ -160,7 +163,8 @@ describe('useTenant', () => {
     const mockUserRoleQuery = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({
+      limit: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
         data: { tenant_id: 'tenant-123' },
         error: null,
       }),

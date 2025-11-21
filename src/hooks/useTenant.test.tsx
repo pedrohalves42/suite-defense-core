@@ -65,9 +65,11 @@ describe('useTenant', () => {
     vi.mocked(supabase.from).mockReturnValueOnce({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({
-            data: { tenant_id: 'tenant-123' },
-            error: null,
+          limit: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: { tenant_id: 'tenant-123' },
+              error: null,
+            }),
           }),
         }),
       }),
@@ -98,9 +100,11 @@ describe('useTenant', () => {
     vi.mocked(supabase.from).mockReturnValueOnce({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
-          maybeSingle: vi.fn().mockResolvedValue({
-            data: { tenant_id: 'tenant-123' },
-            error: null,
+          limit: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({
+              data: { tenant_id: 'tenant-123' },
+              error: null,
+            }),
           }),
         }),
       }),
