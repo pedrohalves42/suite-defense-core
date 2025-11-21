@@ -58,7 +58,7 @@ try {
         Set-Acl -Path $LogsPath -AclObject $acl
         Write-InstallerLog "Permissoes SYSTEM aplicadas em $LogsPath" "SUCCESS"
     } catch {
-        Write-InstallerLog "Aviso: nao foi possivel aplicar ACL para SYSTEM em $LogsPath: $($_.Exception.Message)" "WARN"
+        Write-InstallerLog ("Aviso: nao foi possivel aplicar ACL para SYSTEM em " + $LogsPath + ": " + $($_.Exception.Message)) "WARN"
     }
 } catch {
     Write-InstallerLog "ERRO CRITICO: falha ao criar pastas base/logs: $($_.Exception.Message)" "ERROR"
@@ -276,7 +276,7 @@ try {
     Write-InstallerLog "Scheduled task last run time: $($taskInfo.LastRunTime)" "INFO"
     Write-InstallerLog "Scheduled task last result: $($taskInfo.LastTaskResult)" "INFO"
 } catch {
-    Write-InstallerLog "Aviso: nao foi possivel ler informacoes da scheduled task $TaskName: $($_.Exception.Message)" "WARN"
+    Write-InstallerLog ("Aviso: nao foi possivel ler informacoes da scheduled task " + $TaskName + ": " + $($_.Exception.Message)) "WARN"
 }
 
 # Diagnostico: ler eventos recentes do EventLog Application para o source CyberShield
