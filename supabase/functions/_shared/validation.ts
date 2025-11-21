@@ -30,8 +30,12 @@ export const AgentNameSchema = z.string()
     'Nome do agente deve comecar e terminar com letras ou numeros, e pode conter hifens e underscores'
   )
   .refine(name => {
-    const sqlPatterns = [/[;'"\\/]/, /(union|select|insert|update|delete|drop)/i, /(--|\*\/|\/\*)/, /[\x00-\x1F\x7F]/];
-    return !sqlPatterns.some(pattern => pattern.test(name));
+    const sqlPatterns = [/[;'"\\/]/, /(union|select|insert|update|delete|drop)/i, /(--|\*\/|\/\*)/];
+    const hasControlChars = [...name].some(char => {
+      const code = char.charCodeAt(0);
+      return (code >= 0 && code <= 31) || code === 127;
+    });
+    return !sqlPatterns.some(pattern => pattern.test(name)) && !hasControlChars;
   }, 'Nome contem caracteres perigosos')
   .refine(name => !/(.)\1{5,}/.test(name), 'Nao pode ter mais de 5 caracteres repetidos')
   .refine(name => {
