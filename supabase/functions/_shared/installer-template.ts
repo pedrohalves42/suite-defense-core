@@ -6,7 +6,7 @@
  */
 
 // Windows Installer Template (v3.1.0-HARDENED)
-export const WINDOWS_INSTALLER_TEMPLATE = `#Requires -RunAsAdministrator
+export const WINDOWS_INSTALLER_TEMPLATE = String.raw`#Requires -RunAsAdministrator
 #Requires -Version 5.1
 
 param(
