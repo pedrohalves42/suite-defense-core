@@ -4,7 +4,7 @@
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
  */
 
-export const AGENT_SCRIPT_WINDOWS_CONTENT = `
+export const AGENT_SCRIPT_WINDOWS_CONTENT = String.raw`
 <#
     CyberShield Agent - Windows v3.0.0 (Essencial)
     

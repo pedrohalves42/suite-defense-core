@@ -4,7 +4,7 @@
  * Keep in sync with: public/agent-scripts/cybershield-agent-linux-v3.sh
  */
 
-export const AGENT_SCRIPT_LINUX_SH = `#!/usr/bin/env bash
+export const AGENT_SCRIPT_LINUX_SH = String.raw`#!/usr/bin/env bash
 # CyberShield Agent - Linux
 # Version: v3.0.0 (HMAC HEX, Jobs + Reports, Post-Installation)
 
