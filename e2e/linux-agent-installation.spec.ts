@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { test, expect } from '@playwright/test';
 
 test.describe('Linux Agent Installation E2E', () => {
