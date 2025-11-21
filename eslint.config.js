@@ -5,7 +5,17 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "electron/dist", "electron/web"] },
+  { 
+    ignores: [
+      "dist", 
+      "electron/dist", 
+      "electron/web",
+      // Agent scripts with embedded shell/PowerShell syntax
+      "supabase/functions/_shared/agent-script-linux-content.ts",
+      "supabase/functions/_shared/agent-script-macos-content.ts", 
+      "supabase/functions/_shared/agent-script-windows-content.ts"
+    ] 
+  },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
