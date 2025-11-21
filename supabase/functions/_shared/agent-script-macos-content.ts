@@ -76,18 +76,18 @@ SERVER_URL="\${SERVER_URL%/}"
 ########################################
 
 LOG_DIR="/Library/Logs/CyberShield"
-LOG_FILE="$LOG_DIR/agent.log"
+LOG_FILE="\$LOG_DIR/agent.log"
 
-mkdir -p "$LOG_DIR" || true
-touch "$LOG_FILE" 2>/dev/null || true
+mkdir -p "\$LOG_DIR" || true
+touch "\$LOG_FILE" 2>/dev/null || true
 
 log() {
-  local level="$1"; shift
+  local level="\$1"; shift
   local ts
-  ts="$(date '+%Y-%m-%d %H:%M:%S')"
-  local line="[${ts}] [${level}] $*"
-  echo "$line"
-  echo "$line" >> "$LOG_FILE" 2>/dev/null || true
+  ts="\$(date '+%Y-%m-%d %H:%M:%S')"
+  local line="[\${ts}] [\${level}] \$*"
+  echo "\$line"
+  echo "\$line" >> "\$LOG_FILE" 2>/dev/null || true
 }
 
 ########################################
@@ -95,17 +95,17 @@ log() {
 ########################################
 
 validate_hmac_secret() {
-  if [[ ! "$HMAC_SECRET" =~ ^[0-9a-fA-F]{64}$ ]]; then
-    log "ERROR" "HMAC_SECRET invalido. Esperado 64 caracteres hexadecimais, recebido length=${#HMAC_SECRET}"
+  if [[ ! "\$HMAC_SECRET" =~ ^[0-9a-fA-F]{64}\$ ]]; then
+    log "ERROR" "HMAC_SECRET invalido. Esperado 64 caracteres hexadecimais, recebido length=\${#HMAC_SECRET}"
     exit 1
   fi
 }
 
 hmac_sign() {
-  local message="$1"
-  printf '%s' "$message" \
-    | openssl dgst -sha256 -mac HMAC -macopt "hexkey:$HMAC_SECRET" \
-    | awk '{print $2}'
+  local message="\$1"
+  printf '%s' "\$message" \\
+    | openssl dgst -sha256 -mac HMAC -macopt "hexkey:\$HMAC_SECRET" \\
+    | awk '{print \$2}'
 }
 
 ########################################
