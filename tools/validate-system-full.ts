@@ -56,7 +56,7 @@ function relativePath(p: string): string {
 }
 
 function hasNonAscii(content: string): boolean {
-  return /[^\x00-\x7F]/.test(content);
+  return /[^\u0000-\u007F]/.test(content);
 }
 
 function findLinesMatching(
@@ -142,7 +142,7 @@ function validateAsciiAndPatterns(issues: Issue[]) {
     if (isPowerShellOrTemplate && hasNonAscii(content)) {
       const lines = content.split(/\r?\n/);
       lines.forEach((line, idx) => {
-        if (/[^\x00-\x7F]/.test(line)) {
+        if (/[^\u0000-\u007F]/.test(line)) {
           addIssue(issues, {
             file: rel,
             line: idx + 1,
