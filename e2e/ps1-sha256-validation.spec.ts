@@ -276,7 +276,7 @@ test.describe('SHA256 Validation - Frontend Integration', () => {
     await expect(page.locator('text=[OK]  Integridade verificada')).toBeVisible({ timeout: 15000 });
     
     // Verificar que hash e exibido no UI
-    const hashDisplay = page.locator('text=/SHA256: [a-f0-9]{16}\.\.\.[a-f0-9]{16}/i');
+    const hashDisplay = page.locator('text=/SHA256: [a-f0-9]{16}...[a-f0-9]{16}/i');
     await expect(hashDisplay).toBeVisible();
     
     // Verificar badge verde de validacao
