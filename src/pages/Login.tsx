@@ -71,7 +71,7 @@ export default function Login() {
               logger.error('VITE_TURNSTILE_SITE_KEY not configured');
               return;
             }
-            // @ts-ignore - Turnstile global
+            // @ts-expect-error - Turnstile global
             window.turnstile?.render('#captcha-container', {
               sitekey: siteKey,
               callback: (token: string) => setCaptchaToken(token),

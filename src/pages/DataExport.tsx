@@ -61,7 +61,7 @@ export default function DataExport() {
     try {
       let data: any[] = [];
       let filename = '';
-      let columns: string[] = [];
+      const columns: string[] = [];
 
       // Calculate date filter
       const dateFilter = dateRange === 'all' 
