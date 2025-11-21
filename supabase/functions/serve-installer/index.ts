@@ -358,6 +358,7 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
       .replace(/\{\{AGENT_NAME\}\}/g, () => agentData.agent_name)
       .replace(/\{\{AGENT_VERSION\}\}/g, '3.0.0')
       .replace(/\{\{AGENT_SCRIPT_URL\}\}/g, () => agentScriptUrl)
+      .replace(/\{\{INSTALLER_VERSION\}\}/g, INSTALLER_VERSION)
       .replace(/\{\{TIMESTAMP\}\}/g, () => new Date().toISOString());
 
     // Final validation: ensure no placeholders remain
