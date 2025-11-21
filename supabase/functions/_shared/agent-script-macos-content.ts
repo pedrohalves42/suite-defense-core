@@ -24,32 +24,32 @@ set -euo pipefail
 ########################################
 
 # Prioridade: argumentos > env vars curtas > env vars prefixadas CYBERSHIELD_*
-SERVER_URL="${SERVER_URL:-${CYBERSHIELD_SERVER_URL:-}}"
-AGENT_TOKEN="${AGENT_TOKEN:-${CYBERSHIELD_AGENT_TOKEN:-}}"
-HMAC_SECRET="${HMAC_SECRET:-${CYBERSHIELD_HMAC_SECRET:-}}"
-AGENT_NAME="${AGENT_NAME:-${CYBERSHIELD_AGENT_NAME:-$(hostname -s)}}"
-AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-3.0.0}}"
+SERVER_URL="\${SERVER_URL:-\${CYBERSHIELD_SERVER_URL:-}}"
+AGENT_TOKEN="\${AGENT_TOKEN:-\${CYBERSHIELD_AGENT_TOKEN:-}}"
+HMAC_SECRET="\${HMAC_SECRET:-\${CYBERSHIELD_HMAC_SECRET:-}}"
+AGENT_NAME="\${AGENT_NAME:-\${CYBERSHIELD_AGENT_NAME:-\$(hostname -s)}}"
+AGENT_VERSION="\${AGENT_VERSION:-\${CYBERSHIELD_AGENT_VERSION:-3.0.0}}"
 
-while [[ $# -gt 0 ]]; do
-  case "$1" in
+while [[ \$# -gt 0 ]]; do
+  case "\$1" in
     --server-url)
-      SERVER_URL="$2"; shift 2;;
+      SERVER_URL="\$2"; shift 2;;
     --agent-token)
-      AGENT_TOKEN="$2"; shift 2;;
+      AGENT_TOKEN="\$2"; shift 2;;
     --hmac-secret)
-      HMAC_SECRET="$2"; shift 2;;
+      HMAC_SECRET="\$2"; shift 2;;
     --agent-name)
-      AGENT_NAME="$2"; shift 2;;
+      AGENT_NAME="\$2"; shift 2;;
     --agent-version)
-      AGENT_VERSION="$2"; shift 2;;
+      AGENT_VERSION="\$2"; shift 2;;
     *)
-      echo "[ERROR]  Parametro desconhecido: $1" >&2
-      echo "Uso: $0 --server-url URL --agent-token TOKEN --hmac-secret SECRET [--agent-name NAME] [--agent-version VERSION]"
+      echo "[ERROR]  Parametro desconhecido: \$1" >&2
+      echo "Uso: \$0 --server-url URL --agent-token TOKEN --hmac-secret SECRET [--agent-name NAME] [--agent-version VERSION]"
       exit 1;;
   esac
 done
 
-if [[ -z "$SERVER_URL" ]]; then
+if [[ -z "\$SERVER_URL" ]]; then
   echo "[ERROR]  SERVER_URL nao definido" >&2
   echo "Use: --server-url URL" >&2
   echo "  ou: SERVER_URL=... (env var)" >&2
@@ -57,19 +57,19 @@ if [[ -z "$SERVER_URL" ]]; then
   exit 1
 fi
 
-if [[ -z "$AGENT_TOKEN" ]]; then
+if [[ -z "\$AGENT_TOKEN" ]]; then
   echo "[ERROR]  AGENT_TOKEN nao definido" >&2
   echo "Use: --agent-token TOKEN ou AGENT_TOKEN=... ou CYBERSHIELD_AGENT_TOKEN=..." >&2
   exit 1
 fi
 
-if [[ -z "$HMAC_SECRET" ]]; then
+if [[ -z "\$HMAC_SECRET" ]]; then
   echo "[ERROR]  HMAC_SECRET nao definido" >&2
   echo "Use: --hmac-secret SECRET ou HMAC_SECRET=... ou CYBERSHIELD_HMAC_SECRET=..." >&2
   exit 1
 fi
 
-SERVER_URL="${SERVER_URL%/}"
+SERVER_URL="\${SERVER_URL%/}"
 
 ########################################
 # LOG
