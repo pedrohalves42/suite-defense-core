@@ -31,7 +31,7 @@ INSTALL_DIR="/opt/cybershield"
 BIN_PATH="\\$INSTALL_DIR/cybershield-agent-linux.sh"
 ENV_FILE="/etc/cybershield-agent.env"
 SERVICE_NAME="cybershield-agent"
-SERVICE_FILE="/etc/systemd/system/\\$\{SERVICE_NAME\}.service"
+SERVICE_FILE="/etc/systemd/system/\${SERVICE_NAME}.service"
 LOG_DIR="/var/log/cybershield"
 
 ########################################
