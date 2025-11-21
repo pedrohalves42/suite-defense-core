@@ -1,0 +1,46 @@
+name: Code Guardian - Full System Validation
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  validate-system:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run full system validation
+        run: npm run validate:system
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      
+      - name: Upload guardian report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guardian-report
+          path: guardian-report.json
+          retention-days: 30
+      
+      - name: Fail if errors found
+        if: failure()
+        run: |
+          echo "System validation failed. Check guardian-report.json artifact."
+          exit 1
