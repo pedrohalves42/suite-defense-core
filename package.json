@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
     "scripts": {
+    "validate:system": "tsx tools/validate-system-full.ts",
+    "validate:full": "npm run validate:system",  
     "dev": "vite",
     "ascii:check": "tsx tools/ascii-guard.ts --check",
     "ascii:fix": "tsx tools/ascii-guard.ts --fix",
