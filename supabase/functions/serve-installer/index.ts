@@ -460,7 +460,7 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
     // 3) ? BUG FIX P2: Para Windows, validar que o script do agente embutido nao esta vazio ou truncado
     // Regex melhorado: aceita @' e @" para here-strings
     if (platform === 'windows') {
-      const hereStringPattern = /\$AgentScriptContent\s*=\s*@['"]\s*([\s\S]*?)\s*['"]\@/;
+      const hereStringPattern = /\$AgentScriptContent\s*=\s*@['"]\s*([\s\S]*?)\s*['"]@/;
       const scriptContentMatch = templateContent.match(hereStringPattern);
       
       if (!scriptContentMatch || scriptContentMatch[1].trim().length < 5000) {

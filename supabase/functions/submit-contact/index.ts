@@ -16,7 +16,7 @@ const ContactFormSchema = z.object({
     .optional()
     .nullable(),
   phone: z.string()
-    .regex(/^[\d\s\(\)\+\-]*$/, 'Telefone invalido')
+    .regex(/^[\d\s()+-]*$/, 'Telefone invalido')
     .max(20, 'Telefone muito longo')
     .optional()
     .nullable(),
