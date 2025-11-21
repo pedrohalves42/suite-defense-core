@@ -35,8 +35,8 @@ test.describe('Linux Agent Installation E2E', () => {
     expect(path).toBeTruthy();
     
     // Read script content
-    const fs = require('fs');
-    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    const { readFileSync } = await import('fs');
+    const scriptContent = readFileSync(path!, 'utf-8');
     
     // Validate script structure
     expect(scriptContent).toContain('#!/bin/bash');
@@ -85,8 +85,8 @@ test.describe('Linux Agent Installation E2E', () => {
     const download = await downloadPromise;
     
     const path = await download.path();
-    const fs = require('fs');
-    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    const { readFileSync } = await import('fs');
+    const scriptContent = readFileSync(path!, 'utf-8');
     
     // Validate distribution detection
     expect(scriptContent).toContain('ubuntu|debian');
@@ -117,8 +117,8 @@ test.describe('Linux Agent Installation E2E', () => {
     const download = await downloadPromise;
     
     const path = await download.path();
-    const fs = require('fs');
-    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    const { readFileSync } = await import('fs');
+    const scriptContent = readFileSync(path!, 'utf-8');
     
     // Validate file permissions
     expect(scriptContent).toContain('chmod 750');
@@ -151,8 +151,8 @@ test.describe('Linux Agent Installation E2E', () => {
     const download = await downloadPromise;
     
     const path = await download.path();
-    const fs = require('fs');
-    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    const { readFileSync } = await import('fs');
+    const scriptContent = readFileSync(path!, 'utf-8');
     
     // Validate installation steps are present in correct order
     const installSteps = [
@@ -171,7 +171,7 @@ test.describe('Linux Agent Installation E2E', () => {
       'show_installation_summary'
     ];
     
-    let lastIndex = 0;
+    const lastIndex = 0;
     for (const step of installSteps) {
       const index = scriptContent.indexOf(step);
       expect(index).toBeGreaterThan(-1);
@@ -197,8 +197,8 @@ test.describe('Linux Agent Installation E2E', () => {
     const download = await downloadPromise;
     
     const path = await download.path();
-    const fs = require('fs');
-    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    const { readFileSync } = await import('fs');
+    const scriptContent = readFileSync(path!, 'utf-8');
     
     // Validate logging functions
     expect(scriptContent).toContain('log_info()');
@@ -235,8 +235,8 @@ test.describe('Linux Agent Installation E2E', () => {
     const download = await downloadPromise;
     
     const path = await download.path();
-    const fs = require('fs');
-    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    const { readFileSync } = await import('fs');
+    const scriptContent = readFileSync(path!, 'utf-8');
     
     // Validate parameter validation function
     expect(scriptContent).toContain('validate_parameters()');
@@ -261,8 +261,8 @@ test.describe('Linux Agent Installation E2E', () => {
     const download = await downloadPromise;
     
     const path = await download.path();
-    const fs = require('fs');
-    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    const { readFileSync } = await import('fs');
+    const scriptContent = readFileSync(path!, 'utf-8');
     
     // Validate retry logic in send_heartbeat
     expect(scriptContent).toContain('send_heartbeat()');
@@ -289,8 +289,8 @@ test.describe('Linux Agent Installation E2E', () => {
     const download = await downloadPromise;
     
     const path = await download.path();
-    const fs = require('fs');
-    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    const { readFileSync } = await import('fs');
+    const scriptContent = readFileSync(path!, 'utf-8');
     
     // Validate connectivity test with retry
     expect(scriptContent).toContain('test_server_connectivity()');
@@ -315,8 +315,8 @@ test.describe('Linux Agent Installation E2E', () => {
     const download = await downloadPromise;
     
     const path = await download.path();
-    const fs = require('fs');
-    const scriptContent = fs.readFileSync(path!, 'utf-8');
+    const { readFileSync } = await import('fs');
+    const scriptContent = readFileSync(path!, 'utf-8');
     
     // Validate HMAC generation
     expect(scriptContent).toContain('generate_hmac_signature()');

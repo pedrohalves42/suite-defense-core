@@ -20,7 +20,7 @@ const ContactFormSchema = z.object({
     .max(200, "Nome da empresa muito longo")
     .optional(),
   phone: z.string()
-    .regex(/^[\d\s\(\)\+\-]*$/, "Telefone invalido")
+    .regex(/^[\d\s()+\-]*$/, "Telefone invalido")
     .max(20, "Telefone muito longo")
     .optional(),
   endpoints: z.string()
