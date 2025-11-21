@@ -111,7 +111,7 @@ try {
             Write-InstallerLog "Removendo task antiga (cmdlet): $($task.TaskName)" "INFO"
             try {
                 Stop-ScheduledTask -TaskName $task.TaskName -ErrorAction SilentlyContinue
-                Unregister-ScheduledTask -TaskName $task.TaskName -Confirm:\$false -ErrorAction Stop
+                Unregister-ScheduledTask -TaskName $task.TaskName -Confirm:$false -ErrorAction Stop
                 Write-InstallerLog "Task removida com sucesso: $($task.TaskName)" "SUCCESS"
             } catch {
                 Write-InstallerLog "Falha ao remover $($task.TaskName) via cmdlet: $($_.Exception.Message)" "WARN"
@@ -125,7 +125,7 @@ try {
         $cyberShieldTasks = $schtasksOutput | Where-Object { $_.'TaskName' -like '*CyberShieldAgent*' }
         if ($cyberShieldTasks) {
             foreach ($task in $cyberShieldTasks) {
-                $taskName = $task.'TaskName'.TrimStart('\')
+                $taskName = $task.'TaskName'.TrimStart('\\')
                 Write-InstallerLog "Removendo task antiga (schtasks): $taskName" "INFO"
                 $deleteResult = schtasks.exe /Delete /TN "$taskName" /F 2>&1
                 Write-InstallerLog "Resultado: $deleteResult" "DEBUG"
@@ -332,8 +332,8 @@ if ($taskInfo.LastTaskResult -ne 0 -and $taskInfo.LastTaskResult -ne $null) {
     
     # Sugerir proximos passos
     Write-InstallerLog "Proximos passos de diagnostico:" "INFO"
-    Write-InstallerLog "  1. Verificar log do agente: C:\CyberShield\logs\cybershield-agent-v3.log" "INFO"
-    Write-InstallerLog "  2. Executar manualmente: C:\CyberShield\cybershield-agent-$AgentName.ps1" "INFO"
+    Write-InstallerLog "  1. Verificar log do agente: C:\\CyberShield\\logs\\cybershield-agent-v3.log" "INFO"
+    Write-InstallerLog "  2. Executar manualmente: C:\\CyberShield\\cybershield-agent-$AgentName.ps1" "INFO"
     Write-InstallerLog "  3. Verificar Event Viewer: Logs de Aplicativo" "INFO"
 }
 
