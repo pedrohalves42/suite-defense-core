@@ -7,12 +7,12 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = '3.1.1-PARSERERROR-FIX-REBUILD';
-export const LAST_UPDATED = '2025-11-20T21:00:00Z'; // Force rebuild + version display fix
+export const INSTALLER_VERSION = '3.1.1-PARSERERROR-COMPLETE-FIX';
+export const LAST_UPDATED = '2025-11-21T02:30:00Z'; // Correção completa build-agent-exe
 
 export const CHANGES = [
-  'Corrigido InvalidVariableReferenceWithDrive em 6 blocos catch',
-  'Substituido ": $_" por ": $($_.Exception.Message)" para compatibilidade PowerShell 5.1',
+  'Corrigido InvalidVariableReferenceWithDrive em 8 blocos catch (6 installer + 2 build-agent-exe)',
+  'Substituido TODOS ": $_" por ": $($_.Exception.Message)" para compatibilidade PowerShell 5.1',
   'Validacao completa de sintaxe PowerShell 5.1',
   'Garantia de parsing correto em ambientes Windows Server 2016+',
 ];
