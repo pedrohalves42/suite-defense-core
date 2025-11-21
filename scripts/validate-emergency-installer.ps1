@@ -26,7 +26,7 @@ try {
     exit 1
 }
 
-# Fase 2: Validar headers de versão
+# Fase 2: Validar headers de versao
 Write-Host "`n[2/5] Validando headers..." -ForegroundColor Yellow
 $version = $response.Headers['X-Installer-Version']
 $updated = $response.Headers['X-Installer-Updated']
@@ -56,12 +56,12 @@ Write-Host "  Salvo em: $scriptPath" -ForegroundColor White
 # Fase 4: Validar correcoes criticas
 Write-Host "`n[4/5] Verificando correcoes criticas..." -ForegroundColor Yellow
 
-# Padrão correto: $($_.Exception.Message)
+# Padrao correto: $($_.Exception.Message)
 $correctPattern = '\$\(\$_\.Exception\.Message\)'
 $correctMatches = [regex]::Matches($script, $correctPattern)
 $correctCount = $correctMatches.Count
 
-# Padrão errado: : $_" (excluindo $_.Exception)
+# Padrao errado: : $_" (excluindo $_.Exception)
 $wrongPattern = ':\s*\$_["\s]'
 $wrongMatches = [regex]::Matches($script, $wrongPattern)
 $wrongCount = $wrongMatches.Count
@@ -84,7 +84,7 @@ if ($wrongCount -gt 0) {
     }
 }
 
-# Fase 5: Validar tamanho mínimo do script
+# Fase 5: Validar tamanho minimo do script
 $scriptSize = $script.Length
 Write-Host "`n[5/5] Validando tamanho do script..." -ForegroundColor Yellow
 Write-Host "  Tamanho: $([math]::Round($scriptSize/1024, 2)) KB" -ForegroundColor White
