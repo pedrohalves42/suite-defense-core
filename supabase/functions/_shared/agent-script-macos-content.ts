@@ -12,7 +12,7 @@
  * - launchd (system service management)
  */
 
-export const AGENT_SCRIPT_MACOS_SH = `#!/usr/bin/env bash
+export const AGENT_SCRIPT_MACOS_SH = String.raw`#!/usr/bin/env bash
 # CyberShield Agent - macOS v3.0.0
 # HMAC HEX, Jobs + Reports, Post-Installation
 
