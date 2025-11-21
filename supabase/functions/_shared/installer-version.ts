@@ -8,7 +8,7 @@
  */
 
 export const INSTALLER_VERSION = '3.1.1-PARSERERROR-COMPLETE-FIX';
-export const LAST_UPDATED = '2025-11-21T02:30:00Z'; // Correção completa build-agent-exe
+export const LAST_UPDATED = '2025-11-21T02:35:00Z'; // FORCE REBUILD - Correção completa build-agent-exe
 
 export const CHANGES = [
   'Corrigido InvalidVariableReferenceWithDrive em 8 blocos catch (6 installer + 2 build-agent-exe)',
