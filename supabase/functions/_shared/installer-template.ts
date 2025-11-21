@@ -48,7 +48,7 @@ try {
     try {
         $acl = Get-Acl $LogsPath
         $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-            "NT AUTHORITY\SYSTEM",
+            "NT AUTHORITY\\SYSTEM",
             "FullControl",
             "ContainerInherit,ObjectInherit",
             "None",
