@@ -493,8 +493,8 @@ try {
             break
         } catch {
             $waitTime = [math]::Pow(2, $i)  # Exponential backoff: 2s, 4s, 8s
-            Write-Host "[WARN] ? Tentativa $i falhou: $_" -ForegroundColor Yellow
-            Write-InstallLog "[WARN]  Telemetria tentativa $i falhou: $_"
+            Write-Host "[WARN] ? Tentativa $i falhou: $($_.Exception.Message)" -ForegroundColor Yellow
+            Write-InstallLog "[WARN]  Telemetria tentativa $i falhou: $($_.Exception.Message)"
             if ($i -lt $maxRetries) {
                 Write-Host "? Aguardando $waitTime segundos antes de retentar..." -ForegroundColor Yellow
                 Start-Sleep -Seconds $waitTime
