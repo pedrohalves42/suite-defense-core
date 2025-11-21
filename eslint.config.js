@@ -19,6 +19,11 @@ export default tseslint.config(
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
+    ignores: [
+      "**/agent-script-linux-content.ts",
+      "**/agent-script-macos-content.ts",
+      "**/agent-script-windows-content.ts"
+    ],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
