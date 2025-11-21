@@ -8,7 +8,7 @@
  */
 
 export const INSTALLER_VERSION = '3.1.1-PARSERERROR-FIX-REBUILD';
-export const LAST_UPDATED = '2025-11-20T20:50:00Z'; // Force rebuild at 2025-11-20T20:50:00Z
+export const LAST_UPDATED = '2025-11-20T21:00:00Z'; // Force rebuild + version display fix
 
 export const CHANGES = [
   'Corrigido InvalidVariableReferenceWithDrive em 6 blocos catch',

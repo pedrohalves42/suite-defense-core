@@ -84,7 +84,7 @@ try {
     Write-InstallerLog "Aviso: nao foi possivel registrar event source 'CyberShield': $($_.Exception.Message)" "WARN"
 }
 
-Write-InstallerLog "=== CyberShield Agent Installer v3.1.0-HARDENED ===" "INFO"
+Write-InstallerLog "=== CyberShield Agent Installer v{{INSTALLER_VERSION}} ===" "INFO"
 Write-InstallerLog "ServerUrl: $ServerUrl" "INFO"
 Write-InstallerLog "AgentName: $AgentName" "INFO"
 
