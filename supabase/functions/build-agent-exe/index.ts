@@ -553,7 +553,7 @@ try {
 `;
     
     // [OK]  FASE 1.7: Replace placeholders including agent script content
-    let installerContent = WINDOWS_INSTALLER_TEMPLATE
+    const installerContent = WINDOWS_INSTALLER_TEMPLATE
       .replace(/\{\{AGENT_TOKEN\}\}/g, tokenData.token)
       .replace(/\{\{HMAC_SECRET\}\}/g, agentData.hmac_secret)
       .replace(/\{\{SERVER_URL\}\}/g, SUPABASE_URL)
