@@ -20,9 +20,9 @@ Write-Host "========================================`n" -ForegroundColor Cyan
 Write-Host "[1/5] Baixando installer..." -ForegroundColor Yellow
 try {
     $response = Invoke-WebRequest -Uri $url -UseBasicParsing
-    Write-Host "  ✓ Download concluido" -ForegroundColor Green
+    Write-Host "  [OK] Download concluido" -ForegroundColor Green
 } catch {
-    Write-Host "  ✗ ERRO ao baixar: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  [ERRO] ERRO ao baixar: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 
@@ -37,12 +37,12 @@ Write-Host "  Atualizado: $updated" -ForegroundColor White
 Write-Host "  SHA256: $sha256" -ForegroundColor White
 
 if ($version -notlike "*3.1.1-PARSERERROR-FIX*") {
-    Write-Host "  ✗ VERSÃO INCORRETA!" -ForegroundColor Red
+    Write-Host "  [ERRO] VERSAO INCORRETA!" -ForegroundColor Red
     exit 1
 }
-Write-Host "  ✓ Versao correta" -ForegroundColor Green
+Write-Host "  [OK] Versao correta" -ForegroundColor Green
 
-# Fase 3: Salvar e validar conteúdo do script
+# Fase 3: Salvar e validar conteudo do script
 Write-Host "`n[3/5] Validando conteudo do script..." -ForegroundColor Yellow
 $script = $response.Content
 $tempPath = "C:\Temp"
@@ -53,7 +53,7 @@ $scriptPath = "$tempPath\emergency-installer-$EnrollmentToken.ps1"
 $script | Out-File $scriptPath -Encoding UTF8
 Write-Host "  Salvo em: $scriptPath" -ForegroundColor White
 
-# Fase 4: Validar correções críticas
+# Fase 4: Validar correcoes criticas
 Write-Host "`n[4/5] Verificando correcoes criticas..." -ForegroundColor Yellow
 
 # Padrão correto: $($_.Exception.Message)
@@ -70,13 +70,13 @@ Write-Host "  Correcoes presentes: $correctCount" -ForegroundColor $(if($correct
 Write-Host "  Erros antigos: $wrongCount" -ForegroundColor $(if($wrongCount -eq 0){"Green"}else{"Red"})
 
 if ($correctCount -ge 12) {
-    Write-Host "  ✓ Script contem todas as correcoes" -ForegroundColor Green
+    Write-Host "  [OK] Script contem todas as correcoes" -ForegroundColor Green
 } else {
-    Write-Host "  ✗ Script NAO contem as correcoes necessarias" -ForegroundColor Red
+    Write-Host "  [ERRO] Script NAO contem as correcoes necessarias" -ForegroundColor Red
 }
 
 if ($wrongCount -gt 0) {
-    Write-Host "  ✗ Script ainda contem erros antigos!" -ForegroundColor Red
+    Write-Host "  [ERRO] Script ainda contem erros antigos!" -ForegroundColor Red
     Write-Host "`n  Exemplos de linhas problematicas:" -ForegroundColor Yellow
     $wrongMatches | Select-Object -First 3 | ForEach-Object {
         $lineNum = ($script.Substring(0, $_.Index) -split "`n").Count
@@ -90,10 +90,10 @@ Write-Host "`n[5/5] Validando tamanho do script..." -ForegroundColor Yellow
 Write-Host "  Tamanho: $([math]::Round($scriptSize/1024, 2)) KB" -ForegroundColor White
 
 if ($scriptSize -lt 10240) {
-    Write-Host "  ✗ Script muito pequeno (esperado > 10 KB)" -ForegroundColor Red
+    Write-Host "  [ERRO] Script muito pequeno (esperado > 10 KB)" -ForegroundColor Red
     $validationPassed = $false
 } else {
-    Write-Host "  ✓ Tamanho adequado" -ForegroundColor Green
+    Write-Host "  [OK] Tamanho adequado" -ForegroundColor Green
 }
 
 # Resultado final
@@ -101,13 +101,13 @@ Write-Host "`n========================================" -ForegroundColor Cyan
 $validationPassed = ($correctCount -ge 12) -and ($wrongCount -eq 0) -and ($scriptSize -ge 10240)
 
 if ($validationPassed) {
-    Write-Host "  ✅ VALIDAÇÃO PASSOU" -ForegroundColor Green
+    Write-Host "  [OK] VALIDACAO PASSOU" -ForegroundColor Green
     Write-Host "========================================`n" -ForegroundColor Cyan
     
     if ($InstallIfValid) {
         Write-Host "Iniciando instalacao..." -ForegroundColor Yellow
         
-        # Limpar instalação anterior
+        # Limpar instalacao anterior
         Write-Host "`nLimpando instalacao anterior..." -ForegroundColor Yellow
         Remove-Item "C:\CyberShield\*" -Recurse -Force -ErrorAction SilentlyContinue
         Unregister-ScheduledTask -TaskName "CyberShield Agent" -Confirm:$false -ErrorAction SilentlyContinue
@@ -116,7 +116,7 @@ if ($validationPassed) {
         Write-Host "Executando instalador validado..." -ForegroundColor Yellow
         Invoke-Expression $script
         
-        Write-Host "`n✓ Instalacao concluida!" -ForegroundColor Green
+        Write-Host "`n[OK] Instalacao concluida!" -ForegroundColor Green
         Write-Host "`nVerifique os logs:" -ForegroundColor Yellow
         Write-Host "  Get-Content C:\CyberShield\logs\installer.log -Tail 20" -ForegroundColor White
         Write-Host "  Get-ScheduledTask -TaskName 'CyberShield Agent' | Select TaskName, State, LastTaskResult" -ForegroundColor White
@@ -127,7 +127,7 @@ if ($validationPassed) {
         Write-Host "  irm $url | iex" -ForegroundColor White
     }
 } else {
-    Write-Host "  ❌ VALIDAÇÃO FALHOU" -ForegroundColor Red
+    Write-Host "  [ERRO] VALIDACAO FALHOU" -ForegroundColor Red
     Write-Host "========================================`n" -ForegroundColor Cyan
     
     Write-Host "ACOES NECESSARIAS:" -ForegroundColor Yellow

@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import React from 'react'
 import { useTenant } from './useTenant'
 import { supabase } from '@/integrations/supabase/client'
 
@@ -9,6 +11,22 @@ vi.mock('./useAuth', () => ({
     loading: false,
   }),
 }))
+
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  })
+
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  )
+}
 
 describe('useTenant', () => {
   beforeEach(() => {
@@ -24,7 +42,9 @@ describe('useTenant', () => {
       }),
     } as any)
 
-    const { result } = renderHook(() => useTenant())
+    const { result } = renderHook(() => useTenant(), {
+      wrapper: createWrapper(),
+    })
 
     // Wait for hook to update
     await new Promise(resolve => setTimeout(resolve, 100))
@@ -64,7 +84,9 @@ describe('useTenant', () => {
       }),
     } as any)
 
-    const { result } = renderHook(() => useTenant())
+    const { result } = renderHook(() => useTenant(), {
+      wrapper: createWrapper(),
+    })
 
     // Wait for hook to update
     await new Promise(resolve => setTimeout(resolve, 100))
@@ -84,7 +106,9 @@ describe('useTenant', () => {
       }),
     } as any)
 
-    const { result } = renderHook(() => useTenant())
+    const { result } = renderHook(() => useTenant(), {
+      wrapper: createWrapper(),
+    })
 
     // Wait for hook to update
     await new Promise(resolve => setTimeout(resolve, 100))
