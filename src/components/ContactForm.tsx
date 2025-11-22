@@ -78,7 +78,7 @@ export const ContactForm = () => {
       }
 
       // Call the secure edge function
-      const { data, error } = await supabase.functions.invoke('submit-contact', {
+      const { error } = await supabase.functions.invoke('submit-contact', {
         body: {
           name: formData.name,
           email: formData.email,
