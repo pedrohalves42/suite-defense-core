@@ -120,6 +120,9 @@ verify_jwt = true
 [functions.cleanup-expired-enrollment-keys]
 verify_jwt = true
 
+[functions.cleanup-orphaned-data]
+verify_jwt = true
+
 [functions.check-expiring-enrollment-keys]
 verify_jwt = false
 
