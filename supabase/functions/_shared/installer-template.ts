@@ -226,36 +226,17 @@ Write-InstallerLog "FASE 4: Criando Scheduled Task..." "INFO"
 
 $TaskName = "CyberShieldAgent-$AgentName"
 
-# Construir string de argumentos com escaping correto para Task Scheduler
-$ArgumentString = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden " + `
-                  "-File `"$AgentScriptPath`" " + `
-                  "-ServerUrl `"$ServerUrl`" " + `
-                  "-AgentToken `"$AgentToken`" " + `
-                  "-HmacSecret `"$HmacSecret`" " + `
-                  "-AgentName `"$AgentName`""
+# Construir argumentos em uma linha (sem continuacao)
+$ArgumentString = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File \`"$AgentScriptPath\`" -ServerUrl \`"$ServerUrl\`" -AgentToken \`"$AgentToken\`" -HmacSecret \`"$HmacSecret\`" -AgentName \`"$AgentName\`""
 
 Write-InstallerLog "Task arguments: $ArgumentString" "DEBUG"
 
-$Action = New-ScheduledTaskAction `
-    -Execute "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" `
-    -Argument $ArgumentString
-
+$Action = New-ScheduledTaskAction -Execute "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Argument $ArgumentString
 $Trigger = New-ScheduledTaskTrigger -AtStartup
 $Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-$Settings = New-ScheduledTaskSettingsSet `
-    -AllowStartIfOnBatteries `
-    -DontStopIfGoingOnBatteries `
-    -StartWhenAvailable `
-    -RestartInterval (New-TimeSpan -Minutes 1) `
-    -RestartCount 3
+$Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartInterval (New-TimeSpan -Minutes 1) -RestartCount 3
 
-Register-ScheduledTask `
-    -TaskName $TaskName `
-    -Action $Action `
-    -Trigger $Trigger `
-    -Principal $Principal `
-    -Settings $Settings `
-    -Force | Out-Null
+Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Force | Out-Null
 
 Write-InstallerLog "Scheduled Task criada: $TaskName" "SUCCESS"
 
@@ -376,14 +357,7 @@ try {
     
     Write-InstallerLog "Enviando telemetria para: $telemetryUrl" "DEBUG"
     
-    $response = Invoke-WebRequest `
-        -Uri $telemetryUrl `
-        -Method POST `
-        -Body $telemetryBody `
-        -Headers $headers `
-        -UseBasicParsing `
-        -TimeoutSec 10 `
-        -ErrorAction Stop
+    $response = Invoke-WebRequest -Uri $telemetryUrl -Method POST -Body $telemetryBody -Headers $headers -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
     
     Write-InstallerLog "Telemetria enviada com sucesso (HTTP $($response.StatusCode))" "SUCCESS"
 } catch {
