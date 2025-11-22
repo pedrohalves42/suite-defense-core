@@ -1,5 +1,5 @@
-// FORCE REBUILD: 2025-11-22T12:30:00Z - CRITICAL SYNTAX FIX
-// Bug #1: \` -> ` (35 ocorrencias) | Bug #2: : $_ -> : $($_.Exception.Message) (12 ocorrencias)
+// FORCE REBUILD: 2025-11-22T13:00:00Z - LINE CONTINUATION FIX
+// Remocao completa de continuacoes de linha (backtick final) que causavam ExpectedValueExpression
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-agent-token, x-hmac-signature, x-timestamp, x-nonce',
