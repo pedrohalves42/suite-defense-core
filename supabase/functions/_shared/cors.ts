@@ -1,5 +1,5 @@
-// FORCE REBUILD: 2025-11-22T13:00:00Z - LINE CONTINUATION FIX
-// Remocao completa de continuacoes de linha (backtick final) que causavam ExpectedValueExpression
+// FORCE REBUILD: 2025-11-22T14:00:00Z - FUNCTION ORDER FIX
+// Write-InstallerLog movida para ANTES de qualquer uso (resolve erro "not recognized")
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-agent-token, x-hmac-signature, x-timestamp, x-nonce',
