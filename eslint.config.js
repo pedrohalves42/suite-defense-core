@@ -14,23 +14,10 @@ export default tseslint.config(
     ] 
   },
   
-  // 2. Disable ALL linting for agent scripts (embedded shell/PowerShell syntax)
-  {
-    files: [
-      "supabase/functions/_shared/agent-script-linux-content.ts",
-      "supabase/functions/_shared/agent-script-macos-content.ts",
-      "supabase/functions/_shared/agent-script-windows-content.ts"
-    ],
-    rules: {} // Empty rules object = no linting
-  },
-  
-  // 3. Main configuration for all other TypeScript files
+  // 2. Main configuration for all TypeScript files
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
-    ignores: [
-      "supabase/functions/_shared/agent-script-*-content.ts"
-    ],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -56,7 +43,7 @@ export default tseslint.config(
         }
       ],
       
-      // Novas regras úteis
+      // Novas regras uteis
       "@typescript-eslint/no-explicit-any": "warn",
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
