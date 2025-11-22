@@ -1,5 +1,5 @@
-// FORCE REBUILD: 2025-01-22T11:00:00Z - ESLint definitivo via .eslintignore
-// Agent scripts completamente excluidos do linting
+// FORCE REBUILD: 2025-01-22T11:30:00Z - ESLint flat config ignores configurados
+// Agent scripts corretamente excluidos via ignores (flat config nao usa .eslintignore)
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-agent-token, x-hmac-signature, x-timestamp, x-nonce',
