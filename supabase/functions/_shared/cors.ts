@@ -1,5 +1,5 @@
-// FORCE REBUILD: 2025-01-21T17:45:00Z - InvalidVariableReferenceWithDrive CRITICAL FIX
-// Last updated: installer-template.ts lines 61 and 279 corrected with safe concatenation
+// FORCE REBUILD: 2025-01-22T10:30:00Z - ESLint config reorganization complete
+// Agent scripts now properly excluded from linting via 3-object flat config structure
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-agent-token, x-hmac-signature, x-timestamp, x-nonce',
