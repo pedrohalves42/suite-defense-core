@@ -1,9 +1,0 @@
-# Build / bundles
-dist
-electron/dist
-electron/web
-
-# Agent scripts com shell/powershell embutido
-supabase/functions/_shared/agent-script-linux-content.ts
-supabase/functions/_shared/agent-script-macos-content.ts
-supabase/functions/_shared/agent-script-windows-content.ts
