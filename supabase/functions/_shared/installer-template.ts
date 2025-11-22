@@ -23,48 +23,37 @@ param(
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-# ============= FASE 0: Pre-checks =============
+# ============= FASE 0: Pre-checks (Silent) =============
 $BasePath  = "C:\\CyberShield"
 $LogsPath  = Join-Path $BasePath "logs"
 $LogFile   = Join-Path $LogsPath "installer.log"
 
-# Criar pastas base e logs com permissoes explicitas
-try {
-    if (-not (Test-Path $BasePath)) {
-        New-Item -ItemType Directory -Path $BasePath -Force | Out-Null
-        Write-InstallerLog "Pasta base criada: $BasePath" "SUCCESS"
-    } else {
-        Write-InstallerLog "Pasta base ja existe: $BasePath" "INFO"
-    }
-
-    if (-not (Test-Path $LogsPath)) {
-        New-Item -ItemType Directory -Path $LogsPath -Force | Out-Null
-        Write-InstallerLog "Pasta de logs criada: $LogsPath" "SUCCESS"
-    } else {
-        Write-InstallerLog "Pasta de logs ja existe: $LogsPath" "INFO"
-    }
-
-    # Garantir permissoes para SYSTEM
-    try {
-        $acl = Get-Acl $LogsPath
-        $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-            "NT AUTHORITY\\SYSTEM",
-            "FullControl",
-            "ContainerInherit,ObjectInherit",
-            "None",
-            "Allow"
-        )
-        $acl.SetAccessRule($systemRule)
-        Set-Acl -Path $LogsPath -AclObject $acl
-        Write-InstallerLog "Permissoes SYSTEM aplicadas em $LogsPath" "SUCCESS"
-    } catch {
-        Write-InstallerLog ("Aviso: nao foi possivel aplicar ACL para SYSTEM em " + $LogsPath + ": " + $($_.Exception.Message)) "WARN"
-    }
-} catch {
-    Write-InstallerLog "ERRO CRITICO: falha ao criar pastas base/logs: $($_.Exception.Message)" "ERROR"
-    throw "Instalacao abortada: nao foi possivel criar pastas e logs em $BasePath"
+# Criar pastas base e logs SEM logging (ainda nao temos a funcao)
+if (-not (Test-Path $BasePath)) {
+    New-Item -ItemType Directory -Path $BasePath -Force | Out-Null
 }
 
+if (-not (Test-Path $LogsPath)) {
+    New-Item -ItemType Directory -Path $LogsPath -Force | Out-Null
+}
+
+# Garantir permissoes para SYSTEM (silencioso)
+try {
+    $acl = Get-Acl $LogsPath
+    $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+        "NT AUTHORITY\\SYSTEM",
+        "FullControl",
+        "ContainerInherit,ObjectInherit",
+        "None",
+        "Allow"
+    )
+    $acl.SetAccessRule($systemRule)
+    Set-Acl -Path $LogsPath -AclObject $acl
+} catch {
+    # Silencioso - vamos logar depois se falhar
+}
+
+# ============= FASE 1: Definir Logging =============
 function Write-InstallerLog {
     param([string]$Message, [string]$Level = "INFO")
     $line = "[{0}] [{1}] {2}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $Level, $Message
@@ -72,7 +61,16 @@ function Write-InstallerLog {
     Write-Host $line
 }
 
-# Registrar event source para fallback de log em caso de falha no arquivo
+# ============= FASE 2: Logging Habilitado =============
+
+# Agora podemos logar tudo
+Write-InstallerLog "=== CyberShield Agent Installer v{{INSTALLER_VERSION}} ===" "INFO"
+Write-InstallerLog "ServerUrl: $ServerUrl" "INFO"
+Write-InstallerLog "AgentName: $AgentName" "INFO"
+Write-InstallerLog "Pasta base: $BasePath" "INFO"
+Write-InstallerLog "Pasta de logs: $LogsPath" "INFO"
+
+# Registrar event source para fallback
 try {
     if (-not [System.Diagnostics.EventLog]::SourceExists("CyberShield")) {
         New-EventLog -LogName Application -Source "CyberShield"
@@ -83,10 +81,6 @@ try {
 } catch {
     Write-InstallerLog "Aviso: nao foi possivel registrar event source 'CyberShield': $($_.Exception.Message)" "WARN"
 }
-
-Write-InstallerLog "=== CyberShield Agent Installer v{{INSTALLER_VERSION}} ===" "INFO"
-Write-InstallerLog "ServerUrl: $ServerUrl" "INFO"
-Write-InstallerLog "AgentName: $AgentName" "INFO"
 
 # ============= FASE 1: Cleanup =============
 Write-InstallerLog "FASE 1: Limpando instalacoes anteriores..." "INFO"
