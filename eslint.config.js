@@ -10,7 +10,10 @@ export default tseslint.config(
     ignores: [
       "dist", 
       "electron/dist", 
-      "electron/web"
+      "electron/web",
+      "supabase/functions/_shared/agent-script-linux-content.ts",
+      "supabase/functions/_shared/agent-script-macos-content.ts",
+      "supabase/functions/_shared/agent-script-windows-content.ts",
     ] 
   },
   
@@ -18,6 +21,11 @@ export default tseslint.config(
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
+    ignores: [
+      "supabase/functions/_shared/agent-script-linux-content.ts",
+      "supabase/functions/_shared/agent-script-macos-content.ts",
+      "supabase/functions/_shared/agent-script-windows-content.ts",
+    ],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
