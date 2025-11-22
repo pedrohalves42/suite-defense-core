@@ -301,7 +301,7 @@ function Send-Heartbeat {
         }
         catch {
             $retryCount++
-            Write-Log "    ? Heartbeat erro (tentativa $retryCount/$maxRetries): $_" "ERROR"
+            Write-Log "    ? Heartbeat erro (tentativa $retryCount/$maxRetries): $($_.Exception.Message)" "ERROR"
             Write-Log "    Stack: $($_.ScriptStackTrace)" "DEBUG"
             if ($retryCount -lt $maxRetries) {
                 Start-Sleep -Seconds (2 * $retryCount)
@@ -332,7 +332,7 @@ function Poll-Jobs {
         return $jobs
     }
     catch {
-        Write-Log "Poll error: $_" "ERROR"
+        Write-Log "Poll error: $($_.Exception.Message)" "ERROR"
         return $null
     }
 }
@@ -438,7 +438,7 @@ function Execute-Job {
                         catch {
                             $result.status = "failed"
                             $result.error = "Command execution failed: $($_.Exception.Message)"
-                            Write-Log "Command execution error: $_" "ERROR"
+                            Write-Log "Command execution error: $($_.Exception.Message)" "ERROR"
                         }
                     } else {
                         $result.status = "failed"
@@ -464,7 +464,7 @@ function Execute-Job {
         }
     }
     catch {
-        Write-Log "Job execution failed: $_" "ERROR"
+        Write-Log "Job execution failed: $($_.Exception.Message)" "ERROR"
         Write-Log "Stack trace: $($_.ScriptStackTrace)" "ERROR"
         $result.status = "failed"
         $result.error = $_.Exception.Message
@@ -490,7 +490,7 @@ function Upload-Report {
         return $true
     }
     catch {
-        Write-Log "Report upload failed for job $JobId : $_" "ERROR"
+        Write-Log "Report upload failed for job $JobId : $($_.Exception.Message)" "ERROR"
         return $false
     }
 }
@@ -537,7 +537,7 @@ function Ack-Job {
             }
         }
         catch {
-            Write-Log "ACK attempt $attempt error: $_" "ERROR"
+            Write-Log "ACK attempt $attempt error: $($_.Exception.Message)" "ERROR"
             
             if ($attempt -lt $maxAttempts) {
                 $waitTime = [Math]::Pow(2, $attempt)
@@ -602,7 +602,7 @@ function Send-SystemMetrics {
         return $response
     }
     catch {
-        Write-Log "Failed to send system metrics: $_" "ERROR"
+        Write-Log "Failed to send system metrics: $($_.Exception.Message)" "ERROR"
         return $null
     }
 }
@@ -635,7 +635,7 @@ function Test-SystemHealth {
             return $false
         }
     } catch {
-        Write-Log "  ? Erro DNS: $_" "ERROR"
+        Write-Log "  ? Erro DNS: $($_.Exception.Message)" "ERROR"
         return $false
     }
     
@@ -656,7 +656,7 @@ function Test-SystemHealth {
             return $false
         }
     } catch {
-        Write-Log "  ? Erro ao testar TCP: $_" "ERROR"
+        Write-Log "  ? Erro ao testar TCP: $($_.Exception.Message)" "ERROR"
         return $false
     }
     
@@ -679,7 +679,7 @@ function Test-SystemHealth {
             Write-Log "    [WARN]  AVISO: Espaco em disco baixo" "WARN"
         }
     } catch {
-        Write-Log "    [WARN]  Nao foi possivel verificar recursos: $_" "WARN"
+        Write-Log "    [WARN]  Nao foi possivel verificar recursos: $($_.Exception.Message)" "WARN"
     }
     
     # 6. RETRY DE HEARTBEAT COM BACKOFF EXPONENCIAL
@@ -727,19 +727,6 @@ function Test-SystemHealth {
     Write-Log "========================================" "SUCCESS"
     Write-Log "[OK]  AGENTE INICIALIZADO COM SUCESSO!" "SUCCESS"
     Write-Log "========================================" "SUCCESS"
-    return $true
-    catch {
-        Write-Log "Heartbeat test error: $_" "WARN"
-    }
-    
-    $os = Get-CimInstance Win32_OperatingSystem
-    Write-Log "OS: $($os.Caption) $($os.Version)" "INFO"
-    Write-Log "Free Memory: $([math]::Round($os.FreePhysicalMemory/1MB, 2)) GB" "INFO"
-    
-    $disk = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='C:'"
-    Write-Log "Free Disk C:: $([math]::Round($disk.FreeSpace/1GB, 2)) GB" "INFO"
-    
-    Write-Log "=== Health Check Completed Successfully ===" "SUCCESS"
     return $true
 }
 
@@ -823,7 +810,7 @@ function Start-Agent {
             Start-Sleep -Seconds $PollInterval
         }
         catch {
-            Write-Log "Main loop error: $_" "ERROR"
+            Write-Log "Main loop error: $($_.Exception.Message)" "ERROR"
             Write-Log "Stack Trace: $($_.ScriptStackTrace)" "ERROR"
             Write-Log "Waiting $PollInterval seconds before continuing..." "WARN"
             Start-Sleep -Seconds $PollInterval
