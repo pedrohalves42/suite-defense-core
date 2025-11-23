@@ -1,3 +1,24 @@
+# ============================================
+# SCRIPT DE TESTE COMPLETO - AGENTE testev2
+# Versao do Instalador: v3.3.0-SECURITY-DIAGNOSTICS
+# ============================================
+# 
+# Este script realiza um teste end-to-end completo:
+# 1. Limpeza de instalacoes anteriores
+# 2. Validacao da versao e funcionalidades do instalador
+# 3. Execucao do instalador
+# 4. Validacao de logs do agente
+# 5. Confirmacao de heartbeat
+#
+# NOVAS FUNCIONALIDADES v3.3.0:
+# - Diagnostico avancado de restricoes de seguranca
+# - Deteccao de GPO (ExecutionPolicy AllSigned/Restricted)
+# - Deteccao de Constrained Language Mode
+# - Teste de AppLocker
+# - Verificacao de Device Guard / WDAC
+# - Monitoramento de eventos do Windows Defender
+# ============================================
+
 #Requires -RunAsAdministrator
 
 <#
@@ -73,10 +94,11 @@ try {
     $installerContent = $response.Content
     
     # Verificar versao
-    if ($installerContent -match "v3\.2\.4-UNBLOCK-FIX") {
-        Write-Host "  [OK] Versao do instalador: v3.2.4-UNBLOCK-FIX" -ForegroundColor Green
+    if ($installerContent -match "v3\.3\.0-SECURITY-DIAGNOSTICS") {
+        Write-Host "  [OK] Versao do instalador: v3.3.0-SECURITY-DIAGNOSTICS" -ForegroundColor Green
     } else {
         Write-Host "  [ERRO] Versao incorreta ou ausente!" -ForegroundColor Red
+        Write-Host "  Buscando por v3.3.0-SECURITY-DIAGNOSTICS" -ForegroundColor Yellow
         Write-Host "  Conteudo (primeiras 500 chars):" -ForegroundColor Gray
         Write-Host $installerContent.Substring(0, [Math]::Min(500, $installerContent.Length)) -ForegroundColor Gray
         exit 1
@@ -103,6 +125,41 @@ try {
         Write-Host "  [OK] Instalador usa ExecutionPolicy Unrestricted" -ForegroundColor Green
     } else {
         Write-Host "  [AVISO] ExecutionPolicy pode nao estar configurado como Unrestricted" -ForegroundColor Yellow
+    }
+    
+    # NOVO: Verificar diagnostico de seguranca (Fase 2)
+    if ($installerContent -match "Diagnostico de Restricoes de Seguranca") {
+        Write-Host "  [OK] Instalador contem diagnostico de seguranca avancado" -ForegroundColor Green
+    } else {
+        Write-Host "  [AVISO] Diagnostico de seguranca pode estar ausente" -ForegroundColor Yellow
+    }
+    
+    # NOVO: Verificar deteccao de GPO
+    if ($installerContent -match "MachinePolicy") {
+        Write-Host "  [OK] Instalador detecta GPO (ExecutionPolicy)" -ForegroundColor Green
+    } else {
+        Write-Host "  [AVISO] Deteccao de GPO pode estar ausente" -ForegroundColor Yellow
+    }
+    
+    # NOVO: Verificar deteccao de LanguageMode
+    if ($installerContent -match "LanguageMode") {
+        Write-Host "  [OK] Instalador detecta LanguageMode (Constrained Language)" -ForegroundColor Green
+    } else {
+        Write-Host "  [AVISO] Deteccao de LanguageMode pode estar ausente" -ForegroundColor Yellow
+    }
+    
+    # NOVO: Verificar deteccao de AppLocker
+    if ($installerContent -match "AppLocker") {
+        Write-Host "  [OK] Instalador detecta AppLocker" -ForegroundColor Green
+    } else {
+        Write-Host "  [AVISO] Deteccao de AppLocker pode estar ausente" -ForegroundColor Yellow
+    }
+    
+    # NOVO: Verificar deteccao de Device Guard/WDAC
+    if ($installerContent -match "Device Guard|WDAC") {
+        Write-Host "  [OK] Instalador detecta Device Guard/WDAC" -ForegroundColor Green
+    } else {
+        Write-Host "  [AVISO] Deteccao de Device Guard pode estar ausente" -ForegroundColor Yellow
     }
     
 } catch {
