@@ -1,5 +1,5 @@
-// FORCE REBUILD: 2025-11-23T01:16:00Z - CRITICAL FIX v3.2.3-SCHEDULED-TASK-ARGS-FIX
-// Forcing Edge Functions redeploy to fix Task Scheduler error 4294770688
+// FORCE REBUILD: 2025-11-23T02:45:00Z - CRITICAL FIX v3.2.4-UNBLOCK-FIX
+// Forcing Edge Functions redeploy to fix PSSecurityException + Zone.Identifier
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-agent-token, x-hmac-signature, x-timestamp, x-nonce',
