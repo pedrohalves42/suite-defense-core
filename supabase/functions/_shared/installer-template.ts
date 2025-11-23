@@ -220,8 +220,15 @@ Write-InstallerLog "FASE 4: Criando Scheduled Task..." "INFO"
 
 $TaskName = "CyberShieldAgent-$AgentName"
 
-# Construir argumentos em uma linha (sem continuacao)
-$ArgumentString = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File \`"$AgentScriptPath\`" -ServerUrl \`"$ServerUrl\`" -AgentToken \`"$AgentToken\`" -HmacSecret \`"$HmacSecret\`" -AgentName \`"$AgentName\`""
+# Construir argumentos de forma segura (sem aspas internas problemáticas)
+$ps1Path = $AgentScriptPath
+$ps1Url = $ServerUrl
+$ps1Token = $AgentToken  
+$ps1Secret = $HmacSecret
+$ps1Name = $AgentName
+
+# Montar string de argumentos com double-double quotes ("") para escaping interno
+$ArgumentString = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File ""$ps1Path"" -ServerUrl ""$ps1Url"" -AgentToken ""$ps1Token"" -HmacSecret ""$ps1Secret"" -AgentName ""$ps1Name"""
 
 Write-InstallerLog "Task arguments: $ArgumentString" "DEBUG"
 
