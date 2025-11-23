@@ -7,13 +7,20 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = '3.2.4-UNBLOCK-FIX';
-export const LAST_UPDATED = '2025-11-23T02:45:00Z'; // CRITICAL FIX: Unblock-File + ExecutionPolicy Unrestricted
+export const INSTALLER_VERSION = '3.3.0-SECURITY-DIAGNOSTICS';
+export const LAST_UPDATED = '2025-11-23T03:15:00Z'; // FASE 2: Advanced Security Diagnostics
 
 export const CHANGES = [
-  'CRITICAL: Adiciona Unblock-File apos salvar script do agente',
-  'CRITICAL: Adiciona fallback para remover Zone.Identifier manualmente',
-  'CRITICAL: ExecutionPolicy alterado de Bypass para Unrestricted',
+  'NOVO: Diagnostico avancado de restricoes de seguranca (GPO, AppLocker, LanguageMode, AV/EDR)',
+  'NOVO: Detecta GPO forcando ExecutionPolicy AllSigned/Restricted',
+  'NOVO: Detecta Constrained Language Mode (Device Guard/WDAC)',
+  'NOVO: Testa AppLocker com execucao basica de script',
+  'NOVO: Verifica eventos do Windows Defender relacionados a PowerShell',
+  'NOVO: Detecta Device Guard / WDAC Code Integrity enforcement',
+  'NOVO: Script standalone diagnose-security-restrictions.ps1',
+  'PREVIO: Adiciona Unblock-File apos salvar script do agente',
+  'PREVIO: Adiciona fallback para remover Zone.Identifier manualmente',
+  'PREVIO: ExecutionPolicy alterado de Bypass para Unrestricted',
   'Adiciona validacao de Zone.Identifier antes e depois do desbloqueio',
   'Corrige PSSecurityException: UnauthorizedAccess em ambientes restritos',
   'PREVIO: Scheduled Task arguments com double-double quotes ("")',
