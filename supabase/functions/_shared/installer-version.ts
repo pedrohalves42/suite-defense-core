@@ -7,17 +7,20 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = '3.3.0-SECURITY-DIAGNOSTICS';
-export const LAST_UPDATED = '2025-11-23T03:15:00Z'; // FASE 2: Advanced Security Diagnostics
+export const INSTALLER_VERSION = 'v3.3.1-PAYLOAD-FIX';
+export const LAST_UPDATED = '2025-11-23T20:45:00Z'; // FASE 2.1: Critical Payload HMAC Fix
 
 export const CHANGES = [
-  'NOVO: Diagnostico avancado de restricoes de seguranca (GPO, AppLocker, LanguageMode, AV/EDR)',
-  'NOVO: Detecta GPO forcando ExecutionPolicy AllSigned/Restricted',
-  'NOVO: Detecta Constrained Language Mode (Device Guard/WDAC)',
-  'NOVO: Testa AppLocker com execucao basica de script',
-  'NOVO: Verifica eventos do Windows Defender relacionados a PowerShell',
-  'NOVO: Detecta Device Guard / WDAC Code Integrity enforcement',
-  'NOVO: Script standalone diagnose-security-restrictions.ps1',
+  'CRITICO: Corrige InvalidVariableReferenceWithDrive no payload HMAC (linha 199)',
+  'FIX: Substitui "$timestamp:$nonce:$bodyJson" por formatacao explicita \'{0}:{1}:{2}\' -f',
+  'MELHORIA: Usa operador -f para garantir compatibilidade total com PowerShell 5.1',
+  'PREVIO: Diagnostico avancado de restricoes de seguranca (GPO, AppLocker, LanguageMode, AV/EDR)',
+  'PREVIO: Detecta GPO forcando ExecutionPolicy AllSigned/Restricted',
+  'PREVIO: Detecta Constrained Language Mode (Device Guard/WDAC)',
+  'PREVIO: Testa AppLocker com execucao basica de script',
+  'PREVIO: Verifica eventos do Windows Defender relacionados a PowerShell',
+  'PREVIO: Detecta Device Guard / WDAC Code Integrity enforcement',
+  'PREVIO: Script standalone diagnose-security-restrictions.ps1',
   'PREVIO: Adiciona Unblock-File apos salvar script do agente',
   'PREVIO: Adiciona fallback para remover Zone.Identifier manualmente',
   'PREVIO: ExecutionPolicy alterado de Bypass para Unrestricted',
@@ -33,6 +36,7 @@ export const CHANGES = [
 ];
 
 export const KNOWN_ISSUES_FIXED = [
+  'InvalidVariableReferenceWithDrive: PowerShell 5.1 interpretava :$ como drive reference no payload HMAC (CRITICAL)',
   'PSSecurityException ao executar script como SYSTEM (CRITICAL)',
   'Zone.Identifier bloqueando execucao mesmo com -ExecutionPolicy Bypass',
   'UnauthorizedAccess em ambientes com ExecutionPolicy restritiva',

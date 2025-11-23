@@ -204,7 +204,7 @@ function Invoke-SecureRequest {
                 $bodyJson = ""
             }
 
-            $payload   = "$timestamp:$nonce:$bodyJson"
+            \$payload   = '{0}:{1}:{2}' -f \$timestamp, \$nonce, \$bodyJson
             $signature = Get-HmacSignature -Message $payload -SecretHex $Global:HmacSecret
 
             $headers = @{
