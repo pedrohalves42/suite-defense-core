@@ -7,13 +7,17 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = '3.2.3-SCHEDULED-TASK-ARGS-FIX';
-export const LAST_UPDATED = '2025-11-23T01:15:00Z'; // CRITICAL FIX: Argumentos da Scheduled Task corrigidos
+export const INSTALLER_VERSION = '3.2.4-UNBLOCK-FIX';
+export const LAST_UPDATED = '2025-11-23T02:45:00Z'; // CRITICAL FIX: Unblock-File + ExecutionPolicy Unrestricted
 
 export const CHANGES = [
-  'CRITICAL: Scheduled Task arguments agora usam "" (double-double quotes) ao inves de backtick-quotes',
+  'CRITICAL: Adiciona Unblock-File apos salvar script do agente',
+  'CRITICAL: Adiciona fallback para remover Zone.Identifier manualmente',
+  'CRITICAL: ExecutionPolicy alterado de Bypass para Unrestricted',
+  'Adiciona validacao de Zone.Identifier antes e depois do desbloqueio',
+  'Corrige PSSecurityException: UnauthorizedAccess em ambientes restritos',
+  'PREVIO: Scheduled Task arguments com double-double quotes ("")',
   'Corrige erro 4294770688 (argumentos mal formatados) causado por escaping incorreto',
-  'Argumentos agora sao interpretados corretamente pelo Task Scheduler',
   'PREVIO: Write-InstallerLog movida para ANTES de qualquer uso (linha ~57)',
   'Criacao de pastas agora e silenciosa (FASE 0), logging inicia na FASE 1',
   'Corrige erro: The term Write-InstallerLog is not recognized',
@@ -22,9 +26,12 @@ export const CHANGES = [
 ];
 
 export const KNOWN_ISSUES_FIXED = [
+  'PSSecurityException ao executar script como SYSTEM (CRITICAL)',
+  'Zone.Identifier bloqueando execucao mesmo com -ExecutionPolicy Bypass',
+  'UnauthorizedAccess em ambientes com ExecutionPolicy restritiva',
+  'Script marcado como "da internet" impede execucao pela Scheduled Task',
   'Task Scheduler Error 4294770688: argumentos mal formatados (CRITICAL)',
   'Backtick-quote escaping incompativel com New-ScheduledTaskAction',
-  'Agente nao executava devido a formato incorreto de argumentos',
   'The term Write-InstallerLog is not recognized as the name of a cmdlet',
   'ParserError: ExpectedValueExpression apos operador + (continuacao de linha)',
   'InvalidVariableReferenceWithDrive: : $_ em mensagens de log',

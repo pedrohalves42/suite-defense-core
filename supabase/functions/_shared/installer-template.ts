@@ -150,6 +150,33 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 Write-InstallerLog "Script criado: $AgentScriptPath ($(([System.IO.FileInfo]$AgentScriptPath).Length) bytes)" "SUCCESS"
 
+# CRITICAL: Desbloquear arquivo para permitir execucao pela Scheduled Task
+Write-InstallerLog "Verificando Zone.Identifier..." "DEBUG"
+if (Test-Path "$AgentScriptPath\`:Zone.Identifier") {
+    Write-InstallerLog "Zone.Identifier detectado - script marcado como da internet" "WARN"
+}
+
+try {
+    Unblock-File -Path $AgentScriptPath -ErrorAction Stop
+    Write-InstallerLog "Script desbloqueado com sucesso" "SUCCESS"
+} catch {
+    Write-InstallerLog "AVISO: Falha ao desbloquear arquivo: $($_.Exception.Message)" "WARN"
+    Write-InstallerLog "Tentando remover Zone.Identifier manualmente..." "INFO"
+    try {
+        Remove-Item -Path "$AgentScriptPath\`:Zone.Identifier" -ErrorAction SilentlyContinue
+        Write-InstallerLog "Zone.Identifier removido manualmente" "SUCCESS"
+    } catch {
+        Write-InstallerLog "Falha ao remover Zone.Identifier. O agente pode nao executar." "ERROR"
+    }
+}
+
+# Validacao pos-desbloqueio
+if (Test-Path "$AgentScriptPath\`:Zone.Identifier") {
+    Write-InstallerLog "CRITICO: Zone.Identifier ainda presente apos desbloqueio!" "ERROR"
+} else {
+    Write-InstallerLog "Validacao: Zone.Identifier removido com sucesso" "SUCCESS"
+}
+
 # Validacao critica de encoding
 Write-InstallerLog "Validando encoding do script..." "INFO"
 try {
@@ -228,7 +255,7 @@ $ps1Secret = $HmacSecret
 $ps1Name = $AgentName
 
 # Montar string de argumentos com double-double quotes ("") para escaping interno
-$ArgumentString = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File ""$ps1Path"" -ServerUrl ""$ps1Url"" -AgentToken ""$ps1Token"" -HmacSecret ""$ps1Secret"" -AgentName ""$ps1Name"""
+$ArgumentString = "-ExecutionPolicy Unrestricted -NoProfile -WindowStyle Hidden -File ""$ps1Path"" -ServerUrl ""$ps1Url"" -AgentToken ""$ps1Token"" -HmacSecret ""$ps1Secret"" -AgentName ""$ps1Name"""
 
 Write-InstallerLog "Task arguments: $ArgumentString" "DEBUG"
 
