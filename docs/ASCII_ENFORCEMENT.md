@@ -230,6 +230,14 @@ Before deploying agent updates:
 
 ## History
 
+- **2024-11-23 (v3.3.1-PAYLOAD-FIX)**: Critical HMAC payload syntax fix
+  - Fixed InvalidVariableReferenceWithDrive error in agent script
+  - Replaced `$payload = "$timestamp:$nonce:$bodyJson"` with `'{0}:{1}:{2}' -f $timestamp, $nonce, $bodyJson`
+  - PowerShell 5.1 was interpreting `:$` as drive reference (C:, D:, etc.)
+  - Fixed 103 non-ASCII occurrences in scripts/test-v3-2-4-unblock-fix.ps1 (Portuguese accents, emojis)
+  - Fixed 1 critical character in installer-template.ts line 329 (character 'a')
+  - All files now 100% ASCII-compliant
+
 - **2024-11**: Initial implementation
   - Created `tools/ascii-guard.ts`
   - Added CI protection
