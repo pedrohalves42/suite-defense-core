@@ -134,6 +134,85 @@ try {
 
 Write-InstallerLog "FASE 1: Cleanup concluido" "SUCCESS"
 
+# ============= FASE 1.5: Diagnostico de Seguranca =============
+Write-InstallerLog "=== Diagnostico de Restricoes de Seguranca ===" "INFO"
+
+# 1. ExecutionPolicy por escopo
+try {
+    $policies = Get-ExecutionPolicy -List
+    foreach ($policy in $policies) {
+        Write-InstallerLog "ExecutionPolicy [$($policy.Scope)]: $($policy.ExecutionPolicy)" "INFO"
+    }
+    
+    # ALERTA se GPO forcar AllSigned/Restricted
+    $machinePolicy = ($policies | Where-Object { $_.Scope -eq "MachinePolicy" }).ExecutionPolicy
+    if ($machinePolicy -in @("AllSigned", "Restricted")) {
+        Write-InstallerLog "AVISO CRITICO: GPO forcando ExecutionPolicy=$machinePolicy (ignora -ExecutionPolicy da linha de comando!)" "ERROR"
+        Write-InstallerLog "Solucao: Assinar scripts OU ajustar GPO" "ERROR"
+    }
+} catch {
+    Write-InstallerLog "Falha ao ler ExecutionPolicy: $($_.Exception.Message)" "WARN"
+}
+
+# 2. LanguageMode (detecta Constrained Language)
+try {
+    $languageMode = $ExecutionContext.SessionState.LanguageMode
+    Write-InstallerLog "LanguageMode: $languageMode" "INFO"
+    
+    if ($languageMode -eq "ConstrainedLanguage") {
+        Write-InstallerLog "AVISO CRITICO: ConstrainedLanguage ativo (limita operacoes .NET, crypto, network)" "ERROR"
+        Write-InstallerLog "Causa provavel: Device Guard / WDAC / AppLocker" "ERROR"
+    }
+} catch {
+    Write-InstallerLog "Falha ao ler LanguageMode: $($_.Exception.Message)" "WARN"
+}
+
+# 3. Testar AppLocker (tentativa basica)
+try {
+    $testPath = "$env:TEMP\cybershield-test-$(Get-Random).ps1"
+    "'Write-Host Test'" | Out-File $testPath -Encoding UTF8
+    
+    $testResult = & powershell.exe -ExecutionPolicy Bypass -File $testPath 2>&1
+    Remove-Item $testPath -ErrorAction SilentlyContinue
+    
+    Write-InstallerLog "Teste de execucao basico: PASSOU" "SUCCESS"
+} catch {
+    Write-InstallerLog "AVISO: Teste de execucao falhou - possivel AppLocker/WDAC: $($_.Exception.Message)" "ERROR"
+}
+
+# 4. Verificar AV/EDR (heuristico - via Event Viewer)
+try {
+    $defenderLogs = Get-WinEvent -LogName "Microsoft-Windows-Windows Defender/Operational" -MaxEvents 5 -ErrorAction SilentlyContinue | 
+        Where-Object { $_.Message -like "*PowerShell*" -or $_.Message -like "*CyberShield*" }
+    
+    if ($defenderLogs) {
+        Write-InstallerLog "AVISO: Eventos recentes do Windows Defender relacionados a PowerShell detectados" "WARN"
+        foreach ($log in $defenderLogs) {
+            $shortMessage = $log.Message.Substring(0, [Math]::Min(100, $log.Message.Length))
+            Write-InstallerLog "  - ID $($log.Id): $shortMessage" "WARN"
+        }
+    } else {
+        Write-InstallerLog "Nenhum evento suspeito do Windows Defender detectado" "SUCCESS"
+    }
+} catch {
+    # Silencioso - nem todos os ambientes tem Defender logs acessiveis
+    Write-InstallerLog "Nao foi possivel verificar logs do Windows Defender (esperado em alguns ambientes)" "DEBUG"
+}
+
+# 5. Device Guard / WDAC
+try {
+    $wdac = Get-CimInstance -ClassName Win32_DeviceGuard -Namespace root\Microsoft\Windows\DeviceGuard -ErrorAction SilentlyContinue
+    if ($wdac -and $wdac.CodeIntegrityPolicyEnforcementStatus -eq 1) {
+        Write-InstallerLog "AVISO CRITICO: WDAC/Device Guard ATIVO - apenas codigo assinado permitido!" "ERROR"
+    } else {
+        Write-InstallerLog "Device Guard / WDAC: Nao ativo ou nao configurado" "INFO"
+    }
+} catch {
+    Write-InstallerLog "Nao foi possivel verificar Device Guard (esperado em alguns ambientes)" "DEBUG"
+}
+
+Write-InstallerLog "=== Fim do Diagnostico de Seguranca ===" "INFO"
+
 # ============= FASE 2: Instalacao =============
 Write-InstallerLog "FASE 2: Criando script do agente..." "INFO"
 
