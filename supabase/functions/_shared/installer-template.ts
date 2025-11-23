@@ -326,7 +326,7 @@ Write-InstallerLog "FASE 4: Criando Scheduled Task..." "INFO"
 
 $TaskName = "CyberShieldAgent-$AgentName"
 
-# Construir argumentos de forma segura (sem aspas internas problemáticas)
+# Construir argumentos de forma segura (sem aspas internas problematicas)
 $ps1Path = $AgentScriptPath
 $ps1Url = $ServerUrl
 $ps1Token = $AgentToken  
