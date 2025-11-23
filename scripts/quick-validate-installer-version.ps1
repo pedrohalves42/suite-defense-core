@@ -1,7 +1,7 @@
 #Requires -RunAsAdministrator
 
 # Script de validacao rapida da versao do instalador
-# Testa se o serve-installer esta servindo v3.3.0-SECURITY-DIAGNOSTICS
+# Testa se o serve-installer esta servindo v3.3.1-PAYLOAD-FIX
 
 param(
     [string]$EnrollmentKey = "BT5Y-I43E-KOOA-XAWN",
@@ -10,7 +10,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "`n=== VALIDACAO RAPIDA DO INSTALADOR v3.3.0 ===" -ForegroundColor Cyan
+Write-Host "`n=== VALIDACAO RAPIDA DO INSTALADOR v3.3.1 ===" -ForegroundColor Cyan
 Write-Host "Enrollment Key: $EnrollmentKey" -ForegroundColor Gray
 Write-Host "Server URL: $ServerUrl`n" -ForegroundColor Gray
 
@@ -29,11 +29,15 @@ try {
 
 # Verificar versao
 Write-Host "`n[2] Verificando versao..." -ForegroundColor Yellow
-if ($installerContent -match "v3\.3\.0-SECURITY-DIAGNOSTICS") {
-    Write-Host "  [OK] Versao: v3.3.0-SECURITY-DIAGNOSTICS" -ForegroundColor Green
-} elseif ($installerContent -match "v3\.2\.4-UNBLOCK-FIX") {
-    Write-Host "  [AVISO] Versao antiga: v3.2.4-UNBLOCK-FIX" -ForegroundColor Yellow
+if ($installerContent -match "v3\.3\.1-PAYLOAD-FIX") {
+    Write-Host "  [OK] Versao: v3.3.1-PAYLOAD-FIX" -ForegroundColor Green
+} elseif ($installerContent -match "v3\.3\.0-SECURITY-DIAGNOSTICS") {
+    Write-Host "  [AVISO] Versao antiga: v3.3.0-SECURITY-DIAGNOSTICS" -ForegroundColor Yellow
     Write-Host "  Edge Function pode nao ter sido redeployada ainda" -ForegroundColor Yellow
+    $needsRedeploy = $true
+} elseif ($installerContent -match "v3\.2\.4-UNBLOCK-FIX") {
+    Write-Host "  [AVISO] Versao muito antiga: v3.2.4-UNBLOCK-FIX" -ForegroundColor Yellow
+    Write-Host "  Edge Function precisa ser redeployada!" -ForegroundColor Yellow
     $needsRedeploy = $true
 } else {
     Write-Host "  [ERRO] Versao desconhecida ou ausente!" -ForegroundColor Red
@@ -83,6 +87,24 @@ foreach ($check in $securityChecks.GetEnumerator()) {
     }
 }
 
+# Verificar correcao v3.3.1 (HMAC payload fix)
+Write-Host "`n[5] Verificando correcao v3.3.1 (HMAC payload)..." -ForegroundColor Yellow
+
+if ($installerContent -match "\{0\}:\{1\}:\{2\}.*-f.*timestamp.*nonce.*bodyJson") {
+    Write-Host "  [OK] Payload HMAC corrigido (usa -f operator)" -ForegroundColor Green
+} else {
+    Write-Host "  [ERRO] Payload HMAC com sintaxe antiga/incorreta!" -ForegroundColor Red
+    $missingFeatures++
+}
+
+# Verificar ausencia de caracteres problematicos
+if ($installerContent -match ":\s*\`$_|:\s*\`$[a-z]") {
+    Write-Host "  [ERRO] Encontrado padrao ':$' problematico!" -ForegroundColor Red
+    $missingFeatures++
+} else {
+    Write-Host "  [OK] Sem padroes ':$' problematicos" -ForegroundColor Green
+}
+
 # Resumo
 Write-Host "`n=== RESUMO ===" -ForegroundColor Cyan
 
@@ -93,10 +115,12 @@ if ($needsRedeploy) {
     Write-Host "  1. Commit e push das mudancas" -ForegroundColor Gray
     Write-Host "  2. Lovable Cloud fara redeploy automatico" -ForegroundColor Gray
 } elseif ($missingFeatures -eq 0) {
-    Write-Host "[SUCESSO] Instalador v3.3.0-SECURITY-DIAGNOSTICS 100% funcional!" -ForegroundColor Green
-    Write-Host "Todas as funcionalidades de diagnostico estao presentes." -ForegroundColor Green
+    Write-Host "[SUCESSO] Instalador v3.3.1-PAYLOAD-FIX 100% funcional!" -ForegroundColor Green
+    Write-Host "Todas as funcionalidades estao presentes e corretas." -ForegroundColor Green
+    Write-Host "`nProximo passo: Testar em VM com .\test-testev2-complete.ps1" -ForegroundColor Cyan
 } else {
-    Write-Host "[PARCIAL] Instalador funcional mas com $missingFeatures funcionalidades ausentes" -ForegroundColor Yellow
+    Write-Host "[PARCIAL] Instalador funcional mas com $missingFeatures problemas" -ForegroundColor Yellow
+    Write-Host "Revise os itens marcados com [ERRO] ou [AUSENTE] acima." -ForegroundColor Yellow
 }
 
 Write-Host "`n=== FIM DA VALIDACAO ===`n" -ForegroundColor Cyan
