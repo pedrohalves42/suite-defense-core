@@ -1,15 +1,15 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-    Script de validação completa do fix v3.2.4-UNBLOCK-FIX
+    Script de validacao completa do fix v3.2.4-UNBLOCK-FIX
     
 .DESCRIPTION
     Este script executa todas as 5 fases do plano de teste:
-    1. Limpa instalação anterior
-    2. Valida versão do instalador
+    1. Limpa instalacao anterior
+    2. Valida versao do instalador
     3. Executa instalador
-    4. Valida execução do agente
-    5. Mostra instruções para verificar dashboard
+    4. Valida execucao do agente
+    5. Mostra instrucoes para verificar dashboard
     
 .PARAMETER EnrollmentKey
     Chave de enrollment gerada no dashboard (formato: XXXX-XXXX-XXXX-XXXX)
@@ -59,14 +59,14 @@ function Test-Phase {
     try {
         $result = & $Test
         if ($result) {
-            Write-Host "✅ $SuccessMessage" -ForegroundColor Green
+            Write-Host "[OK]  $SuccessMessage" -ForegroundColor Green
             return $true
         } else {
-            Write-Host "❌ $FailureMessage" -ForegroundColor Red
+            Write-Host "[ERROR]  $FailureMessage" -ForegroundColor Red
             return $false
         }
     } catch {
-        Write-Host "❌ ERRO: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "[ERROR]  ERRO: $($_.Exception.Message)" -ForegroundColor Red
         Write-TestLog "ERRO na fase '$Name': $($_.Exception.Message)" "ERROR"
         return $false
     }
@@ -75,7 +75,7 @@ function Test-Phase {
 # ============================================================
 # FASE 1: LIMPEZA
 # ============================================================
-$phase1 = Test-Phase -Name "1/5 - Limpeza de Instalação Anterior" -Test {
+$phase1 = Test-Phase -Name "1/5 - Limpeza de Instalacao Anterior" -Test {
     Write-TestLog "Iniciando limpeza..."
     
     # Parar e remover Scheduled Task
@@ -105,19 +105,19 @@ $phase1 = Test-Phase -Name "1/5 - Limpeza de Instalação Anterior" -Test {
         Remove-Item "$BaseDir\logs\*.txt" -Force -ErrorAction SilentlyContinue
     }
     
-    Write-TestLog "Limpeza concluída"
+    Write-TestLog "Limpeza concluida"
     return $true
-} -SuccessMessage "Instalação anterior limpa com sucesso" -FailureMessage "Falha na limpeza"
+} -SuccessMessage "Instalacao anterior limpa com sucesso" -FailureMessage "Falha na limpeza"
 
 if (-not $phase1) {
-    Write-Host "`n⚠️ Aviso: Limpeza falhou, mas continuando..." -ForegroundColor Yellow
+    Write-Host "`n[WARN]  Aviso: Limpeza falhou, mas continuando..." -ForegroundColor Yellow
 }
 
 # ============================================================
-# FASE 2: VALIDAÇÃO DA VERSÃO DO INSTALADOR
+# FASE 2: VALIDACAO DA VERSAO DO INSTALADOR
 # ============================================================
-$phase2 = Test-Phase -Name "2/5 - Validação da Versão do Instalador" -Test {
-    Write-TestLog "Verificando versão do instalador..."
+$phase2 = Test-Phase -Name "2/5 - Validacao da Versao do Instalador" -Test {
+    Write-TestLog "Verificando versao do instalador..."
     
     $installerUrl = "$ServerUrl/functions/v1/serve-installer/$EnrollmentKey"
     Write-TestLog "URL: $installerUrl"
@@ -128,58 +128,58 @@ $phase2 = Test-Phase -Name "2/5 - Validação da Versão do Instalador" -Test {
         
         Write-TestLog "Resposta recebida: $($content.Length) bytes"
         
-        # Verificar versão
+        # Verificar versao
         if ($content -match 'v3\.2\.4-UNBLOCK-FIX') {
-            Write-TestLog "Versão v3.2.4-UNBLOCK-FIX confirmada"
-            Write-Host "   Versão: v3.2.4-UNBLOCK-FIX ✅" -ForegroundColor Green
+            Write-TestLog "Versao v3.2.4-UNBLOCK-FIX confirmada"
+            Write-Host "   Versao: v3.2.4-UNBLOCK-FIX [OK] " -ForegroundColor Green
             
-            # Verificar presença de Unblock-File
+            # Verificar presenca de Unblock-File
             if ($content -match 'Unblock-File') {
-                Write-Host "   Unblock-File: Presente ✅" -ForegroundColor Green
+                Write-Host "   Unblock-File: Presente [OK] " -ForegroundColor Green
             } else {
-                Write-Host "   Unblock-File: AUSENTE ❌" -ForegroundColor Red
+                Write-Host "   Unblock-File: AUSENTE [ERROR] " -ForegroundColor Red
                 return $false
             }
             
-            # Verificar remoção manual de Zone.Identifier
+            # Verificar remocao manual de Zone.Identifier
             if ($content -match 'Zone\.Identifier') {
-                Write-Host "   Zone.Identifier Removal: Presente ✅" -ForegroundColor Green
+                Write-Host "   Zone.Identifier Removal: Presente [OK] " -ForegroundColor Green
             } else {
-                Write-Host "   Zone.Identifier Removal: AUSENTE ❌" -ForegroundColor Red
+                Write-Host "   Zone.Identifier Removal: AUSENTE [ERROR] " -ForegroundColor Red
                 return $false
             }
             
             # Verificar ExecutionPolicy Unrestricted
             if ($content -match 'Unrestricted') {
-                Write-Host "   ExecutionPolicy Unrestricted: Presente ✅" -ForegroundColor Green
+                Write-Host "   ExecutionPolicy Unrestricted: Presente [OK] " -ForegroundColor Green
             } else {
-                Write-Host "   ExecutionPolicy Unrestricted: AUSENTE ❌" -ForegroundColor Red
+                Write-Host "   ExecutionPolicy Unrestricted: AUSENTE [ERROR] " -ForegroundColor Red
                 return $false
             }
             
             return $true
         } else {
-            Write-TestLog "ERRO: Versão incorreta detectada" "ERROR"
-            Write-Host "   Versão esperada: v3.2.4-UNBLOCK-FIX" -ForegroundColor Red
-            Write-Host "   Versão encontrada: $(if ($content -match 'v\d+\.\d+\.\d+[^\s]*') { $matches[0] } else { 'Desconhecida' })" -ForegroundColor Red
+            Write-TestLog "ERRO: Versao incorreta detectada" "ERROR"
+            Write-Host "   Versao esperada: v3.2.4-UNBLOCK-FIX" -ForegroundColor Red
+            Write-Host "   Versao encontrada: $(if ($content -match 'v\d+\.\d+\.\d+[^\s]*') { $matches[0] } else { 'Desconhecida' })" -ForegroundColor Red
             return $false
         }
     } catch {
         Write-TestLog "ERRO ao buscar instalador: $($_.Exception.Message)" "ERROR"
         throw
     }
-} -SuccessMessage "Instalador v3.2.4-UNBLOCK-FIX validado com sucesso" -FailureMessage "Versão do instalador incorreta ou incompleta"
+} -SuccessMessage "Instalador v3.2.4-UNBLOCK-FIX validado com sucesso" -FailureMessage "Versao do instalador incorreta ou incompleta"
 
 if (-not $phase2) {
-    Write-Host "`n❌ TESTE ABORTADO: Instalador não possui o fix necessário" -ForegroundColor Red
+    Write-Host "`n[ERROR]  TESTE ABORTADO: Instalador nao possui o fix necessario" -ForegroundColor Red
     Write-Host "   Por favor, aguarde o redeploy completo do Edge Function" -ForegroundColor Yellow
     exit 1
 }
 
 # ============================================================
-# FASE 3: EXECUÇÃO DO INSTALADOR
+# FASE 3: EXECUCAO DO INSTALADOR
 # ============================================================
-$phase3 = Test-Phase -Name "3/5 - Execução do Instalador" -Test {
+$phase3 = Test-Phase -Name "3/5 - Execucao do Instalador" -Test {
     Write-TestLog "Baixando e executando instalador..."
     
     $installerUrl = "$ServerUrl/functions/v1/serve-installer/$EnrollmentKey"
@@ -196,35 +196,35 @@ $phase3 = Test-Phase -Name "3/5 - Execução do Instalador" -Test {
     Start-Sleep -Seconds 5
     
     return $true
-} -SuccessMessage "Instalador executado com sucesso" -FailureMessage "Falha na execução do instalador"
+} -SuccessMessage "Instalador executado com sucesso" -FailureMessage "Falha na execucao do instalador"
 
 if (-not $phase3) {
-    Write-Host "`n❌ TESTE ABORTADO: Instalador falhou" -ForegroundColor Red
+    Write-Host "`n[ERROR]  TESTE ABORTADO: Instalador falhou" -ForegroundColor Red
     exit 1
 }
 
 # ============================================================
-# FASE 4: VALIDAÇÃO DA EXECUÇÃO DO AGENTE
+# FASE 4: VALIDACAO DA EXECUCAO DO AGENTE
 # ============================================================
-Write-Host "`n⏳ Aguardando 30 segundos para o agente iniciar..." -ForegroundColor Yellow
+Write-Host "`n? Aguardando 30 segundos para o agente iniciar..." -ForegroundColor Yellow
 Start-Sleep -Seconds 30
 
-$phase4 = Test-Phase -Name "4/5 - Validação da Execução do Agente" -Test {
-    Write-TestLog "Validando execução do agente..."
+$phase4 = Test-Phase -Name "4/5 - Validacao da Execucao do Agente" -Test {
+    Write-TestLog "Validando execucao do agente..."
     
     $agentLogPath = "$BaseDir\logs\cybershield-agent-v3.log"
     
     if (-not (Test-Path $agentLogPath)) {
-        Write-Host "   ❌ Log do agente não encontrado: $agentLogPath" -ForegroundColor Red
+        Write-Host "   [ERROR]  Log do agente nao encontrado: $agentLogPath" -ForegroundColor Red
         return $false
     }
     
     $logContent = Get-Content $agentLogPath -Tail 100 -ErrorAction Stop
     Write-TestLog "Log do agente lido: $($logContent.Count) linhas"
     
-    # Verificações críticas
+    # Verificacoes criticas
     $checks = @{
-        "Inicialização" = "\[START\] Iniciando CyberShield Agent"
+        "Inicializacao" = "\[START\] Iniciando CyberShield Agent"
         "Bootstrap" = "\[SUCCESS\] Bootstrap concluido"
         "Loop Principal" = "Entrando no loop principal"
         "Heartbeat" = "\[HEARTBEAT\] Heartbeat enviado com sucesso \(200\)"
@@ -233,39 +233,39 @@ $phase4 = Test-Phase -Name "4/5 - Validação da Execução do Agente" -Test {
     $allPassed = $true
     foreach ($check in $checks.GetEnumerator()) {
         if ($logContent -match $check.Value) {
-            Write-Host "   ✅ $($check.Key): OK" -ForegroundColor Green
+            Write-Host "   [OK]  $($check.Key): OK" -ForegroundColor Green
         } else {
-            Write-Host "   ❌ $($check.Key): FALHOU" -ForegroundColor Red
+            Write-Host "   [ERROR]  $($check.Key): FALHOU" -ForegroundColor Red
             $allPassed = $false
         }
     }
     
-    # Verificar se há erros 401
+    # Verificar se ha erros 401
     if ($logContent -match "401|Unauthorized") {
-        Write-Host "   ❌ ERRO: Encontrados erros de autenticação (401)" -ForegroundColor Red
+        Write-Host "   [ERROR]  ERRO: Encontrados erros de autenticacao (401)" -ForegroundColor Red
         $allPassed = $false
     } else {
-        Write-Host "   ✅ Sem erros de autenticação" -ForegroundColor Green
+        Write-Host "   [OK]  Sem erros de autenticacao" -ForegroundColor Green
     }
     
     if ($allPassed) {
-        Write-Host "`n📄 Últimas 10 linhas do log:" -ForegroundColor Cyan
+        Write-Host "`n[DOC]  Ultimas 10 linhas do log:" -ForegroundColor Cyan
         $logContent | Select-Object -Last 10 | ForEach-Object { Write-Host "   $_" }
     }
     
     return $allPassed
-} -SuccessMessage "Agente executando corretamente! 🎉" -FailureMessage "Agente NÃO está executando como esperado"
+} -SuccessMessage "Agente executando corretamente! ?" -FailureMessage "Agente NAO esta executando como esperado"
 
 # ============================================================
-# FASE 5: INSTRUÇÕES PARA DASHBOARD
+# FASE 5: INSTRUCOES PARA DASHBOARD
 # ============================================================
 Write-Host "`n========================================" -ForegroundColor Cyan
-Write-Host "FASE: 5/5 - Verificação no Dashboard" -ForegroundColor Cyan
+Write-Host "FASE: 5/5 - Verificacao no Dashboard" -ForegroundColor Cyan
 Write-Host "========================================`n" -ForegroundColor Cyan
 
 Write-Host "Por favor, acesse o dashboard e verifique:" -ForegroundColor Yellow
 Write-Host "   1. Status do agente '$AgentName': Deve estar 'Online' (verde)" -ForegroundColor White
-Write-Host "   2. Último Heartbeat: Deve ser < 1 minuto" -ForegroundColor White
+Write-Host "   2. Ultimo Heartbeat: Deve ser < 1 minuto" -ForegroundColor White
 Write-Host "   3. Badge 'Completo' (verde) no timeline" -ForegroundColor White
 
 # ============================================================
@@ -279,30 +279,30 @@ $totalPhases = 4
 $passedPhases = @($phase1, $phase2, $phase3, $phase4) | Where-Object { $_ -eq $true }
 $passedCount = $passedPhases.Count
 
-Write-Host "Fases Concluídas: $passedCount/$totalPhases" -ForegroundColor $(if ($passedCount -eq $totalPhases) { "Green" } else { "Yellow" })
+Write-Host "Fases Concluidas: $passedCount/$totalPhases" -ForegroundColor $(if ($passedCount -eq $totalPhases) { "Green" } else { "Yellow" })
 
 if ($phase4) {
-    Write-Host "`n🎉 SUCESSO! O fix v3.2.4-UNBLOCK-FIX está funcionando!" -ForegroundColor Green
-    Write-Host "   O agente está executando corretamente e enviando heartbeats." -ForegroundColor Green
+    Write-Host "`n? SUCESSO! O fix v3.2.4-UNBLOCK-FIX esta funcionando!" -ForegroundColor Green
+    Write-Host "   O agente esta executando corretamente e enviando heartbeats." -ForegroundColor Green
     Write-Host "   Verifique o dashboard para confirmar o status 'Online'." -ForegroundColor Green
 } else {
-    Write-Host "`n⚠️ FALHA PARCIAL" -ForegroundColor Yellow
+    Write-Host "`n[WARN]  FALHA PARCIAL" -ForegroundColor Yellow
     Write-Host "   Logs completos salvos em: $LogFile" -ForegroundColor White
-    Write-Host "`nDiagnóstico:" -ForegroundColor Cyan
+    Write-Host "`nDiagnostico:" -ForegroundColor Cyan
     
     if (-not $phase2) {
-        Write-Host "   - O instalador NÃO possui o fix v3.2.4-UNBLOCK-FIX" -ForegroundColor Red
+        Write-Host "   - O instalador NAO possui o fix v3.2.4-UNBLOCK-FIX" -ForegroundColor Red
         Write-Host "   - Aguarde o redeploy completo e tente novamente" -ForegroundColor Yellow
     } elseif (-not $phase3) {
         Write-Host "   - O instalador falhou ao executar" -ForegroundColor Red
         Write-Host "   - Verifique: $BaseDir\logs\installer.log" -ForegroundColor Yellow
     } elseif (-not $phase4) {
-        Write-Host "   - O agente NÃO iniciou corretamente" -ForegroundColor Red
-        Write-Host "   - Possíveis causas:" -ForegroundColor Yellow
+        Write-Host "   - O agente NAO iniciou corretamente" -ForegroundColor Red
+        Write-Host "   - Possiveis causas:" -ForegroundColor Yellow
         Write-Host "     1. Zone.Identifier ainda presente (verifique installer.log)" -ForegroundColor White
         Write-Host "     2. ExecutionPolicy bloqueando (verifique Event Viewer)" -ForegroundColor White
         Write-Host "     3. Erro de parsing do PowerShell 5.1" -ForegroundColor White
-        Write-Host "`n   Tente execução manual:" -ForegroundColor Cyan
+        Write-Host "`n   Tente execucao manual:" -ForegroundColor Cyan
         Write-Host "   powershell.exe -ExecutionPolicy Unrestricted -File `"C:\CyberShield\cybershield-agent-$AgentName.ps1`"" -ForegroundColor White
     }
 }
