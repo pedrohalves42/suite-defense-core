@@ -152,7 +152,7 @@ Write-InstallerLog "Script criado: $AgentScriptPath ($(([System.IO.FileInfo]$Age
 
 # CRITICAL: Desbloquear arquivo para permitir execucao pela Scheduled Task
 Write-InstallerLog "Verificando Zone.Identifier..." "DEBUG"
-if (Test-Path "$AgentScriptPath\`:Zone.Identifier") {
+if (Test-Path "$AgentScriptPath:Zone.Identifier") {
     Write-InstallerLog "Zone.Identifier detectado - script marcado como da internet" "WARN"
 }
 
@@ -163,7 +163,7 @@ try {
     Write-InstallerLog "AVISO: Falha ao desbloquear arquivo: $($_.Exception.Message)" "WARN"
     Write-InstallerLog "Tentando remover Zone.Identifier manualmente..." "INFO"
     try {
-        Remove-Item -Path "$AgentScriptPath\`:Zone.Identifier" -ErrorAction SilentlyContinue
+        Remove-Item -Path "$AgentScriptPath:Zone.Identifier" -ErrorAction SilentlyContinue
         Write-InstallerLog "Zone.Identifier removido manualmente" "SUCCESS"
     } catch {
         Write-InstallerLog "Falha ao remover Zone.Identifier. O agente pode nao executar." "ERROR"
@@ -171,7 +171,7 @@ try {
 }
 
 # Validacao pos-desbloqueio
-if (Test-Path "$AgentScriptPath\`:Zone.Identifier") {
+if (Test-Path "$AgentScriptPath:Zone.Identifier") {
     Write-InstallerLog "CRITICO: Zone.Identifier ainda presente apos desbloqueio!" "ERROR"
 } else {
     Write-InstallerLog "Validacao: Zone.Identifier removido com sucesso" "SUCCESS"
