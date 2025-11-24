@@ -6,15 +6,16 @@
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.0.0 (Essencial)
+    CyberShield Agent - Windows v3.4.0 (REPORT-SUPPORT)
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
     - Heartbeat periodico
     - Poll de jobs
-    - Execucao de jobs
+    - Execucao de jobs (scan + report)
     - Envio de resultado (submit-job-result)
     - Evento de post_installation
+    - Suporte a jobs tipo REPORT (metricas do sistema)
     
     Uso:
     powershell.exe -ExecutionPolicy Bypass -File .\\cybershield-agent-windows-v3.ps1 \`
