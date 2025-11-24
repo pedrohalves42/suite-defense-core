@@ -10,6 +10,19 @@ import { ErrorState } from "@/components/ErrorState";
 import { InstallationHealthCard } from "@/components/admin/InstallationHealthCard";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { useAgentMetricsHistory } from "@/hooks/useAgentMetricsHistory";
+import { format, eachDayOfInterval, subDays } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 
 export default function AgentHealthMonitor() {
   const { tenant } = useTenant();
@@ -29,6 +42,49 @@ export default function AgentHealthMonitor() {
     enabled: !!tenant?.id,
     refetchInterval: 30000, // 30s
   });
+
+  // Fetch historical metrics
+  const { data: metricsHistory = [] } = useAgentMetricsHistory(tenant?.id, 7);
+
+  // Process metrics for charts
+  const processMetricsForCharts = () => {
+    const last7Days = eachDayOfInterval({
+      start: subDays(new Date(), 6),
+      end: new Date(),
+    });
+
+    return last7Days.map(day => {
+      const dayStr = format(day, 'yyyy-MM-dd');
+      const dayLabel = format(day, 'dd/MM', { locale: ptBR });
+      
+      // Filter metrics for this day
+      const dayMetrics = metricsHistory.filter(m => 
+        m.collected_at.startsWith(dayStr)
+      );
+      
+      // Calculate averages
+      const avgCpu = dayMetrics.length > 0
+        ? dayMetrics.reduce((sum, m) => sum + (m.cpu_usage_percent || 0), 0) / dayMetrics.length
+        : 0;
+      
+      const avgMemory = dayMetrics.length > 0
+        ? dayMetrics.reduce((sum, m) => sum + (m.memory_usage_percent || 0), 0) / dayMetrics.length
+        : 0;
+      
+      const avgDisk = dayMetrics.length > 0
+        ? dayMetrics.reduce((sum, m) => sum + (m.disk_usage_percent || 0), 0) / dayMetrics.length
+        : 0;
+      
+      return {
+        date: dayLabel,
+        cpu: Math.round(avgCpu * 10) / 10,
+        memory: Math.round(avgMemory * 10) / 10,
+        disk: Math.round(avgDisk * 10) / 10,
+      };
+    });
+  };
+
+  const chartData = processMetricsForCharts();
 
   // Realtime subscription for heartbeats
   useEffect(() => {
@@ -187,6 +243,168 @@ export default function AgentHealthMonitor() {
           </CardContent>
         </Card>
       )}
+
+      {/* Historical Metrics Charts */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* CPU Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Monitor className="h-5 w-5 text-blue-500" />
+              Uso de CPU - Últimos 7 Dias
+            </CardTitle>
+            <CardDescription>Média diária de uso do processador</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    stroke="hsl(var(--muted-foreground))"
+                  />
+                  <YAxis 
+                    domain={[0, 100]}
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    stroke="hsl(var(--muted-foreground))"
+                    label={{ value: '%', position: 'insideLeft', fill: 'hsl(var(--muted-foreground))' }}
+                  />
+                  <RechartsTooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                    formatter={(value: number) => [`${value}%`, 'CPU']}
+                  />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="cpu" 
+                    stroke="#3b82f6" 
+                    strokeWidth={2}
+                    dot={{ fill: '#3b82f6', r: 4 }}
+                    activeDot={{ r: 6 }}
+                    name="CPU (%)"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-muted-foreground">
+                Sem dados de CPU nos últimos 7 dias
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Memory Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-green-500" />
+              Uso de Memória - Últimos 7 Dias
+            </CardTitle>
+            <CardDescription>Média diária de uso de RAM</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    stroke="hsl(var(--muted-foreground))"
+                  />
+                  <YAxis 
+                    domain={[0, 100]}
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    stroke="hsl(var(--muted-foreground))"
+                    label={{ value: '%', position: 'insideLeft', fill: 'hsl(var(--muted-foreground))' }}
+                  />
+                  <RechartsTooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px'
+                    }}
+                    formatter={(value: number) => [`${value}%`, 'RAM']}
+                  />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="memory" 
+                    stroke="#10b981" 
+                    strokeWidth={2}
+                    dot={{ fill: '#10b981', r: 4 }}
+                    activeDot={{ r: 6 }}
+                    name="RAM (%)"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[250px] text-muted-foreground">
+                Sem dados de memória nos últimos 7 dias
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Disk Chart - Full Width */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Server className="h-5 w-5 text-orange-500" />
+            Uso de Disco - Últimos 7 Dias
+          </CardTitle>
+          <CardDescription>Média diária de uso de armazenamento</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  stroke="hsl(var(--muted-foreground))"
+                />
+                <YAxis 
+                  domain={[0, 100]}
+                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  stroke="hsl(var(--muted-foreground))"
+                  label={{ value: '%', position: 'insideLeft', fill: 'hsl(var(--muted-foreground))' }}
+                />
+                <RechartsTooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '8px'
+                  }}
+                  formatter={(value: number) => [`${value}%`, 'Disco']}
+                />
+                <Legend />
+                <Line 
+                  type="monotone" 
+                  dataKey="disk" 
+                  stroke="#f97316" 
+                  strokeWidth={2}
+                  dot={{ fill: '#f97316', r: 4 }}
+                  activeDot={{ r: 6 }}
+                  name="Disco (%)"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+              Sem dados de disco nos últimos 7 dias
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Heatmap Grid */}
       <Card>
