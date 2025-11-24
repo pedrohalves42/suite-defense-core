@@ -2868,6 +2868,13 @@ export type Database = {
           cleaned_count: number
         }[]
       }
+      cleanup_stuck_jobs: {
+        Args: never
+        Returns: {
+          cleaned_count: number
+          job_ids: string[]
+        }[]
+      }
       current_user_tenant_id: { Args: never; Returns: string }
       dearmor: { Args: { "": string }; Returns: string }
       diagnose_agent: { Args: { p_agent_name: string }; Returns: Json }
