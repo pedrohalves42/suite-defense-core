@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +14,7 @@ import { RecentJobsActivity } from '@/components/admin/RecentJobsActivity';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { OnboardingWizard } from '@/components/OnboardingWizard';
 
 interface Stats {
   totalAgents: number;
@@ -29,6 +32,19 @@ interface Stats {
 
 export default function Dashboard() {
   const { tenant } = useTenant();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Check for onboarding parameter
+  useEffect(() => {
+    const onboardingParam = searchParams.get('onboarding');
+    if (onboardingParam === 'true') {
+      setShowOnboarding(true);
+      // Remove parameter from URL
+      searchParams.delete('onboarding');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['tenant-stats', tenant?.id],
@@ -513,6 +529,12 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Onboarding Wizard */}
+      <OnboardingWizard 
+        open={showOnboarding} 
+        onComplete={() => setShowOnboarding(false)} 
+      />
     </div>
   );
 }

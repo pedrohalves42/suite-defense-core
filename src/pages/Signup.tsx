@@ -68,9 +68,10 @@ export default function Signup() {
       },
     });
 
-    // Send welcome email via edge function
+    // Send welcome email and create trial subscription
     if (!error && data.user) {
       try {
+        // Send welcome email
         await supabase.functions.invoke('send-welcome-email', {
           body: {
             email: validation.data.email,
@@ -78,9 +79,19 @@ export default function Signup() {
             userId: data.user.id,
           },
         });
+
+        // Create trial subscription (14 days)
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          await supabase.functions.invoke('create-trial-subscription', {
+            headers: {
+              Authorization: `Bearer ${sessionData.session.access_token}`,
+            },
+          });
+        }
       } catch (emailError) {
-        logger.error('Failed to send welcome email', emailError);
-        // Don't block signup if email fails
+        logger.error('Failed to send welcome email or create trial', emailError);
+        // Don't block signup if these fail
       }
     }
 
@@ -97,10 +108,14 @@ export default function Signup() {
       });
     } else {
       toast({
-        title: 'Cadastro realizado com sucesso',
-        description: 'Voce ja pode fazer login.',
+        title: 'Cadastro realizado com sucesso! 🎉',
+        description: 'Trial de 14 dias ativado. Redirecionando...',
       });
-      navigate('/login');
+      
+      // Redirect to onboarding after 1.5s
+      setTimeout(() => {
+        navigate('/admin/dashboard?onboarding=true');
+      }, 1500);
     }
 
     setLoading(false);

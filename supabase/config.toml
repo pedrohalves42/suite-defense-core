@@ -1,6 +1,9 @@
 project_id = "iavbnmduxpxhwubqrzzn"
 
 # === Stripe Functions ===
+[functions.create-trial-subscription]
+verify_jwt = true
+
 [functions.create-stripe-products]
 verify_jwt = true
 
