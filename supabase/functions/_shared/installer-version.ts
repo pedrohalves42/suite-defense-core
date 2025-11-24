@@ -7,10 +7,14 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.5.0-METRICS-AUTO';
-export const LAST_UPDATED = '2025-01-24T14:30:00Z'; // FASE 5: Metrics automation + telemetry fix + stuck jobs
+export const INSTALLER_VERSION = 'v3.6.0-METRICS-FIX';
+export const LAST_UPDATED = '2025-01-24T15:00:00Z'; // FASE 6: Critical fix - metricas agora sao enviadas via POST
 
 export const CHANGES = [
+  '[v3.6.0-METRICS-FIX] CRITICAL FIX: Metricas agora sao REALMENTE enviadas via POST submit-system-metrics',
+  '[v3.6.0-METRICS-FIX] NOVO: Funcao Send-SystemMetrics envia payload estruturado para backend',
+  '[v3.6.0-METRICS-FIX] FIX: Loop principal parseia JSON de Invoke-ReportJob e envia via HTTP',
+  '[v3.6.0-METRICS-FIX] FIX: Logs agora mostram "CPU=XX%, RAM=YY%, Disco=ZZ%" quando metricas sao enviadas',
   '[v3.5.0-METRICS-AUTO] NOVO: Envio automatico de metricas a cada 5min no loop principal',
   '[v3.5.0-METRICS-AUTO] FIX: Calculadora de preco dinamica baseada em tiers (Landing)',
   '[v3.5.0-METRICS-AUTO] FIX: Dashboard com validacao robusta de agents online',

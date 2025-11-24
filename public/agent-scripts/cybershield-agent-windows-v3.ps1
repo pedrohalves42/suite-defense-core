@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.4.0 (REPORT-SUPPORT)
+    CyberShield Agent - Windows v3.6.0-METRICS-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -427,6 +427,37 @@ function Send-Heartbeat {
 }
 
 # ============================================
+#  SEND SYSTEM METRICS
+# ============================================
+function Send-SystemMetrics {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Metrics
+    )
+    
+    Write-Log "[METRICS] Enviando metricas para backend..." "DEBUG"
+    
+    try {
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-system-metrics" `
+            -Method "POST" `
+            -Body $Metrics `
+            -TimeoutSec 15
+        
+        if ($result.Success -and $result.StatusCode -eq 200) {
+            Write-Log "[SUCCESS] Metricas enviadas com sucesso" "SUCCESS"
+            return $true
+        } else {
+            Write-Log "[WARN] Falha ao enviar metricas (HTTP $($result.StatusCode))" "WARN"
+            return $false
+        }
+    } catch {
+        Write-Log "[ERROR] Erro ao enviar metricas: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
+# ============================================
 #  SUBMIT JOB RESULT
 # ============================================
 function Submit-JobResult {
@@ -822,12 +853,29 @@ try {
             # FASE 2: Enviar métricas a cada 5 minutos
             try {
                 if ((($now - $lastMetrics).TotalSeconds) -ge 300) {
-                    Write-Log "[METRICS] Enviando metricas de sistema..." "INFO"
+                    Write-Log "[METRICS] Coletando metricas de sistema..." "INFO"
                     $metricsJob = @{ id = "auto-metrics"; type = "report" }
                     $metricsResult = Invoke-ReportJob -Job $metricsJob
                     
                     if ($metricsResult.success) {
-                        Write-Log "[SUCCESS] Metricas enviadas: $($metricsResult.output)" "SUCCESS"
+                        # Parsear JSON e enviar para backend
+                        try {
+                            $metricsData = $metricsResult.output | ConvertFrom-Json
+                            
+                            $payload = @{
+                                cpu_usage_percent = $metricsData.cpu_percent
+                                memory_usage_percent = $metricsData.memory_percent
+                                disk_usage_percent = $metricsData.disk_percent
+                                hostname = $metricsData.hostname
+                            }
+                            
+                            $sent = Send-SystemMetrics -Metrics $payload
+                            if ($sent) {
+                                Write-Log "[SUCCESS] Metricas enviadas: CPU=$($metricsData.cpu_percent)%, RAM=$($metricsData.memory_percent)%, Disco=$($metricsData.disk_percent)%" "SUCCESS"
+                            }
+                        } catch {
+                            Write-Log "[WARN] Falha ao parsear metricas: $($_.Exception.Message)" "WARN"
+                        }
                     } else {
                         Write-Log "[WARN] Falha ao coletar metricas (nao critico): $($metricsResult.output)" "WARN"
                     }
