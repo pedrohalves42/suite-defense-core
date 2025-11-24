@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +11,10 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { RecentAuditActivity } from '@/components/admin/RecentAuditActivity';
 import { RecentJobsActivity } from '@/components/admin/RecentJobsActivity';
+import { Skeleton } from '@/components/ui/skeleton';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { OnboardingWizard } from '@/components/OnboardingWizard';
 
 interface Stats {
   totalAgents: number;
@@ -26,6 +32,19 @@ interface Stats {
 
 export default function Dashboard() {
   const { tenant } = useTenant();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Check for onboarding parameter
+  useEffect(() => {
+    const onboardingParam = searchParams.get('onboarding');
+    if (onboardingParam === 'true') {
+      setShowOnboarding(true);
+      // Remove parameter from URL
+      searchParams.delete('onboarding');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['tenant-stats', tenant?.id],
@@ -146,8 +165,38 @@ export default function Dashboard() {
 
   if (statsLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="space-y-6">
+        {/* Header Skeleton */}
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-80" />
+          <Skeleton className="h-5 w-96" />
+        </div>
+
+        {/* Stats Cards Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: i * 0.1 }}
+            >
+              <Card className="p-6">
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Grid Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-96 w-full" />
+          <Skeleton className="h-96 w-full" />
+        </div>
       </div>
     );
   }
@@ -163,49 +212,65 @@ export default function Dashboard() {
 
       {/* Alertas Criticos */}
       {criticalAlerts && criticalAlerts.length > 0 && (
-        <Card className="border-red-500 bg-red-50 dark:bg-red-950">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-              Alertas Criticos ({criticalAlerts.length})
-            </CardTitle>
-            <CardDescription>
-              Requerem atencao imediata
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {criticalAlerts.map((alert) => (
-              <div 
-                key={alert.id} 
-                className="flex justify-between items-start p-3 bg-white dark:bg-gray-900 rounded-lg border"
-              >
-                <div className="flex-1">
-                  <div className="font-medium text-sm">{alert.title}</div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {alert.message}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {format(new Date(alert.created_at), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}
-                  </div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Card className="border-l-4 border-red-500 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-950/30 dark:to-transparent shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-red-100 dark:bg-red-950/30">
+                  <AlertTriangle className="h-5 w-5 text-red-600 animate-pulse" />
                 </div>
-                <Badge 
-                  variant={alert.severity === 'critical' ? 'destructive' : 'default'}
-                  className="ml-2"
+                Alertas Criticos ({criticalAlerts.length})
+              </CardTitle>
+              <CardDescription>
+                Requerem atencao imediata
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {criticalAlerts.map((alert, idx) => (
+                <motion.div
+                  key={alert.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, delay: idx * 0.1 }}
+                  className="flex justify-between items-start p-3 bg-white dark:bg-gray-900 rounded-lg border hover:shadow-md transition-all duration-300"
                 >
-                  {alert.severity}
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">{alert.title}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {alert.message}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {format(new Date(alert.created_at), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}
+                    </div>
+                  </div>
+                  <Badge 
+                    variant={alert.severity === 'critical' ? 'destructive' : 'default'}
+                    className="ml-2"
+                  >
+                    {alert.severity}
+                  </Badge>
+                </motion.div>
+              ))}
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
 
       {/* Recent Activity & Jobs Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Atividade Recente</CardTitle>
+        <Card className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <CardHeader className="border-b border-border/50">
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Activity className="h-5 w-5 text-primary" />
+              </div>
+              Atividade Recente
+            </CardTitle>
             <CardDescription>Principais acoes de seguranca no seu tenant</CardDescription>
           </CardHeader>
           <CardContent>
@@ -214,9 +279,14 @@ export default function Dashboard() {
         </Card>
 
         {/* Recent Jobs */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Ultimos Jobs Executados</CardTitle>
+        <Card className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <CardHeader className="border-b border-border/50">
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-accent/10">
+                <Activity className="h-5 w-5 text-accent" />
+              </div>
+              Ultimos Jobs Executados
+            </CardTitle>
             <CardDescription>Jobs recentes processados pelos agentes</CardDescription>
           </CardHeader>
           <CardContent>
@@ -227,64 +297,88 @@ export default function Dashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Agentes</CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalAgents || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.activeAgents || 0} ativos, {stats?.offlineAgents || 0} offline
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Scans Realizados</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalScans || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.maliciousFiles || 0} maliciosos, {stats?.cleanFiles || 0} limpos
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Arquivos em Quarentena</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.quarantinedFiles || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              Arquivos isolados
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Jobs</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.totalJobs || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.completedJobs || 0} concluidos, {stats?.pendingJobs || 0} pendentes
-            </p>
-          </CardContent>
-        </Card>
+        {[
+          {
+            title: "Agentes",
+            icon: Server,
+            value: stats?.totalAgents || 0,
+            subtitle: `${stats?.activeAgents || 0} ativos, ${stats?.offlineAgents || 0} offline`,
+            borderColor: "border-blue-500",
+            gradient: "from-blue-50/50 dark:from-blue-950/30",
+            iconBg: "bg-blue-100 dark:bg-blue-950/30",
+            iconColor: "text-blue-500"
+          },
+          {
+            title: "Scans Realizados",
+            icon: Shield,
+            value: stats?.totalScans || 0,
+            subtitle: `${stats?.maliciousFiles || 0} maliciosos, ${stats?.cleanFiles || 0} limpos`,
+            borderColor: "border-green-500",
+            gradient: "from-green-50/50 dark:from-green-950/30",
+            iconBg: "bg-green-100 dark:bg-green-950/30",
+            iconColor: "text-green-500"
+          },
+          {
+            title: "Arquivos em Quarentena",
+            icon: AlertTriangle,
+            value: stats?.quarantinedFiles || 0,
+            subtitle: "Arquivos isolados",
+            borderColor: "border-yellow-500",
+            gradient: "from-yellow-50/50 dark:from-yellow-950/30",
+            iconBg: "bg-yellow-100 dark:bg-yellow-950/30",
+            iconColor: "text-yellow-500"
+          },
+          {
+            title: "Jobs",
+            icon: Activity,
+            value: stats?.totalJobs || 0,
+            subtitle: `${stats?.completedJobs || 0} concluidos, ${stats?.pendingJobs || 0} pendentes`,
+            borderColor: "border-purple-500",
+            gradient: "from-purple-50/50 dark:from-purple-950/30",
+            iconBg: "bg-purple-100 dark:bg-purple-950/30",
+            iconColor: "text-purple-500"
+          }
+        ].map((card, idx) => (
+          <motion.div
+            key={card.title}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: idx * 0.1 }}
+          >
+            <Card className={cn(
+              "border-l-4 bg-gradient-to-br to-transparent hover:shadow-xl transition-all duration-300 hover:-translate-y-1",
+              card.borderColor,
+              card.gradient
+            )}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                <div className={cn("p-2 rounded-lg", card.iconBg)}>
+                  <card.icon className={cn("h-5 w-5", card.iconColor)} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className={cn("text-3xl font-bold", card.iconColor)}>
+                  {card.value}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {card.subtitle}
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Scans */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Scans Recentes</CardTitle>
+        <Card className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <CardHeader className="border-b border-border/50">
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Shield className="h-5 w-5 text-primary" />
+              </div>
+              Scans Recentes
+            </CardTitle>
             <CardDescription>Ultimos 5 scans de virus realizados</CardDescription>
           </CardHeader>
           <CardContent>
@@ -336,9 +430,14 @@ export default function Dashboard() {
         </Card>
 
         {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Atividades Recentes</CardTitle>
+        <Card className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <CardHeader className="border-b border-border/50">
+            <CardTitle className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-accent/10">
+                <Activity className="h-5 w-5 text-accent" />
+              </div>
+              Atividades Recentes
+            </CardTitle>
             <CardDescription>Ultimas 10 acoes no sistema</CardDescription>
           </CardHeader>
           <CardContent>
@@ -374,9 +473,14 @@ export default function Dashboard() {
       </div>
 
       {/* Health Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Status de Saude do Sistema</CardTitle>
+      <Card className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+        <CardHeader className="border-b border-border/50">
+          <CardTitle className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Activity className="h-5 w-5 text-primary" />
+            </div>
+            Status de Saude do Sistema
+          </CardTitle>
           <CardDescription>Indicadores de saude do seu tenant</CardDescription>
         </CardHeader>
         <CardContent>
@@ -425,6 +529,12 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Onboarding Wizard */}
+      <OnboardingWizard 
+        open={showOnboarding} 
+        onComplete={() => setShowOnboarding(false)} 
+      />
     </div>
   );
 }

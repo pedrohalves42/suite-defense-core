@@ -189,11 +189,27 @@ const ServerDashboard = () => {
     }
   };
 
+  // Cálculo robusto de agentes online (FASE 1)
+  const FIVE_MINUTES_MS = 5 * 60 * 1000;
+  
   const activeAgents = agents.filter(a => {
     if (!a.last_heartbeat) return false;
-    const lastHeartbeat = new Date(a.last_heartbeat);
-    const now = new Date();
-    return (now.getTime() - lastHeartbeat.getTime()) < 5 * 60 * 1000;
+    
+    try {
+      const lastHeartbeat = new Date(a.last_heartbeat);
+      const now = new Date();
+      const diffMs = now.getTime() - lastHeartbeat.getTime();
+      
+      // Debug opcional (remover depois se necessário)
+      if (diffMs >= 0 && diffMs < FIVE_MINUTES_MS) {
+        console.debug(`[ONLINE] ${a.agent_name}: ${Math.round(diffMs/1000)}s ago`);
+      }
+      
+      return diffMs >= 0 && diffMs < FIVE_MINUTES_MS;
+    } catch (err) {
+      console.error(`[ERROR] Failed to parse last_heartbeat for ${a.agent_name}:`, err);
+      return false;
+    }
   });
 
   const pendingJobs = jobs.filter(j => j.status === "queued").length;

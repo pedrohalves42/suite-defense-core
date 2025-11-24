@@ -1,8 +1,9 @@
 import { MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CONTACT } from "@/constants/config";
 
 export const WhatsAppButton = () => {
-  const whatsappLink = "https://wa.me/5534984432835?text=Ola!%20Tenho%20interesse%20no%20CyberShield";
+  const whatsappLink = `${CONTACT.WHATSAPP_LINK}?text=${CONTACT.WHATSAPP_TEXT_SUPPORT}`;
 
   return (
     <a
