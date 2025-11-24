@@ -32,7 +32,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.0.0"
+    [string]$AgentVersion = "3.6.0"
 )
 
 $ErrorActionPreference = "Stop"
