@@ -6,7 +6,7 @@
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.6.0-METRICS-FIX
+    CyberShield Agent - Windows v3.7.0-METRICS-WMI-FALLBACK
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -39,7 +39,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "3.6.0"
+    [string]\$AgentVersion = "3.7.0"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -313,23 +313,39 @@ function Invoke-ReportJob {
     }
 
     try {
-        # CPU
-        \$cpuSample = Get-Counter '\\Processor(_Total)\\% Processor Time' -ErrorAction Stop
-        \$cpuUsage  = \$cpuSample.CounterSamples.CookedValue
+        # CPU - tentar Get-Counter primeiro, depois WMI fallback
+        try {
+            \$cpuSample = Get-Counter '\\Processor(_Total)\\% Processor Time' -ErrorAction Stop
+            \$cpuUsage  = \$cpuSample.CounterSamples.CookedValue
+        } catch {
+            Write-Log "[METRICS] Get-Counter CPU falhou, usando WMI fallback" "WARN"
+            \$cpuUsage = (Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
+            if (\$null -eq \$cpuUsage) { \$cpuUsage = 0 }
+        }
 
-        # Memoria
-        \$memSample   = Get-Counter '\\Memory\\% Committed Bytes In Use' -ErrorAction Stop
-        \$memUsage    = \$memSample.CounterSamples.CookedValue
+        # Memoria - usar WMI (mais confiavel)
+        \$os = Get-WmiObject Win32_OperatingSystem
+        \$memUsage = [math]::Round(((\$os.TotalVisibleMemorySize - \$os.FreePhysicalMemory) / \$os.TotalVisibleMemorySize) * 100, 2)
 
-        # Disco (C:)
-        \$cDrive = Get-PSDrive -Name C -ErrorAction Stop
-        \$diskPercent = 0
-        if ((\$cDrive.Used + \$cDrive.Free) -gt 0) {
-            \$diskPercent = [math]::Round((\$cDrive.Used / (\$cDrive.Used + \$cDrive.Free)) * 100, 2)
+        # Disco (C:) - tentar Get-PSDrive primeiro, depois WMI
+        try {
+            \$cDrive = Get-PSDrive -Name C -ErrorAction Stop
+            \$diskPercent = 0
+            if ((\$cDrive.Used + \$cDrive.Free) -gt 0) {
+                \$diskPercent = [math]::Round((\$cDrive.Used / (\$cDrive.Used + \$cDrive.Free)) * 100, 2)
+            }
+        } catch {
+            Write-Log "[METRICS] Get-PSDrive falhou, usando WMI fallback" "WARN"
+            \$disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
+            if (\$disk -and \$disk.Size -gt 0) {
+                \$diskPercent = [math]::Round(((\$disk.Size - \$disk.FreeSpace) / \$disk.Size) * 100, 2)
+            } else {
+                \$diskPercent = 0
+            }
         }
 
         \$report.cpu_percent    = [math]::Round(\$cpuUsage, 2)
-        \$report.memory_percent = [math]::Round(\$memUsage, 2)
+        \$report.memory_percent = \$memUsage
         \$report.disk_percent   = \$diskPercent
 
         Write-Log "[REPORT] Metricas coletadas: CPU=\$(\$report.cpu_percent)%, MEM=\$(\$report.memory_percent)%, DISK=\$(\$report.disk_percent)%" "INFO"
