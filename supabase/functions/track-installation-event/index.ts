@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { getTenantIdForUser } from '../_shared/tenant.ts';
 import { logger } from '../_shared/logger.ts';
+import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 // Validation schema
@@ -89,34 +90,35 @@ Deno.serve(async (req) => {
 
     const event: InstallationEvent = validation.data;
 
-    // ===== MODO ALTERNATIVO: Auth via X-Agent-Token (EXPANSAO: aceita qualquer event_type) =====
+    // ===== MODO AGENT-TOKEN COM VALIDACAO HMAC COMPLETA (IGUAL AO HEARTBEAT) =====
     const agentToken = req.headers.get('X-Agent-Token');
     const hmacSignature = req.headers.get('X-HMAC-Signature');
 
     if (agentToken && hmacSignature) {
-      // Modo telemetria de falha: nao exige JWT, usa agent credentials
-      logger.info('[track-installation-event] Using agent-token mode for failure telemetry', { requestId });
+      logger.info('[track-installation-event] Using agent-token mode with HMAC validation', { requestId });
       
       try {
-        // Buscar agent pre-existente (pode nao existir ainda se instalacao esta falhando antes de registrar)
-        const { data: agentData } = await supabase
-          .from('agents')
-          .select('id, tenant_id, hmac_secret')
-          .eq('agent_name', event.agent_name)
+        // 1. BUSCAR AGENTE PELO TOKEN (igual ao heartbeat)
+        const { data: tokenData } = await supabase
+          .from('agent_tokens')
+          .select('agent_id, agents!inner(id, tenant_id, agent_name, hmac_secret)')
+          .eq('token', agentToken)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
-        if (!agentData) {
-          // Agent nao existe ainda (instalacao falhando antes de registrar)
-          // Tentar usar enrollment_key_prefix do metadata para encontrar tenant
+        if (!tokenData?.agents) {
+          // FALLBACK: Token nao encontrado, tentar enrollment key (instalacoes que falham antes de criar token)
           const tokenPrefix = event.metadata?.token_prefix as string | undefined;
           
           if (!tokenPrefix) {
-            logger.warn('[track-installation-event] No agent and no token prefix', { requestId });
+            logger.warn('[track-installation-event] No token found and no token prefix for fallback', { requestId });
             return new Response(
               JSON.stringify({
                 ok: false,
                 tracked: false,
-                reason: 'no_tenant_identifier',
+                reason: 'invalid_agent_token',
                 requestId,
               } as TelemetryResponse),
               { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -132,7 +134,7 @@ Deno.serve(async (req) => {
             .maybeSingle();
 
           if (!keyData) {
-            logger.warn('[track-installation-event] No enrollment key found', { requestId, prefix: tokenPrefix });
+            logger.warn('[track-installation-event] No enrollment key found for fallback', { requestId, prefix: tokenPrefix });
             return new Response(
               JSON.stringify({
                 ok: false,
@@ -144,40 +146,29 @@ Deno.serve(async (req) => {
             );
           }
 
-          const tenantId = keyData.tenant_id;
-
-          // Inserir telemetria de falha sem agent_id
+          // Inserir telemetria sem validacao HMAC (fallback para falhas early-stage)
           const { error: insertError } = await supabase
             .from('installation_analytics')
             .insert({
-              tenant_id: tenantId,
-              agent_id: null, // Agent nao existe ainda
+              tenant_id: keyData.tenant_id,
+              agent_id: null,
               agent_name: event.agent_name,
-              event_type: 'installation_failed',
+              event_type: event.event_type,
               platform: event.platform,
               installation_method: event.installation_method,
               error_message: event.error_message,
-              metadata: event.metadata || {},
-              success: false,
+              metadata: { ...event.metadata, hmac_validation: 'skipped_fallback' },
+              success: event.event_type !== 'installation_failed' && event.event_type !== 'failed',
+              installation_time_seconds: event.installation_time_seconds,
               ip_address: req.headers.get('x-forwarded-for') || 'unknown',
               user_agent: req.headers.get('user-agent') || 'unknown',
             });
 
           if (insertError) {
-            logger.error('[track-installation-event] Insert failed', { requestId, error: insertError });
-            return new Response(
-              JSON.stringify({
-                ok: false,
-                tracked: false,
-                reason: 'insert_failed',
-                requestId,
-                details: { code: insertError.code, message: insertError.message }
-              } as TelemetryResponse),
-              { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+            logger.error('[track-installation-event] Fallback insert failed', { requestId, error: insertError });
           }
 
-          logger.success('[track-installation-event] Failure telemetry tracked (agent-token mode)', { requestId });
+          logger.success('[track-installation-event] Telemetry tracked (fallback mode)', { requestId });
           return new Response(
             JSON.stringify({
               ok: true,
@@ -188,25 +179,54 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Se agent existe, inserir telemetria com agent_id
+        const agent = (Array.isArray(tokenData.agents) ? tokenData.agents[0] : tokenData.agents) as { id: string; tenant_id: string; agent_name: string; hmac_secret: string };
+
+        // 2. VALIDAR ASSINATURA HMAC (igual ao heartbeat)
+        const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret);
+
+        if (!hmacResult.valid) {
+          logger.warn('[track-installation-event] HMAC validation failed', { 
+            requestId, 
+            errorCode: hmacResult.errorCode,
+            agentName: agent.agent_name 
+          });
+
+          // Retornar erro estruturado (nao 401 para telemetria)
+          return new Response(
+            JSON.stringify({
+              ok: false,
+              tracked: false,
+              reason: 'hmac_validation_failed',
+              requestId,
+              details: { 
+                code: hmacResult.errorCode, 
+                message: hmacResult.errorMessage 
+              }
+            } as TelemetryResponse),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // 3. REGISTRAR TELEMETRIA COM CREDENCIAIS VALIDADAS
         const { error: insertError } = await supabase
           .from('installation_analytics')
           .insert({
-            tenant_id: agentData.tenant_id,
-            agent_id: agentData.id,
-            agent_name: event.agent_name,
-            event_type: 'installation_failed',
+            tenant_id: agent.tenant_id,
+            agent_id: agent.id,
+            agent_name: agent.agent_name,
+            event_type: event.event_type, // Aceitar qualquer event_type
             platform: event.platform,
             installation_method: event.installation_method,
+            success: event.event_type !== 'installation_failed' && event.event_type !== 'failed',
+            installation_time_seconds: event.installation_time_seconds,
             error_message: event.error_message,
-            metadata: event.metadata || {},
-            success: false,
+            metadata: { ...event.metadata, hmac_validation: 'success' },
             ip_address: req.headers.get('x-forwarded-for') || 'unknown',
             user_agent: req.headers.get('user-agent') || 'unknown',
           });
 
         if (insertError) {
-          logger.error('[track-installation-event] Insert failed', { requestId, error: insertError });
+          logger.error('[track-installation-event] Insert failed after HMAC validation', { requestId, error: insertError });
           return new Response(
             JSON.stringify({
               ok: false,
@@ -219,7 +239,11 @@ Deno.serve(async (req) => {
           );
         }
 
-        logger.success('[track-installation-event] Failure telemetry tracked (agent-token mode with agent_id)', { requestId });
+        logger.success('[track-installation-event] Telemetry tracked with HMAC validation', { 
+          requestId, 
+          eventType: event.event_type,
+          agentName: agent.agent_name 
+        });
         return new Response(
           JSON.stringify({
             ok: true,
