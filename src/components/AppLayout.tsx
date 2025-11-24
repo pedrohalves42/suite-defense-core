@@ -19,7 +19,6 @@ export const AppLayout = () => {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    // Custom event for same-page updates
     window.addEventListener('sidebar-toggle', handleStorageChange);
 
     return () => {
@@ -29,13 +28,21 @@ export const AppLayout = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div 
+      className="min-h-screen bg-background"
+      style={{
+        backgroundImage: `
+          radial-gradient(circle at 10% 20%, hsl(var(--primary) / 0.05) 0%, transparent 50%),
+          radial-gradient(circle at 90% 80%, hsl(var(--accent) / 0.05) 0%, transparent 50%)
+        `,
+      }}
+    >
       <NotificationSystem />
       <ConnectivityIndicator />
       <AppSidebar />
       <div className={cn('transition-all duration-300', collapsed ? 'pl-16' : 'pl-60')}>
         <TopBar />
-        <main className="pt-16">
+        <main className="pt-16 p-6">
           <Outlet />
         </main>
       </div>
