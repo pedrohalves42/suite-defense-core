@@ -7,10 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.6.0-METRICS-FIX';
-export const LAST_UPDATED = '2025-01-24T15:00:00Z'; // FASE 6: Critical fix - metricas agora sao enviadas via POST
+export const INSTALLER_VERSION = 'v3.6.1-TELEMETRY-HMAC-FIX';
+export const LAST_UPDATED = '2025-01-24T16:00:00Z'; // FASE 1+2: Telemetria agora usa HMAC + track-installation-event aceita qualquer event_type
 
 export const CHANGES = [
+  '[v3.6.1-TELEMETRY-HMAC-FIX] CRITICAL FIX: Telemetria agora usa HMAC (X-Agent-Token + X-HMAC-Signature)',
+  '[v3.6.1-TELEMETRY-HMAC-FIX] NOVO: Funcoes Convert-HexToBytes e Get-HmacSignature copiadas do agent',
+  '[v3.6.1-TELEMETRY-HMAC-FIX] FIX: Installer envia post_installation com credenciais do agente',
+  '[v3.6.1-TELEMETRY-HMAC-FIX] FIX: track-installation-event aceita qualquer event_type com HMAC valido',
+  '[v3.6.1-TELEMETRY-HMAC-FIX] FIX: Fallback para telemetria anonima se agent ja existir (compatibilidade)',
   '[v3.6.0-METRICS-FIX] CRITICAL FIX: Metricas agora sao REALMENTE enviadas via POST submit-system-metrics',
   '[v3.6.0-METRICS-FIX] NOVO: Funcao Send-SystemMetrics envia payload estruturado para backend',
   '[v3.6.0-METRICS-FIX] FIX: Loop principal parseia JSON de Invoke-ReportJob e envia via HTTP',
