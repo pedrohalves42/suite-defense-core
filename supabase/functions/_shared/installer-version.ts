@@ -8,9 +8,11 @@
  */
 
 export const INSTALLER_VERSION = 'v3.4.0-REPORT-SUPPORT';
-export const LAST_UPDATED = '2025-11-24T00:15:00Z'; // Add support for report jobs + network logging
+export const LAST_UPDATED = '2025-11-24T02:55:00Z'; // FORCE REBUILD: Fix version header sync
 
 export const CHANGES = [
+  'FIX: Corrige header de versao do script (v3.0.0 -> v3.4.0-REPORT-SUPPORT)',
+  'FIX: Sincroniza version string entre source e embedded script',
   'NOVO: Adiciona suporte para jobs do tipo "report" com coleta de metricas do sistema',
   'NOVO: Funcao Invoke-ReportJob coleta CPU, memoria e disco (uso de percentual)',
   'NOVO: Logging de rede em todas as requisicoes HTTP (method + URL + status)',
