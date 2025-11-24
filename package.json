@@ -4,6 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "sync:agent:windows": "pwsh -File scripts/sync-agent-script.ps1",
+    "sync:agent:linux": "bash scripts/sync-agent-linux.sh",
+    "sync:agent:macos": "bash scripts/sync-agent-macos.sh",
+    "sync:agent:all": "npm run sync:agent:windows && npm run sync:agent:linux && npm run sync:agent:macos",
     "validate:system": "tsx tools/validate-system-full.ts",
     "validate:full": "npm run validate:system",
     "dev": "vite",
