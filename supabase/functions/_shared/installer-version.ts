@@ -7,10 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.4.0-REPORT-SUPPORT';
-export const LAST_UPDATED = '2025-11-24T02:55:00Z'; // FORCE REBUILD: Fix version header sync
+export const INSTALLER_VERSION = 'v3.5.0-METRICS-AUTO';
+export const LAST_UPDATED = '2025-01-24T14:30:00Z'; // FASE 5: Metrics automation + telemetry fix + stuck jobs
 
 export const CHANGES = [
+  '[v3.5.0-METRICS-AUTO] NOVO: Envio automatico de metricas a cada 5min no loop principal',
+  '[v3.5.0-METRICS-AUTO] FIX: Calculadora de preco dinamica baseada em tiers (Landing)',
+  '[v3.5.0-METRICS-AUTO] FIX: Dashboard com validacao robusta de agents online',
+  '[v3.5.0-METRICS-AUTO] FIX: Telemetria aceita X-Agent-Token para post_installation (nao apenas installation_failed)',
+  '[v3.5.0-METRICS-AUTO] NOVO: Cleanup automatico de jobs stuck (delivered >1h)',
   'FIX: Corrige header de versao do script (v3.0.0 -> v3.4.0-REPORT-SUPPORT)',
   'FIX: Sincroniza version string entre source e embedded script',
   'NOVO: Adiciona suporte para jobs do tipo "report" com coleta de metricas do sistema',
