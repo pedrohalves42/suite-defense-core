@@ -10,6 +10,7 @@ import { Check, Zap, Crown, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTenant } from '@/hooks/useTenant';
+import { CONTACT } from '@/constants/config';
 
 interface Plan {
   id: string;
@@ -375,7 +376,7 @@ export default function PlanUpgradeNew() {
                   <Button
                     className="w-full"
                     variant="outline"
-                    onClick={() => window.open('https://wa.me/5534984432835', '_blank')}
+                    onClick={() => window.open(CONTACT.WHATSAPP_LINK, '_blank')}
                   >
                     Falar com Vendas
                   </Button>
@@ -400,7 +401,7 @@ export default function PlanUpgradeNew() {
         <CardContent>
           <Button 
             variant="outline"
-            onClick={() => window.open('https://wa.me/5534984432835', '_blank')}
+            onClick={() => window.open(CONTACT.WHATSAPP_LINK, '_blank')}
           >
             Falar com Vendas
           </Button>

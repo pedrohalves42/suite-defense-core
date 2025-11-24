@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { CONTACT } from "@/constants/config";
 export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -23,7 +24,7 @@ export const Navbar = () => {
       setIsMobileMenuOpen(false);
     }
   };
-  const whatsappLink = "https://wa.me/5534984432835?text=Ola!%20Gostaria%20de%20conhecer%20o%20CyberShield";
+  const whatsappLink = `${CONTACT.WHATSAPP_LINK}?text=${CONTACT.WHATSAPP_TEXT_DEFAULT}`;
   return <>
       <nav className={cn("fixed top-0 left-0 right-0 z-50 transition-all duration-300", isScrolled ? "bg-background/95 backdrop-blur-md border-b border-border shadow-lg" : "bg-transparent")}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
