@@ -52,7 +52,25 @@ All colors MUST be HSL.
     --glow-primary: 0 0 40px hsl(174 100% 46% / 0.2);
     --glow-accent: 0 0 30px hsl(189 94% 53% / 0.15);
     --border-glow: 0 0 20px hsl(174 100% 46% / 0.3);
+    
+    /* RGB values for gradients */
+    --primary-rgb: 59, 221, 189;
+    --accent-rgb: 49, 196, 223;
   }
+}
+
+/* Animacao de glow personalizada */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 10px hsl(174 100% 46% / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px hsl(174 100% 46% / 0.6);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
 }
 
 @layer utilities {
