@@ -93,7 +93,7 @@ export default function AgentHealthMonitor() {
       const { data, error } = await supabase.functions.invoke('cleanup-jobs', {
         body: {
           status: statusMap[type],
-          older_than_days: 7
+          older_than_days: 0  // Deletar jobs de qualquer idade
         }
       });
 
