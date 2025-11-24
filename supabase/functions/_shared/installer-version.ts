@@ -7,13 +7,17 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.3.1-PAYLOAD-FIX';
-export const LAST_UPDATED = '2025-11-23T20:45:00Z'; // FASE 2.1: Critical Payload HMAC Fix
+export const INSTALLER_VERSION = 'v3.4.0-REPORT-SUPPORT';
+export const LAST_UPDATED = '2025-11-24T00:15:00Z'; // Add support for report jobs + network logging
 
 export const CHANGES = [
-  'CRITICO: Corrige InvalidVariableReferenceWithDrive no payload HMAC (linha 199)',
-  'FIX: Substitui "$timestamp:$nonce:$bodyJson" por formatacao explicita \'{0}:{1}:{2}\' -f',
-  'MELHORIA: Usa operador -f para garantir compatibilidade total com PowerShell 5.1',
+  'NOVO: Adiciona suporte para jobs do tipo "report" com coleta de metricas do sistema',
+  'NOVO: Funcao Invoke-ReportJob coleta CPU, memoria e disco (uso de percentual)',
+  'NOVO: Logging de rede em todas as requisicoes HTTP (method + URL + status)',
+  'MELHORIA: Switch de tipos de job agora suporta: integration_test, collect_info, report, scan, update_agent',
+  'PREVIO: Corrige InvalidVariableReferenceWithDrive no payload HMAC (linha 199)',
+  'PREVIO: Substitui "$timestamp:$nonce:$bodyJson" por formatacao explicita \'{0}:{1}:{2}\' -f',
+  'PREVIO: Usa operador -f para garantir compatibilidade total com PowerShell 5.1',
   'PREVIO: Diagnostico avancado de restricoes de seguranca (GPO, AppLocker, LanguageMode, AV/EDR)',
   'PREVIO: Detecta GPO forcando ExecutionPolicy AllSigned/Restricted',
   'PREVIO: Detecta Constrained Language Mode (Device Guard/WDAC)',
