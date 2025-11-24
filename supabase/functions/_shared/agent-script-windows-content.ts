@@ -39,7 +39,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "3.0.0"
+    [string]\$AgentVersion = "3.6.0"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -580,7 +580,7 @@ function Execute-Job {
                 try {
                     Write-Log "[SCAN] Job type 'scan' recebido" "INFO"
 
-                    # Payload esperado: { "filePath": "C:\\path\\file.exe", "tenantId": "uuid" }
+                    # Payload esperado: { "filePath": "C:\\\\path\\\\file.exe", "tenantId": "uuid" }
                     \$filePath = \$payload.filePath
                     \$tenantId = \$payload.tenantId
 
@@ -839,7 +839,7 @@ try {
     Send-Heartbeat
 
     \$bootstrapElapsed = [int]((Get-Date) - \$bootstrapStart).TotalSeconds
-    Write-Log "[SUCCESS] Bootstrap concluido em \${\$bootstrapElapsed}s" "SUCCESS"
+    Write-Log "[SUCCESS] Bootstrap concluido em \${bootstrapElapsed}s" "SUCCESS"
 
     Write-Log "[INFO] Entrando no loop principal (intervalo=\$(\$Global:PollIntervalSeconds)s)" "INFO"
 
