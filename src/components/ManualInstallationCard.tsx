@@ -1,6 +1,7 @@
 import { AlertTriangle, Download, HelpCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { Button } from "./ui/button";
+import { CONTACT } from "@/constants/config";
 
 interface ManualInstallationCardProps {
   agentName: string;
@@ -118,7 +119,7 @@ export const ManualInstallationCard = ({ agentName, onDownloadPs1 }: ManualInsta
               <p className="font-semibold text-gray-800 dark:text-gray-200">Precisa de ajuda?</p>
               <div className="ml-4 mt-1 space-y-1">
                 <p>Contato: <a href="mailto:gamehousetecnologia@gmail.com" className="text-blue-600 hover:underline font-medium">gamehousetecnologia@gmail.com</a></p>
-                <p>WhatsApp: <a href="https://wa.me/5534984432835" className="text-blue-600 hover:underline font-medium">(34) 98443-2835</a></p>
+                <p>WhatsApp: <a href={CONTACT.WHATSAPP_LINK} className="text-blue-600 hover:underline font-medium">{CONTACT.PHONE_FORMATTED}</a></p>
               </div>
             </div>
           </div>

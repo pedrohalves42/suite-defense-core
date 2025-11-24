@@ -8,11 +8,12 @@ import { Navbar } from "@/components/Navbar";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { CONTACT } from "@/constants/config";
 
 type Audience = 'business' | 'home';
 
 const Landing = () => {
-  const whatsappLink = "https://wa.me/5534997185623?text=Ola!%20Gostaria%20de%20conhecer%20o%20CyberShield";
+  const whatsappLink = `${CONTACT.WHATSAPP_LINK}?text=${CONTACT.WHATSAPP_TEXT_DEFAULT}`;
   const [deviceCount, setDeviceCount] = useState<number>(10);
   const [audience, setAudience] = useState<Audience>('business');
 
