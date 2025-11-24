@@ -89,11 +89,11 @@ Deno.serve(async (req) => {
 
     const event: InstallationEvent = validation.data;
 
-    // ===== MODO ALTERNATIVO: Auth via X-Agent-Token (FASE 3: expandido para post_installation) =====
+    // ===== MODO ALTERNATIVO: Auth via X-Agent-Token (EXPANSAO: aceita qualquer event_type) =====
     const agentToken = req.headers.get('X-Agent-Token');
     const hmacSignature = req.headers.get('X-HMAC-Signature');
 
-    if (agentToken && hmacSignature && (event.event_type === 'installation_failed' || event.event_type === 'post_installation')) {
+    if (agentToken && hmacSignature) {
       // Modo telemetria de falha: nao exige JWT, usa agent credentials
       logger.info('[track-installation-event] Using agent-token mode for failure telemetry', { requestId });
       
@@ -242,23 +242,83 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ===== FLUXO NORMAL: Auth via JWT =====
+    // ===== FALLBACK: Modo compatibilidade (installers antigos sem auth) =====
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      logger.warn('[track-installation-event] No authorization header', { requestId });
-      return new Response(
-        JSON.stringify({
-          ok: false,
-          tracked: false,
-          reason: 'no_auth',
-          requestId,
-        } as TelemetryResponse),
-        { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      // Tentar inferir tenant_id pelo agent_name (se agente ja existir)
+      logger.warn('[track-installation-event] No authentication provided, attempting inference', { requestId });
+      
+      try {
+        const { data: existingAgent } = await supabase
+          .from('agents')
+          .select('id, tenant_id')
+          .eq('agent_name', event.agent_name)
+          .maybeSingle();
+        
+        if (existingAgent) {
+          // Registrar telemetria com tenant_id inferido
+          const { error: insertError } = await supabase
+            .from('installation_analytics')
+            .insert({
+              tenant_id: existingAgent.tenant_id,
+              agent_id: existingAgent.id,
+              agent_name: event.agent_name,
+              event_type: event.event_type,
+              platform: event.platform,
+              installation_method: event.installation_method,
+              success: event.event_type !== 'installation_failed' && event.event_type !== 'failed',
+              installation_time_seconds: event.installation_time_seconds,
+              error_message: event.error_message,
+              ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+              user_agent: req.headers.get('user-agent') || 'unknown',
+              network_connectivity: true,
+              metadata: event.metadata || {}
+            });
+          
+          if (insertError) {
+            logger.error('[track-installation-event] Failed to insert anonymous telemetry', { 
+              error: insertError.message, 
+              requestId 
+            });
+          } else {
+            logger.success('[track-installation-event] Telemetry tracked (anonymous with inference)', { requestId });
+            return new Response(
+              JSON.stringify({
+                ok: true,
+                tracked: true,
+                requestId
+              } as TelemetryResponse),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
         }
-      );
+        
+        // Se nao conseguiu inferir, registrar sem tenant_id (para debug)
+        logger.warn('[track-installation-event] Recording telemetry without tenant_id', { requestId });
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            tracked: false,
+            reason: 'no_authentication_and_agent_not_found',
+            requestId
+          } as TelemetryResponse),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      } catch (inferError) {
+        logger.error('[track-installation-event] Inference failed', { error: inferError, requestId });
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            tracked: false,
+            reason: 'inference_error',
+            requestId
+          } as TelemetryResponse),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
+    
+    // ===== FLUXO NORMAL: Auth via JWT =====
 
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
