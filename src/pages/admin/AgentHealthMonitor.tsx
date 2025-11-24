@@ -1,9 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Heart, AlertCircle, Server, Clock, Monitor } from "lucide-react";
+import { Activity, Heart, AlertCircle, Server, Clock, Monitor, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ErrorState } from "@/components/ErrorState";
@@ -28,6 +29,7 @@ export default function AgentHealthMonitor() {
   const { tenant } = useTenant();
   const [liveHeartbeats, setLiveHeartbeats] = useState<number>(0);
   const [recentHeartbeats, setRecentHeartbeats] = useState<string[]>([]);
+  const [isCleaningJobs, setIsCleaningJobs] = useState(false);
 
   // Fetch agent health metrics using RPC
   const { data: agentsHealth = [], isLoading, isError, error: errorData, refetch } = useQuery({
@@ -45,6 +47,65 @@ export default function AgentHealthMonitor() {
 
   // Fetch historical metrics
   const { data: metricsHistory = [] } = useAgentMetricsHistory(tenant?.id, 7);
+
+  // Fetch job statistics
+  const { data: jobStats, refetch: refetchJobStats } = useQuery({
+    queryKey: ['job-stats', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return { failed: 0, delivered: 0, total: 0 };
+      
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('status', { count: 'exact' })
+        .eq('tenant_id', tenant.id);
+      
+      if (error) throw error;
+      
+      const failed = data.filter(j => j.status === 'failed').length;
+      const delivered = data.filter(j => j.status === 'delivered').length;
+      
+      return { failed, delivered, total: data.length };
+    },
+    enabled: !!tenant?.id,
+    refetchInterval: 60000, // 1 min
+  });
+
+  // Cleanup jobs function
+  const handleCleanup = async (type: 'failed' | 'delivered' | 'all') => {
+    const statusMap = {
+      failed: ['failed'],
+      delivered: ['delivered'],
+      all: ['failed', 'delivered']
+    };
+
+    const confirmMessage = 
+      type === 'failed' ? `Deletar ${jobStats?.failed || 0} jobs failed?` :
+      type === 'delivered' ? `Deletar ${jobStats?.delivered || 0} jobs stuck?` :
+      `Deletar ${(jobStats?.failed || 0) + (jobStats?.delivered || 0)} jobs (failed + stuck)?`;
+
+    if (!confirm(confirmMessage)) return;
+
+    setIsCleaningJobs(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('cleanup-jobs', {
+        body: {
+          status: statusMap[type],
+          older_than_days: 7
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success(`${data.deleted_count} jobs deletados com sucesso`);
+      refetchJobStats();
+    } catch (error) {
+      console.error('Cleanup error:', error);
+      toast.error('Erro ao limpar jobs');
+    } finally {
+      setIsCleaningJobs(false);
+    }
+  };
 
   // Process metrics for charts
   const processMetricsForCharts = () => {
@@ -239,6 +300,66 @@ export default function AgentHealthMonitor() {
                   {name}
                 </Badge>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* System Maintenance Card */}
+      {jobStats && (jobStats.failed > 0 || jobStats.delivered > 0) && (
+        <Card className="border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-orange-600" />
+                Manutencao do Sistema
+              </span>
+            </CardTitle>
+            <CardDescription>
+              Limpeza de jobs antigos e travados do historico
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-3">
+                <span className="font-semibold text-red-600">{jobStats.failed} jobs failed</span>
+                {' • '}
+                <span className="font-semibold text-yellow-600">{jobStats.delivered} jobs stuck</span>
+                {' • '}
+                <span className="font-semibold">{jobStats.total} total</span>
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => handleCleanup('failed')}
+                  disabled={isCleaningJobs || jobStats.failed === 0}
+                >
+                  Limpar Failed ({jobStats.failed})
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleCleanup('delivered')}
+                  disabled={isCleaningJobs || jobStats.delivered === 0}
+                  className="border-yellow-600 text-yellow-700 hover:bg-yellow-50"
+                >
+                  Limpar Stuck ({jobStats.delivered})
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => handleCleanup('all')}
+                  disabled={isCleaningJobs || (jobStats.failed === 0 && jobStats.delivered === 0)}
+                >
+                  Limpar Tudo ({jobStats.failed + jobStats.delivered})
+                </Button>
+              </div>
+              {isCleaningJobs && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Limpando jobs... Aguarde.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
