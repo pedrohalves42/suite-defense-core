@@ -12,7 +12,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 type Audience = 'business' | 'home';
 
 const Landing = () => {
-  const whatsappLink = "https://wa.me/5534984432835?text=Ola!%20Gostaria%20de%20conhecer%20o%20CyberShield";
+  const whatsappLink = "https://wa.me/5534997185623?text=Ola!%20Gostaria%20de%20conhecer%20o%20CyberShield";
   const [deviceCount, setDeviceCount] = useState<number>(10);
   const [audience, setAudience] = useState<Audience>('business');
 
