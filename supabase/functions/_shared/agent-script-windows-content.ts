@@ -203,13 +203,8 @@ function Invoke-SecureRequest {
                 \$bodyJson = ""
             }
 
-<<<<<<< HEAD
             \$payload   = '{0}:{1}:{2}' -f \$timestamp, \$nonce, \$bodyJson
-            $signature = Get-HmacSignature -Message $payload -SecretHex $Global:HmacSecret
-=======
-            \$payload   = "\$timestamp:\$nonce:\$bodyJson"
             \$signature = Get-HmacSignature -Message \$payload -SecretHex \$Global:HmacSecret
->>>>>>> d427558 (fix(ascii): remove caracteres não-ASCII de scripts críticos)
 
             \$headers = @{
                 "X-Agent-Token"    = \$Global:AgentToken
