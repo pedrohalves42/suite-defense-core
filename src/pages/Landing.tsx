@@ -415,6 +415,10 @@ const Landing = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-background to-muted/30" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 border border-primary/30 backdrop-blur-sm animate-pulse-glow mb-6">
+              <Shield className="w-4 h-4 text-primary animate-pulse" />
+              <span className="text-sm font-medium text-foreground">🎉 Trial de 14 dias - Sem cartão necessário</span>
+            </div>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               {audience === 'business' ? "Planos Transparentes" : "Planos para Sua Casa"}
             </h2>
