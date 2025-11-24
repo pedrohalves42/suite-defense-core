@@ -23,6 +23,16 @@ export const CACHE_GC_TIME_MS = 10 * 60 * 1000; // 10 minutos
 
 // CORRECAO: Roles movidos para src/types/roles.ts (centralizado)
 
+// Contatos
+export const CONTACT = {
+  WHATSAPP_NUMBER: '5534997185623',
+  WHATSAPP_LINK: 'https://wa.me/5534997185623',
+  WHATSAPP_TEXT_DEFAULT: 'Ola!%20Gostaria%20de%20conhecer%20o%20CyberShield',
+  WHATSAPP_TEXT_SUPPORT: 'Ola!%20Tenho%20interesse%20no%20CyberShield',
+  EMAIL: 'gamehousetecnologia@gmail.com',
+  PHONE_FORMATTED: '(34) 99718-5623'
+} as const;
+
 // Feature Flags (se necessario)
 export const FEATURES = {
   ENABLE_ANALYTICS: true,

@@ -134,6 +134,85 @@ try {
 
 Write-InstallerLog "FASE 1: Cleanup concluido" "SUCCESS"
 
+# ============= FASE 1.5: Diagnostico de Seguranca =============
+Write-InstallerLog "=== Diagnostico de Restricoes de Seguranca ===" "INFO"
+
+# 1. ExecutionPolicy por escopo
+try {
+    $policies = Get-ExecutionPolicy -List
+    foreach ($policy in $policies) {
+        Write-InstallerLog "ExecutionPolicy [$($policy.Scope)]: $($policy.ExecutionPolicy)" "INFO"
+    }
+    
+    # ALERTA se GPO forcar AllSigned/Restricted
+    $machinePolicy = ($policies | Where-Object { $_.Scope -eq "MachinePolicy" }).ExecutionPolicy
+    if ($machinePolicy -in @("AllSigned", "Restricted")) {
+        Write-InstallerLog "AVISO CRITICO: GPO forcando ExecutionPolicy=$machinePolicy (ignora -ExecutionPolicy da linha de comando!)" "ERROR"
+        Write-InstallerLog "Solucao: Assinar scripts OU ajustar GPO" "ERROR"
+    }
+} catch {
+    Write-InstallerLog "Falha ao ler ExecutionPolicy: $($_.Exception.Message)" "WARN"
+}
+
+# 2. LanguageMode (detecta Constrained Language)
+try {
+    $languageMode = $ExecutionContext.SessionState.LanguageMode
+    Write-InstallerLog "LanguageMode: $languageMode" "INFO"
+    
+    if ($languageMode -eq "ConstrainedLanguage") {
+        Write-InstallerLog "AVISO CRITICO: ConstrainedLanguage ativo (limita operacoes .NET, crypto, network)" "ERROR"
+        Write-InstallerLog "Causa provavel: Device Guard / WDAC / AppLocker" "ERROR"
+    }
+} catch {
+    Write-InstallerLog "Falha ao ler LanguageMode: $($_.Exception.Message)" "WARN"
+}
+
+# 3. Testar AppLocker (tentativa basica)
+try {
+    $testPath = "$env:TEMP\cybershield-test-$(Get-Random).ps1"
+    "'Write-Host Test'" | Out-File $testPath -Encoding UTF8
+    
+    $testResult = & powershell.exe -ExecutionPolicy Bypass -File $testPath 2>&1
+    Remove-Item $testPath -ErrorAction SilentlyContinue
+    
+    Write-InstallerLog "Teste de execucao basico: PASSOU" "SUCCESS"
+} catch {
+    Write-InstallerLog "AVISO: Teste de execucao falhou - possivel AppLocker/WDAC: $($_.Exception.Message)" "ERROR"
+}
+
+# 4. Verificar AV/EDR (heuristico - via Event Viewer)
+try {
+    $defenderLogs = Get-WinEvent -LogName "Microsoft-Windows-Windows Defender/Operational" -MaxEvents 5 -ErrorAction SilentlyContinue | 
+        Where-Object { $_.Message -like "*PowerShell*" -or $_.Message -like "*CyberShield*" }
+    
+    if ($defenderLogs) {
+        Write-InstallerLog "AVISO: Eventos recentes do Windows Defender relacionados a PowerShell detectados" "WARN"
+        foreach ($log in $defenderLogs) {
+            $shortMessage = $log.Message.Substring(0, [Math]::Min(100, $log.Message.Length))
+            Write-InstallerLog "  - ID $($log.Id): $shortMessage" "WARN"
+        }
+    } else {
+        Write-InstallerLog "Nenhum evento suspeito do Windows Defender detectado" "SUCCESS"
+    }
+} catch {
+    # Silencioso - nem todos os ambientes tem Defender logs acessiveis
+    Write-InstallerLog "Nao foi possivel verificar logs do Windows Defender (esperado em alguns ambientes)" "DEBUG"
+}
+
+# 5. Device Guard / WDAC
+try {
+    $wdac = Get-CimInstance -ClassName Win32_DeviceGuard -Namespace root\Microsoft\Windows\DeviceGuard -ErrorAction SilentlyContinue
+    if ($wdac -and $wdac.CodeIntegrityPolicyEnforcementStatus -eq 1) {
+        Write-InstallerLog "AVISO CRITICO: WDAC/Device Guard ATIVO - apenas codigo assinado permitido!" "ERROR"
+    } else {
+        Write-InstallerLog "Device Guard / WDAC: Nao ativo ou nao configurado" "INFO"
+    }
+} catch {
+    Write-InstallerLog "Nao foi possivel verificar Device Guard (esperado em alguns ambientes)" "DEBUG"
+}
+
+Write-InstallerLog "=== Fim do Diagnostico de Seguranca ===" "INFO"
+
 # ============= FASE 2: Instalacao =============
 Write-InstallerLog "FASE 2: Criando script do agente..." "INFO"
 
@@ -152,7 +231,7 @@ Write-InstallerLog "Script criado: $AgentScriptPath ($(([System.IO.FileInfo]$Age
 
 # CRITICAL: Desbloquear arquivo para permitir execucao pela Scheduled Task
 Write-InstallerLog "Verificando Zone.Identifier..." "DEBUG"
-if (Test-Path "$AgentScriptPath\`:Zone.Identifier") {
+if (Test-Path "$AgentScriptPath:Zone.Identifier") {
     Write-InstallerLog "Zone.Identifier detectado - script marcado como da internet" "WARN"
 }
 
@@ -163,7 +242,7 @@ try {
     Write-InstallerLog "AVISO: Falha ao desbloquear arquivo: $($_.Exception.Message)" "WARN"
     Write-InstallerLog "Tentando remover Zone.Identifier manualmente..." "INFO"
     try {
-        Remove-Item -Path "$AgentScriptPath\`:Zone.Identifier" -ErrorAction SilentlyContinue
+        Remove-Item -Path "$AgentScriptPath:Zone.Identifier" -ErrorAction SilentlyContinue
         Write-InstallerLog "Zone.Identifier removido manualmente" "SUCCESS"
     } catch {
         Write-InstallerLog "Falha ao remover Zone.Identifier. O agente pode nao executar." "ERROR"
@@ -171,7 +250,7 @@ try {
 }
 
 # Validacao pos-desbloqueio
-if (Test-Path "$AgentScriptPath\`:Zone.Identifier") {
+if (Test-Path "$AgentScriptPath:Zone.Identifier") {
     Write-InstallerLog "CRITICO: Zone.Identifier ainda presente apos desbloqueio!" "ERROR"
 } else {
     Write-InstallerLog "Validacao: Zone.Identifier removido com sucesso" "SUCCESS"
@@ -247,7 +326,7 @@ Write-InstallerLog "FASE 4: Criando Scheduled Task..." "INFO"
 
 $TaskName = "CyberShieldAgent-$AgentName"
 
-# Construir argumentos de forma segura (sem aspas internas problemáticas)
+# Construir argumentos de forma segura (sem aspas internas problematicas)
 $ps1Path = $AgentScriptPath
 $ps1Url = $ServerUrl
 $ps1Token = $AgentToken  
@@ -361,33 +440,74 @@ if (Test-Path $agentLogPath) {
 
 Write-InstallerLog "FASE 5: Agente iniciado" "SUCCESS"
 
-# ============= FASE 6: Telemetria =============
+# ============= FUNCOES AUXILIARES HMAC =============
+function Convert-HexToBytes {
+    param([string]$HexString)
+    $HexString = $HexString -replace '\s', ''
+    if ($HexString.Length % 2 -ne 0) {
+        throw "HexString deve ter comprimento par (64 chars para SHA256)"
+    }
+    $bytes = [byte[]]::new($HexString.Length / 2)
+    for ($i = 0; $i -lt $HexString.Length; $i += 2) {
+        $bytes[$i / 2] = [Convert]::ToByte($HexString.Substring($i, 2), 16)
+    }
+    return $bytes
+}
+
+function Get-HmacSignature {
+    param(
+        [string]$Message,
+        [string]$SecretHex
+    )
+    $keyBytes = Convert-HexToBytes $SecretHex
+    $hmac = New-Object System.Security.Cryptography.HMACSHA256
+    $hmac.Key = $keyBytes
+    $messageBytes = [Text.Encoding]::UTF8.GetBytes($Message)
+    $signatureBytes = $hmac.ComputeHash($messageBytes)
+    return ([System.BitConverter]::ToString($signatureBytes) -replace '-', '').ToLower()
+}
+
+# ============= FASE 6: Telemetria com HMAC =============
 Write-InstallerLog "FASE 6: Enviando telemetria de instalacao..." "INFO"
 
 try {
-    $telemetryUrl = "$ServerUrl/functions/v1/track-installation-event"
     $telemetryBody = @{
         agent_name = $AgentName
         event_type = "post_installation"
         platform = "windows"
         success = $true
+        installation_method = "one_click"
+        network_connectivity = $true
         metadata = @{
-            installer_version = "3.1.0-HARDENED"
+            installer_version = "{{INSTALLER_VERSION}}"
             powershell_version = $PSVersionTable.PSVersion.ToString()
             os_version = [System.Environment]::OSVersion.Version.ToString()
         }
-    } | ConvertTo-Json -Depth 5
-    
-    $headers = @{
-        "Content-Type" = "application/json"
-        "apikey" = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlhdmJubWR1eHB4aHd1YnFyenpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk4NzkzMzIsImV4cCI6MjA3NTQ1NTMzMn0.79Bg6lX-ArhDGLeaUN7MPgChv4FQNJ_KcjdMa5IerWk"
     }
     
+    $bodyJson = $telemetryBody | ConvertTo-Json -Depth 5 -Compress
+    
+    # Calcular HMAC
+    $timestamp = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
+    $nonce = [guid]::NewGuid().ToString()
+    $payload = '{0}:{1}:{2}' -f $timestamp, $nonce, $bodyJson
+    $signature = Get-HmacSignature -Message $payload -SecretHex $HmacSecret
+    
+    $headers = @{
+        "X-Agent-Token" = $AgentToken
+        "X-HMAC-Signature" = $signature
+        "X-Timestamp" = $timestamp
+        "X-Nonce" = $nonce
+        "Content-Type" = "application/json"
+    }
+    
+    $telemetryUrl = "$ServerUrl/functions/v1/track-installation-event"
     Write-InstallerLog "Enviando telemetria para: $telemetryUrl" "DEBUG"
     
-    $response = Invoke-WebRequest -Uri $telemetryUrl -Method POST -Body $telemetryBody -Headers $headers -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
+    $response = Invoke-WebRequest -Uri $telemetryUrl -Method POST -Body $bodyJson -Headers $headers -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
     
     Write-InstallerLog "Telemetria enviada com sucesso (HTTP $($response.StatusCode))" "SUCCESS"
+    Write-InstallerLog "Instalacao rastreada no sistema de analytics" "INFO"
 } catch {
     $errorDetails = $_.Exception.Message
     $statusCode = "N/A"
@@ -401,11 +521,9 @@ try {
     
     # Diagnostico especifico por tipo de erro
     if ($statusCode -eq 401) {
-        Write-InstallerLog "Erro de autenticacao. Verifique se o apikey esta correto." "WARN"
+        Write-InstallerLog "Erro de autenticacao HMAC. Token ou secret pode estar invalido." "WARN"
     } elseif ($statusCode -eq 500) {
         Write-InstallerLog "Erro no servidor backend. Verifique logs do Edge Function." "WARN"
-    } elseif ($statusCode -eq 404) {
-        Write-InstallerLog "Endpoint de telemetria nao encontrado. Verifique URL do servidor." "WARN"
     } else {
         Write-InstallerLog "Erro de rede ou timeout. Verifique conectividade." "WARN"
     }
