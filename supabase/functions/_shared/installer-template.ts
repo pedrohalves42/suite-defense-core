@@ -440,33 +440,74 @@ if (Test-Path $agentLogPath) {
 
 Write-InstallerLog "FASE 5: Agente iniciado" "SUCCESS"
 
-# ============= FASE 6: Telemetria =============
+# ============= FUNCOES AUXILIARES HMAC =============
+function Convert-HexToBytes {
+    param([string]$HexString)
+    $HexString = $HexString -replace '\s', ''
+    if ($HexString.Length % 2 -ne 0) {
+        throw "HexString deve ter comprimento par (64 chars para SHA256)"
+    }
+    $bytes = [byte[]]::new($HexString.Length / 2)
+    for ($i = 0; $i -lt $HexString.Length; $i += 2) {
+        $bytes[$i / 2] = [Convert]::ToByte($HexString.Substring($i, 2), 16)
+    }
+    return $bytes
+}
+
+function Get-HmacSignature {
+    param(
+        [string]$Message,
+        [string]$SecretHex
+    )
+    $keyBytes = Convert-HexToBytes $SecretHex
+    $hmac = New-Object System.Security.Cryptography.HMACSHA256
+    $hmac.Key = $keyBytes
+    $messageBytes = [Text.Encoding]::UTF8.GetBytes($Message)
+    $signatureBytes = $hmac.ComputeHash($messageBytes)
+    return ([System.BitConverter]::ToString($signatureBytes) -replace '-', '').ToLower()
+}
+
+# ============= FASE 6: Telemetria com HMAC =============
 Write-InstallerLog "FASE 6: Enviando telemetria de instalacao..." "INFO"
 
 try {
-    $telemetryUrl = "$ServerUrl/functions/v1/track-installation-event"
     $telemetryBody = @{
         agent_name = $AgentName
         event_type = "post_installation"
         platform = "windows"
         success = $true
+        installation_method = "one_click"
+        network_connectivity = $true
         metadata = @{
-            installer_version = "3.1.0-HARDENED"
+            installer_version = "{{INSTALLER_VERSION}}"
             powershell_version = $PSVersionTable.PSVersion.ToString()
             os_version = [System.Environment]::OSVersion.Version.ToString()
         }
-    } | ConvertTo-Json -Depth 5
-    
-    $headers = @{
-        "Content-Type" = "application/json"
-        "apikey" = "***REMOVED***"
     }
     
+    $bodyJson = $telemetryBody | ConvertTo-Json -Depth 5 -Compress
+    
+    # Calcular HMAC
+    $timestamp = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
+    $nonce = [guid]::NewGuid().ToString()
+    $payload = '{0}:{1}:{2}' -f $timestamp, $nonce, $bodyJson
+    $signature = Get-HmacSignature -Message $payload -SecretHex $HmacSecret
+    
+    $headers = @{
+        "X-Agent-Token" = $AgentToken
+        "X-HMAC-Signature" = $signature
+        "X-Timestamp" = $timestamp
+        "X-Nonce" = $nonce
+        "Content-Type" = "application/json"
+    }
+    
+    $telemetryUrl = "$ServerUrl/functions/v1/track-installation-event"
     Write-InstallerLog "Enviando telemetria para: $telemetryUrl" "DEBUG"
     
-    $response = Invoke-WebRequest -Uri $telemetryUrl -Method POST -Body $telemetryBody -Headers $headers -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
+    $response = Invoke-WebRequest -Uri $telemetryUrl -Method POST -Body $bodyJson -Headers $headers -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
     
     Write-InstallerLog "Telemetria enviada com sucesso (HTTP $($response.StatusCode))" "SUCCESS"
+    Write-InstallerLog "Instalacao rastreada no sistema de analytics" "INFO"
 } catch {
     $errorDetails = $_.Exception.Message
     $statusCode = "N/A"
@@ -480,11 +521,9 @@ try {
     
     # Diagnostico especifico por tipo de erro
     if ($statusCode -eq 401) {
-        Write-InstallerLog "Erro de autenticacao. Verifique se o apikey esta correto." "WARN"
+        Write-InstallerLog "Erro de autenticacao HMAC. Token ou secret pode estar invalido." "WARN"
     } elseif ($statusCode -eq 500) {
         Write-InstallerLog "Erro no servidor backend. Verifique logs do Edge Function." "WARN"
-    } elseif ($statusCode -eq 404) {
-        Write-InstallerLog "Endpoint de telemetria nao encontrado. Verifique URL do servidor." "WARN"
     } else {
         Write-InstallerLog "Erro de rede ou timeout. Verifique conectividade." "WARN"
     }
