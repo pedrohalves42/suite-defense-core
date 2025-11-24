@@ -227,11 +227,13 @@ function Invoke-SecureRequest {
                 \$params.Body = \$bodyJson
             }
 
+            Write-Log "[NETWORK] \$Method \$uri" "INFO"
             Write-Log "DEBUG: \$Method \$uri (body_length=\$(\$bodyJson.Length))" "DEBUG"
 
             \$response = Invoke-WebRequest @params -UseBasicParsing
             \$status   = [int]\$response.StatusCode
 
+            Write-Log "[NETWORK] Response: \$status from \$uri" "INFO"
             Write-Log "DEBUG: Resposta \$status de \$uri" "DEBUG"
 
             return [pscustomobject]@{
@@ -293,6 +295,55 @@ function Get-SystemInfo {
             hostname     = \$env:COMPUTERNAME
             agent_name   = \$Global:AgentName
             agent_version = \$Global:AgentVersion
+        }
+    }
+}
+
+# ============================================
+#  REPORT JOB (METRICAS DO SISTEMA)
+# ============================================
+function Invoke-ReportJob {
+    param(
+        [hashtable]\$Job
+    )
+
+    \$report = @{
+        timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        hostname  = \$env:COMPUTERNAME
+    }
+
+    try {
+        # CPU
+        \$cpuSample = Get-Counter '\\Processor(_Total)\\% Processor Time' -ErrorAction Stop
+        \$cpuUsage  = \$cpuSample.CounterSamples.CookedValue
+
+        # Memoria
+        \$memSample   = Get-Counter '\\Memory\\% Committed Bytes In Use' -ErrorAction Stop
+        \$memUsage    = \$memSample.CounterSamples.CookedValue
+
+        # Disco (C:)
+        \$cDrive = Get-PSDrive -Name C -ErrorAction Stop
+        \$diskPercent = 0
+        if ((\$cDrive.Used + \$cDrive.Free) -gt 0) {
+            \$diskPercent = [math]::Round((\$cDrive.Used / (\$cDrive.Used + \$cDrive.Free)) * 100, 2)
+        }
+
+        \$report.cpu_percent    = [math]::Round(\$cpuUsage, 2)
+        \$report.memory_percent = [math]::Round(\$memUsage, 2)
+        \$report.disk_percent   = \$diskPercent
+
+        Write-Log "[REPORT] Metricas coletadas: CPU=\$(\$report.cpu_percent)%, MEM=\$(\$report.memory_percent)%, DISK=\$(\$report.disk_percent)%" "INFO"
+
+        return @{
+            success = \$true
+            output  = (\$report | ConvertTo-Json -Compress)
+        }
+    } catch {
+        \$errorMsg = "Falha ao coletar metrics do report: {0}" -f \$_.Exception.Message
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            output  = \$errorMsg
         }
     }
 }
@@ -482,11 +533,23 @@ function Execute-Job {
                 \$sys = Get-SystemInfo
                 \$output = \$sys
             }
+            "report" {
+                Write-Log "[REPORT] Job type 'report' recebido" "INFO"
+                
+                \$reportResult = Invoke-ReportJob -Job \$Job
+                
+                if (\$reportResult.success) {
+                    \$output = \$reportResult.output | ConvertFrom-Json
+                    Write-Log "[SUCCESS] Report job concluido com sucesso" "SUCCESS"
+                } else {
+                    throw \$reportResult.output
+                }
+            }
             "scan" {
                 try {
                     Write-Log "[SCAN] Job type 'scan' recebido" "INFO"
 
-                    # Payload esperado: { "filePath": "C:\\\\path\\\\file.exe", "tenantId": "uuid" }
+                    # Payload esperado: { "filePath": "C:\\path\\file.exe", "tenantId": "uuid" }
                     \$filePath = \$payload.filePath
                     \$tenantId = \$payload.tenantId
 
@@ -745,12 +808,13 @@ try {
     Send-Heartbeat
 
     \$bootstrapElapsed = [int]((Get-Date) - \$bootstrapStart).TotalSeconds
-    Write-Log "[SUCCESS] Bootstrap concluido em \${bootstrapElapsed}s" "SUCCESS"
+    Write-Log "[SUCCESS] Bootstrap concluido em \${\bootstrapElapsed}s" "SUCCESS"
 
     Write-Log "[INFO] Entrando no loop principal (intervalo=\$(\$Global:PollIntervalSeconds)s)" "INFO"
 
     \$lastHeartbeat = Get-Date
     \$lastPoll      = Get-Date
+    \$lastMetrics   = Get-Date  # FASE 2: Controle de metricas
 
     while (\$true) {
         \$now = Get-Date
@@ -760,6 +824,26 @@ try {
             if (((\$now - \$lastHeartbeat).TotalSeconds) -ge \$Global:PollIntervalSeconds) {
                 Send-Heartbeat
                 \$lastHeartbeat = Get-Date
+            }
+
+            # FASE 2: Enviar metricas a cada 5 minutos
+            try {
+                if (((\$now - \$lastMetrics).TotalSeconds) -ge 300) {
+                    Write-Log "[METRICS] Enviando metricas de sistema..." "INFO"
+                    \$metricsJob = @{ id = "auto-metrics"; type = "report" }
+                    \$metricsResult = Invoke-ReportJob -Job \$metricsJob
+                    
+                    if (\$metricsResult.success) {
+                        Write-Log "[SUCCESS] Metricas enviadas: \$(\$metricsResult.output)" "SUCCESS"
+                    } else {
+                        Write-Log "[WARN] Falha ao coletar metricas (nao critico): \$(\$metricsResult.output)" "WARN"
+                    }
+                    
+                    \$lastMetrics = Get-Date
+                }
+            } catch {
+                # NUNCA derrubar o loop por causa de metrics
+                Write-Log "[WARN] Erro ao processar metrics: \$(\$_.Exception.Message)" "WARN"
             }
 
             # Poll de jobs a cada intervalo
