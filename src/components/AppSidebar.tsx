@@ -33,19 +33,30 @@ export const AppSidebar = () => {
   ], []);
 
   const adminItems = useMemo(() => [
+    // Overview
     { icon: Home, label: 'Dashboard', to: '/admin/dashboard', end: true },
+    
+    // Agent Monitoring & Health
     { icon: Activity, label: 'Monitoramento RT', to: '/admin/monitoring-advanced' },
     { icon: Activity, label: 'Saude Agentes', to: '/admin/agent-health' },
-    { icon: Package, label: 'Instalacoes', to: '/admin/installations' },
-    { icon: Brain, label: 'IA Insights', to: '/admin/ai-insights' },
-    { icon: CheckCircle, label: 'IA Acoes', to: '/admin/ai-actions' },
-    { icon: Users, label: 'Membros', to: '/admin/members' },
-    { icon: Settings, label: 'Tenant', to: '/admin/tenant' },
-    { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
-    { icon: Activity, label: 'Assinaturas', to: '/admin/subscriptions' },
     { icon: Activity, label: 'Diagnostico Agentes', to: '/admin/agent-diagnostics' },
     { icon: Terminal, label: 'Troubleshooting', to: '/admin/agent-troubleshooting' },
     { icon: AlertTriangle, label: 'Agentes Problematicos', to: '/admin/problematic-agents' },
+    
+    // Infrastructure
+    { icon: Package, label: 'Instalacoes', to: '/admin/installations' },
+    
+    // AI Features
+    { icon: Brain, label: 'IA Insights', to: '/admin/ai-insights' },
+    { icon: CheckCircle, label: 'IA Acoes', to: '/admin/ai-actions' },
+    
+    // Team Management
+    { icon: Users, label: 'Membros', to: '/admin/members' },
+    { icon: Settings, label: 'Tenant', to: '/admin/tenant' },
+    
+    // Billing
+    { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
+    { icon: Activity, label: 'Assinaturas', to: '/admin/subscriptions' },
   ], []);
 
   const superAdminItems = useMemo(() => [
