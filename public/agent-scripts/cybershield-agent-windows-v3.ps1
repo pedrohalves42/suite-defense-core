@@ -807,6 +807,7 @@ try {
 
     $lastHeartbeat = Get-Date
     $lastPoll      = Get-Date
+    $lastMetrics   = Get-Date  # FASE 2: Controle de métricas
 
     while ($true) {
         $now = Get-Date
@@ -816,6 +817,26 @@ try {
             if ((($now - $lastHeartbeat).TotalSeconds) -ge $Global:PollIntervalSeconds) {
                 Send-Heartbeat
                 $lastHeartbeat = Get-Date
+            }
+
+            # FASE 2: Enviar métricas a cada 5 minutos
+            try {
+                if ((($now - $lastMetrics).TotalSeconds) -ge 300) {
+                    Write-Log "[METRICS] Enviando metricas de sistema..." "INFO"
+                    $metricsJob = @{ id = "auto-metrics"; type = "report" }
+                    $metricsResult = Invoke-ReportJob -Job $metricsJob
+                    
+                    if ($metricsResult.success) {
+                        Write-Log "[SUCCESS] Metricas enviadas: $($metricsResult.output)" "SUCCESS"
+                    } else {
+                        Write-Log "[WARN] Falha ao coletar metricas (nao critico): $($metricsResult.output)" "WARN"
+                    }
+                    
+                    $lastMetrics = Get-Date
+                }
+            } catch {
+                # NUNCA derrubar o loop por causa de metrics
+                Write-Log "[WARN] Erro ao processar metrics: $($_.Exception.Message)" "WARN"
             }
 
             # Poll de jobs a cada intervalo

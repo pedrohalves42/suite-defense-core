@@ -89,11 +89,11 @@ Deno.serve(async (req) => {
 
     const event: InstallationEvent = validation.data;
 
-    // ===== MODO ALTERNATIVO: Auth via X-Agent-Token (para instaladores falhando) =====
+    // ===== MODO ALTERNATIVO: Auth via X-Agent-Token (FASE 3: expandido para post_installation) =====
     const agentToken = req.headers.get('X-Agent-Token');
     const hmacSignature = req.headers.get('X-HMAC-Signature');
 
-    if (agentToken && hmacSignature && event.event_type === 'installation_failed') {
+    if (agentToken && hmacSignature && (event.event_type === 'installation_failed' || event.event_type === 'post_installation')) {
       // Modo telemetria de falha: nao exige JWT, usa agent credentials
       logger.info('[track-installation-event] Using agent-token mode for failure telemetry', { requestId });
       

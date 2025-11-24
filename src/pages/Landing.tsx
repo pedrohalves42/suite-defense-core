@@ -56,7 +56,18 @@ const Landing = () => {
   };
 
   const currentContent = content[audience];
-  const calculatePrice = (devices: number): number => devices <= 30 ? 59.90 : devices <= 200 ? 149.90 : 299.90;
+  
+  // Cálculo dinâmico por tier (FASE 1)
+  const calculatePrice = (devices: number): number => {
+    if (devices <= 0 || Number.isNaN(devices)) return 0;
+    
+    const pricePerDevice = 
+      devices <= 30 ? 4.61 :    // R$ 59,90 / 13 dispositivos
+      devices <= 200 ? 0.75 :   // R$ 149,90 / 200 dispositivos  
+      0.29;                     // R$ 299,90 / 1000 dispositivos
+    
+    return Number((devices * pricePerDevice).toFixed(2));
+  };
 
   return (
     <div className="min-h-screen bg-background">
