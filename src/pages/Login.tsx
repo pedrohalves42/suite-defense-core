@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Mail, AlertCircle } from 'lucide-react';
+import { Shield, Mail, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { logger } from '@/lib/logger';
@@ -211,86 +211,132 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <Shield className="h-12 w-12 text-primary" />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-card">
+      {/* Animated Background Pattern */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(174,255,237,0.03),transparent_50%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_70%,transparent_110%)] opacity-20 pointer-events-none" />
+      
+      <Card className="w-full max-w-md backdrop-blur-xl bg-card/80 border-2 border-border/50 shadow-2xl shadow-primary/10 animate-fade-in relative z-10 hover:shadow-primary/20 transition-shadow duration-500">
+        <CardHeader className="space-y-1 text-center pb-6">
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-full blur-xl animate-pulse-glow" />
+              <div className="relative bg-gradient-to-br from-primary/10 to-accent/10 p-4 rounded-full backdrop-blur-sm border border-primary/20 shadow-glow-primary">
+                <Shield className="h-12 w-12 text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" />
+              </div>
+            </div>
           </div>
-          <CardTitle className="text-2xl font-bold">CyberShield Cloud</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent tracking-tight">
+            CyberShield Cloud
+          </CardTitle>
+          <CardDescription className="text-base text-muted-foreground/80 tracking-wide">
             Entre com suas credenciais para acessar o sistema
           </CardDescription>
         </CardHeader>
 
         <Tabs defaultValue="password" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="password">Senha</TabsTrigger>
-            <TabsTrigger value="magic">Email Magico</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-muted/50 backdrop-blur-sm p-1 border border-border/50">
+            <TabsTrigger 
+              value="password" 
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:shadow-primary/50 transition-all duration-300 font-medium"
+            >
+              Senha
+            </TabsTrigger>
+            <TabsTrigger 
+              value="magic"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:shadow-primary/50 transition-all duration-300 font-medium"
+            >
+              Email Mágico
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="password">
             <form onSubmit={handleLogin}>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5 pt-6">
                 {attemptCount > 0 && attemptCount < 3 && (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      [WARN] ? {attemptCount} tentativa{attemptCount > 1 ? 's' : ''} falhada{attemptCount > 1 ? 's' : ''} detectada{attemptCount > 1 ? 's' : ''}. 
+                  <Alert className="border-warning/50 bg-warning/5 backdrop-blur-sm animate-slide-in">
+                    <AlertCircle className="h-4 w-4 text-warning animate-pulse" />
+                    <AlertDescription className="text-warning-foreground/90 font-medium">
+                      [WARN] ⚠️ {attemptCount} tentativa{attemptCount > 1 ? 's' : ''} falhada{attemptCount > 1 ? 's' : ''} detectada{attemptCount > 1 ? 's' : ''}. 
                       {3 - attemptCount} tentativa{3 - attemptCount > 1 ? 's' : ''} restante{3 - attemptCount > 1 ? 's' : ''} antes do CAPTCHA.
                     </AlertDescription>
                   </Alert>
                 )}
                 {requiresCaptcha && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      ? Protecao ativada: {attemptCount} tentativas falhadas. Complete o CAPTCHA para continuar.
-                      {attemptCount >= 5 && ' Proximo bloqueio automatico apos mais falhas!'}
+                  <Alert variant="destructive" className="border-destructive/50 bg-destructive/5 backdrop-blur-sm animate-slide-in">
+                    <AlertCircle className="h-4 w-4 animate-pulse" />
+                    <AlertDescription className="font-medium">
+                      🛡️ Proteção ativada: {attemptCount} tentativas falhadas. Complete o CAPTCHA para continuar.
+                      {attemptCount >= 5 && ' Próximo bloqueio automático após mais falhas!'}
                     </AlertDescription>
                   </Alert>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    maxLength={255}
-                  />
+                  <Label htmlFor="email" className="text-foreground/90 font-medium tracking-wide">Email</Label>
+                  <div className="relative group">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      maxLength={255}
+                      className="pl-10 h-11 border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300 bg-background/50 backdrop-blur-sm"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="????????"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    maxLength={72}
-                  />
+                  <Label htmlFor="password" className="text-foreground/90 font-medium tracking-wide">Senha</Label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      maxLength={72}
+                      className="pl-10 h-11 border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300 bg-background/50 backdrop-blur-sm"
+                    />
+                  </div>
                 </div>
                 {requiresCaptcha && (
                   <div id="captcha-container" className="flex justify-center" />
                 )}
               </CardContent>
-              <CardFooter className="flex flex-col space-y-4">
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Entrando...' : 'Entrar'}
+              <CardFooter className="flex flex-col space-y-4 pt-6">
+                <Button 
+                  type="submit" 
+                  className="w-full h-11 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground font-semibold shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] transition-all duration-300 tracking-wide" 
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    'Entrar'
+                  )}
                 </Button>
-                <div className="text-sm text-center text-muted-foreground space-y-2">
+                <div className="text-sm text-center text-muted-foreground/80 space-y-2">
                   <div>
-                    <Link to="/forgot-password" className="text-primary hover:underline">
+                    <Link 
+                      to="/forgot-password" 
+                      className="text-primary hover:text-accent font-medium relative inline-block after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
+                    >
                       Esqueceu sua senha?
                     </Link>
                   </div>
                   <div>
-                    Nao tem uma conta?{' '}
-                    <Link to="/signup" className="text-primary hover:underline">
+                    Não tem uma conta?{' '}
+                    <Link 
+                      to="/signup" 
+                      className="text-primary hover:text-accent font-medium relative inline-block after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
+                    >
                       Cadastre-se
                     </Link>
                   </div>
@@ -301,41 +347,62 @@ export default function Login() {
 
           <TabsContent value="magic">
             <form onSubmit={handleMagicLink}>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5 pt-6">
                 <div className="space-y-2">
-                  <Label htmlFor="magic-email">Email</Label>
-                  <Input
-                    id="magic-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    maxLength={255}
-                  />
+                  <Label htmlFor="magic-email" className="text-foreground/90 font-medium tracking-wide">Email</Label>
+                  <div className="relative group">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
+                    <Input
+                      id="magic-email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      maxLength={255}
+                      className="pl-10 h-11 border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all duration-300 bg-background/50 backdrop-blur-sm"
+                    />
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  <p className="flex items-start gap-2">
-                    <Mail className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                    <span>
-                      Enviaremos um link de acesso unico para seu email. 
-                      {' '}Ideal para redes corporativas com restricoes.
+                <div className="text-sm text-muted-foreground/80 bg-muted/30 backdrop-blur-sm p-4 rounded-lg border border-border/30">
+                  <p className="flex items-start gap-3">
+                    <Mail className="h-5 w-5 mt-0.5 flex-shrink-0 text-primary/70" />
+                    <span className="leading-relaxed">
+                      Enviaremos um link de acesso único para seu email. 
+                      {' '}Ideal para redes corporativas com restrições.
                     </span>
                   </p>
                 </div>
                 {magicLinkSent && (
-                  <div className="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950 p-3 rounded-md">
-                    ? Email enviado! Verifique sua caixa de entrada.
-                  </div>
+                  <Alert className="border-success/50 bg-success/5 backdrop-blur-sm animate-slide-in">
+                    <Mail className="h-4 w-4 text-success animate-pulse" />
+                    <AlertDescription className="text-success-foreground font-medium">
+                      ✅ Email enviado! Verifique sua caixa de entrada.
+                    </AlertDescription>
+                  </Alert>
                 )}
               </CardContent>
-              <CardFooter className="flex flex-col space-y-4">
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Enviando...' : 'Enviar Link Magico'}
+              <CardFooter className="flex flex-col space-y-4 pt-6">
+                <Button 
+                  type="submit" 
+                  className="w-full h-11 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground font-semibold shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] transition-all duration-300 tracking-wide" 
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Enviando...
+                    </>
+                  ) : (
+                    'Enviar Link Mágico'
+                  )}
                 </Button>
-                <div className="text-sm text-center text-muted-foreground">
-                  Nao tem uma conta?{' '}
-                  <Link to="/signup" className="text-primary hover:underline">
+                <div className="text-sm text-center text-muted-foreground/80">
+                  Não tem uma conta?{' '}
+                  <Link 
+                    to="/signup" 
+                    className="text-primary hover:text-accent font-medium relative inline-block after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
+                  >
                     Cadastre-se
                   </Link>
                 </div>
