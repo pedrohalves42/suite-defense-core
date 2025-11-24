@@ -7,10 +7,16 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.6.1-TELEMETRY-HMAC-FIX';
-export const LAST_UPDATED = '2025-01-24T16:00:00Z'; // FASE 1+2: Telemetria agora usa HMAC + track-installation-event aceita qualquer event_type
+export const INSTALLER_VERSION = 'v3.7.0-METRICS-WMI-FALLBACK';
+export const LAST_UPDATED = '2025-01-24T17:30:00Z'; // FASE 1+2+3: Cleanup sem filtro de data + WMI fallback
 
 export const CHANGES = [
+  '[v3.7.0-METRICS-WMI-FALLBACK] CRITICAL FIX: Cleanup jobs agora deleta jobs de qualquer idade (older_than_days: 0)',
+  '[v3.7.0-METRICS-WMI-FALLBACK] CRITICAL FIX: Metricas CPU/RAM/Disco com WMI fallback quando Get-Counter falhar',
+  '[v3.7.0-METRICS-WMI-FALLBACK] FIX: CPU usa Get-Counter primeiro, fallback para Win32_Processor.LoadPercentage',
+  '[v3.7.0-METRICS-WMI-FALLBACK] FIX: RAM sempre via WMI Win32_OperatingSystem (mais confiavel)',
+  '[v3.7.0-METRICS-WMI-FALLBACK] FIX: Disco usa Get-PSDrive primeiro, fallback para Win32_LogicalDisk',
+  '[v3.7.0-METRICS-WMI-FALLBACK] MELHORIA: Jobs tipo report agora funcionam em VMs sem Performance Counters',
   '[v3.6.1-TELEMETRY-HMAC-FIX] CRITICAL FIX: Telemetria agora usa HMAC (X-Agent-Token + X-HMAC-Signature)',
   '[v3.6.1-TELEMETRY-HMAC-FIX] NOVO: Funcoes Convert-HexToBytes e Get-HmacSignature copiadas do agent',
   '[v3.6.1-TELEMETRY-HMAC-FIX] FIX: Installer envia post_installation com credenciais do agente',
@@ -56,6 +62,10 @@ export const CHANGES = [
 ];
 
 export const KNOWN_ISSUES_FIXED = [
+  'CRITICAL: Cleanup jobs nao deletava nada (older_than_days: 7 bloqueava jobs recentes)',
+  'CRITICAL: Metricas N/A em VMs sem Performance Counters habilitados',
+  'CRITICAL: Get-Counter falhava silenciosamente, sem fallback para WMI',
+  'CRITICAL: Jobs tipo report falhavam completamente em ambientes restritos',
   'InvalidVariableReferenceWithDrive: PowerShell 5.1 interpretava :$ como drive reference no payload HMAC (CRITICAL)',
   'PSSecurityException ao executar script como SYSTEM (CRITICAL)',
   'Zone.Identifier bloqueando execucao mesmo com -ExecutionPolicy Bypass',
