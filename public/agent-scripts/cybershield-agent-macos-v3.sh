@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # CyberShield Agent - macOS
-# Version: v3.0.0 (HMAC HEX, Jobs + Reports, Post-Installation)
+# Version: v3.6.0-METRICS-FIX (Auto-metrics + Report Jobs + Timestamps + Disk Usage + RAM FIX)
 
 set -euo pipefail
 
 ########################################
-# PARÂMETROS
+# PARAMETROS
 ########################################
 
 # Prioridade: argumentos > env vars curtas > env vars prefixadas CYBERSHIELD_*
@@ -13,7 +13,7 @@ SERVER_URL="${SERVER_URL:-${CYBERSHIELD_SERVER_URL:-}}"
 AGENT_TOKEN="${AGENT_TOKEN:-${CYBERSHIELD_AGENT_TOKEN:-}}"
 HMAC_SECRET="${HMAC_SECRET:-${CYBERSHIELD_HMAC_SECRET:-}}"
 AGENT_NAME="${AGENT_NAME:-${CYBERSHIELD_AGENT_NAME:-$(hostname -s)}}"
-AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-3.0.0}}"
+AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-3.6.0}}"
 
 # Parse argumentos (sobrescreve env vars)
 while [[ $# -gt 0 ]]; do
@@ -29,15 +29,15 @@ while [[ $# -gt 0 ]]; do
     --agent-version)
       AGENT_VERSION="$2"; shift 2;;
     *)
-      echo "❌ Parâmetro desconhecido: $1" >&2
+      echo "Parametro desconhecido: $1" >&2
       echo "Uso: $0 --server-url URL --agent-token TOKEN --hmac-secret SECRET [--agent-name NAME] [--agent-version VERSION]"
       exit 1;;
   esac
 done
 
-# Validação com mensagens claras
+# Validacao com mensagens claras
 if [[ -z "$SERVER_URL" ]]; then
-  echo "❌ SERVER_URL não definido" >&2
+  echo "SERVER_URL nao definido" >&2
   echo "Use: --server-url URL" >&2
   echo "  ou: SERVER_URL=... (env var)" >&2
   echo "  ou: CYBERSHIELD_SERVER_URL=... (env var prefixada)" >&2
@@ -45,13 +45,13 @@ if [[ -z "$SERVER_URL" ]]; then
 fi
 
 if [[ -z "$AGENT_TOKEN" ]]; then
-  echo "❌ AGENT_TOKEN não definido" >&2
+  echo "AGENT_TOKEN nao definido" >&2
   echo "Use: --agent-token TOKEN ou AGENT_TOKEN=... ou CYBERSHIELD_AGENT_TOKEN=..." >&2
   exit 1
 fi
 
 if [[ -z "$HMAC_SECRET" ]]; then
-  echo "❌ HMAC_SECRET não definido" >&2
+  echo "HMAC_SECRET nao definido" >&2
   echo "Use: --hmac-secret SECRET ou HMAC_SECRET=... ou CYBERSHIELD_HMAC_SECRET=..." >&2
   exit 1
 fi
@@ -83,21 +83,21 @@ log() {
 
 validate_hmac_secret() {
   if [[ ! "$HMAC_SECRET" =~ ^[0-9a-fA-F]{64}$ ]]; then
-    log "ERROR" "HMAC_SECRET inválido. Esperado 64 caracteres hexadecimais, recebido length=${#HMAC_SECRET}"
+    log "ERROR" "HMAC_SECRET invalido. Esperado 64 caracteres hexadecimais, recebido length=${#HMAC_SECRET}"
     exit 1
   fi
 }
 
 hmac_sign() {
   local message="$1"
-  # macOS também usa openssl com hexkey
+  # macOS tambem usa openssl com hexkey
   printf '%s' "$message" \
     | openssl dgst -sha256 -mac HMAC -macopt "hexkey:$HMAC_SECRET" \
     | awk '{print $2}'
 }
 
 ########################################
-# REQUISIÇÃO SEGURA
+# REQUISICAO SEGURA
 ########################################
 
 SECURE_RESP_STATUS=""
@@ -116,7 +116,7 @@ secure_request() {
 
   while true; do
     local timestamp nonce payload signature http_code raw
-    # macOS date não tem %3N → usar segundos * 1000
+    # macOS date nao tem %3N -> usar segundos * 1000
     timestamp=$(( $(date +%s) * 1000 ))
 
     if command -v uuidgen >/dev/null 2>&1; then
@@ -151,7 +151,7 @@ secure_request() {
     log "DEBUG" "Response $http_code from $url"
 
     if [[ "$http_code" == "401" ]]; then
-      log "ERROR" "Erro de autenticação (401). Verifique AgentToken / HmacSecret / clock."
+      log "ERROR" "Erro de autenticacao (401). Verifique AgentToken / HmacSecret / clock."
       return 1
     fi
 
@@ -161,7 +161,7 @@ secure_request() {
 
     retry_count=$((retry_count+1))
     if (( retry_count >= max_retries )); then
-      log "ERROR" "Falha definitiva após $max_retries tentativas em $url (status=$http_code)"
+      log "ERROR" "Falha definitiva apos $max_retries tentativas em $url (status=$http_code)"
       return 1
     fi
 
@@ -206,23 +206,78 @@ system_info_json() {
 }
 
 system_metrics_json() {
-  local cpu_load ram_used
+  local cpu_load ram_used disk_used
 
-  # CPU load médio (1 minuto) - usar "uptime"
+  # CPU load medio (1 minuto) - usar "uptime"
   cpu_load="$(uptime | awk -F'load averages:' '{print $2}' 2>/dev/null | awk '{print $1}' | tr -d ',')"
   cpu_load="${cpu_load:-0}"
 
-  # RAM usada (%)
-  # macOS não tem free, usar memory_pressure é mais complexo; deixar 0 ou implementar depois
-  ram_used="0"
+  # RAM usada (%) - CORRIGIDO v3.6.0 - BUG CRITICO
+  # macOS: usar vm_stat para calcular uso real
+  ram_used="$(vm_stat | awk '
+    /Pages active/ {gsub(/\./, "", $3); active=$3}
+    /Pages wired down/ {gsub(/\./, "", $4); wired=$4}
+    /Pages free/ {gsub(/\./, "", $3); free=$3}
+    /Pages speculative/ {gsub(/\./, "", $3); spec=$3}
+    END {
+      page_size = 4096
+      total_pages = active + wired + free + spec
+      used_pages = active + wired
+      if (total_pages > 0) {
+        printf "%.2f", (used_pages / total_pages) * 100
+      } else {
+        print "0"
+      }
+    }')"
+  ram_used="${ram_used:-0}"
+
+  # DISCO (%) - NOVO v3.6.0
+  disk_used="$(df / | awk 'NR==2 {print $5}' | sed 's/%//')"
+  disk_used="${disk_used:-0}"
 
   jq -n \
     --arg cpu_load "$cpu_load" \
     --arg ram_used "$ram_used" \
+    --arg disk_used "$disk_used" \
     '{
       cpu_load_percent: ($cpu_load|tonumber),
-      ram_used_percent: ($ram_used|tonumber)
+      ram_used_percent: ($ram_used|tonumber),
+      disk_used_percent: ($disk_used|tonumber)
     }'
+}
+
+########################################
+# SEND SYSTEM METRICS (NOVO v3.6.0)
+########################################
+
+send_system_metrics() {
+  local cpu_usage_percent="$1"
+  local memory_usage_percent="$2"
+  local disk_usage_percent="$3"
+  local hostname="$4"
+  
+  local body
+  body="$(jq -n \
+    --arg cpu "$cpu_usage_percent" \
+    --arg mem "$memory_usage_percent" \
+    --arg disk "$disk_usage_percent" \
+    --arg host "$hostname" \
+    '{
+      cpu_usage_percent: ($cpu|tonumber),
+      memory_usage_percent: ($mem|tonumber),
+      disk_usage_percent: ($disk|tonumber),
+      hostname: $host
+    }'
+  )"
+  
+  log "INFO" "Enviando metricas de sistema..."
+  if secure_request "/functions/v1/submit-system-metrics" "POST" "$body" 15 3; then
+    log "SUCCESS" "Metricas enviadas com sucesso"
+    return 0
+  else
+    log "WARN" "Falha ao enviar metricas (status=$SECURE_RESP_STATUS)"
+    return 1
+  fi
 }
 
 ########################################
@@ -259,7 +314,8 @@ send_post_installation() {
             hardware_model: $sys.hardware_model,
             total_ram_gb: $sys.total_ram_gb,
             cpu_load: $metrics.cpu_load_percent,
-            ram_used: $metrics.ram_used_percent
+            ram_used: $metrics.ram_used_percent,
+            disk_used: $metrics.disk_used_percent
           }'
       )" \
       '{
@@ -321,7 +377,7 @@ send_heartbeat() {
 }
 
 ########################################
-# SUBMIT JOB RESULT
+# SUBMIT JOB RESULT (ATUALIZADO v3.6.0)
 ########################################
 
 submit_job_result() {
@@ -330,6 +386,7 @@ submit_job_result() {
   local output_json="$3"
   local error_message="${4:-""}"
   local exec_time="${5:-0}"
+  local started_at="${6:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"  # NOVO v3.6.0
 
   local body
   body="$(
@@ -338,13 +395,15 @@ submit_job_result() {
       --arg status "$status" \
       --arg error_message "$error_message" \
       --arg exec_time "$exec_time" \
+      --arg started_at "$started_at" \
       --argjson output "$output_json" \
       '{
         job_id: $job_id,
         status: $status,
         output: $output,
         error_message: $error_message,
-        execution_time_seconds: ($exec_time|tonumber)
+        execution_time_seconds: ($exec_time|tonumber),
+        started_at: $started_at
       }'
   )"
 
@@ -359,7 +418,7 @@ submit_job_result() {
 }
 
 ########################################
-# EXECUÇÃO DE JOB
+# EXECUCAO DE JOB (ATUALIZADO v3.6.0)
 ########################################
 
 execute_job() {
@@ -368,6 +427,9 @@ execute_job() {
   local payload_json="$3"
 
   log "INFO" "Executando job $job_id (type=$job_type)"
+  
+  local started_at
+  started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"  # NOVO v3.6.0
   local start_ts
   start_ts=$(date +%s)
 
@@ -410,9 +472,37 @@ execute_job() {
           }'
       )"
       ;;
+    
+    report)  # NOVO v3.6.0
+      local sys metrics cpu_percent mem_percent disk_percent hostname
+      sys="$(system_info_json)"
+      metrics="$(system_metrics_json)"
+      
+      cpu_percent="$(printf '%s\n' "$metrics" | jq -r '.cpu_load_percent')"
+      mem_percent="$(printf '%s\n' "$metrics" | jq -r '.ram_used_percent')"
+      disk_percent="$(printf '%s\n' "$metrics" | jq -r '.disk_used_percent')"
+      hostname="$(printf '%s\n' "$sys" | jq -r '.hostname')"
+      
+      output_json="$(jq -n \
+        --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+        --arg host "$hostname" \
+        --arg cpu "$cpu_percent" \
+        --arg mem "$mem_percent" \
+        --arg disk "$disk_percent" \
+        '{
+          success: true,
+          timestamp: $ts,
+          hostname: $host,
+          cpu_percent: ($cpu|tonumber),
+          memory_percent: ($mem|tonumber),
+          disk_percent: ($disk|tonumber)
+        }'
+      )"
+      ;;
+    
     *)
       status="failed"
-      error_msg="Tipo de job não suportado: $job_type"
+      error_msg="Tipo de job nao suportado: $job_type"
       output_json="$(jq -n --arg error "$error_msg" '{error: $error}')"
       ;;
   esac
@@ -422,10 +512,10 @@ execute_job() {
   exec_time=$(( end_ts - start_ts ))
 
   if [[ "$status" == "completed" ]]; then
-    submit_job_result "$job_id" "completed" "$output_json" "" "$exec_time"
+    submit_job_result "$job_id" "completed" "$output_json" "" "$exec_time" "$started_at"
   else
     log "ERROR" "$error_msg"
-    submit_job_result "$job_id" "failed" "$output_json" "$error_msg" "$exec_time"
+    submit_job_result "$job_id" "failed" "$output_json" "$error_msg" "$exec_time" "$started_at"
   fi
 }
 
@@ -461,7 +551,7 @@ poll_jobs() {
   fi
 
   if [[ "$count" -eq 0 ]]; then
-    log "INFO" "Nenhum job disponível"
+    log "INFO" "Nenhum job disponivel"
     return
   fi
 
@@ -477,7 +567,7 @@ poll_jobs() {
 }
 
 ########################################
-# LOOP PRINCIPAL
+# LOOP PRINCIPAL (ATUALIZADO v3.6.0)
 ########################################
 
 main() {
@@ -485,6 +575,7 @@ main() {
 
   local heartbeat_interval=30
   local poll_interval=30
+  local metrics_interval=300  # NOVO v3.6.0: 5 minutos
 
   log "INFO" "============================================"
   log "INFO" "Iniciando CyberShield Agent - macOS v$AGENT_VERSION"
@@ -498,13 +589,14 @@ main() {
   send_heartbeat
 
   bootstrap_elapsed=$(( $(date +%s) - bootstrap_start ))
-  log "INFO" "Bootstrap concluído em ${bootstrap_elapsed}s"
+  log "INFO" "Bootstrap concluido em ${bootstrap_elapsed}s"
 
-  log "INFO" "Entrando no loop principal (heartbeat=${heartbeat_interval}s, poll=${poll_interval}s)"
+  log "INFO" "Entrando no loop principal (heartbeat=${heartbeat_interval}s, poll=${poll_interval}s, metrics=${metrics_interval}s)"
 
-  local last_hb last_poll now
+  local last_hb last_poll last_metrics now
   last_hb=$(date +%s)
   last_poll=$(date +%s)
+  last_metrics=$(date +%s)  # NOVO v3.6.0
 
   while true; do
     now=$(date +%s)
@@ -517,6 +609,28 @@ main() {
     if (( now - last_poll >= poll_interval )); then
       poll_jobs
       last_poll=$(date +%s)
+    fi
+
+    # Enviar metricas a cada 5 minutos - NOVO v3.6.0
+    if (( now - last_metrics >= metrics_interval )); then
+      log "INFO" "Coletando metricas de sistema (5min)..."
+      local metrics_json sys_json cpu_p mem_p disk_p host
+      
+      metrics_json="$(system_metrics_json)"
+      sys_json="$(system_info_json)"
+      
+      cpu_p="$(printf '%s\n' "$metrics_json" | jq -r '.cpu_load_percent')"
+      mem_p="$(printf '%s\n' "$metrics_json" | jq -r '.ram_used_percent')"
+      disk_p="$(printf '%s\n' "$metrics_json" | jq -r '.disk_used_percent')"
+      host="$(printf '%s\n' "$sys_json" | jq -r '.hostname')"
+      
+      if send_system_metrics "$cpu_p" "$mem_p" "$disk_p" "$host"; then
+        log "SUCCESS" "Metricas enviadas: CPU=${cpu_p}%, RAM=${mem_p}%, Disco=${disk_p}%"
+      else
+        log "WARN" "Falha ao enviar metricas (nao critico)"
+      fi
+      
+      last_metrics=$(date +%s)
     fi
 
     sleep 2
