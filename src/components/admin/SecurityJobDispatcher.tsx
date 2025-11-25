@@ -57,7 +57,7 @@ export function SecurityJobDispatcher({ agents }: { agents: Agent[] }) {
           agent_id: selectedAgentId,
           agent_name: agent.agent_name,
           type: jobType,
-          status: 'pending',
+          status: 'queued',
           payload: {},
           approved: true
         });
