@@ -14,6 +14,32 @@ import { useState } from "react";
 
 export default function AgentReleases() {
   const { releases, isLoading, error, refetch, registerRelease, isRegistering } = useAgentReleases();
+  const [isProcessingUpdates, setIsProcessingUpdates] = useState(false);
+
+  const handleForceUpdateCheck = async () => {
+    try {
+      setIsProcessingUpdates(true);
+      const { data, error } = await supabase.functions.invoke('process-agent-updates');
+      
+      if (error) throw error;
+      
+      const result = data as { message: string; jobs_created: number; platforms: Record<string, number> };
+      toast.success(`Verificação concluída: ${result.jobs_created} jobs de atualização criados`, {
+        description: Object.entries(result.platforms)
+          .map(([platform, count]) => `${platform}: ${count} jobs`)
+          .join(', ')
+      });
+      
+      refetch();
+    } catch (error: any) {
+      console.error('Error forcing update check:', error);
+      toast.error('Erro ao forçar verificação de updates', {
+        description: error.message
+      });
+    } finally {
+      setIsProcessingUpdates(false);
+    }
+  };
   const [fetchingScript, setFetchingScript] = useState(false);
 
   const handleRegisterV3_10_0 = async () => {
@@ -95,9 +121,18 @@ export default function AgentReleases() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Agent Releases</h1>
-        <p className="text-muted-foreground">Gerenciar versoes de agentes e auto-update</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Agent Releases</h1>
+          <p className="text-muted-foreground">Gerenciar versoes de agentes e auto-update</p>
+        </div>
+        <Button 
+          onClick={handleForceUpdateCheck}
+          disabled={isProcessingUpdates}
+          variant="outline"
+        >
+          {isProcessingUpdates ? "Processando..." : "Forçar Verificação de Updates"}
+        </Button>
       </div>
 
       {/* Action Card */}
