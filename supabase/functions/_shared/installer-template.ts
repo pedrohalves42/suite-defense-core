@@ -64,6 +64,33 @@ function Write-InstallerLog {
     Write-Host $line
 }
 
+# ============= FUNCOES AUXILIARES HMAC =============
+function Convert-HexToBytes {
+    param([string]$HexString)
+    $HexString = $HexString -replace '\s', ''
+    if ($HexString.Length % 2 -ne 0) {
+        throw "HexString deve ter comprimento par (64 chars para SHA256)"
+    }
+    $bytes = [byte[]]::new($HexString.Length / 2)
+    for ($i = 0; $i -lt $HexString.Length; $i += 2) {
+        $bytes[$i / 2] = [Convert]::ToByte($HexString.Substring($i, 2), 16)
+    }
+    return $bytes
+}
+
+function Get-HmacSignature {
+    param(
+        [string]$Message,
+        [string]$SecretHex
+    )
+    $keyBytes = Convert-HexToBytes $SecretHex
+    $hmac = New-Object System.Security.Cryptography.HMACSHA256
+    $hmac.Key = $keyBytes
+    $messageBytes = [Text.Encoding]::UTF8.GetBytes($Message)
+    $signatureBytes = $hmac.ComputeHash($messageBytes)
+    return ([System.BitConverter]::ToString($signatureBytes) -replace '-', '').ToLower()
+}
+
 # ============= FASE 2: Logging Habilitado =============
 
 # Agora podemos logar tudo
@@ -286,6 +313,35 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 [System.IO.File]::WriteAllText($AgentScriptPath, $AgentScriptContent, $utf8NoBom)
 
 Write-InstallerLog "Script criado: $AgentScriptPath ($(([System.IO.FileInfo]$AgentScriptPath).Length) bytes)" "SUCCESS"
+
+# Telemetria: installed
+try {
+    $telemetryInstalled = @{
+        agent_name = $AgentName
+        event_type = "installed"
+        platform = "windows"
+        success = $true
+        metadata = @{
+            installer_version = "{{INSTALLER_VERSION}}"
+            script_size_bytes = ([System.IO.FileInfo]$AgentScriptPath).Length
+        }
+    } | ConvertTo-Json -Compress
+    
+    $timestamp = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
+    $nonce = [guid]::NewGuid().ToString()
+    $payload = '{0}:{1}:{2}' -f $timestamp, $nonce, $telemetryInstalled
+    $signature = Get-HmacSignature -Message $payload -SecretHex $HmacSecret
+    
+    Invoke-WebRequest -Uri "$ServerUrl/functions/v1/track-installation-event" -Method POST -Body $telemetryInstalled -Headers @{
+        "X-Agent-Token" = $AgentToken
+        "X-HMAC-Signature" = $signature
+        "X-Timestamp" = $timestamp
+        "X-Nonce" = $nonce
+        "Content-Type" = "application/json"
+    } -UseBasicParsing -TimeoutSec 10 -ErrorAction SilentlyContinue | Out-Null
+} catch {
+    Write-InstallerLog "Telemetria installed falhou (nao critico): $($_.Exception.Message)" "DEBUG"
+}
 
 # CRITICAL: Desbloquear arquivo para permitir execucao pela Scheduled Task
 Write-InstallerLog "Verificando Zone.Identifier..." "DEBUG"
@@ -526,33 +582,6 @@ if (Test-Path $agentLogPath) {
 }
 
 Write-InstallerLog "FASE 5: Agente iniciado" "SUCCESS"
-
-# ============= FUNCOES AUXILIARES HMAC =============
-function Convert-HexToBytes {
-    param([string]$HexString)
-    $HexString = $HexString -replace '\s', ''
-    if ($HexString.Length % 2 -ne 0) {
-        throw "HexString deve ter comprimento par (64 chars para SHA256)"
-    }
-    $bytes = [byte[]]::new($HexString.Length / 2)
-    for ($i = 0; $i -lt $HexString.Length; $i += 2) {
-        $bytes[$i / 2] = [Convert]::ToByte($HexString.Substring($i, 2), 16)
-    }
-    return $bytes
-}
-
-function Get-HmacSignature {
-    param(
-        [string]$Message,
-        [string]$SecretHex
-    )
-    $keyBytes = Convert-HexToBytes $SecretHex
-    $hmac = New-Object System.Security.Cryptography.HMACSHA256
-    $hmac.Key = $keyBytes
-    $messageBytes = [Text.Encoding]::UTF8.GetBytes($Message)
-    $signatureBytes = $hmac.ComputeHash($messageBytes)
-    return ([System.BitConverter]::ToString($signatureBytes) -replace '-', '').ToLower()
-}
 
 # ============= FASE 6: Telemetria com HMAC =============
 Write-InstallerLog "FASE 6: Enviando telemetria de instalacao..." "INFO"
