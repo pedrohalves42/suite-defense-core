@@ -7,10 +7,13 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.9.0-AUTO-UPDATE';
-export const LAST_UPDATED = '2025-01-24T21:00:00Z'; // Auto-update check every 24h + release management
+export const INSTALLER_VERSION = 'v3.9.1-JOB-TYPE-FIX';
+export const LAST_UPDATED = '2025-11-25T02:00:00Z'; // Critical fix: PSCustomObject->Hashtable type conversion error
 
 export const CHANGES = [
+  '[v3.9.1-JOB-TYPE-FIX] CRITICAL FIX: Submit-JobResult agora aceita [object] ao inves de [hashtable]',
+  '[v3.9.1-JOB-TYPE-FIX] CRITICAL FIX: Jobs report agora completam corretamente (nao mais crash PSCustomObject)',
+  '[v3.9.1-JOB-TYPE-FIX] FIX: Tipo do parametro $Output mudado para [object] para aceitar PSCustomObject',
   '[v3.9.0-AUTO-UPDATE] FEATURE: Agente verifica updates automaticamente a cada 24h via check-agent-updates',
   '[v3.9.0-AUTO-UPDATE] FEATURE: Auto-aplica updates quando nova versao disponivel (sem reinstalacao)',
   '[v3.9.0-AUTO-UPDATE] FEATURE: Edge Function register-agent-release para registrar novas versoes',
@@ -72,6 +75,8 @@ export const CHANGES = [
 ];
 
 export const KNOWN_ISSUES_FIXED = [
+  'CRITICAL: Jobs nao completavam devido a erro "Nao e possivel converter PSCustomObject para Hashtable" (v3.9.1)',
+  'CRITICAL: Submit-JobResult esperava [hashtable] mas recebia PSCustomObject de ConvertFrom-Json',
   'CRITICAL: Cleanup jobs nao deletava nada (older_than_days: 7 bloqueava jobs recentes)',
   'CRITICAL: Metricas N/A em VMs sem Performance Counters habilitados',
   'CRITICAL: Get-Counter falhava silenciosamente, sem fallback para WMI',

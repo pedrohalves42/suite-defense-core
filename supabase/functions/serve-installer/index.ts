@@ -278,8 +278,8 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
       });
     }
     
-    // CRITICAL: Validate embedded script is v3.9.0-AUTO-UPDATE
-    const expectedVersion = 'v3.9.0-AUTO-UPDATE';
+    // CRITICAL: Validate embedded script version
+    const expectedVersion = 'v3.9.1-JOB-TYPE-FIX';
     if (!agentScriptContent.includes(expectedVersion)) {
       console.error(`[${requestId}] CRITICAL: Agent script version mismatch`, {
         expected: expectedVersion,
