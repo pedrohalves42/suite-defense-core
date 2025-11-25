@@ -23,11 +23,13 @@ export default function AgentReleases() {
       
       if (error) throw error;
       
-      const result = data as { message: string; jobs_created: number; platforms: Record<string, number> };
-      toast.success(`Verificação concluída: ${result.jobs_created} jobs de atualização criados`, {
-        description: Object.entries(result.platforms)
-          .map(([platform, count]) => `${platform}: ${count} jobs`)
-          .join(', ')
+      const result = data as { 
+        success: boolean; 
+        total_jobs_created: number; 
+        platforms: Array<{platform: string; outdated_count: number; jobs_created: number}>
+      };
+      toast.success(`Verificação concluída: ${result.total_jobs_created || 0} jobs de atualização criados`, {
+        description: result.platforms?.map(p => `${p.platform}: ${p.jobs_created} jobs`).join(', ') || 'Nenhuma plataforma processada'
       });
       
       refetch();
@@ -43,7 +45,7 @@ export default function AgentReleases() {
   const [fetchingScript, setFetchingScript] = useState(false);
 
   const handleRegisterCurrentVersion = async () => {
-    if (!confirm('Registrar v3.10.2-TLS-FIX com script completo?\n\nIsso ira buscar o script atual e registrar no agent_releases.')) {
+    if (!confirm('Registrar v3.10.3-TLS-COMPLETE com script completo?\n\nIsso ira buscar o script atual e registrar no agent_releases.')) {
       return;
     }
 
