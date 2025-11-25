@@ -266,3 +266,11 @@ schedule = "0 * * * *"  # Executa a cada hora
 [functions.monitor-stuck-agents]
 verify_jwt = false
 schedule = "*/10 * * * *"  # Executa a cada 10 minutos
+
+# === FASE 3+4: Agent Release Management ===
+[functions.register-agent-release]
+verify_jwt = true
+
+[functions.process-agent-updates]
+verify_jwt = false
+schedule = "0 */6 * * *"  # Executa a cada 6 horas
