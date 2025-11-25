@@ -42,8 +42,8 @@ export default function AgentReleases() {
   };
   const [fetchingScript, setFetchingScript] = useState(false);
 
-  const handleRegisterV3_10_0 = async () => {
-    if (!confirm('Registrar v3.10.0-SECURITY-FEATURES com script completo?\n\nIsso ira buscar o script atual e registrar no agent_releases.')) {
+  const handleRegisterCurrentVersion = async () => {
+    if (!confirm('Registrar v3.10.2-TLS-FIX com script completo?\n\nIsso ira buscar o script atual e registrar no agent_releases.')) {
       return;
     }
 
@@ -70,15 +70,15 @@ export default function AgentReleases() {
 
       // Register the release
       registerRelease({
-        version: 'v3.10.0-SECURITY-FEATURES',
+        version: 'v3.10.2-TLS-FIX',
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: '10 security features: Software Inventory, URL Analysis, Vulnerability Scanning, Security Policies, Scheduled Jobs, Agent Groups, Antivirus Integration, Anomaly Detection, Auto-remediation, Agent Timeline + Web Activity tracking',
+        release_notes: 'CRITICAL FIX: TLS 1.2 enforcement + automatic proxy configuration for corporate environments (pfSense/firewalls). Resolves SSL/TLS channel errors and enables heartbeat through Cloudflare/Supabase endpoints.',
         channel: 'stable'
       });
 
     } catch (error: any) {
-      console.error('Error registering v3.10.0:', error);
+      console.error('Error registering v3.10.2-TLS-FIX:', error);
       toast.error(`Erro ao registrar release: ${error.message || 'Unknown error'}`);
     } finally {
       setFetchingScript(false);
@@ -114,9 +114,9 @@ export default function AgentReleases() {
     );
   }
 
-  const v3_10_0 = releases.find(r => r.version === 'v3.10.0-SECURITY-FEATURES' && r.platform === 'windows');
-  const scriptSizeKB = v3_10_0 ? Math.round(v3_10_0.script_content.length / 1024) : 0;
-  const needsRegistration = !v3_10_0 || scriptSizeKB < 50;
+  const currentVersion = releases.find(r => r.version === 'v3.10.2-TLS-FIX' && r.platform === 'windows');
+  const scriptSizeKB = currentVersion ? Math.round(currentVersion.script_content.length / 1024) : 0;
+  const needsRegistration = !currentVersion || scriptSizeKB < 50;
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -144,23 +144,23 @@ export default function AgentReleases() {
               Acao Necessaria
             </CardTitle>
             <CardDescription>
-              v3.10.0-SECURITY-FEATURES precisa ser registrado com script completo
+              v3.10.2-TLS-FIX precisa ser registrado com script completo
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                {v3_10_0 
+                {currentVersion 
                   ? `Script atual: ${scriptSizeKB}KB (placeholder). Necessario: >50KB`
                   : 'Release nao encontrada no banco de dados'}
               </p>
               <Button
-                onClick={handleRegisterV3_10_0}
+                onClick={handleRegisterCurrentVersion}
                 disabled={fetchingScript || isRegistering}
                 className="gap-2"
               >
                 <Package className="h-4 w-4" />
-                {fetchingScript ? 'Buscando Script...' : isRegistering ? 'Registrando...' : 'Registrar v3.10.0-SECURITY-FEATURES'}
+                {fetchingScript ? 'Buscando Script...' : isRegistering ? 'Registrando...' : 'Registrar v3.10.2-TLS-FIX'}
               </Button>
             </div>
           </CardContent>
