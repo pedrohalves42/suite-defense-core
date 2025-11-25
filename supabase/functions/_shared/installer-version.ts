@@ -7,10 +7,13 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.3-TLS-COMPLETE';
-export const LAST_UPDATED = '2025-11-25T06:00:00Z'; // TLS 1.2 completo: comando irm + installer template + agent script
+export const INSTALLER_VERSION = 'v3.10.4-UTF8-FIX';
+export const LAST_UPDATED = '2025-11-25T18:50:00Z'; // UTF-8 encoding forcado em Invoke-SecureRequest para consistencia HMAC
 
 export const CHANGES = [
+  '[v3.10.4-UTF8-FIX] CRITICAL FIX: Forcado UTF-8 encoding em Invoke-SecureRequest para consistencia HMAC',
+  '[v3.10.4-UTF8-FIX] CRITICAL FIX: Body JSON convertido para UTF-8 bytes antes de enviar (resolve erro 401 em submit-job-result)',
+  '[v3.10.4-UTF8-FIX] CRITICAL FIX: HMAC agora calcula assinatura identica no agente PowerShell e backend Deno',
   '[v3.10.3-TLS-COMPLETE] CRITICAL FIX: TLS 1.2 no comando irm (resolve erro de download em Windows Server)',
   '[v3.10.3-TLS-COMPLETE] CRITICAL FIX: TLS 1.2 no installer template (resolve health check)',
   '[v3.10.3-TLS-COMPLETE] MELHORIA: TLS 1.2 em 3 camadas (download + installer + agent) para compatibilidade total',
