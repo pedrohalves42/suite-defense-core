@@ -7,10 +7,13 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.4-UTF8-FIX';
-export const LAST_UPDATED = '2025-11-25T18:50:00Z'; // UTF-8 encoding forcado em Invoke-SecureRequest para consistencia HMAC
+export const INSTALLER_VERSION = 'v3.10.5-UPDATE-FIX';
+export const LAST_UPDATED = '2025-11-25T19:30:00Z'; // Handler update_agent corrigido para usar $output ao inves de $result nao declarado
 
 export const CHANGES = [
+  '[v3.10.5-UPDATE-FIX] CRITICAL FIX: Handler update_agent agora usa $output ao inves de variavel $result nao declarada',
+  '[v3.10.5-UPDATE-FIX] CRITICAL FIX: Corrige erro "Exception setting property error" que impedia auto-update',
+  '[v3.10.5-UPDATE-FIX] CRITICAL FIX: update_agent jobs agora completam corretamente permitindo auto-update funcionar',
   '[v3.10.4-UTF8-FIX] CRITICAL FIX: Forcado UTF-8 encoding em Invoke-SecureRequest para consistencia HMAC',
   '[v3.10.4-UTF8-FIX] CRITICAL FIX: Body JSON convertido para UTF-8 bytes antes de enviar (resolve erro 401 em submit-job-result)',
   '[v3.10.4-UTF8-FIX] CRITICAL FIX: HMAC agora calcula assinatura identica no agente PowerShell e backend Deno',

@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.4-UTF8-FIX';
+const CURRENT_VERSION = 'v3.10.5-UPDATE-FIX';
 
 export default function AgentReleases() {
   const { releases, isLoading, error, refetch, registerRelease, isRegistering } = useAgentReleases();
@@ -88,7 +88,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'Critical fix: Forced UTF-8 encoding in Invoke-SecureRequest for HMAC consistency. Resolves 401 errors in submit-job-result for security jobs (software inventory, vulnerabilities, antivirus status, web activity).',
+        release_notes: 'Critical fix: update_agent handler now uses $output instead of undeclared $result variable. Resolves "Exception setting property error" blocking auto-update. Also includes UTF-8 encoding fix for HMAC consistency.',
         channel: 'stable'
       });
 
