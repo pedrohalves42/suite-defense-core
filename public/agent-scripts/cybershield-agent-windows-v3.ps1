@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.7.0-METRICS-WMI-FALLBACK
+    CyberShield Agent - Windows v3.9.0-AUTO-UPDATE
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -32,7 +32,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.7.0"
+    [string]$AgentVersion = "3.9.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -855,6 +855,7 @@ try {
     $lastHeartbeat = Get-Date
     $lastPoll      = Get-Date
     $lastMetrics   = Get-Date  # FASE 2: Controle de métricas
+    $lastUpdateCheck = Get-Date  # FASE 2 AUTO-UPDATE: Controle de verificação de updates
 
     while ($true) {
         $now = Get-Date
@@ -864,6 +865,51 @@ try {
             if ((($now - $lastHeartbeat).TotalSeconds) -ge $Global:PollIntervalSeconds) {
                 Send-Heartbeat
                 $lastHeartbeat = Get-Date
+            }
+
+            # FASE 2 AUTO-UPDATE: Verificar updates a cada 24 horas
+            try {
+                if ((($now - $lastUpdateCheck).TotalHours) -ge 24) {
+                    Write-Log "[UPDATE] Verificando atualizacoes disponiveis..." "INFO"
+                    
+                    $updateResult = Invoke-SecureRequest `
+                        -Path "/functions/v1/check-agent-updates" `
+                        -Method "GET" `
+                        -TimeoutSec 30
+                    
+                    if ($updateResult.Success -and $updateResult.StatusCode -eq 200) {
+                        try {
+                            $updateInfo = $updateResult.Body | ConvertFrom-Json
+                            
+                            if ($updateInfo.has_update -and $updateInfo.version -ne $Global:AgentVersion) {
+                                Write-Log "[UPDATE] Nova versao disponivel: $($updateInfo.version) (atual: $Global:AgentVersion)" "INFO"
+                                Write-Log "[UPDATE] Aplicando atualizacao automaticamente..." "INFO"
+                                
+                                # Auto-trigger update_agent job
+                                $updateJob = @{ 
+                                    id = "auto-update-$(Get-Date -Format 'yyyyMMddHHmmss')"
+                                    type = "update_agent"
+                                }
+                                Execute-Job -Job $updateJob
+                                
+                                Write-Log "[SUCCESS] Atualizacao concluida. Agente sera reiniciado." "SUCCESS"
+                                # Agente será reiniciado pela scheduled task
+                                exit 0
+                            } else {
+                                Write-Log "[UPDATE] Agente ja esta atualizado (versao $Global:AgentVersion)" "INFO"
+                            }
+                        } catch {
+                            Write-Log "[WARN] Falha ao processar resposta de update: $($_.Exception.Message)" "WARN"
+                        }
+                    } else {
+                        Write-Log "[WARN] Verificacao de update retornou status $($updateResult.StatusCode)" "WARN"
+                    }
+                    
+                    $lastUpdateCheck = Get-Date
+                }
+            } catch {
+                Write-Log "[WARN] Erro ao verificar updates (nao critico): $($_.Exception.Message)" "WARN"
+                $lastUpdateCheck = Get-Date  # Reset para evitar loop infinito
             }
 
             # FASE 2: Enviar métricas a cada 5 minutos
