@@ -7,10 +7,14 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.1-AGGRESSIVE-CLEANUP';
-export const LAST_UPDATED = '2025-11-25T04:00:00Z'; // Aggressive cleanup: PowerShell process termination + log file retry
+export const INSTALLER_VERSION = 'v3.10.2-TLS-FIX';
+export const LAST_UPDATED = '2025-11-25T05:00:00Z'; // TLS 1.2 + Proxy configuration for corporate environments
 
 export const CHANGES = [
+  '[v3.10.2-TLS-FIX] CRITICAL FIX: Forcando TLS 1.2 no agente para compatibilidade com firewalls corporativos (pfSense)',
+  '[v3.10.2-TLS-FIX] CRITICAL FIX: Configuracao automatica de proxy do sistema para ambientes corporativos',
+  '[v3.10.2-TLS-FIX] FIX: Resolve erro "Nao foi possivel criar um canal seguro para SSL/TLS" em Windows Server',
+  '[v3.10.2-TLS-FIX] MELHORIA: Heartbeat agora funciona atraves de firewalls Cloudflare/Supabase',
   '[v3.10.1-AGGRESSIVE-CLEANUP] FIX: Encerra processos PowerShell do agente antes da reinstalacao',
   '[v3.10.1-AGGRESSIVE-CLEANUP] FIX: Remove log antigo do agente preventivamente',
   '[v3.10.1-AGGRESSIVE-CLEANUP] FIX: Teste de escrita no log com retry (3 tentativas com 2s de intervalo)',
