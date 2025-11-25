@@ -162,15 +162,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log('[submit-job-result] Processing:', {
+    console.log('[submit-job-result] Processing job result:', {
       job_id,
       agent: agent.agent_name,
       status,
       has_output: !!output,
+      output_type: output ? typeof output : 'null',
       has_error: !!error_message,
       execution_time: execution_time_seconds,
       has_started_at: !!started_at,
-      has_finished_at: !!finished_at
+      has_finished_at: !!finished_at,
+      started_at_value: started_at,
+      finished_at_value: finished_at
     })
 
     // Buscar o job
@@ -289,23 +292,38 @@ Deno.serve(async (req) => {
       updateData.execution_time_seconds = execution_time_seconds
     }
 
-    const { error: updateError } = await supabase
+    console.log('[submit-job-result] Updating job with data:', {
+      job_id,
+      updateData: JSON.stringify(updateData, null, 2),
+      updateFields: Object.keys(updateData)
+    })
+
+    const { data: updateResult, error: updateError } = await supabase
       .from('jobs')
       .update(updateData)
       .eq('id', job_id)
+      .select()
 
     if (updateError) {
-      console.error('[submit-job-result] Error updating job:', updateError)
+      console.error('[submit-job-result] Database update failed:', {
+        job_id,
+        error: updateError.message,
+        error_code: updateError.code,
+        error_details: updateError.details,
+        error_hint: updateError.hint
+      })
       return new Response(
         JSON.stringify({ error: 'Erro ao atualizar job', details: updateError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log('[submit-job-result] Job completed successfully:', {
+    console.log('[submit-job-result] Job updated successfully:', {
       job_id,
       agent: agent.agent_name,
-      final_status: status
+      final_status: status,
+      updated_record: updateResult ? JSON.stringify(updateResult[0]) : 'null',
+      rows_affected: updateResult?.length || 0
     })
 
     return new Response(
