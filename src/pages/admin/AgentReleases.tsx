@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.3-TLS-COMPLETE';
+const CURRENT_VERSION = 'v3.10.4-UTF8-FIX';
 
 export default function AgentReleases() {
   const { releases, isLoading, error, refetch, registerRelease, isRegistering } = useAgentReleases();
@@ -88,7 +88,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'Critical fix: TLS 1.2 enforcement in installation command, installer template, and agent script. Automatic system proxy configuration. Resolves SSL/TLS errors in corporate firewall environments (pfSense).',
+        release_notes: 'Critical fix: Forced UTF-8 encoding in Invoke-SecureRequest for HMAC consistency. Resolves 401 errors in submit-job-result for security jobs (software inventory, vulnerabilities, antivirus status, web activity).',
         channel: 'stable'
       });
 
