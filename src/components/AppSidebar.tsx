@@ -69,6 +69,7 @@ export const AppSidebar = () => {
   const superAdminItems = useMemo(() => [
     { icon: Home, label: 'Meu Tenant (Admin)', to: '/admin/dashboard', end: false },
     { icon: Package, label: 'Gerenciar Tenants', to: '/super-admin/tenants', end: true },
+    { icon: Package, label: 'Agent Releases', to: '/admin/agent-releases', end: false },
     { icon: BarChart3, label: 'Metricas Globais', to: '/super-admin/metrics' },
     { icon: BarChart3, label: 'Analytics Subs', to: '/super-admin/subscription-analytics' },
     { icon: CreditCard, label: 'Config Stripe', to: '/super-admin/stripe-setup' },
