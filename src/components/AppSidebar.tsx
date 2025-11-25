@@ -33,36 +33,36 @@ export const AppSidebar = () => {
   ], []);
 
   const adminItems = useMemo(() => [
-    // Overview
-    { icon: Home, label: 'Dashboard', to: '/admin/dashboard', end: true },
+    // === OVERVIEW ===
+    { icon: Home, label: 'Dashboard', to: '/admin/dashboard', end: true, section: 'overview' },
     
-    // Agent Monitoring & Health
-    { icon: Activity, label: 'Monitoramento RT', to: '/admin/monitoring-advanced' },
-    { icon: Activity, label: 'Saude Agentes', to: '/admin/agent-health' },
-    { icon: Activity, label: 'Diagnostico Agentes', to: '/admin/agent-diagnostics' },
-    { icon: Terminal, label: 'Troubleshooting', to: '/admin/agent-troubleshooting' },
-    { icon: AlertTriangle, label: 'Agentes Problematicos', to: '/admin/problematic-agents' },
+    // === MONITORAMENTO ===
+    { icon: Activity, label: 'Monitoramento RT', to: '/admin/monitoring-advanced', section: 'monitoring' },
+    { icon: Activity, label: 'Saude Agentes', to: '/admin/agent-health', section: 'monitoring' },
+    { icon: Activity, label: 'Diagnostico', to: '/admin/agent-diagnostics', section: 'monitoring' },
+    { icon: Terminal, label: 'Troubleshooting', to: '/admin/agent-troubleshooting', section: 'monitoring' },
+    { icon: AlertTriangle, label: 'Problematicos', to: '/admin/problematic-agents', section: 'monitoring' },
     
-    // Infrastructure
-    { icon: Package, label: 'Instalacoes', to: '/admin/installations' },
+    // === SEGURANÇA ===
+    { icon: Package, label: 'Inventario Software', to: '/admin/software-inventory', section: 'security' },
+    { icon: AlertTriangle, label: 'Vulnerabilidades', to: '/admin/vulnerabilities', section: 'security' },
+    { icon: Globe, label: 'Atividade Web', to: '/admin/web-activity', section: 'security' },
+    { icon: Clock, label: 'Timeline Agente', to: '/admin/agent-timeline', section: 'security' },
     
-    // AI Features
-    { icon: Brain, label: 'IA Insights', to: '/admin/ai-insights' },
-    { icon: CheckCircle, label: 'IA Acoes', to: '/admin/ai-actions' },
+    // === INFRAESTRUTURA ===
+    { icon: Package, label: 'Instalacoes', to: '/admin/installations', section: 'infrastructure' },
     
-    // Team Management
-    { icon: Users, label: 'Membros', to: '/admin/members' },
-    { icon: Settings, label: 'Tenant', to: '/admin/tenant' },
+    // === INTELIGÊNCIA ARTIFICIAL ===
+    { icon: Brain, label: 'IA Insights', to: '/admin/ai-insights', section: 'ai' },
+    { icon: CheckCircle, label: 'IA Acoes', to: '/admin/ai-actions', section: 'ai' },
     
-    // Billing
-    { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
-    { icon: Activity, label: 'Assinaturas', to: '/admin/subscriptions' },
+    // === GESTÃO ===
+    { icon: Users, label: 'Membros', to: '/admin/members', section: 'management' },
+    { icon: Settings, label: 'Tenant', to: '/admin/tenant', section: 'management' },
     
-    // Security Features
-    { icon: Package, label: 'Inventario Software', to: '/admin/software-inventory' },
-    { icon: AlertTriangle, label: 'Vulnerabilidades', to: '/admin/vulnerabilities' },
-    { icon: Globe, label: 'Atividade Web', to: '/admin/web-activity' },
-    { icon: Clock, label: 'Timeline Agente', to: '/admin/agent-timeline' },
+    // === FINANCEIRO ===
+    { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade', section: 'billing' },
+    { icon: Activity, label: 'Assinaturas', to: '/admin/subscriptions', section: 'billing' },
   ], []);
 
   const superAdminItems = useMemo(() => [
@@ -200,12 +200,8 @@ export const AppSidebar = () => {
               <div className="h-px bg-border" />
             </div>
             <div className="space-y-1 px-2">
-              {!collapsed && (
-                <p className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase">
-                  Administracao
-                </p>
-              )}
-              {adminItems.map((item, idx) => {
+              {/* Overview Section */}
+              {adminItems.filter(item => item.section === 'overview').map((item, idx) => {
                 const Icon = item.icon;
                 return (
                   <motion.div
@@ -217,6 +213,150 @@ export const AppSidebar = () => {
                     <NavLink
                       to={item.to}
                       end={item.end}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md"
+                      activeClassName="bg-gradient-to-r from-accent to-accent/70 text-accent-foreground font-medium shadow-lg border-l-2 border-primary"
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      {!collapsed && <span className="text-sm">{item.label}</span>}
+                    </NavLink>
+                  </motion.div>
+                );
+              })}
+              
+              {/* Monitoring Section */}
+              {!collapsed && <div className="h-px bg-border my-3" />}
+              {!collapsed && <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">Monitoramento</p>}
+              {adminItems.filter(item => item.section === 'monitoring').map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.to}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  >
+                    <NavLink
+                      to={item.to}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md"
+                      activeClassName="bg-gradient-to-r from-accent to-accent/70 text-accent-foreground font-medium shadow-lg border-l-2 border-primary"
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      {!collapsed && <span className="text-sm">{item.label}</span>}
+                    </NavLink>
+                  </motion.div>
+                );
+              })}
+              
+              {/* Security Section */}
+              {!collapsed && <div className="h-px bg-border my-3" />}
+              {!collapsed && <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">Seguranca</p>}
+              {adminItems.filter(item => item.section === 'security').map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.to}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  >
+                    <NavLink
+                      to={item.to}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md"
+                      activeClassName="bg-gradient-to-r from-accent to-accent/70 text-accent-foreground font-medium shadow-lg border-l-2 border-primary"
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      {!collapsed && <span className="text-sm">{item.label}</span>}
+                    </NavLink>
+                  </motion.div>
+                );
+              })}
+              
+              {/* Infrastructure Section */}
+              {!collapsed && <div className="h-px bg-border my-3" />}
+              {!collapsed && <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">Infraestrutura</p>}
+              {adminItems.filter(item => item.section === 'infrastructure').map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.to}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  >
+                    <NavLink
+                      to={item.to}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md"
+                      activeClassName="bg-gradient-to-r from-accent to-accent/70 text-accent-foreground font-medium shadow-lg border-l-2 border-primary"
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      {!collapsed && <span className="text-sm">{item.label}</span>}
+                    </NavLink>
+                  </motion.div>
+                );
+              })}
+              
+              {/* AI Section */}
+              {!collapsed && <div className="h-px bg-border my-3" />}
+              {!collapsed && <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">IA</p>}
+              {adminItems.filter(item => item.section === 'ai').map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.to}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  >
+                    <NavLink
+                      to={item.to}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md"
+                      activeClassName="bg-gradient-to-r from-accent to-accent/70 text-accent-foreground font-medium shadow-lg border-l-2 border-primary"
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      {!collapsed && <span className="text-sm">{item.label}</span>}
+                    </NavLink>
+                  </motion.div>
+                );
+              })}
+              
+              {/* Management Section */}
+              {!collapsed && <div className="h-px bg-border my-3" />}
+              {!collapsed && <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">Gestao</p>}
+              {adminItems.filter(item => item.section === 'management').map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.to}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  >
+                    <NavLink
+                      to={item.to}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md"
+                      activeClassName="bg-gradient-to-r from-accent to-accent/70 text-accent-foreground font-medium shadow-lg border-l-2 border-primary"
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      {!collapsed && <span className="text-sm">{item.label}</span>}
+                    </NavLink>
+                  </motion.div>
+                );
+              })}
+              
+              {/* Billing Section */}
+              {!collapsed && <div className="h-px bg-border my-3" />}
+              {!collapsed && <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">Financeiro</p>}
+              {adminItems.filter(item => item.section === 'billing').map((item, idx) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.to}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                  >
+                    <NavLink
+                      to={item.to}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md"
                       activeClassName="bg-gradient-to-r from-accent to-accent/70 text-accent-foreground font-medium shadow-lg border-l-2 border-primary"
                     >
