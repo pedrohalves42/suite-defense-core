@@ -7,10 +7,13 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.2-TLS-FIX';
-export const LAST_UPDATED = '2025-11-25T05:00:00Z'; // TLS 1.2 + Proxy configuration for corporate environments
+export const INSTALLER_VERSION = 'v3.10.3-TLS-COMPLETE';
+export const LAST_UPDATED = '2025-11-25T06:00:00Z'; // TLS 1.2 completo: comando irm + installer template + agent script
 
 export const CHANGES = [
+  '[v3.10.3-TLS-COMPLETE] CRITICAL FIX: TLS 1.2 no comando irm (resolve erro de download em Windows Server)',
+  '[v3.10.3-TLS-COMPLETE] CRITICAL FIX: TLS 1.2 no installer template (resolve health check)',
+  '[v3.10.3-TLS-COMPLETE] MELHORIA: TLS 1.2 em 3 camadas (download + installer + agent) para compatibilidade total',
   '[v3.10.2-TLS-FIX] CRITICAL FIX: Forcando TLS 1.2 no agente para compatibilidade com firewalls corporativos (pfSense)',
   '[v3.10.2-TLS-FIX] CRITICAL FIX: Configuracao automatica de proxy do sistema para ambientes corporativos',
   '[v3.10.2-TLS-FIX] FIX: Resolve erro "Nao foi possivel criar um canal seguro para SSL/TLS" em Windows Server',
