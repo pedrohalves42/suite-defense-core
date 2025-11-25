@@ -6,7 +6,7 @@
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.3-TLS-COMPLETE
+    CyberShield Agent - Windows v3.10.4-UTF8-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -44,7 +44,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "3.10.3"
+    [string]\$AgentVersion = "3.10.4"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -244,7 +244,9 @@ function Invoke-SecureRequest {
             }
 
             if (\$bodyJson -ne "") {
-                \$params.Body = \$bodyJson
+                # CRITICAL: Forcar UTF-8 encoding para garantir consistencia HMAC
+                \$bodyBytes = [System.Text.Encoding]::UTF8.GetBytes(\$bodyJson)
+                \$params.Body = \$bodyBytes
             }
 
             Write-Log "[NETWORK] \$Method \$uri" "INFO"
