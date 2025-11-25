@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import { getTenantIdForUser } from '../_shared/tenant.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -37,6 +38,15 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Get user's tenant_id for security validation
+    const tenantId = await getTenantIdForUser(supabase, user.id);
+    if (!tenantId) {
+      return new Response(
+        JSON.stringify({ error: 'User has no tenant assigned' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Obter agent_name do body
     const body = await req.json();
     const agentName = body.agent_name;
@@ -51,10 +61,11 @@ Deno.serve(async (req) => {
     logger.info('[diagnose-agent] Starting diagnosis', { 
       requestId, 
       agentName,
-      userId: user.id 
+      userId: user.id,
+      tenantId 
     });
 
-    // Chamar funcao de diagnostico
+    // Chamar funcao de diagnostico (agora com validacao de tenant no RPC)
     const { data: diagnosis, error: diagnosisError } = await supabase.rpc('diagnose_agent', {
       p_agent_name: agentName
     });
