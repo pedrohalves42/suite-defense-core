@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
@@ -57,6 +57,12 @@ export const AppSidebar = () => {
     // Billing
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
     { icon: Activity, label: 'Assinaturas', to: '/admin/subscriptions' },
+    
+    // Security Features
+    { icon: Package, label: 'Inventario Software', to: '/admin/software-inventory' },
+    { icon: AlertTriangle, label: 'Vulnerabilidades', to: '/admin/vulnerabilities' },
+    { icon: Globe, label: 'Atividade Web', to: '/admin/web-activity' },
+    { icon: Clock, label: 'Timeline Agente', to: '/admin/agent-timeline' },
   ], []);
 
   const superAdminItems = useMemo(() => [

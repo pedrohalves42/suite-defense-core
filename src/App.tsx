@@ -64,6 +64,10 @@ import JobsV3Migration from "./pages/admin/JobsV3Migration";
 import InstallationHealth from "./pages/admin/InstallationHealth";
 import PerformanceMetrics from "./pages/admin/PerformanceMetrics";
 import SystemHealth from "./pages/admin/SystemHealth";
+import SoftwareInventory from "./pages/admin/SoftwareInventory";
+import VulnerabilityFindings from "./pages/admin/VulnerabilityFindings";
+import WebActivity from "./pages/admin/WebActivity";
+import AgentTimeline from "./pages/admin/AgentTimeline";
 
 // CORRECAO: QueryClient ja esta inicializado no src/main.tsx
 // Remover duplicacao para manter configuracoes otimizadas
@@ -132,6 +136,10 @@ const App = () => (
                 <Route path="installation-health" element={<InstallationHealth />} />
                 <Route path="performance-metrics" element={<PerformanceMetrics />} />
                 <Route path="system-health" element={<SystemHealth />} />
+                <Route path="software-inventory" element={<SoftwareInventory />} />
+                <Route path="vulnerabilities" element={<VulnerabilityFindings />} />
+                <Route path="web-activity" element={<WebActivity />} />
+                <Route path="agent-timeline" element={<AgentTimeline />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
