@@ -51,6 +51,7 @@ export const AppSidebar = () => {
     
     // === INFRAESTRUTURA ===
     { icon: Package, label: 'Instalacoes', to: '/admin/installations', section: 'infrastructure' },
+    { icon: Package, label: 'Agent Releases', to: '/admin/agent-releases', section: 'infrastructure' },
     
     // === INTELIGÊNCIA ARTIFICIAL ===
     { icon: Brain, label: 'IA Insights', to: '/admin/ai-insights', section: 'ai' },
