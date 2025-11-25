@@ -3862,33 +3862,19 @@ export type Database = {
           uptime_seconds: number
         }[]
       }
-      get_problematic_agents:
-        | {
-            Args: never
-            Returns: {
-              agent_name: string
-              created_at: string
-              id: string
-              installation_success: boolean
-              metadata: Json
-              minutes_since_creation: number
-              network_connectivity: boolean
-              status: string
-            }[]
-          }
-        | {
-            Args: { p_tenant_id: string }
-            Returns: {
-              agent_name: string
-              created_at: string
-              id: string
-              installation_success: boolean
-              metadata: Json
-              minutes_since_creation: number
-              network_connectivity: boolean
-              status: string
-            }[]
-          }
+      get_problematic_agents: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          agent_name: string
+          created_at: string
+          id: string
+          installation_success: boolean
+          metadata: Json
+          minutes_since_creation: number
+          network_connectivity: boolean
+          status: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
