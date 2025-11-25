@@ -1146,8 +1146,7 @@ function Execute-Job {
                     # Ja esta na ultima versao?
                     if (\$data.message -eq "Already up to date") {
                         Write-Log "[INFO] Agente ja esta na ultima versao (\$(\$data.current_version))" "INFO"
-                        \$result.success = \$true
-                        \$result.output  = (\$data | ConvertTo-Json -Depth 5)
+                        \$output = \$data
                         break
                     }
 
@@ -1195,17 +1194,10 @@ function Execute-Job {
                         sha256      = \$actualHash
                         restartedAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
-
-                    \$result.success = \$true
-                    \$result.output  = \$output | ConvertTo-Json -Depth 5
                     break
                 }
                 catch {
-                    \$err = \$_.Exception.Message
-                    Write-Log "[ERROR] Erro no auto-update: \$err" "ERROR"
-                    \$result.success = \$false
-                    \$result.error   = \$err
-                    break
+                    throw \$_.Exception.Message
                 }
             }
             "software_inventory_collect" {
