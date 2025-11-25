@@ -44,10 +44,12 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get client IP for rate limiting
+    // Get client IP and user agent for audit
     const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0] || 
                      req.headers.get('x-real-ip') || 
                      'unknown';
+    
+    const userAgent = req.headers.get('user-agent') || 'unknown';
 
     console.log(`[${requestId}] Contact form submission from IP: ${clientIp}`);
 
@@ -97,7 +99,7 @@ Deno.serve(async (req) => {
 
     const data = validation.data;
 
-    // Insert into database
+    // Insert into database with audit fields
     const { error: insertError } = await supabase
       .from('sales_contacts')
       .insert({
@@ -107,7 +109,9 @@ Deno.serve(async (req) => {
         phone: data.phone || null,
         endpoints: data.endpoints || null,
         message: data.message || null,
-        status: 'new'
+        status: 'new',
+        client_ip: clientIp,
+        user_agent: userAgent
       });
 
     if (insertError) {
