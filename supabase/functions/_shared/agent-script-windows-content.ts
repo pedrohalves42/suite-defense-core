@@ -6,16 +6,21 @@
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.9.0-AUTO-UPDATE
+    CyberShield Agent - Windows v3.10.0-SECURITY-FEATURES
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
     - Heartbeat periodico
     - Poll de jobs
-    - Execucao de jobs (scan + report)
+    - Execucao de jobs (scan + report + security features)
     - Envio de resultado (submit-job-result)
     - Evento de post_installation
     - Suporte a jobs tipo REPORT (metricas do sistema)
+    - Inventario de software (software_inventory_collect)
+    - Scanner de vulnerabilidades leve (light_vuln_scan)
+    - Coleta de status de antivirus (collect_antivirus_status)
+    - Atividade web via DNS cache (collect_web_activity)
+    - Auto-remediacao basica (fix_firewall, restart_service)
     
     Uso:
     powershell.exe -ExecutionPolicy Bypass -File .\\cybershield-agent-windows-v3.ps1 \`
@@ -39,7 +44,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "3.9.0"
+    [string]\$AgentVersion = "3.10.0"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -365,6 +370,433 @@ function Invoke-ReportJob {
 }
 
 # ============================================
+#  SOFTWARE INVENTORY JOB
+# ============================================
+function Invoke-SoftwareInventoryJob {
+    param(
+        [hashtable]\$Job
+    )
+
+    Write-Log "[SOFTWARE-INVENTORY] Iniciando coleta de inventario de software..." "INFO"
+
+    \$items = @()
+
+    try {
+        \$keys = @(
+            "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
+            "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*"
+        )
+
+        foreach (\$keyPath in \$keys) {
+            \$apps = Get-ItemProperty -Path \$keyPath -ErrorAction SilentlyContinue
+            foreach (\$app in \$apps) {
+                if ([string]::IsNullOrWhiteSpace(\$app.DisplayName)) {
+                    continue
+                }
+
+                \$items += @{
+                    name = \$app.DisplayName
+                    version = \$app.DisplayVersion
+                    vendor = \$app.Publisher
+                    install_location = \$app.InstallLocation
+                }
+            }
+        }
+
+        Write-Log "[SOFTWARE-INVENTORY] Coletados \$(\$items.Count) itens" "SUCCESS"
+
+        \$body = @{
+            agent_id = \$Global:AgentId
+            items    = \$items
+        }
+
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/submit-software-inventory" \`
+            -Method "POST" \`
+            -Body \$body \`
+            -TimeoutSec 30
+
+        if (-not \$result.Success) {
+            throw "Falha ao enviar inventario (HTTP \$(\$result.StatusCode))"
+        }
+
+        return @{
+            success = \$true
+            output  = "Inventario enviado. Itens: \$(\$items.Count)"
+        }
+    }
+    catch {
+        \$errorMsg = "Erro em Invoke-SoftwareInventoryJob: \$(\$_.Exception.Message)"
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            error   = \$errorMsg
+        }
+    }
+}
+
+# ============================================
+#  LIGHT VULN SCAN JOB
+# ============================================
+function Invoke-LightVulnScanJob {
+    param(
+        [hashtable]\$Job
+    )
+
+    Write-Log "[VULN-SCAN] Iniciando light vuln scan..." "INFO"
+
+    \$findings = @()
+
+    try {
+        # Check 1: Firewall
+        \$firewallProfiles = Get-NetFirewallProfile -ErrorAction SilentlyContinue
+        if (\$firewallProfiles) {
+            foreach (\$p in \$firewallProfiles) {
+                if (-not \$p.Enabled) {
+                    \$findings += @{
+                        severity = "high"
+                        check_key = "firewall_disabled_\$(\$p.Name)"
+                        title = "Firewall desativado no perfil \$(\$p.Name)"
+                        description = "Firewall deve permanecer habilitado em todos os perfis."
+                        remediation = "Ativar firewall para o perfil \$(\$p.Name)."
+                    }
+                }
+            }
+        }
+
+        # Check 2: RDP
+        \$rdpKey = "HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server"
+        \$fDenyTSConn = Get-ItemProperty -Path \$rdpKey -Name "fDenyTSConnections" -ErrorAction SilentlyContinue
+
+        if (\$fDenyTSConn -and \$fDenyTSConn.fDenyTSConnections -eq 0) {
+            \$findings += @{
+                severity = "medium"
+                check_key = "rdp_enabled"
+                title = "RDP habilitado"
+                description = "RDP habilitado aumenta a superficie de ataque."
+                remediation = "Desabilitar RDP se nao for necessario."
+            }
+        }
+
+        # Check 3: SMBv1
+        try {
+            \$smbv1 = Get-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -ErrorAction SilentlyContinue
+            if (\$smbv1 -and \$smbv1.State -eq "Enabled") {
+                \$findings += @{
+                    severity = "high"
+                    check_key = "smbv1_enabled"
+                    title = "SMBv1 habilitado"
+                    description = "SMBv1 e vulneravel e deve ser desabilitado."
+                    remediation = "Desabilitar SMBv1 via Windows Features."
+                }
+            }
+        } catch {
+            Write-Log "[VULN-SCAN] Nao foi possivel verificar SMBv1" "WARN"
+        }
+
+        Write-Log "[VULN-SCAN] Encontrados \$(\$findings.Count) findings" "INFO"
+
+        if (\$findings.Count -gt 0) {
+            \$body = @{
+                agent_id = \$Global:AgentId
+                findings = \$findings
+            }
+
+            \$result = Invoke-SecureRequest \`
+                -Path "/functions/v1/submit-vuln-findings" \`
+                -Method "POST" \`
+                -Body \$body \`
+                -TimeoutSec 30
+
+            if (-not \$result.Success) {
+                throw "Falha ao enviar findings (HTTP \$(\$result.StatusCode))"
+            }
+        }
+
+        return @{
+            success = \$true
+            output  = "Light vuln scan concluido. Findings: \$(\$findings.Count)"
+        }
+    }
+    catch {
+        \$errorMsg = "Erro em Invoke-LightVulnScanJob: \$(\$_.Exception.Message)"
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            error   = \$errorMsg
+        }
+    }
+}
+
+# ============================================
+#  ANTIVIRUS STATUS JOB
+# ============================================
+function Invoke-CollectAntivirusStatusJob {
+    param(
+        [hashtable]\$Job
+    )
+
+    Write-Log "[AV-STATUS] Coletando status de antivirus..." "INFO"
+
+    try {
+        \$statusList = @()
+
+        try {
+            \$avProducts = Get-CimInstance -Namespace "root/SecurityCenter2" -ClassName "AntiVirusProduct" -ErrorAction SilentlyContinue
+            foreach (\$av in \$avProducts) {
+                \$statusList += @{
+                    engine_name = \$av.displayName
+                    engine_version = \$av.productState.ToString()
+                    status = "active"
+                }
+            }
+        } catch {
+            Write-Log "[AV-STATUS] Erro ao ler SecurityCenter2: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        if (-not \$statusList.Count) {
+            Write-Log "[AV-STATUS] Nenhum produto de antivirus detectado" "INFO"
+            
+            return @{
+                success = \$true
+                output  = "Nenhum produto de antivirus detectado"
+            }
+        }
+
+        \$body = @{
+            agent_id = \$Global:AgentId
+            items    = \$statusList
+        }
+
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/submit-antivirus-status" \`
+            -Method "POST" \`
+            -Body \$body \`
+            -TimeoutSec 30
+
+        if (-not \$result.Success) {
+            throw "Falha ao enviar status AV (HTTP \$(\$result.StatusCode))"
+        }
+
+        Write-Log "[AV-STATUS] Status enviado. Produtos: \$(\$statusList.Count)" "SUCCESS"
+
+        return @{
+            success = \$true
+            output  = "Status AV enviado. Produtos: \$(\$statusList.Count)"
+        }
+    }
+    catch {
+        \$errorMsg = "Erro em Invoke-CollectAntivirusStatusJob: \$(\$_.Exception.Message)"
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            error   = \$errorMsg
+        }
+    }
+}
+
+# ============================================
+#  WEB ACTIVITY JOB (SITES ACESSADOS)
+# ============================================
+function Invoke-WebActivityJob {
+    param(
+        [hashtable]\$Job
+    )
+
+    Write-Log "[WEB-ACTIVITY] Iniciando coleta de atividade web (cache DNS)..." "INFO"
+
+    try {
+        \$payload = \$null
+        if (\$Job.ContainsKey("payload") -and \$Job.payload) {
+            try {
+                \$payload = \$Job.payload | ConvertFrom-Json
+            } catch {
+                Write-Log "[WEB-ACTIVITY] Payload invalido, usando defaults" "WARN"
+            }
+        }
+
+        \$maxDomains = 100
+        if (\$payload -and \$payload.max_domains) {
+            \$maxDomains = [int]\$payload.max_domains
+        }
+
+        \$nowUtc = [DateTime]::UtcNow
+        \$items = @()
+
+        try {
+            \$dnsEntries = Get-DnsClientCache -ErrorAction SilentlyContinue
+            if (\$dnsEntries) {
+                \$dnsEntries = \$dnsEntries |
+                    Where-Object { \$_.Entry -and \$_.Name } |
+                    Sort-Object -Property Name -Unique |
+                    Select-Object -First \$maxDomains
+
+                foreach (\$entry in \$dnsEntries) {
+                    \$domain = \$entry.Name
+                    if ([string]::IsNullOrWhiteSpace(\$domain)) {
+                        continue
+                    }
+
+                    if (\$domain -like "localhost*" -or
+                        \$domain -like "*.local" -or
+                        \$domain -like "local") {
+                        continue
+                    }
+
+                    \$items += @{
+                        domain = \$domain
+                        source = "dns_cache"
+                        visited_at = \$nowUtc.ToString("o")
+                    }
+                }
+            }
+        } catch {
+            Write-Log "[WEB-ACTIVITY] Erro ao ler cache DNS: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        if (-not \$items.Count) {
+            Write-Log "[WEB-ACTIVITY] Nenhum dominio encontrado no cache DNS" "INFO"
+
+            return @{
+                success = \$true
+                output  = "Nenhum dominio encontrado no cache DNS"
+            }
+        }
+
+        \$body = @{
+            agent_id = \$Global:AgentId
+            items    = \$items
+        }
+
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/submit-web-activity" \`
+            -Method "POST" \`
+            -Body \$body \`
+            -TimeoutSec 30
+
+        if (-not \$result.Success) {
+            throw "Falha ao enviar atividade web (HTTP \$(\$result.StatusCode))"
+        }
+
+        Write-Log "[WEB-ACTIVITY] Atividade enviada. Dominios: \$(\$items.Count)" "SUCCESS"
+
+        return @{
+            success = \$true
+            output  = "Atividade web enviada. Dominios: \$(\$items.Count)"
+        }
+    }
+    catch {
+        \$errorMsg = "Erro em Invoke-WebActivityJob: \$(\$_.Exception.Message)"
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            error   = \$errorMsg
+        }
+    }
+}
+
+# ============================================
+#  FIX FIREWALL JOB (AUTO-REMEDIACAO)
+# ============================================
+function Invoke-FixFirewallJob {
+    param(
+        [hashtable]\$Job
+    )
+
+    Write-Log "[FIX-FIREWALL] Iniciando auto-remediacao de firewall..." "INFO"
+
+    try {
+        \$profiles = Get-NetFirewallProfile -ErrorAction Stop
+        
+        \$fixed = @()
+        foreach (\$p in \$profiles) {
+            if (-not \$p.Enabled) {
+                Write-Log "[FIX-FIREWALL] Ativando firewall no perfil \$(\$p.Name)" "INFO"
+                Set-NetFirewallProfile -Name \$p.Name -Enabled True -ErrorAction Stop
+                \$fixed += \$p.Name
+            }
+        }
+
+        if (\$fixed.Count -gt 0) {
+            Write-Log "[FIX-FIREWALL] Firewall ativado em: \$(\$fixed -join ', ')" "SUCCESS"
+            return @{
+                success = \$true
+                output  = "Firewall ativado em perfis: \$(\$fixed -join ', ')"
+            }
+        } else {
+            Write-Log "[FIX-FIREWALL] Firewall ja estava ativo em todos os perfis" "INFO"
+            return @{
+                success = \$true
+                output  = "Firewall ja ativo em todos os perfis"
+            }
+        }
+    }
+    catch {
+        \$errorMsg = "Erro em Invoke-FixFirewallJob: \$(\$_.Exception.Message)"
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            error   = \$errorMsg
+        }
+    }
+}
+
+# ============================================
+#  RESTART SERVICE JOB (AUTO-REMEDIACAO)
+# ============================================
+function Invoke-RestartServiceJob {
+    param(
+        [hashtable]\$Job
+    )
+
+    Write-Log "[RESTART-SERVICE] Iniciando restart de servico..." "INFO"
+
+    try {
+        \$payload = \$null
+        if (\$Job.ContainsKey("payload") -and \$Job.payload) {
+            try {
+                \$payload = \$Job.payload | ConvertFrom-Json
+            } catch {
+                throw "Payload invalido"
+            }
+        }
+
+        if (-not \$payload -or -not \$payload.service_name) {
+            throw "service_name nao especificado no payload"
+        }
+
+        \$serviceName = \$payload.service_name
+
+        \$service = Get-Service -Name \$serviceName -ErrorAction SilentlyContinue
+        if (-not \$service) {
+            throw "Servico '\$serviceName' nao encontrado"
+        }
+
+        Write-Log "[RESTART-SERVICE] Reiniciando servico: \$serviceName (Status atual: \$(\$service.Status))" "INFO"
+
+        Restart-Service -Name \$serviceName -Force -ErrorAction Stop
+
+        Start-Sleep -Seconds 2
+
+        \$serviceAfter = Get-Service -Name \$serviceName -ErrorAction Stop
+        Write-Log "[RESTART-SERVICE] Servico reiniciado. Status: \$(\$serviceAfter.Status)" "SUCCESS"
+
+        return @{
+            success = \$true
+            output  = "Servico '\$serviceName' reiniciado com sucesso. Status: \$(\$serviceAfter.Status)"
+        }
+    }
+    catch {
+        \$errorMsg = "Erro em Invoke-RestartServiceJob: \$(\$_.Exception.Message)"
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            error   = \$errorMsg
+        }
+    }
+}
+
+# ============================================
 #  POST INSTALLATION
 # ============================================
 function Send-PostInstallationEvent {
@@ -493,7 +925,7 @@ function Submit-JobResult {
         [string]\$Status,
         
         [Parameter(Mandatory = \$false)]
-        [hashtable]\$Output = @{},
+        [object]\$Output = @{},
         
         [Parameter(Mandatory = \$false)]
         [string]\$ErrorMessage = "",
@@ -758,6 +1190,24 @@ function Execute-Job {
                     \$result.error   = \$err
                     break
                 }
+            }
+            "software_inventory_collect" {
+                \$result = Invoke-SoftwareInventoryJob -Job \$job
+            }
+            "light_vuln_scan" {
+                \$result = Invoke-LightVulnScanJob -Job \$job
+            }
+            "collect_antivirus_status" {
+                \$result = Invoke-CollectAntivirusStatusJob -Job \$job
+            }
+            "collect_web_activity" {
+                \$result = Invoke-WebActivityJob -Job \$job
+            }
+            "fix_firewall" {
+                \$result = Invoke-FixFirewallJob -Job \$job
+            }
+            "restart_service" {
+                \$result = Invoke-RestartServiceJob -Job \$job
             }
             
             default {
