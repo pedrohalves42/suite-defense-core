@@ -25,13 +25,24 @@ export default function AgentReleases() {
       
       if (error) throw error;
       
+      // Defensive parsing: validate response structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response format from process-agent-updates');
+      }
+      
       const result = data as { 
-        success: boolean; 
-        total_jobs_created: number; 
-        platforms: Array<{platform: string; outdated_count: number; jobs_created: number}>
+        success?: boolean; 
+        total_jobs_created?: number; 
+        platforms?: Array<{platform: string; outdated_count: number; jobs_created: number}>
       };
-      toast.success(`Verificação concluída: ${result.total_jobs_created || 0} jobs de atualização criados`, {
-        description: result.platforms?.map(p => `${p.platform}: ${p.jobs_created} jobs`).join(', ') || 'Nenhuma plataforma processada'
+      
+      const totalJobs = result.total_jobs_created ?? 0;
+      const platformsInfo = result.platforms && Array.isArray(result.platforms)
+        ? result.platforms.map(p => `${p.platform}: ${p.jobs_created ?? 0} jobs`).join(', ')
+        : 'Nenhuma plataforma processada';
+      
+      toast.success(`Verificação concluída: ${totalJobs} jobs de atualização criados`, {
+        description: platformsInfo
       });
       
       refetch();
