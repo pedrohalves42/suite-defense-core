@@ -19,6 +19,7 @@ import {
   FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { SecurityJobDispatcher } from '@/components/admin/SecurityJobDispatcher';
 
 interface DiagnosticIssue {
   issue_type: string;
@@ -235,6 +236,9 @@ export default function AgentDiagnostics() {
             </ScrollArea>
           </CardContent>
         </Card>
+
+        {/* Disparador de Jobs de Segurança */}
+        <SecurityJobDispatcher agents={agents} />
 
         {/* Diagnostico Detalhado */}
         <Card className="lg:col-span-2">
