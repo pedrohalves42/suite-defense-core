@@ -25,8 +25,10 @@ Deno.serve(async (req) => {
     }
 
     // CORRECAO: Interface explicita para OS info
+    // FASE 2: Aceitar tanto os_type quanto platform (retrocompatibilidade)
     interface OSInfo {
       os_type?: string;
+      platform?: string; // Legacy field
       os_version?: string;
       hostname?: string;
     }
@@ -140,8 +142,9 @@ Deno.serve(async (req) => {
       status: 'active'
     }
     
-    if (osInfo.os_type) {
-      updateData.os_type = osInfo.os_type
+    // FASE 2: Aceitar os_type ou platform (retrocompatibilidade)
+    if (osInfo.os_type || osInfo.platform) {
+      updateData.os_type = osInfo.os_type || osInfo.platform
     }
     if (osInfo.os_version) {
       updateData.os_version = osInfo.os_version
