@@ -17,66 +17,43 @@ export default function AgentReleases() {
   const [fetchingScript, setFetchingScript] = useState(false);
 
   const handleRegisterV3_10_0 = async () => {
-    if (!confirm('Registrar v3.10.0-SECURITY-FEATURES com script completo?\n\nIsso ira buscar o script atual do serve-installer e registrar no agent_releases.')) {
+    if (!confirm('Registrar v3.10.0-SECURITY-FEATURES com script completo?\n\nIsso ira buscar o script atual e registrar no agent_releases.')) {
       return;
     }
 
-    setFetchingScript(true);
-    
     try {
-      // First, get an enrollment key to fetch the installer
-      const { data: keyData, error: keyError } = await supabase
-        .from('enrollment_keys')
-        .select('key')
-        .eq('is_active', true)
-        .gte('expires_at', new Date().toISOString())
-        .limit(1)
-        .single();
+      setFetchingScript(true);
+      toast.info('Buscando script do agente...');
 
-      if (keyError) throw new Error('No active enrollment key found');
-
-      // Fetch the installer script from serve-installer
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-installer?key=${keyData.key}&platform=windows`,
-        {
-          headers: {
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-        }
+      // Fetch the embedded agent script directly (no enrollment key needed)
+      const { data: scriptData, error: scriptError } = await supabase.functions.invoke(
+        'get-agent-script-content'
       );
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch installer: ${response.status}`);
+      if (scriptError) throw scriptError;
+      if (!scriptData?.script_content) {
+        throw new Error('No script content received');
       }
 
-      const scriptContent = await response.text();
-
-      // Extract embedded agent script using regex
-      const embedMatch = scriptContent.match(/@["'][\r\n]+([\s\S]+?)[\r\n]+["']@/);
-      
-      if (!embedMatch || !embedMatch[1]) {
-        throw new Error('Could not extract embedded agent script from installer');
+      const scriptContent = scriptData.script_content;
+      if (scriptContent.length < 10000) {
+        throw new Error(`Script too small (${scriptContent.length} bytes) - likely placeholder`);
       }
 
-      const agentScript = embedMatch[1].trim();
-
-      if (agentScript.length < 50000) {
-        throw new Error(`Extracted script too small (${agentScript.length} bytes). Expected >50KB.`);
-      }
+      toast.success(`Script obtido: ${(scriptContent.length / 1024).toFixed(1)} KB`);
 
       // Register the release
       registerRelease({
         version: 'v3.10.0-SECURITY-FEATURES',
         platform: 'windows',
-        script_content: agentScript,
+        script_content: scriptContent,
         release_notes: '10 security features: Software Inventory, URL Analysis, Vulnerability Scanning, Security Policies, Scheduled Jobs, Agent Groups, Antivirus Integration, Anomaly Detection, Auto-remediation, Agent Timeline + Web Activity tracking',
-        channel: 'stable',
+        channel: 'stable'
       });
 
-      toast.success(`Script extraido (${Math.round(agentScript.length / 1024)}KB) e enviado para registro`);
     } catch (error: any) {
-      console.error('Error fetching/registering script:', error);
-      toast.error(`Erro: ${error.message}`);
+      console.error('Error registering v3.10.0:', error);
+      toast.error(`Erro ao registrar release: ${error.message || 'Unknown error'}`);
     } finally {
       setFetchingScript(false);
     }
