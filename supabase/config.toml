@@ -274,3 +274,28 @@ verify_jwt = true
 [functions.process-agent-updates]
 verify_jwt = false
 schedule = "0 */6 * * *"  # Executa a cada 6 horas
+
+# === Security Features v3.10.0 ===
+[functions.submit-software-inventory]
+verify_jwt = false
+
+[functions.submit-vuln-findings]
+verify_jwt = false
+
+[functions.submit-antivirus-status]
+verify_jwt = false
+
+[functions.submit-web-activity]
+verify_jwt = false
+
+[functions.analyze-url]
+verify_jwt = true
+
+[functions.get-agent-timeline]
+verify_jwt = true
+
+[functions.get-software-inventory]
+verify_jwt = true
+
+[functions.get-web-activity]
+verify_jwt = true
