@@ -279,7 +279,7 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
     }
     
     // CRITICAL: Validate embedded script version
-    const expectedVersion = 'v3.10.0-SECURITY-FEATURES';
+    const expectedVersion = 'v3.10.2-TLS-FIX';
     if (!agentScriptContent.includes(expectedVersion)) {
       console.error(`[${requestId}] CRITICAL: Agent script version mismatch`, {
         expected: expectedVersion,
