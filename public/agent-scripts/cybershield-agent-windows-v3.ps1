@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.0-SECURITY-FEATURES
+    CyberShield Agent - Windows v3.10.2-TLS-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.10.0"
+    [string]$AgentVersion = "3.10.2"
 )
 
 $ErrorActionPreference = "Stop"
@@ -87,6 +87,21 @@ $Global:LogFilePath = Join-Path -Path $logDir -ChildPath "cybershield-agent-v3.l
 
 # Intervalos
 $Global:PollIntervalSeconds = 30
+
+# ============================================
+#  CONFIGURACAO DE REDE (TLS 1.2 + Proxy)
+# ============================================
+# Forcar TLS 1.2 para compatibilidade com Supabase/Cloudflare
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+# Configurar proxy do sistema (para ambientes corporativos)
+try {
+    $proxy = [System.Net.WebRequest]::GetSystemWebProxy()
+    [System.Net.WebRequest]::DefaultWebProxy = $proxy
+    [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+} catch {
+    # Ignorar erro de proxy - continuar sem proxy configurado
+}
 
 # ============================================
 #  LOGGING
