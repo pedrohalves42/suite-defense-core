@@ -486,7 +486,7 @@ function Submit-JobResult {
         [string]$Status,
         
         [Parameter(Mandatory = $false)]
-        [hashtable]$Output = @{},
+        [object]$Output = @{},
         
         [Parameter(Mandatory = $false)]
         [string]$ErrorMessage = "",
