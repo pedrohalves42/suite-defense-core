@@ -278,10 +278,27 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
       });
     }
     
+    // CRITICAL: Validate embedded script is v3.9.0-AUTO-UPDATE
+    const expectedVersion = 'v3.9.0-AUTO-UPDATE';
+    if (!agentScriptContent.includes(expectedVersion)) {
+      console.error(`[${requestId}] CRITICAL: Agent script version mismatch`, {
+        expected: expectedVersion,
+        scriptPreview: agentScriptContent.substring(0, 500)
+      });
+      return new Response(
+        `Agent script version mismatch: expected ${expectedVersion} but embedded script has different version`,
+        { 
+          status: 503,
+          headers: corsHeaders
+        }
+      );
+    }
+    
     console.log(`[${requestId}] Agent script validated successfully`, { 
       size: agentScriptContent.length,
       sizeKB: (agentScriptContent.length / 1024).toFixed(2),
-      hash: agentScriptHash
+      hash: agentScriptHash,
+      version: expectedVersion
     });
 
 
