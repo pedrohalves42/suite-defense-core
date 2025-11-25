@@ -68,6 +68,7 @@ import SoftwareInventory from "./pages/admin/SoftwareInventory";
 import VulnerabilityFindings from "./pages/admin/VulnerabilityFindings";
 import WebActivity from "./pages/admin/WebActivity";
 import AgentTimeline from "./pages/admin/AgentTimeline";
+import AgentReleases from "./pages/admin/AgentReleases";
 
 // CORRECAO: QueryClient ja esta inicializado no src/main.tsx
 // Remover duplicacao para manter configuracoes otimizadas
@@ -140,6 +141,7 @@ const App = () => (
                 <Route path="vulnerabilities" element={<VulnerabilityFindings />} />
                 <Route path="web-activity" element={<WebActivity />} />
                 <Route path="agent-timeline" element={<AgentTimeline />} />
+                <Route path="agent-releases" element={<AgentReleases />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
