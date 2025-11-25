@@ -7,10 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.8.0-REALTIME-OS-TYPE-FIX';
-export const LAST_UPDATED = '2025-01-24T19:00:00Z'; // Realtime + os_type fix + multiple instances cleanup
+export const INSTALLER_VERSION = 'v3.9.0-AUTO-UPDATE';
+export const LAST_UPDATED = '2025-01-24T21:00:00Z'; // Auto-update check every 24h + release management
 
 export const CHANGES = [
+  '[v3.9.0-AUTO-UPDATE] FEATURE: Agente verifica updates automaticamente a cada 24h via check-agent-updates',
+  '[v3.9.0-AUTO-UPDATE] FEATURE: Auto-aplica updates quando nova versao disponivel (sem reinstalacao)',
+  '[v3.9.0-AUTO-UPDATE] FEATURE: Edge Function register-agent-release para registrar novas versoes',
+  '[v3.9.0-AUTO-UPDATE] FEATURE: Edge Function process-agent-updates com cron para push updates',
+  '[v3.9.0-AUTO-UPDATE] MELHORIA: Tabelas agent_releases e agent_versions populadas com v3.8.0',
   '[v3.8.0-REALTIME-OS-TYPE-FIX] CRITICAL FIX: Agente envia os_type ao inves de platform no heartbeat',
   '[v3.8.0-REALTIME-OS-TYPE-FIX] CRITICAL FIX: Heartbeat aceita tanto os_type quanto platform (retrocompatibilidade)',
   '[v3.8.0-REALTIME-OS-TYPE-FIX] CRITICAL FIX: Realtime habilitado para agent_system_metrics e system_alerts',
