@@ -114,7 +114,7 @@ if (-not $phase1) {
     Write-Host "`n[WARN]  Aviso: Limpeza falhou, mas continuando..." -ForegroundColor Yellow
 =======
     Write-Host "`n[WARN] ? Aviso: Limpeza falhou, mas continuando..." -ForegroundColor Yellow
->>>>>>> 221a634 (fix(ascii): remove caracteres não-ASCII de scripts críticos)
+>>>>>>> 221a634 (fix(ascii): remove caracteres nao-ASCII de scripts criticos)
 }
 
 # ============================================================
@@ -294,7 +294,7 @@ if ($phase4) {
     Write-Host "`n[WARN]  FALHA PARCIAL" -ForegroundColor Yellow
 =======
     Write-Host "`n[WARN] ? FALHA PARCIAL" -ForegroundColor Yellow
->>>>>>> 221a634 (fix(ascii): remove caracteres não-ASCII de scripts críticos)
+>>>>>>> 221a634 (fix(ascii): remove caracteres nao-ASCII de scripts criticos)
     Write-Host "   Logs completos salvos em: $LogFile" -ForegroundColor White
     Write-Host "`nDiagnostico:" -ForegroundColor Cyan
     

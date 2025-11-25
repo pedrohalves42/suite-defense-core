@@ -1,6 +1,6 @@
--- FASE 4: Cleanup automático de jobs stuck (delivered >1h)
+-- FASE 4: Cleanup automatico de jobs stuck (delivered >1h)
 
--- Criar função para cleanup de jobs stuck
+-- Criar funcao para cleanup de jobs stuck
 CREATE OR REPLACE FUNCTION cleanup_stuck_jobs()
 RETURNS TABLE(cleaned_count INTEGER, job_ids UUID[])
 LANGUAGE plpgsql
@@ -11,7 +11,7 @@ DECLARE
   v_cleaned_count INTEGER;
   v_job_ids UUID[];
 BEGIN
-  -- Marcar jobs "delivered" há mais de 1 hora como "failed"
+  -- Marcar jobs "delivered" ha mais de 1 hora como "failed"
   WITH updated_jobs AS (
     UPDATE jobs
     SET 
@@ -28,9 +28,9 @@ BEGIN
   INTO v_cleaned_count, v_job_ids
   FROM updated_jobs;
   
-  -- Log da operação
+  -- Log da operacao
   IF v_cleaned_count > 0 THEN
-    RAISE NOTICE 'Cleanup concluído: % jobs marcados como failed', v_cleaned_count;
+    RAISE NOTICE 'Cleanup concluido: % jobs marcados como failed', v_cleaned_count;
   END IF;
   
   RETURN QUERY SELECT 
@@ -39,4 +39,4 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION cleanup_stuck_jobs() IS 'Marca jobs em estado delivered há mais de 1 hora como failed (v3.5.0-METRICS-AUTO)';
+COMMENT ON FUNCTION cleanup_stuck_jobs() IS 'Marca jobs em estado delivered ha mais de 1 hora como failed (v3.5.0-METRICS-AUTO)';

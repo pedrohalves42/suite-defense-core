@@ -6,12 +6,12 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 /**
- * FASE 4: Edge Function para push de updates automático
+ * FASE 4: Edge Function para push de updates automatico
  * 
  * Scheduled cron job que identifica agentes desatualizados e cria
- * jobs "update_agent" para forçar atualização em agentes críticos.
+ * jobs "update_agent" para forcar atualizacao em agentes criticos.
  * 
- * Execução: A cada 6 horas via cron
+ * Execucao: A cada 6 horas via cron
  */
 
 Deno.serve(async (req) => {
@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Buscar última versão de cada plataforma
+    // Buscar ultima versao de cada plataforma
     const { data: latestVersions, error: versionError } = await supabase
       .from('agent_versions')
       .select('platform, version')
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
       // Criar job update_agent para cada agente desatualizado
       let jobsCreated = 0;
       for (const agent of outdatedAgents) {
-        // Verificar se já existe job update_agent pendente para este agente
+        // Verificar se ja existe job update_agent pendente para este agente
         const { data: existingJobs } = await supabase
           .from('jobs')
           .select('id')

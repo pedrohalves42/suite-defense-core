@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   
   try {
-    // Autenticação
+    // Autenticacao
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verificar usuário autenticado
+    // Verificar usuario autenticado
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     
@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se é admin
+    // Verificar se e admin
     const { data: userRole } = await supabase
       .from('user_roles')
       .select('role, tenant_id')

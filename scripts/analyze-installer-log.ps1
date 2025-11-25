@@ -153,7 +153,7 @@ if ($logContent -match "Scheduled Task '(.+)' criada com sucesso") {
             # Decodificar erro comum
             switch ($taskResult) {
                 1 { Write-Host "    Erro: Erro generico (argumentos ou sintaxe do script)" -ForegroundColor Yellow }
-                267009 { Write-Host "    Erro: Task nao pôde ser executada" -ForegroundColor Yellow }
+                267009 { Write-Host "    Erro: Task nao pode ser executada" -ForegroundColor Yellow }
                 default { Write-Host "    Erro: Codigo de erro desconhecido" -ForegroundColor Yellow }
             }
         }
