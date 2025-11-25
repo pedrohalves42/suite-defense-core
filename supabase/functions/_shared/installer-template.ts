@@ -23,6 +23,9 @@ param(
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+# Forcar TLS 1.2 para compatibilidade com Windows Server
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 # ============= FASE 0: Pre-checks (Silent) =============
 $BasePath  = "C:\\CyberShield"
 $LogsPath  = Join-Path $BasePath "logs"
