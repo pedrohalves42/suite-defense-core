@@ -1,4 +1,4 @@
--- FASE 1: Popular tabelas de releases com versão atual v3.8.0-REALTIME-OS-TYPE-FIX
+-- FASE 1: Popular tabelas de releases com versao atual v3.8.0-REALTIME-OS-TYPE-FIX
 
 -- Obter script content atual do Windows agent
 DO $$
@@ -6,7 +6,7 @@ DECLARE
   v_script_content TEXT;
   v_sha256 TEXT;
 BEGIN
-  -- Para v3.8.0, usar script atual (será sincronizado posteriormente)
+  -- Para v3.8.0, usar script atual (sera sincronizado posteriormente)
   v_script_content := 'PLACEHOLDER_SCRIPT_CONTENT';
   v_sha256 := encode(digest(v_script_content, 'sha256'), 'hex');
   

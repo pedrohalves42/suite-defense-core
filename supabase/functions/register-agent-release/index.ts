@@ -8,7 +8,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 /**
  * FASE 3: Edge Function para registrar novas releases de agentes
  * 
- * Permite que o deploy automatizado registre novas versões nas tabelas
+ * Permite que o deploy automatizado registre novas versoes nas tabelas
  * agent_releases e agent_versions sem necessidade de SQL manual.
  */
 
@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Verificar autenticação (super admin ou deploy automation)
+    // Verificar autenticacao (super admin ou deploy automation)
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se é super admin
+    // Verificar se e super admin
     const { data: roles } = await supabase
       .from('user_roles')
       .select('role')
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
       size: script_content.length
     });
 
-    // Desativar versões anteriores como "latest"
+    // Desativar versoes anteriores como "latest"
     await supabase
       .from('agent_versions')
       .update({ is_latest: false })

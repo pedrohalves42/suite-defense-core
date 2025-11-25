@@ -51,18 +51,18 @@ function Write-ColoredLine {
 function Write-Header {
     param([string]$Title)
     Write-Host ""
-    Write-ColoredLine "═══════════════════════════════════════════════════════════════" "Cyan"
+    Write-ColoredLine "???????????????????????????????????????????????????????????????" "Cyan"
     Write-ColoredLine "  $Title" "Cyan"
-    Write-ColoredLine "═══════════════════════════════════════════════════════════════" "Cyan"
+    Write-ColoredLine "???????????????????????????????????????????????????????????????" "Cyan"
     Write-Host ""
 }
 
 function Write-Section {
     param([string]$Title)
     Write-Host ""
-    Write-ColoredLine "───────────────────────────────────────────────────────────────" "Yellow"
+    Write-ColoredLine "???????????????????????????????????????????????????????????????" "Yellow"
     Write-ColoredLine "  $Title" "Yellow"
-    Write-ColoredLine "───────────────────────────────────────────────────────────────" "Yellow"
+    Write-ColoredLine "???????????????????????????????????????????????????????????????" "Yellow"
 }
 
 function Extract-TokenPrefix {
@@ -105,7 +105,7 @@ function Format-TimeSpan {
 }
 
 # ====================================
-# FASE 1: DETECÇÃO DE PROCESSOS
+# FASE 1: DETECCAO DE PROCESSOS
 # ====================================
 
 Write-Header "CYBERSHIELD - DIAGNOSTICO DE PROCESSOS DUPLICADOS"
@@ -141,14 +141,14 @@ try {
         $allProcesses += $processInfo
     }
 
-    Write-ColoredLine "✓ Processos encontrados: $($allProcesses.Count)" "Green"
+    Write-ColoredLine "? Processos encontrados: $($allProcesses.Count)" "Green"
 
 } catch {
-    Write-ColoredLine "✗ Erro ao detectar processos: $($_.Exception.Message)" "Red"
+    Write-ColoredLine "? Erro ao detectar processos: $($_.Exception.Message)" "Red"
 }
 
 # ====================================
-# FASE 2: ANÁLISE DE DUPLICADOS
+# FASE 2: ANALISE DE DUPLICADOS
 # ====================================
 
 Write-Section "FASE 2: ANALISANDO TOKENS E DUPLICADOS"
@@ -177,7 +177,7 @@ Write-ColoredLine "  Tokens unicos: $uniqueTokens" "White"
 if ($hasDuplicates) {
     Write-ColoredLine "  DUPLICADOS DETECTADOS: $($duplicates.Count) token(s) com multiplos processos" "Red"
 } else {
-    Write-ColoredLine "  ✓ Nenhum duplicado detectado" "Green"
+    Write-ColoredLine "  ? Nenhum duplicado detectado" "Green"
 }
 
 # ====================================
@@ -193,7 +193,7 @@ if ($allProcesses.Count -eq 0) {
     Write-Host ""
     $headerFormat = "{0,-8} {1,-20} {2,-12} {3,-12} {4,-12}"
     Write-ColoredLine ($headerFormat -f "PID", "Usuario", "Token", "HMAC", "Tempo Exec") "Cyan"
-    Write-ColoredLine ($headerFormat -f "────────", "────────────────────", "────────────", "────────────", "────────────") "Cyan"
+    Write-ColoredLine ($headerFormat -f "????????", "????????????????????", "????????????", "????????????", "????????????") "Cyan"
 
     foreach ($proc in $allProcesses) {
         $tokenDisplay = if ($proc.TokenPrefix) { "$($proc.TokenPrefix).." } else { "N/A" }
@@ -208,16 +208,16 @@ if ($allProcesses.Count -eq 0) {
         if ($proc.TokenPrefix) {
             $group = $tokenGroups | Where-Object { $_.Name -eq $proc.TokenPrefix }
             if ($group -and $group.Count -gt 1) {
-                # É duplicado se não for o processo mais antigo do grupo
+                # E duplicado se nao for o processo mais antigo do grupo
                 $oldestInGroup = ($group.Group | Sort-Object StartTime | Select-Object -First 1).PID
                 if ($proc.PID -ne $oldestInGroup) {
                     $isDuplicate = $true
-                    $line += "  ⚠️ DUPLICADO"
+                    $line += "  [WARN] ? DUPLICADO"
                 }
             }
         } else {
             $isInvalidToken = $true
-            $line += "  ❌ TOKEN NAO ENCONTRADO"
+            $line += "  [ERROR]  TOKEN NAO ENCONTRADO"
         }
 
         # Colorir linha baseado no status
@@ -274,9 +274,9 @@ try {
             $taskData.HasProcess = $hasProcess
 
             $statusIcon = switch ($state) {
-                "Running" { if ($hasProcess) { "✓" } else { "⚠️" } }
-                "Ready" { "○" }
-                "Disabled" { "✗" }
+                "Running" { if ($hasProcess) { "?" } else { "[WARN] ?" } }
+                "Ready" { "?" }
+                "Disabled" { "?" }
                 default { "?" }
             }
 
@@ -296,11 +296,11 @@ try {
         }
     }
 } catch {
-    Write-ColoredLine "  ✗ Erro ao analisar scheduled tasks: $($_.Exception.Message)" "Red"
+    Write-ColoredLine "  ? Erro ao analisar scheduled tasks: $($_.Exception.Message)" "Red"
 }
 
 # ====================================
-# FASE 5: RECOMENDAÇÕES
+# FASE 5: RECOMENDACOES
 # ====================================
 
 Write-Section "FASE 5: RECOMENDACOES E COMANDOS DE CLEANUP"
@@ -320,22 +320,22 @@ foreach ($group in $duplicates) {
     }
 }
 
-# Identificar processos sem token válido
+# Identificar processos sem token valido
 $invalidTokenProcesses = $allProcesses | Where-Object { -not $_.TokenPrefix }
 foreach ($invalid in $invalidTokenProcesses) {
     $processesToKill += $invalid.PID
     $report.Recommendations += "Matar processo $($invalid.PID) (token invalido ou nao encontrado)"
 }
 
-# Identificar tasks órfãs (Disabled sem processo)
+# Identificar tasks orfas (Disabled sem processo)
 $orphanedTasks = $report.ScheduledTasks | Where-Object { $_.State -eq "Disabled" }
 foreach ($orphan in $orphanedTasks) {
     $tasksToRemove += $orphan.Name
-    $report.Recommendations += "Remover scheduled task '$($orphan.Name)' (orfã/desabilitada)"
+    $report.Recommendations += "Remover scheduled task '$($orphan.Name)' (orfa/desabilitada)"
 }
 
 if ($report.Recommendations.Count -eq 0) {
-    Write-ColoredLine "  ✓ Nenhuma acao necessaria. Sistema esta limpo!" "Green"
+    Write-ColoredLine "  ? Nenhuma acao necessaria. Sistema esta limpo!" "Green"
 } else {
     Write-ColoredLine "  TOTAL DE RECOMENDACOES: $($report.Recommendations.Count)" "Yellow"
     Write-Host ""
@@ -347,9 +347,9 @@ if ($report.Recommendations.Count -eq 0) {
     }
 
     Write-Host ""
-    Write-ColoredLine "───────────────────────────────────────────────────────────────" "Cyan"
+    Write-ColoredLine "???????????????????????????????????????????????????????????????" "Cyan"
     Write-ColoredLine "  COMANDOS SUGERIDOS PARA CLEANUP" "Cyan"
-    Write-ColoredLine "───────────────────────────────────────────────────────────────" "Cyan"
+    Write-ColoredLine "???????????????????????????????????????????????????????????????" "Cyan"
     Write-Host ""
 
     if ($processesToKill.Count -gt 0) {
@@ -386,9 +386,9 @@ if ($AutoCleanup -and $report.Recommendations.Count -gt 0) {
         Write-ColoredLine "  Matando processos: $($processesToKill -join ', ')..." "Yellow"
         try {
             Stop-Process -Id $processesToKill -Force -ErrorAction Stop
-            Write-ColoredLine "  ✓ Processos encerrados com sucesso" "Green"
+            Write-ColoredLine "  ? Processos encerrados com sucesso" "Green"
         } catch {
-            Write-ColoredLine "  ✗ Erro ao matar processos: $($_.Exception.Message)" "Red"
+            Write-ColoredLine "  ? Erro ao matar processos: $($_.Exception.Message)" "Red"
             $cleanupSuccess = $false
         }
     }
@@ -399,9 +399,9 @@ if ($AutoCleanup -and $report.Recommendations.Count -gt 0) {
             Write-ColoredLine "  Removendo task '$taskName'..." "Yellow"
             try {
                 Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction Stop
-                Write-ColoredLine "  ✓ Task removida com sucesso" "Green"
+                Write-ColoredLine "  ? Task removida com sucesso" "Green"
             } catch {
-                Write-ColoredLine "  ✗ Erro ao remover task: $($_.Exception.Message)" "Red"
+                Write-ColoredLine "  ? Erro ao remover task: $($_.Exception.Message)" "Red"
                 $cleanupSuccess = $false
             }
         }
@@ -409,10 +409,10 @@ if ($AutoCleanup -and $report.Recommendations.Count -gt 0) {
 
     if ($cleanupSuccess) {
         Write-Host ""
-        Write-ColoredLine "  ✓ AUTO-CLEANUP CONCLUIDO COM SUCESSO!" "Green"
+        Write-ColoredLine "  ? AUTO-CLEANUP CONCLUIDO COM SUCESSO!" "Green"
     } else {
         Write-Host ""
-        Write-ColoredLine "  ⚠️ AUTO-CLEANUP CONCLUIDO COM ALGUNS ERROS. Verifique os logs acima." "Yellow"
+        Write-ColoredLine "  [WARN] ? AUTO-CLEANUP CONCLUIDO COM ALGUNS ERROS. Verifique os logs acima." "Yellow"
     }
 }
 
@@ -432,26 +432,26 @@ if ($ExportJson) {
 
     try {
         $report | ConvertTo-Json -Depth 10 | Set-Content -Path $jsonPath -Encoding UTF8
-        Write-ColoredLine "  ✓ Relatorio exportado para: $jsonPath" "Green"
+        Write-ColoredLine "  ? Relatorio exportado para: $jsonPath" "Green"
     } catch {
-        Write-ColoredLine "  ✗ Erro ao exportar JSON: $($_.Exception.Message)" "Red"
+        Write-ColoredLine "  ? Erro ao exportar JSON: $($_.Exception.Message)" "Red"
     }
 }
 
 # ====================================
-# RODAPÉ
+# RODAPE
 # ====================================
 
 Write-Host ""
-Write-ColoredLine "═══════════════════════════════════════════════════════════════" "Cyan"
+Write-ColoredLine "???????????????????????????????????????????????????????????????" "Cyan"
 Write-ColoredLine "  DIAGNOSTICO CONCLUIDO" "Cyan"
-Write-ColoredLine "═══════════════════════════════════════════════════════════════" "Cyan"
+Write-ColoredLine "???????????????????????????????????????????????????????????????" "Cyan"
 Write-Host ""
 
 if ($report.Recommendations.Count -eq 0) {
-    Write-ColoredLine "STATUS: ✓ SISTEMA LIMPO - Nenhuma acao necessaria" "Green"
+    Write-ColoredLine "STATUS: ? SISTEMA LIMPO - Nenhuma acao necessaria" "Green"
 } else {
-    Write-ColoredLine "STATUS: ⚠️ ATENCAO - $($report.Recommendations.Count) acao(oes) recomendada(s)" "Yellow"
+    Write-ColoredLine "STATUS: [WARN] ? ATENCAO - $($report.Recommendations.Count) acao(oes) recomendada(s)" "Yellow"
     if (-not $AutoCleanup) {
         Write-Host ""
         Write-ColoredLine "Para executar cleanup automatico, execute:" "White"

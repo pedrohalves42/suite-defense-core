@@ -854,8 +854,8 @@ try {
 
     $lastHeartbeat = Get-Date
     $lastPoll      = Get-Date
-    $lastMetrics   = Get-Date  # FASE 2: Controle de métricas
-    $lastUpdateCheck = Get-Date  # FASE 2 AUTO-UPDATE: Controle de verificação de updates
+    $lastMetrics   = Get-Date  # FASE 2: Controle de metricas
+    $lastUpdateCheck = Get-Date  # FASE 2 AUTO-UPDATE: Controle de verificacao de updates
 
     while ($true) {
         $now = Get-Date
@@ -893,7 +893,7 @@ try {
                                 Execute-Job -Job $updateJob
                                 
                                 Write-Log "[SUCCESS] Atualizacao concluida. Agente sera reiniciado." "SUCCESS"
-                                # Agente será reiniciado pela scheduled task
+                                # Agente sera reiniciado pela scheduled task
                                 exit 0
                             } else {
                                 Write-Log "[UPDATE] Agente ja esta atualizado (versao $Global:AgentVersion)" "INFO"
@@ -912,7 +912,7 @@ try {
                 $lastUpdateCheck = Get-Date  # Reset para evitar loop infinito
             }
 
-            # FASE 2: Enviar métricas a cada 5 minutos
+            # FASE 2: Enviar metricas a cada 5 minutos
             try {
                 if ((($now - $lastMetrics).TotalSeconds) -ge 300) {
                     Write-Log "[METRICS] Coletando metricas de sistema..." "INFO"
