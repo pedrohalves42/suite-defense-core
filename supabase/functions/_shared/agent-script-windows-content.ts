@@ -6,7 +6,7 @@
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.4-UTF8-FIX
+    CyberShield Agent - Windows v3.10.5-UPDATE-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
