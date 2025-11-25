@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
+const CURRENT_VERSION = 'v3.10.3-TLS-COMPLETE';
+
 export default function AgentReleases() {
   const { releases, isLoading, error, refetch, registerRelease, isRegistering } = useAgentReleases();
   const [isProcessingUpdates, setIsProcessingUpdates] = useState(false);
@@ -45,7 +47,7 @@ export default function AgentReleases() {
   const [fetchingScript, setFetchingScript] = useState(false);
 
   const handleRegisterCurrentVersion = async () => {
-    if (!confirm('Registrar v3.10.3-TLS-COMPLETE com script completo?\n\nIsso ira buscar o script atual e registrar no agent_releases.')) {
+    if (!confirm(`Registrar ${CURRENT_VERSION} com script completo?\n\nIsso ira buscar o script atual e registrar no agent_releases.`)) {
       return;
     }
 
@@ -72,15 +74,15 @@ export default function AgentReleases() {
 
       // Register the release
       registerRelease({
-        version: 'v3.10.2-TLS-FIX',
+        version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'CRITICAL FIX: TLS 1.2 enforcement + automatic proxy configuration for corporate environments (pfSense/firewalls). Resolves SSL/TLS channel errors and enables heartbeat through Cloudflare/Supabase endpoints.',
+        release_notes: 'Critical fix: TLS 1.2 enforcement in installation command, installer template, and agent script. Automatic system proxy configuration. Resolves SSL/TLS errors in corporate firewall environments (pfSense).',
         channel: 'stable'
       });
 
     } catch (error: any) {
-      console.error('Error registering v3.10.2-TLS-FIX:', error);
+      console.error(`Error registering ${CURRENT_VERSION}:`, error);
       toast.error(`Erro ao registrar release: ${error.message || 'Unknown error'}`);
     } finally {
       setFetchingScript(false);
@@ -116,9 +118,10 @@ export default function AgentReleases() {
     );
   }
 
-  const currentVersion = releases.find(r => r.version === 'v3.10.2-TLS-FIX' && r.platform === 'windows');
+  const currentVersion = releases.find(r => r.version === CURRENT_VERSION && r.platform === 'windows');
   const scriptSizeKB = currentVersion ? Math.round(currentVersion.script_content.length / 1024) : 0;
   const needsRegistration = !currentVersion || scriptSizeKB < 50;
+  const latestRelease = releases[0]; // First release is the most recent (order by created_at desc)
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -145,13 +148,13 @@ export default function AgentReleases() {
               <AlertCircle className="h-5 w-5 text-orange-600" />
               Acao Necessaria
             </CardTitle>
-            <CardDescription>
-              v3.10.2-TLS-FIX precisa ser registrado com script completo
+            <CardDescription className="text-orange-800 dark:text-orange-200">
+              {CURRENT_VERSION} precisa ser registrado com script completo
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-orange-800 dark:text-orange-200">
                 {currentVersion 
                   ? `Script atual: ${scriptSizeKB}KB (placeholder). Necessario: >50KB`
                   : 'Release nao encontrada no banco de dados'}
@@ -162,7 +165,7 @@ export default function AgentReleases() {
                 className="gap-2"
               >
                 <Package className="h-4 w-4" />
-                {fetchingScript ? 'Buscando Script...' : isRegistering ? 'Registrando...' : 'Registrar v3.10.2-TLS-FIX'}
+                {fetchingScript ? 'Buscando Script...' : isRegistering ? 'Registrando...' : `Registrar ${CURRENT_VERSION}`}
               </Button>
             </div>
           </CardContent>
@@ -194,6 +197,9 @@ export default function AgentReleases() {
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Ativo
                           </Badge>
+                        )}
+                        {latestRelease?.id === release.id && (
+                          <Badge variant="default">Latest</Badge>
                         )}
                       </CardTitle>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
