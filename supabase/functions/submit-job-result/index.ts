@@ -72,6 +72,19 @@ Deno.serve(async (req) => {
 
     const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
     if (!hmacResult.valid) {
+      // DEBUG LOGGING: Enhanced error details
+      console.error('[submit-job-result] HMAC validation failed:', {
+        agent: agent.agent_name,
+        error_code: hmacResult.errorCode,
+        error_message: hmacResult.errorMessage,
+        transient: hmacResult.transient,
+        headers: {
+          timestamp: req.headers.get('X-Timestamp'),
+          nonce: req.headers.get('X-Nonce'),
+          has_signature: !!req.headers.get('X-HMAC-Signature')
+        }
+      });
+      
       await logSecurityEvent({
         supabase,
         tenantId: agent.tenant_id,
@@ -82,7 +95,8 @@ Deno.serve(async (req) => {
         blocked: true,
         details: {
           agent_name: agent.agent_name,
-          error_code: hmacResult.errorCode
+          error_code: hmacResult.errorCode,
+          error_message: hmacResult.errorMessage
         }
       })
       return new Response(
@@ -95,6 +109,9 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+    
+    // DEBUG LOGGING: Log successful validation
+    console.log('[submit-job-result] HMAC validation SUCCESS for agent:', agent.agent_name);
 
     // 3. Rate limiting
     const rateLimitResult = await checkRateLimit(supabase, agent.agent_name, 'submit-job-result', {
