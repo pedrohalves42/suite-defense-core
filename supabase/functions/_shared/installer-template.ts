@@ -246,6 +246,34 @@ Write-InstallerLog "=== Fim do Diagnostico de Seguranca ===" "INFO"
 # ============= FASE 2: Instalacao =============
 Write-InstallerLog "FASE 2: Criando script do agente..." "INFO"
 
+# Telemetria: downloaded
+try {
+    $telemetryDownloaded = @{
+        agent_name = $AgentName
+        event_type = "downloaded"
+        platform = "windows"
+        success = $true
+        metadata = @{
+            installer_version = "{{INSTALLER_VERSION}}"
+        }
+    } | ConvertTo-Json -Compress
+    
+    $timestamp = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
+    $nonce = [guid]::NewGuid().ToString()
+    $payload = '{0}:{1}:{2}' -f $timestamp, $nonce, $telemetryDownloaded
+    $signature = Get-HmacSignature -Message $payload -SecretHex $HmacSecret
+    
+    Invoke-WebRequest -Uri "$ServerUrl/functions/v1/track-installation-event" -Method POST -Body $telemetryDownloaded -Headers @{
+        "X-Agent-Token" = $AgentToken
+        "X-HMAC-Signature" = $signature
+        "X-Timestamp" = $timestamp
+        "X-Nonce" = $nonce
+        "Content-Type" = "application/json"
+    } -UseBasicParsing -TimeoutSec 10 -ErrorAction SilentlyContinue | Out-Null
+} catch {
+    Write-InstallerLog "Telemetria downloaded falhou (nao critico): $($_.Exception.Message)" "DEBUG"
+}
+
 $AgentScriptContent = @'
 {{AGENT_SCRIPT_CONTENT}}
 '@
