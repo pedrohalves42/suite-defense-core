@@ -423,7 +423,7 @@ function Send-Heartbeat {
 
     \$body = @{
         agent_name    = \$Global:AgentName
-        platform      = "windows"
+        os_type       = "windows"  # FASE 3: Corrigido de "platform" para "os_type"
         os_name       = \$sys.os_name
         os_version    = \$sys.os_version
         hostname      = \$sys.hostname

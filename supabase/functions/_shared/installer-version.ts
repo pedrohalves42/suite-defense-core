@@ -7,10 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.7.0-METRICS-WMI-FALLBACK';
-export const LAST_UPDATED = '2025-01-24T17:30:00Z'; // FASE 1+2+3: Cleanup sem filtro de data + WMI fallback
+export const INSTALLER_VERSION = 'v3.8.0-REALTIME-OS-TYPE-FIX';
+export const LAST_UPDATED = '2025-01-24T19:00:00Z'; // Realtime + os_type fix + multiple instances cleanup
 
 export const CHANGES = [
+  '[v3.8.0-REALTIME-OS-TYPE-FIX] CRITICAL FIX: Agente envia os_type ao inves de platform no heartbeat',
+  '[v3.8.0-REALTIME-OS-TYPE-FIX] CRITICAL FIX: Heartbeat aceita tanto os_type quanto platform (retrocompatibilidade)',
+  '[v3.8.0-REALTIME-OS-TYPE-FIX] CRITICAL FIX: Realtime habilitado para agent_system_metrics e system_alerts',
+  '[v3.8.0-REALTIME-OS-TYPE-FIX] CRITICAL FIX: Agentes existentes com os_type NULL atualizados para "windows"',
+  '[v3.8.0-REALTIME-OS-TYPE-FIX] MELHORIA: Dashboard agora atualiza metricas em tempo real',
   '[v3.7.0-METRICS-WMI-FALLBACK] CRITICAL FIX: Cleanup jobs agora deleta jobs de qualquer idade (older_than_days: 0)',
   '[v3.7.0-METRICS-WMI-FALLBACK] CRITICAL FIX: Metricas CPU/RAM/Disco com WMI fallback quando Get-Counter falhar',
   '[v3.7.0-METRICS-WMI-FALLBACK] FIX: CPU usa Get-Counter primeiro, fallback para Win32_Processor.LoadPercentage',
