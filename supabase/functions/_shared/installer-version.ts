@@ -7,10 +7,18 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.9.1-JOB-TYPE-FIX';
-export const LAST_UPDATED = '2025-11-25T02:00:00Z'; // Critical fix: PSCustomObject->Hashtable type conversion error
+export const INSTALLER_VERSION = 'v3.10.0-SECURITY-FEATURES';
+export const LAST_UPDATED = '2025-11-25T03:00:00Z'; // Security Features: Software inventory, vuln scan, AV status, web activity
 
 export const CHANGES = [
+  '[v3.10.0-SECURITY-FEATURES] FEATURE: Software inventory collection (software_inventory_collect job)',
+  '[v3.10.0-SECURITY-FEATURES] FEATURE: Light vulnerability scanner (light_vuln_scan job)',
+  '[v3.10.0-SECURITY-FEATURES] FEATURE: Antivirus status collection (collect_antivirus_status job)',
+  '[v3.10.0-SECURITY-FEATURES] FEATURE: Web activity tracking via DNS cache (collect_web_activity job)',
+  '[v3.10.0-SECURITY-FEATURES] FEATURE: Auto-remediation - fix firewall (fix_firewall job)',
+  '[v3.10.0-SECURITY-FEATURES] FEATURE: Auto-remediation - restart service (restart_service job)',
+  '[v3.10.0-SECURITY-FEATURES] NEW: 12 tabelas de seguranca: software_inventory, vuln_findings, antivirus_status, agent_web_activity, etc',
+  '[v3.10.0-SECURITY-FEATURES] NEW: 6 Edge Functions para coleta e analise de dados de seguranca',
   '[v3.9.1-JOB-TYPE-FIX] CRITICAL FIX: Submit-JobResult agora aceita [object] ao inves de [hashtable]',
   '[v3.9.1-JOB-TYPE-FIX] CRITICAL FIX: Jobs report agora completam corretamente (nao mais crash PSCustomObject)',
   '[v3.9.1-JOB-TYPE-FIX] FIX: Tipo do parametro $Output mudado para [object] para aceitar PSCustomObject',
