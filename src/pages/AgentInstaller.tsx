@@ -587,7 +587,7 @@ const AgentInstaller = () => {
 
       const installUrl = `${SUPABASE_URL}/functions/v1/serve-installer/${credentials.enrollmentKey}`;
       const command = platform === 'windows'
-        ? `irm ${installUrl} | iex`
+        ? `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm ${installUrl} | iex`
         : `curl -sL ${installUrl} | sudo bash`;
 
       setInstallCommand(command);
