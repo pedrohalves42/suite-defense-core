@@ -2047,6 +2047,7 @@ export type Database = {
       }
       sales_contacts: {
         Row: {
+          client_ip: string | null
           company: string | null
           created_at: string
           email: string
@@ -2056,8 +2057,10 @@ export type Database = {
           name: string
           phone: string | null
           status: string | null
+          user_agent: string | null
         }
         Insert: {
+          client_ip?: string | null
           company?: string | null
           created_at?: string
           email: string
@@ -2067,8 +2070,10 @@ export type Database = {
           name: string
           phone?: string | null
           status?: string | null
+          user_agent?: string | null
         }
         Update: {
+          client_ip?: string | null
           company?: string | null
           created_at?: string
           email?: string
@@ -2078,6 +2083,7 @@ export type Database = {
           name?: string
           phone?: string | null
           status?: string | null
+          user_agent?: string | null
         }
         Relationships: []
       }
@@ -3289,7 +3295,6 @@ export type Database = {
           installer_sha256: string | null
           installer_size_bytes: number | null
           is_active: boolean | null
-          key_full: string | null
           key_masked: string | null
           max_uses: number | null
           tenant_id: string | null
@@ -3309,7 +3314,6 @@ export type Database = {
           installer_sha256?: string | null
           installer_size_bytes?: number | null
           is_active?: boolean | null
-          key_full?: string | null
           key_masked?: never
           max_uses?: number | null
           tenant_id?: string | null
@@ -3329,7 +3333,6 @@ export type Database = {
           installer_sha256?: string | null
           installer_size_bytes?: number | null
           is_active?: boolean | null
-          key_full?: string | null
           key_masked?: never
           max_uses?: number | null
           tenant_id?: string | null
@@ -3859,19 +3862,33 @@ export type Database = {
           uptime_seconds: number
         }[]
       }
-      get_problematic_agents: {
-        Args: never
-        Returns: {
-          agent_name: string
-          created_at: string
-          id: string
-          installation_success: boolean
-          metadata: Json
-          minutes_since_creation: number
-          network_connectivity: boolean
-          status: string
-        }[]
-      }
+      get_problematic_agents:
+        | {
+            Args: never
+            Returns: {
+              agent_name: string
+              created_at: string
+              id: string
+              installation_success: boolean
+              metadata: Json
+              minutes_since_creation: number
+              network_connectivity: boolean
+              status: string
+            }[]
+          }
+        | {
+            Args: { p_tenant_id: string }
+            Returns: {
+              agent_name: string
+              created_at: string
+              id: string
+              installation_success: boolean
+              metadata: Json
+              minutes_since_creation: number
+              network_connectivity: boolean
+              status: string
+            }[]
+          }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
