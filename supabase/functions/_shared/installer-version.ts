@@ -7,8 +7,8 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.5-UPDATE-FIX';
-export const LAST_UPDATED = '2025-11-25T19:30:00Z'; // Handler update_agent corrigido para usar $output ao inves de $result nao declarado
+export const INSTALLER_VERSION = 'v3.10.6-JOB-TYPE-FIX';
+export const LAST_UPDATED = '2025-11-25T22:15:00Z'; // CRITICAL FIX: Tipo [hashtable]$Job removido de 7 funcoes + versao hardcoded corrigida
 
 export const CHANGES = [
   '[v3.10.5-UPDATE-FIX] CRITICAL FIX: Handler update_agent agora usa $output ao inves de variavel $result nao declarada',
