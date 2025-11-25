@@ -7,10 +7,14 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.0-SECURITY-FEATURES';
-export const LAST_UPDATED = '2025-11-25T03:00:00Z'; // Security Features: Software inventory, vuln scan, AV status, web activity
+export const INSTALLER_VERSION = 'v3.10.1-AGGRESSIVE-CLEANUP';
+export const LAST_UPDATED = '2025-11-25T04:00:00Z'; // Aggressive cleanup: PowerShell process termination + log file retry
 
 export const CHANGES = [
+  '[v3.10.1-AGGRESSIVE-CLEANUP] FIX: Encerra processos PowerShell do agente antes da reinstalacao',
+  '[v3.10.1-AGGRESSIVE-CLEANUP] FIX: Remove log antigo do agente preventivamente',
+  '[v3.10.1-AGGRESSIVE-CLEANUP] FIX: Teste de escrita no log com retry (3 tentativas com 2s de intervalo)',
+  '[v3.10.1-AGGRESSIVE-CLEANUP] FIX: Resolve erro "O fluxo nao era legivel" causado por log travado',
   '[v3.10.0-SECURITY-FEATURES] FEATURE: Software inventory collection (software_inventory_collect job)',
   '[v3.10.0-SECURITY-FEATURES] FEATURE: Light vulnerability scanner (light_vuln_scan job)',
   '[v3.10.0-SECURITY-FEATURES] FEATURE: Antivirus status collection (collect_antivirus_status job)',

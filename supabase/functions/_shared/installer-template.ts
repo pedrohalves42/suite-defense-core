@@ -132,6 +132,33 @@ try {
     Write-InstallerLog "Aviso ao remover tasks: $($_.Exception.Message)" "WARN"
 }
 
+# FASE 1.3 - Encerrar processos PowerShell que estao executando scripts do agente
+try {
+    Write-InstallerLog "Verificando processos PowerShell relacionados ao agente..." "INFO"
+
+    $agentProcesses = Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.CommandLine -ne $null -and
+            $_.CommandLine -like "*cybershield-agent*" 
+        }
+
+    if ($agentProcesses) {
+        foreach ($proc in $agentProcesses) {
+            try {
+                Write-InstallerLog "Parando processo PowerShell do agente (PID: $($proc.ProcessId))" "INFO"
+                Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+                Start-Sleep -Milliseconds 500
+            } catch {
+                Write-InstallerLog "Aviso ao parar processo PowerShell PID=$($proc.ProcessId): $($_.Exception.Message)" "WARN"
+            }
+        }
+    } else {
+        Write-InstallerLog "Nenhum processo PowerShell do agente encontrado" "INFO"
+    }
+} catch {
+    Write-InstallerLog "Aviso ao consultar processos PowerShell: $($_.Exception.Message)" "WARN"
+}
+
 Write-InstallerLog "FASE 1: Cleanup concluido" "SUCCESS"
 
 # ============= FASE 1.5: Diagnostico de Seguranca =============
@@ -311,14 +338,43 @@ Write-InstallerLog "[OK]  Script do agente validado: $scriptSize bytes" "SUCCESS
 # Testar escrita no log do agente antes de criar a scheduled task
 $AgentLogPath = Join-Path $LogsPath "cybershield-agent-v3.log"
 
-try {
-    $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $line = "$ts [INFO] Agent log criado pelo instalador"
-    Add-Content -Path $AgentLogPath -Value $line -Encoding UTF8
-    Write-InstallerLog "Teste de escrita no log do agente ok: $AgentLogPath" "SUCCESS"
-} catch {
-    Write-InstallerLog "ERRO CRITICO: nao foi possivel escrever no log do agente: $($_.Exception.Message)" "ERROR"
-    throw "Instalacao abortada: sem permissao para criar logs do agente em $AgentLogPath"
+# Remover log antigo se existir, para evitar conflitos com handle travado
+if (Test-Path $AgentLogPath) {
+    try {
+        Remove-Item -Path $AgentLogPath -Force -ErrorAction Stop
+        Write-InstallerLog "Log antigo removido: $AgentLogPath" "INFO"
+    } catch {
+        Write-InstallerLog "Aviso: nao foi possivel remover log antigo (possivelmente em uso): $($_.Exception.Message)" "WARN"
+    }
+}
+
+# Teste de escrita no log do agente com retry
+$maxRetries   = 3
+$writeSuccess = $false
+
+for ($i = 1; $i -le $maxRetries; $i++) {
+    try {
+        $ts   = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        $line = "$ts [INFO] Agent log criado pelo instalador (tentativa $i)"
+
+        Add-Content -Path $AgentLogPath -Value $line -Encoding UTF8
+
+        Write-InstallerLog "Teste de escrita no log do agente ok: $AgentLogPath" "SUCCESS"
+        $writeSuccess = $true
+        break
+    } catch {
+        Write-InstallerLog "Tentativa $i de escrita no log do agente falhou: $($_.Exception.Message)" "WARN"
+
+        if ($i -lt $maxRetries) {
+            Start-Sleep -Seconds 2
+        }
+    }
+}
+
+if (-not $writeSuccess) {
+    $msg = "Instalacao abortada: sem permissao para criar logs do agente em $AgentLogPath apos $maxRetries tentativas"
+    Write-InstallerLog $msg "ERROR"
+    throw $msg
 }
 
 # ============= FASE 4: Scheduled Task =============
