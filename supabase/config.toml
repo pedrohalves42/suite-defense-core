@@ -271,6 +271,9 @@ schedule = "*/10 * * * *"  # Executa a cada 10 minutos
 [functions.register-agent-release]
 verify_jwt = true
 
+[functions.get-agent-script-content]
+verify_jwt = true
+
 [functions.process-agent-updates]
 verify_jwt = false
 schedule = "0 */6 * * *"  # Executa a cada 6 horas
