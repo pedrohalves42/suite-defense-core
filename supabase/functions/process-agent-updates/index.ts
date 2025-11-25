@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
             agent_name: agent.agent_name,
             tenant_id: agent.tenant_id,
             type: 'update_agent',
-            status: 'pending',
+            status: 'queued',
             approved: true,
             payload: {
               current_version: agent.agent_version,
