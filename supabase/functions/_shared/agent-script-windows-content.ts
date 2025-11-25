@@ -6,7 +6,7 @@
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.2-TLS-FIX
+    CyberShield Agent - Windows v3.10.3-TLS-COMPLETE
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -44,7 +44,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "3.10.2"
+    [string]\$AgentVersion = "3.10.3"
 )
 
 \$ErrorActionPreference = "Stop"
