@@ -4,8 +4,12 @@
  * Aplica escapamento correto para template literals
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const SOURCE_PATH = path.join(__dirname, '../public/agent-scripts/cybershield-agent-windows-v3.ps1');
 const TARGET_PATH = path.join(__dirname, '../supabase/functions/_shared/agent-script-windows-content.ts');
