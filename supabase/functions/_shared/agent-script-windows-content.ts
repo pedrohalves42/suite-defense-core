@@ -44,7 +44,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "3.10.10-UPDATE-PATH-FIX"
+    [string]\$AgentVersion = "3.10.11-SCAN-DIRECTORY-FIX"
 )
 
 \$ErrorActionPreference = "Stop"
