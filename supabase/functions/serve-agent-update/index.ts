@@ -32,24 +32,27 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Buscar agente e HMAC secret
-    const { data: agent, error: agentError } = await supabase
-      .from('agents')
-      .select('id, agent_name, hmac_secret, agent_version, os_type')
-      .eq('id', agentToken)
-      .single();
+    // Buscar token e agente (como faz heartbeat)
+    const { data: tokenData, error: tokenError } = await supabase
+      .from('agent_tokens')
+      .select('agent_id, is_active, agents!inner(id, agent_name, hmac_secret, agent_version, os_type)')
+      .eq('token', agentToken)
+      .eq('is_active', true)
+      .maybeSingle();
 
-    if (agentError || !agent) {
-      logger.error('[serve-agent-update] Agente nao encontrado', { 
+    if (tokenError || !tokenData || !tokenData.agents) {
+      logger.error('[serve-agent-update] Token invalido ou agente nao encontrado', { 
         requestId, 
-        agentToken,
-        error: agentError 
+        agentToken: agentToken.substring(0, 8) + '...',
+        error: tokenError 
       });
       return new Response(
-        JSON.stringify({ error: 'Agent not found' }),
+        JSON.stringify({ error: 'Invalid token or agent not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const agent = tokenData.agents;
 
     // Verificar HMAC
     const hmacResult = await verifyHmacSignature(
