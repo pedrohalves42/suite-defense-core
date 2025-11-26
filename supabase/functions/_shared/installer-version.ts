@@ -7,10 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.10-UPDATE-PATH-FIX';
-export const LAST_UPDATED = '2025-01-26T21:00:00Z'; // UPDATE-PATH-FIX: PSCommandPath substituido por caminho absoluto
+export const INSTALLER_VERSION = 'v3.10.11-SCAN-DIRECTORY-FIX';
+export const LAST_UPDATED = '2025-01-26T23:00:00Z'; // SCAN-DIRECTORY-FIX: Expansao de variaveis ambiente + tratamento de diretorios
 
 export const CHANGES = [
+  '[v3.10.11-SCAN-DIRECTORY-FIX] CRITICAL FIX: Handler scan expande variaveis ambiente (%USERPROFILE%, %TEMP%) automaticamente',
+  '[v3.10.11-SCAN-DIRECTORY-FIX] CRITICAL FIX: Handler scan detecta diretorios e escaneia arquivos executaveis dentro',
+  '[v3.10.11-SCAN-DIRECTORY-FIX] FIX: Resolve erro "Arquivo nao encontrado" ao escanear paths com variaveis Windows',
+  '[v3.10.11-SCAN-DIRECTORY-FIX] FIX: Resolve erro "Nao e possivel chamar metodo em expressao de valor nulo" ao escanear diretorios',
+  '[v3.10.11-SCAN-DIRECTORY-FIX] MELHORIA: Scan de diretorio lista ate 10 executaveis (.exe, .dll, .bat, .ps1, etc)',
   '[v3.10.10-UPDATE-PATH-FIX] CRITICAL FIX: Handler update_agent usa caminho absoluto C:\\CyberShield\\cybershield-agent-v3.ps1',
   '[v3.10.10-UPDATE-PATH-FIX] CRITICAL FIX: Resolve "arquivo nao encontrado" quando PSCommandPath vazio em Scheduled Task',
   '[v3.10.10-UPDATE-PATH-FIX] MELHORIA: Rate limit submit-software-inventory aumentado de 30 para 60 req/hora',
