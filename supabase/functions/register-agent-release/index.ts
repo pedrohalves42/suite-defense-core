@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
 
     // Parse payload
     const payload = await req.json();
-    const { platform, version, script_content, release_notes, channel = 'stable' } = payload;
+    const { platform, version, script_content, release_notes, channel = 'stable', manual_sha256 } = payload;
 
     if (!platform || !version || !script_content) {
       return new Response(
@@ -69,12 +69,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Calcular SHA256
-    const encoder = new TextEncoder();
-    const data = encoder.encode(script_content);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    // Use manual SHA256 if provided (for BOM compatibility with old agents)
+    // Otherwise calculate SHA256 normally
+    let sha256: string;
+    if (manual_sha256) {
+      sha256 = manual_sha256;
+      logger.info('[register-agent-release] Using manual SHA256', {
+        requestId,
+        manual_sha256: sha256.substring(0, 16) + '...'
+      });
+    } else {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(script_content);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
 
     logger.info('[register-agent-release] Registering new release', {
       requestId,
