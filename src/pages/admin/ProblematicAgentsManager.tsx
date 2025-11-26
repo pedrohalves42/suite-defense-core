@@ -30,7 +30,7 @@ interface ProblematicAgent {
   minutes_since_enrollment: number;
   issue_type: string;
   token_count: number;
-  has_active_token: number;
+  has_active_token: boolean;
   pending_jobs_count: number;
 }
 
