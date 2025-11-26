@@ -7,10 +7,13 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.11-SCAN-DIRECTORY-FIX';
-export const LAST_UPDATED = '2025-01-26T23:00:00Z'; // SCAN-DIRECTORY-FIX: Expansao de variaveis ambiente + tratamento de diretorios
+export const INSTALLER_VERSION = 'v3.10.12-UPDATE-PATH-AGENTNAME-FIX';
+export const LAST_UPDATED = '2025-01-26T23:30:00Z'; // UPDATE-PATH-AGENTNAME-FIX: Handler update_agent usa caminho dinamico com $AgentName
 
 export const CHANGES = [
+  '[v3.10.12-UPDATE-PATH-AGENTNAME-FIX] CRITICAL FIX: Handler update_agent usa caminho dinamico C:\\CyberShield\\cybershield-agent-$AgentName.ps1',
+  '[v3.10.12-UPDATE-PATH-AGENTNAME-FIX] CRITICAL FIX: Resolve "arquivo nao encontrado" quando instalador salva script com nome do agente',
+  '[v3.10.12-UPDATE-PATH-AGENTNAME-FIX] FIX: Elimina hardcoded v3.ps1, agora usa $Global:AgentName dinamicamente',
   '[v3.10.11-SCAN-DIRECTORY-FIX] CRITICAL FIX: Handler scan expande variaveis ambiente (%USERPROFILE%, %TEMP%) automaticamente',
   '[v3.10.11-SCAN-DIRECTORY-FIX] CRITICAL FIX: Handler scan detecta diretorios e escaneia arquivos executaveis dentro',
   '[v3.10.11-SCAN-DIRECTORY-FIX] FIX: Resolve erro "Arquivo nao encontrado" ao escanear paths com variaveis Windows',
