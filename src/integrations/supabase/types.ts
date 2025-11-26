@@ -3460,6 +3460,7 @@ export type Database = {
       }
       jobs_normalized: {
         Row: {
+          agent_id: string | null
           agent_name: string | null
           approved: boolean | null
           completed_at: string | null
@@ -3486,6 +3487,7 @@ export type Database = {
           type: string | null
         }
         Insert: {
+          agent_id?: string | null
           agent_name?: string | null
           approved?: boolean | null
           completed_at?: string | null
@@ -3512,6 +3514,7 @@ export type Database = {
           type?: string | null
         }
         Update: {
+          agent_id?: string | null
           agent_name?: string | null
           approved?: boolean | null
           completed_at?: string | null
@@ -3543,6 +3546,48 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
             referencedColumns: ["id"]
           },
           {
