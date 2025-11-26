@@ -3624,14 +3624,23 @@ export type Database = {
         Row: {
           agent_name: string | null
           agent_version: string | null
-          health_status: string | null
+          completed_jobs_24h: number | null
+          cpu_usage_percent: number | null
+          disk_usage_percent: number | null
+          failed_jobs_24h: number | null
+          failure_rate_pct: number | null
+          heartbeat_status: string | null
+          hostname: string | null
           id: string | null
           last_heartbeat: string | null
-          lifecycle_stage: string | null
-          minutes_since_heartbeat: number | null
+          last_metrics_at: string | null
+          memory_usage_percent: number | null
           os_type: string | null
-          outdated: boolean | null
+          os_version: string | null
+          seconds_since_heartbeat: number | null
+          status: string | null
           tenant_id: string | null
+          total_jobs_24h: number | null
         }
         Relationships: [
           {
@@ -3654,31 +3663,16 @@ export type Database = {
         Row: {
           agent_id: string | null
           agent_name: string | null
-          agent_status: string | null
-          agent_version: string | null
           command_copied_at: string | null
           downloaded_at: string | null
           enrolled_at: string | null
           generated_at: string | null
-          hostname: string | null
-          installation_metadata: Json | null
-          installation_method: string | null
-          installation_success: boolean | null
           installation_time_seconds: number | null
           installed_at: string | null
           is_stuck: boolean | null
-          last_error_at: string | null
-          last_error_message: string | null
           last_heartbeat: string | null
           lifecycle_stage: string | null
-          minutes_between_copy_and_install: number | null
-          minutes_since_enrollment: number | null
-          minutes_since_heartbeat: number | null
-          network_connectivity: boolean | null
-          os_type: string | null
-          os_version: string | null
-          payload_hash: string | null
-          platform: string | null
+          status: string | null
           tenant_id: string | null
         }
         Relationships: [
@@ -3701,17 +3695,16 @@ export type Database = {
       v_problematic_agents: {
         Row: {
           agent_name: string | null
-          enrolled_at: string | null
-          has_active_token: number | null
+          created_at: string | null
           id: string | null
-          issue_type: string | null
+          installation_success: boolean | null
           last_heartbeat: string | null
-          minutes_since_enrollment: number | null
-          pending_jobs_count: number | null
+          metadata: Json | null
+          minutes_since_creation: number | null
+          network_connectivity: boolean | null
+          problem_type: string | null
           status: string | null
           tenant_id: string | null
-          tenant_name: string | null
-          token_count: number | null
         }
         Relationships: [
           {
