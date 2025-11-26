@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
       logger.error('Failed to clear old inventory', deleteError);
     }
 
-    // Inserir novos itens
+    // Inserir ou atualizar itens (UPSERT para lidar com duplicatas)
     const itemsToInsert = payload.items.map(item => ({
       tenant_id: agent.tenant_id,
       agent_id: payload.agent_id,
@@ -148,10 +148,13 @@ Deno.serve(async (req) => {
 
     const { error: insertError } = await supabase
       .from('software_inventory')
-      .insert(itemsToInsert);
+      .upsert(itemsToInsert, { 
+        onConflict: 'agent_id,name,version',
+        ignoreDuplicates: false 
+      });
 
     if (insertError) {
-      logger.error('Failed to insert software inventory', insertError);
+      logger.error('Failed to upsert software inventory', insertError);
       return new Response(
         JSON.stringify({ error: 'Failed to store inventory' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
