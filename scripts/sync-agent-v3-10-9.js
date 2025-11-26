@@ -9,9 +9,13 @@
  * 4. Exibe SHA256 para registro manual em agent_releases
  */
 
-const fs = require('fs');
-const crypto = require('crypto');
-const path = require('path');
+import fs from 'fs';
+import crypto from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Paths
 const SOURCE_SCRIPT = path.join(__dirname, '..', 'public', 'agent-scripts', 'cybershield-agent-windows-v3.ps1');
