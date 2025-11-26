@@ -2,14 +2,10 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
+ * Sincronizado em: 2025-01-26
  */
 
-<<<<<<< HEAD
-export const AGENT_SCRIPT_WINDOWS_CONTENT = `
-<#
-=======
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
->>>>>>> 3d2967e4ce1a22aa8dde6d71a7771917144c33fe
     CyberShield Agent - Windows v3.10.6-JOB-TYPE-FIX
     
     Funcionalidades:
@@ -49,7 +45,6 @@ param(
 
     [Parameter(Mandatory = \$false)]
     [string]\$AgentVersion = "3.10.6-JOB-TYPE-FIX"
-<<<<<<< HEAD
 )
 
 \$ErrorActionPreference = "Stop"
@@ -1050,7 +1045,7 @@ function Execute-Job {
                 try {
                     Write-Log "[SCAN] Job type 'scan' recebido" "INFO"
 
-                    # Payload esperado: { "filePath": "C:\\\\path\\\\file.exe", "tenantId": "uuid" }
+                    # Payload esperado: { "filePath": "C:\\path\\file.exe", "tenantId": "uuid" }
                     \$filePath = \$payload.filePath
                     \$tenantId = \$payload.tenantId
 
@@ -1438,9 +1433,6 @@ catch {
     exit 1
 }
 `;
-=======
-)`;
->>>>>>> 3d2967e4ce1a22aa8dde6d71a7771917144c33fe
 
 export function getAgentScriptWindows(): string {
   return AGENT_SCRIPT_WINDOWS_CONTENT;
