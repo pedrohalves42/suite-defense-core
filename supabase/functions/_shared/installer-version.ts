@@ -7,10 +7,13 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.9-PSCUSTOMOBJECT-FIX';
-export const LAST_UPDATED = '2025-01-27T00:15:00Z'; // PSCUSTOMOBJECT-FIX: ContainsKey() substituido por $null -ne
+export const INSTALLER_VERSION = 'v3.10.10-UPDATE-PATH-FIX';
+export const LAST_UPDATED = '2025-01-26T21:00:00Z'; // UPDATE-PATH-FIX: PSCommandPath substituido por caminho absoluto
 
 export const CHANGES = [
+  '[v3.10.10-UPDATE-PATH-FIX] CRITICAL FIX: Handler update_agent usa caminho absoluto C:\\CyberShield\\cybershield-agent-v3.ps1',
+  '[v3.10.10-UPDATE-PATH-FIX] CRITICAL FIX: Resolve "arquivo nao encontrado" quando PSCommandPath vazio em Scheduled Task',
+  '[v3.10.10-UPDATE-PATH-FIX] MELHORIA: Rate limit submit-software-inventory aumentado de 30 para 60 req/hora',
   '[v3.10.9-PSCUSTOMOBJECT-FIX] CRITICAL FIX: Linhas 620 e 766 - $Job.ContainsKey("payload") substituido por $null -ne $Job.payload',
   '[v3.10.9-PSCUSTOMOBJECT-FIX] CRITICAL FIX: ContainsKey() nao funciona em PSCustomObject (retornado por ConvertFrom-Json)',
   '[v3.10.9-PSCUSTOMOBJECT-FIX] CRITICAL FIX: Resolve erro MethodNotFound em Invoke-WebActivityJob e Invoke-RestartServiceJob',
