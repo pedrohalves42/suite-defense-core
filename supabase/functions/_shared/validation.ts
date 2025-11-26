@@ -196,3 +196,10 @@ export const SuggestConfigChangePayloadSchema = z.object({
   suggested_value: z.string().max(500),
   reason: z.string().min(1).max(300),
 });
+
+export const SuggestJobCleanupPayloadSchema = z.object({
+  agent_name: AgentNameSchema.optional(),
+  job_status: z.enum(['stuck', 'failed', 'pending']).optional(),
+  older_than_days: z.number().int().min(0).max(365).optional().default(7),
+  reason: z.string().min(1).max(300),
+});
