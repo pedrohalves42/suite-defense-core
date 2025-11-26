@@ -6,6 +6,7 @@ import {
   SystemAlertPayloadSchema,
   SuggestAgentRestartPayloadSchema,
   SuggestConfigChangePayloadSchema,
+  SuggestJobCleanupPayloadSchema,
 } from '../_shared/validation.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -196,11 +197,15 @@ serve(async (req) => {
         }
 
         case 'suggest_job_cleanup': {
-          // Manter case existente sem validacao especifica por enquanto
+          const payload = SuggestJobCleanupPayloadSchema.parse(action.action_payload);
+
           executionResult = {
-            suggestion_type: action.action_type,
-            payload: action.action_payload,
-            note: 'Suggestion recorded. Manual action required.'
+            suggestion_type: 'job_cleanup',
+            agent_name: payload.agent_name,
+            job_status: payload.job_status,
+            older_than_days: payload.older_than_days,
+            reason: payload.reason,
+            note: 'Suggestion recorded. Manual action required.',
           };
           break;
         }
