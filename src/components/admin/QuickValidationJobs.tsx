@@ -12,10 +12,13 @@ interface ValidationJob {
 }
 
 const VALIDATION_JOBS: ValidationJob[] = [
+  { agentName: "testepc2", jobType: "update_agent", label: "testepc2 - Update Agent (v3.10.7 → v3.10.9)" },
   { agentName: "TESTEMIT", jobType: "software_inventory_collect", label: "TESTEMIT - Software Inventory" },
+  { agentName: "testepc2", jobType: "software_inventory_collect", label: "testepc2 - Software Inventory" },
   { agentName: "TESTEMIT", jobType: "collect_antivirus_status", label: "TESTEMIT - Antivirus Status" },
   { agentName: "TESTEBMG", jobType: "collect_antivirus_status", label: "TESTEBMG - Antivirus Status" },
-  { agentName: "TESTEBMG", jobType: "collect_web_activity", label: "TESTEBMG - Web Activity" },
+  { agentName: "testepc2", jobType: "collect_antivirus_status", label: "testepc2 - Antivirus Status" },
+  { agentName: "testepc2", jobType: "collect_web_activity", label: "testepc2 - Web Activity" },
 ];
 
 export function QuickValidationJobs() {
@@ -42,12 +45,12 @@ export function QuickValidationJobs() {
       // Get agent IDs
       const { data: agents } = await supabase
         .from('agents')
-        .select('id, agent_name')
+        .select('id, agent_name, agent_version')
         .eq('tenant_id', userRole.tenant_id)
-        .in('agent_name', ['TESTEMIT', 'TESTEBMG']);
+        .in('agent_name', ['TESTEMIT', 'TESTEBMG', 'testepc2']);
 
       if (!agents || agents.length === 0) {
-        throw new Error("Agentes TESTEMIT ou TESTEBMG não encontrados");
+        throw new Error("Agentes não encontrados");
       }
 
       // Create all jobs
@@ -55,13 +58,21 @@ export function QuickValidationJobs() {
         const agent = agents.find(a => a.agent_name === vJob.agentName);
         if (!agent) return null;
 
+        // Special payload for update_agent job
+        const payload = vJob.jobType === 'update_agent' 
+          ? { 
+              current_version: agent.agent_version || 'v3.10.7',
+              target_version: 'v3.10.9-PSCUSTOMOBJECT-FIX' 
+            }
+          : {};
+
         return {
           tenant_id: userRole.tenant_id,
           agent_id: agent.id,
           agent_name: agent.agent_name,
           type: vJob.jobType,
           status: 'queued',
-          payload: {},
+          payload,
           approved: true
         };
       }).filter(Boolean);
