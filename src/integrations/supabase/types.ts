@@ -3447,15 +3447,11 @@ export type Database = {
       }
       installation_error_summary: {
         Row: {
-          affected_agents_sample: string[] | null
+          error_count: number | null
           error_message: string | null
-          first_seen: string | null
-          last_seen: string | null
-          occurrence_count: number | null
-          percentage_of_failures: number | null
+          last_occurrence: string | null
           platform: string | null
           tenant_id: string | null
-          unique_agents_affected: number | null
         }
         Relationships: [
           {
@@ -3469,13 +3465,13 @@ export type Database = {
       }
       installation_health_status: {
         Row: {
-          attempts_24h: number | null
-          failed_24h: number | null
-          failure_rate_24h_pct: number | null
-          health_status: string | null
-          last_installation_at: string | null
-          success_24h: number | null
+          avg_install_time_seconds: number | null
+          failed_attempts: number | null
+          platform: string | null
+          success_rate_pct: number | null
+          successful_attempts: number | null
           tenant_id: string | null
+          total_attempts: number | null
         }
         Relationships: [
           {
@@ -3513,16 +3509,14 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           delivered_at: string | null
-          duration_seconds: number | null
           error_message: string | null
           execution_time_seconds: number | null
           finished_at: string | null
           id: string | null
           is_recurring: boolean | null
-          is_v3: boolean | null
+          is_stuck: boolean | null
           last_run_at: string | null
           next_run_at: string | null
-          normalized_status: string | null
           output: Json | null
           parent_job_id: string | null
           payload: Json | null
@@ -3540,16 +3534,14 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
-          duration_seconds?: never
           error_message?: string | null
           execution_time_seconds?: number | null
           finished_at?: string | null
           id?: string | null
           is_recurring?: boolean | null
-          is_v3?: never
+          is_stuck?: never
           last_run_at?: string | null
           next_run_at?: string | null
-          normalized_status?: never
           output?: Json | null
           parent_job_id?: string | null
           payload?: Json | null
@@ -3567,16 +3559,14 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
-          duration_seconds?: never
           error_message?: string | null
           execution_time_seconds?: number | null
           finished_at?: string | null
           id?: string | null
           is_recurring?: boolean | null
-          is_v3?: never
+          is_stuck?: never
           last_run_at?: string | null
           next_run_at?: string | null
-          normalized_status?: never
           output?: Json | null
           parent_job_id?: string | null
           payload?: Json | null
@@ -3793,39 +3783,108 @@ export type Database = {
       }
       v_problematic_jobs: {
         Row: {
-          age_minutes: number | null
+          agent_id: string | null
           agent_name: string | null
           completed_at: string | null
           created_at: string | null
           delivered_at: string | null
+          error_message: string | null
           id: string | null
-          problem_type: string | null
+          issue_type: string | null
+          minutes_since_creation: number | null
+          started_at: string | null
           status: string | null
+          tenant_id: string | null
           type: string | null
         }
         Insert: {
-          age_minutes?: never
+          agent_id?: string | null
           agent_name?: string | null
           completed_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          error_message?: string | null
           id?: string | null
-          problem_type?: never
+          issue_type?: never
+          minutes_since_creation?: never
+          started_at?: string | null
           status?: string | null
+          tenant_id?: string | null
           type?: string | null
         }
         Update: {
-          age_minutes?: never
+          agent_id?: string | null
           agent_name?: string | null
           completed_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          error_message?: string | null
           id?: string | null
-          problem_type?: never
+          issue_type?: never
+          minutes_since_creation?: never
+          started_at?: string | null
           status?: string | null
+          tenant_id?: string | null
           type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
