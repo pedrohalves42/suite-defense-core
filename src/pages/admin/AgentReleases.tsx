@@ -88,7 +88,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'Critical fix: update_agent handler now uses $output instead of undeclared $result variable. Resolves "Exception setting property error" blocking auto-update. Also includes UTF-8 encoding fix for HMAC consistency.',
+        release_notes: 'CRITICAL FIX: Replaced $Job.ContainsKey("payload") with $null -ne $Job.payload for PSCustomObject compatibility. All job handlers updated to use null check pattern instead of hashtable methods.',
         channel: 'stable'
       });
 
