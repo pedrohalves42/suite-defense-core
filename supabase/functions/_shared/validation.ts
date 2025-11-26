@@ -51,7 +51,18 @@ export const EnrollAgentSchema = z.object({
 
 export const CreateJobSchema = z.object({
   agentName: AgentNameSchema,
-  type: z.enum(['scan', 'update', 'report', 'config'], { errorMap: () => ({ message: 'Tipo de job invalido' }) }),
+  type: z.enum([
+    'scan', 
+    'update_agent', 
+    'report', 
+    'config',
+    'software_inventory_collect',
+    'light_vuln_scan',
+    'collect_antivirus_status',
+    'collect_web_activity',
+    'fix_firewall',
+    'restart_service'
+  ], { errorMap: () => ({ message: 'Tipo de job invalido' }) }),
   payload: z.record(z.unknown()).optional(),
   approved: z.boolean().default(true),
   scheduledAt: z.string().datetime().optional(),
@@ -94,7 +105,18 @@ export const AutoGenerateEnrollmentSchema = z.object({
 // Enhanced CreateJobSchema with additional security validations
 export const CreateJobSchemaEnhanced = z.object({
   agentName: AgentNameSchema,
-  type: z.enum(['scan', 'update', 'report', 'config'], { errorMap: () => ({ message: 'Tipo de job invalido' }) }),
+  type: z.enum([
+    'scan', 
+    'update_agent', 
+    'report', 
+    'config',
+    'software_inventory_collect',
+    'light_vuln_scan',
+    'collect_antivirus_status',
+    'collect_web_activity',
+    'fix_firewall',
+    'restart_service'
+  ], { errorMap: () => ({ message: 'Tipo de job invalido' }) }),
   payload: z.record(z.unknown()).optional().refine(payload => {
     if (!payload) return true;
     const jsonStr = JSON.stringify(payload);
