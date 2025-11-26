@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ChevronLeft, ChevronRight, ExternalLink, Shield, AlertTriangle, CheckCircle2, FileSearch, TrendingUp } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { ScanFileDialog } from '@/components/ScanFileDialog';
+import { SystemScanButton } from '@/components/SystemScanButton';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const ITEMS_PER_PAGE = 15;
@@ -205,15 +206,21 @@ export default function VirusScans() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div>
-        <div className="flex items-center gap-3 mb-2">
-          <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
-            <Shield className="h-8 w-8 text-primary" />
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
+              <Shield className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">Scans de Virus</h1>
+              <p className="text-muted-foreground">Resultados das analises do VirusTotal</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-bold">Scans de Virus</h1>
-            <p className="text-muted-foreground">Resultados das analises do VirusTotal</p>
-          </div>
+        </div>
+        <div className="flex gap-2">
+          <SystemScanButton />
+          <ScanFileDialog />
         </div>
       </div>
 
