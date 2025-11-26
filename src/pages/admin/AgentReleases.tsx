@@ -17,8 +17,7 @@ const CURRENT_VERSION = 'v3.10.11-SCAN-DIRECTORY-FIX';
 
 // SHA256 WITH BOM for v3.10.11 (calculated by scripts/calculate-sha256-v3-10-11.js)
 // This hash includes UTF-8 BOM (EF BB BF) to match how v3.10.9 agents save files
-// Calculated: 8cbb197264adcd3c53dd078d4cad021582125ef038489af133423d7674526b
-const CURRENT_VERSION_SHA256_WITH_BOM = '8cbb197264adcd3c53dd078d4cad021582125ef038489af133423d7674526b';
+const CURRENT_VERSION_SHA256_WITH_BOM = 'a41d263896daf907182f529f36339eeab32f42b8d6761544a78dee46d5d069d3';
 
 export default function AgentReleases() {
   const { releases, isLoading, error, refetch, registerRelease, isRegistering } = useAgentReleases();
