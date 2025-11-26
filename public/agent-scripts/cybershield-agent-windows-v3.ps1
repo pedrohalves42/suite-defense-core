@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.9-PSCUSTOMOBJECT-FIX
+    CyberShield Agent - Windows v3.10.10-UPDATE-PATH-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.10.9-PSCUSTOMOBJECT-FIX"
+    [string]$AgentVersion = "3.10.10-UPDATE-PATH-FIX"
 )
 
 $ErrorActionPreference = "Stop"
@@ -1148,8 +1148,8 @@ function Execute-Job {
                     $backupScript  = $currentScript -replace '\.ps1$', "-backup-$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
                     $tempScript    = Join-Path $env:TEMP "cybershield-agent-update-$newVersion.ps1"
 
-                    # Salvar script novo
-                    Set-Content -Path $tempScript -Value $scriptText -Encoding UTF8
+                    # Salvar script novo (UTF8 sem BOM para compatibilidade SHA256)
+                    [System.IO.File]::WriteAllText($tempScript, $scriptText, [System.Text.UTF8Encoding]::new($false))
 
                     # Validar SHA256
                     $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
