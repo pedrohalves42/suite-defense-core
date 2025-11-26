@@ -2057,6 +2057,7 @@ export type Database = {
           name: string
           phone: string | null
           status: string | null
+          tenant_id: string | null
           user_agent: string | null
         }
         Insert: {
@@ -2070,6 +2071,7 @@ export type Database = {
           name: string
           phone?: string | null
           status?: string | null
+          tenant_id?: string | null
           user_agent?: string | null
         }
         Update: {
@@ -2083,9 +2085,18 @@ export type Database = {
           name?: string
           phone?: string | null
           status?: string | null
+          tenant_id?: string | null
           user_agent?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sales_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scheduled_jobs: {
         Row: {
