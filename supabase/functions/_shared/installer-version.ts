@@ -7,10 +7,14 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.7-FINAL-FIX';
-export const LAST_UPDATED = '2025-01-26T23:00:00Z'; // FINAL FIX: Corrigidos 6 bugs criticos (scan $result, update_agent -Uri, security handlers output extraction)
+export const INSTALLER_VERSION = 'v3.10.8-AGENT-ID-FIX';
+export const LAST_UPDATED = '2025-01-26T23:30:00Z'; // AGENT-ID-FIX: poll-jobs retorna agent_id, handlers usam $Job.agent_id
 
 export const CHANGES = [
+  '[v3.10.8-AGENT-ID-FIX] CRITICAL FIX: poll-jobs Edge Function agora retorna agent_id no objeto de resposta',
+  '[v3.10.8-AGENT-ID-FIX] CRITICAL FIX: Handlers de seguranca (software_inventory, vuln_scan, antivirus, web_activity) usam $Job.agent_id',
+  '[v3.10.8-AGENT-ID-FIX] FIX: Elimina erro 400 "agent_id violates not-null constraint" em jobs de seguranca',
+  '[v3.10.8-AGENT-ID-FIX] FIX: Todos os security jobs agora completam com sucesso e populam tabelas corretamente',
   '[v3.10.7-FINAL-FIX] CRITICAL FIX: Bug #1 - scan handler removeu try/catch redundante que usava $result nao declarada',
   '[v3.10.7-FINAL-FIX] CRITICAL FIX: Bug #2 - scan handler corrigido para usar -Path ao inves de -Uri em Invoke-SecureRequest',
   '[v3.10.7-FINAL-FIX] CRITICAL FIX: Bug #3 - update_agent handler corrigido para usar -Path ao inves de -Uri',
