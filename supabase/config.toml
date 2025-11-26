@@ -149,6 +149,9 @@ verify_jwt = true
 [functions.list-reports]
 verify_jwt = false
 
+[functions.generate-security-report]
+verify_jwt = true
+
 [functions.check-tenant-quotas]
 verify_jwt = true
 

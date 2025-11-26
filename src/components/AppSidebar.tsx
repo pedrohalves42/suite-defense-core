@@ -48,6 +48,7 @@ export const AppSidebar = () => {
     { icon: AlertTriangle, label: 'Vulnerabilidades', to: '/admin/vulnerabilities', section: 'security' },
     { icon: Globe, label: 'Atividade Web', to: '/admin/web-activity', section: 'security' },
     { icon: Clock, label: 'Timeline Agente', to: '/admin/agent-timeline', section: 'security' },
+    { icon: ScrollText, label: 'Relatorios', to: '/admin/reports', section: 'security' },
     
     // === INFRAESTRUTURA ===
     { icon: Package, label: 'Instalacoes', to: '/admin/installations', section: 'infrastructure' },
