@@ -174,47 +174,40 @@ export default function AgentTest() {
         throw new Error("Agent nao fez polling apos 120s. Verifique se o agent esta rodando.");
       }
 
-      // Step 3: Wait for report upload
+      // Step 3: Wait for job completion with output
       addTestResult({
-        step: "3. Aguardar Report Upload",
+        step: "3. Aguardar Conclusao do Job",
         status: "running",
-        message: "Aguardando agent enviar report (max 60s)..."
+        message: "Aguardando agent executar e retornar output (max 60s)..."
       });
 
-      let reportUploaded = false;
+      let jobCompleted = false;
       attempts = 0;
-      const maxReportAttempts = 12; // 12 * 5s = 60s
+      const maxCompletionAttempts = 12; // 12 * 5s = 60s
 
-      while (!reportUploaded && attempts < maxReportAttempts) {
+      while (!jobCompleted && attempts < maxCompletionAttempts) {
         await new Promise(resolve => setTimeout(resolve, 5000));
         attempts++;
 
-        const { data: reports } = await supabase
-          .from("reports")
-          .select("*")
-          .eq("agent_name", agentName)
-          .order("created_at", { ascending: false })
-          .limit(1);
+        const { data: updatedJob } = await supabase
+          .from("jobs")
+          .select("status, output, completed_at")
+          .eq("id", job.id)
+          .maybeSingle();
 
-        if (reports && reports.length > 0) {
-          const latestReport = reports[0];
-          const reportTime = new Date(latestReport.created_at).getTime();
-          const jobTime = new Date(job.created_at).getTime();
-          
-          if (reportTime > jobTime) {
-            reportUploaded = true;
-            addTestResult({
-              step: "3. Aguardar Report Upload",
-              status: "success",
-              message: `Report enviado apos ${attempts * 5}s`,
-              data: latestReport
-            });
-          }
+        if (updatedJob?.status === "completed" && updatedJob?.output) {
+          jobCompleted = true;
+          addTestResult({
+            step: "3. Aguardar Conclusao do Job",
+            status: "success",
+            message: `Job completado com output apos ${attempts * 5}s`,
+            data: { status: updatedJob.status, output: updatedJob.output }
+          });
         }
       }
 
-      if (!reportUploaded) {
-        throw new Error("Agent nao enviou report apos 60s. Verifique os logs do agent.");
+      if (!jobCompleted) {
+        throw new Error("Agent nao completou job com output apos 60s. Verifique os logs do agent.");
       }
 
       // Step 4: Wait for ACK
