@@ -3509,14 +3509,17 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           delivered_at: string | null
+          duration_seconds: number | null
           error_message: string | null
           execution_time_seconds: number | null
           finished_at: string | null
           id: string | null
           is_recurring: boolean | null
           is_stuck: boolean | null
+          is_v3: boolean | null
           last_run_at: string | null
           next_run_at: string | null
+          normalized_status: string | null
           output: Json | null
           parent_job_id: string | null
           payload: Json | null
@@ -3534,14 +3537,17 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          duration_seconds?: number | null
           error_message?: string | null
           execution_time_seconds?: number | null
           finished_at?: string | null
           id?: string | null
           is_recurring?: boolean | null
           is_stuck?: never
+          is_v3?: never
           last_run_at?: string | null
           next_run_at?: string | null
+          normalized_status?: string | null
           output?: Json | null
           parent_job_id?: string | null
           payload?: Json | null
@@ -3559,14 +3565,17 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           delivered_at?: string | null
+          duration_seconds?: number | null
           error_message?: string | null
           execution_time_seconds?: number | null
           finished_at?: string | null
           id?: string | null
           is_recurring?: boolean | null
           is_stuck?: never
+          is_v3?: never
           last_run_at?: string | null
           next_run_at?: string | null
+          normalized_status?: string | null
           output?: Json | null
           parent_job_id?: string | null
           payload?: Json | null
