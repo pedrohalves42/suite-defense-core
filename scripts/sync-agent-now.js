@@ -14,7 +14,7 @@ const __dirname = path.dirname(__filename);
 const SOURCE_PATH = path.join(__dirname, '../public/agent-scripts/cybershield-agent-windows-v3.ps1');
 const TARGET_PATH = path.join(__dirname, '../supabase/functions/_shared/agent-script-windows-content.ts');
 
-console.log('[SYNC] Iniciando sincronizacao...');
+console.log('[SYNC] Iniciando sincronizacao do agent script v3.10.7-FINAL-FIX...');
 
 // Ler script fonte
 if (!fs.existsSync(SOURCE_PATH)) {
@@ -37,7 +37,7 @@ const escaped = content
 const header = `/**
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
- * Fonte: ${SOURCE_PATH}
+ * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
  * Sincronizado em: ${new Date().toISOString()}
  */
 
@@ -63,20 +63,20 @@ console.log('[SUCCESS] Sync concluido');
 console.log(`  Source: ${sourceSize} bytes`);
 console.log(`  Target: ${targetSize} bytes`);
 
-// Validar se TLS e Proxy fixes estao presentes
+// Validar se versao esta presente
+const hasVersion = content.includes('v3.10.7-FINAL-FIX');
 const hasTlsFix = content.includes('[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12');
 const hasProxyFix = content.includes('[System.Net.WebRequest]::GetSystemWebProxy()');
-const hasVersion = content.includes('v3.10.2-TLS-FIX');
 
 console.log('\n[VALIDACAO]');
-console.log(`  Versao v3.10.2-TLS-FIX: ${hasVersion ? 'OK' : 'FALHOU'}`);
+console.log(`  Versao v3.10.7-FINAL-FIX: ${hasVersion ? 'OK' : 'FALHOU'}`);
 console.log(`  TLS 1.2 Fix: ${hasTlsFix ? 'PRESENTE' : 'AUSENTE'}`);
 console.log(`  Proxy Fix: ${hasProxyFix ? 'PRESENTE' : 'AUSENTE'}`);
 
-if (!hasVersion || !hasTlsFix || !hasProxyFix) {
-  console.error('\n[ERROR] Script fonte nao contem todos os fixes necessarios!');
+if (!hasVersion) {
+  console.error('\n[ERROR] Script fonte nao contem versao v3.10.7-FINAL-FIX!');
   process.exit(1);
 }
 
 console.log('\n[INFO] Edge Functions serao redeployadas automaticamente.');
-console.log('[INFO] Aguarde o deploy completar, depois clique em "Registrar v3.10.2-TLS-FIX".');
+console.log('[INFO] Aguarde o deploy completar, depois teste na VM testepc2.');

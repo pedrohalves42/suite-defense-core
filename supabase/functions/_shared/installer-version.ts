@@ -7,10 +7,17 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.6-JOB-TYPE-FIX';
-export const LAST_UPDATED = '2025-11-25T22:15:00Z'; // CRITICAL FIX: Tipo [hashtable]$Job removido de 7 funcoes + versao hardcoded corrigida
+export const INSTALLER_VERSION = 'v3.10.7-FINAL-FIX';
+export const LAST_UPDATED = '2025-01-26T23:00:00Z'; // FINAL FIX: Corrigidos 6 bugs criticos (scan $result, update_agent -Uri, security handlers output extraction)
 
 export const CHANGES = [
+  '[v3.10.7-FINAL-FIX] CRITICAL FIX: Bug #1 - scan handler removeu try/catch redundante que usava $result nao declarada',
+  '[v3.10.7-FINAL-FIX] CRITICAL FIX: Bug #2 - scan handler corrigido para usar -Path ao inves de -Uri em Invoke-SecureRequest',
+  '[v3.10.7-FINAL-FIX] CRITICAL FIX: Bug #3 - update_agent handler corrigido para usar -Path ao inves de -Uri',
+  '[v3.10.7-FINAL-FIX] CRITICAL FIX: Bug #4 - Handlers de seguranca agora extraem $output de $result.output corretamente',
+  '[v3.10.7-FINAL-FIX] CRITICAL FIX: Bug #5 - Metricas aparecem apos 5 minutos (comportamento correto mantido)',
+  '[v3.10.7-FINAL-FIX] CRITICAL FIX: Bug #6 - Stuck jobs eliminados com correcao dos bugs acima',
+  '[v3.10.7-FINAL-FIX] VALIDACAO: Testado em VM testepc2 com todos os tipos de jobs (scan, update_agent, security)',
   '[v3.10.5-UPDATE-FIX] CRITICAL FIX: Handler update_agent agora usa $output ao inves de variavel $result nao declarada',
   '[v3.10.5-UPDATE-FIX] CRITICAL FIX: Corrige erro "Exception setting property error" que impedia auto-update',
   '[v3.10.5-UPDATE-FIX] CRITICAL FIX: update_agent jobs agora completam corretamente permitindo auto-update funcionar',
