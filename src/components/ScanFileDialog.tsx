@@ -39,7 +39,7 @@ export function ScanFileDialog() {
           agent_name: agentName,
           job_type: 'scan',
           payload: {
-            file_path: filePath
+            filePath: filePath
           }
         }
       });
