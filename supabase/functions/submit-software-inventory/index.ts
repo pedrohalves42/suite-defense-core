@@ -125,6 +125,40 @@ Deno.serve(async (req) => {
 
     logger.info(`Storing ${payload.items.length} software items for agent ${agent.agent_name}`);
 
+    // Deduplicar itens por name + version para evitar erro "ON CONFLICT DO UPDATE command cannot affect row a second time"
+    const uniqueMap = new Map<string, SoftwareItem>();
+    
+    for (const item of payload.items) {
+      if (!item.name) continue;
+      
+      const normalizedName = item.name.trim();
+      if (!normalizedName) continue;
+      
+      const normalizedVersion = (item.version || '').trim() || null;
+      const key = `${normalizedName}|${normalizedVersion || 'null'}`;
+      
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, {
+          name: normalizedName,
+          version: normalizedVersion || undefined,
+          vendor: item.vendor || undefined,
+          install_location: item.install_location || undefined,
+          risk_level: item.risk_level || 'unknown',
+        });
+      }
+    }
+
+    const uniqueItems = Array.from(uniqueMap.values());
+    logger.info(`Deduplicated: ${payload.items.length} -> ${uniqueItems.length} unique items`);
+
+    if (uniqueItems.length === 0) {
+      logger.info('No valid software items to store after deduplication');
+      return new Response(
+        JSON.stringify({ success: true, inserted: 0, deduplicated_from: payload.items.length }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Limpar inventario anterior do agente
     const { error: deleteError } = await supabase
       .from('software_inventory')
@@ -136,14 +170,14 @@ Deno.serve(async (req) => {
     }
 
     // Inserir ou atualizar itens (UPSERT para lidar com duplicatas)
-    const itemsToInsert = payload.items.map(item => ({
+    const itemsToInsert = uniqueItems.map(item => ({
       tenant_id: agent.tenant_id,
       agent_id: payload.agent_id,
       name: item.name,
-      version: item.version || null,
-      vendor: item.vendor || null,
-      install_location: item.install_location || null,
-      risk_level: item.risk_level || 'unknown',
+      version: item.version,
+      vendor: item.vendor,
+      install_location: item.install_location,
+      risk_level: item.risk_level,
     }));
 
     const { error: insertError } = await supabase
@@ -161,13 +195,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    logger.success(`Software inventory stored: ${payload.items.length} items`);
+    logger.success(`Software inventory stored: ${uniqueItems.length} unique items (deduplicated from ${payload.items.length})`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        inserted: payload.items.length 
-      }), 
+        inserted: uniqueItems.length,
+        deduplicated_from: payload.items.length
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
