@@ -13,7 +13,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.10-UPDATE-PATH-FIX';
+const CURRENT_VERSION = 'v3.10.11-SCAN-DIRECTORY-FIX';
+
+// SHA256 WITH BOM for v3.10.11 (calculated by scripts/calculate-sha256-v3-10-9.js)
+// This hash includes UTF-8 BOM (EF BB BF) to match how v3.10.9 agents save files
+// Run: node scripts/calculate-sha256-v3-10-9.js to recalculate if needed
+const CURRENT_VERSION_SHA256_WITH_BOM = 'PLACEHOLDER_REPLACE_WITH_CALCULATED_HASH';
 
 export default function AgentReleases() {
   const { releases, isLoading, error, refetch, registerRelease, isRegistering } = useAgentReleases();
@@ -86,12 +91,14 @@ export default function AgentReleases() {
 
       toast.success(`Script obtido: ${(scriptContent.length / 1024).toFixed(1)} KB`);
 
-      // Register the release
+      // Register the release with manual SHA256 (includes BOM)
+      // This allows v3.10.9 agents (using Set-Content UTF8) to validate the hash
       registerRelease({
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'CRITICAL FIX v3.10.10: (1) Fixed PSCommandPath empty in Scheduled Task - now uses absolute path C:\\CyberShield\\cybershield-agent-v3.ps1. (2) Fixed UTF8 BOM issue - Set-Content replaced with [System.IO.File]::WriteAllText using UTF8Encoding without BOM for SHA256 hash compatibility during auto-update.',
+        manual_sha256: CURRENT_VERSION_SHA256_WITH_BOM,
+        release_notes: 'CRITICAL FIX v3.10.11: (1) Environment variable expansion (%USERPROFILE%, %TEMP%) for scan paths. (2) Directory handling - when scan target is directory, lists up to 10 executables and processes first one. (3) Resolves "cannot call method on null reference" error when scanning directories instead of files.',
         channel: 'stable'
       });
 
@@ -140,12 +147,13 @@ export default function AgentReleases() {
 
       toast.success(`Script obtido: ${(scriptContent.length / 1024).toFixed(1)} KB`);
 
-      // Register the release
+      // Register the release with manual SHA256 (includes BOM)
       registerRelease({
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'CRITICAL FIX v3.10.10: (1) Fixed PSCommandPath empty in Scheduled Task - now uses absolute path C:\\CyberShield\\cybershield-agent-v3.ps1. (2) Fixed UTF8 BOM issue - Set-Content replaced with [System.IO.File]::WriteAllText using UTF8Encoding without BOM for SHA256 hash compatibility during auto-update.',
+        manual_sha256: CURRENT_VERSION_SHA256_WITH_BOM,
+        release_notes: 'CRITICAL FIX v3.10.11: (1) Environment variable expansion (%USERPROFILE%, %TEMP%) for scan paths. (2) Directory handling - when scan target is directory, lists up to 10 executables and processes first one. (3) Resolves "cannot call method on null reference" error when scanning directories instead of files.',
         channel: 'stable'
       });
 

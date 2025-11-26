@@ -25,19 +25,28 @@ export const useAgentReleases = () => {
       script_content,
       release_notes,
       channel = 'stable',
+      manual_sha256,
     }: {
       version: string;
       platform: string;
       script_content: string;
       release_notes?: string;
       channel?: string;
+      manual_sha256?: string;
     }) => {
-      // Calculate SHA256
-      const encoder = new TextEncoder();
-      const data = encoder.encode(script_content);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      // Use manual SHA256 if provided (for BOM compatibility)
+      // Otherwise calculate SHA256 normally
+      let sha256: string;
+      if (manual_sha256) {
+        sha256 = manual_sha256;
+        console.log('[useAgentReleases] Using manual SHA256:', sha256.substring(0, 16) + '...');
+      } else {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(script_content);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      }
 
       // Call register-agent-release Edge Function
       const { data: result, error } = await supabase.functions.invoke('register-agent-release', {
@@ -46,6 +55,7 @@ export const useAgentReleases = () => {
           platform,
           script_content,
           sha256,
+          manual_sha256,
           release_notes,
           channel,
         },
