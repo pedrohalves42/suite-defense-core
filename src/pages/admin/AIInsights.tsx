@@ -38,9 +38,15 @@ export default function AIInsights() {
   const { data, isLoading } = useQuery({
     queryKey: ['ai-insights'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('ai-get-insights', {
-        body: { page: 1, limit: 50 }
+      const params = new URLSearchParams({
+        page: '1',
+        limit: '50',
       });
+
+      const { data, error } = await supabase.functions.invoke(
+        `ai-get-insights?${params.toString()}`,
+        { method: 'GET' }
+      );
 
       if (error) throw error;
       return data as { insights: AIInsight[]; statistics: Statistics };
