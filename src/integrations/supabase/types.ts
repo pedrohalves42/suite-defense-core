@@ -3095,6 +3095,42 @@ export type Database = {
           },
         ]
       }
+      agent_releases_public: {
+        Row: {
+          channel: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string | null
+          is_active: boolean | null
+          platform: string | null
+          release_notes: string | null
+          sha256: string | null
+          version: string | null
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          platform?: string | null
+          release_notes?: string | null
+          sha256?: string | null
+          version?: string | null
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          platform?: string | null
+          release_notes?: string | null
+          sha256?: string | null
+          version?: string | null
+        }
+        Relationships: []
+      }
       agent_timeline_events: {
         Row: {
           agent_id: string | null
@@ -3663,16 +3699,30 @@ export type Database = {
         Row: {
           agent_id: string | null
           agent_name: string | null
+          agent_status: string | null
+          agent_version: string | null
           command_copied_at: string | null
           downloaded_at: string | null
           enrolled_at: string | null
           generated_at: string | null
+          hostname: string | null
+          installation_metadata: Json | null
+          installation_method: string | null
+          installation_success: boolean | null
           installation_time_seconds: number | null
           installed_at: string | null
           is_stuck: boolean | null
+          last_error_at: string | null
+          last_error_message: string | null
           last_heartbeat: string | null
           lifecycle_stage: string | null
-          status: string | null
+          minutes_between_copy_and_install: number | null
+          minutes_since_enrollment: number | null
+          minutes_since_heartbeat: number | null
+          network_connectivity: boolean | null
+          os_type: string | null
+          os_version: string | null
+          platform: string | null
           tenant_id: string | null
         }
         Relationships: [
@@ -3696,15 +3746,22 @@ export type Database = {
         Row: {
           agent_name: string | null
           created_at: string | null
+          enrolled_at: string | null
+          has_active_token: boolean | null
           id: string | null
           installation_success: boolean | null
+          issue_type: string | null
           last_heartbeat: string | null
           metadata: Json | null
           minutes_since_creation: number | null
+          minutes_since_enrollment: number | null
           network_connectivity: boolean | null
+          pending_jobs_count: number | null
           problem_type: string | null
           status: string | null
           tenant_id: string | null
+          tenant_name: string | null
+          token_count: number | null
         }
         Relationships: [
           {
