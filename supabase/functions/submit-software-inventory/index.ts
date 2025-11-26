@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     // Rate limiting
     const rateLimitKey = `software-inventory:${agent.agent_name}`;
     const rateLimitResult = await checkRateLimit(supabase, rateLimitKey, 'submit-software-inventory', {
-      maxRequests: 10,
+      maxRequests: 30,
       windowMinutes: 60,
       blockMinutes: 10,
     });
