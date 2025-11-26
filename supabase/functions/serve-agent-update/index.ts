@@ -38,9 +38,9 @@ Deno.serve(async (req) => {
       .select('agent_id, is_active, agents!inner(id, agent_name, hmac_secret, agent_version, os_type)')
       .eq('token', agentToken)
       .eq('is_active', true)
-      .maybeSingle();
+      .single();
 
-    if (tokenError || !tokenData || !tokenData.agents) {
+    if (tokenError || !tokenData) {
       logger.error('[serve-agent-update] Token invalido ou agente nao encontrado', { 
         requestId, 
         agentToken: agentToken.substring(0, 8) + '...',
@@ -52,7 +52,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    const agent = tokenData.agents;
+    const agent = (tokenData as any).agents as { 
+      id: string; 
+      agent_name: string; 
+      hmac_secret: string; 
+      agent_version: string | null; 
+      os_type: string | null;
+    };
 
     // Verificar HMAC
     const hmacResult = await verifyHmacSignature(
