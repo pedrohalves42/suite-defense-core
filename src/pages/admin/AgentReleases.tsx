@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.5-UPDATE-FIX';
+const CURRENT_VERSION = 'v3.10.6-JOB-TYPE-FIX';
 
 export default function AgentReleases() {
   const { releases, isLoading, error, refetch, registerRelease, isRegistering } = useAgentReleases();
