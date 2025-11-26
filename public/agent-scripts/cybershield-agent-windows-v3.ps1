@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.11-SCAN-DIRECTORY-FIX
+    CyberShield Agent - Windows v3.10.12-UPDATE-PATH-AGENTNAME-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.10.11-SCAN-DIRECTORY-FIX"
+    [string]$AgentVersion = "3.10.12-UPDATE-PATH-AGENTNAME-FIX"
 )
 
 $ErrorActionPreference = "Stop"
@@ -1177,8 +1177,8 @@ function Execute-Job {
 
                     Write-Log "[UPDATE] Atualizando agente para versao $newVersion" "INFO"
 
-                    # CRITICAL FIX: Usa caminho absoluto fixo (PSCommandPath vazio em Scheduled Task)
-                    $currentScript = "C:\CyberShield\cybershield-agent-v3.ps1"
+                    # CRITICAL FIX: Usa caminho com $AgentName dinamico (instalador salva como cybershield-agent-$AgentName.ps1)
+                    $currentScript = "C:\CyberShield\cybershield-agent-$($Global:AgentName).ps1"
                     $backupScript  = $currentScript -replace '\.ps1$', "-backup-$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
                     $tempScript    = Join-Path $env:TEMP "cybershield-agent-update-$newVersion.ps1"
 
