@@ -17,6 +17,7 @@ const CURRENT_VERSION = 'v3.10.9-PSCUSTOMOBJECT-FIX';
 export default function AgentReleases() {
   const { releases, isLoading, error, refetch, registerRelease, isRegistering } = useAgentReleases();
   const [isProcessingUpdates, setIsProcessingUpdates] = useState(false);
+  const [isForceReregistering, setIsForceReregistering] = useState(false);
 
   const handleForceUpdateCheck = async () => {
     try {
@@ -100,6 +101,60 @@ export default function AgentReleases() {
     }
   };
 
+  const handleForceReregister = async () => {
+    if (!confirm(`FORÇAR RE-REGISTRO de ${CURRENT_VERSION}?\n\nIsso ira:\n1. Deletar a entrada atual do banco\n2. Buscar o script atualizado\n3. Re-registrar a versao\n\nContinuar?`)) {
+      return;
+    }
+
+    try {
+      setIsForceReregistering(true);
+      toast.info('Deletando entrada atual...');
+
+      // Delete existing entry
+      const { error: deleteError } = await supabase
+        .from('agent_releases')
+        .delete()
+        .eq('version', CURRENT_VERSION)
+        .eq('platform', 'windows');
+
+      if (deleteError) throw deleteError;
+
+      toast.success('Entrada deletada. Buscando script...');
+
+      // Now register the correct version
+      const { data: scriptData, error: scriptError } = await supabase.functions.invoke(
+        'get-agent-script-content'
+      );
+
+      if (scriptError) throw scriptError;
+      if (!scriptData?.script_content) {
+        throw new Error('No script content received');
+      }
+
+      const scriptContent = scriptData.script_content;
+      if (scriptContent.length < 10000) {
+        throw new Error(`Script too small (${scriptContent.length} bytes) - likely placeholder`);
+      }
+
+      toast.success(`Script obtido: ${(scriptContent.length / 1024).toFixed(1)} KB`);
+
+      // Register the release
+      registerRelease({
+        version: CURRENT_VERSION,
+        platform: 'windows',
+        script_content: scriptContent,
+        release_notes: 'CRITICAL FIX: Replaced $Job.ContainsKey("payload") with $null -ne $Job.payload for PSCustomObject compatibility. All job handlers updated to use null check pattern instead of hashtable methods.',
+        channel: 'stable'
+      });
+
+    } catch (error: any) {
+      console.error(`Error force re-registering ${CURRENT_VERSION}:`, error);
+      toast.error(`Erro ao forcar re-registro: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsForceReregistering(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-6 space-y-6">
@@ -142,13 +197,22 @@ export default function AgentReleases() {
           <h1 className="text-3xl font-bold">Agent Releases</h1>
           <p className="text-muted-foreground">Gerenciar versoes de agentes e auto-update</p>
         </div>
-        <Button 
-          onClick={handleForceUpdateCheck}
-          disabled={isProcessingUpdates}
-          variant="outline"
-        >
-          {isProcessingUpdates ? "Processando..." : "Forçar Verificação de Updates"}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={handleForceReregister}
+            disabled={isForceReregistering || fetchingScript || isRegistering}
+            variant="destructive"
+          >
+            {isForceReregistering ? "Re-registrando..." : "Forçar Re-registro"}
+          </Button>
+          <Button 
+            onClick={handleForceUpdateCheck}
+            disabled={isProcessingUpdates}
+            variant="outline"
+          >
+            {isProcessingUpdates ? "Processando..." : "Forçar Verificação de Updates"}
+          </Button>
+        </div>
       </div>
 
       {/* Action Card */}
