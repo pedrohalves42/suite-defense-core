@@ -4,8 +4,12 @@
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
  */
 
+<<<<<<< HEAD
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
+=======
+export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
+>>>>>>> 3d2967e4ce1a22aa8dde6d71a7771917144c33fe
     CyberShield Agent - Windows v3.10.6-JOB-TYPE-FIX
     
     Funcionalidades:
@@ -45,6 +49,7 @@ param(
 
     [Parameter(Mandatory = \$false)]
     [string]\$AgentVersion = "3.10.6-JOB-TYPE-FIX"
+<<<<<<< HEAD
 )
 
 \$ErrorActionPreference = "Stop"
@@ -1433,6 +1438,9 @@ catch {
     exit 1
 }
 `;
+=======
+)`;
+>>>>>>> 3d2967e4ce1a22aa8dde6d71a7771917144c33fe
 
 export function getAgentScriptWindows(): string {
   return AGENT_SCRIPT_WINDOWS_CONTENT;
