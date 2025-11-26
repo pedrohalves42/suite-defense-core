@@ -26,15 +26,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    const jwt = authHeader.replace('Bearer ', '');
-
-    // Create Supabase admin client with SERVICE_ROLE_KEY
+    // Create Supabase client with user's JWT for authentication
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: authHeader }
+      }
+    });
 
-    // Validate JWT and get user
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(jwt);
+    // Get authenticated user from JWT
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError || !user) {
       console.error(`[${requestId}] JWT validation failed:`, userError?.message);
@@ -50,6 +52,10 @@ Deno.serve(async (req) => {
         }
       );
     }
+
+    // Create admin client for role check (bypasses RLS)
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Verify user is super_admin using RPC
     const { data: isSuperAdmin, error: roleError } = await supabaseAdmin.rpc('has_role', {
