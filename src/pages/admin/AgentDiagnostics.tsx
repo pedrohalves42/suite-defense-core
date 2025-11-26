@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SecurityJobDispatcher } from '@/components/admin/SecurityJobDispatcher';
+import { ValidationJobDispatcher } from '@/components/admin/ValidationJobDispatcher';
 
 interface DiagnosticIssue {
   issue_type: string;
@@ -236,6 +237,9 @@ export default function AgentDiagnostics() {
             </ScrollArea>
           </CardContent>
         </Card>
+
+        {/* Jobs de Validação */}
+        <ValidationJobDispatcher />
 
         {/* Disparador de Jobs de Segurança */}
         <SecurityJobDispatcher agents={agents} />
