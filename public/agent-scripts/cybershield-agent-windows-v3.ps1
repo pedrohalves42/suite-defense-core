@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.6-JOB-TYPE-FIX
+    CyberShield Agent - Windows v3.10.7-FINAL-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.10.6-JOB-TYPE-FIX"
+    [string]$AgentVersion = "3.10.7-FINAL-FIX"
 )
 
 $ErrorActionPreference = "Stop"
@@ -1064,7 +1064,7 @@ function Execute-Job {
 
                     # Chama backend scan-virus
                     $scanResult = Invoke-SecureRequest `
-                        -Uri "$ServerUrl/functions/v1/scan-virus" `
+                        -Path "/functions/v1/scan-virus" `
                         -Method POST `
                         -Body $scanBody `
                         -TimeoutSec 60
@@ -1109,15 +1109,9 @@ function Execute-Job {
                     } else {
                         Write-Log "[SUCCESS] Arquivo limpo" "SUCCESS"
                     }
-
-                    $result.success = $true
-                    $result.output = $output | ConvertTo-Json
                 }
                 catch {
-                    $err = $_.Exception.Message
-                    Write-Log "[ERROR] Erro ao processar job 'scan': $err" "ERROR"
-                    $result.success = $false
-                    $result.error = $err
+                    throw $_.Exception.Message
                 }
             }
             "update_agent" {
@@ -1126,7 +1120,7 @@ function Execute-Job {
 
                     # Chama serve-agent-update
                     $updateResult = Invoke-SecureRequest `
-                        -Uri "$ServerUrl/functions/v1/serve-agent-update" `
+                        -Path "/functions/v1/serve-agent-update" `
                         -Method GET `
                         -TimeoutSec 60
 
@@ -1195,21 +1189,51 @@ function Execute-Job {
             }
             "software_inventory_collect" {
                 $result = Invoke-SoftwareInventoryJob -Job $job
+                if ($result.success) {
+                    $output = $result.output
+                } else {
+                    throw $result.error
+                }
             }
             "light_vuln_scan" {
                 $result = Invoke-LightVulnScanJob -Job $job
+                if ($result.success) {
+                    $output = $result.output
+                } else {
+                    throw $result.error
+                }
             }
             "collect_antivirus_status" {
                 $result = Invoke-CollectAntivirusStatusJob -Job $job
+                if ($result.success) {
+                    $output = $result.output
+                } else {
+                    throw $result.error
+                }
             }
             "collect_web_activity" {
                 $result = Invoke-WebActivityJob -Job $job
+                if ($result.success) {
+                    $output = $result.output
+                } else {
+                    throw $result.error
+                }
             }
             "fix_firewall" {
                 $result = Invoke-FixFirewallJob -Job $job
+                if ($result.success) {
+                    $output = $result.output
+                } else {
+                    throw $result.error
+                }
             }
             "restart_service" {
                 $result = Invoke-RestartServiceJob -Job $job
+                if ($result.success) {
+                    $output = $result.output
+                } else {
+                    throw $result.error
+                }
             }
             
             default {
