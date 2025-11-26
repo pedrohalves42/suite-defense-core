@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.10-UPDATE-PATH-FIX
+    CyberShield Agent - Windows v3.10.11-SCAN-DIRECTORY-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -1046,11 +1046,45 @@ function Execute-Job {
                         throw "Payload invalido: 'filePath' nao informado"
                     }
 
-                    if (-not (Test-Path $filePath)) {
-                        throw "Arquivo nao encontrado: $filePath"
+                    # Expandir variaveis de ambiente estilo Windows (%VAR%)
+                    if ($filePath -match '%([^%]+)%') {
+                        $filePath = [System.Environment]::ExpandEnvironmentVariables($filePath)
+                        Write-Log "[SCAN] Caminho expandido: $filePath" "DEBUG"
                     }
 
-                    # Calcular SHA256
+                    if (-not (Test-Path $filePath)) {
+                        throw "Caminho nao encontrado: $filePath"
+                    }
+
+                    # Verificar se e diretorio
+                    $item = Get-Item $filePath -ErrorAction Stop
+                    if ($item.PSIsContainer) {
+                        Write-Log "[SCAN] Caminho e diretorio, listando arquivos executaveis..." "INFO"
+                        
+                        # Escanear arquivos executaveis no diretorio (nao recursivo)
+                        $files = Get-ChildItem -Path $filePath -File -ErrorAction SilentlyContinue | 
+                                 Where-Object { $_.Extension -match '\.(exe|dll|bat|ps1|vbs|js|msi|scr|com)$' } |
+                                 Select-Object -First 10  # Limitar a 10 arquivos por diretorio
+                        
+                        if ($files.Count -eq 0) {
+                            # Diretorio sem executaveis - retornar sucesso informativo
+                            $output = @{
+                                filePath = $filePath
+                                isDirectory = $true
+                                filesScanned = 0
+                                message = "Nenhum arquivo executavel encontrado no diretorio"
+                                isMalicious = $false
+                            }
+                            Write-Log "[SCAN] Diretorio sem executaveis: $filePath" "INFO"
+                            return $output
+                        } else {
+                            # Processar primeiro arquivo executavel
+                            $filePath = $files[0].FullName
+                            Write-Log "[SCAN] Escaneando primeiro executavel: $filePath" "INFO"
+                        }
+                    }
+
+                    # Calcular SHA256 do arquivo
                     $fileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
                     Write-Log "[SCAN] Escaneando: $filePath (hash: $fileHash)" "INFO"
 

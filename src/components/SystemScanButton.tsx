@@ -55,12 +55,13 @@ export function SystemScanButton() {
       }
 
       // Create multiple scan jobs for critical system paths
+      // Agent expandira variaveis de ambiente automaticamente
       const criticalPaths = [
-        "C:\\Users\\Public",
-        "C:\\Windows\\Temp",
-        "C:\\ProgramData",
-        "%USERPROFILE%\\Downloads",
-        "%USERPROFILE%\\AppData\\Local\\Temp",
+        "C:\\Users\\Public\\Downloads",  // Pasta publica de downloads
+        "C:\\Windows\\Temp",             // Temp do sistema
+        "C:\\ProgramData",               // Dados de programas
+        "%USERPROFILE%\\Downloads",      // Downloads do usuario (agente expande)
+        "%TEMP%",                        // Pasta temp do usuario (agente expande)
       ];
 
       const jobs = criticalPaths.map((path) => ({
