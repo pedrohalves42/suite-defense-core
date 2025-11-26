@@ -10,13 +10,13 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Get Authorization header
+    // Extract JWT from Authorization header
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: 'Unauthorized: Missing authorization header',
+          error: 'Unauthorized: Missing or invalid authorization header',
           requestId
         }),
         {
@@ -26,18 +26,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create Supabase client with user's JWT
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: authHeader }
-      }
-    });
+    const jwt = authHeader.replace('Bearer ', '');
 
-    // Get user from JWT
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Create Supabase admin client with SERVICE_ROLE_KEY
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Validate JWT and get user
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(jwt);
+    
     if (userError || !user) {
+      console.error(`[${requestId}] JWT validation failed:`, userError?.message);
       return new Response(
         JSON.stringify({
           success: false,
@@ -51,13 +51,29 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify user is super_admin
-    const { data: isSuperAdmin, error: roleError } = await supabase.rpc('has_role', {
+    // Verify user is super_admin using RPC
+    const { data: isSuperAdmin, error: roleError } = await supabaseAdmin.rpc('has_role', {
       _user_id: user.id,
       _role: 'super_admin'
     });
 
-    if (roleError || !isSuperAdmin) {
+    if (roleError) {
+      console.error(`[${requestId}] Role check failed:`, roleError.message);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Internal error checking permissions',
+          requestId
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    if (!isSuperAdmin) {
+      console.warn(`[${requestId}] User ${user.id} attempted access without super_admin role`);
       return new Response(
         JSON.stringify({
           success: false,
