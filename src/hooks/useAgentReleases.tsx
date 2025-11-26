@@ -16,6 +16,9 @@ export const useAgentReleases = () => {
       if (error) throw error;
       return data;
     },
+    refetchInterval: 10000, // Auto-refresh every 10 seconds
+    refetchOnWindowFocus: true, // Refetch when tab gets focus
+    staleTime: 5000, // Keep data fresh for 5 seconds
   });
 
   const registerRelease = useMutation({
