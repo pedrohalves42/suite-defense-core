@@ -131,7 +131,7 @@ export default function AgentReleases() {
 
   const currentVersion = releases.find(r => r.version === CURRENT_VERSION && r.platform === 'windows');
   const scriptSizeKB = currentVersion ? Math.round(currentVersion.script_content.length / 1024) : 0;
-  const needsRegistration = !currentVersion || scriptSizeKB < 50;
+  const needsRegistration = !currentVersion || scriptSizeKB < 40;
   const latestRelease = releases[0]; // First release is the most recent (order by created_at desc)
 
   return (
@@ -167,7 +167,7 @@ export default function AgentReleases() {
             <div className="space-y-4">
               <p className="text-sm text-orange-800 dark:text-orange-200">
                 {currentVersion 
-                  ? `Script atual: ${scriptSizeKB}KB (placeholder). Necessario: >50KB`
+                  ? `Script atual: ${scriptSizeKB}KB (placeholder). Necessario: >40KB`
                   : 'Release nao encontrada no banco de dados'}
               </p>
               <Button
@@ -187,7 +187,7 @@ export default function AgentReleases() {
       <div className="grid gap-4">
         {releases.map((release, idx) => {
           const sizeKB = Math.round(release.script_content.length / 1024);
-          const isValid = sizeKB > 50;
+          const isValid = sizeKB > 40;
 
           return (
             <motion.div
