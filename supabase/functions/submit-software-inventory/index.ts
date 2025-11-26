@@ -9,9 +9,9 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 interface SoftwareItem {
   name: string;
-  version?: string;
-  vendor?: string;
-  install_location?: string;
+  version?: string | null;
+  vendor?: string | null;
+  install_location?: string | null;
   risk_level?: 'unknown' | 'low' | 'medium' | 'high' | 'critical';
 }
 
@@ -140,9 +140,9 @@ Deno.serve(async (req) => {
       if (!uniqueMap.has(key)) {
         uniqueMap.set(key, {
           name: normalizedName,
-          version: normalizedVersion || undefined,
-          vendor: item.vendor || undefined,
-          install_location: item.install_location || undefined,
+          version: normalizedVersion,
+          vendor: item.vendor || null,
+          install_location: item.install_location || null,
           risk_level: item.risk_level || 'unknown',
         });
       }
@@ -174,9 +174,9 @@ Deno.serve(async (req) => {
       tenant_id: agent.tenant_id,
       agent_id: payload.agent_id,
       name: item.name,
-      version: item.version,
-      vendor: item.vendor,
-      install_location: item.install_location,
+      version: item.version ?? null,
+      vendor: item.vendor ?? null,
+      install_location: item.install_location ?? null,
       risk_level: item.risk_level,
     }));
 
