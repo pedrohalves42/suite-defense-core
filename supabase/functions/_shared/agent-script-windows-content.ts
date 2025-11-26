@@ -6,7 +6,7 @@
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.5-UPDATE-FIX
+    CyberShield Agent - Windows v3.10.6-JOB-TYPE-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -44,7 +44,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "3.10.4"
+    [string]\$AgentVersion = "3.10.6-JOB-TYPE-FIX"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -326,7 +326,7 @@ function Get-SystemInfo {
 # ============================================
 function Invoke-ReportJob {
     param(
-        [hashtable]\$Job
+        \$Job
     )
 
     \$report = @{
@@ -391,7 +391,7 @@ function Invoke-ReportJob {
 # ============================================
 function Invoke-SoftwareInventoryJob {
     param(
-        [hashtable]\$Job
+        \$Job
     )
 
     Write-Log "[SOFTWARE-INVENTORY] Iniciando coleta de inventario de software..." "INFO"
@@ -457,7 +457,7 @@ function Invoke-SoftwareInventoryJob {
 # ============================================
 function Invoke-LightVulnScanJob {
     param(
-        [hashtable]\$Job
+        \$Job
     )
 
     Write-Log "[VULN-SCAN] Iniciando light vuln scan..." "INFO"
@@ -550,7 +550,7 @@ function Invoke-LightVulnScanJob {
 # ============================================
 function Invoke-CollectAntivirusStatusJob {
     param(
-        [hashtable]\$Job
+        \$Job
     )
 
     Write-Log "[AV-STATUS] Coletando status de antivirus..." "INFO"
@@ -617,7 +617,7 @@ function Invoke-CollectAntivirusStatusJob {
 # ============================================
 function Invoke-WebActivityJob {
     param(
-        [hashtable]\$Job
+        \$Job
     )
 
     Write-Log "[WEB-ACTIVITY] Iniciando coleta de atividade web (cache DNS)..." "INFO"
@@ -717,7 +717,7 @@ function Invoke-WebActivityJob {
 # ============================================
 function Invoke-FixFirewallJob {
     param(
-        [hashtable]\$Job
+        \$Job
     )
 
     Write-Log "[FIX-FIREWALL] Iniciando auto-remediacao de firewall..." "INFO"
@@ -763,7 +763,7 @@ function Invoke-FixFirewallJob {
 # ============================================
 function Invoke-RestartServiceJob {
     param(
-        [hashtable]\$Job
+        \$Job
     )
 
     Write-Log "[RESTART-SERVICE] Iniciando restart de servico..." "INFO"
