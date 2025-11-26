@@ -101,8 +101,13 @@ console.log(`  Expansion: ${((targetSize / sourceSize - 1) * 100).toFixed(1)}% (
 // Validar arquivo gerado
 const generated = fs.readFileSync(TARGET_PATH, 'utf8');
 
-// Verificar se nao tem conflitos de merge
-if (generated.includes('<<<<<<<') || generated.includes('>>>>>>>') || generated.includes('=======')) {
+// Verificar se nao tem conflitos de merge (com espacos para evitar falsos positivos)
+const hasConflicts = 
+  generated.includes('<<<<<<< ') ||     // Inicio de conflito (com espaco)
+  generated.includes('>>>>>>> ') ||     // Fim de conflito (com espaco)
+  (generated.match(/^=======$/m));      // Separador de conflito (linha exata)
+  
+if (hasConflicts) {
   console.error('\n[ERROR] Arquivo gerado contem marcadores de conflito de merge!');
   process.exit(1);
 }
