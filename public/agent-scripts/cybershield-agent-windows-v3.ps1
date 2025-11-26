@@ -1143,8 +1143,8 @@ function Execute-Job {
 
                     Write-Log "[UPDATE] Atualizando agente para versao $newVersion" "INFO"
 
-                    # Usa o proprio script atual, sem hardcode de caminho
-                    $currentScript = $PSCommandPath
+                    # CRITICAL FIX: Usa caminho absoluto fixo (PSCommandPath vazio em Scheduled Task)
+                    $currentScript = "C:\CyberShield\cybershield-agent-v3.ps1"
                     $backupScript  = $currentScript -replace '\.ps1$', "-backup-$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
                     $tempScript    = Join-Path $env:TEMP "cybershield-agent-update-$newVersion.ps1"
 
