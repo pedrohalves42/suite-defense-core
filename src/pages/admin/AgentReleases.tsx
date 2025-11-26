@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAgentReleases } from "@/hooks/useAgentReleases";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Package, CheckCircle, AlertCircle, Download } from "lucide-react";
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -16,6 +17,7 @@ const CURRENT_VERSION = 'v3.10.10-UPDATE-PATH-FIX';
 
 export default function AgentReleases() {
   const { releases, isLoading, error, refetch, registerRelease, isRegistering } = useAgentReleases();
+  const { isSuperAdmin, loading: isCheckingRole } = useSuperAdmin();
   const [isProcessingUpdates, setIsProcessingUpdates] = useState(false);
   const [isForceReregistering, setIsForceReregistering] = useState(false);
 
@@ -89,7 +91,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'CRITICAL FIX: Replaced $Job.ContainsKey("payload") with $null -ne $Job.payload for PSCustomObject compatibility. All job handlers updated to use null check pattern instead of hashtable methods.',
+        release_notes: 'CRITICAL FIX v3.10.10: (1) Fixed PSCommandPath empty in Scheduled Task - now uses absolute path C:\\CyberShield\\cybershield-agent-v3.ps1. (2) Fixed UTF8 BOM issue - Set-Content replaced with [System.IO.File]::WriteAllText using UTF8Encoding without BOM for SHA256 hash compatibility during auto-update.',
         channel: 'stable'
       });
 
@@ -143,7 +145,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'CRITICAL FIX: Replaced $Job.ContainsKey("payload") with $null -ne $Job.payload for PSCustomObject compatibility. All job handlers updated to use null check pattern instead of hashtable methods.',
+        release_notes: 'CRITICAL FIX v3.10.10: (1) Fixed PSCommandPath empty in Scheduled Task - now uses absolute path C:\\CyberShield\\cybershield-agent-v3.ps1. (2) Fixed UTF8 BOM issue - Set-Content replaced with [System.IO.File]::WriteAllText using UTF8Encoding without BOM for SHA256 hash compatibility during auto-update.',
         channel: 'stable'
       });
 
@@ -234,9 +236,16 @@ export default function AgentReleases() {
                   ? `Script atual: ${scriptSizeKB}KB (placeholder). Necessario: >40KB`
                   : 'Release nao encontrada no banco de dados'}
               </p>
+              
+              {!isSuperAdmin && !isCheckingRole && (
+                <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                  ⚠️ Apenas super_admin pode registrar releases
+                </p>
+              )}
+              
               <Button
                 onClick={handleRegisterCurrentVersion}
-                disabled={fetchingScript || isRegistering}
+                disabled={!isSuperAdmin || fetchingScript || isRegistering || isCheckingRole}
                 className="gap-2"
               >
                 <Package className="h-4 w-4" />
