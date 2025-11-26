@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.8-AGENT-ID-FIX
+    CyberShield Agent - Windows v3.10.9-PSCUSTOMOBJECT-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.10.8-AGENT-ID-FIX"
+    [string]$AgentVersion = "3.10.9-PSCUSTOMOBJECT-FIX"
 )
 
 $ErrorActionPreference = "Stop"
@@ -617,7 +617,7 @@ function Invoke-WebActivityJob {
 
     try {
         $payload = $null
-        if ($Job.ContainsKey("payload") -and $Job.payload) {
+        if ($null -ne $Job.payload -and $Job.payload) {
             try {
                 $payload = $Job.payload | ConvertFrom-Json
             } catch {
@@ -763,7 +763,7 @@ function Invoke-RestartServiceJob {
 
     try {
         $payload = $null
-        if ($Job.ContainsKey("payload") -and $Job.payload) {
+        if ($null -ne $Job.payload -and $Job.payload) {
             try {
                 $payload = $Job.payload | ConvertFrom-Json
             } catch {

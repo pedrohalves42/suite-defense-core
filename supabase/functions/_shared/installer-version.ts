@@ -7,10 +7,14 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.8-AGENT-ID-FIX';
-export const LAST_UPDATED = '2025-01-26T23:30:00Z'; // AGENT-ID-FIX: poll-jobs retorna agent_id, handlers usam $Job.agent_id
+export const INSTALLER_VERSION = 'v3.10.9-PSCUSTOMOBJECT-FIX';
+export const LAST_UPDATED = '2025-01-27T00:15:00Z'; // PSCUSTOMOBJECT-FIX: ContainsKey() substituido por $null -ne
 
 export const CHANGES = [
+  '[v3.10.9-PSCUSTOMOBJECT-FIX] CRITICAL FIX: Linhas 620 e 766 - $Job.ContainsKey("payload") substituido por $null -ne $Job.payload',
+  '[v3.10.9-PSCUSTOMOBJECT-FIX] CRITICAL FIX: ContainsKey() nao funciona em PSCustomObject (retornado por ConvertFrom-Json)',
+  '[v3.10.9-PSCUSTOMOBJECT-FIX] CRITICAL FIX: Resolve erro MethodNotFound em Invoke-WebActivityJob e Invoke-RestartServiceJob',
+  '[v3.10.9-PSCUSTOMOBJECT-FIX] VALIDACAO: SHA256 correto calculado e registrado em agent_releases',
   '[v3.10.8-AGENT-ID-FIX] CRITICAL FIX: poll-jobs Edge Function agora retorna agent_id no objeto de resposta',
   '[v3.10.8-AGENT-ID-FIX] CRITICAL FIX: Handlers de seguranca (software_inventory, vuln_scan, antivirus, web_activity) usam $Job.agent_id',
   '[v3.10.8-AGENT-ID-FIX] FIX: Elimina erro 400 "agent_id violates not-null constraint" em jobs de seguranca',
