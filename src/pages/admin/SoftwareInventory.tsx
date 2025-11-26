@@ -5,10 +5,15 @@ import { useSoftwareInventory } from '@/hooks/useSoftwareInventory';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Package, Search } from 'lucide-react';
+import { AlertCircle, Package, Search, RefreshCw } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/hooks/useTenant';
+import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
 const getRiskVariant = (risk: string): "default" | "secondary" | "destructive" | "warning" | "success" => {
@@ -24,8 +29,31 @@ const getRiskVariant = (risk: string): "default" | "secondary" | "destructive" |
 export default function SoftwareInventory() {
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const { tenant } = useTenant();
   
   const { data: software, isLoading, error } = useSoftwareInventory(selectedAgent, !!selectedAgent);
+
+  const createJobMutation = useMutation({
+    mutationFn: async (agentName: string) => {
+      if (!tenant) throw new Error('Tenant nao encontrado');
+      
+      const { error } = await supabase.from('jobs').insert({
+        agent_name: agentName,
+        type: 'software_inventory_collect',
+        status: 'queued',
+        tenant_id: tenant.id,
+        approved: true,
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Job de coleta criado com sucesso');
+    },
+    onError: (error) => {
+      toast.error(`Erro ao criar job: ${error.message}`);
+    },
+  });
 
   const filteredSoftware = software?.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -47,11 +75,25 @@ export default function SoftwareInventory() {
         {/* Agent Selector */}
         <Card className="border-l-4 border-l-primary">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Selecionar Agente
-            </CardTitle>
-            <CardDescription>Escolha um agente para visualizar o inventario</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Selecionar Agente
+                </CardTitle>
+                <CardDescription>Escolha um agente para visualizar o inventario</CardDescription>
+              </div>
+              {selectedAgent && (
+                <Button
+                  onClick={() => createJobMutation.mutate(selectedAgent)}
+                  disabled={createJobMutation.isPending}
+                  size="sm"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${createJobMutation.isPending ? 'animate-spin' : ''}`} />
+                  Coletar Dados
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <AgentSelector value={selectedAgent} onValueChange={setSelectedAgent} />
