@@ -197,7 +197,8 @@ Deno.serve(async (req) => {
       id: j.id,
       type: j.type,
       payload: j.payload,
-      approved: j.approved
+      approved: j.approved,
+      agent_id: j.agent_id
     }))
 
     return new Response(
