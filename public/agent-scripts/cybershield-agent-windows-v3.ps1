@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.7-FINAL-FIX
+    CyberShield Agent - Windows v3.10.8-AGENT-ID-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.10.7-FINAL-FIX"
+    [string]$AgentVersion = "3.10.8-AGENT-ID-FIX"
 )
 
 $ErrorActionPreference = "Stop"
@@ -416,7 +416,7 @@ function Invoke-SoftwareInventoryJob {
         Write-Log "[SOFTWARE-INVENTORY] Coletados $($items.Count) itens" "SUCCESS"
 
         $body = @{
-            agent_id = $Global:AgentId
+            agent_id = $Job.agent_id
             items    = $items
         }
 
@@ -508,7 +508,7 @@ function Invoke-LightVulnScanJob {
 
         if ($findings.Count -gt 0) {
             $body = @{
-                agent_id = $Global:AgentId
+                agent_id = $Job.agent_id
                 findings = $findings
             }
 
@@ -574,7 +574,7 @@ function Invoke-CollectAntivirusStatusJob {
         }
 
         $body = @{
-            agent_id = $Global:AgentId
+            agent_id = $Job.agent_id
             items    = $statusList
         }
 
@@ -674,7 +674,7 @@ function Invoke-WebActivityJob {
         }
 
         $body = @{
-            agent_id = $Global:AgentId
+            agent_id = $Job.agent_id
             items    = $items
         }
 
