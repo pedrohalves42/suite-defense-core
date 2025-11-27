@@ -1,6 +1,6 @@
 {
-  "startedAt": "2025-11-27T00:16:43.269Z",
-  "finishedAt": "2025-11-27T00:17:25.077Z",
+  "startedAt": "2025-11-27T00:29:59.540Z",
+  "finishedAt": "2025-11-27T00:30:25.546Z",
   "issues": [
     {
       "severity": "error",
@@ -43,18 +43,12 @@
     {
       "severity": "error",
       "file": "<process>",
-      "rule": "command:test",
-      "message": "Command \"npm run test\" failed: Command failed: npm run test"
-    },
-    {
-      "severity": "error",
-      "file": "<process>",
       "rule": "command:validate:all",
       "message": "Command \"npm run validate:all\" failed: Command failed: npm run validate:all"
     }
   ],
   "summary": {
-    "errors": 3,
+    "errors": 2,
     "warnings": 5
   }
 }
