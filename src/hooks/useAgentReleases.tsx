@@ -73,7 +73,7 @@ export const useAgentReleases = () => {
       queryClient.invalidateQueries({ queryKey: ['agent-releases'] });
       toast.success('Release registrada com sucesso');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       console.error('Error registering release:', error);
       toast.error(`Erro ao registrar release: ${error.message || 'Unknown error'}`);
     },
