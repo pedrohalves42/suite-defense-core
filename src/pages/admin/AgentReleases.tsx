@@ -13,11 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.11-SCAN-DIRECTORY-FIX';
+const CURRENT_VERSION = 'v3.10.12-UPDATE-PATH-AGENTNAME-FIX';
 
-// SHA256 WITH BOM for v3.10.11 (calculated by scripts/calculate-sha256-v3-10-11.js)
-// This hash includes UTF-8 BOM (EF BB BF) to match how v3.10.9 agents save files
-const CURRENT_VERSION_SHA256_WITH_BOM = 'a41d263896daf907182f529f36339eeab32f42b8d6761544a78dee46d5d069d3';
+// SHA256 will be calculated automatically WITH BOM by useAgentReleases hook
+// No need for manual SHA256 anymore - the hook handles BOM compatibility automatically
 
 export default function AgentReleases() {
   const { releases, isLoading, error, refetch, registerRelease, isRegistering } = useAgentReleases();
@@ -90,14 +89,12 @@ export default function AgentReleases() {
 
       toast.success(`Script obtido: ${(scriptContent.length / 1024).toFixed(1)} KB`);
 
-      // Register the release with manual SHA256 (includes BOM)
-      // This allows v3.10.9 agents (using Set-Content UTF8) to validate the hash
+      // Register the release - SHA256 with BOM will be calculated automatically
       registerRelease({
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        manual_sha256: CURRENT_VERSION_SHA256_WITH_BOM,
-        release_notes: 'CRITICAL FIX v3.10.11: (1) Environment variable expansion (%USERPROFILE%, %TEMP%) for scan paths. (2) Directory handling - when scan target is directory, lists up to 10 executables and processes first one. (3) Resolves "cannot call method on null reference" error when scanning directories instead of files.',
+        release_notes: 'CRITICAL FIX v3.10.12: (1) update_agent handler now uses dynamic path C:\\CyberShield\\cybershield-agent-$AgentName.ps1 instead of hardcoded v3.ps1. (2) Resolves "file not found" error during agent updates when installer saves script with agent-specific name.',
         channel: 'stable'
       });
 
@@ -146,13 +143,12 @@ export default function AgentReleases() {
 
       toast.success(`Script obtido: ${(scriptContent.length / 1024).toFixed(1)} KB`);
 
-      // Register the release with manual SHA256 (includes BOM)
+      // Register the release - SHA256 with BOM will be calculated automatically
       registerRelease({
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        manual_sha256: CURRENT_VERSION_SHA256_WITH_BOM,
-        release_notes: 'CRITICAL FIX v3.10.11: (1) Environment variable expansion (%USERPROFILE%, %TEMP%) for scan paths. (2) Directory handling - when scan target is directory, lists up to 10 executables and processes first one. (3) Resolves "cannot call method on null reference" error when scanning directories instead of files.',
+        release_notes: 'CRITICAL FIX v3.10.12: (1) update_agent handler now uses dynamic path C:\\CyberShield\\cybershield-agent-$AgentName.ps1 instead of hardcoded v3.ps1. (2) Resolves "file not found" error during agent updates when installer saves script with agent-specific name.',
         channel: 'stable'
       });
 
