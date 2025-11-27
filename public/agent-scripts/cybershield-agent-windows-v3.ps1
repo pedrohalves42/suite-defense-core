@@ -1407,11 +1407,16 @@ try {
                                     id = "auto-update-$(Get-Date -Format 'yyyyMMddHHmmss')"
                                     type = "update_agent"
                                 }
-                                Execute-Job -Job $updateJob
                                 
-                                Write-Log "[SUCCESS] Atualizacao concluida. Agente sera reiniciado." "SUCCESS"
-                                # Agente sera reiniciado pela scheduled task
-                                exit 0
+                                try {
+                                    Execute-Job -Job $updateJob
+                                    Write-Log "[SUCCESS] Atualizacao concluida. Agente sera reiniciado." "SUCCESS"
+                                    # Agente sera reiniciado pela scheduled task
+                                    exit 0
+                                } catch {
+                                    Write-Log "[ERROR] Falha no auto-update: $($_.Exception.Message). Continuando operacao normal." "ERROR"
+                                    # NAO fazer exit - agente continua funcionando
+                                }
                             } else {
                                 Write-Log "[UPDATE] Agente ja esta atualizado (versao $Global:AgentVersion)" "INFO"
                             }
