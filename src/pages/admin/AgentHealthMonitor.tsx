@@ -164,7 +164,7 @@ export default function AgentHealthMonitor() {
           table: 'agents',
           filter: `tenant_id=eq.${tenant.id}`
         },
-        (payload: any) => {
+        (payload: { new: { agent_name: string } }) => {
           const agentName = payload.new.agent_name;
           setLiveHeartbeats(prev => prev + 1);
           setRecentHeartbeats(prev => [agentName, ...prev.slice(0, 4)]);
