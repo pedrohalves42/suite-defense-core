@@ -2,7 +2,7 @@
 -- FASE 1: CORRIGIR VIEWS SECURITY DEFINER (P0 CRITICAL)
 -- =====================================================
 -- Corrigir 3 views que bypassam RLS e permitem vazamento cross-tenant
--- Adicionar security_invoker=on e filtro explícito de tenant_id
+-- Adicionar security_invoker=on e filtro explicito de tenant_id
 
 -- =====================================================
 -- 1. v_agent_lifecycle_state
@@ -26,14 +26,14 @@ SELECT
   ia_copy.created_at AS command_copied_at,
   ia_inst.created_at AS installed_at,
   
-  -- Tempo de instalação
+  -- Tempo de instalacao
   CASE 
     WHEN ia_inst.created_at IS NOT NULL AND ia_copy.created_at IS NOT NULL
     THEN EXTRACT(EPOCH FROM (ia_inst.created_at - ia_copy.created_at))::INTEGER
     ELSE NULL
   END AS installation_time_seconds,
   
-  -- Estágio do ciclo de vida
+  -- Estagio do ciclo de vida
   CASE
     WHEN a.last_heartbeat IS NOT NULL AND a.last_heartbeat > NOW() - INTERVAL '5 minutes' THEN 'active'
     WHEN ia_inst.created_at IS NOT NULL THEN 'installed_inactive'
@@ -43,7 +43,7 @@ SELECT
     ELSE 'unknown'
   END AS lifecycle_stage,
   
-  -- Detecção de agentes travados
+  -- Deteccao de agentes travados
   CASE
     WHEN a.status = 'pending' 
      AND a.last_heartbeat IS NULL 
@@ -121,7 +121,7 @@ SELECT
   
   EXTRACT(EPOCH FROM (NOW() - a.last_heartbeat))::INTEGER AS seconds_since_heartbeat,
   
-  -- Jobs statistics (últimas 24h)
+  -- Jobs statistics (ultimas 24h)
   COALESCE(j.total_jobs, 0) AS total_jobs_24h,
   COALESCE(j.completed_jobs, 0) AS completed_jobs_24h,
   COALESCE(j.failed_jobs, 0) AS failed_jobs_24h,
@@ -132,7 +132,7 @@ SELECT
     ELSE 0
   END AS failure_rate_pct,
   
-  -- Métricas mais recentes
+  -- Metricas mais recentes
   m.cpu_usage_percent,
   m.memory_usage_percent,
   m.disk_usage_percent,
@@ -166,7 +166,7 @@ WHERE a.tenant_id IN (
 );
 
 COMMENT ON VIEW public.v_agent_health_summary IS 
-'View segura de resumo de saúde dos agentes com isolamento por tenant via security_invoker';
+'View segura de resumo de saude dos agentes com isolamento por tenant via security_invoker';
 
 -- =====================================================
 -- 3. v_problematic_agents
@@ -184,10 +184,10 @@ SELECT
   a.enrolled_at AS created_at,
   a.last_heartbeat,
   
-  -- Tempo desde criação
+  -- Tempo desde criacao
   EXTRACT(EPOCH FROM (NOW() - a.enrolled_at)) / 60 AS minutes_since_creation,
   
-  -- Status de instalação
+  -- Status de instalacao
   ia.success AS installation_success,
   ia.network_connectivity,
   ia.metadata,
@@ -218,23 +218,23 @@ WHERE a.tenant_id IN (
   WHERE user_id = auth.uid()
 )
 AND (
-  -- Nunca conectou após 10 minutos
+  -- Nunca conectou apos 10 minutos
   (a.last_heartbeat IS NULL AND a.enrolled_at < NOW() - INTERVAL '10 minutes')
   OR
   -- Heartbeat antigo (>15min)
   (a.last_heartbeat < NOW() - INTERVAL '15 minutes')
   OR
-  -- Travado em pending após 5 minutos
+  -- Travado em pending apos 5 minutos
   (a.status = 'pending' AND a.enrolled_at < NOW() - INTERVAL '5 minutes')
 );
 
 COMMENT ON VIEW public.v_problematic_agents IS 
-'View segura de agentes problemáticos com isolamento por tenant via security_invoker';
+'View segura de agentes problematicos com isolamento por tenant via security_invoker';
 
 -- =====================================================
--- VALIDAÇÃO: Verificar que views estão seguras
+-- VALIDACAO: Verificar que views estao seguras
 -- =====================================================
--- Após executar, rodar esta query para confirmar:
+-- Apos executar, rodar esta query para confirmar:
 -- SELECT table_name, security_type 
 -- FROM information_schema.views 
 -- WHERE table_schema = 'public' 

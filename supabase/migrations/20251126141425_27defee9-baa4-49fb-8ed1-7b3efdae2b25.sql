@@ -12,6 +12,6 @@ WHERE version = 'v3.10.9-PSCUSTOMOBJECT-FIX'
 
 -- Nota: Apos esta migration:
 -- 1. Edge Function get-agent-script-content sera redeployado automaticamente
--- 2. Usuario clicara em "Forçar Re-registro" na UI
+-- 2. Usuario clicara em "Forcar Re-registro" na UI
 -- 3. Nova entrada v3.10.9 sera criada com script_content correto
 -- 4. serve-installer retornara 200 OK (nao mais 503)
