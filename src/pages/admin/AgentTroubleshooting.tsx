@@ -7,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AlertCircle, CheckCircle2, XCircle, RefreshCw, Terminal, Shield } from "lucide-react";
+import { AlertCircle, CheckCircle2, XCircle, RefreshCw, Terminal, Shield, Download } from "lucide-react";
 import { toast } from "sonner";
+import { useTenant } from "@/hooks/useTenant";
 
 interface ProblematicAgent {
   id: string;
@@ -23,7 +24,34 @@ interface ProblematicAgent {
 
 export default function AgentTroubleshooting() {
   const navigate = useNavigate();
+  const { tenant } = useTenant();
   const [regeneratingAgent, setRegeneratingAgent] = useState<string | null>(null);
+
+  const handleDownloadReinstallScript = async () => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-reinstall-script`
+      );
+
+      if (!response.ok) {
+        throw new Error('Falha ao baixar script de reinstalação');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'reinstall-cybershield-agent.ps1';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('Script de reinstalação baixado com sucesso');
+    } catch (error) {
+      toast.error(`Erro ao baixar script: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
 
   // Query para buscar agentes problematicos
   const { data: problematicAgents, isLoading, refetch } = useQuery({
@@ -129,6 +157,69 @@ export default function AgentTroubleshooting() {
           Diagnostico avancado de agentes com problemas de instalacao ou conectividade
         </p>
       </div>
+
+      {/* Script de Reinstalação Automatizada */}
+      <Card className="border-destructive/20 bg-destructive/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Script de Reinstalação Automatizada
+          </CardTitle>
+          <CardDescription>
+            Para agentes offline: limpa instalação antiga e reinstala automaticamente o agente v3.10.12
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p className="font-semibold">O script executa automaticamente:</p>
+            <ul className="list-disc list-inside space-y-1 ml-4">
+              <li>Para e remove Scheduled Task antiga</li>
+              <li>Limpa diretório C:\CyberShield completamente</li>
+              <li>Baixa installer atualizado do servidor</li>
+              <li>Executa instalação com versão v3.10.12</li>
+              <li>Verifica instalação e exibe logs</li>
+            </ul>
+          </div>
+
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Uso Recomendado</AlertTitle>
+            <AlertDescription>
+              Use este script quando agentes ficarem offline após atualização ou quando houver problemas de credenciais. 
+              O script requer um enrollment key válido.
+            </AlertDescription>
+          </Alert>
+
+          <Button
+            onClick={handleDownloadReinstallScript}
+            className="w-full gap-2"
+            variant="destructive"
+          >
+            <Download className="h-4 w-4" />
+            Baixar Script de Reinstalação
+          </Button>
+
+          <div className="space-y-2">
+            <p className="text-sm font-semibold">Como usar:</p>
+            <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground ml-2">
+              <li>Baixe o script usando o botão acima</li>
+              <li>Vá para <code className="bg-muted px-1 py-0.5 rounded">/admin/installer</code> e gere um novo enrollment key para o agente</li>
+              <li>No computador offline, abra PowerShell como Administrador</li>
+              <li>Execute o comando abaixo substituindo os valores:</li>
+            </ol>
+            <div className="bg-muted p-3 rounded-md">
+              <code className="text-xs block">
+                .\reinstall-cybershield-agent.ps1 `<br/>
+                &nbsp;&nbsp;-EnrollmentKey "SEU_ENROLLMENT_KEY" `<br/>
+                &nbsp;&nbsp;-ServerUrl "{import.meta.env.VITE_SUPABASE_URL}"
+              </code>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              ⚠️ Certifique-se de usar o MESMO nome de agente ao gerar o enrollment key para manter o histórico
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Script de Validacao */}
       <Card className="border-primary/20 bg-primary/5">
