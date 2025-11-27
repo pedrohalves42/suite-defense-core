@@ -52,10 +52,10 @@ export default function AgentReleases() {
       });
       
       refetch();
-    } catch (error: any) {
-      console.error('Error forcing update check:', error);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       toast.error('Erro ao forçar verificação de updates', {
-        description: error.message
+        description: errorMessage
       });
     } finally {
       setIsProcessingUpdates(false);
@@ -98,9 +98,9 @@ export default function AgentReleases() {
         channel: 'stable'
       });
 
-    } catch (error: any) {
-      console.error(`Error registering ${CURRENT_VERSION}:`, error);
-      toast.error(`Erro ao registrar release: ${error.message || 'Unknown error'}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Erro ao registrar release: ${errorMessage}`);
     } finally {
       setFetchingScript(false);
     }
@@ -152,9 +152,9 @@ export default function AgentReleases() {
         channel: 'stable'
       });
 
-    } catch (error: any) {
-      console.error(`Error force re-registering ${CURRENT_VERSION}:`, error);
-      toast.error(`Erro ao forcar re-registro: ${error.message || 'Unknown error'}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Erro ao forcar re-registro: ${errorMessage}`);
     } finally {
       setIsForceReregistering(false);
     }

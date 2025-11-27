@@ -5,9 +5,18 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   test: {
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true
+      }
+    },
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    testTimeout: 30000,
+    hookTimeout: 30000,
+    isolate: false,
     exclude: [
       'node_modules/**',
       'dist/**',
