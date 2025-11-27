@@ -1066,7 +1066,7 @@ function Execute-Job {
                                  Where-Object { $_.Extension -match '\.(exe|dll|bat|ps1|vbs|js|msi|scr|com)$' } |
                                  Select-Object -First 10  # Limitar a 10 arquivos por diretorio
                         
-                        if ($files.Count -eq 0) {
+                        if ($null -eq $files -or $files.Count -eq 0) {
                             # Diretorio sem executaveis - retornar sucesso informativo
                             $output = @{
                                 filePath = $filePath
