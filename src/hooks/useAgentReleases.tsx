@@ -38,17 +38,23 @@ export const useAgentReleases = () => {
       manual_sha256?: string;
     }) => {
       // Use manual SHA256 if provided (for BOM compatibility)
-      // Otherwise calculate SHA256 normally
+      // Otherwise calculate SHA256 WITH BOM (for compatibility with v3.10.9 agents using Set-Content UTF8)
       let sha256: string;
       if (manual_sha256) {
         sha256 = manual_sha256;
         console.log('[useAgentReleases] Using manual SHA256:', sha256.substring(0, 16) + '...');
       } else {
+        // ALWAYS include BOM for compatibility with old agents
+        const BOM = new Uint8Array([0xEF, 0xBB, 0xBF]);
         const encoder = new TextEncoder();
-        const data = encoder.encode(script_content);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const contentBytes = encoder.encode(script_content);
+        const dataWithBOM = new Uint8Array(BOM.length + contentBytes.length);
+        dataWithBOM.set(BOM, 0);
+        dataWithBOM.set(contentBytes, BOM.length);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', dataWithBOM);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        console.log('[useAgentReleases] Calculated SHA256 WITH BOM:', sha256.substring(0, 16) + '...');
       }
 
       // Call register-agent-release Edge Function
