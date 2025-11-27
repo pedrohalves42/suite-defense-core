@@ -7,10 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.12-UPDATE-PATH-AGENTNAME-FIX';
-export const LAST_UPDATED = '2025-01-26T23:30:00Z'; // UPDATE-PATH-AGENTNAME-FIX: Handler update_agent usa caminho dinamico com $AgentName
+export const INSTALLER_VERSION = 'v3.10.13-AUTO-UPDATE-SAFE';
+export const LAST_UPDATED = '2025-01-27T02:00:00Z'; // AUTO-UPDATE-SAFE: Try-catch no auto-update impede morte do agente em falhas
 
 export const CHANGES = [
+  '[v3.10.13-AUTO-UPDATE-SAFE] CRITICAL FIX: Auto-update envolvido em try-catch, exit 0 APENAS se sucesso',
+  '[v3.10.13-AUTO-UPDATE-SAFE] CRITICAL FIX: Agente continua funcionando se update_agent falhar (nao morre mais)',
+  '[v3.10.13-AUTO-UPDATE-SAFE] CRITICAL FIX: Elimina comportamento de "agente offline apos 24h" causado por exit incondicional',
+  '[v3.10.13-AUTO-UPDATE-SAFE] MELHORIA: ScanFileDialog avisa sobre paths de usuario inacessiveis pela conta SYSTEM',
+  '[v3.10.13-AUTO-UPDATE-SAFE] MELHORIA: Frontend sugere paths validos (C:\\Windows, C:\\Program Files, C:\\Temp)',
   '[v3.10.12-UPDATE-PATH-AGENTNAME-FIX] CRITICAL FIX: Handler update_agent usa caminho dinamico C:\\CyberShield\\cybershield-agent-$AgentName.ps1',
   '[v3.10.12-UPDATE-PATH-AGENTNAME-FIX] CRITICAL FIX: Resolve "arquivo nao encontrado" quando instalador salva script com nome do agente',
   '[v3.10.12-UPDATE-PATH-AGENTNAME-FIX] FIX: Elimina hardcoded v3.ps1, agora usa $Global:AgentName dinamicamente',

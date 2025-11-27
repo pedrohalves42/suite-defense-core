@@ -126,14 +126,27 @@ export function ScanFileDialog() {
             <Input
               id="filePath"
               type="text"
-              placeholder="C:\path\to\file.exe"
+              placeholder="C:\Program Files\app\file.exe"
               value={filePath}
               onChange={(e) => setFilePath(e.target.value)}
               required
             />
             <p className="text-xs text-muted-foreground">
-              Exemplo: C:\Users\Public\Downloads\arquivo.exe
+              Use caminhos absolutos acessiveis pela conta SYSTEM.
             </p>
+            {(filePath.includes('%USERPROFILE%') || 
+              filePath.includes('%APPDATA%') || 
+              filePath.toLowerCase().includes('downloads') ||
+              filePath.toLowerCase().includes('documents') ||
+              filePath.toLowerCase().includes('desktop')) && (
+              <div className="rounded-md bg-warning/10 p-3 text-xs text-warning">
+                <p className="font-semibold">⚠️ Aviso: Path de Usuario</p>
+                <p className="mt-1">
+                  O agente roda como SYSTEM e pode nao ter acesso a pastas de usuario.
+                  Considere usar: C:\Windows\..., C:\Program Files\..., ou C:\Temp\...
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2">
