@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.12-UPDATE-PATH-AGENTNAME-FIX
+    CyberShield Agent - Windows v3.10.13-AUTO-UPDATE-SAFE
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
