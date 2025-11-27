@@ -18,7 +18,7 @@ interface ProblematicAgent {
   minutes_since_creation: number;
   installation_success: boolean | null;
   network_connectivity: boolean | null;
-  metadata: any;
+  metadata: Record<string, unknown> | null;
 }
 
 export default function AgentTroubleshooting() {
@@ -101,8 +101,8 @@ export default function AgentTroubleshooting() {
         );
       }, 1500); // Delay para usuario ler o toast
       
-    } catch (error: any) {
-      toast.error(`Erro ao regenerar credenciais: ${error.message}`);
+    } catch (error) {
+      toast.error(`Erro ao regenerar credenciais: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setRegeneratingAgent(null);
     }
     // Nota: nao resetamos regeneratingAgent aqui porque vamos sair da pagina

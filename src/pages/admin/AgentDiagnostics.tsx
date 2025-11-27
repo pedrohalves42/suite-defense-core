@@ -26,7 +26,7 @@ interface DiagnosticIssue {
   issue_type: string;
   severity: string;
   description: string;
-  details: any;
+  details: Record<string, unknown>;
 }
 
 interface Agent {
@@ -93,7 +93,7 @@ export default function AgentDiagnostics() {
       });
       refetchDiagnostics();
     },
-    onError: (error: any) => {
+    onError: (error) => {
       toast({
         title: 'Erro no health check',
         description: error.message,
