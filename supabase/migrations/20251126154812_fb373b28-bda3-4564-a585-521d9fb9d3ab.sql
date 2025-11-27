@@ -1,9 +1,9 @@
--- Fase 1: Desativar todas as versões antigas do Windows
+-- Fase 1: Desativar todas as versoes antigas do Windows
 UPDATE public.agent_releases 
 SET is_active = false 
 WHERE platform = 'windows';
 
--- Fase 2: Inserir v3.10.9-PSCUSTOMOBJECT-FIX (se não existir)
+-- Fase 2: Inserir v3.10.9-PSCUSTOMOBJECT-FIX (se nao existir)
 INSERT INTO public.agent_releases (
   version, platform, channel, 
   script_content, sha256, 
@@ -13,7 +13,7 @@ SELECT
   'v3.10.9-PSCUSTOMOBJECT-FIX',
   'windows',
   'stable',
-  '# Placeholder - será atualizado via Edge Function',
+  '# Placeholder - sera atualizado via Edge Function',
   'placeholder-sha256-to-be-calculated',
   'CRITICAL FIX: Corrige $Job.ContainsKey() para $null -ne $Job.payload em todos os job handlers. Resolve incompatibilidade PSCustomObject vs Hashtable.',
   true
@@ -23,7 +23,7 @@ WHERE NOT EXISTS (
     AND platform = 'windows'
 );
 
--- Se já existir, apenas ativar
+-- Se ja existir, apenas ativar
 UPDATE public.agent_releases
 SET is_active = true,
     release_notes = 'CRITICAL FIX: Corrige $Job.ContainsKey() para $null -ne $Job.payload em todos os job handlers. Resolve incompatibilidade PSCustomObject vs Hashtable.'

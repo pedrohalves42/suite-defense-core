@@ -1,5 +1,5 @@
 -- ============================================================================
--- FASE 7: Correção P0 Blockers - Security Scan Remediation
+-- FASE 7: Correcao P0 Blockers - Security Scan Remediation
 -- ============================================================================
 -- Fix: subscription_plans exposes pricing to public
 -- Fix: Document security_invoker views for scan clarification
