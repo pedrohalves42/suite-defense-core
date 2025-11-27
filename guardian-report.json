@@ -1,0 +1,60 @@
+{
+  "startedAt": "2025-11-27T00:16:43.269Z",
+  "finishedAt": "2025-11-27T00:17:25.077Z",
+  "issues": [
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/installer-version.ts",
+      "line": 144,
+      "rule": "no-invalid-variable-reference-drive",
+      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
+      "snippet": "'InvalidVariableReferenceWithDrive: : $_ em mensagens de log',"
+    },
+    {
+      "severity": "warn",
+      "file": "supabase/migrations/20251119024342_4058858b-eb9b-4ef3-96f5-ce6efa8f2a17.sql",
+      "rule": "jobs-migration-missing-column",
+      "message": "Migration that alters jobs table does not mention column \"output\"."
+    },
+    {
+      "severity": "warn",
+      "file": "supabase/migrations/20251119024342_4058858b-eb9b-4ef3-96f5-ce6efa8f2a17.sql",
+      "rule": "jobs-migration-missing-column",
+      "message": "Migration that alters jobs table does not mention column \"error_message\"."
+    },
+    {
+      "severity": "warn",
+      "file": "supabase/migrations/20251119024342_4058858b-eb9b-4ef3-96f5-ce6efa8f2a17.sql",
+      "rule": "jobs-migration-missing-column",
+      "message": "Migration that alters jobs table does not mention column \"started_at\"."
+    },
+    {
+      "severity": "warn",
+      "file": "supabase/migrations/20251119024342_4058858b-eb9b-4ef3-96f5-ce6efa8f2a17.sql",
+      "rule": "jobs-migration-missing-column",
+      "message": "Migration that alters jobs table does not mention column \"finished_at\"."
+    },
+    {
+      "severity": "warn",
+      "file": "supabase/migrations/20251119024342_4058858b-eb9b-4ef3-96f5-ce6efa8f2a17.sql",
+      "rule": "jobs-migration-missing-column",
+      "message": "Migration that alters jobs table does not mention column \"execution_time_seconds\"."
+    },
+    {
+      "severity": "error",
+      "file": "<process>",
+      "rule": "command:test",
+      "message": "Command \"npm run test\" failed: Command failed: npm run test"
+    },
+    {
+      "severity": "error",
+      "file": "<process>",
+      "rule": "command:validate:all",
+      "message": "Command \"npm run validate:all\" failed: Command failed: npm run validate:all"
+    }
+  ],
+  "summary": {
+    "errors": 3,
+    "warnings": 5
+  }
+}
