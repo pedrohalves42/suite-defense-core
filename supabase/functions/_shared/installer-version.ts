@@ -141,7 +141,7 @@ export const KNOWN_ISSUES_FIXED = [
   'Backtick-quote escaping incompativel com New-ScheduledTaskAction',
   'The term Write-InstallerLog is not recognized as the name of a cmdlet',
   'ParserError: ExpectedValueExpression apos operador + (continuacao de linha)',
-  'InvalidVariableReferenceWithDrive: : $_ em mensagens de log',
+  'InvalidVariableReferenceWithDrive: uso de $_ em mensagens de log',
   'Instalador falhava com erros de parse antes de executar',
   'Agent nao conseguia logar erros corretamente',
   'Continuacoes de linha do PowerShell causando problemas em String.raw',
