@@ -44,7 +44,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "3.10.12-UPDATE-PATH-AGENTNAME-FIX"
+    [string]\$AgentVersion = "3.10.13-AUTO-UPDATE-SAFE"
 )
 
 \$ErrorActionPreference = "Stop"
