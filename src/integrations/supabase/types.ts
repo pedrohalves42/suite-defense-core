@@ -1811,6 +1811,113 @@ export type Database = {
           },
         ]
       }
+      network_anomalies: {
+        Row: {
+          acknowledged: boolean | null
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          agent_id: string
+          anomaly_type: string
+          created_at: string
+          description: string | null
+          destination_ip: string | null
+          detected_at: string
+          id: string
+          port: number | null
+          protocol: string | null
+          raw_data: Json | null
+          severity: string
+          source_ip: string | null
+          tenant_id: string
+        }
+        Insert: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          agent_id: string
+          anomaly_type: string
+          created_at?: string
+          description?: string | null
+          destination_ip?: string | null
+          detected_at?: string
+          id?: string
+          port?: number | null
+          protocol?: string | null
+          raw_data?: Json | null
+          severity: string
+          source_ip?: string | null
+          tenant_id: string
+        }
+        Update: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          agent_id?: string
+          anomaly_type?: string
+          created_at?: string
+          description?: string | null
+          destination_ip?: string | null
+          detected_at?: string
+          id?: string
+          port?: number | null
+          protocol?: string | null
+          raw_data?: Json | null
+          severity?: string
+          source_ip?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "network_anomalies_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_anomalies_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_anomalies_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_anomalies_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_anomalies_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "network_anomalies_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "network_anomalies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       performance_metrics: {
         Row: {
           created_at: string
