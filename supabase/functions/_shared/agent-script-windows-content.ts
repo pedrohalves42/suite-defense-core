@@ -6,7 +6,7 @@
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.12-UPDATE-PATH-AGENTNAME-FIX
+    CyberShield Agent - Windows v3.10.13-AUTO-UPDATE-SAFE
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -1073,7 +1073,7 @@ function Execute-Job {
                                  Where-Object { \$_.Extension -match '\\.(exe|dll|bat|ps1|vbs|js|msi|scr|com)\$' } |
                                  Select-Object -First 10  # Limitar a 10 arquivos por diretorio
                         
-                        if (\$files.Count -eq 0) {
+                        if (\$null -eq \$files -or \$files.Count -eq 0) {
                             # Diretorio sem executaveis - retornar sucesso informativo
                             \$output = @{
                                 filePath = \$filePath
@@ -1414,11 +1414,16 @@ try {
                                     id = "auto-update-\$(Get-Date -Format 'yyyyMMddHHmmss')"
                                     type = "update_agent"
                                 }
-                                Execute-Job -Job \$updateJob
                                 
-                                Write-Log "[SUCCESS] Atualizacao concluida. Agente sera reiniciado." "SUCCESS"
-                                # Agente sera reiniciado pela scheduled task
-                                exit 0
+                                try {
+                                    Execute-Job -Job \$updateJob
+                                    Write-Log "[SUCCESS] Atualizacao concluida. Agente sera reiniciado." "SUCCESS"
+                                    # Agente sera reiniciado pela scheduled task
+                                    exit 0
+                                } catch {
+                                    Write-Log "[ERROR] Falha no auto-update: \$(\$_.Exception.Message). Continuando operacao normal." "ERROR"
+                                    # NAO fazer exit - agente continua funcionando
+                                }
                             } else {
                                 Write-Log "[UPDATE] Agente ja esta atualizado (versao \$Global:AgentVersion)" "INFO"
                             }
