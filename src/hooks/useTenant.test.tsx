@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 import { useTenant } from './useTenant'
@@ -47,9 +47,9 @@ describe('useTenant', () => {
     })
 
     // Wait for hook to update
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    expect(result.current.tenant).toBeNull()
+    await waitFor(() => {
+      expect(result.current.tenant).toBeNull()
+    })
   })
 
   it('should return tenant when user has tenant', async () => {
@@ -91,9 +91,9 @@ describe('useTenant', () => {
     })
 
     // Wait for hook to update
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    expect(result.current.tenant).toEqual(mockTenant)
+    await waitFor(() => {
+      expect(result.current.tenant).toEqual(mockTenant)
+    })
   })
 
   it('should handle multiple roles gracefully', async () => {
@@ -115,8 +115,8 @@ describe('useTenant', () => {
     })
 
     // Wait for hook to update
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    expect(result.current.tenant).toBeDefined()
+    await waitFor(() => {
+      expect(result.current.tenant).toBeDefined()
+    })
   })
 })

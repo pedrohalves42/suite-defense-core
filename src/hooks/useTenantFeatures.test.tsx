@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useTenantFeatures } from './useTenantFeatures'
 import { supabase } from '@/integrations/supabase/client'
@@ -53,10 +53,10 @@ describe('useTenantFeatures', () => {
     })
 
     // Wait for query to complete
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    expect(result.current.hasFeature('advanced_dashboard')).toBe(true)
-    expect(result.current.hasFeature('non_existent')).toBe(false)
+    await waitFor(() => {
+      expect(result.current.hasFeature('advanced_dashboard')).toBe(true)
+      expect(result.current.hasFeature('non_existent')).toBe(false)
+    })
   })
 
   it('should calculate feature quota correctly', async () => {
@@ -83,12 +83,12 @@ describe('useTenantFeatures', () => {
     })
 
     // Wait for query to complete
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    const quota = result.current.getFeatureQuota('max_devices')
-    expect(quota.limit).toBe(10)
-    expect(quota.used).toBe(7)
-    expect(quota.remaining).toBe(3)
+    await waitFor(() => {
+      const quota = result.current.getFeatureQuota('max_devices')
+      expect(quota.limit).toBe(10)
+      expect(quota.used).toBe(7)
+      expect(quota.remaining).toBe(3)
+    })
   })
 
   it('should check if feature can be used based on quota', async () => {
@@ -121,10 +121,10 @@ describe('useTenantFeatures', () => {
     })
 
     // Wait for query to complete
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    expect(result.current.canUseFeature('limited_feature')).toBe(false)
-    expect(result.current.canUseFeature('available_feature')).toBe(true)
+    await waitFor(() => {
+      expect(result.current.canUseFeature('limited_feature')).toBe(false)
+      expect(result.current.canUseFeature('available_feature')).toBe(true)
+    })
   })
 
   it('should detect near quota threshold', async () => {
@@ -151,9 +151,9 @@ describe('useTenantFeatures', () => {
     })
 
     // Wait for query to complete
-    await new Promise(resolve => setTimeout(resolve, 100))
-
-    expect(result.current.isNearQuota('near_limit', 80)).toBe(true)
-    expect(result.current.isNearQuota('near_limit', 90)).toBe(false)
+    await waitFor(() => {
+      expect(result.current.isNearQuota('near_limit', 80)).toBe(true)
+      expect(result.current.isNearQuota('near_limit', 90)).toBe(false)
+    })
   })
 })
