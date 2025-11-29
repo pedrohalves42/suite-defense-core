@@ -37,6 +37,14 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Validate HTTP method
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ error: 'Metodo nao permitido. Use POST.' }),
+      { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   const requestId = crypto.randomUUID();
 
   try {
