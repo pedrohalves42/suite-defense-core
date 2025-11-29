@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Zap, Plus, Server, CheckCircle, XCircle, Clock, AlertCircle, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,42 @@ const JobCreator = () => {
   const [isRecurring, setIsRecurring] = useState<boolean>(false);
   const [recurrencePattern, setRecurrencePattern] = useState<string>("0 * * * *");
 
+  const loadAgents = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("agents")
+        .select("*")
+        .order("agent_name", { ascending: true });
+
+      if (error) throw error;
+      setAgents(data || []);
+    } catch (error) {
+      logger.error("Erro ao carregar agentes", error);
+      toast.error("Erro ao carregar lista de agentes");
+    }
+  }, []);
+
+  const loadJobs = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("jobs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+      setRecentJobs(data || []);
+    } catch (error) {
+      logger.error("Erro ao carregar jobs", error);
+    }
+  }, []);
+
+  const loadData = useCallback(async () => {
+    setLoadingData(true);
+    await Promise.all([loadAgents(), loadJobs()]);
+    setLoadingData(false);
+  }, [loadAgents, loadJobs]);
+
   useEffect(() => {
     loadData();
     
@@ -66,43 +102,7 @@ const JobCreator = () => {
     return () => {
       supabase.removeChannel(jobsChannel);
     };
-  }, []);
-
-  const loadData = async () => {
-    setLoadingData(true);
-    await Promise.all([loadAgents(), loadJobs()]);
-    setLoadingData(false);
-  };
-
-  const loadAgents = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("agents")
-        .select("*")
-        .order("agent_name", { ascending: true });
-
-      if (error) throw error;
-      setAgents(data || []);
-    } catch (error) {
-      logger.error("Erro ao carregar agentes", error);
-      toast.error("Erro ao carregar lista de agentes");
-    }
-  };
-
-  const loadJobs = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("jobs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(20);
-
-      if (error) throw error;
-      setRecentJobs(data || []);
-    } catch (error) {
-      logger.error("Erro ao carregar jobs", error);
-    }
-  };
+  }, [loadData, loadJobs]);
 
   const clearPendingJobs = useMutation({
     mutationFn: async () => {
