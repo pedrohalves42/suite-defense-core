@@ -7,10 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.13-AUTO-UPDATE-SAFE';
-export const LAST_UPDATED = '2025-01-27T02:00:00Z'; // AUTO-UPDATE-SAFE: Try-catch no auto-update impede morte do agente em falhas
+export const INSTALLER_VERSION = 'v3.10.14-NO-EXIT-ON-UPDATE';
+export const LAST_UPDATED = '2025-06-15T18:00:00Z'; // NO-EXIT-ON-UPDATE: Removido exit 0 apos auto-update bem sucedido
 
 export const CHANGES = [
+  '[v3.10.14-NO-EXIT-ON-UPDATE] CRITICAL FIX: Removido exit 0 apos auto-update bem sucedido',
+  '[v3.10.14-NO-EXIT-ON-UPDATE] CRITICAL FIX: Agente continua rodando apos update (nao morre mais apos 24h)',
+  '[v3.10.14-NO-EXIT-ON-UPDATE] CRITICAL FIX: Nova versao sera usada no proximo boot do sistema',
+  '[v3.10.14-NO-EXIT-ON-UPDATE] FIX: Resolve problema de "agente offline apos 24h" definitivamente',
+  '[v3.10.14-NO-EXIT-ON-UPDATE] MELHORIA: Agente opera 24/7 sem interrupcao mesmo durante auto-updates',
   '[v3.10.13-AUTO-UPDATE-SAFE] CRITICAL FIX: Auto-update envolvido em try-catch, exit 0 APENAS se sucesso',
   '[v3.10.13-AUTO-UPDATE-SAFE] CRITICAL FIX: Agente continua funcionando se update_agent falhar (nao morre mais)',
   '[v3.10.13-AUTO-UPDATE-SAFE] CRITICAL FIX: Elimina comportamento de "agente offline apos 24h" causado por exit incondicional',
