@@ -1,4 +1,5 @@
 import { corsHeaders } from '../_shared/cors.ts';
+import { REINSTALL_SCRIPT_CONTENT } from '../_shared/reinstall-script-content.ts';
 
 /**
  * Get Reinstall Script - Edge Function
@@ -17,34 +18,28 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    // Read the reinstall script from the public directory
-    const scriptPath = './public/scripts/reinstall-cybershield-agent.ps1';
-    
-    let scriptContent: string;
-    
-    try {
-      scriptContent = await Deno.readTextFile(scriptPath);
-    } catch (readError) {
-      console.error('Failed to read reinstall script:', readError);
-      
-      return new Response(
-        JSON.stringify({
-          error: 'Script not found',
-          message: 'Reinstall script is not available',
-        }),
-        {
-          status: 404,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-    }
+  // Validate HTTP method
+  if (req.method !== 'GET') {
+    return new Response(
+      JSON.stringify({
+        error: 'Method not allowed',
+        message: 'Only GET requests are supported',
+      }),
+      {
+        status: 405,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+  }
 
-    // Return the script as a downloadable PowerShell file
-    return new Response(scriptContent, {
+  try {
+    console.log('Serving reinstall script from embedded content');
+
+    // Return the embedded script as a downloadable PowerShell file
+    return new Response(REINSTALL_SCRIPT_CONTENT, {
       status: 200,
       headers: {
         ...corsHeaders,
