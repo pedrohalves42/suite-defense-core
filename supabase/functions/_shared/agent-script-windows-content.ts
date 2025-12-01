@@ -6,7 +6,7 @@
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.13-AUTO-UPDATE-SAFE
+    CyberShield Agent - Windows v3.10.14-NO-EXIT-ON-UPDATE
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -44,7 +44,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "3.10.13-AUTO-UPDATE-SAFE"
+    [string]\$AgentVersion = "3.10.14-NO-EXIT-ON-UPDATE"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -1417,11 +1417,13 @@ try {
                                 
                                 try {
                                     Execute-Job -Job \$updateJob
-                                    Write-Log "[SUCCESS] Atualizacao concluida. Agente sera reiniciado." "SUCCESS"
-                                    # Agente sera reiniciado pela scheduled task
-                                    exit 0
+                                    Write-Log "[SUCCESS] Script do agente atualizado em disco." "SUCCESS"
+                                    Write-Log "[INFO] A nova versao sera carregada no proximo boot ou restart do agente." "INFO"
+                                    Write-Log "[INFO] Continuando execucao com a versao atual ate o proximo restart." "INFO"
+                                    # NAO fazer exit - agente continua rodando com versao atual
+                                    # Nova versao sera usada quando sistema reiniciar ou task for recriada
                                 } catch {
-                                    Write-Log "[ERROR] Falha no auto-update: \$(\$_.Exception.Message). Continuando operacao normal." "ERROR"
+                                    Write-Log "[ERROR] Falha no auto-update: \$(\$_.Exception.Message). Continuando com versao atual." "ERROR"
                                     # NAO fazer exit - agente continua funcionando
                                 }
                             } else {
