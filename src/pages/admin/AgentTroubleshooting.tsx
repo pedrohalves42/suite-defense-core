@@ -166,7 +166,7 @@ export default function AgentTroubleshooting() {
             Script de Reinstalação Automatizada
           </CardTitle>
           <CardDescription>
-            Para agentes offline: limpa instalação antiga e reinstala automaticamente o agente v3.10.12
+            Para agentes offline: limpa instalação antiga e reinstala automaticamente o agente v3.10.14-NO-EXIT-ON-UPDATE
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
