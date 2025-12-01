@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.13-AUTO-UPDATE-SAFE';
+const CURRENT_VERSION = 'v3.10.14-NO-EXIT-ON-UPDATE';
 
 // SHA256 will be calculated automatically WITH BOM by useAgentReleases hook
 // No need for manual SHA256 anymore - the hook handles BOM compatibility automatically
@@ -94,7 +94,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'CRITICAL FIX v3.10.12: (1) update_agent handler now uses dynamic path C:\\CyberShield\\cybershield-agent-$AgentName.ps1 instead of hardcoded v3.ps1. (2) Resolves "file not found" error during agent updates when installer saves script with agent-specific name.',
+        release_notes: 'CRITICAL FIX v3.10.14: Removido exit 0 apos auto-update bem-sucedido. Agente continua rodando 24/7 sem interrupcao - nova versao sera usada no proximo boot. Previne morte do agente apos 24h.',
         channel: 'stable'
       });
 
@@ -148,7 +148,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'CRITICAL FIX v3.10.12: (1) update_agent handler now uses dynamic path C:\\CyberShield\\cybershield-agent-$AgentName.ps1 instead of hardcoded v3.ps1. (2) Resolves "file not found" error during agent updates when installer saves script with agent-specific name.',
+        release_notes: 'CRITICAL FIX v3.10.14: Removido exit 0 apos auto-update bem-sucedido. Agente continua rodando 24/7 sem interrupcao - nova versao sera usada no proximo boot. Previne morte do agente apos 24h.',
         channel: 'stable'
       });
 
