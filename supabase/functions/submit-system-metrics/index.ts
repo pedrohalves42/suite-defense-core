@@ -156,46 +156,77 @@ Deno.serve(async (req) => {
     logger.success('Metrics stored successfully');
 
     logger.debug('Checking alert thresholds');
-    // Gerar alertas se thresholds ultrapassados
+    // Gerar alertas se thresholds ultrapassados (com verificacao de duplicatas e cooldown)
     const alerts = [];
+    const ALERT_COOLDOWN_MINUTES = 60; // 1 hora de cooldown
 
-    if (metrics.cpu_usage_percent && metrics.cpu_usage_percent > 90) {
-      logger.info('High CPU usage detected');
-      alerts.push({
-        tenant_id: agent.tenant_id,
-        agent_id: agent.id,
-        alert_type: 'high_cpu',
-        severity: 'critical',
-        title: `CPU Critico: ${agent.agent_name}`,
-        message: `Uso de CPU em ${metrics.cpu_usage_percent.toFixed(1)}% (limite: 90%)`,
-        details: { cpu_usage: metrics.cpu_usage_percent },
-      });
+    // Verificar alertas existentes nas ultimas 24h
+    const { data: existingAlerts } = await supabase
+      .from('system_alerts')
+      .select('alert_type, created_at, resolved')
+      .eq('agent_id', agent.id)
+      .eq('tenant_id', agent.tenant_id)
+      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+
+    const hasRecentAlert = (type: string) => {
+      if (!existingAlerts) return false;
+      
+      const recentAlert = existingAlerts.find(
+        (alert) => 
+          alert.alert_type === type && 
+          !alert.resolved &&
+          new Date(alert.created_at).getTime() > Date.now() - ALERT_COOLDOWN_MINUTES * 60 * 1000
+      );
+      
+      return !!recentAlert;
+    };
+
+    // CPU: Threshold 95% (increased from 90%)
+    if (metrics.cpu_usage_percent && metrics.cpu_usage_percent > 95) {
+      if (!hasRecentAlert('high_cpu')) {
+        logger.info('High CPU usage detected');
+        alerts.push({
+          tenant_id: agent.tenant_id,
+          agent_id: agent.id,
+          alert_type: 'high_cpu',
+          severity: 'critical',
+          title: `CPU Critico: ${agent.agent_name}`,
+          message: `Uso de CPU em ${metrics.cpu_usage_percent.toFixed(1)}% (limite: 95%)`,
+          details: { cpu_usage: metrics.cpu_usage_percent },
+        });
+      }
     }
 
-    if (metrics.memory_usage_percent && metrics.memory_usage_percent > 85) {
-      logger.info('High memory usage detected');
-      alerts.push({
-        tenant_id: agent.tenant_id,
-        agent_id: agent.id,
-        alert_type: 'high_memory',
-        severity: 'high',
-        title: `Memoria Alta: ${agent.agent_name}`,
-        message: `Uso de memoria em ${metrics.memory_usage_percent.toFixed(1)}% (limite: 85%)`,
-        details: { memory_usage: metrics.memory_usage_percent },
-      });
+    // Memory: Threshold 90% (increased from 85%)
+    if (metrics.memory_usage_percent && metrics.memory_usage_percent > 90) {
+      if (!hasRecentAlert('high_memory')) {
+        logger.info('High memory usage detected');
+        alerts.push({
+          tenant_id: agent.tenant_id,
+          agent_id: agent.id,
+          alert_type: 'high_memory',
+          severity: 'high',
+          title: `Memoria Alta: ${agent.agent_name}`,
+          message: `Uso de memoria em ${metrics.memory_usage_percent.toFixed(1)}% (limite: 90%)`,
+          details: { memory_usage: metrics.memory_usage_percent },
+        });
+      }
     }
 
-    if (metrics.disk_usage_percent && metrics.disk_usage_percent > 90) {
-      logger.info('High disk usage detected');
-      alerts.push({
-        tenant_id: agent.tenant_id,
-        agent_id: agent.id,
-        alert_type: 'high_disk',
-        severity: 'critical',
-        title: `Disco Critico: ${agent.agent_name}`,
-        message: `Uso de disco em ${metrics.disk_usage_percent.toFixed(1)}% (limite: 90%)`,
-        details: { disk_usage: metrics.disk_usage_percent },
-      });
+    // Disk: Threshold 95% (increased from 90%)
+    if (metrics.disk_usage_percent && metrics.disk_usage_percent > 95) {
+      if (!hasRecentAlert('high_disk')) {
+        logger.info('High disk usage detected');
+        alerts.push({
+          tenant_id: agent.tenant_id,
+          agent_id: agent.id,
+          alert_type: 'high_disk',
+          severity: 'critical',
+          title: `Disco Critico: ${agent.agent_name}`,
+          message: `Uso de disco em ${metrics.disk_usage_percent.toFixed(1)}% (limite: 95%)`,
+          details: { disk_usage: metrics.disk_usage_percent },
+        });
+      }
     }
 
     if (alerts.length > 0) {
