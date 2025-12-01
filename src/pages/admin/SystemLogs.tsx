@@ -1,17 +1,30 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle, Clock, Mail, Activity, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, CheckCircle, Clock, Mail, Activity, Shield, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useTenant } from "@/hooks/useTenant";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { RecentAuditActivity } from "@/components/admin/RecentAuditActivity";
+import { toast } from "sonner";
+import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function SystemLogs() {
   const { tenant } = useTenant();
   const { isSuperAdmin } = useSuperAdmin();
+  const queryClient = useQueryClient();
+  const [severityFilter, setSeverityFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   const { data: alerts, isLoading: alertsLoading } = useQuery({
     queryKey: ['system-alerts', tenant?.id],
@@ -27,10 +40,30 @@ export default function SystemLogs() {
       
       const { data, error } = await query
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
       
       if (error) throw error;
       return data;
+    },
+  });
+
+  const acknowledgeAllMutation = useMutation({
+    mutationFn: async () => {
+      if (!tenant?.id) throw new Error('No tenant ID');
+      
+      const { data, error } = await supabase.rpc('acknowledge_all_alerts', {
+        p_tenant_id: tenant.id
+      });
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      toast.success(`${data.acknowledged_count} alertas reconhecidos com sucesso`);
+      queryClient.invalidateQueries({ queryKey: ['system-alerts'] });
+    },
+    onError: (error) => {
+      toast.error('Erro ao reconhecer alertas: ' + error.message);
     },
   });
 
@@ -85,6 +118,23 @@ export default function SystemLogs() {
     );
   };
 
+  // Filter alerts
+  const filteredAlerts = alerts?.filter((alert) => {
+    if (severityFilter !== "all" && alert.severity !== severityFilter) return false;
+    if (typeFilter !== "all" && alert.alert_type !== typeFilter) return false;
+    return true;
+  });
+
+  // Alert statistics
+  const alertStats = alerts?.reduce((acc, alert) => {
+    if (!alert.resolved) {
+      acc.unresolved++;
+      if (alert.severity === 'critical') acc.critical++;
+      if (alert.severity === 'high') acc.high++;
+    }
+    return acc;
+  }, { unresolved: 0, critical: 0, high: 0 });
+
   if (alertsLoading || logsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -105,18 +155,82 @@ export default function SystemLogs() {
       {/* System Alerts */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5" />
-            Alertas do Sistema
-          </CardTitle>
-          <CardDescription>
-            Alertas gerados automaticamente pelo sistema de monitoramento
-          </CardDescription>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" />
+                Alertas do Sistema
+              </CardTitle>
+              <CardDescription>
+                Alertas gerados automaticamente pelo sistema de monitoramento
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => acknowledgeAllMutation.mutate()}
+                disabled={!alertStats?.unresolved || acknowledgeAllMutation.isPending}
+              >
+                {acknowledgeAllMutation.isPending ? "Processando..." : "Reconhecer Todos"}
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
+          {/* Statistics */}
+          {alertStats && alertStats.unresolved > 0 && (
+            <div className="mb-4 p-4 bg-muted rounded-lg flex gap-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="destructive">{alertStats.unresolved}</Badge>
+                <span className="text-sm">Não resolvidos</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="destructive">{alertStats.critical}</Badge>
+                <span className="text-sm">Críticos</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="destructive">{alertStats.high}</Badge>
+                <span className="text-sm">Alta prioridade</span>
+              </div>
+            </div>
+          )}
+
+          {/* Filters */}
+          <div className="mb-4 flex gap-4">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              <Select value={severityFilter} onValueChange={setSeverityFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filtrar por severidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas severidades</SelectItem>
+                  <SelectItem value="critical">Crítico</SelectItem>
+                  <SelectItem value="high">Alta</SelectItem>
+                  <SelectItem value="medium">Média</SelectItem>
+                  <SelectItem value="low">Baixa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filtrar por tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                <SelectItem value="high_cpu">CPU Alta</SelectItem>
+                <SelectItem value="high_memory">Memória Alta</SelectItem>
+                <SelectItem value="high_disk">Disco Alto</SelectItem>
+                <SelectItem value="pending_agents">Agentes Pendentes</SelectItem>
+                <SelectItem value="email_sent">Email Enviado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-4">
-            {alerts && alerts.length > 0 ? (
-              alerts.map((alert) => (
+            {filteredAlerts && filteredAlerts.length > 0 ? (
+              filteredAlerts.map((alert) => (
                 <div
                   key={alert.id}
                   className="p-4 border rounded-lg space-y-2 hover:bg-accent/50 transition-colors"

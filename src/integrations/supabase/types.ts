@@ -4004,6 +4004,7 @@ export type Database = {
       }
     }
     Functions: {
+      acknowledge_all_alerts: { Args: { p_tenant_id: string }; Returns: Json }
       calculate_next_run: {
         Args: { from_time?: string; pattern: string }
         Returns: string
