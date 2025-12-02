@@ -17,6 +17,7 @@ cat > "$TARGET" <<'EOF'
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
+ * Versao: v3.10.16-MULTIUSER-WEB-ACTIVITY
  */
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
@@ -41,4 +42,6 @@ export function getAgentScriptWindows(): string {
 }
 EOF
 
-echo "[SUCCESS] Sync concluído. Tamanho: $(wc -c < "$SOURCE") bytes"
+echo "[SUCCESS] Sync concluído para v3.10.16-MULTIUSER-WEB-ACTIVITY"
+echo "[INFO] Tamanho: $(wc -c < "$SOURCE") bytes"
+echo "[INFO] Linhas: $(wc -l < "$SOURCE")"

@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.14-NO-EXIT-ON-UPDATE';
+const CURRENT_VERSION = 'v3.10.16-MULTIUSER-WEB-ACTIVITY';
 
 // SHA256 will be calculated automatically WITH BOM by useAgentReleases hook
 // No need for manual SHA256 anymore - the hook handles BOM compatibility automatically
@@ -94,7 +94,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'CRITICAL FIX v3.10.14: Removido exit 0 apos auto-update bem-sucedido. Agente continua rodando 24/7 sem interrupcao - nova versao sera usada no proximo boot. Previne morte do agente apos 24h.',
+        release_notes: 'MULTIUSER-WEB-ACTIVITY: Coleta de historico de TODOS os perfis de usuario em C:\\Users\\*. Resolve problema de SYSTEM nao ver historico de usuarios reais.',
         channel: 'stable'
       });
 
@@ -148,7 +148,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'CRITICAL FIX v3.10.14: Removido exit 0 apos auto-update bem-sucedido. Agente continua rodando 24/7 sem interrupcao - nova versao sera usada no proximo boot. Previne morte do agente apos 24h.',
+        release_notes: 'MULTIUSER-WEB-ACTIVITY: Coleta de historico de TODOS os perfis de usuario em C:\\Users\\*. Resolve problema de SYSTEM nao ver historico de usuarios reais.',
         channel: 'stable'
       });
 
