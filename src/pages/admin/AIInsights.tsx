@@ -79,6 +79,28 @@ export default function AIInsights() {
     },
   });
 
+  const executeSolutionMutation = useMutation({
+    mutationFn: async ({ actionId, solutionType, parameters }: { actionId: string; solutionType: string; parameters?: any }) => {
+      const { data, error } = await supabase.functions.invoke('ai-execute-solution', {
+        body: { action_id: actionId, solution_type: solutionType, parameters }
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['ai-insights'] });
+      toast.success('Solucao aplicada com sucesso', {
+        description: JSON.stringify(data.result)
+      });
+    },
+    onError: (error: any) => {
+      toast.error('Erro ao executar solucao', {
+        description: error.message
+      });
+    },
+  });
+
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case 'critical':
@@ -319,21 +341,66 @@ export default function AIInsights() {
                     </div>
                   )}
 
-                  {/* Metadata */}
-                  <div className="flex items-center justify-between pt-2 border-t">
+                  {/* Metadata and Actions */}
+                  <div className="flex items-center justify-between pt-2 border-t flex-wrap gap-2">
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span>Confianca: {(insight.confidence_score * 100).toFixed(0)}%</span>
-                      <span>?</span>
+                      <span>•</span>
                       <span>{formatDate(insight.created_at)}</span>
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => acknowledgeMutation.mutate(insight.id)}
-                      disabled={acknowledgeMutation.isPending}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Reconhecer
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {/* Auto-solution buttons based on insight type */}
+                      {insight.insight_type === 'agent_health' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => executeSolutionMutation.mutate({
+                            actionId: insight.id,
+                            solutionType: 'cleanup_stuck_jobs'
+                          })}
+                          disabled={executeSolutionMutation.isPending}
+                        >
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Limpar Jobs Travados
+                        </Button>
+                      )}
+                      {insight.insight_type === 'system_alerts' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => executeSolutionMutation.mutate({
+                            actionId: insight.id,
+                            solutionType: 'acknowledge_alerts'
+                          })}
+                          disabled={executeSolutionMutation.isPending}
+                        >
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Reconhecer Alertas
+                        </Button>
+                      )}
+                      {insight.insight_type === 'missing_data' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => executeSolutionMutation.mutate({
+                            actionId: insight.id,
+                            solutionType: 'create_security_jobs'
+                          })}
+                          disabled={executeSolutionMutation.isPending}
+                        >
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Criar Jobs de Coleta
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        onClick={() => acknowledgeMutation.mutate(insight.id)}
+                        disabled={acknowledgeMutation.isPending}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Reconhecer
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
