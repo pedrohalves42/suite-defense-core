@@ -7,10 +7,16 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.15-WEB-ACTIVITY-ENHANCED';
-export const LAST_UPDATED = '2025-12-02T00:00:00Z'; // WEB-ACTIVITY-ENHANCED: Coleta completa de historico Chrome/Firefox/Edge + DNS cache
+export const INSTALLER_VERSION = 'v3.10.16-MULTIUSER-WEB-ACTIVITY';
+export const LAST_UPDATED = '2025-12-02T12:00:00Z'; // MULTIUSER-WEB-ACTIVITY: Coleta de TODOS os perfis de usuario (C:\Users\*)
 
 export const CHANGES = [
+  '[v3.10.16-MULTIUSER-WEB-ACTIVITY] CRITICAL FIX: Web activity agora coleta de TODOS os perfis de usuario em C:\\Users\\*',
+  '[v3.10.16-MULTIUSER-WEB-ACTIVITY] CRITICAL FIX: Resolve problema de agente SYSTEM nao ver historico dos usuarios reais',
+  '[v3.10.16-MULTIUSER-WEB-ACTIVITY] FEATURE: Itera sobre todos os perfis (exceto Public, Default)',
+  '[v3.10.16-MULTIUSER-WEB-ACTIVITY] FEATURE: Chrome, Firefox e Edge coletados para cada usuario individualmente',
+  '[v3.10.16-MULTIUSER-WEB-ACTIVITY] FEATURE: Source agora inclui nome do usuario (chrome_history_joao, edge_history_maria)',
+  '[v3.10.16-MULTIUSER-WEB-ACTIVITY] MELHORIA: Filtro melhorado para excluir dominios internos (google, microsoft, bing, mozilla)',
   '[v3.10.15-WEB-ACTIVITY-ENHANCED] FEATURE: Coleta real de historico de navegadores (Chrome, Firefox, Edge)',
   '[v3.10.15-WEB-ACTIVITY-ENHANCED] FEATURE: collect_web_activity agora coleta ate 500 dominios de multiplas fontes',
   '[v3.10.15-WEB-ACTIVITY-ENHANCED] FEATURE: Copia temporaria de arquivos SQLite bloqueados (History, places.sqlite)',
