@@ -9,14 +9,11 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { Input } from "@/components/ui/input";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { CONTACT } from "@/constants/config";
-
 type Audience = 'business' | 'home';
-
 const Landing = () => {
   const whatsappLink = `${CONTACT.WHATSAPP_LINK}?text=${CONTACT.WHATSAPP_TEXT_DEFAULT}`;
   const [deviceCount, setDeviceCount] = useState<number>(10);
   const [audience, setAudience] = useState<Audience>('business');
-
   const content = {
     business: {
       hero: {
@@ -30,11 +27,22 @@ const Landing = () => {
         reassurance: "✓ 30 dias de trial gratuito | ✓ Instalação em 5 minutos | ✓ Suporte 100% em português"
       },
       benefits: {
-        card1: { title: "Veja Tudo em Um Só Lugar", description: "Painel centralizado com status de todos os dispositivos da empresa" },
-        card2: { title: "Haja em Segundos", description: "Resposta em tempo real para proteger seus ativos digitais" },
-        card3: { title: "Economize Tempo e Dinheiro", description: "Automação inteligente reduz custos operacionais" }
+        card1: {
+          title: "Veja Tudo em Um Só Lugar",
+          description: "Painel centralizado com status de todos os dispositivos da empresa"
+        },
+        card2: {
+          title: "Haja em Segundos",
+          description: "Resposta em tempo real para proteger seus ativos digitais"
+        },
+        card3: {
+          title: "Economize Tempo e Dinheiro",
+          description: "Automação inteligente reduz custos operacionais"
+        }
       },
-      calculator: { label: "Quantos dispositivos sua empresa possui?" }
+      calculator: {
+        label: "Quantos dispositivos sua empresa possui?"
+      }
     },
     home: {
       hero: {
@@ -48,30 +56,38 @@ const Landing = () => {
         reassurance: "✓ 30 dias grátis | ✓ Instale você mesmo em 5min | ✓ Suporte em português via WhatsApp"
       },
       benefits: {
-        card1: { title: "Veja Tudo em Um Só Lugar", description: "Veja o status de todos os PCs da casa: do seu home office ao computador dos filhos" },
-        card2: { title: "Haja em Segundos", description: "Proteja fotos de família, documentos importantes e a privacidade de todos em tempo real" },
-        card3: { title: "Economize Tempo e Dinheiro", description: "Chega de pagar técnico toda semana. Mantenha os PCs seguros automaticamente" }
+        card1: {
+          title: "Veja Tudo em Um Só Lugar",
+          description: "Veja o status de todos os PCs da casa: do seu home office ao computador dos filhos"
+        },
+        card2: {
+          title: "Haja em Segundos",
+          description: "Proteja fotos de família, documentos importantes e a privacidade de todos em tempo real"
+        },
+        card3: {
+          title: "Economize Tempo e Dinheiro",
+          description: "Chega de pagar técnico toda semana. Mantenha os PCs seguros automaticamente"
+        }
       },
-      calculator: { label: "Quantos computadores você tem em casa?" }
+      calculator: {
+        label: "Quantos computadores você tem em casa?"
+      }
     }
   };
-
   const currentContent = content[audience];
-  
+
   // Cálculo dinâmico por tier (FASE 1)
   const calculatePrice = (devices: number): number => {
     if (devices <= 0 || Number.isNaN(devices)) return 0;
-    
-    const pricePerDevice = 
-      devices <= 30 ? 4.61 :    // R$ 59,90 / 13 dispositivos
-      devices <= 200 ? 0.75 :   // R$ 149,90 / 200 dispositivos  
-      0.29;                     // R$ 299,90 / 1000 dispositivos
-    
+    const pricePerDevice = devices <= 30 ? 4.61 :
+    // R$ 59,90 / 13 dispositivos
+    devices <= 200 ? 0.75 :
+    // R$ 149,90 / 200 dispositivos  
+    0.29; // R$ 299,90 / 1000 dispositivos
+
     return Number((devices * pricePerDevice).toFixed(2));
   };
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <Navbar />
       <WhatsAppButton />
 
@@ -80,7 +96,9 @@ const Landing = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-accent/5 to-background animate-gradient-slow" />
         <div className="absolute inset-0 bg-grid-white/[0.02]" />
         <div className="absolute top-20 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '1s'}} />
+        <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse-slow" style={{
+        animationDelay: '1s'
+      }} />
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24">
           <div className="text-center space-y-8 animate-fade-in">
@@ -115,7 +133,7 @@ const Landing = () => {
 
             <div className="flex flex-wrap justify-center gap-8 pt-4">
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">30 dias</div>
+                <div className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">15 dias</div>
                 <div className="text-sm text-muted-foreground">Trial gratuito</div>
               </div>
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
@@ -201,8 +219,7 @@ const Landing = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
-            {audience === 'business' ? (
-              <>
+            {audience === 'business' ? <>
                 <div className="group relative bg-card/50 backdrop-blur-sm p-8 rounded-2xl border border-border text-center transition-all duration-300 hover:-translate-y-2 hover:shadow-lg hover:border-primary/50">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative mb-4 inline-block">
@@ -230,9 +247,7 @@ const Landing = () => {
                   <h3 className="relative text-xl font-bold mb-2">Compliance e Segurança</h3>
                   <p className="relative text-muted-foreground">Atenda requisitos regulatórios com relatórios detalhados.</p>
                 </div>
-              </>
-            ) : (
-              <>
+              </> : <>
                 <div className="group relative bg-card/50 backdrop-blur-sm p-8 rounded-2xl border border-border text-center transition-all duration-300 hover:-translate-y-2 hover:shadow-lg hover:border-primary/50">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
                   <div className="relative mb-4 inline-block">
@@ -260,8 +275,7 @@ const Landing = () => {
                   <h3 className="relative text-xl font-bold mb-2">Família Conectada</h3>
                   <p className="relative text-muted-foreground">Gerencie a segurança de todos os dispositivos da casa.</p>
                 </div>
-              </>
-            )}
+              </>}
           </div>
         </div>
       </section>
@@ -269,7 +283,9 @@ const Landing = () => {
       {/* How It Works */}
       <section className="py-20 relative overflow-hidden">
         <div className="absolute top-1/4 left-10 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute bottom-1/4 right-10 w-64 h-64 bg-accent/10 rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '1.5s'}} />
+        <div className="absolute bottom-1/4 right-10 w-64 h-64 bg-accent/10 rounded-full blur-3xl animate-pulse-slow" style={{
+        animationDelay: '1.5s'
+      }} />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -295,7 +311,9 @@ const Landing = () => {
             </div>
 
             <div className="group relative">
-              <div className="absolute -top-4 -left-4 w-20 h-20 bg-primary/20 rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '0.5s'}} />
+              <div className="absolute -top-4 -left-4 w-20 h-20 bg-primary/20 rounded-full blur-3xl animate-pulse-slow" style={{
+              animationDelay: '0.5s'
+            }} />
               <div className="relative bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl p-8 rounded-2xl border border-primary/20 h-full transition-all duration-300 hover:scale-105 hover:shadow-glow-primary hover:border-primary/50">
                 <div className="w-14 h-14 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
                   <span className="text-2xl font-bold text-primary-foreground">2</span>
@@ -308,7 +326,9 @@ const Landing = () => {
             </div>
 
             <div className="group relative">
-              <div className="absolute -top-4 -left-4 w-20 h-20 bg-primary/20 rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '1s'}} />
+              <div className="absolute -top-4 -left-4 w-20 h-20 bg-primary/20 rounded-full blur-3xl animate-pulse-slow" style={{
+              animationDelay: '1s'
+            }} />
               <div className="relative bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl p-8 rounded-2xl border border-primary/20 h-full transition-all duration-300 hover:scale-105 hover:shadow-glow-primary hover:border-primary/50">
                 <div className="w-14 h-14 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
                   <span className="text-2xl font-bold text-primary-foreground">3</span>
@@ -561,7 +581,9 @@ const Landing = () => {
       {/* Testimonials */}
       <section className="py-20 bg-muted/30 relative overflow-hidden">
         <div className="absolute top-20 right-10 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse-slow" />
-        <div className="absolute bottom-20 left-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse-slow" style={{animationDelay: '1s'}} />
+        <div className="absolute bottom-20 left-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse-slow" style={{
+        animationDelay: '1s'
+      }} />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -573,8 +595,7 @@ const Landing = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-12 max-w-6xl mx-auto">
-            {audience === 'business' ? (
-              <>
+            {audience === 'business' ? <>
                 <Card className="group relative bg-card/50 backdrop-blur-xl border-primary/20 transition-all duration-300 hover:scale-105 hover:shadow-glow-primary hover:border-primary/50">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardContent className="relative pt-6">
@@ -623,9 +644,7 @@ const Landing = () => {
                     </div>
                   </CardContent>
                 </Card>
-              </>
-            ) : (
-              <>
+              </> : <>
                 <Card className="group relative bg-card/50 backdrop-blur-xl border-green-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:border-green-500/50">
                   <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardContent className="relative pt-6">
@@ -674,8 +693,7 @@ const Landing = () => {
                     </div>
                   </CardContent>
                 </Card>
-              </>
-            )}
+              </>}
           </div>
         </div>
       </section>
@@ -693,8 +711,7 @@ const Landing = () => {
           </div>
 
           <Accordion type="single" collapsible className="max-w-3xl mx-auto space-y-4">
-            {audience === 'business' ? (
-              <>
+            {audience === 'business' ? <>
                 <AccordionItem value="q1">
                   <AccordionTrigger>Como funciona o periodo de trial?</AccordionTrigger>
                   <AccordionContent>
@@ -713,9 +730,7 @@ const Landing = () => {
                     Sim, oferecemos suporte 100% em portugues via email e WhatsApp.
                   </AccordionContent>
                 </AccordionItem>
-              </>
-            ) : (
-              <>
+              </> : <>
                 <AccordionItem value="q1">
                   <AccordionTrigger>Como instalo o CyberShield em casa?</AccordionTrigger>
                   <AccordionContent>
@@ -734,8 +749,7 @@ const Landing = () => {
                     Oferecemos suporte via WhatsApp para ajudar voce a qualquer momento.
                   </AccordionContent>
                 </AccordionItem>
-              </>
-            )}
+              </>}
           </Accordion>
         </div>
       </section>
@@ -750,15 +764,7 @@ const Landing = () => {
             {currentContent.calculator.label}
           </p>
           <div className="flex flex-col sm:flex-row items-center gap-4 justify-center">
-            <Input
-              type="number"
-              min={1}
-              max={1000}
-              value={deviceCount}
-              onChange={(e) => setDeviceCount(Number(e.target.value))}
-              className="max-w-xs"
-              aria-label={currentContent.calculator.label}
-            />
+            <Input type="number" min={1} max={1000} value={deviceCount} onChange={e => setDeviceCount(Number(e.target.value))} className="max-w-xs" aria-label={currentContent.calculator.label} />
             <div className="text-2xl font-bold">
               {`R$ ${calculatePrice(deviceCount).toFixed(2)} / ${audience === 'business' ? 'mes' : 'mes'}`}
             </div>
@@ -776,8 +782,6 @@ const Landing = () => {
           <ContactForm />
         </div>
       </section>
-    </div>
-  );
+    </div>;
 };
-
 export default Landing;
