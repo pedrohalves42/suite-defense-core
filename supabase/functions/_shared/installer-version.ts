@@ -7,10 +7,16 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.14-NO-EXIT-ON-UPDATE';
-export const LAST_UPDATED = '2025-06-15T18:00:00Z'; // NO-EXIT-ON-UPDATE: Removido exit 0 apos auto-update bem sucedido
+export const INSTALLER_VERSION = 'v3.10.15-WEB-ACTIVITY-ENHANCED';
+export const LAST_UPDATED = '2025-12-02T00:00:00Z'; // WEB-ACTIVITY-ENHANCED: Coleta completa de historico Chrome/Firefox/Edge + DNS cache
 
 export const CHANGES = [
+  '[v3.10.15-WEB-ACTIVITY-ENHANCED] FEATURE: Coleta real de historico de navegadores (Chrome, Firefox, Edge)',
+  '[v3.10.15-WEB-ACTIVITY-ENHANCED] FEATURE: collect_web_activity agora coleta ate 500 dominios de multiplas fontes',
+  '[v3.10.15-WEB-ACTIVITY-ENHANCED] FEATURE: Copia temporaria de arquivos SQLite bloqueados (History, places.sqlite)',
+  '[v3.10.15-WEB-ACTIVITY-ENHANCED] FEATURE: Extracao de URLs via regex de arquivos binarios SQLite',
+  '[v3.10.15-WEB-ACTIVITY-ENHANCED] MELHORIA: Deduplicacao de dominios entre todas as fontes (DNS + 3 navegadores)',
+  '[v3.10.15-WEB-ACTIVITY-ENHANCED] MELHORIA: Logging detalhado por fonte (DNS cache, Chrome, Firefox, Edge)',
   '[v3.10.14-NO-EXIT-ON-UPDATE] CRITICAL FIX: Removido exit 0 apos auto-update bem sucedido',
   '[v3.10.14-NO-EXIT-ON-UPDATE] CRITICAL FIX: Agente continua rodando apos update (nao morre mais apos 24h)',
   '[v3.10.14-NO-EXIT-ON-UPDATE] CRITICAL FIX: Nova versao sera usada no proximo boot do sistema',
