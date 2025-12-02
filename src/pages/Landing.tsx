@@ -24,7 +24,7 @@ const Landing = () => {
         descriptionBold: " Visibilidade completa, e resposta em tempo real.",
         stat2Label: "Dispositivos por plano",
         ctaButton: "Começar Trial Grátis",
-        reassurance: "✓ 30 dias de trial gratuito | ✓ Instalação em 5 minutos | ✓ Suporte 100% em português"
+        reassurance: "✓ 15 dias de trial gratuito | ✓ Instalação em 5 minutos | ✓ Suporte 100% em português"
       },
       benefits: {
         card1: {
