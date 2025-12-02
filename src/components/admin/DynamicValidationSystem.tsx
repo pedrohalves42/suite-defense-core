@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, PlayCircle, AlertCircle } from "lucide-react";
+import { CheckCircle2, Loader2, PlayCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface AgentStatus {
@@ -25,22 +25,44 @@ interface ValidationJob {
   reason: string;
 }
 
-const CURRENT_VERSION = "v3.10.14-NO-EXIT-ON-UPDATE";
-
 export function DynamicValidationSystem() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [agents, setAgents] = useState<AgentStatus[]>([]);
   const [validationJobs, setValidationJobs] = useState<ValidationJob[]>([]);
   const [completedJobs, setCompletedJobs] = useState<Set<string>>(new Set());
+  const [currentVersion, setCurrentVersion] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadAgentsStatus();
+  const loadActiveVersion = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('agent_releases')
+        .select('version')
+        .eq('is_active', true)
+        .eq('platform', 'windows')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error loading active version:', error);
+        return null;
+      }
+
+      return data?.version || null;
+    } catch (error) {
+      console.error('Error loading active version:', error);
+      return null;
+    }
   }, []);
 
-  const loadAgentsStatus = async () => {
+  const loadAgentsStatus = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Load active version first
+      const activeVersion = await loadActiveVersion();
+      setCurrentVersion(activeVersion);
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
@@ -48,7 +70,8 @@ export function DynamicValidationSystem() {
         .from('user_roles')
         .select('tenant_id')
         .eq('user_id', user.id)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (!userRole) throw new Error("Tenant não encontrado");
 
@@ -90,14 +113,14 @@ export function DynamicValidationSystem() {
       // Generate validation jobs based on missing data
       const jobs: ValidationJob[] = [];
       agentsWithStatus.forEach(agent => {
-        // Check if agent needs update
-        if (agent.agent_version !== CURRENT_VERSION) {
+        // Check if agent needs update (only if we have a valid active version)
+        if (activeVersion && agent.agent_version !== activeVersion) {
           jobs.push({
             agentId: agent.id,
             agentName: agent.agent_name,
             jobType: 'update_agent',
             label: `${agent.agent_name} - Update Agent`,
-            reason: `Versão atual: ${agent.agent_version || 'desconhecida'} → ${CURRENT_VERSION}`
+            reason: `Versão atual: ${agent.agent_version || 'desconhecida'} → ${activeVersion}`
           });
         }
 
@@ -152,7 +175,11 @@ export function DynamicValidationSystem() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [loadActiveVersion]);
+
+  useEffect(() => {
+    loadAgentsStatus();
+  }, [loadAgentsStatus]);
 
   const createValidationJobs = async () => {
     setIsCreating(true);
@@ -166,7 +193,8 @@ export function DynamicValidationSystem() {
         .from('user_roles')
         .select('tenant_id')
         .eq('user_id', user.id)
-        .single();
+        .limit(1)
+        .maybeSingle();
 
       if (!userRole) throw new Error("Tenant não encontrado");
 
@@ -179,7 +207,7 @@ export function DynamicValidationSystem() {
         const payload = vJob.jobType === 'update_agent' 
           ? { 
               current_version: agent.agent_version || 'unknown',
-              target_version: CURRENT_VERSION
+              target_version: currentVersion || 'latest'
             }
           : {};
 
@@ -242,6 +270,11 @@ export function DynamicValidationSystem() {
         </CardTitle>
         <CardDescription>
           Detecção automática de agentes e dados faltantes
+          {currentVersion && (
+            <span className="ml-2 text-xs text-primary">
+              (Versão ativa: {currentVersion})
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -256,6 +289,7 @@ export function DynamicValidationSystem() {
               onClick={loadAgentsStatus}
               disabled={isLoading}
             >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Atualizar Status
             </Button>
           </div>
@@ -268,7 +302,7 @@ export function DynamicValidationSystem() {
                   Todos os agentes estão atualizados
                 </p>
                 <p className="text-xs text-green-700 dark:text-green-300">
-                  Todos os agentes estão na versão {CURRENT_VERSION} e têm dados completos
+                  Todos os agentes estão na versão {currentVersion || 'mais recente'} e têm dados completos
                 </p>
               </div>
             </div>
