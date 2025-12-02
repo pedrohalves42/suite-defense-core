@@ -409,10 +409,15 @@ const JobCreator = () => {
                         <SelectValue placeholder="Selecione o tipo" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="scan">Scan (Verificacao de seguranca)</SelectItem>
+                        <SelectItem value="scan">Scan (Verificacao de arquivo)</SelectItem>
                         <SelectItem value="update">Update (Atualizacao do agente)</SelectItem>
                         <SelectItem value="report">Report (Gerar relatorio)</SelectItem>
                         <SelectItem value="config">Config (Alterar configuracao)</SelectItem>
+                        <SelectItem value="software_inventory_collect">Software Inventory (Coletar inventario)</SelectItem>
+                        <SelectItem value="collect_antivirus_status">Antivirus Status (Coletar status AV)</SelectItem>
+                        <SelectItem value="collect_web_activity">Web Activity (Coletar atividade web)</SelectItem>
+                        <SelectItem value="light_vuln_scan">Vulnerability Scan (Verificar vulnerabilidades)</SelectItem>
+                        <SelectItem value="update_agent">Agent Update (Atualizar agente v3)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

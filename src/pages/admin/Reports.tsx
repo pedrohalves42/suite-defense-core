@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, Loader2, Shield, AlertTriangle, Bug, Globe, FileWarning } from "lucide-react";
+import { FileText, Download, Loader2, Shield, AlertTriangle, Bug, Globe, FileWarning, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 
 interface Agent {
@@ -15,6 +15,7 @@ interface Agent {
 }
 
 interface SecurityReport {
+  success?: boolean;
   generated_at: string;
   tenant_id: string;
   agent_filter: string;
@@ -24,12 +25,23 @@ interface SecurityReport {
     total_vulnerabilities: number;
     critical_vulnerabilities: number;
     high_vulnerabilities: number;
+    medium_vulnerabilities?: number;
+    low_vulnerabilities?: number;
     antivirus_engines: number;
     threats_found: number;
     unique_domains: number;
     malicious_scans: number;
     total_scans: number;
     security_events: number;
+  };
+  data?: {
+    agents: any[];
+    software_inventory: any[];
+    vulnerabilities: any[];
+    antivirus_status: any[];
+    web_activity: any[];
+    virus_scans: any[];
+    security_events: any[];
   };
 }
 
@@ -115,6 +127,102 @@ export default function Reports() {
     }
   };
 
+  const handleExportCSV = async () => {
+    setIsGenerating(true);
+    try {
+      const params = new URLSearchParams({ format: "json" });
+      if (selectedAgent !== "all") {
+        params.append("agent_id", selectedAgent);
+      }
+
+      const { data, error } = await supabase.functions.invoke(
+        `generate-security-report?${params.toString()}`,
+        { method: "GET" }
+      );
+
+      if (error) throw error;
+
+      const reportData = data as SecurityReport;
+      
+      // Generate CSV content
+      let csvContent = "";
+      
+      // Header section
+      csvContent += "RELATÓRIO DE SEGURANÇA CYBERSHIELD\n";
+      csvContent += `Data de Geração:,${new Date(reportData.generated_at).toLocaleString("pt-BR")}\n`;
+      csvContent += `Filtro:,${reportData.agent_filter === "all" ? "Todos os Agentes" : reportData.agent_filter}\n\n`;
+      
+      // Statistics section
+      csvContent += "ESTATÍSTICAS GERAIS\n";
+      csvContent += `Agentes Ativos:,${reportData.statistics.total_agents}\n`;
+      csvContent += `Software Inventariado:,${reportData.statistics.total_software}\n`;
+      csvContent += `Vulnerabilidades Total:,${reportData.statistics.total_vulnerabilities}\n`;
+      csvContent += `Vulnerabilidades Críticas:,${reportData.statistics.critical_vulnerabilities}\n`;
+      csvContent += `Vulnerabilidades Altas:,${reportData.statistics.high_vulnerabilities}\n`;
+      csvContent += `Engines Antivírus:,${reportData.statistics.antivirus_engines}\n`;
+      csvContent += `Ameaças Detectadas:,${reportData.statistics.threats_found}\n`;
+      csvContent += `Domínios Únicos:,${reportData.statistics.unique_domains}\n`;
+      csvContent += `Scans Maliciosos:,${reportData.statistics.malicious_scans}/${reportData.statistics.total_scans}\n`;
+      csvContent += `Eventos de Segurança:,${reportData.statistics.security_events}\n\n`;
+
+      // Software Inventory
+      if (reportData.data?.software_inventory && reportData.data.software_inventory.length > 0) {
+        csvContent += "INVENTÁRIO DE SOFTWARE\n";
+        csvContent += "Nome,Versão,Fornecedor,Nível de Risco,Última Atualização\n";
+        reportData.data.software_inventory.forEach((sw: any) => {
+          csvContent += `"${sw.name || ''}","${sw.version || ''}","${sw.vendor || ''}","${sw.risk_level || ''}","${sw.last_seen_at || ''}"\n`;
+        });
+        csvContent += "\n";
+      }
+
+      // Vulnerabilities
+      if (reportData.data?.vulnerabilities && reportData.data.vulnerabilities.length > 0) {
+        csvContent += "VULNERABILIDADES\n";
+        csvContent += "CVE,Severidade,Software,Descrição,Status\n";
+        reportData.data.vulnerabilities.forEach((vuln: any) => {
+          csvContent += `"${vuln.cve_id || ''}","${vuln.severity || ''}","${vuln.affected_software || ''}","${(vuln.description || '').replace(/"/g, '""')}","${vuln.status || ''}"\n`;
+        });
+        csvContent += "\n";
+      }
+
+      // Antivirus Status
+      if (reportData.data?.antivirus_status && reportData.data.antivirus_status.length > 0) {
+        csvContent += "STATUS DO ANTIVÍRUS\n";
+        csvContent += "Engine,Versão,Status,Última Atualização,Ameaças Encontradas\n";
+        reportData.data.antivirus_status.forEach((av: any) => {
+          csvContent += `"${av.engine_name || ''}","${av.engine_version || ''}","${av.status || ''}","${av.last_update_at || ''}","${av.threats_found || 0}"\n`;
+        });
+        csvContent += "\n";
+      }
+
+      // Web Activity (top 50)
+      if (reportData.data?.web_activity && reportData.data.web_activity.length > 0) {
+        csvContent += "ATIVIDADE WEB (Últimos 50)\n";
+        csvContent += "Domínio,URL,Visitado Em,Fonte\n";
+        reportData.data.web_activity.slice(0, 50).forEach((web: any) => {
+          csvContent += `"${web.domain || ''}","${web.url || ''}","${web.visited_at || ''}","${web.source || ''}"\n`;
+        });
+        csvContent += "\n";
+      }
+
+      // Download CSV
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `relatorio-seguranca-${selectedAgent}-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast.success("Relatório CSV baixado com sucesso!");
+    } catch (error) {
+      console.error("Error exporting CSV:", error);
+      toast.error("Erro ao exportar CSV: " + (error instanceof Error ? error.message : "Unknown error"));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -139,8 +247,8 @@ export default function Reports() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="flex-1 min-w-[200px]">
               <label className="text-sm font-medium mb-2 block">Agente</label>
               <Select value={selectedAgent} onValueChange={setSelectedAgent}>
                 <SelectTrigger>
@@ -168,12 +276,21 @@ export default function Reports() {
             </Button>
             <Button
               variant="outline"
+              onClick={handleExportCSV}
+              disabled={isGenerating}
+            >
+              {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Exportar CSV
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => handleGenerateReport(true)}
               disabled={isGenerating}
             >
               {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Download className="mr-2 h-4 w-4" />
-              Baixar Completo (JSON)
+              JSON Completo
             </Button>
           </div>
         </CardContent>
