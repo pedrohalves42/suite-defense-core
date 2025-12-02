@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.15-WEB-ACTIVITY-ENHANCED
+    CyberShield Agent - Windows v3.10.16-MULTIUSER-WEB-ACTIVITY
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -12,7 +12,7 @@
     - Inventario de software (software_inventory_collect)
     - Scanner de vulnerabilidades leve (light_vuln_scan)
     - Coleta de status de antivirus (collect_antivirus_status)
-    - Atividade web via DNS cache (collect_web_activity)
+    - Atividade web de TODOS OS PERFIS DE USUARIO (collect_web_activity)
     - Auto-remediacao basica (fix_firewall, restart_service)
     
     Uso:
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.10.15-WEB-ACTIVITY-ENHANCED"
+    [string]$AgentVersion = "3.10.16-MULTIUSER-WEB-ACTIVITY"
 )
 
 $ErrorActionPreference = "Stop"
@@ -667,130 +667,145 @@ function Invoke-WebActivityJob {
             Write-Log "[WEB-ACTIVITY] Erro ao ler cache DNS: $($_.Exception.Message)" "WARN"
         }
 
-        # 2. Coletar historico do Chrome
-        Write-Log "[WEB-ACTIVITY] Coletando historico do Chrome..." "INFO"
+        # 2. Coletar historico de TODOS OS PERFIS DE USUARIO
+        # O agente roda como SYSTEM, entao precisamos iterar C:\Users\*
+        Write-Log "[WEB-ACTIVITY] Coletando historico de todos os perfis de usuario..." "INFO"
+        
+        $userProfiles = @()
         try {
-            $chromeHistoryPath = "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\History"
-            if (Test-Path $chromeHistoryPath) {
-                $tempHistoryPath = "$env:TEMP\chrome_history_temp_$(Get-Random).db"
-                Copy-Item -Path $chromeHistoryPath -Destination $tempHistoryPath -Force -ErrorAction SilentlyContinue
-                
-                if (Test-Path $tempHistoryPath) {
-                    # SQLite query requires System.Data.SQLite, we'll use a simple file-based approach
-                    # Read last 50 URLs from Chrome history using simple text extraction
-                    try {
-                        $chromeData = Get-Content $tempHistoryPath -Encoding Byte -ReadCount 0 -ErrorAction SilentlyContinue
-                        if ($chromeData) {
-                            $dataString = [System.Text.Encoding]::UTF8.GetString($chromeData)
-                            $urlMatches = [regex]::Matches($dataString, 'https?://([^/\s\x00]+)')
-                            
-                            $chromeDomains = $urlMatches | 
-                                ForEach-Object { $_.Groups[1].Value } | 
-                                Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" } |
-                                Select-Object -Unique -First 100
-                            
-                            foreach ($domain in $chromeDomains) {
-                                $items += @{
-                                    domain = $domain
-                                    source = "chrome_history"
-                                    visited_at = $nowUtc.ToString("o")
-                                }
-                            }
-                            Write-Log "[WEB-ACTIVITY] Chrome: $($chromeDomains.Count) dominios coletados" "INFO"
-                        }
-                    } catch {
-                        Write-Log "[WEB-ACTIVITY] Erro ao ler dados do Chrome: $($_.Exception.Message)" "WARN"
-                    }
-                    Remove-Item $tempHistoryPath -Force -ErrorAction SilentlyContinue
-                }
-            }
+            $userProfiles = Get-ChildItem -Path "C:\Users" -Directory -ErrorAction SilentlyContinue | 
+                Where-Object { $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
+            Write-Log "[WEB-ACTIVITY] Encontrados $($userProfiles.Count) perfis de usuario" "INFO"
         } catch {
-            Write-Log "[WEB-ACTIVITY] Erro ao acessar historico do Chrome: $($_.Exception.Message)" "WARN"
+            Write-Log "[WEB-ACTIVITY] Erro ao listar perfis de usuario: $($_.Exception.Message)" "WARN"
         }
-
-        # 3. Coletar historico do Firefox
-        Write-Log "[WEB-ACTIVITY] Coletando historico do Firefox..." "INFO"
-        try {
-            $firefoxProfilesPath = "$env:APPDATA\Mozilla\Firefox\Profiles"
-            if (Test-Path $firefoxProfilesPath) {
-                $profiles = Get-ChildItem -Path $firefoxProfilesPath -Directory -ErrorAction SilentlyContinue
-                foreach ($profile in $profiles) {
-                    $placesPath = Join-Path $profile.FullName "places.sqlite"
-                    if (Test-Path $placesPath) {
-                        $tempPlacesPath = "$env:TEMP\firefox_places_temp_$(Get-Random).db"
-                        Copy-Item -Path $placesPath -Destination $tempPlacesPath -Force -ErrorAction SilentlyContinue
-                        
-                        if (Test-Path $tempPlacesPath) {
-                            try {
-                                $firefoxData = Get-Content $tempPlacesPath -Encoding Byte -ReadCount 0 -ErrorAction SilentlyContinue
-                                if ($firefoxData) {
-                                    $dataString = [System.Text.Encoding]::UTF8.GetString($firefoxData)
-                                    $urlMatches = [regex]::Matches($dataString, 'https?://([^/\s\x00]+)')
-                                    
-                                    $firefoxDomains = $urlMatches | 
-                                        ForEach-Object { $_.Groups[1].Value } | 
-                                        Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" } |
-                                        Select-Object -Unique -First 100
-                                    
-                                    foreach ($domain in $firefoxDomains) {
-                                        $items += @{
-                                            domain = $domain
-                                            source = "firefox_history"
-                                            visited_at = $nowUtc.ToString("o")
-                                        }
+        
+        foreach ($userProfile in $userProfiles) {
+            $userName = $userProfile.Name
+            $userPath = $userProfile.FullName
+            
+            Write-Log "[WEB-ACTIVITY] Processando perfil: $userName" "INFO"
+            
+            # 2a. Chrome History para este usuario
+            try {
+                $chromeHistoryPath = Join-Path $userPath "AppData\Local\Google\Chrome\User Data\Default\History"
+                if (Test-Path $chromeHistoryPath) {
+                    $tempHistoryPath = "$env:TEMP\chrome_history_temp_$(Get-Random).db"
+                    Copy-Item -Path $chromeHistoryPath -Destination $tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    
+                    if (Test-Path $tempHistoryPath) {
+                        try {
+                            $chromeData = Get-Content $tempHistoryPath -Encoding Byte -ReadCount 0 -ErrorAction SilentlyContinue
+                            if ($chromeData) {
+                                $dataString = [System.Text.Encoding]::UTF8.GetString($chromeData)
+                                $urlMatches = [regex]::Matches($dataString, 'https?://([^/\s\x00]+)')
+                                
+                                $chromeDomains = $urlMatches | 
+                                    ForEach-Object { $_.Groups[1].Value } | 
+                                    Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*google*" } |
+                                    Select-Object -Unique -First 50
+                                
+                                foreach ($domain in $chromeDomains) {
+                                    $items += @{
+                                        domain = $domain
+                                        source = "chrome_history_$userName"
+                                        visited_at = $nowUtc.ToString("o")
                                     }
-                                    Write-Log "[WEB-ACTIVITY] Firefox: $($firefoxDomains.Count) dominios coletados" "INFO"
                                 }
-                            } catch {
-                                Write-Log "[WEB-ACTIVITY] Erro ao ler dados do Firefox: $($_.Exception.Message)" "WARN"
+                                Write-Log "[WEB-ACTIVITY] Chrome ($userName): $($chromeDomains.Count) dominios" "INFO"
                             }
-                            Remove-Item $tempPlacesPath -Force -ErrorAction SilentlyContinue
+                        } catch {
+                            Write-Log "[WEB-ACTIVITY] Erro ao ler Chrome ($userName): $($_.Exception.Message)" "WARN"
                         }
-                        break
+                        Remove-Item $tempHistoryPath -Force -ErrorAction SilentlyContinue
                     }
                 }
+            } catch {
+                Write-Log "[WEB-ACTIVITY] Erro ao acessar Chrome ($userName): $($_.Exception.Message)" "WARN"
             }
-        } catch {
-            Write-Log "[WEB-ACTIVITY] Erro ao acessar historico do Firefox: $($_.Exception.Message)" "WARN"
-        }
-
-        # 4. Coletar historico do Edge
-        Write-Log "[WEB-ACTIVITY] Coletando historico do Edge..." "INFO"
-        try {
-            $edgeHistoryPath = "$env:LOCALAPPDATA\Microsoft\Edge\User Data\Default\History"
-            if (Test-Path $edgeHistoryPath) {
-                $tempHistoryPath = "$env:TEMP\edge_history_temp_$(Get-Random).db"
-                Copy-Item -Path $edgeHistoryPath -Destination $tempHistoryPath -Force -ErrorAction SilentlyContinue
-                
-                if (Test-Path $tempHistoryPath) {
-                    try {
-                        $edgeData = Get-Content $tempHistoryPath -Encoding Byte -ReadCount 0 -ErrorAction SilentlyContinue
-                        if ($edgeData) {
-                            $dataString = [System.Text.Encoding]::UTF8.GetString($edgeData)
-                            $urlMatches = [regex]::Matches($dataString, 'https?://([^/\s\x00]+)')
+            
+            # 2b. Firefox History para este usuario
+            try {
+                $firefoxProfilesPath = Join-Path $userPath "AppData\Roaming\Mozilla\Firefox\Profiles"
+                if (Test-Path $firefoxProfilesPath) {
+                    $profiles = Get-ChildItem -Path $firefoxProfilesPath -Directory -ErrorAction SilentlyContinue
+                    foreach ($profile in $profiles) {
+                        $placesPath = Join-Path $profile.FullName "places.sqlite"
+                        if (Test-Path $placesPath) {
+                            $tempPlacesPath = "$env:TEMP\firefox_places_temp_$(Get-Random).db"
+                            Copy-Item -Path $placesPath -Destination $tempPlacesPath -Force -ErrorAction SilentlyContinue
                             
-                            $edgeDomains = $urlMatches | 
-                                ForEach-Object { $_.Groups[1].Value } | 
-                                Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" } |
-                                Select-Object -Unique -First 100
-                            
-                            foreach ($domain in $edgeDomains) {
-                                $items += @{
-                                    domain = $domain
-                                    source = "edge_history"
-                                    visited_at = $nowUtc.ToString("o")
+                            if (Test-Path $tempPlacesPath) {
+                                try {
+                                    $firefoxData = Get-Content $tempPlacesPath -Encoding Byte -ReadCount 0 -ErrorAction SilentlyContinue
+                                    if ($firefoxData) {
+                                        $dataString = [System.Text.Encoding]::UTF8.GetString($firefoxData)
+                                        $urlMatches = [regex]::Matches($dataString, 'https?://([^/\s\x00]+)')
+                                        
+                                        $firefoxDomains = $urlMatches | 
+                                            ForEach-Object { $_.Groups[1].Value } | 
+                                            Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*mozilla*" } |
+                                            Select-Object -Unique -First 50
+                                        
+                                        foreach ($domain in $firefoxDomains) {
+                                            $items += @{
+                                                domain = $domain
+                                                source = "firefox_history_$userName"
+                                                visited_at = $nowUtc.ToString("o")
+                                            }
+                                        }
+                                        Write-Log "[WEB-ACTIVITY] Firefox ($userName): $($firefoxDomains.Count) dominios" "INFO"
+                                    }
+                                } catch {
+                                    Write-Log "[WEB-ACTIVITY] Erro ao ler Firefox ($userName): $($_.Exception.Message)" "WARN"
                                 }
+                                Remove-Item $tempPlacesPath -Force -ErrorAction SilentlyContinue
                             }
-                            Write-Log "[WEB-ACTIVITY] Edge: $($edgeDomains.Count) dominios coletados" "INFO"
+                            break
                         }
-                    } catch {
-                        Write-Log "[WEB-ACTIVITY] Erro ao ler dados do Edge: $($_.Exception.Message)" "WARN"
                     }
-                    Remove-Item $tempHistoryPath -Force -ErrorAction SilentlyContinue
                 }
+            } catch {
+                Write-Log "[WEB-ACTIVITY] Erro ao acessar Firefox ($userName): $($_.Exception.Message)" "WARN"
             }
-        } catch {
-            Write-Log "[WEB-ACTIVITY] Erro ao acessar historico do Edge: $($_.Exception.Message)" "WARN"
+            
+            # 2c. Edge History para este usuario
+            try {
+                $edgeHistoryPath = Join-Path $userPath "AppData\Local\Microsoft\Edge\User Data\Default\History"
+                if (Test-Path $edgeHistoryPath) {
+                    $tempHistoryPath = "$env:TEMP\edge_history_temp_$(Get-Random).db"
+                    Copy-Item -Path $edgeHistoryPath -Destination $tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    
+                    if (Test-Path $tempHistoryPath) {
+                        try {
+                            $edgeData = Get-Content $tempHistoryPath -Encoding Byte -ReadCount 0 -ErrorAction SilentlyContinue
+                            if ($edgeData) {
+                                $dataString = [System.Text.Encoding]::UTF8.GetString($edgeData)
+                                $urlMatches = [regex]::Matches($dataString, 'https?://([^/\s\x00]+)')
+                                
+                                $edgeDomains = $urlMatches | 
+                                    ForEach-Object { $_.Groups[1].Value } | 
+                                    Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*microsoft*" -and $_ -notlike "*bing*" } |
+                                    Select-Object -Unique -First 50
+                                
+                                foreach ($domain in $edgeDomains) {
+                                    $items += @{
+                                        domain = $domain
+                                        source = "edge_history_$userName"
+                                        visited_at = $nowUtc.ToString("o")
+                                    }
+                                }
+                                Write-Log "[WEB-ACTIVITY] Edge ($userName): $($edgeDomains.Count) dominios" "INFO"
+                            }
+                        } catch {
+                            Write-Log "[WEB-ACTIVITY] Erro ao ler Edge ($userName): $($_.Exception.Message)" "WARN"
+                        }
+                        Remove-Item $tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    }
+                }
+            } catch {
+                Write-Log "[WEB-ACTIVITY] Erro ao acessar Edge ($userName): $($_.Exception.Message)" "WARN"
+            }
         }
 
         # Deduplicate and limit
