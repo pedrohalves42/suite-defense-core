@@ -250,10 +250,25 @@ Deno.serve(async (req) => {
       expires_at: expiresAt.toISOString(),
     });
 
-    // Increment key usage
+    // Increment key usage and extend expiration to 30 days after first use
+    const isFirstUse = keyData.current_uses === 0;
+    const updateData: Record<string, any> = { 
+      current_uses: keyData.current_uses + 1,
+      used_by_agent: agentName,
+      used_at: new Date().toISOString()
+    };
+    
+    // If first use, extend expiration to 30 days from now
+    if (isFirstUse) {
+      const newExpiration = new Date();
+      newExpiration.setDate(newExpiration.getDate() + 30);
+      updateData.expires_at = newExpiration.toISOString();
+      logger.info(`[${requestId}] First use of key - extending expiration to 30 days: ${updateData.expires_at}`);
+    }
+    
     await supabase
       .from('enrollment_keys')
-      .update({ current_uses: keyData.current_uses + 1 })
+      .update(updateData)
       .eq('id', keyData.id);
 
     // Create audit log
