@@ -16,11 +16,13 @@ export default function TenantLogs() {
   const { tenant, loading: tenantLoading } = useTenant();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAction, setFilterAction] = useState<string>("all");
+  const [filterSuccess, setFilterSuccess] = useState<string>("all");
+  const [pageSize, setPageSize] = useState<number>(50);
   const debouncedSearch = useDebounce(searchTerm, 500);
 
   // Fetch audit logs for tenant
   const { data: auditLogs, isLoading } = useQuery({
-    queryKey: ["tenant-audit-logs", tenant?.id, debouncedSearch, filterAction],
+    queryKey: ["tenant-audit-logs", tenant?.id, debouncedSearch, filterAction, filterSuccess, pageSize],
     queryFn: async () => {
       if (!tenant?.id) return [];
       
@@ -32,10 +34,14 @@ export default function TenantLogs() {
         `)
         .eq("tenant_id", tenant.id)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(pageSize);
 
       if (filterAction && filterAction !== "all") {
         query = query.eq("action", filterAction);
+      }
+
+      if (filterSuccess !== "all") {
+        query = query.eq("success", filterSuccess === "success");
       }
 
       if (debouncedSearch) {
@@ -50,6 +56,7 @@ export default function TenantLogs() {
       return data;
     },
     enabled: !!tenant?.id,
+    refetchInterval: 30000,
   });
 
   if (tenantLoading || isLoading) {
@@ -71,7 +78,7 @@ export default function TenantLogs() {
           <CardDescription>Pesquise e filtre logs de auditoria</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="relative">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -93,6 +100,34 @@ export default function TenantLogs() {
                 <SelectItem value="update_role">Alterar Funcao</SelectItem>
                 <SelectItem value="login">Login</SelectItem>
                 <SelectItem value="logout">Logout</SelectItem>
+                <SelectItem value="cleanup_agent">Limpar Agente</SelectItem>
+                <SelectItem value="execute_solution">Executar Solucao</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterSuccess} onValueChange={setFilterSuccess}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar por status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="success">Sucesso</SelectItem>
+                <SelectItem value="failed">Falha</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex justify-between items-center pt-2">
+            <div className="text-sm text-muted-foreground">
+              Exibindo {auditLogs?.length || 0} de ate {pageSize} logs recentes
+            </div>
+            <Select value={pageSize.toString()} onValueChange={(v) => setPageSize(parseInt(v))}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="50">50 logs</SelectItem>
+                <SelectItem value="100">100 logs</SelectItem>
+                <SelectItem value="200">200 logs</SelectItem>
+                <SelectItem value="500">500 logs</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # CyberShield Agent - Linux
-# Version: v3.6.0-METRICS-FIX (Auto-metrics + Report Jobs + Timestamps + Disk Usage)
+# Version: v3.10.15-WEB-ACTIVITY-ENHANCED (Browser History + DNS Cache)
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ SERVER_URL="${SERVER_URL:-${CYBERSHIELD_SERVER_URL:-}}"
 AGENT_TOKEN="${AGENT_TOKEN:-${CYBERSHIELD_AGENT_TOKEN:-}}"
 HMAC_SECRET="${HMAC_SECRET:-${CYBERSHIELD_HMAC_SECRET:-}}"
 AGENT_NAME="${AGENT_NAME:-${CYBERSHIELD_AGENT_NAME:-$(hostname -s)}}"
-AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-3.6.0}}"
+AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-3.10.15}}"
 
 # Parse argumentos (sobrescreve env vars)
 while [[ $# -gt 0 ]]; do
@@ -474,6 +474,81 @@ execute_job() {
           cpu_percent: ($cpu|tonumber),
           memory_percent: ($mem|tonumber),
           disk_percent: ($disk|tonumber)
+        }'
+      )"
+      ;;
+
+    collect_web_activity)  # NOVO v3.10.15
+      local web_activity_array=""
+      local chrome_history="$HOME/.config/google-chrome/Default/History"
+      local firefox_profile_dir="$HOME/.mozilla/firefox"
+      
+      # Chrome history
+      if [[ -f "$chrome_history" ]]; then
+        local chrome_temp="/tmp/chrome_history_copy_$$.db"
+        cp "$chrome_history" "$chrome_temp" 2>/dev/null || true
+        
+        if [[ -f "$chrome_temp" ]] && command -v sqlite3 >/dev/null 2>&1; then
+          local chrome_urls
+          chrome_urls="$(sqlite3 "$chrome_temp" "SELECT DISTINCT url FROM urls WHERE last_visit_time > 0 ORDER BY last_visit_time DESC LIMIT 100;" 2>/dev/null || echo "")"
+          
+          while IFS= read -r url; do
+            if [[ -n "$url" ]]; then
+              local domain
+              domain="$(echo "$url" | awk -F/ '{print $3}' | sed 's/^www\.//')"
+              [[ -n "$domain" ]] && web_activity_array="${web_activity_array}${domain}"$'\n'
+            fi
+          done <<< "$chrome_urls"
+          
+          rm -f "$chrome_temp"
+        fi
+      fi
+      
+      # Firefox history
+      if [[ -d "$firefox_profile_dir" ]]; then
+        for profile in "$firefox_profile_dir"/*.default* "$firefox_profile_dir"/*.dev-edition-default*; do
+          [[ -d "$profile" ]] || continue
+          local ff_history="$profile/places.sqlite"
+          
+          if [[ -f "$ff_history" ]] && command -v sqlite3 >/dev/null 2>&1; then
+            local ff_temp="/tmp/ff_history_copy_$$.db"
+            cp "$ff_history" "$ff_temp" 2>/dev/null || true
+            
+            if [[ -f "$ff_temp" ]]; then
+              local ff_urls
+              ff_urls="$(sqlite3 "$ff_temp" "SELECT DISTINCT url FROM moz_places WHERE visit_count > 0 ORDER BY last_visit_date DESC LIMIT 100;" 2>/dev/null || echo "")"
+              
+              while IFS= read -r url; do
+                if [[ -n "$url" ]]; then
+                  local domain
+                  domain="$(echo "$url" | awk -F/ '{print $3}' | sed 's/^www\.//')"
+                  [[ -n "$domain" ]] && web_activity_array="${web_activity_array}${domain}"$'\n'
+                fi
+              done <<< "$ff_urls"
+              
+              rm -f "$ff_temp"
+            fi
+          fi
+        done
+      fi
+      
+      # Remove duplicates and create JSON array
+      local unique_domains
+      unique_domains="$(echo "$web_activity_array" | sort -u | grep -v '^$')"
+      
+      local domains_json="[]"
+      if [[ -n "$unique_domains" ]]; then
+        domains_json="$(echo "$unique_domains" | jq -R -s -c 'split("\n") | map(select(length > 0))')"
+      fi
+      
+      output_json="$(jq -n \
+        --argjson domains "$domains_json" \
+        --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+        '{
+          success: true,
+          timestamp: $ts,
+          domains: $domains,
+          source: "browser_history"
         }'
       )"
       ;;
