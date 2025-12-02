@@ -34,6 +34,7 @@ export default function InstallationPipelineMonitor() {
   const { tenant } = useTenant();
   const [hoursBack, setHoursBack] = useState<number>(24);
   const [stageFilter, setStageFilter] = useState<string>('all');
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
 
   const { data: agents, isLoading: agentsLoading, isError: agentsError, error: agentsErrorData, refetch: refetchAgents } = useAgentLifecycle(tenant?.id);
   const { data: metrics, isLoading: metricsLoading, isError: metricsError, error: metricsErrorData, refetch: refetchMetrics } = usePipelineMetrics(tenant?.id, hoursBack);
@@ -88,18 +89,31 @@ export default function InstallationPipelineMonitor() {
           <h1 className="text-3xl font-bold">Pipeline de Instalacao</h1>
           <p className="text-muted-foreground">Monitoramento em tempo real do fluxo de instalacao de agentes</p>
         </div>
-        <Select value={hoursBack.toString()} onValueChange={(v) => setHoursBack(parseInt(v))}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1">Ultima hora</SelectItem>
-            <SelectItem value="6">Ultimas 6 horas</SelectItem>
-            <SelectItem value="24">Ultimas 24 horas</SelectItem>
-            <SelectItem value="72">Ultimos 3 dias</SelectItem>
-            <SelectItem value="168">Ultima semana</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-3 items-center">
+          <Button
+            onClick={() => {
+              refetchAgents();
+              refetchMetrics();
+              toast.success("Dados atualizados");
+            }}
+            variant="outline"
+            size="sm"
+          >
+            Atualizar Agora
+          </Button>
+          <Select value={hoursBack.toString()} onValueChange={(v) => setHoursBack(parseInt(v))}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Ultima hora</SelectItem>
+              <SelectItem value="6">Ultimas 6 horas</SelectItem>
+              <SelectItem value="24">Ultimas 24 horas</SelectItem>
+              <SelectItem value="72">Ultimos 3 dias</SelectItem>
+              <SelectItem value="168">Ultima semana</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Metrics Cards */}
