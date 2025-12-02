@@ -139,22 +139,28 @@ const JobCreator = () => {
   const getJobTypeExamples = (type: string) => {
     const examples: Record<string, any> = {
       scan: {
-        path: "/path/to/scan",
+        filePath: "C:\\Windows\\System32",
         recursive: true,
         extensions: [".exe", ".dll", ".bat"]
       },
       update: {
-        version: "2.0.0",
-        url: "https://example.com/update.zip"
+        target_version: "v3.10.15-WEB-ACTIVITY-ENHANCED",
+        force: false
       },
       report: {
-        type: "system_info",
-        include_logs: true
+        type: "security_report",
+        include_software: true,
+        include_vulnerabilities: true,
+        include_antivirus: true
       },
       config: {
         polling_interval: 60,
         enable_auto_update: true
-      }
+      },
+      software_inventory_collect: {},
+      collect_antivirus_status: {},
+      collect_web_activity: {},
+      light_vuln_scan: {}
     };
     return JSON.stringify(examples[type] || {}, null, 2);
   };
