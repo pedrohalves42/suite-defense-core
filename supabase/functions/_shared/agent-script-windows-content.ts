@@ -6,7 +6,7 @@
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.14-NO-EXIT-ON-UPDATE
+    CyberShield Agent - Windows v3.10.15-WEB-ACTIVITY-ENHANCED
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -44,7 +44,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "3.10.14-NO-EXIT-ON-UPDATE"
+    [string]\$AgentVersion = "3.10.15-WEB-ACTIVITY-ENHANCED"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -620,7 +620,7 @@ function Invoke-WebActivityJob {
         \$Job
     )
 
-    Write-Log "[WEB-ACTIVITY] Iniciando coleta de atividade web (cache DNS)..." "INFO"
+    Write-Log "[WEB-ACTIVITY] Iniciando coleta de atividade web..." "INFO"
 
     try {
         \$payload = \$null
@@ -632,7 +632,7 @@ function Invoke-WebActivityJob {
             }
         }
 
-        \$maxDomains = 100
+        \$maxDomains = 500
         if (\$payload -and \$payload.max_domains) {
             \$maxDomains = [int]\$payload.max_domains
         }
@@ -640,13 +640,15 @@ function Invoke-WebActivityJob {
         \$nowUtc = [DateTime]::UtcNow
         \$items = @()
 
+        # 1. Coletar DNS Cache
+        Write-Log "[WEB-ACTIVITY] Coletando cache DNS..." "INFO"
         try {
             \$dnsEntries = Get-DnsClientCache -ErrorAction SilentlyContinue
             if (\$dnsEntries) {
                 \$dnsEntries = \$dnsEntries |
                     Where-Object { \$_.Entry -and \$_.Name } |
                     Sort-Object -Property Name -Unique |
-                    Select-Object -First \$maxDomains
+                    Select-Object -First 100
 
                 foreach (\$entry in \$dnsEntries) {
                     \$domain = \$entry.Name
@@ -666,19 +668,151 @@ function Invoke-WebActivityJob {
                         visited_at = \$nowUtc.ToString("o")
                     }
                 }
+                Write-Log "[WEB-ACTIVITY] Cache DNS: \$(\$dnsEntries.Count) dominios coletados" "INFO"
             }
         } catch {
             Write-Log "[WEB-ACTIVITY] Erro ao ler cache DNS: \$(\$_.Exception.Message)" "WARN"
         }
 
-        if (-not \$items.Count) {
-            Write-Log "[WEB-ACTIVITY] Nenhum dominio encontrado no cache DNS" "INFO"
+        # 2. Coletar historico do Chrome
+        Write-Log "[WEB-ACTIVITY] Coletando historico do Chrome..." "INFO"
+        try {
+            \$chromeHistoryPath = "\$env:LOCALAPPDATA\\Google\\Chrome\\User Data\\Default\\History"
+            if (Test-Path \$chromeHistoryPath) {
+                \$tempHistoryPath = "\$env:TEMP\\chrome_history_temp_\$(Get-Random).db"
+                Copy-Item -Path \$chromeHistoryPath -Destination \$tempHistoryPath -Force -ErrorAction SilentlyContinue
+                
+                if (Test-Path \$tempHistoryPath) {
+                    # SQLite query requires System.Data.SQLite, we'll use a simple file-based approach
+                    # Read last 50 URLs from Chrome history using simple text extraction
+                    try {
+                        \$chromeData = Get-Content \$tempHistoryPath -Encoding Byte -ReadCount 0 -ErrorAction SilentlyContinue
+                        if (\$chromeData) {
+                            \$dataString = [System.Text.Encoding]::UTF8.GetString(\$chromeData)
+                            \$urlMatches = [regex]::Matches(\$dataString, 'https?://([^/\\s\\x00]+)')
+                            
+                            \$chromeDomains = \$urlMatches | 
+                                ForEach-Object { \$_.Groups[1].Value } | 
+                                Where-Object { \$_ -notlike "localhost*" -and \$_ -notlike "*.local" } |
+                                Select-Object -Unique -First 100
+                            
+                            foreach (\$domain in \$chromeDomains) {
+                                \$items += @{
+                                    domain = \$domain
+                                    source = "chrome_history"
+                                    visited_at = \$nowUtc.ToString("o")
+                                }
+                            }
+                            Write-Log "[WEB-ACTIVITY] Chrome: \$(\$chromeDomains.Count) dominios coletados" "INFO"
+                        }
+                    } catch {
+                        Write-Log "[WEB-ACTIVITY] Erro ao ler dados do Chrome: \$(\$_.Exception.Message)" "WARN"
+                    }
+                    Remove-Item \$tempHistoryPath -Force -ErrorAction SilentlyContinue
+                }
+            }
+        } catch {
+            Write-Log "[WEB-ACTIVITY] Erro ao acessar historico do Chrome: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        # 3. Coletar historico do Firefox
+        Write-Log "[WEB-ACTIVITY] Coletando historico do Firefox..." "INFO"
+        try {
+            \$firefoxProfilesPath = "\$env:APPDATA\\Mozilla\\Firefox\\Profiles"
+            if (Test-Path \$firefoxProfilesPath) {
+                \$profiles = Get-ChildItem -Path \$firefoxProfilesPath -Directory -ErrorAction SilentlyContinue
+                foreach (\$profile in \$profiles) {
+                    \$placesPath = Join-Path \$profile.FullName "places.sqlite"
+                    if (Test-Path \$placesPath) {
+                        \$tempPlacesPath = "\$env:TEMP\\firefox_places_temp_\$(Get-Random).db"
+                        Copy-Item -Path \$placesPath -Destination \$tempPlacesPath -Force -ErrorAction SilentlyContinue
+                        
+                        if (Test-Path \$tempPlacesPath) {
+                            try {
+                                \$firefoxData = Get-Content \$tempPlacesPath -Encoding Byte -ReadCount 0 -ErrorAction SilentlyContinue
+                                if (\$firefoxData) {
+                                    \$dataString = [System.Text.Encoding]::UTF8.GetString(\$firefoxData)
+                                    \$urlMatches = [regex]::Matches(\$dataString, 'https?://([^/\\s\\x00]+)')
+                                    
+                                    \$firefoxDomains = \$urlMatches | 
+                                        ForEach-Object { \$_.Groups[1].Value } | 
+                                        Where-Object { \$_ -notlike "localhost*" -and \$_ -notlike "*.local" } |
+                                        Select-Object -Unique -First 100
+                                    
+                                    foreach (\$domain in \$firefoxDomains) {
+                                        \$items += @{
+                                            domain = \$domain
+                                            source = "firefox_history"
+                                            visited_at = \$nowUtc.ToString("o")
+                                        }
+                                    }
+                                    Write-Log "[WEB-ACTIVITY] Firefox: \$(\$firefoxDomains.Count) dominios coletados" "INFO"
+                                }
+                            } catch {
+                                Write-Log "[WEB-ACTIVITY] Erro ao ler dados do Firefox: \$(\$_.Exception.Message)" "WARN"
+                            }
+                            Remove-Item \$tempPlacesPath -Force -ErrorAction SilentlyContinue
+                        }
+                        break
+                    }
+                }
+            }
+        } catch {
+            Write-Log "[WEB-ACTIVITY] Erro ao acessar historico do Firefox: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        # 4. Coletar historico do Edge
+        Write-Log "[WEB-ACTIVITY] Coletando historico do Edge..." "INFO"
+        try {
+            \$edgeHistoryPath = "\$env:LOCALAPPDATA\\Microsoft\\Edge\\User Data\\Default\\History"
+            if (Test-Path \$edgeHistoryPath) {
+                \$tempHistoryPath = "\$env:TEMP\\edge_history_temp_\$(Get-Random).db"
+                Copy-Item -Path \$edgeHistoryPath -Destination \$tempHistoryPath -Force -ErrorAction SilentlyContinue
+                
+                if (Test-Path \$tempHistoryPath) {
+                    try {
+                        \$edgeData = Get-Content \$tempHistoryPath -Encoding Byte -ReadCount 0 -ErrorAction SilentlyContinue
+                        if (\$edgeData) {
+                            \$dataString = [System.Text.Encoding]::UTF8.GetString(\$edgeData)
+                            \$urlMatches = [regex]::Matches(\$dataString, 'https?://([^/\\s\\x00]+)')
+                            
+                            \$edgeDomains = \$urlMatches | 
+                                ForEach-Object { \$_.Groups[1].Value } | 
+                                Where-Object { \$_ -notlike "localhost*" -and \$_ -notlike "*.local" } |
+                                Select-Object -Unique -First 100
+                            
+                            foreach (\$domain in \$edgeDomains) {
+                                \$items += @{
+                                    domain = \$domain
+                                    source = "edge_history"
+                                    visited_at = \$nowUtc.ToString("o")
+                                }
+                            }
+                            Write-Log "[WEB-ACTIVITY] Edge: \$(\$edgeDomains.Count) dominios coletados" "INFO"
+                        }
+                    } catch {
+                        Write-Log "[WEB-ACTIVITY] Erro ao ler dados do Edge: \$(\$_.Exception.Message)" "WARN"
+                    }
+                    Remove-Item \$tempHistoryPath -Force -ErrorAction SilentlyContinue
+                }
+            }
+        } catch {
+            Write-Log "[WEB-ACTIVITY] Erro ao acessar historico do Edge: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        # Deduplicate and limit
+        \$uniqueItems = \$items | Sort-Object -Property domain -Unique | Select-Object -First \$maxDomains
+
+        if (-not \$uniqueItems.Count) {
+            Write-Log "[WEB-ACTIVITY] Nenhum dominio encontrado em nenhuma fonte" "INFO"
 
             return @{
                 success = \$true
-                output  = "Nenhum dominio encontrado no cache DNS"
+                output  = "Nenhum dominio encontrado"
             }
         }
+
+        Write-Log "[WEB-ACTIVITY] Total de dominios unicos coletados: \$(\$uniqueItems.Count)" "INFO"
 
         \$body = @{
             agent_id = \$Job.agent_id
