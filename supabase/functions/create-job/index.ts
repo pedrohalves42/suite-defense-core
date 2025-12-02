@@ -123,46 +123,42 @@ Deno.serve(async (req) => {
     
     const { agentName, type, payload, approved, scheduledAt, isRecurring, recurrencePattern } = validation.data;
 
-    // Resolve tenant context
-    let effectiveTenantId = userRole?.tenant_id;
+    // SEMPRE buscar o agente para obter agent_id e tenant_id
+    const { data: agentData, error: agentError } = await supabaseAdmin
+      .from('agents')
+      .select('id, tenant_id')
+      .eq('agent_name', agentName)
+      .limit(1)
+      .maybeSingle();
 
-    // If super_admin without direct tenant mapping, derive from agent
-    if (hasSuperAdminRole && !effectiveTenantId) {
-      const { data: agentData, error: agentError } = await supabaseAdmin
-        .from('agents')
-        .select('tenant_id')
-        .eq('agent_name', agentName)
-        .limit(1)
-        .maybeSingle();
+    if (agentError || !agentData) {
+      await createAuditLog({ 
+        supabase: supabaseAdmin, 
+        userId: user.id, 
+        tenantId: userRole?.tenant_id || 'unknown', 
+        action: 'job_creation_denied', 
+        resourceType: 'job', 
+        details: { 
+          reason: 'agent_not_found',
+          agent_name: agentName 
+        }, 
+        request: req, 
+        success: false 
+      });
 
-      if (agentError || !agentData) {
-        await createAuditLog({ 
-          supabase: supabaseAdmin, 
-          userId: user.id, 
-          tenantId: 'unknown', 
-          action: 'job_creation_denied', 
-          resourceType: 'job', 
-          details: { 
-            reason: 'agent_not_found',
-            agent_name: agentName 
-          }, 
-          request: req, 
-          success: false 
-        });
-
-        return new Response(
-          JSON.stringify({ 
-            error: {
-              code: 'AGENT_NOT_FOUND',
-              message: 'Agente nao encontrado ou nao pertence a nenhum tenant.'
-            }
-          }), 
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      effectiveTenantId = agentData.tenant_id;
+      return new Response(
+        JSON.stringify({ 
+          error: {
+            code: 'AGENT_NOT_FOUND',
+            message: 'Agente nao encontrado.'
+          }
+        }), 
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    // Usar tenant_id do agente ou do user_role
+    const effectiveTenantId = agentData.tenant_id || userRole?.tenant_id;
 
     if (!effectiveTenantId) {
       await createAuditLog({ 
@@ -191,6 +187,18 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Verificar se usuario tem acesso ao tenant do agente (exceto super_admin)
+    if (!hasSuperAdminRole && userRole?.tenant_id !== agentData.tenant_id) {
+      return new Response(
+        JSON.stringify({ 
+          error: {
+            code: 'FORBIDDEN',
+            message: 'Agente pertence a outro tenant.'
+          }
+        }), 
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Calculate next_run_at for recurring jobs
     let nextRunAt = null;
@@ -202,8 +210,9 @@ Deno.serve(async (req) => {
       nextRunAt = nextRunData;
     }
 
-    // Prepare job data
+    // Prepare job data - INCLUINDO agent_id
     const jobData: any = {
+      agent_id: agentData.id,  // CRÍTICO: incluir agent_id
       agent_name: agentName, 
       type, 
       payload, 
