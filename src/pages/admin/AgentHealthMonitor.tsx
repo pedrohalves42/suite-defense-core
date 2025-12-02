@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ErrorState } from "@/components/ErrorState";
 import { InstallationHealthCard } from "@/components/admin/InstallationHealthCard";
-import { QuickValidationJobs } from "@/components/admin/QuickValidationJobs";
+import { DynamicValidationSystem } from "@/components/admin/DynamicValidationSystem";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAgentMetricsHistory } from "@/hooks/useAgentMetricsHistory";
@@ -260,8 +260,8 @@ export default function AgentHealthMonitor() {
       {/* Installation Health Card */}
       <InstallationHealthCard />
 
-      {/* Quick Validation Jobs */}
-      <QuickValidationJobs />
+      {/* Dynamic Validation System */}
+      <DynamicValidationSystem />
 
       {/* Live Statistics */}
       <div className="grid gap-4 md:grid-cols-4">
