@@ -17,7 +17,7 @@ cat > "$TARGET" <<'EOF'
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.17-SCAN-CAMELCASE-FIX
+ * Versao: v3.10.18-SCAN-PATH-FIX
  */
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
@@ -42,6 +42,6 @@ export function getAgentScriptWindows(): string {
 }
 EOF
 
-echo "[SUCCESS] Sync concluído para v3.10.17-SCAN-CAMELCASE-FIX"
+echo "[SUCCESS] Sync concluído para v3.10.18-SCAN-PATH-FIX"
 echo "[INFO] Tamanho: $(wc -c < "$SOURCE") bytes"
 echo "[INFO] Linhas: $(wc -l < "$SOURCE")"

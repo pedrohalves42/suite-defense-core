@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.17-SCAN-CAMELCASE-FIX';
+const CURRENT_VERSION = 'v3.10.18-SCAN-PATH-FIX';
 
 // SHA256 will be calculated automatically WITH BOM by useAgentReleases hook
 // No need for manual SHA256 anymore - the hook handles BOM compatibility automatically
