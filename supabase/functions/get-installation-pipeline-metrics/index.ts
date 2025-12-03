@@ -49,10 +49,29 @@ serve(async (req) => {
 
     const tenantId = userRole.tenant_id;
 
-    // Parse query parameters
-    const url = new URL(req.url);
-    const hoursBackRaw = url.searchParams.get("hours_back") || "24";
-    const hoursBack = parseInt(hoursBackRaw);
+    // Parse parameters from body OR URL (body takes precedence)
+    let hoursBack = 24;
+    
+    // Try to get from body first
+    if (req.method === "POST") {
+      try {
+        const body = await req.json();
+        if (body.hours_back) {
+          hoursBack = parseInt(body.hours_back);
+        }
+      } catch {
+        // Body parsing failed, use URL params
+      }
+    }
+    
+    // Fallback to URL params
+    if (hoursBack === 24) {
+      const url = new URL(req.url);
+      const hoursBackRaw = url.searchParams.get("hours_back");
+      if (hoursBackRaw) {
+        hoursBack = parseInt(hoursBackRaw);
+      }
+    }
 
     // Validate hours_back parameter
     if (isNaN(hoursBack) || hoursBack < 1 || hoursBack > 720) {
