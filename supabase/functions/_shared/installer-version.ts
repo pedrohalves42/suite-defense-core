@@ -7,10 +7,14 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.17-SCAN-CAMELCASE-FIX';
-export const LAST_UPDATED = '2025-12-03T12:00:00Z'; // SCAN-CAMELCASE-FIX: Corrige snake_case para camelCase no scan handler
+export const INSTALLER_VERSION = 'v3.10.18-SCAN-PATH-FIX';
+export const LAST_UPDATED = '2025-12-03T13:00:00Z'; // SCAN-PATH-FIX: Corrige scan para C:\ProgramData e %USERPROFILE%
 
 export const CHANGES = [
+  '[v3.10.18-SCAN-PATH-FIX] CRITICAL FIX: %USERPROFILE% agora expande para usuarios reais (C:\\Users\\*), nao SYSTEM',
+  '[v3.10.18-SCAN-PATH-FIX] CRITICAL FIX: Get-Item fallback para pastas protegidas (C:\\ProgramData) usando Test-Path',
+  '[v3.10.18-SCAN-PATH-FIX] CRITICAL FIX: Get-ChildItem usa -Force para acessar itens ocultos/sistema',
+  '[v3.10.18-SCAN-PATH-FIX] FIX: Resolve erro "Cannot bind argument to parameter Path" em C:\\ProgramData',
   '[v3.10.17-SCAN-CAMELCASE-FIX] CRITICAL FIX: Scan handler agora envia filePath/fileHash (camelCase) ao inves de file_path/file_hash',
   '[v3.10.17-SCAN-CAMELCASE-FIX] CRITICAL FIX: Resolve HTTP 400 "Missing filePath or fileHash" no scan-virus Edge Function',
   '[v3.10.17-SCAN-CAMELCASE-FIX] MELHORIA: ScanFileDialog com avisos mais claros sobre paths SYSTEM',

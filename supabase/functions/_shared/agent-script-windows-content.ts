@@ -2,12 +2,12 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.17-SCAN-CAMELCASE-FIX
+ * Versao: v3.10.18-SCAN-PATH-FIX
  */
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.17-SCAN-CAMELCASE-FIX
+    CyberShield Agent - Windows v3.10.18-SCAN-PATH-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -45,7 +45,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "3.10.17-SCAN-CAMELCASE-FIX"
+    [string]\$AgentVersion = "3.10.18-SCAN-PATH-FIX"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -1204,7 +1204,30 @@ function Execute-Job {
                     }
 
                     # Expandir variaveis de ambiente estilo Windows (%VAR%)
-                    if (\$filePath -match '%([^%]+)%') {
+                    # CRITICAL FIX v3.10.18: %USERPROFILE% expande para todos os usuarios reais, nao SYSTEM
+                    if (\$filePath -match '%USERPROFILE%') {
+                        Write-Log "[SCAN] Detectado %USERPROFILE%, expandindo para usuarios reais..." "DEBUG"
+                        
+                        # Listar perfis de usuarios reais (excluir SYSTEM, Public, Default)
+                        \$userProfiles = Get-ChildItem "C:\\Users" -Directory -ErrorAction SilentlyContinue | 
+                            Where-Object { \$_.Name -notin @("Public", "Default", "Default User", "All Users") }
+                        
+                        \$expandedPath = \$null
+                        foreach (\$profile in \$userProfiles) {
+                            \$testPath = \$filePath -replace '%USERPROFILE%', \$profile.FullName
+                            if (Test-Path \$testPath) {
+                                \$expandedPath = \$testPath
+                                Write-Log "[SCAN] Encontrado path valido em: \$expandedPath" "DEBUG"
+                                break
+                            }
+                        }
+                        
+                        if (\$null -eq \$expandedPath) {
+                            throw "Caminho nao encontrado em nenhum perfil de usuario: \$filePath"
+                        }
+                        \$filePath = \$expandedPath
+                    }
+                    elseif (\$filePath -match '%([^%]+)%') {
                         \$filePath = [System.Environment]::ExpandEnvironmentVariables(\$filePath)
                         Write-Log "[SCAN] Caminho expandido: \$filePath" "DEBUG"
                     }
@@ -1213,13 +1236,30 @@ function Execute-Job {
                         throw "Caminho nao encontrado: \$filePath"
                     }
 
-                    # Verificar se e diretorio
-                    \$item = Get-Item \$filePath -ErrorAction Stop
-                    if (\$item.PSIsContainer) {
+                    # Verificar se e diretorio - com fallback para pastas protegidas (ex: C:\\ProgramData)
+                    \$isDirectory = \$false
+                    try {
+                        \$item = Get-Item \$filePath -Force -ErrorAction Stop
+                        \$isDirectory = \$item.PSIsContainer
+                    } catch {
+                        # Fallback: Get-Item pode falhar em pastas com atributos especiais
+                        # Se Test-Path passou, assume que e diretorio
+                        Write-Log "[SCAN] Get-Item falhou para \$filePath, usando fallback Test-Path" "DEBUG"
+                        if (Test-Path \$filePath -PathType Container) {
+                            \$isDirectory = \$true
+                        } elseif (Test-Path \$filePath -PathType Leaf) {
+                            \$isDirectory = \$false
+                        } else {
+                            throw "Caminho inacessivel: \$filePath - \$(\$_.Exception.Message)"
+                        }
+                    }
+
+                    if (\$isDirectory) {
                         Write-Log "[SCAN] Caminho e diretorio, listando arquivos executaveis..." "INFO"
                         
                         # Escanear arquivos executaveis no diretorio (nao recursivo)
-                        \$files = Get-ChildItem -Path \$filePath -File -ErrorAction SilentlyContinue | 
+                        # CRITICAL FIX v3.10.18: Usar -Force para acessar itens ocultos/sistema
+                        \$files = Get-ChildItem -Path \$filePath -File -Force -ErrorAction SilentlyContinue | 
                                  Where-Object { \$_.Extension -match '\\.(exe|dll|bat|ps1|vbs|js|msi|scr|com)\$' } |
                                  Select-Object -First 10  # Limitar a 10 arquivos por diretorio
                         
