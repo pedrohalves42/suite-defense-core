@@ -7,10 +7,14 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.18-SCAN-PATH-FIX';
-export const LAST_UPDATED = '2025-12-03T13:00:00Z'; // SCAN-PATH-FIX: Corrige scan para C:\ProgramData e %USERPROFILE%
+export const INSTALLER_VERSION = 'v3.10.19-VERSION-NORMALIZE';
+export const LAST_UPDATED = '2025-12-03T21:00:00Z'; // VERSION-NORMALIZE: Normaliza comparacao de versoes no auto-update
 
 export const CHANGES = [
+  '[v3.10.19-VERSION-NORMALIZE] CRITICAL FIX: Edge Functions agora normalizam versoes removendo prefixo "v" antes de comparar',
+  '[v3.10.19-VERSION-NORMALIZE] CRITICAL FIX: Agente agora reporta versao com prefixo "v" (v3.10.19 ao inves de 3.10.19)',
+  '[v3.10.19-VERSION-NORMALIZE] CRITICAL FIX: Resolve loop infinito de auto-update causado por mismatch v3.x vs 3.x',
+  '[v3.10.19-VERSION-NORMALIZE] CRITICAL FIX: serve-agent-update, check-agent-updates e process-agent-updates corrigidos',
   '[v3.10.18-SCAN-PATH-FIX] CRITICAL FIX: %USERPROFILE% agora expande para usuarios reais (C:\\Users\\*), nao SYSTEM',
   '[v3.10.18-SCAN-PATH-FIX] CRITICAL FIX: Get-Item fallback para pastas protegidas (C:\\ProgramData) usando Test-Path',
   '[v3.10.18-SCAN-PATH-FIX] CRITICAL FIX: Get-ChildItem usa -Force para acessar itens ocultos/sistema',
