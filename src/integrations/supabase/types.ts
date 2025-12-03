@@ -4010,7 +4010,7 @@ export type Database = {
         Returns: string
       }
       calculate_pipeline_metrics: {
-        Args: { p_hours_back?: number; p_tenant_id?: string }
+        Args: { p_hours_back?: number; p_tenant_id: string }
         Returns: {
           avg_install_time_seconds: number
           conversion_rate_copied_to_installed_pct: number
