@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useSubscription } from './useSubscription'
 import { supabase } from '@/integrations/supabase/client'
@@ -59,7 +59,7 @@ describe('useSubscription', () => {
     })
 
     // Wait for query to complete
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(result.current.subscription).toEqual(mockSubscription)
     })
   })
@@ -84,7 +84,7 @@ describe('useSubscription', () => {
     })
 
     // Wait for query to complete
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(result.current.subscription).toBeUndefined()
     })
   })

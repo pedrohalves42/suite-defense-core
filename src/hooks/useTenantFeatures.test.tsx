@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useTenantFeatures } from './useTenantFeatures'
 import { supabase } from '@/integrations/supabase/client'
@@ -53,7 +53,7 @@ describe('useTenantFeatures', () => {
     })
 
     // Wait for query to complete
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(result.current.hasFeature('advanced_dashboard')).toBe(true)
       expect(result.current.hasFeature('non_existent')).toBe(false)
     })
@@ -83,7 +83,7 @@ describe('useTenantFeatures', () => {
     })
 
     // Wait for query to complete
-    await waitFor(() => {
+    await vi.waitFor(() => {
       const quota = result.current.getFeatureQuota('max_devices')
       expect(quota.limit).toBe(10)
       expect(quota.used).toBe(7)
@@ -121,7 +121,7 @@ describe('useTenantFeatures', () => {
     })
 
     // Wait for query to complete
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(result.current.canUseFeature('limited_feature')).toBe(false)
       expect(result.current.canUseFeature('available_feature')).toBe(true)
     })
@@ -151,7 +151,7 @@ describe('useTenantFeatures', () => {
     })
 
     // Wait for query to complete
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(result.current.isNearQuota('near_limit', 80)).toBe(true)
       expect(result.current.isNearQuota('near_limit', 90)).toBe(false)
     })
