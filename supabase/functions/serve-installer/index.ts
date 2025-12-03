@@ -628,6 +628,36 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
       console.error(`[${requestId}] Database error persisting hash:`, dbError);
     }
 
+    // Track "downloaded" event for installation analytics
+    try {
+      const { error: telemetryError } = await supabaseClient
+        .from('installation_analytics')
+        .insert({
+          tenant_id: enrollmentData.tenant_id,
+          agent_id: enrollmentData.agent_id,
+          agent_name: agentData.agent_name,
+          event_type: 'downloaded',
+          platform: platform,
+          installation_method: 'one_click',
+          success: true,
+          ip_address: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
+          user_agent: req.headers.get('user-agent') || 'unknown',
+          metadata: {
+            installer_version: INSTALLER_VERSION,
+            installer_size_bytes: installerSizeBytes,
+            installer_sha256: installerSha256.substring(0, 16) + '...'
+          }
+        });
+
+      if (telemetryError) {
+        console.warn(`[${requestId}] Failed to track downloaded event:`, telemetryError);
+      } else {
+        console.log(`[${requestId}] Tracked 'downloaded' event for ${agentData.agent_name}`);
+      }
+    } catch (telemetryErr) {
+      console.warn(`[${requestId}] Telemetry error:`, telemetryErr);
+    }
+
     // Return script
     const fileName = platform === 'windows'
       ? `install-${agentData.agent_name}-windows.ps1`
