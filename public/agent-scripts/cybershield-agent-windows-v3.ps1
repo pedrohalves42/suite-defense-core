@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.16-MULTIUSER-WEB-ACTIVITY
+    CyberShield Agent - Windows v3.10.17-SCAN-CAMELCASE-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -1238,11 +1238,12 @@ function Execute-Job {
                     Write-Log "[SCAN] Escaneando: $filePath (hash: $fileHash)" "INFO"
 
                     # Monta body para backend (NAO converte pra JSON aqui)
+                    # CRITICAL: Edge Function espera camelCase (filePath, fileHash)
                     $scanBody = @{
                         tenant_id  = $tenantId
                         agent_name = $Global:AgentName
-                        file_path  = $filePath
-                        file_hash  = $fileHash
+                        filePath   = $filePath
+                        fileHash   = $fileHash
                     }
 
                     # Chama backend scan-virus

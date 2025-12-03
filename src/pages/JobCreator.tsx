@@ -264,7 +264,7 @@ const JobCreator = () => {
     const variants: Record<string, { color: string; icon: any }> = {
       queued: { color: "bg-warning/20 text-warning border-warning/30", icon: Clock },
       delivered: { color: "bg-primary/20 text-primary border-primary/30", icon: Server },
-      done: { color: "bg-success/20 text-success border-success/30", icon: CheckCircle },
+      completed: { color: "bg-success/20 text-success border-success/30", icon: CheckCircle },
       failed: { color: "bg-destructive/20 text-destructive border-destructive/30", icon: XCircle }
     };
 
