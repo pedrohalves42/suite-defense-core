@@ -3180,28 +3180,18 @@ export type Database = {
     Views: {
       agent_installation_metrics: {
         Row: {
-          avg_install_time_sec: number | null
-          date: string | null
-          failed_installs: number | null
-          linux_bash_installs: number | null
-          linux_count: number | null
-          max_install_time_sec: number | null
-          min_install_time_sec: number | null
-          network_failed: number | null
-          network_ok: number | null
-          network_unknown: number | null
+          avg_install_time_seconds: number | null
+          failed_events: number | null
+          last_event_at: string | null
           platform: string | null
-          success_rate_pct: number | null
-          successful_installs: number | null
+          successful_events: number | null
           tenant_id: string | null
-          total_attempts: number | null
-          unknown_status: number | null
-          unverified_count: number | null
-          unverified_events: number | null
-          verified_count: number | null
-          verified_events: number | null
-          windows_count: number | null
-          windows_ps1_installs: number | null
+          total_copied: number | null
+          total_downloaded: number | null
+          total_generated: number | null
+          total_installed: number | null
+          with_network: number | null
+          without_network: number | null
         }
         Relationships: [
           {
@@ -3556,6 +3546,7 @@ export type Database = {
         Row: {
           error_count: number | null
           error_message: string | null
+          event_type: string | null
           last_occurrence: string | null
           platform: string | null
           tenant_id: string | null
@@ -3572,17 +3563,24 @@ export type Database = {
       }
       installation_health_status: {
         Row: {
-          avg_install_time_seconds: number | null
-          failed_attempts: number | null
-          platform: string | null
-          success_rate_pct: number | null
-          successful_attempts: number | null
+          activation_rate_pct: number | null
+          active_agents: number | null
+          pending_agents: number | null
+          stuck_agents: number | null
           tenant_id: string | null
-          total_attempts: number | null
+          total_agents: number | null
+          window_interval: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "installation_analytics_tenant_id_fkey"
+            foreignKeyName: "agents_tenant_id_new_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_agents_tenant"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
