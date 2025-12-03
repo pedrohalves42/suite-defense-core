@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.10.16-MULTIUSER-WEB-ACTIVITY"
+    [string]$AgentVersion = "3.10.17-SCAN-CAMELCASE-FIX"
 )
 
 $ErrorActionPreference = "Stop"
