@@ -89,6 +89,9 @@ verify_jwt = true
 [functions.setup-agent-script]
 verify_jwt = false
 
+[functions.get-reinstall-script]
+verify_jwt = false
+
 [functions.serve-installer]
 verify_jwt = false
 
