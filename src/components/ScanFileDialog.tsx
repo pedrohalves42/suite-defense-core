@@ -131,19 +131,29 @@ export function ScanFileDialog() {
               onChange={(e) => setFilePath(e.target.value)}
               required
             />
-            <p className="text-xs text-muted-foreground">
-              Use caminhos absolutos acessiveis pela conta SYSTEM.
-            </p>
+            <div className="rounded-md bg-muted/50 p-2 text-xs">
+              <p className="font-medium mb-1">Caminhos recomendados (conta SYSTEM):</p>
+              <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                <li><code>C:\Windows\System32\...</code></li>
+                <li><code>C:\Program Files\...</code></li>
+                <li><code>C:\ProgramData\...</code></li>
+                <li><code>C:\Temp\...</code></li>
+              </ul>
+            </div>
             {(filePath.includes('%USERPROFILE%') || 
               filePath.includes('%APPDATA%') || 
+              filePath.includes('%TEMP%') ||
+              filePath.toLowerCase().includes('\\users\\') ||
               filePath.toLowerCase().includes('downloads') ||
               filePath.toLowerCase().includes('documents') ||
               filePath.toLowerCase().includes('desktop')) && (
-              <div className="rounded-md bg-warning/10 p-3 text-xs text-warning">
-                <p className="font-semibold">⚠️ Aviso: Path de Usuario</p>
+              <div className="rounded-md bg-destructive/10 border border-destructive/30 p-3 text-xs text-destructive">
+                <p className="font-semibold">⚠️ Caminho Invalido para SYSTEM</p>
                 <p className="mt-1">
-                  O agente roda como SYSTEM e pode nao ter acesso a pastas de usuario.
-                  Considere usar: C:\Windows\..., C:\Program Files\..., ou C:\Temp\...
+                  O agente roda como conta SYSTEM e <strong>nao tem acesso</strong> a pastas de usuario como Downloads, Documents ou Desktop.
+                </p>
+                <p className="mt-1">
+                  Use caminhos absolutos como <code>C:\Program Files\...</code> ou <code>C:\Windows\...</code>
                 </p>
               </div>
             )}
