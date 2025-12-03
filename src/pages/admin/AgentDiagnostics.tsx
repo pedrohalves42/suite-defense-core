@@ -16,11 +16,17 @@ import {
   Terminal,
   Network,
   Activity,
-  FileText
+  FileText,
+  Shield,
+  Wifi,
+  Globe,
+  Server
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SecurityJobDispatcher } from '@/components/admin/SecurityJobDispatcher';
-import { ValidationJobDispatcher } from '@/components/admin/ValidationJobDispatcher';
+import { DynamicValidationSystem } from '@/components/admin/DynamicValidationSystem';
+import { useAgentNetworkInfo } from '@/hooks/useAgentNetworkInfo';
+import { getOsDisplayName, getOsIcon } from '@/lib/os-utils';
 
 interface DiagnosticIssue {
   issue_type: string;
@@ -221,7 +227,7 @@ export default function AgentDiagnostics() {
                         {getStatusBadge(agent)}
                       </div>
                       <div className="text-xs text-muted-foreground space-y-1">
-                        <p>OS: {agent.os_type}</p>
+                        <p>OS: {getOsDisplayName(agent.os_type, null)}</p>
                         <p>Host: {agent.hostname}</p>
                         {agent.last_heartbeat && (
                           <p>
@@ -238,8 +244,8 @@ export default function AgentDiagnostics() {
           </CardContent>
         </Card>
 
-        {/* Jobs de Validação */}
-        <ValidationJobDispatcher />
+        {/* Validação Inteligente com IA */}
+        <DynamicValidationSystem />
 
         {/* Disparador de Jobs de Segurança */}
         <SecurityJobDispatcher agents={agents} />
@@ -352,21 +358,34 @@ export default function AgentDiagnostics() {
                 </TabsContent>
 
                 <TabsContent value="network" className="space-y-4">
-                  <Alert>
-                    <Network className="h-4 w-4" />
-                    <AlertTitle>Testes de Conectividade</AlertTitle>
-                  <AlertDescription className="space-y-2 mt-2">
-                      <div className="space-y-1">
-                        <p className="font-medium">Checklist de Rede:</p>
-                        <ul className="list-disc list-inside text-sm space-y-1">
-                          <li>Porta 443 (HTTPS) deve estar aberta</li>
-                          <li>Firewall deve permitir conexoes saindo para *.supabase.co</li>
-                          <li>Proxy corporativo deve permitir WebSocket (wss://)</li>
-                          <li>DNS deve resolver o dominio do Supabase</li>
-                        </ul>
-                      </div>
-                    </AlertDescription>
-                  </Alert>
+                  <NetworkDiagnosticsTab 
+                    selectedAgentId={selectedAgent} 
+                    agents={agents}
+                    onCollectNetworkInfo={() => {
+                      const agent = agents.find(a => a.id === selectedAgent);
+                      if (agent) {
+                        supabase.functions.invoke('create-job', {
+                          body: {
+                            agentName: agent.agent_name,
+                            type: 'collect_network_info',
+                            payload: {},
+                            approved: true,
+                          },
+                        }).then(() => {
+                          toast({
+                            title: 'Job criado',
+                            description: 'Coleta de informações de rede iniciada',
+                          });
+                        }).catch((err) => {
+                          toast({
+                            title: 'Erro',
+                            description: err.message,
+                            variant: 'destructive',
+                          });
+                        });
+                      }
+                    }}
+                  />
                 </TabsContent>
 
                 <TabsContent value="logs" className="space-y-4">
@@ -389,6 +408,165 @@ export default function AgentDiagnostics() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+// Network Diagnostics Tab Component
+function NetworkDiagnosticsTab({ 
+  selectedAgentId, 
+  agents,
+  onCollectNetworkInfo 
+}: { 
+  selectedAgentId: string | null;
+  agents: Agent[];
+  onCollectNetworkInfo: () => void;
+}) {
+  const { data: networkInfo, isLoading, refetch } = useAgentNetworkInfo(selectedAgentId || '', !!selectedAgentId);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <RefreshCw className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!networkInfo) {
+    return (
+      <div className="space-y-4">
+        <Alert>
+          <Network className="h-4 w-4" />
+          <AlertTitle>Sem dados de rede</AlertTitle>
+          <AlertDescription>
+            Nenhuma informação de rede coletada para este agente.
+          </AlertDescription>
+        </Alert>
+        <Button onClick={onCollectNetworkInfo} className="w-full">
+          <Wifi className="h-4 w-4 mr-2" />
+          Coletar Informações de Rede
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Firewall Status */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="p-3 border rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Domain</span>
+            <Shield className={`h-4 w-4 ${networkInfo.firewall_domain ? 'text-green-500' : 'text-red-500'}`} />
+          </div>
+          <Badge variant={networkInfo.firewall_domain ? 'default' : 'destructive'}>
+            {networkInfo.firewall_domain ? 'Ativo' : 'Inativo'}
+          </Badge>
+        </div>
+        <div className="p-3 border rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Private</span>
+            <Shield className={`h-4 w-4 ${networkInfo.firewall_private ? 'text-green-500' : 'text-red-500'}`} />
+          </div>
+          <Badge variant={networkInfo.firewall_private ? 'default' : 'destructive'}>
+            {networkInfo.firewall_private ? 'Ativo' : 'Inativo'}
+          </Badge>
+        </div>
+        <div className="p-3 border rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Public</span>
+            <Shield className={`h-4 w-4 ${networkInfo.firewall_public ? 'text-green-500' : 'text-yellow-500'}`} />
+          </div>
+          <Badge variant={networkInfo.firewall_public ? 'default' : 'secondary'}>
+            {networkInfo.firewall_public ? 'Ativo' : 'Inativo'}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Connectivity Tests */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="p-3 border rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">DNS</span>
+          </div>
+          {networkInfo.dns_test_success ? (
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          ) : networkInfo.dns_test_success === false ? (
+            <XCircle className="h-4 w-4 text-red-500" />
+          ) : (
+            <span className="text-xs text-muted-foreground">N/A</span>
+          )}
+        </div>
+        <div className="p-3 border rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Server className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm">HTTPS (443)</span>
+          </div>
+          {networkInfo.https_test_success ? (
+            <CheckCircle className="h-4 w-4 text-green-500" />
+          ) : networkInfo.https_test_success === false ? (
+            <XCircle className="h-4 w-4 text-red-500" />
+          ) : (
+            <span className="text-xs text-muted-foreground">N/A</span>
+          )}
+        </div>
+      </div>
+
+      {/* Network Info */}
+      <div className="space-y-2">
+        {networkInfo.public_ip && (
+          <div className="flex items-center justify-between p-2 bg-muted rounded">
+            <span className="text-sm">IP Público</span>
+            <code className="text-xs">{networkInfo.public_ip}</code>
+          </div>
+        )}
+        {networkInfo.gateway_ip && (
+          <div className="flex items-center justify-between p-2 bg-muted rounded">
+            <span className="text-sm">Gateway</span>
+            <code className="text-xs">{networkInfo.gateway_ip}</code>
+          </div>
+        )}
+        {networkInfo.dns_servers.length > 0 && (
+          <div className="flex items-center justify-between p-2 bg-muted rounded">
+            <span className="text-sm">DNS Servers</span>
+            <code className="text-xs">{networkInfo.dns_servers.join(', ')}</code>
+          </div>
+        )}
+      </div>
+
+      {/* Open Ports */}
+      {networkInfo.open_ports.length > 0 && (
+        <div>
+          <h4 className="text-sm font-semibold mb-2">Portas Abertas ({networkInfo.open_ports.length})</h4>
+          <ScrollArea className="h-[150px]">
+            <div className="space-y-1">
+              {networkInfo.open_ports.slice(0, 20).map((port, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 text-xs border rounded">
+                  <span className="font-mono">{port.port}/{port.protocol}</span>
+                  <span className="text-muted-foreground truncate max-w-[150px]">{port.process}</span>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        <Button onClick={() => refetch()} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Atualizar
+        </Button>
+        <Button onClick={onCollectNetworkInfo} variant="outline" size="sm">
+          <Wifi className="h-4 w-4 mr-2" />
+          Nova Coleta
+        </Button>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Última coleta: {new Date(networkInfo.collected_at).toLocaleString('pt-BR')}
+      </p>
     </div>
   );
 }
