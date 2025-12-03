@@ -58,14 +58,23 @@ Deno.serve(async (req) => {
         latestVersion: latest.version
       });
 
-      // Buscar agentes desatualizados desta plataforma
-      const { data: outdatedAgents, error: agentsError } = await supabase
+      // Normalizar versao para comparacao (remover prefixo "v")
+      const normalizeVersion = (v: string | null) => v?.replace(/^v/i, '') || '';
+      const latestVersionNorm = normalizeVersion(latest.version);
+
+      // Buscar agentes ativos desta plataforma (filtraremos versao manualmente)
+      const { data: allAgents, error: agentsError } = await supabase
         .from('agents')
         .select('id, agent_name, agent_version, tenant_id')
         .eq('status', 'active')
         .eq('os_type', latest.platform)
-        .neq('agent_version', latest.version)
         .not('agent_version', 'is', null);
+
+      // Filtrar agentes realmente desatualizados (comparacao normalizada)
+      const outdatedAgents = (allAgents || []).filter(agent => {
+        const agentVersionNorm = normalizeVersion(agent.agent_version);
+        return agentVersionNorm !== latestVersionNorm;
+      });
 
       if (agentsError) {
         logger.error('[process-agent-updates] Failed to fetch outdated agents', {

@@ -115,12 +115,19 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Normalizar versoes (remover prefixo "v" para comparacao)
+    const normalizeVersion = (v: string | null) => v?.replace(/^v/i, '') || '';
+    const currentVersionNorm = normalizeVersion(agent.agent_version);
+    const releaseVersionNorm = normalizeVersion(release.version);
+
     // Verificar se ja esta na ultima versao
-    if (release.version === agent.agent_version) {
+    if (releaseVersionNorm === currentVersionNorm) {
       logger.info('[serve-agent-update] Agente ja esta atualizado', { 
         requestId, 
         agentName: agent.agent_name,
-        version: agent.agent_version 
+        version: agent.agent_version,
+        releaseVersion: release.version,
+        normalized: { current: currentVersionNorm, release: releaseVersionNorm }
       });
       return new Response(
         JSON.stringify({ 

@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.18-SCAN-PATH-FIX
+    CyberShield Agent - Windows v3.10.19-VERSION-NORMALIZE
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "3.10.18-SCAN-PATH-FIX"
+    [string]$AgentVersion = "v3.10.19-VERSION-NORMALIZE"
 )
 
 $ErrorActionPreference = "Stop"

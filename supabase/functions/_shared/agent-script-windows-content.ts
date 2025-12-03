@@ -2,12 +2,12 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.18-SCAN-PATH-FIX
+ * Versao: v3.10.19-VERSION-NORMALIZE
  */
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.18-SCAN-PATH-FIX
+    CyberShield Agent - Windows v3.10.19-VERSION-NORMALIZE
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -45,7 +45,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "3.10.18-SCAN-PATH-FIX"
+    [string]\$AgentVersion = "v3.10.19-VERSION-NORMALIZE"
 )
 
 \$ErrorActionPreference = "Stop"
