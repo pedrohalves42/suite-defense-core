@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {  Activity, AlertCircle, CheckCircle, Clock, Cpu, HardDrive, MemoryStick, Monitor, Search, XCircle } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, Clock, Cpu, HardDrive, MemoryStick, Monitor, Search, XCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { getOsDisplayName, getOsIcon } from '@/lib/os-utils';
 
 interface AgentMetrics {
   id: string;
@@ -167,11 +168,6 @@ export default function AgentMonitoringAdvanced() {
     return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" /> Offline</Badge>;
   };
 
-  const getOsIcon = (osType: string) => {
-    if (osType === 'windows') return '?';
-    if (osType === 'linux') return '?';
-    return '?';
-  };
 
   const getUsageBadge = (value: number | null, threshold: number) => {
     if (value === null) return <span className="text-muted-foreground">N/A</span>;
@@ -403,7 +399,7 @@ export default function AgentMonitoringAdvanced() {
                     <td className="p-2">
                       <div className="flex items-center gap-1">
                         <span className="text-xl">{getOsIcon(agent.os_type)}</span>
-                        <span className="text-sm">{agent.os_version || agent.os_type}</span>
+                        <span className="text-sm">{getOsDisplayName(agent.os_type, agent.os_version || null)}</span>
                       </div>
                     </td>
                     <td className="p-2 text-sm">{agent.hostname || 'N/A'}</td>

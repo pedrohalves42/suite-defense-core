@@ -188,6 +188,113 @@ export type Database = {
           },
         ]
       }
+      agent_network_info: {
+        Row: {
+          active_connections: Json | null
+          agent_id: string
+          collected_at: string
+          created_at: string
+          dns_servers: Json | null
+          dns_test_success: boolean | null
+          firewall_domain: boolean | null
+          firewall_private: boolean | null
+          firewall_public: boolean | null
+          gateway_ip: string | null
+          https_test_success: boolean | null
+          id: string
+          network_adapters: Json | null
+          open_ports: Json | null
+          public_ip: string | null
+          tenant_id: string
+        }
+        Insert: {
+          active_connections?: Json | null
+          agent_id: string
+          collected_at?: string
+          created_at?: string
+          dns_servers?: Json | null
+          dns_test_success?: boolean | null
+          firewall_domain?: boolean | null
+          firewall_private?: boolean | null
+          firewall_public?: boolean | null
+          gateway_ip?: string | null
+          https_test_success?: boolean | null
+          id?: string
+          network_adapters?: Json | null
+          open_ports?: Json | null
+          public_ip?: string | null
+          tenant_id: string
+        }
+        Update: {
+          active_connections?: Json | null
+          agent_id?: string
+          collected_at?: string
+          created_at?: string
+          dns_servers?: Json | null
+          dns_test_success?: boolean | null
+          firewall_domain?: boolean | null
+          firewall_private?: boolean | null
+          firewall_public?: boolean | null
+          gateway_ip?: string | null
+          https_test_success?: boolean | null
+          id?: string
+          network_adapters?: Json | null
+          open_ports?: Json | null
+          public_ip?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_network_info_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_network_info_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_network_info_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_network_info_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_network_info_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_network_info_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_network_info_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_releases: {
         Row: {
           channel: string

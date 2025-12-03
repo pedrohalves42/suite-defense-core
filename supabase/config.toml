@@ -308,3 +308,10 @@ verify_jwt = true
 
 [functions.get-web-activity]
 verify_jwt = true
+
+# === AI Analysis Functions ===
+[functions.ai-analyze-agent]
+verify_jwt = true
+
+[functions.submit-network-info]
+verify_jwt = false
