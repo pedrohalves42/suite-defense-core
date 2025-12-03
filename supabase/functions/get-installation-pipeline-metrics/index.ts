@@ -75,7 +75,7 @@ serve(async (req) => {
 
     // Validate hours_back parameter
     if (isNaN(hoursBack) || hoursBack < 1 || hoursBack > 720) {
-      console.error(`[${requestId}] Invalid hours_back: ${hoursBackRaw}`);
+      console.error(`[${requestId}] Invalid hours_back: ${hoursBack}`);
       return new Response(
         JSON.stringify({
           success: false,
