@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 import { useTenant } from './useTenant'
@@ -47,7 +47,7 @@ describe('useTenant', () => {
     })
 
     // Wait for hook to update
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(result.current.tenant).toBeNull()
     })
   })
@@ -91,7 +91,7 @@ describe('useTenant', () => {
     })
 
     // Wait for hook to update
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(result.current.tenant).toEqual(mockTenant)
     })
   })
@@ -115,7 +115,7 @@ describe('useTenant', () => {
     })
 
     // Wait for hook to update
-    await waitFor(() => {
+    await vi.waitFor(() => {
       expect(result.current.tenant).toBeDefined()
     })
   })
