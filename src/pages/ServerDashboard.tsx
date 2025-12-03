@@ -213,7 +213,7 @@ const ServerDashboard = () => {
   });
 
   const pendingJobs = jobs.filter(j => j.status === "queued").length;
-  const completedJobs = jobs.filter(j => j.status === "done").length;
+  const completedJobs = jobs.filter(j => j.status === "completed").length;
   const failedJobs = jobs.filter(j => j.status === "failed").length;
   
   // Agrupar agentes por tenant
@@ -248,7 +248,7 @@ const ServerDashboard = () => {
     return {
       date: new Date(day).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
       total: dayJobs.length,
-      completed: dayJobs.filter(j => j.status === 'done').length,
+      completed: dayJobs.filter(j => j.status === 'completed').length,
       failed: dayJobs.filter(j => j.status === 'failed').length,
     };
   });
@@ -726,7 +726,7 @@ const ServerDashboard = () => {
                                         {lastJob.type}
                                       </Badge>
                                       <Badge variant={
-                                        lastJob.status === "done" ? "default" :
+                                        lastJob.status === "completed" ? "default" :
                                         lastJob.status === "queued" ? "secondary" :
                                         "destructive"
                                       } className="text-xs">
@@ -782,7 +782,7 @@ const ServerDashboard = () => {
                         <div className="text-right">
                           <Badge 
                             variant={
-                              job.status === "done" ? "default" :
+                              job.status === "completed" ? "default" :
                               job.status === "delivered" ? "secondary" :
                               "outline"
                             }

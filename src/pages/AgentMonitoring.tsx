@@ -177,7 +177,7 @@ const AgentMonitoring = () => {
   const onlineAgents = agents.filter(a => a.status === 'active' || a.status === 'online').length;
   const offlineAgents = agents.filter(a => a.status === 'offline').length;
   const successRate = recentJobs.length > 0 
-    ? Math.round((recentJobs.filter(j => j.status === 'done').length / recentJobs.length) * 100)
+    ? Math.round((recentJobs.filter(j => j.status === 'completed').length / recentJobs.length) * 100)
     : 0;
 
   const getStatusBadge = (status: string, lastHeartbeat: string | null) => {
@@ -279,7 +279,7 @@ const AgentMonitoring = () => {
     return {
       date: day.label,
       total: dayJobs.length,
-      completed: dayJobs.filter(j => j.status === 'done' || j.status === 'completed').length,
+      completed: dayJobs.filter(j => j.status === 'completed').length,
       failed: dayJobs.filter(j => j.status === 'failed').length,
       pending: dayJobs.filter(j => j.status === 'queued' || j.status === 'delivered').length,
     };
