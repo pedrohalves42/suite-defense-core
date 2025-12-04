@@ -7,10 +7,14 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.21-OPEN-PORTS-FIX';
-export const LAST_UPDATED = '2025-12-04T01:15:00Z'; // NETWORK-INFO: Adiciona handler collect_network_info ao agente
+export const INSTALLER_VERSION = 'v3.10.22-WEB-ACTIVITY-DEDUP';
+export const LAST_UPDATED = '2025-12-04T19:30:00Z'; // WEB-ACTIVITY-DEDUP: Corrige bug de duplicatas na coleta
 
 export const CHANGES = [
+  '[v3.10.22-WEB-ACTIVITY-DEDUP] CRITICAL FIX: Web activity agora envia $uniqueItems ao inves de $items (linha 827)',
+  '[v3.10.22-WEB-ACTIVITY-DEDUP] CRITICAL FIX: Elimina duplicatas enviadas para submit-web-activity',
+  '[v3.10.22-WEB-ACTIVITY-DEDUP] DEFESA: Deduplicacao server-side no Edge Function como fallback',
+  '[v3.10.21-OPEN-PORTS-FIX] FIX: Open ports collection usando Get-NetTCPConnection ao inves de netstat',
   '[v3.10.20-NETWORK-INFO] FEATURE: Novo job type collect_network_info para coleta de diagnostico de rede',
   '[v3.10.20-NETWORK-INFO] FEATURE: Coleta status do Windows Firewall (Domain/Private/Public)',
   '[v3.10.20-NETWORK-INFO] FEATURE: Coleta portas abertas (listening) com processo associado',

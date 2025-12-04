@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.21-OPEN-PORTS-FIX
+    CyberShield Agent - Windows v3.10.22-WEB-ACTIVITY-DEDUP
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.21-OPEN-PORTS-FIX"
+    [string]$AgentVersion = "v3.10.22-WEB-ACTIVITY-DEDUP"
 )
 
 $ErrorActionPreference = "Stop"
@@ -824,7 +824,7 @@ function Invoke-WebActivityJob {
 
         $body = @{
             agent_id = $Job.agent_id
-            items    = $items
+            items    = $uniqueItems  # FIX v3.10.22: Usar lista deduplicada ao inves de $items
         }
 
         $result = Invoke-SecureRequest `
@@ -837,11 +837,11 @@ function Invoke-WebActivityJob {
             throw "Falha ao enviar atividade web (HTTP $($result.StatusCode))"
         }
 
-        Write-Log "[WEB-ACTIVITY] Atividade enviada. Dominios: $($items.Count)" "SUCCESS"
+        Write-Log "[WEB-ACTIVITY] Atividade enviada. Dominios unicos: $($uniqueItems.Count)" "SUCCESS"
 
         return @{
             success = $true
-            output  = "Atividade web enviada. Dominios: $($items.Count)"
+            output  = "Atividade web enviada. Dominios unicos: $($uniqueItems.Count)"
         }
     }
     catch {
