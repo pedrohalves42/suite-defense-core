@@ -315,3 +315,10 @@ verify_jwt = true
 
 [functions.submit-network-info]
 verify_jwt = false
+
+# === Custom Trial Functions ===
+[functions.create-custom-trial]
+verify_jwt = true
+
+[functions.get-diagnostic-script]
+verify_jwt = false

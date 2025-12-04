@@ -1372,6 +1372,62 @@ export type Database = {
           },
         ]
       }
+      custom_trials: {
+        Row: {
+          company_name: string
+          contact_name: string | null
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          notes: string | null
+          status: string
+          tenant_id: string | null
+          trial_days: number
+          trial_end: string
+          trial_start: string
+          updated_at: string
+        }
+        Insert: {
+          company_name: string
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email: string
+          id?: string
+          notes?: string | null
+          status?: string
+          tenant_id?: string | null
+          trial_days?: number
+          trial_end: string
+          trial_start?: string
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          tenant_id?: string | null
+          trial_days?: number
+          trial_end?: string
+          trial_start?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_trials_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollment_keys: {
         Row: {
           agent_id: string | null
