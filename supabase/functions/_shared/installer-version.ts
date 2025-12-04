@@ -7,10 +7,16 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.23-NETSH-FALLBACK';
-export const LAST_UPDATED = '2025-12-04T20:00:00Z'; // NETSH-FALLBACK: P0 fix para firewall em sistemas sem NetSecurity
+export const INSTALLER_VERSION = 'v3.10.24-SMART-UPDATE';
+export const LAST_UPDATED = '2025-12-04T23:00:00Z'; // SMART-UPDATE: Corrige bootstrap problem com deteccao inteligente de path
 
 export const CHANGES = [
+  '[v3.10.24-SMART-UPDATE] CRITICAL FIX: update_agent agora detecta automaticamente o path do script atual',
+  '[v3.10.24-SMART-UPDATE] CRITICAL FIX: Tenta multiplas estrategias: PSCommandPath, AgentName, glob pattern',
+  '[v3.10.24-SMART-UPDATE] CRITICAL FIX: Pula backup se script atual nao encontrado (nao falha)',
+  '[v3.10.24-SMART-UPDATE] CRITICAL FIX: Recria Scheduled Task com path correto garantindo futuras execucoes',
+  '[v3.10.24-SMART-UPDATE] NOVO: Job type reinstall_agent para reinstalacao completa remota',
+  '[v3.10.24-SMART-UPDATE] NOVO: reinstall_agent remove todas as tasks e scripts antigos, instala versao mais recente',
   '[v3.10.23-NETSH-FALLBACK] P0 FIX: Funcao Get-FirewallProfilesSafe com fallback netsh para sistemas antigos',
   '[v3.10.23-NETSH-FALLBACK] P0 FIX: Fix-Firewall agora usa netsh advfirewall se Set-NetFirewallProfile indisponivel',
   '[v3.10.23-NETSH-FALLBACK] P0 FIX: Vuln scan e network-info usam funcao com fallback',

@@ -54,6 +54,7 @@ export const CreateJobSchema = z.object({
   type: z.enum([
     'scan', 
     'update_agent', 
+    'reinstall_agent',
     'report', 
     'config',
     'software_inventory_collect',
