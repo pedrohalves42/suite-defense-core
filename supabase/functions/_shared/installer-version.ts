@@ -7,7 +7,7 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.20-NETWORK-INFO';
+export const INSTALLER_VERSION = 'v3.10.21-OPEN-PORTS-FIX';
 export const LAST_UPDATED = '2025-12-04T01:15:00Z'; // NETWORK-INFO: Adiciona handler collect_network_info ao agente
 
 export const CHANGES = [
