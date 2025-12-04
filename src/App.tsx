@@ -69,6 +69,7 @@ import WebActivity from "./pages/admin/WebActivity";
 import AgentTimeline from "./pages/admin/AgentTimeline";
 import AgentReleases from "./pages/admin/AgentReleases";
 import Reports from "./pages/admin/Reports";
+import CustomTrials from "./pages/admin/CustomTrials";
 
 const App = () => (
   <ErrorBoundary>
@@ -160,6 +161,7 @@ const App = () => (
                 <Route path="agent-troubleshooting" element={<AgentTroubleshooting />} />
                 <Route path="build-health" element={<BuildHealthDashboard />} />
                 <Route path="system-logs" element={<SystemLogs />} />
+                <Route path="custom-trials" element={<CustomTrials />} />
               </Route>
             </Route>
             
