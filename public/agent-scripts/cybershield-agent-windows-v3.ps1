@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.23-NETSH-FALLBACK
+    CyberShield Agent - Windows v3.10.24-SMART-UPDATE
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.23-NETSH-FALLBACK"
+    [string]$AgentVersion = "v3.10.24-SMART-UPDATE"
 )
 
 $ErrorActionPreference = "Stop"
@@ -1658,7 +1658,7 @@ function Execute-Job {
             }
             "update_agent" {
                 try {
-                    Write-Log "[INFO] Job 'update_agent' recebido" "INFO"
+                    Write-Log "[INFO] Job 'update_agent' recebido - SMART UPDATE v3.10.24" "INFO"
 
                     # Chama serve-agent-update
                     $updateResult = Invoke-SecureRequest `
@@ -1685,10 +1685,37 @@ function Execute-Job {
 
                     Write-Log "[UPDATE] Atualizando agente para versao $newVersion" "INFO"
 
-                    # CRITICAL FIX: Usa caminho com $AgentName dinamico (instalador salva como cybershield-agent-$AgentName.ps1)
-                    $currentScript = "C:\CyberShield\cybershield-agent-$($Global:AgentName).ps1"
-                    $backupScript  = $currentScript -replace '\.ps1$', "-backup-$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
-                    $tempScript    = Join-Path $env:TEMP "cybershield-agent-update-$newVersion.ps1"
+                    # SMART PATH DETECTION - Tenta multiplas estrategias para encontrar script atual
+                    $installDir = "C:\CyberShield"
+                    $targetScript = Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"
+                    
+                    # Detectar script atual em execucao
+                    $currentScript = $null
+                    $possiblePaths = @(
+                        $PSCommandPath,
+                        (Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"),
+                        (Join-Path $installDir "cybershield-agent-v3.ps1"),
+                        (Join-Path $installDir "cybershield-agent.ps1")
+                    )
+                    
+                    foreach ($path in $possiblePaths) {
+                        if ($path -and (Test-Path $path)) {
+                            $currentScript = $path
+                            Write-Log "[UPDATE] Script atual detectado: $currentScript" "INFO"
+                            break
+                        }
+                    }
+                    
+                    # Fallback: busca qualquer script cybershield-agent-*.ps1
+                    if (-not $currentScript) {
+                        $found = Get-ChildItem -Path $installDir -Filter "cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1
+                        if ($found) {
+                            $currentScript = $found.FullName
+                            Write-Log "[UPDATE] Script encontrado via glob: $currentScript" "INFO"
+                        }
+                    }
+                    
+                    $tempScript = Join-Path $env:TEMP "cybershield-agent-update-$newVersion.ps1"
 
                     # Salvar script novo (UTF8 sem BOM para compatibilidade SHA256)
                     [System.IO.File]::WriteAllText($tempScript, $scriptText, [System.Text.UTF8Encoding]::new($false))
@@ -1702,27 +1729,140 @@ function Execute-Job {
 
                     Write-Log "[SUCCESS] SHA256 validado: $actualHash" "SUCCESS"
 
-                    # Backup do script atual
-                    Copy-Item -Path $currentScript -Destination $backupScript -Force
-                    Write-Log "[BACKUP] Backup criado em: $backupScript" "INFO"
-
-                    # Trocar script
-                    Copy-Item -Path $tempScript -Destination $currentScript -Force
+                    # Backup do script atual (opcional - nao falha se nao encontrar)
+                    if ($currentScript -and (Test-Path $currentScript)) {
+                        $backupScript = $currentScript -replace '\.ps1$', "-backup-$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
+                        try {
+                            Copy-Item -Path $currentScript -Destination $backupScript -Force
+                            Write-Log "[BACKUP] Backup criado: $backupScript" "INFO"
+                        } catch {
+                            Write-Log "[WARN] Backup falhou, continuando: $($_.Exception.Message)" "WARN"
+                        }
+                    } else {
+                        Write-Log "[WARN] Script atual nao encontrado, pulando backup" "WARN"
+                    }
+                    
+                    # Instalar novo script no path padrao
+                    Copy-Item -Path $tempScript -Destination $targetScript -Force
                     Remove-Item $tempScript -Force
-
-                    Write-Log "[SUCCESS] Script atualizado para $newVersion" "SUCCESS"
-
-                    # Reiniciar task
-                    Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
-                    Start-Sleep -Seconds 2
-                    Start-ScheduledTask -TaskName "CyberShield Agent"
+                    Write-Log "[SUCCESS] Script instalado: $targetScript" "SUCCESS"
+                    
+                    # Recriar Scheduled Task com path correto
+                    $taskName = "CyberShieldAgent"
+                    $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+                    if (-not $existingTask) {
+                        # Tentar nome antigo
+                        $taskName = "CyberShield Agent"
+                        $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+                    }
+                    
+                    if ($existingTask) {
+                        Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+                        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
+                    }
+                    
+                    # Criar nova task com path correto
+                    $action = New-ScheduledTaskAction -Execute "powershell.exe" `
+                        -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$targetScript`""
+                    $trigger = New-ScheduledTaskTrigger -AtStartup
+                    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+                        -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+                    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
+                    
+                    Register-ScheduledTask -TaskName "CyberShieldAgent" -Action $action -Trigger $trigger `
+                        -Settings $settings -Principal $principal -Force | Out-Null
+                    
+                    Start-ScheduledTask -TaskName "CyberShieldAgent"
+                    
+                    Write-Log "[SUCCESS] Task recriada e iniciada com path correto" "SUCCESS"
 
                     $output = @{
-                        message     = "Agent updated successfully"
+                        message     = "Agent updated successfully with smart path detection"
                         newVersion  = $newVersion
+                        targetPath  = $targetScript
                         sha256      = $actualHash
                         restartedAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
+                    break
+                }
+                catch {
+                    throw $_.Exception.Message
+                }
+            }
+            "reinstall_agent" {
+                try {
+                    Write-Log "[REINSTALL] Iniciando reinstalacao completa..." "INFO"
+                    
+                    # Busca script mais recente do servidor
+                    $updateResult = Invoke-SecureRequest `
+                        -Path "/functions/v1/serve-agent-update" `
+                        -Method GET `
+                        -TimeoutSec 60
+                    
+                    if (-not $updateResult.Success) {
+                        throw "Falha ao buscar script: HTTP $($updateResult.StatusCode)"
+                    }
+                    
+                    $data = $updateResult.Body | ConvertFrom-Json
+                    $scriptText = $data.script_content
+                    $expectedHash = $data.sha256
+                    $newVersion = $data.version
+                    
+                    $installDir = "C:\CyberShield"
+                    $targetScript = Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"
+                    $tempScript = Join-Path $env:TEMP "cybershield-reinstall-$newVersion.ps1"
+                    
+                    # Salvar e validar SHA256
+                    [System.IO.File]::WriteAllText($tempScript, $scriptText, [System.Text.UTF8Encoding]::new($false))
+                    $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+                    
+                    if ($actualHash -ne $expectedHash.ToLower()) {
+                        Remove-Item $tempScript -Force
+                        throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
+                    }
+                    
+                    Write-Log "[REINSTALL] SHA256 validado: $actualHash" "SUCCESS"
+                    
+                    # Remover scheduled tasks antigas
+                    Get-ScheduledTask -TaskName "*CyberShield*" -ErrorAction SilentlyContinue | 
+                        ForEach-Object { 
+                            Stop-ScheduledTask -TaskName $_.TaskName -ErrorAction SilentlyContinue
+                            Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue
+                        }
+                    
+                    Write-Log "[REINSTALL] Tasks antigas removidas" "INFO"
+                    
+                    # Limpar scripts antigos (manter logs)
+                    Get-ChildItem -Path $installDir -Filter "*.ps1" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+                    
+                    # Instalar novo script
+                    Copy-Item -Path $tempScript -Destination $targetScript -Force
+                    Remove-Item $tempScript -Force
+                    
+                    Write-Log "[REINSTALL] Script instalado: $targetScript" "SUCCESS"
+                    
+                    # Criar nova scheduled task
+                    $action = New-ScheduledTaskAction -Execute "powershell.exe" `
+                        -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$targetScript`""
+                    $trigger = New-ScheduledTaskTrigger -AtStartup
+                    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+                        -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+                    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
+                    
+                    Register-ScheduledTask -TaskName "CyberShieldAgent" -Action $action -Trigger $trigger `
+                        -Settings $settings -Principal $principal -Force | Out-Null
+                    
+                    Start-ScheduledTask -TaskName "CyberShieldAgent"
+                    
+                    $output = @{
+                        message = "Agent reinstalled successfully"
+                        newVersion = $newVersion
+                        targetPath = $targetScript
+                        sha256 = $actualHash
+                        reinstalledAt = (Get-Date).ToUniversalTime().ToString("o")
+                    }
+                    
+                    Write-Log "[SUCCESS] Reinstalacao concluida, nova task iniciada" "SUCCESS"
                     break
                 }
                 catch {
