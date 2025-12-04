@@ -1545,6 +1545,125 @@ export type Database = {
           },
         ]
       }
+      failed_jobs_dlq: {
+        Row: {
+          agent_id: string | null
+          agent_name: string
+          created_at: string | null
+          error_count: number | null
+          error_message: string | null
+          first_failure_at: string | null
+          id: string
+          job_type: string
+          last_failure_at: string | null
+          max_retries: number | null
+          metadata: Json | null
+          next_retry_at: string | null
+          original_job_id: string
+          payload: Json | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          retry_count: number | null
+          status: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name: string
+          created_at?: string | null
+          error_count?: number | null
+          error_message?: string | null
+          first_failure_at?: string | null
+          id?: string
+          job_type: string
+          last_failure_at?: string | null
+          max_retries?: number | null
+          metadata?: Json | null
+          next_retry_at?: string | null
+          original_job_id: string
+          payload?: Json | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          retry_count?: number | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string
+          created_at?: string | null
+          error_count?: number | null
+          error_message?: string | null
+          first_failure_at?: string | null
+          id?: string
+          job_type?: string
+          last_failure_at?: string | null
+          max_retries?: number | null
+          metadata?: Json | null
+          next_retry_at?: string | null
+          original_job_id?: string
+          payload?: Json | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          retry_count?: number | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       failed_login_attempts: {
         Row: {
           created_at: string
@@ -3934,6 +4053,33 @@ export type Database = {
           },
         ]
       }
+      rate_limit_stats: {
+        Row: {
+          blocked_until: string | null
+          endpoint: string | null
+          identifier: string | null
+          is_blocked: boolean | null
+          request_count: number | null
+          window_start: string | null
+        }
+        Insert: {
+          blocked_until?: string | null
+          endpoint?: string | null
+          identifier?: string | null
+          is_blocked?: never
+          request_count?: number | null
+          window_start?: string | null
+        }
+        Update: {
+          blocked_until?: string | null
+          endpoint?: string | null
+          identifier?: string | null
+          is_blocked?: never
+          request_count?: number | null
+          window_start?: string | null
+        }
+        Relationships: []
+      }
       v_agent_health_summary: {
         Row: {
           agent_name: string | null
@@ -4316,6 +4462,16 @@ export type Database = {
           minutes_since_creation: number
           network_connectivity: boolean
           status: string
+        }[]
+      }
+      get_rate_limit_summary: {
+        Args: { p_hours_back?: number }
+        Returns: {
+          avg_requests_per_identifier: number
+          blocked_count: number
+          endpoint: string
+          total_requests: number
+          unique_identifiers: number
         }[]
       }
       has_role: {
