@@ -2,12 +2,12 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.19-VERSION-NORMALIZE
+ * Versao: v3.10.20-NETWORK-INFO
  */
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.19-VERSION-NORMALIZE
+    CyberShield Agent - Windows v3.10.20-NETWORK-INFO
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -45,7 +45,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.19-VERSION-NORMALIZE"
+    [string]\$AgentVersion = "v3.10.20-NETWORK-INFO"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -964,6 +964,220 @@ function Invoke-RestartServiceJob {
 }
 
 # ============================================
+#  COLLECT NETWORK INFO JOB
+# ============================================
+function Invoke-CollectNetworkInfoJob {
+    param(
+        \$Job
+    )
+
+    Write-Log "[NETWORK-INFO] Iniciando coleta de informacoes de rede..." "INFO"
+
+    try {
+        # 1. Windows Firewall Status
+        \$firewallDomain = \$null
+        \$firewallPrivate = \$null
+        \$firewallPublic = \$null
+        
+        try {
+            \$profiles = Get-NetFirewallProfile -ErrorAction Stop
+            foreach (\$p in \$profiles) {
+                switch (\$p.Name) {
+                    "Domain" { \$firewallDomain = \$p.Enabled }
+                    "Private" { \$firewallPrivate = \$p.Enabled }
+                    "Public" { \$firewallPublic = \$p.Enabled }
+                }
+            }
+            Write-Log "[NETWORK-INFO] Firewall: Domain=\$firewallDomain, Private=\$firewallPrivate, Public=\$firewallPublic" "DEBUG"
+        } catch {
+            Write-Log "[NETWORK-INFO] Erro ao obter firewall: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        # 2. Open Ports (listening)
+        \$openPorts = @()
+        try {
+            \$netstat = netstat -ano 2>\$null | Select-String "LISTENING"
+            \$openPorts = \$netstat | ForEach-Object {
+                \$parts = (\$_.Line -split '\\s+').Where({ \$_ -ne '' })
+                if (\$parts.Count -ge 5) {
+                    \$localAddress = \$parts[1]
+                    \$port = 0
+                    if (\$localAddress -match ':(\\d+)\$') {
+                        \$port = [int]\$Matches[1]
+                    }
+                    \$pid = \$parts[4]
+                    \$processName = try { (Get-Process -Id \$pid -ErrorAction SilentlyContinue).ProcessName } catch { "unknown" }
+                    @{
+                        port = \$port
+                        process = \$processName
+                        protocol = if (\$parts[0] -eq "TCP") { "TCP" } else { "UDP" }
+                    }
+                }
+            } | Where-Object { \$_.port -gt 0 } | Select-Object -First 50
+            Write-Log "[NETWORK-INFO] Portas abertas: \$(\$openPorts.Count)" "DEBUG"
+        } catch {
+            Write-Log "[NETWORK-INFO] Erro ao obter portas: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        # 3. Active Connections (established)
+        \$activeConnections = @()
+        try {
+            \$established = netstat -ano 2>\$null | Select-String "ESTABLISHED"
+            \$activeConnections = \$established | ForEach-Object {
+                \$parts = (\$_.Line -split '\\s+').Where({ \$_ -ne '' })
+                if (\$parts.Count -ge 5) {
+                    \$foreignAddress = \$parts[2]
+                    \$remoteAddr = ""
+                    \$remotePort = 0
+                    if (\$foreignAddress -match '^(.+):(\\d+)\$') {
+                        \$remoteAddr = \$Matches[1]
+                        \$remotePort = [int]\$Matches[2]
+                    }
+                    @{
+                        remote_address = \$remoteAddr
+                        remote_port = \$remotePort
+                        state = "ESTABLISHED"
+                    }
+                }
+            } | Where-Object { \$_.remote_port -gt 0 } | Select-Object -First 100
+            Write-Log "[NETWORK-INFO] Conexoes ativas: \$(\$activeConnections.Count)" "DEBUG"
+        } catch {
+            Write-Log "[NETWORK-INFO] Erro ao obter conexoes: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        # 4. Network Adapters
+        \$networkAdapters = @()
+        try {
+            \$adapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { \$_.Status -eq 'Up' }
+            foreach (\$adapter in \$adapters) {
+                \$ipConfig = Get-NetIPAddress -InterfaceIndex \$adapter.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1
+                \$networkAdapters += @{
+                    name = \$adapter.Name
+                    ip_address = if (\$ipConfig) { \$ipConfig.IPAddress } else { "" }
+                    mac_address = \$adapter.MacAddress
+                    status = \$adapter.Status
+                }
+            }
+            Write-Log "[NETWORK-INFO] Adaptadores: \$(\$networkAdapters.Count)" "DEBUG"
+        } catch {
+            Write-Log "[NETWORK-INFO] Erro ao obter adaptadores: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        # 5. DNS Servers
+        \$dnsServers = @()
+        try {
+            \$dnsConfig = Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | 
+                Where-Object { \$_.ServerAddresses } | 
+                Select-Object -ExpandProperty ServerAddresses -Unique
+            \$dnsServers = @(\$dnsConfig)
+            Write-Log "[NETWORK-INFO] DNS Servers: \$(\$dnsServers -join ', ')" "DEBUG"
+        } catch {
+            Write-Log "[NETWORK-INFO] Erro ao obter DNS: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        # 6. Gateway IP
+        \$gatewayIp = \$null
+        try {
+            \$gateway = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (\$gateway) {
+                \$gatewayIp = \$gateway.NextHop
+            }
+            Write-Log "[NETWORK-INFO] Gateway: \$gatewayIp" "DEBUG"
+        } catch {
+            Write-Log "[NETWORK-INFO] Erro ao obter gateway: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        # 7. Public IP
+        \$publicIp = \$null
+        try {
+            \$response = Invoke-RestMethod -Uri "https://api.ipify.org?format=json" -TimeoutSec 5 -ErrorAction SilentlyContinue
+            if (\$response.ip) {
+                \$publicIp = \$response.ip
+            }
+            Write-Log "[NETWORK-INFO] IP Publico: \$publicIp" "DEBUG"
+        } catch {
+            Write-Log "[NETWORK-INFO] Erro ao obter IP publico: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        # 8. DNS Test
+        \$dnsTestSuccess = \$null
+        try {
+            \$dnsTest = Resolve-DnsName -Name "google.com" -Type A -DnsOnly -ErrorAction SilentlyContinue
+            \$dnsTestSuccess = (\$null -ne \$dnsTest)
+            Write-Log "[NETWORK-INFO] DNS Test: \$dnsTestSuccess" "DEBUG"
+        } catch {
+            \$dnsTestSuccess = \$false
+        }
+
+        # 9. HTTPS Test
+        \$httpsTestSuccess = \$null
+        try {
+            \$httpsTest = Test-NetConnection -ComputerName "google.com" -Port 443 -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+            \$httpsTestSuccess = \$httpsTest.TcpTestSucceeded
+            Write-Log "[NETWORK-INFO] HTTPS Test: \$httpsTestSuccess" "DEBUG"
+        } catch {
+            \$httpsTestSuccess = \$false
+        }
+
+        # Monta payload
+        \$payload = @{
+            firewall_domain = \$firewallDomain
+            firewall_private = \$firewallPrivate
+            firewall_public = \$firewallPublic
+            open_ports = @(\$openPorts)
+            active_connections = @(\$activeConnections)
+            network_adapters = @(\$networkAdapters)
+            dns_servers = @(\$dnsServers)
+            gateway_ip = \$gatewayIp
+            public_ip = \$publicIp
+            dns_test_success = \$dnsTestSuccess
+            https_test_success = \$httpsTestSuccess
+        }
+
+        # Envia para backend
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/submit-network-info" \`
+            -Method "POST" \`
+            -Body \$payload \`
+            -TimeoutSec 30
+
+        if (-not \$result.Success) {
+            throw "Falha ao enviar info de rede (HTTP \$(\$result.StatusCode))"
+        }
+
+        Write-Log "[NETWORK-INFO] Informacoes de rede enviadas com sucesso" "SUCCESS"
+
+        return @{
+            success = \$true
+            output  = @{
+                message = "Informacoes de rede coletadas e enviadas"
+                firewall = @{
+                    domain = \$firewallDomain
+                    private = \$firewallPrivate
+                    public = \$firewallPublic
+                }
+                open_ports_count = \$openPorts.Count
+                connections_count = \$activeConnections.Count
+                adapters_count = \$networkAdapters.Count
+                dns_servers = \$dnsServers
+                gateway = \$gatewayIp
+                public_ip = \$publicIp
+                dns_test = \$dnsTestSuccess
+                https_test = \$httpsTestSuccess
+            }
+        }
+    }
+    catch {
+        \$errorMsg = "Erro em Invoke-CollectNetworkInfoJob: \$(\$_.Exception.Message)"
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            error   = \$errorMsg
+        }
+    }
+}
+
+# ============================================
 #  POST INSTALLATION
 # ============================================
 function Send-PostInstallationEvent {
@@ -1461,6 +1675,14 @@ function Execute-Job {
             }
             "restart_service" {
                 \$result = Invoke-RestartServiceJob -Job \$job
+                if (\$result.success) {
+                    \$output = \$result.output
+                } else {
+                    throw \$result.error
+                }
+            }
+            "collect_network_info" {
+                \$result = Invoke-CollectNetworkInfoJob -Job \$job
                 if (\$result.success) {
                     \$output = \$result.output
                 } else {
