@@ -7,6 +7,27 @@ import { logger } from '../_shared/logger.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// Função para sanitizar strings com caracteres Unicode problemáticos
+function sanitizeString(input: string | null | undefined): string | null {
+  if (!input) return null;
+  try {
+    let s = String(input);
+    // Remove C0 control characters (except newline/tab)
+    s = s.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/g, '');
+    // Remove invalid unicode escape sequences like \u12 (less than 4 hex digits)
+    s = s.replace(/\\u(?![0-9a-fA-F]{4})/g, '');
+    // Remove lone backslashes before 'u'
+    s = s.replace(/\\(?=u[^0-9a-fA-F])/g, '');
+    // Normalize to NFC to avoid odd combined chars
+    try { s = s.normalize('NFC'); } catch { /* ignore */ }
+    // Trim and limit length
+    s = s.trim().slice(0, 1000);
+    return s.length > 0 ? s : null;
+  } catch {
+    return null;
+  }
+}
+
 interface SoftwareItem {
   name: string;
   version?: string | null;
@@ -170,13 +191,14 @@ Deno.serve(async (req) => {
     }
 
     // Inserir ou atualizar itens (UPSERT para lidar com duplicatas)
+    // Aplicar sanitização em cada campo string para evitar erros de Unicode
     const itemsToInsert = uniqueItems.map(item => ({
       tenant_id: agent.tenant_id,
       agent_id: payload.agent_id,
-      name: item.name,
-      version: item.version ?? null,
-      vendor: item.vendor ?? null,
-      install_location: item.install_location ?? null,
+      name: sanitizeString(item.name) || 'Unknown',
+      version: sanitizeString(item.version),
+      vendor: sanitizeString(item.vendor),
+      install_location: sanitizeString(item.install_location),
       risk_level: item.risk_level,
     }));
 
