@@ -326,3 +326,10 @@ verify_jwt = false
 # === User Management Functions ===
 [functions.change-password]
 verify_jwt = true
+
+# === Observability Functions ===
+[functions.get-rate-limit-stats]
+verify_jwt = true
+
+[functions.process-dlq-retries]
+verify_jwt = true
