@@ -2,12 +2,12 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.20-NETWORK-INFO
+ * Versao: v3.10.21-OPEN-PORTS-FIX
  */
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.20-NETWORK-INFO
+    CyberShield Agent - Windows v3.10.21-OPEN-PORTS-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -45,7 +45,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.20-NETWORK-INFO"
+    [string]\$AgentVersion = "v3.10.21-OPEN-PORTS-FIX"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -993,27 +993,41 @@ function Invoke-CollectNetworkInfoJob {
             Write-Log "[NETWORK-INFO] Erro ao obter firewall: \$(\$_.Exception.Message)" "WARN"
         }
 
-        # 2. Open Ports (listening)
+        # 2. Open Ports (listening) - Using Get-NetTCPConnection/Get-NetUDPEndpoint (more reliable than netstat)
         \$openPorts = @()
         try {
-            \$netstat = netstat -ano 2>\$null | Select-String "LISTENING"
-            \$openPorts = \$netstat | ForEach-Object {
-                \$parts = (\$_.Line -split '\\s+').Where({ \$_ -ne '' })
-                if (\$parts.Count -ge 5) {
-                    \$localAddress = \$parts[1]
-                    \$port = 0
-                    if (\$localAddress -match ':(\\d+)\$') {
-                        \$port = [int]\$Matches[1]
-                    }
-                    \$pid = \$parts[4]
-                    \$processName = try { (Get-Process -Id \$pid -ErrorAction SilentlyContinue).ProcessName } catch { "unknown" }
-                    @{
-                        port = \$port
-                        process = \$processName
-                        protocol = if (\$parts[0] -eq "TCP") { "TCP" } else { "UDP" }
-                    }
+            # TCP Listening ports
+            \$tcpListening = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue
+            foreach (\$conn in \$tcpListening) {
+                \$processName = "unknown"
+                try { 
+                    \$proc = Get-Process -Id \$conn.OwningProcess -ErrorAction SilentlyContinue
+                    if (\$proc) { \$processName = \$proc.ProcessName }
+                } catch { }
+                \$openPorts += @{
+                    port = \$conn.LocalPort
+                    process = \$processName
+                    protocol = "TCP"
                 }
-            } | Where-Object { \$_.port -gt 0 } | Select-Object -First 50
+            }
+            
+            # UDP Endpoints
+            \$udpEndpoints = Get-NetUDPEndpoint -ErrorAction SilentlyContinue
+            foreach (\$endpoint in \$udpEndpoints) {
+                \$processName = "unknown"
+                try { 
+                    \$proc = Get-Process -Id \$endpoint.OwningProcess -ErrorAction SilentlyContinue
+                    if (\$proc) { \$processName = \$proc.ProcessName }
+                } catch { }
+                \$openPorts += @{
+                    port = \$endpoint.LocalPort
+                    process = \$processName
+                    protocol = "UDP"
+                }
+            }
+            
+            # Deduplicate and limit
+            \$openPorts = \$openPorts | Sort-Object { \$_.port } -Unique | Select-Object -First 100
             Write-Log "[NETWORK-INFO] Portas abertas: \$(\$openPorts.Count)" "DEBUG"
         } catch {
             Write-Log "[NETWORK-INFO] Erro ao obter portas: \$(\$_.Exception.Message)" "WARN"

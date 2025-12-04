@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.20-NETWORK-INFO';
+const CURRENT_VERSION = 'v3.10.21-OPEN-PORTS-FIX';
 
 // SHA256 will be calculated automatically WITH BOM by useAgentReleases hook
 // No need for manual SHA256 anymore - the hook handles BOM compatibility automatically
@@ -94,7 +94,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'NETWORK-INFO: Novo job collect_network_info para diagnóstico de rede. Coleta: status do firewall (Domain/Private/Public), portas abertas, conexões ativas, adaptadores de rede, DNS servers, gateway, IP público, testes de conectividade DNS/HTTPS.',
+        release_notes: 'OPEN-PORTS-FIX: Corrige coleta de portas abertas usando Get-NetTCPConnection/Get-NetUDPEndpoint (mais confiável que netstat). Coleta TCP e UDP listening ports com nome do processo.',
         channel: 'stable'
       });
 
@@ -148,7 +148,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'NETWORK-INFO: Novo job collect_network_info para diagnóstico de rede. Coleta: status do firewall (Domain/Private/Public), portas abertas, conexões ativas, adaptadores de rede, DNS servers, gateway, IP público, testes de conectividade DNS/HTTPS.',
+        release_notes: 'OPEN-PORTS-FIX: Corrige coleta de portas abertas usando Get-NetTCPConnection/Get-NetUDPEndpoint (mais confiável que netstat). Coleta TCP e UDP listening ports com nome do processo.',
         channel: 'stable'
       });
 
