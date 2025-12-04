@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
 
     const nowIso = new Date().toISOString();
 
-    // Inserir itens
+    // Preparar itens para inserção
     const itemsToInsert = payload.items.map(item => ({
       tenant_id: agent.tenant_id,
       agent_id: payload.agent_id,
@@ -136,9 +136,24 @@ Deno.serve(async (req) => {
       visited_at: item.visited_at || nowIso,
     }));
 
+    // DEDUPLICAÇÃO SERVER-SIDE (defesa em profundidade)
+    // Remove duplicatas por domain+source para evitar erro de UPSERT
+    const uniqueItemsMap = new Map<string, typeof itemsToInsert[0]>();
+    for (const item of itemsToInsert) {
+      const key = `${item.domain}:${item.source}`;
+      if (!uniqueItemsMap.has(key)) {
+        uniqueItemsMap.set(key, item);
+      }
+    }
+    const dedupedItems = Array.from(uniqueItemsMap.values());
+
+    if (dedupedItems.length < itemsToInsert.length) {
+      logger.info(`Deduped ${itemsToInsert.length} → ${dedupedItems.length} items (removed ${itemsToInsert.length - dedupedItems.length} duplicates)`);
+    }
+
     const { error: insertError } = await supabase
       .from('agent_web_activity')
-      .insert(itemsToInsert);
+      .insert(dedupedItems);
 
     if (insertError) {
       logger.error('Failed to insert web activity', insertError);
