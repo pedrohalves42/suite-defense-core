@@ -2,7 +2,7 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.21-OPEN-PORTS-FIX
+ * Versao: v3.10.23-NETSH-FALLBACK
  */
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `

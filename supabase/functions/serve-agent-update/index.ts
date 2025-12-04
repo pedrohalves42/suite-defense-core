@@ -2,6 +2,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
+import { AGENT_SCRIPT_WINDOWS_CONTENT } from '../_shared/agent-script-windows-content.ts';
+import { INSTALLER_VERSION } from '../_shared/installer-version.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -138,18 +140,43 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Verificar se script_content é placeholder (< 1000 bytes = placeholder)
+    let finalScriptContent = release.script_content;
+    let finalSha256 = release.sha256;
+    
+    if (!release.script_content || release.script_content.length < 1000) {
+      logger.warn('[serve-agent-update] Script no banco é placeholder, usando embedded', { 
+        requestId, 
+        dbScriptSize: release.script_content?.length || 0,
+        embeddedScriptSize: AGENT_SCRIPT_WINDOWS_CONTENT.length
+      });
+      
+      // Usar script embedded como fallback
+      if (platform === 'windows' && AGENT_SCRIPT_WINDOWS_CONTENT) {
+        finalScriptContent = AGENT_SCRIPT_WINDOWS_CONTENT;
+        
+        // Calcular SHA256 do script embedded
+        const encoder = new TextEncoder();
+        const data = encoder.encode(AGENT_SCRIPT_WINDOWS_CONTENT);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        finalSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+    }
+
     logger.info('[serve-agent-update] Retornando atualizacao', { 
       requestId, 
       agentName: agent.agent_name,
       fromVersion: agent.agent_version,
-      toVersion: release.version 
+      toVersion: release.version,
+      scriptSize: finalScriptContent.length
     });
 
     return new Response(
       JSON.stringify({
         version: release.version,
-        script_content: release.script_content,
-        sha256: release.sha256,
+        script_content: finalScriptContent,
+        sha256: finalSha256,
         release_notes: release.release_notes,
         platform: platform,
         current_version: agent.agent_version
