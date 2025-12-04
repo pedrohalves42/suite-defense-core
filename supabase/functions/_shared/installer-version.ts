@@ -7,10 +7,17 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.19-VERSION-NORMALIZE';
-export const LAST_UPDATED = '2025-12-03T21:00:00Z'; // VERSION-NORMALIZE: Normaliza comparacao de versoes no auto-update
+export const INSTALLER_VERSION = 'v3.10.20-NETWORK-INFO';
+export const LAST_UPDATED = '2025-12-04T01:15:00Z'; // NETWORK-INFO: Adiciona handler collect_network_info ao agente
 
 export const CHANGES = [
+  '[v3.10.20-NETWORK-INFO] FEATURE: Novo job type collect_network_info para coleta de diagnostico de rede',
+  '[v3.10.20-NETWORK-INFO] FEATURE: Coleta status do Windows Firewall (Domain/Private/Public)',
+  '[v3.10.20-NETWORK-INFO] FEATURE: Coleta portas abertas (listening) com processo associado',
+  '[v3.10.20-NETWORK-INFO] FEATURE: Coleta conexoes ativas (established) com endereco remoto',
+  '[v3.10.20-NETWORK-INFO] FEATURE: Coleta adaptadores de rede com IP e MAC',
+  '[v3.10.20-NETWORK-INFO] FEATURE: Coleta DNS servers, gateway IP e IP publico',
+  '[v3.10.20-NETWORK-INFO] FEATURE: Testes de conectividade DNS e HTTPS automaticos',
   '[v3.10.19-VERSION-NORMALIZE] CRITICAL FIX: Edge Functions agora normalizam versoes removendo prefixo "v" antes de comparar',
   '[v3.10.19-VERSION-NORMALIZE] CRITICAL FIX: Agente agora reporta versao com prefixo "v" (v3.10.19 ao inves de 3.10.19)',
   '[v3.10.19-VERSION-NORMALIZE] CRITICAL FIX: Resolve loop infinito de auto-update causado por mismatch v3.x vs 3.x',
