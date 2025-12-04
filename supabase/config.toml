@@ -322,3 +322,7 @@ verify_jwt = true
 
 [functions.get-diagnostic-script]
 verify_jwt = false
+
+# === User Management Functions ===
+[functions.change-password]
+verify_jwt = true
