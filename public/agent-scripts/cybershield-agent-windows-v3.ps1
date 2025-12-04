@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.22-WEB-ACTIVITY-DEDUP
+    CyberShield Agent - Windows v3.10.23-NETSH-FALLBACK
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.22-WEB-ACTIVITY-DEDUP"
+    [string]$AgentVersion = "v3.10.23-NETSH-FALLBACK"
 )
 
 $ErrorActionPreference = "Stop"
@@ -152,6 +152,76 @@ function Convert-HexToBytes {
         Write-Log "Falha ao converter HMAC_SECRET de HEX para bytes: $($_.Exception.Message)" "ERROR"
         throw "HMAC_SECRET conversion failed: $($_.Exception.Message)"
     }
+}
+
+# ============================================
+#  P0 FIX: FIREWALL PROFILES COM FALLBACK NETSH
+#  Resolve FUNC-01: Get-NetFirewallProfile falta em alguns Windows
+# ============================================
+function Get-FirewallProfilesSafe {
+    <#
+    .SYNOPSIS
+    Obtem status dos perfis de firewall com fallback para netsh em sistemas mais antigos.
+    
+    .DESCRIPTION
+    Tenta usar Get-NetFirewallProfile (modulo NetSecurity) primeiro.
+    Se nao disponivel, faz fallback para netsh advfirewall.
+    #>
+    
+    $profiles = @()
+    
+    # Tentativa 1: Get-NetFirewallProfile (modulo NetSecurity)
+    try {
+        if (Get-Command Get-NetFirewallProfile -ErrorAction SilentlyContinue) {
+            $fwProfiles = Get-NetFirewallProfile -ErrorAction Stop
+            foreach ($p in $fwProfiles) {
+                $profiles += [PSCustomObject]@{
+                    Name    = $p.Name
+                    Enabled = $p.Enabled
+                }
+            }
+            Write-Log "[FIREWALL] Obtido via Get-NetFirewallProfile: $($profiles.Count) perfis" "DEBUG"
+            return $profiles
+        }
+    } catch {
+        Write-Log "[FIREWALL] Get-NetFirewallProfile falhou: $($_.Exception.Message), tentando netsh..." "WARN"
+    }
+    
+    # Tentativa 2: Fallback para netsh advfirewall
+    try {
+        $netshOutput = netsh advfirewall show allprofiles state 2>&1
+        
+        if ($LASTEXITCODE -eq 0 -and $netshOutput) {
+            $outputText = $netshOutput | Out-String
+            
+            # Parsear output do netsh para cada perfil
+            foreach ($profileName in @("Domain", "Private", "Public")) {
+                $enabled = $false
+                
+                # Procurar padrao "Profile Settings:" ou "<ProfileName> Profile Settings:"
+                # seguido de "State" e "ON" ou "OFF"
+                $pattern = "(?s)$profileName.*?State\s+(ON|OFF)"
+                if ($outputText -match $pattern) {
+                    $enabled = ($Matches[1] -eq "ON")
+                }
+                
+                $profiles += [PSCustomObject]@{
+                    Name    = $profileName
+                    Enabled = $enabled
+                }
+            }
+            Write-Log "[FIREWALL] Obtido via netsh: $($profiles.Count) perfis" "DEBUG"
+        }
+    } catch {
+        Write-Log "[FIREWALL] netsh fallback falhou: $($_.Exception.Message)" "WARN"
+    }
+    
+    # Se nenhum metodo funcionou, retornar array vazio
+    if ($profiles.Count -eq 0) {
+        Write-Log "[FIREWALL] Nao foi possivel obter perfis de firewall por nenhum metodo" "WARN"
+    }
+    
+    return $profiles
 }
 
 function Get-HmacSignature {
@@ -458,8 +528,8 @@ function Invoke-LightVulnScanJob {
     $findings = @()
 
     try {
-        # Check 1: Firewall
-        $firewallProfiles = Get-NetFirewallProfile -ErrorAction SilentlyContinue
+        # Check 1: Firewall (usando funcao com fallback netsh)
+        $firewallProfiles = Get-FirewallProfilesSafe
         if ($firewallProfiles) {
             foreach ($p in $firewallProfiles) {
                 if (-not $p.Enabled) {
@@ -865,14 +935,33 @@ function Invoke-FixFirewallJob {
     Write-Log "[FIX-FIREWALL] Iniciando auto-remediacao de firewall..." "INFO"
 
     try {
-        $profiles = Get-NetFirewallProfile -ErrorAction Stop
+        # Usar funcao com fallback para detectar status
+        $profiles = Get-FirewallProfilesSafe
+        
+        if ($profiles.Count -eq 0) {
+            throw "Nao foi possivel obter status dos perfis de firewall"
+        }
         
         $fixed = @()
         foreach ($p in $profiles) {
             if (-not $p.Enabled) {
                 Write-Log "[FIX-FIREWALL] Ativando firewall no perfil $($p.Name)" "INFO"
-                Set-NetFirewallProfile -Name $p.Name -Enabled True -ErrorAction Stop
-                $fixed += $p.Name
+                
+                # Tentar Set-NetFirewallProfile primeiro, fallback para netsh
+                try {
+                    if (Get-Command Set-NetFirewallProfile -ErrorAction SilentlyContinue) {
+                        Set-NetFirewallProfile -Name $p.Name -Enabled True -ErrorAction Stop
+                    } else {
+                        # Fallback: netsh advfirewall
+                        $result = netsh advfirewall set $($p.Name.ToLower())profile state on 2>&1
+                        if ($LASTEXITCODE -ne 0) {
+                            throw "netsh falhou: $result"
+                        }
+                    }
+                    $fixed += $p.Name
+                } catch {
+                    Write-Log "[FIX-FIREWALL] Falha ao ativar perfil $($p.Name): $($_.Exception.Message)" "ERROR"
+                }
             }
         }
 
@@ -972,7 +1061,8 @@ function Invoke-CollectNetworkInfoJob {
         $firewallPublic = $null
         
         try {
-            $profiles = Get-NetFirewallProfile -ErrorAction Stop
+            # Usar funcao com fallback netsh
+            $profiles = Get-FirewallProfilesSafe
             foreach ($p in $profiles) {
                 switch ($p.Name) {
                     "Domain" { $firewallDomain = $p.Enabled }

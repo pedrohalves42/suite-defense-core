@@ -69,15 +69,22 @@ export default function Members() {
     enabled: !!tenant?.id,
   });
 
-  // Remover membro
+  // P0 FIX: Remover membro via Edge Function (nao DELETE direto)
+  // Edge Function valida: nao remover ultimo admin, nao remover a si mesmo, audit log
   const removeMember = useMutation({
     mutationFn: async (memberId: string) => {
-      const { error } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('id', memberId);
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('remove-member', {
+        body: { member_id: memberId },
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+      });
 
       if (error) throw error;
+      if (!data?.success) throw new Error(data?.message || 'Erro ao remover membro');
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant-members', tenant?.id] });
@@ -87,7 +94,7 @@ export default function Members() {
       });
       setMemberToRemove(null);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro ao remover membro',
         description: error.message,
