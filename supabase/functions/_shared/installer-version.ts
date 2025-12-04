@@ -7,10 +7,13 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.22-WEB-ACTIVITY-DEDUP';
-export const LAST_UPDATED = '2025-12-04T19:30:00Z'; // WEB-ACTIVITY-DEDUP: Corrige bug de duplicatas na coleta
+export const INSTALLER_VERSION = 'v3.10.23-NETSH-FALLBACK';
+export const LAST_UPDATED = '2025-12-04T20:00:00Z'; // NETSH-FALLBACK: P0 fix para firewall em sistemas sem NetSecurity
 
 export const CHANGES = [
+  '[v3.10.23-NETSH-FALLBACK] P0 FIX: Funcao Get-FirewallProfilesSafe com fallback netsh para sistemas antigos',
+  '[v3.10.23-NETSH-FALLBACK] P0 FIX: Fix-Firewall agora usa netsh advfirewall se Set-NetFirewallProfile indisponivel',
+  '[v3.10.23-NETSH-FALLBACK] P0 FIX: Vuln scan e network-info usam funcao com fallback',
   '[v3.10.22-WEB-ACTIVITY-DEDUP] CRITICAL FIX: Web activity agora envia $uniqueItems ao inves de $items (linha 827)',
   '[v3.10.22-WEB-ACTIVITY-DEDUP] CRITICAL FIX: Elimina duplicatas enviadas para submit-web-activity',
   '[v3.10.22-WEB-ACTIVITY-DEDUP] DEFESA: Deduplicacao server-side no Edge Function como fallback',

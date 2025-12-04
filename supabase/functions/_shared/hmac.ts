@@ -101,9 +101,15 @@ export async function verifyHmacSignature(
   try {
     keyData = hexToBytes(hmacSecret);
   } catch (hexError) {
-    // Fallback para UTF-8 (retrocompatibilidade com agentes antigos)
-    console.warn(`[HMAC] HEX parsing failed, trying UTF-8 fallback: ${hexError}`);
-    keyData = encoder.encode(hmacSecret);
+    // P0 FIX: Remover fallback UTF-8 - secrets DEVEM ser HEX valido (64 chars)
+    // Fallback permitia bypass de autenticacao com secrets malformados
+    console.error(`[HMAC] CRITICAL: Invalid HMAC secret format for agent ${agentName}. Must be 64 hex chars.`, hexError);
+    return {
+      valid: false,
+      errorCode: 'AUTH_INVALID_SECRET_FORMAT',
+      errorMessage: 'HMAC secret invalido. Agente deve ser reinstalado com secret HEX valido.',
+      transient: false,
+    };
   }
   
   const messageData = encoder.encode(payload);

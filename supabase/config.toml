@@ -117,6 +117,9 @@ verify_jwt = true
 [functions.update-member-role]
 verify_jwt = true
 
+[functions.remove-member]
+verify_jwt = true
+
 [functions.generate-enrollment-key]
 verify_jwt = true
 
