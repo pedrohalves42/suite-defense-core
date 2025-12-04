@@ -58,9 +58,9 @@ Deno.serve(async (req) => {
       throw new Error('Forbidden');
     }
 
-    if (userRole.role !== 'admin' && userRole.role !== 'operator') {
+    if (userRole.role !== 'admin' && userRole.role !== 'operator' && userRole.role !== 'super_admin') {
       console.warn(`[${requestId}] User ${user.id} does not have permission, role:`, userRole.role);
-      throw new Error('Forbidden: only admins and operators can generate keys');
+      throw new Error('Forbidden: only admins, operators, and super admins can generate keys');
     }
 
     console.log(`[${requestId}] User ${user.id} authorized with role:`, userRole.role);
