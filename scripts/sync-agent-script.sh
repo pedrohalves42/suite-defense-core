@@ -9,18 +9,27 @@ if [ ! -f "$SOURCE" ]; then
   exit 1
 fi
 
-echo "[SYNC] Sincronizando $SOURCE -> $TARGET"
+# Extrair versão dinamicamente do arquivo fonte
+VERSION=$(grep '\$AgentVersion.*=' "$SOURCE" | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
 
-# Cabecalho TS fixo
-cat > "$TARGET" <<'EOF'
+if [ -z "$VERSION" ]; then
+  echo "[ERROR] Não foi possível extrair a versão do arquivo fonte"
+  exit 1
+fi
+
+echo "[SYNC] Sincronizando $SOURCE -> $TARGET"
+echo "[INFO] Versão detectada: $VERSION"
+
+# Cabecalho TS com versão dinâmica
+cat > "$TARGET" <<EOF
 /**
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.21-OPEN-PORTS-FIX
+ * Versao: $VERSION
  */
 
-export const AGENT_SCRIPT_WINDOWS_CONTENT = `
+export const AGENT_SCRIPT_WINDOWS_CONTENT = \`
 EOF
 
 # Corpo do script PowerShell com escaping para template literal TS:
@@ -42,6 +51,6 @@ export function getAgentScriptWindows(): string {
 }
 EOF
 
-echo "[SUCCESS] Sync concluído para v3.10.21-OPEN-PORTS-FIX"
+echo "[SUCCESS] Sync concluído para $VERSION"
 echo "[INFO] Tamanho: $(wc -c < "$SOURCE") bytes"
 echo "[INFO] Linhas: $(wc -l < "$SOURCE")"
