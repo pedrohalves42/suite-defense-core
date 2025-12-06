@@ -9,6 +9,7 @@ import { ptBR } from "date-fns/locale";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useTenant } from "@/hooks/useTenant";
 import { logger } from "@/lib/logger";
+import { getJobTypeLabel, getJobStatusLabel } from "@/lib/job-labels";
 
 interface Agent {
   id: string;

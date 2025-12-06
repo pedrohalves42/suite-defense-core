@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
+import { getJobTypeLabel, getJobStatusLabel } from '@/lib/job-labels';
 
 interface RecentJobsActivityProps {
   tenantId?: string;
@@ -42,7 +43,7 @@ export function RecentJobsActivity({ tenantId }: RecentJobsActivityProps) {
         <div key={job.id} className="flex justify-between items-start text-sm border-b pb-2">
           <div className="flex-1">
             <div className="font-medium flex items-center gap-2">
-              <span>{job.type} ? {job.agent_name}</span>
+              <span>{getJobTypeLabel(job.type)} → {job.agent_name}</span>
               {job.is_v3 && (
                 <Badge variant="outline" className="text-xs px-1 py-0">v3</Badge>
               )}
@@ -60,7 +61,7 @@ export function RecentJobsActivity({ tenantId }: RecentJobsActivityProps) {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={statusColors[job.normalized_status as keyof typeof statusColors] || 'outline'}>
-              {job.normalized_status}
+              {getJobStatusLabel(job.normalized_status)}
             </Badge>
             <span className="text-xs text-muted-foreground">
               {format(new Date(job.created_at), "dd/MM HH:mm", { locale: ptBR })}

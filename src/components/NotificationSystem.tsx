@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ShieldAlert, FileWarning, AlertTriangle, Server } from 'lucide-react';
 import { useTenant } from '@/hooks/useTenant';
+import { getJobTypeLabelNoEmoji } from '@/lib/job-labels';
 
 interface QuarantinedFile {
   id: string;
@@ -144,7 +145,7 @@ export const NotificationSystem = () => {
             toast.error(
               `Job Falhou`,
               {
-                description: `${job.type} no agente ${job.agent_name}`,
+                description: `${getJobTypeLabelNoEmoji(job.type)} no agente ${job.agent_name}`,
                 icon: <AlertTriangle className="h-5 w-5" />,
                 duration: 6000
               }

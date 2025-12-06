@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { useMutation } from "@tanstack/react-query";
+import { getJobTypeLabel, getJobStatusLabel, JOB_TYPE_LABELS } from "@/lib/job-labels";
 
 interface Agent {
   id: string;
@@ -274,7 +275,7 @@ const JobCreator = () => {
     return (
       <Badge variant="outline" className={`${variant.color} gap-1`}>
         <Icon className="h-3 w-3" />
-        {status}
+        {getJobStatusLabel(status)}
       </Badge>
     );
   };
@@ -409,15 +410,11 @@ const JobCreator = () => {
                         <SelectValue placeholder="Selecione o tipo" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="scan">Scan (Verificacao de arquivo)</SelectItem>
-                        <SelectItem value="update">Update (Atualizacao do agente)</SelectItem>
-                        <SelectItem value="report">Report (Gerar relatorio)</SelectItem>
-                        <SelectItem value="config">Config (Alterar configuracao)</SelectItem>
-                        <SelectItem value="software_inventory_collect">Software Inventory (Coletar inventario)</SelectItem>
-                        <SelectItem value="collect_antivirus_status">Antivirus Status (Coletar status AV)</SelectItem>
-                        <SelectItem value="collect_web_activity">Web Activity (Coletar atividade web)</SelectItem>
-                        <SelectItem value="light_vuln_scan">Vulnerability Scan (Verificar vulnerabilidades)</SelectItem>
-                        <SelectItem value="update_agent">Agent Update (Atualizar agente v3)</SelectItem>
+                        {Object.entries(JOB_TYPE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>
+                            {label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
