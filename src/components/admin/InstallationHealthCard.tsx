@@ -112,20 +112,20 @@ export function InstallationHealthCard() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-              Installation Health
+              Status das Instalacoes
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
                     <AlertCircle className="h-4 w-4 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="text-xs">Taxa de sucesso de post_installation por plataforma (ultimas 24h)</p>
+                    <p className="text-xs">Taxa de sucesso de instalacoes por sistema operacional (ultimos 7 dias)</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              Ultimas 24 horas ? Atualizado {lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              Ultimos 7 dias • Atualizado {lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>
           
@@ -140,7 +140,7 @@ export function InstallationHealthCard() {
           <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-xs text-destructive">
             <div className="flex items-center gap-2">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>Erro ao carregar metricas: {error}</span>
+              <span>Erro ao carregar dados: {error}</span>
             </div>
           </div>
         )}
@@ -149,15 +149,16 @@ export function InstallationHealthCard() {
         {!loading && totalEvents > 0 && (
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-foreground">Taxa Global</span>
+              <span className="text-sm font-medium text-foreground">Taxa de Sucesso</span>
               <Badge variant="outline" className="text-xs">
-                {totalEvents} eventos
+                {totalEvents} instalacoes
               </Badge>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-foreground">{globalSuccessRate}%</span>
               <Badge className={getStatus(globalSuccessRate).color}>
-                {getStatus(globalSuccessRate).label}
+                {getStatus(globalSuccessRate).label === 'Healthy' ? 'Saudavel' : 
+                 getStatus(globalSuccessRate).label === 'Warning' ? 'Atencao' : 'Critico'}
               </Badge>
             </div>
           </div>
@@ -167,20 +168,20 @@ export function InstallationHealthCard() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <OsCard
             label="macOS"
-            emoji="?"
+            emoji="🍎"
             row={macosRow}
             highlight
             getStatus={getStatus}
           />
           <OsCard
             label="Windows"
-            emoji="?"
+            emoji="🪟"
             row={windowsRow}
             getStatus={getStatus}
           />
           <OsCard
             label="Linux"
-            emoji="?"
+            emoji="🐧"
             row={linuxRow}
             getStatus={getStatus}
           />
@@ -188,7 +189,7 @@ export function InstallationHealthCard() {
 
         {!loading && totalEvents === 0 && !error && (
           <div className="text-center py-6 text-muted-foreground text-sm">
-            Nenhuma instalacao registrada nas ultimas 24 horas
+            Nenhuma instalacao registrada nos ultimos 7 dias
           </div>
         )}
       </CardContent>
@@ -210,6 +211,8 @@ function OsCard({ label, emoji, row, highlight, getStatus }: OsCardProps) {
   const successful = row?.successful_events ?? 0;
   const failed = row?.failed_events ?? 0;
   const status = getStatus(successRate);
+  const statusLabel = status.label === 'Healthy' ? 'Saudavel' : 
+                      status.label === 'Warning' ? 'Atencao' : 'Critico';
 
   const hasData = total > 0;
 
@@ -231,7 +234,7 @@ function OsCard({ label, emoji, row, highlight, getStatus }: OsCardProps) {
         </div>
         {hasData && (
           <Badge className={`${status.color} text-white text-[10px] px-2 py-0.5`}>
-            {status.label}
+            {statusLabel}
           </Badge>
         )}
       </div>
@@ -252,7 +255,7 @@ function OsCard({ label, emoji, row, highlight, getStatus }: OsCardProps) {
                   <span className="cursor-help">Total: {total}</span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-xs">[OK]  {successful} sucesso ? [ERROR]  {failed} falhas</p>
+                  <p className="text-xs">✅ {successful} sucesso • ❌ {failed} falhas</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

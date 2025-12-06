@@ -54,12 +54,14 @@ export default function AgentMonitoringAdvanced() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [osFilter, setOsFilter] = useState<'all' | 'windows' | 'linux'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'offline'>('all');
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (showToast = false) => {
     try {
+      if (showToast) setIsRefreshing(true);
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) return;
 
@@ -74,15 +76,23 @@ export default function AgentMonitoringAdvanced() {
       setSummary(data.summary);
       setAgents(data.agents);
       setAlerts(data.recent_alerts);
+      
+      if (showToast) {
+        toast({
+          title: 'Atualizado',
+          description: 'Dados atualizados com sucesso',
+        });
+      }
     } catch (error) {
       logger.error('Error fetching dashboard data', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao carregar dados do dashboard',
+        description: 'Falha ao carregar dados do painel',
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -163,9 +173,9 @@ export default function AgentMonitoringAdvanced() {
 
   const getStatusBadge = (agent: AgentMetrics) => {
     if (agent.is_online) {
-      return <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" /> Online</Badge>;
+      return <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" /> Conectado</Badge>;
     }
-    return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" /> Offline</Badge>;
+    return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" /> Desconectado</Badge>;
   };
 
 
@@ -198,11 +208,11 @@ export default function AgentMonitoringAdvanced() {
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Monitor className="w-8 h-8" />
-          Monitoramento em Tempo Real
+          Painel de Controle
         </h1>
-        <Button onClick={fetchDashboardData} variant="outline">
-          <Activity className="w-4 h-4 mr-2" />
-          Atualizar
+        <Button onClick={() => fetchDashboardData(true)} variant="outline" disabled={isRefreshing}>
+          <Activity className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Atualizando...' : 'Atualizar'}
         </Button>
       </div>
 
@@ -210,20 +220,20 @@ export default function AgentMonitoringAdvanced() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Agentes</CardTitle>
+            <CardTitle className="text-sm font-medium">Computadores Protegidos</CardTitle>
             <Monitor className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summary?.total_agents || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {summary?.online_agents} online ? {summary?.offline_agents} offline
+              {summary?.online_agents} conectados • {summary?.offline_agents} desconectados
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">CPU Media</CardTitle>
+            <CardTitle className="text-sm font-medium">Uso do Processador</CardTitle>
             <Cpu className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -231,13 +241,13 @@ export default function AgentMonitoringAdvanced() {
               {summary?.avg_cpu_usage || 'N/A'}
               {summary?.avg_cpu_usage && '%'}
             </div>
-            <p className="text-xs text-muted-foreground">Uso medio de CPU</p>
+            <p className="text-xs text-muted-foreground">Media de todos os computadores</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">RAM Media</CardTitle>
+            <CardTitle className="text-sm font-medium">Uso de Memoria</CardTitle>
             <MemoryStick className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -245,13 +255,13 @@ export default function AgentMonitoringAdvanced() {
               {summary?.avg_memory_usage || 'N/A'}
               {summary?.avg_memory_usage && '%'}
             </div>
-            <p className="text-xs text-muted-foreground">Uso medio de memoria</p>
+            <p className="text-xs text-muted-foreground">Media de todos os computadores</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Disco Medio</CardTitle>
+            <CardTitle className="text-sm font-medium">Uso de Armazenamento</CardTitle>
             <HardDrive className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -259,7 +269,7 @@ export default function AgentMonitoringAdvanced() {
               {summary?.avg_disk_usage || 'N/A'}
               {summary?.avg_disk_usage && '%'}
             </div>
-            <p className="text-xs text-muted-foreground">Uso medio de disco</p>
+            <p className="text-xs text-muted-foreground">Media de todos os computadores</p>
           </CardContent>
         </Card>
       </div>
@@ -270,7 +280,7 @@ export default function AgentMonitoringAdvanced() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-destructive" />
-              Alertas Nao Reconhecidos ({alerts.length})
+              Alertas Pendentes ({alerts.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -373,7 +383,7 @@ export default function AgentMonitoringAdvanced() {
       {/* Agents Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Agentes ({filteredAgents.length})</CardTitle>
+          <CardTitle>Computadores Protegidos ({filteredAgents.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -382,13 +392,13 @@ export default function AgentMonitoringAdvanced() {
                 <tr className="border-b">
                   <th className="text-left p-2">Status</th>
                   <th className="text-left p-2">Nome</th>
-                  <th className="text-left p-2">OS</th>
-                  <th className="text-left p-2">Hostname</th>
-                  <th className="text-left p-2">CPU</th>
-                  <th className="text-left p-2">RAM</th>
-                  <th className="text-left p-2">Disco</th>
-                  <th className="text-left p-2">Uptime</th>
-                  <th className="text-left p-2">Ultimo Heartbeat</th>
+                  <th className="text-left p-2">Sistema</th>
+                  <th className="text-left p-2">Computador</th>
+                  <th className="text-left p-2">Processador</th>
+                  <th className="text-left p-2">Memoria</th>
+                  <th className="text-left p-2">Armazenamento</th>
+                  <th className="text-left p-2">Tempo Ligado</th>
+                  <th className="text-left p-2">Ultima Conexao</th>
                 </tr>
               </thead>
               <tbody>
