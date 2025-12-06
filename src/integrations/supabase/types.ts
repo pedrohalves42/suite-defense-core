@@ -153,6 +153,45 @@ export type Database = {
           },
         ]
       }
+      agent_group_policies: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          group_id: string
+          id: string
+          policy_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          group_id: string
+          id?: string
+          policy_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          group_id?: string
+          id?: string
+          policy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_group_policies_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "agent_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_group_policies_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "security_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_groups: {
         Row: {
           created_at: string
@@ -2244,6 +2283,112 @@ export type Database = {
           },
         ]
       }
+      policy_enforcement_logs: {
+        Row: {
+          action_taken: string
+          agent_id: string | null
+          blocked: boolean | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          policy_id: string | null
+          rule_id: string | null
+          rule_type: string
+          target: string
+          tenant_id: string
+        }
+        Insert: {
+          action_taken: string
+          agent_id?: string | null
+          blocked?: boolean | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          policy_id?: string | null
+          rule_id?: string | null
+          rule_type: string
+          target: string
+          tenant_id: string
+        }
+        Update: {
+          action_taken?: string
+          agent_id?: string | null
+          blocked?: boolean | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          policy_id?: string | null
+          rule_id?: string | null
+          rule_type?: string
+          target?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "policy_enforcement_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "policy_enforcement_logs_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "security_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "policy_enforcement_logs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "security_policy_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "policy_enforcement_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       policy_rules: {
         Row: {
           action: Json
@@ -2753,28 +2898,37 @@ export type Database = {
       security_policies: {
         Row: {
           created_at: string
+          created_by: string | null
           description: string | null
           enabled: boolean
           id: string
+          is_active: boolean | null
           name: string
+          priority: number | null
           tenant_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           description?: string | null
           enabled?: boolean
           id?: string
+          is_active?: boolean | null
           name: string
+          priority?: number | null
           tenant_id: string
           updated_at?: string
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           description?: string | null
           enabled?: boolean
           id?: string
+          is_active?: boolean | null
           name?: string
+          priority?: number | null
           tenant_id?: string
           updated_at?: string
         }
@@ -2784,6 +2938,47 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_policy_rules: {
+        Row: {
+          action: string
+          conditions: Json | null
+          created_at: string | null
+          id: string
+          is_enabled: boolean | null
+          policy_id: string
+          rule_type: string
+          target: string
+        }
+        Insert: {
+          action: string
+          conditions?: Json | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          policy_id: string
+          rule_type: string
+          target: string
+        }
+        Update: {
+          action?: string
+          conditions?: Json | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          policy_id?: string
+          rule_type?: string
+          target?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_policy_rules_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "security_policies"
             referencedColumns: ["id"]
           },
         ]

@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
@@ -44,6 +44,7 @@ export const AppSidebar = () => {
     { icon: AlertTriangle, label: 'Problematicos', to: '/admin/problematic-agents', section: 'monitoring' },
     
     // === SEGURANÇA ===
+    { icon: ShieldCheck, label: 'Politicas', to: '/admin/security-policies', section: 'security' },
     { icon: Package, label: 'Inventario Software', to: '/admin/software-inventory', section: 'security' },
     { icon: AlertTriangle, label: 'Vulnerabilidades', to: '/admin/vulnerabilities', section: 'security' },
     { icon: Globe, label: 'Atividade Web', to: '/admin/web-activity', section: 'security' },
