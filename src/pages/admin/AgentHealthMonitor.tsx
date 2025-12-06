@@ -253,8 +253,8 @@ export default function AgentHealthMonitor() {
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold">Monitor de Saude dos Agentes</h1>
-        <p className="text-muted-foreground">Acompanhamento em tempo real do status de todos os agentes</p>
+        <h1 className="text-3xl font-bold">Monitor de Saude</h1>
+        <p className="text-muted-foreground">Acompanhe o status de todos os computadores protegidos</p>
       </div>
 
       {/* Installation Health Card */}
@@ -299,7 +299,7 @@ export default function AgentHealthMonitor() {
         >
           <Card className="border-l-4 border-red-500 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-950/30 dark:to-transparent hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Heartbeats Live</CardTitle>
+              <CardTitle className="text-sm font-medium">Sinais de Vida</CardTitle>
               <Heart className="h-5 w-5 text-red-500 animate-pulse" />
             </CardHeader>
             <CardContent>
@@ -307,7 +307,7 @@ export default function AgentHealthMonitor() {
                 {liveHeartbeats}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Recebidos nesta sessão
+                Recebidos nesta sessao
               </p>
             </CardContent>
           </Card>
@@ -341,7 +341,7 @@ export default function AgentHealthMonitor() {
         >
           <Card className="border-l-4 border-gray-400 bg-gradient-to-br from-gray-50/50 to-transparent dark:from-gray-950/30 dark:to-transparent hover:shadow-lg transition-all duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Offline</CardTitle>
+              <CardTitle className="text-sm font-medium">Desconectados</CardTitle>
               <Clock className="h-5 w-5 text-gray-500" />
             </CardHeader>
             <CardContent>
@@ -349,7 +349,7 @@ export default function AgentHealthMonitor() {
                 {counts.offline}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Offline temporariamente
+                Temporariamente inacessiveis
               </p>
             </CardContent>
           </Card>
@@ -362,7 +362,7 @@ export default function AgentHealthMonitor() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Heart className="h-5 w-5 text-red-500" />
-              Heartbeats Recentes
+              Conexoes Recentes
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -400,19 +400,19 @@ export default function AgentHealthMonitor() {
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Trash2 className="h-5 w-5 text-orange-600" />
-                Manutencao do Sistema
+                Limpeza de Tarefas
               </span>
             </CardTitle>
             <CardDescription>
-              Limpeza de jobs antigos e travados do historico
+              Remover tarefas antigas ou com problemas
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-muted-foreground mb-3">
-                <span className="font-semibold text-red-600">{jobStats.failed} jobs failed</span>
+                <span className="font-semibold text-red-600">{jobStats.failed} com falha</span>
                 {' • '}
-                <span className="font-semibold text-yellow-600">{jobStats.delivered} jobs stuck</span>
+                <span className="font-semibold text-yellow-600">{jobStats.delivered} travadas</span>
                 {' • '}
                 <span className="font-semibold">{jobStats.total} total</span>
               </p>
@@ -423,7 +423,7 @@ export default function AgentHealthMonitor() {
                   onClick={() => handleCleanup('failed')}
                   disabled={isCleaningJobs || jobStats.failed === 0}
                 >
-                  Limpar Failed ({jobStats.failed})
+                  Limpar com Falha ({jobStats.failed})
                 </Button>
                 <Button 
                   variant="outline" 
@@ -432,7 +432,7 @@ export default function AgentHealthMonitor() {
                   disabled={isCleaningJobs || jobStats.delivered === 0}
                   className="border-yellow-600 text-yellow-700 hover:bg-yellow-50"
                 >
-                  Limpar Stuck ({jobStats.delivered})
+                  Limpar Travadas ({jobStats.delivered})
                 </Button>
                 <Button 
                   variant="ghost" 
@@ -445,7 +445,7 @@ export default function AgentHealthMonitor() {
               </div>
               {isCleaningJobs && (
                 <p className="text-xs text-muted-foreground mt-2">
-                  Limpando jobs... Aguarde.
+                  Limpando tarefas... Aguarde.
                 </p>
               )}
             </div>
