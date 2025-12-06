@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, RefreshCw, Activity, TrendingUp, Clock, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { InstallationHealthCard } from "@/components/admin/InstallationHealthCard";
+import { getJobTypeLabel } from "@/lib/job-labels";
 
 type ProblematicAgent = {
   agent_name: string;
@@ -254,7 +255,7 @@ export default function InstallationHealth() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-foreground">{job.agent_name}</span>
-                          <Badge variant="outline">{job.type}</Badge>
+                          <Badge variant="outline">{getJobTypeLabel(job.type)}</Badge>
                           <Badge variant="secondary">{job.status}</Badge>
                         </div>
                         <div className="text-sm text-muted-foreground mt-1">

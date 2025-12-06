@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
+import { getJobTypeLabel } from '@/lib/job-labels';
 
 interface DLQEntry {
   id: string;
@@ -220,7 +221,7 @@ export default function DeadLetterQueue() {
                     <TableRow key={entry.id}>
                       <TableCell className="font-medium">{entry.agent_name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{entry.job_type}</Badge>
+                        <Badge variant="outline">{getJobTypeLabel(entry.job_type)}</Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusConfig[entry.status]?.variant || 'secondary'}>
@@ -307,8 +308,8 @@ export default function DeadLetterQueue() {
                   <p className="text-sm text-muted-foreground">{selectedEntry.agent_name}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Job Type</label>
-                  <p className="text-sm text-muted-foreground">{selectedEntry.job_type}</p>
+                  <label className="text-sm font-medium">Tipo de Job</label>
+                  <p className="text-sm text-muted-foreground">{getJobTypeLabel(selectedEntry.job_type)}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium">First Failure</label>
