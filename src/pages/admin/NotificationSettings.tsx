@@ -655,6 +655,5 @@ export default function NotificationSettings() {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
   );
 }
