@@ -48,6 +48,10 @@ import SecurityDashboard from "./pages/admin/SecurityDashboard";
 import AgentMonitoringAdvanced from "./pages/AgentMonitoringAdvanced";
 import ExeBuild from "./pages/docs/ExeBuild";
 import SubscriptionAnalytics from "./pages/admin/SubscriptionAnalytics";
+import UnitEconomics from "./pages/admin/super/UnitEconomics";
+import CohortAnalysis from "./pages/admin/super/CohortAnalysis";
+import RevenueProjections from "./pages/admin/super/RevenueProjections";
+import SalesPipeline from "./pages/admin/super/SalesPipeline";
 import StripeSetup from "./pages/admin/StripeSetup";
 import AgentDiagnostics from "./pages/admin/AgentDiagnostics.tsx";
 import AgentTroubleshooting from "./pages/admin/AgentTroubleshooting";
@@ -170,6 +174,10 @@ const App = () => (
                 <Route path="build-health" element={<BuildHealthDashboard />} />
                 <Route path="system-logs" element={<SystemLogs />} />
                 <Route path="custom-trials" element={<CustomTrials />} />
+                <Route path="unit-economics" element={<UnitEconomics />} />
+                <Route path="cohort-analysis" element={<CohortAnalysis />} />
+                <Route path="revenue-projections" element={<RevenueProjections />} />
+                <Route path="sales-pipeline" element={<SalesPipeline />} />
               </Route>
             </Route>
             

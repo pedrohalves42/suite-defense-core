@@ -352,3 +352,16 @@ verify_jwt = true
 
 [functions.process-dlq-retries]
 verify_jwt = true
+
+# === Financial Analytics Functions ===
+[functions.unit-economics]
+verify_jwt = true
+
+[functions.cohort-analysis]
+verify_jwt = true
+
+[functions.revenue-projections]
+verify_jwt = true
+
+[functions.sales-pipeline]
+verify_jwt = true
