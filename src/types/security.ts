@@ -52,6 +52,8 @@ export interface WebActivityItem {
   first_seen_at: string;
   last_seen_at: string;
   hits: number;
+  category?: string;
+  is_blocked?: boolean;
 }
 
 export interface WebActivityRaw {
@@ -63,6 +65,8 @@ export interface WebActivityRaw {
   source: string;
   visited_at: string;
   created_at: string;
+  category?: string;
+  is_blocked?: boolean;
 }
 
 export interface UrlReputationItem {

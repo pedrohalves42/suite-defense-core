@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.24-SMART-UPDATE
+    CyberShield Agent - Windows v3.10.25-BLOCKED-WEBSITES
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.24-SMART-UPDATE"
+    [string]$AgentVersion = "v3.10.25-BLOCKED-WEBSITES"
 )
 
 $ErrorActionPreference = "Stop"
@@ -1317,6 +1317,123 @@ function Invoke-CollectNetworkInfoJob {
 }
 
 # ============================================
+#  SYNC BLOCKED WEBSITES JOB
+# ============================================
+function Invoke-SyncBlockedWebsitesJob {
+    param(
+        [Parameter(Mandatory = $true)]
+        [object]$Job
+    )
+    
+    try {
+        Write-Log "[BLOCKED-SITES] Iniciando sincronizacao de sites bloqueados..." "INFO"
+        
+        # Buscar lista de sites bloqueados do servidor
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/get-blocked-websites" `
+            -Method "GET" `
+            -TimeoutSec 30
+        
+        if (-not $result.Success) {
+            throw "Falha ao buscar lista de sites bloqueados (HTTP $($result.StatusCode))"
+        }
+        
+        $data = $result.Body | ConvertFrom-Json
+        $blockedDomains = @()
+        
+        if ($null -ne $data.blocked_websites) {
+            $blockedDomains = @($data.blocked_websites | ForEach-Object { $_.domain_pattern })
+        }
+        
+        Write-Log "[BLOCKED-SITES] Recebidos $($blockedDomains.Count) dominios bloqueados" "INFO"
+        
+        # Salvar lista localmente para uso pelo agente
+        $blockedListPath = "C:\CyberShield\blocked_websites.json"
+        $blockedData = @{
+            updated_at = [DateTime]::UtcNow.ToString("o")
+            domains = $blockedDomains
+        }
+        
+        $blockedJson = $blockedData | ConvertTo-Json -Compress
+        [System.IO.File]::WriteAllText($blockedListPath, $blockedJson, [System.Text.UTF8Encoding]::new($false))
+        
+        Write-Log "[BLOCKED-SITES] Lista salva em $blockedListPath" "SUCCESS"
+        
+        # Aplicar bloqueios no Windows Hosts file (opcional, apenas se configurado)
+        $payload = $null
+        if ($null -ne $Job.payload) {
+            $payload = $Job.payload
+        }
+        
+        $applyToHosts = $false
+        if ($null -ne $payload -and $null -ne $payload.apply_to_hosts) {
+            $applyToHosts = [bool]$payload.apply_to_hosts
+        }
+        
+        $hostsModified = 0
+        if ($applyToHosts -and $blockedDomains.Count -gt 0) {
+            try {
+                $hostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
+                $hostsContent = Get-Content $hostsPath -Raw -ErrorAction SilentlyContinue
+                
+                # Marcadores para identificar linhas gerenciadas pelo CyberShield
+                $startMarker = "# BEGIN CYBERSHIELD BLOCKED"
+                $endMarker = "# END CYBERSHIELD BLOCKED"
+                
+                # Remover bloqueios antigos do CyberShield
+                if ($hostsContent -match "$startMarker[\s\S]*?$endMarker") {
+                    $hostsContent = $hostsContent -replace "$startMarker[\s\S]*?$endMarker", ""
+                    $hostsContent = $hostsContent.Trim()
+                }
+                
+                # Adicionar novos bloqueios
+                $newBlockLines = @($startMarker)
+                foreach ($domain in $blockedDomains) {
+                    # Limpar wildcards para hosts file
+                    $cleanDomain = $domain -replace '^\*\.', '' -replace '\*', ''
+                    if ($cleanDomain -and $cleanDomain -notmatch '^[\s\.]*$') {
+                        $newBlockLines += "127.0.0.1 $cleanDomain"
+                        $newBlockLines += "127.0.0.1 www.$cleanDomain"
+                        $hostsModified++
+                    }
+                }
+                $newBlockLines += $endMarker
+                
+                $newHostsContent = "$hostsContent`n`n$($newBlockLines -join "`n")"
+                Set-Content -Path $hostsPath -Value $newHostsContent -Force -Encoding ASCII
+                
+                Write-Log "[BLOCKED-SITES] Hosts file atualizado com $hostsModified dominios" "SUCCESS"
+                
+                # Limpar cache DNS para aplicar mudancas imediatamente
+                ipconfig /flushdns | Out-Null
+                
+            } catch {
+                Write-Log "[BLOCKED-SITES] Erro ao modificar hosts file: $($_.Exception.Message)" "WARN"
+            }
+        }
+        
+        return @{
+            success = $true
+            output = @{
+                message = "Sites bloqueados sincronizados com sucesso"
+                domains_count = $blockedDomains.Count
+                hosts_modified = $hostsModified
+                list_path = $blockedListPath
+                synced_at = [DateTime]::UtcNow.ToString("o")
+            }
+        }
+    }
+    catch {
+        $errorMsg = "Erro em Invoke-SyncBlockedWebsitesJob: $($_.Exception.Message)"
+        Write-Log "[ERROR] $errorMsg" "ERROR"
+        return @{
+            success = $false
+            error = $errorMsg
+        }
+    }
+}
+
+# ============================================
 #  POST INSTALLATION
 # ============================================
 function Send-PostInstallationEvent {
@@ -1962,6 +2079,14 @@ function Execute-Job {
             }
             "collect_network_info" {
                 $result = Invoke-CollectNetworkInfoJob -Job $job
+                if ($result.success) {
+                    $output = $result.output
+                } else {
+                    throw $result.error
+                }
+            }
+            "sync_blocked_websites" {
+                $result = Invoke-SyncBlockedWebsitesJob -Job $job
                 if ($result.success) {
                     $output = $result.output
                 } else {

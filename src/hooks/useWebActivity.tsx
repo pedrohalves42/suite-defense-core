@@ -8,7 +8,7 @@ async function fetchWebActivity(agentId: string): Promise<WebActivityItem[]> {
   
   const { data, error } = await supabase
     .from('agent_web_activity')
-    .select('domain, visited_at')
+    .select('domain, visited_at, category, is_blocked')
     .eq('agent_id', agentId)
     .gte('visited_at', oneDayAgo)
     .order('visited_at', { ascending: false });
@@ -18,7 +18,13 @@ async function fetchWebActivity(agentId: string): Promise<WebActivityItem[]> {
   }
 
   // Aggregate by domain
-  const aggregated = new Map<string, { first: string; last: string; count: number }>();
+  const aggregated = new Map<string, { 
+    first: string; 
+    last: string; 
+    count: number; 
+    category?: string;
+    is_blocked?: boolean;
+  }>();
   
   for (const item of data || []) {
     const existing = aggregated.get(item.domain);
@@ -30,11 +36,16 @@ async function fetchWebActivity(agentId: string): Promise<WebActivityItem[]> {
         existing.last = item.visited_at;
       }
       existing.count++;
+      // Keep latest category/is_blocked values
+      if (item.category) existing.category = item.category;
+      if (item.is_blocked !== null) existing.is_blocked = item.is_blocked;
     } else {
       aggregated.set(item.domain, {
         first: item.visited_at,
         last: item.visited_at,
-        count: 1
+        count: 1,
+        category: item.category ?? undefined,
+        is_blocked: item.is_blocked ?? undefined
       });
     }
   }
@@ -43,7 +54,9 @@ async function fetchWebActivity(agentId: string): Promise<WebActivityItem[]> {
     domain,
     first_seen_at: data.first,
     last_seen_at: data.last,
-    hits: data.count
+    hits: data.count,
+    category: data.category,
+    is_blocked: data.is_blocked
   }));
 
   // Sort by last seen (most recent first)
