@@ -3,6 +3,7 @@ import { AgentTokenSchema } from '../_shared/validation.ts'
 import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
+import { logger } from '../_shared/logger.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
  
     // FASE 1.2: HMAC OBRIGATORIO - Agora hmac_secret e NOT NULL
     if (!agent.hmac_secret) {
-      console.error('[poll-jobs] CRITICAL SECURITY: Agent without HMAC secret:', agent.agent_name)
+      logger.error('CRITICAL SECURITY: Agent without HMAC secret', { agentName: agent.agent_name })
       return new Response(
         JSON.stringify({ error: 'HMAC secret not configured for agent' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
     // Verificar HMAC (obrigatorio)
     const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
     if (!hmacResult.valid) {
-      console.warn('[poll-jobs] HMAC verification failed:', {
+      logger.warn('HMAC verification failed', {
         agent: agent.agent_name,
         errorCode: hmacResult.errorCode,
         errorMessage: hmacResult.errorMessage,
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    console.log('[poll-jobs] Agente polling:', agent.agent_name)
+    logger.debug('Agent polling', { agentName: agent.agent_name })
 
     // Atualizar heartbeat e last_used_at do token
     await Promise.all([
@@ -111,7 +112,7 @@ Deno.serve(async (req) => {
         .eq('token', agentToken)
     ])
 
-    console.log('[poll-jobs] Fetching jobs for agent:', agent.agent_name)
+    logger.debug('Fetching jobs for agent', { agentName: agent.agent_name })
     // Buscar jobs pendentes (max 3)
     const { data: jobs, error: jobsError } = await supabase
       .from('jobs')
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
       .limit(3)
 
     if (jobsError) {
-      console.error('[poll-jobs] Error fetching jobs:', jobsError)
+      logger.error('Error fetching jobs', { error: jobsError.message })
       // Em caso de erro, retornar array vazio em vez de lancar excecao
       return new Response(
         JSON.stringify([]),
@@ -131,45 +132,44 @@ Deno.serve(async (req) => {
     }
 
     // FASE 1: LOG CRITICO - ver o que veio do banco ANTES do filtro
-    console.log('[poll-jobs] Raw jobs from database:', JSON.stringify(jobs))
-    console.log('[poll-jobs] Jobs count from DB:', jobs?.length ?? 0)
+    logger.debug('Raw jobs from database', { jobs: JSON.stringify(jobs), count: jobs?.length ?? 0 })
 
     // FASE 1: Filtro QUADRUPLO de seguranca (null, ID, type, payload)
     const validJobs = (jobs || []).filter(job => {
       // Check 1: Nao e null/undefined
       if (!job) {
-        console.warn('[poll-jobs] NULL job detected, filtering out')
+        logger.warn('NULL job detected, filtering out')
         return false
       }
       
       // Check 2: Tem ID valido
       if (!job.id || typeof job.id !== 'string') {
-        console.warn('[poll-jobs] Job without valid ID', { job })
+        logger.warn('Job without valid ID', { job })
         return false
       }
       
       // Check 3: Tem tipo valido
       if (!job.type || typeof job.type !== 'string') {
-        console.warn('[poll-jobs] Job without valid type', { jobId: job.id })
+        logger.warn('Job without valid type', { jobId: job.id })
         return false
       }
       
       // Check 4: Tem payload (mesmo que seja {})
       if (job.payload === undefined || job.payload === null) {
-        console.warn('[poll-jobs] Job without payload', { jobId: job.id })
+        logger.warn('Job without payload', { jobId: job.id })
         return false
       }
       
       return true
     })
 
-    console.log(`[poll-jobs] Valid jobs after filtering: ${validJobs.length}`)
+    logger.debug('Valid jobs after filtering', { count: validJobs.length })
 
     // FASE 1: LOG DETALHADO - mostrar IDs dos jobs que estao sendo retornados
     if (validJobs.length > 0) {
-      console.log('[poll-jobs] Returning job IDs:', validJobs.map(j => j.id))
+      logger.info('Returning jobs', { jobIds: validJobs.map(j => j.id) })
     } else {
-      console.log('[poll-jobs] No valid jobs to return')
+      logger.debug('No valid jobs to return')
     }
 
     // Marcar jobs como entregues
@@ -185,10 +185,10 @@ Deno.serve(async (req) => {
         .in('id', jobIds)
 
       if (updateError) {
-        console.error('[poll-jobs] Error updating job status:', updateError)
+        logger.error('Error updating job status', { error: updateError.message })
         // Nao lancar erro, apenas logar - jobs ja foram buscados
       } else {
-        console.log('[poll-jobs] Jobs marked as delivered:', jobIds)
+        logger.success('Jobs marked as delivered', { jobIds })
       }
     }
 

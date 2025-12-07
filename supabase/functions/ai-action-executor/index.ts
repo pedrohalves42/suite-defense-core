@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger, loggerWithContext } from '../_shared/logger.ts';
 import {
   DiagnosticJobPayloadSchema,
   SystemAlertPayloadSchema,
@@ -13,6 +14,9 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
 serve(async (req) => {
+  const requestId = crypto.randomUUID().slice(0, 8);
+  const log = loggerWithContext(requestId);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -39,7 +43,7 @@ serve(async (req) => {
       throw new Error('action_id is required');
     }
 
-    console.log(`[ai-action-executor] Processing action ${action_id} for user ${user.id}`);
+    log.info('Processing action', { action_id, user_id: user.id });
 
     // 1. Buscar acao
     const { data: action, error: actionError } = await supabase
@@ -214,7 +218,7 @@ serve(async (req) => {
           throw new Error(`Action type ${action.action_type} not implemented`);
       }
     } catch (execError: any) {
-      console.error(`[ai-action-executor] Execution failed:`, execError);
+      log.error('Execution failed: ' + execError.message, { action_type: action.action_type, error: execError.message });
       executionStatus = 'failed';
       errorMessage = execError.message;
       executionResult = { error: execError.message };
@@ -234,7 +238,7 @@ serve(async (req) => {
       });
 
     if (execLogError) {
-      console.error('[ai-action-executor] Failed to log execution:', execLogError);
+      log.error('Failed to log execution', execLogError);
     }
 
     // 9. Atualizar status da acao
@@ -249,10 +253,10 @@ serve(async (req) => {
       .eq('id', action.id);
 
     if (updateError) {
-      console.error('[ai-action-executor] Failed to update action:', updateError);
+      log.error('Failed to update action', updateError);
     }
 
-    console.log(`[ai-action-executor] Action ${action_id} executed with status: ${executionStatus}`);
+    log.success('Action executed', { action_id, status: executionStatus });
 
     // 10. Security logging: registrar acao de IA executada
     if (executionStatus === 'executed') {
@@ -278,7 +282,7 @@ serve(async (req) => {
         });
 
       if (securityLogError) {
-        console.error('[ai-action-executor] Failed to log security event:', securityLogError);
+        log.error('Failed to log security event', securityLogError);
       }
     }
 
@@ -294,7 +298,7 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('[ai-action-executor] Error:', error);
+    logger.error('AI action executor error', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,
