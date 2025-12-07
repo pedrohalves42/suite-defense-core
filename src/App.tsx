@@ -73,6 +73,7 @@ import CustomTrials from "./pages/admin/CustomTrials";
 import RateLimitingStats from "./pages/admin/RateLimitingStats";
 import DeadLetterQueue from "./pages/admin/DeadLetterQueue";
 import SecurityPolicies from "./pages/admin/SecurityPolicies";
+import NotificationSettings from "./pages/admin/NotificationSettings";
 
 const App = () => (
   <ErrorBoundary>
@@ -147,6 +148,7 @@ const App = () => (
                 <Route path="rate-limiting" element={<RateLimitingStats />} />
                 <Route path="dead-letter-queue" element={<DeadLetterQueue />} />
                 <Route path="security-policies" element={<SecurityPolicies />} />
+                <Route path="notification-settings" element={<NotificationSettings />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
