@@ -82,7 +82,7 @@ export const OutdatedAgentsBanner = () => {
   }
 
   return (
-    <div className="mb-4 p-4 rounded-lg border border-warning/50 bg-warning/10 flex items-start gap-3">
+    <div className="mb-4 p-4 rounded-lg border border-warning/50 bg-warning/20 flex items-start gap-3">
       <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
         <h4 className="font-semibold text-warning-foreground">

@@ -255,9 +255,9 @@ export default function Login() {
             <form onSubmit={handleLogin}>
               <CardContent className="space-y-5 pt-6">
                 {attemptCount > 0 && attemptCount < 3 && (
-                  <Alert className="border-warning/50 bg-warning/5 backdrop-blur-sm animate-slide-in">
+                  <Alert className="border-warning/50 bg-warning/20 backdrop-blur-sm animate-slide-in">
                     <AlertCircle className="h-4 w-4 text-warning animate-pulse" />
-                    <AlertDescription className="text-warning-foreground/90 font-medium">
+                    <AlertDescription className="text-warning-foreground font-medium">
                       [WARN] ⚠️ {attemptCount} tentativa{attemptCount > 1 ? 's' : ''} falhada{attemptCount > 1 ? 's' : ''} detectada{attemptCount > 1 ? 's' : ''}. 
                       {3 - attemptCount} tentativa{3 - attemptCount > 1 ? 's' : ''} restante{3 - attemptCount > 1 ? 's' : ''} antes do CAPTCHA.
                     </AlertDescription>
