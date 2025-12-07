@@ -185,13 +185,13 @@ async function sendEmailNotification(
     };
 
     const severityEmoji: Record<string, string> = {
-      info: 'ℹ️',
-      warning: '⚠️',
-      critical: '🚨'
+      info: '[INFO] ?',
+      warning: '[WARN] ?',
+      critical: '?'
     };
 
     const color = severityColors[payload.severity] || '#3182ce';
-    const emoji = severityEmoji[payload.severity] || 'ℹ️';
+    const emoji = severityEmoji[payload.severity] || '[INFO] ?';
 
     // Email HTML with CSP nonce for inline styles
     const emailHtml = `
@@ -218,13 +218,13 @@ async function sendEmailNotification(
     
     ${payload.details ? `
       <div style="margin: 20px 0;">
-        <h3 style="color: #555; margin-bottom: 10px; font-size: 14px; text-transform: uppercase;">Detalhes Técnicos</h3>
+        <h3 style="color: #555; margin-bottom: 10px; font-size: 14px; text-transform: uppercase;">Detalhes Tecnicos</h3>
         <pre style="background-color: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 8px; overflow-x: auto; font-size: 13px; font-family: 'Monaco', 'Consolas', monospace;">${JSON.stringify(payload.details, null, 2)}</pre>
       </div>
     ` : ''}
     
     <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #718096; font-size: 12px;">
-      <p style="margin: 0;">Este é um alerta automático do CyberShield Security Platform.</p>
+      <p style="margin: 0;">Este e um alerta automatico do CyberShield Security Platform.</p>
       <p style="margin: 5px 0 0 0;">Data/Hora: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</p>
       <p style="margin: 5px 0 0 0; color: #a0aec0;">Nonce: ${nonce}</p>
     </div>

@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
 
     // Prepare job data - INCLUINDO agent_id
     const jobData: any = {
-      agent_id: agentData.id,  // CRÍTICO: incluir agent_id
+      agent_id: agentData.id,  // CRITICO: incluir agent_id
       agent_name: agentName, 
       type, 
       payload, 

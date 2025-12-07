@@ -67,22 +67,22 @@ serve(async (req) => {
     // Build context summary for AI
     const contextSummary = buildContextSummary(agent, context);
 
-    const systemPrompt = `Você é um especialista em segurança de sistemas e monitoramento de agentes. 
-Analise o contexto do agente e forneça:
-1. Um score de saúde (0-100)
-2. Sugestões de jobs de validação específicos
+    const systemPrompt = `Voce e um especialista em seguranca de sistemas e monitoramento de agentes. 
+Analise o contexto do agente e forneca:
+1. Um score de saude (0-100)
+2. Sugestoes de jobs de validacao especificos
 3. Insights sobre o estado do sistema
 4. Fatores de risco identificados
 
-Jobs disponíveis:
+Jobs disponiveis:
 - software_inventory_collect: Coleta lista de software instalado
 - light_vuln_scan: Scan de vulnerabilidades leve
-- collect_antivirus_status: Verifica status do antivírus
+- collect_antivirus_status: Verifica status do antivirus
 - collect_web_activity: Coleta atividade web recente
-- collect_network_info: Coleta informações de rede
-- update_agent: Atualiza o agente para última versão
+- collect_network_info: Coleta informacoes de rede
+- update_agent: Atualiza o agente para ultima versao
 
-Responda APENAS com JSON válido no formato:
+Responda APENAS com JSON valido no formato:
 {
   "healthScore": number,
   "suggestions": [{"jobType": string, "priority": "low"|"medium"|"high", "reason": string, "confidence": number}],
@@ -170,7 +170,7 @@ Agente: ${agent.agent_name}
 Sistema Operacional: ${agent.os_type}
 Hostname: ${agent.hostname}
 
-MÉTRICAS DE SISTEMA:
+METRICAS DE SISTEMA:
 - CPU: ${metrics?.cpu_usage_percent ?? 'N/A'}%
 - RAM: ${metrics?.memory_usage_percent ?? 'N/A'}%
 - Disco: ${metrics?.disk_usage_percent ?? 'N/A'}%
@@ -182,14 +182,14 @@ SOFTWARE:
 
 VULNERABILIDADES:
 - Total: ${vulnCount}
-- Críticas/Altas: ${criticalVulns}
+- Criticas/Altas: ${criticalVulns}
 
-JOBS RECENTES (últimos 20):
+JOBS RECENTES (ultimos 20):
 - Total: ${totalJobs}
 - Falhados: ${failedJobs}
 - Taxa de sucesso: ${totalJobs > 0 ? Math.round(((totalJobs - failedJobs) / totalJobs) * 100) : 100}%
 
-Analise este agente e sugira validações específicas baseadas no contexto.
+Analise este agente e sugira validacoes especificas baseadas no contexto.
 `;
 }
 
@@ -216,15 +216,15 @@ function generateBasicAnalysis(context: AgentContext): AIAnalysis {
   // Memory analysis
   if (metrics?.memory_usage_percent && metrics.memory_usage_percent > 85) {
     healthScore -= 10;
-    riskFactors.push('Uso de memória elevado');
-    insights.push('Considere verificar processos consumindo muita memória');
+    riskFactors.push('Uso de memoria elevado');
+    insights.push('Considere verificar processos consumindo muita memoria');
   }
 
   // Disk analysis
   if (metrics?.disk_usage_percent && metrics.disk_usage_percent > 90) {
     healthScore -= 15;
     riskFactors.push('Disco quase cheio - risco de falhas');
-    insights.push('Espaço em disco crítico, libere espaço urgentemente');
+    insights.push('Espaco em disco critico, libere espaco urgentemente');
   }
 
   // Vulnerabilities
@@ -234,11 +234,11 @@ function generateBasicAnalysis(context: AgentContext): AIAnalysis {
   
   if (criticalVulns > 0) {
     healthScore -= criticalVulns * 5;
-    riskFactors.push(`${criticalVulns} vulnerabilidades críticas/altas detectadas`);
+    riskFactors.push(`${criticalVulns} vulnerabilidades criticas/altas detectadas`);
     suggestions.push({
       jobType: 'light_vuln_scan',
       priority: 'high',
-      reason: `${criticalVulns} vulnerabilidades precisam de atenção`,
+      reason: `${criticalVulns} vulnerabilidades precisam de atencao`,
       confidence: 90,
     });
   }
@@ -248,7 +248,7 @@ function generateBasicAnalysis(context: AgentContext): AIAnalysis {
     suggestions.push({
       jobType: 'software_inventory_collect',
       priority: 'medium',
-      reason: 'Inventário de software não coletado',
+      reason: 'Inventario de software nao coletado',
       confidence: 95,
     });
   }
@@ -265,19 +265,19 @@ function generateBasicAnalysis(context: AgentContext): AIAnalysis {
     suggestions.push({
       jobType: 'collect_antivirus_status',
       priority: 'low',
-      reason: 'Verificação de rotina do antivírus',
+      reason: 'Verificacao de rotina do antivirus',
       confidence: 70,
     });
     suggestions.push({
       jobType: 'collect_network_info',
       priority: 'low',
-      reason: 'Coletar informações de rede para diagnóstico',
+      reason: 'Coletar informacoes de rede para diagnostico',
       confidence: 75,
     });
   }
 
   if (insights.length === 0) {
-    insights.push('Sistema operando dentro dos parâmetros normais');
+    insights.push('Sistema operando dentro dos parametros normais');
   }
 
   return {

@@ -1,14 +1,38 @@
 {
-  "startedAt": "2025-11-27T00:29:59.540Z",
-  "finishedAt": "2025-11-27T00:30:25.546Z",
+  "startedAt": "2025-12-07T22:23:58.443Z",
+  "finishedAt": "2025-12-07T22:24:27.213Z",
   "issues": [
     {
       "severity": "error",
-      "file": "supabase/functions/_shared/installer-version.ts",
-      "line": 144,
-      "rule": "no-invalid-variable-reference-drive",
-      "message": "Pattern ': $_' found. This causes InvalidVariableReferenceWithDrive in PowerShell 5.1. Use $($_.Exception.Message) or another form.",
-      "snippet": "'InvalidVariableReferenceWithDrive: : $_ em mensagens de log',"
+      "file": "public/agent-scripts/cybershield-agent-windows-v3.ps1",
+      "line": 462,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n²)"
+    },
+    {
+      "severity": "error",
+      "file": "public/agent-scripts/cybershield-agent-windows-v3.ps1",
+      "line": 706,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n²)"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows-content.ts",
+      "line": 470,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n²)"
+    },
+    {
+      "severity": "error",
+      "file": "supabase/functions/_shared/agent-script-windows-content.ts",
+      "line": 714,
+      "rule": "no-non-ascii-in-sensitive-files",
+      "message": "Non ASCII character found in sensitive file (remove accents, emoji, special symbols).",
+      "snippet": "# OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n²)"
     },
     {
       "severity": "warn",
@@ -43,12 +67,18 @@
     {
       "severity": "error",
       "file": "<process>",
+      "rule": "command:lint",
+      "message": "Command \"npm run lint\" failed: Command failed: npm run lint"
+    },
+    {
+      "severity": "error",
+      "file": "<process>",
       "rule": "command:validate:all",
       "message": "Command \"npm run validate:all\" failed: Command failed: npm run validate:all"
     }
   ],
   "summary": {
-    "errors": 2,
+    "errors": 6,
     "warnings": 5
   }
 }

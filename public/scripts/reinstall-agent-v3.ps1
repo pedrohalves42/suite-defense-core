@@ -1,12 +1,12 @@
 # =============================================================================
-# CyberShield Agent - Script de Reinstalação v1.0
+# CyberShield Agent - Script de Reinstalacao v1.0
 # =============================================================================
-# Este script remove completamente o agente antigo e instala a versão mais recente.
-# Use quando o agente está offline ou com versão incompatível (< v3.10.24).
+# Este script remove completamente o agente antigo e instala a versao mais recente.
+# Use quando o agente esta offline ou com versao incompativel (< v3.10.24).
 #
 # USO:
 #   1. Execute como Administrador no PowerShell
-#   2. Passe a URL de instalação gerada no dashboard
+#   2. Passe a URL de instalacao gerada no dashboard
 #
 # EXEMPLO:
 #   .\reinstall-agent-v3.ps1 -InstallUrl "https://...functions/v1/serve-installer?key=ABC123"
@@ -16,7 +16,7 @@
 #Requires -RunAsAdministrator
 
 param(
-    [Parameter(Mandatory = $true, HelpMessage = "URL de instalação gerada no dashboard CyberShield")]
+    [Parameter(Mandatory = $true, HelpMessage = "URL de instalacao gerada no dashboard CyberShield")]
     [string]$InstallUrl
 )
 
@@ -28,7 +28,7 @@ $ProgressPreference = 'SilentlyContinue'
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host " CyberShield Agent - Reinstalação Completa" -ForegroundColor Cyan
+Write-Host " CyberShield Agent - Reinstalacao Completa" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -44,11 +44,11 @@ if ($agentProcesses) {
             Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
             Write-Host "  [OK] Processo $($proc.ProcessId) encerrado" -ForegroundColor Green
         } catch {
-            Write-Host "  [AVISO] Não foi possível encerrar processo $($proc.ProcessId)" -ForegroundColor DarkYellow
+            Write-Host "  [AVISO] Nao foi possivel encerrar processo $($proc.ProcessId)" -ForegroundColor DarkYellow
         }
     }
 } else {
-    Write-Host "  [OK] Nenhum processo do agente em execução" -ForegroundColor Green
+    Write-Host "  [OK] Nenhum processo do agente em execucao" -ForegroundColor Green
 }
 
 Start-Sleep -Seconds 2
@@ -74,10 +74,10 @@ if ($tasks) {
 }
 
 # =============================================================================
-# FASE 3: Remover pasta de instalação
+# FASE 3: Remover pasta de instalacao
 # =============================================================================
 Write-Host ""
-Write-Host "[FASE 3/5] Removendo pasta de instalação..." -ForegroundColor Yellow
+Write-Host "[FASE 3/5] Removendo pasta de instalacao..." -ForegroundColor Yellow
 
 $installPath = "C:\CyberShield"
 if (Test-Path $installPath) {
@@ -99,7 +99,7 @@ if (Test-Path $installPath) {
         } catch {}
     }
 } else {
-    Write-Host "  [OK] Pasta $installPath não existe" -ForegroundColor Green
+    Write-Host "  [OK] Pasta $installPath nao existe" -ForegroundColor Green
 }
 
 # =============================================================================
@@ -115,7 +115,7 @@ try {
     $installerScript = Invoke-RestMethod -Uri $InstallUrl -UseBasicParsing
     
     if (-not $installerScript -or $installerScript.Length -lt 1000) {
-        throw "Script do instalador inválido ou muito pequeno ($($installerScript.Length) bytes)"
+        throw "Script do instalador invalido ou muito pequeno ($($installerScript.Length) bytes)"
     }
     
     Write-Host "  [OK] Instalador baixado ($($installerScript.Length) bytes)" -ForegroundColor Green
@@ -129,19 +129,19 @@ try {
 } catch {
     Write-Host "  [ERRO] Falha ao baixar/executar instalador: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host ""
-    Write-Host "DIAGNÓSTICO:" -ForegroundColor Yellow
-    Write-Host "  1. Verifique se a URL está correta e não expirou" -ForegroundColor White
+    Write-Host "DIAGNOSTICO:" -ForegroundColor Yellow
+    Write-Host "  1. Verifique se a URL esta correta e nao expirou" -ForegroundColor White
     Write-Host "  2. Verifique conectividade: Test-NetConnection iavbnmduxpxhwubqrzzn.supabase.co -Port 443" -ForegroundColor White
-    Write-Host "  3. Verifique se há firewall bloqueando" -ForegroundColor White
+    Write-Host "  3. Verifique se ha firewall bloqueando" -ForegroundColor White
     Write-Host ""
     exit 1
 }
 
 # =============================================================================
-# FASE 5: Validar instalação
+# FASE 5: Validar instalacao
 # =============================================================================
 Write-Host ""
-Write-Host "[FASE 5/5] Validando instalação..." -ForegroundColor Yellow
+Write-Host "[FASE 5/5] Validando instalacao..." -ForegroundColor Yellow
 
 Start-Sleep -Seconds 5
 
@@ -151,15 +151,15 @@ if ($newTask) {
     Write-Host "  [OK] Scheduled Task criada: $($newTask.TaskName)" -ForegroundColor Green
     Write-Host "       Estado: $($newTask.State)" -ForegroundColor Cyan
 } else {
-    Write-Host "  [AVISO] Scheduled Task não encontrada" -ForegroundColor DarkYellow
+    Write-Host "  [AVISO] Scheduled Task nao encontrada" -ForegroundColor DarkYellow
 }
 
-# Verificar pasta de instalação
+# Verificar pasta de instalacao
 if (Test-Path $installPath) {
     $scriptFiles = Get-ChildItem -Path $installPath -Filter "*.ps1" -ErrorAction SilentlyContinue
-    Write-Host "  [OK] Pasta de instalação criada com $($scriptFiles.Count) script(s)" -ForegroundColor Green
+    Write-Host "  [OK] Pasta de instalacao criada com $($scriptFiles.Count) script(s)" -ForegroundColor Green
 } else {
-    Write-Host "  [AVISO] Pasta de instalação não encontrada" -ForegroundColor DarkYellow
+    Write-Host "  [AVISO] Pasta de instalacao nao encontrada" -ForegroundColor DarkYellow
 }
 
 # Verificar log
@@ -168,7 +168,7 @@ if ($logFile) {
     $lastLines = Get-Content $logFile.FullName -Tail 5 -ErrorAction SilentlyContinue
     Write-Host "  [OK] Log encontrado: $($logFile.Name)" -ForegroundColor Green
     Write-Host ""
-    Write-Host "  Últimas linhas do log:" -ForegroundColor Cyan
+    Write-Host "  Ultimas linhas do log:" -ForegroundColor Cyan
     $lastLines | ForEach-Object { Write-Host "    $_" -ForegroundColor Gray }
 }
 
@@ -177,16 +177,16 @@ if ($logFile) {
 # =============================================================================
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
-Write-Host " Reinstalação Concluída!" -ForegroundColor Green
+Write-Host " Reinstalacao Concluida!" -ForegroundColor Green
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "PRÓXIMOS PASSOS:" -ForegroundColor Yellow
+Write-Host "PROXIMOS PASSOS:" -ForegroundColor Yellow
 Write-Host "  1. Aguarde 2-3 minutos para o agente enviar o primeiro heartbeat" -ForegroundColor White
 Write-Host "  2. Verifique no dashboard se o agente aparece como 'online'" -ForegroundColor White
-Write-Host "  3. Confirme a versão do agente no dashboard (deve ser v3.10.24+)" -ForegroundColor White
+Write-Host "  3. Confirme a versao do agente no dashboard (deve ser v3.10.24+)" -ForegroundColor White
 Write-Host ""
 Write-Host "SUPORTE:" -ForegroundColor Yellow
-Write-Host "  Se o agente não aparecer online após 5 minutos:" -ForegroundColor White
+Write-Host "  Se o agente nao aparecer online apos 5 minutos:" -ForegroundColor White
 Write-Host "  1. Execute: Get-Content '$installPath\agent.log' -Tail 50" -ForegroundColor Cyan
 Write-Host "  2. Execute: irm https://iavbnmduxpxhwubqrzzn.supabase.co/functions/v1/get-diagnostic-script | iex" -ForegroundColor Cyan
 Write-Host ""

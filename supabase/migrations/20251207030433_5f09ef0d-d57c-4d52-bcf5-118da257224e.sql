@@ -51,7 +51,7 @@ BEGIN
   DELETE FROM public.ip_blocklist
   WHERE blocked_until < NOW();
   
-  -- Limpar métricas antigas (>30 dias)
+  -- Limpar metricas antigas (>30 dias)
   DELETE FROM public.agent_system_metrics
   WHERE collected_at < NOW() - INTERVAL '30 days';
   
@@ -59,6 +59,6 @@ BEGIN
   DELETE FROM public.security_logs
   WHERE created_at < NOW() - INTERVAL '90 days';
   
-  RAISE NOTICE 'Limpeza de dados antigos concluída em %', NOW();
+  RAISE NOTICE 'Limpeza de dados antigos concluida em %', NOW();
 END;
 $function$;

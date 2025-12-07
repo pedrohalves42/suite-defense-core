@@ -1,6 +1,6 @@
--- Fase 8 (simplificada): Popular security_events apenas com alertas críticos
+-- Fase 8 (simplificada): Popular security_events apenas com alertas criticos
 
--- Inserir eventos de segurança baseados em alertas críticos não resolvidos
+-- Inserir eventos de seguranca baseados em alertas criticos nao resolvidos
 INSERT INTO security_events (tenant_id, agent_id, severity, title, description, status, data, created_at)
 SELECT DISTINCT 
   sa.tenant_id,
@@ -24,7 +24,7 @@ WHERE sa.severity = 'critical'
   )
 LIMIT 50;
 
--- Criar trigger para popular security_events automaticamente quando novos alertas críticos são criados
+-- Criar trigger para popular security_events automaticamente quando novos alertas criticos sao criados
 CREATE OR REPLACE FUNCTION create_security_event_from_alert()
 RETURNS TRIGGER
 LANGUAGE plpgsql

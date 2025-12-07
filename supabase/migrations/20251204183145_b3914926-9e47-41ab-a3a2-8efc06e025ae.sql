@@ -4,7 +4,7 @@ SET quota_limit = 20
 WHERE tenant_id = '2584d2cd-8b99-4ca7-a8e2-b61256e82b3e' 
   AND feature_key = 'max_agents';
 
--- Se não existir, criar a feature
+-- Se nao existir, criar a feature
 INSERT INTO tenant_features (tenant_id, feature_key, quota_limit, enabled)
 SELECT '2584d2cd-8b99-4ca7-a8e2-b61256e82b3e', 'max_agents', 20, true
 WHERE NOT EXISTS (

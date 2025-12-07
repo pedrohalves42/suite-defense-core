@@ -27,11 +27,11 @@ interface WhatsAppPayload {
 }
 
 const SEVERITY_EMOJI: Record<string, string> = {
-  critical: '🔴',
-  high: '🟠',
-  medium: '🟡',
-  low: '🟢',
-  info: 'ℹ️'
+  critical: '?',
+  high: '?',
+  medium: '?',
+  low: '?',
+  info: '[INFO] ?'
 };
 
 serve(async (req: Request) => {
@@ -87,12 +87,12 @@ serve(async (req: Request) => {
     }
 
     // Format message
-    const emoji = SEVERITY_EMOJI[payload.alert.severity] || '⚠️';
+    const emoji = SEVERITY_EMOJI[payload.alert.severity] || '[WARN] ?';
     const message = `${emoji} *CyberShield Alert*\n\n` +
       `*${payload.alert.title}*\n\n` +
       `${payload.alert.message}\n\n` +
-      (payload.alert.agent_name ? `🖥️ Agent: ${payload.alert.agent_name}\n` : '') +
-      `⏰ ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`;
+      (payload.alert.agent_name ? `?? Agent: ${payload.alert.agent_name}\n` : '') +
+      `? ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`;
 
     // Format phone number for WhatsApp
     const toNumber = payload.recipient.startsWith('whatsapp:') 

@@ -36,9 +36,9 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 const SEVERITY_LABELS: Record<string, string> = {
-  critical: 'Crítico',
+  critical: 'Critico',
   high: 'Alto',
-  medium: 'Médio',
+  medium: 'Medio',
   low: 'Baixo',
   info: 'Informativo'
 };
@@ -110,7 +110,7 @@ serve(async (req: Request) => {
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; padding: 20px;">
     <tr>
       <td style="background-color: #1f2937; padding: 24px; border-radius: 8px 8px 0 0;">
-        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">🛡️ CyberShield</h1>
+        <h1 style="color: #ffffff; margin: 0; font-size: 24px;">?? CyberShield</h1>
       </td>
     </tr>
     <tr>
@@ -151,7 +151,7 @@ serve(async (req: Request) => {
     <tr>
       <td style="padding: 24px; text-align: center;">
         <p style="color: #9ca3af; margin: 0; font-size: 12px;">
-          Este é um alerta automático do CyberShield. Não responda a este email.
+          Este e um alerta automatico do CyberShield. Nao responda a este email.
         </p>
       </td>
     </tr>

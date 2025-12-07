@@ -24,12 +24,12 @@ interface AIInsight {
   confidence_score: number;
 }
 
-// Helper: Verificar se tenant tem feature AI habilitada e quota disponível
+// Helper: Verificar se tenant tem feature AI habilitada e quota disponivel
 async function checkTenantAIEligibility(
   supabase: any,
   tenantId: string
 ): Promise<{ eligible: boolean; reason?: string }> {
-  // 1. Verificar subscription ativa ou trial válido
+  // 1. Verificar subscription ativa ou trial valido
   const { data: subscription, error: subError } = await supabase
     .from('tenant_subscriptions')
     .select('status, trial_end')
@@ -50,7 +50,7 @@ async function checkTenantAIEligibility(
     return { eligible: false, reason: 'subscription_inactive_or_trial_expired' };
   }
 
-  // 2. Verificar se feature ai_insights está habilitada
+  // 2. Verificar se feature ai_insights esta habilitada
   const { data: feature, error: featureError } = await supabase
     .from('tenant_features')
     .select('enabled, quota_limit, quota_used')
@@ -58,14 +58,14 @@ async function checkTenantAIEligibility(
     .eq('feature_key', 'ai_insights')
     .single();
 
-  // Se feature não existe, permitir por padrão (backward compatibility)
+  // Se feature nao existe, permitir por padrao (backward compatibility)
   if (featureError || !feature) {
     return { eligible: true, reason: 'feature_not_configured_allowing_default' };
   }
 
   const feat = feature as { enabled: boolean; quota_limit: number | null; quota_used: number };
 
-  // 3. Verificar se feature está habilitada
+  // 3. Verificar se feature esta habilitada
   if (!feat.enabled) {
     return { eligible: false, reason: 'feature_disabled' };
   }
@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
         // Chamar IA para analise
         const tenantInsights = await analyzeWithAI(tenant.id, tenant.name, analysisData, jobStats || []);
         
-        // P0 FIX: Incrementar quota após gerar insights
+        // P0 FIX: Incrementar quota apos gerar insights
         if (tenantInsights.length > 0) {
           await incrementAIQuotaUsage(supabase, tenant.id, tenantInsights.length);
         }

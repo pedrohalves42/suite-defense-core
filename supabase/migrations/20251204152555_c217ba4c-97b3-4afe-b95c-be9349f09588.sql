@@ -2,7 +2,7 @@
 DELETE FROM public.enrollment_keys 
 WHERE expires_at < NOW() AND is_active = false;
 
--- Fase 2: Atualizar função diagnose_agent_issues para verificar apenas key mais recente
+-- Fase 2: Atualizar funcao diagnose_agent_issues para verificar apenas key mais recente
 CREATE OR REPLACE FUNCTION public.diagnose_agent_issues(p_agent_name text)
  RETURNS TABLE(issue_type text, severity text, description text, details jsonb)
  LANGUAGE plpgsql
@@ -15,7 +15,7 @@ BEGIN
     RETURN QUERY SELECT 
       'agent_not_found'::TEXT,
       'critical'::TEXT,
-      'Agente não encontrado no sistema'::TEXT,
+      'Agente nao encontrado no sistema'::TEXT,
       jsonb_build_object('agent_name', p_agent_name);
     RETURN;
   END IF;
@@ -40,7 +40,7 @@ BEGIN
   SELECT 
     'stale_heartbeat'::TEXT,
     'high'::TEXT,
-    'Último heartbeat há mais de 5 minutos'::TEXT,
+    'Ultimo heartbeat ha mais de 5 minutos'::TEXT,
     jsonb_build_object(
       'agent_name', p_agent_name,
       'last_heartbeat', a.last_heartbeat,
@@ -51,7 +51,7 @@ BEGIN
     AND a.last_heartbeat IS NOT NULL
     AND a.last_heartbeat < NOW() - INTERVAL '5 minutes';
   
-  -- Verificar token inválido/expirado
+  -- Verificar token invalido/expirado
   RETURN QUERY
   SELECT 
     'invalid_token'::TEXT,
@@ -75,7 +75,7 @@ BEGIN
   SELECT 
     'stuck_jobs'::TEXT,
     'medium'::TEXT,
-    'Jobs em estado "delivered" há mais de 1 hora sem conclusão'::TEXT,
+    'Jobs em estado "delivered" ha mais de 1 hora sem conclusao'::TEXT,
     jsonb_build_object(
       'agent_name', p_agent_name,
       'stuck_job_count', COUNT(*)
@@ -87,12 +87,12 @@ BEGIN
   GROUP BY j.agent_name
   HAVING COUNT(*) > 0;
   
-  -- Verificar métricas ausentes nas últimas 24 horas (não apenas existência)
+  -- Verificar metricas ausentes nas ultimas 24 horas (nao apenas existencia)
   RETURN QUERY
   SELECT 
     'no_metrics'::TEXT,
     'medium'::TEXT,
-    'Nenhuma métrica de sistema registrada nas últimas 24 horas'::TEXT,
+    'Nenhuma metrica de sistema registrada nas ultimas 24 horas'::TEXT,
     jsonb_build_object(
       'agent_name', p_agent_name,
       'agent_id', a.id
@@ -105,7 +105,7 @@ BEGIN
         AND m.collected_at > NOW() - INTERVAL '24 hours'
     );
     
-  -- Verificar APENAS a enrollment key MAIS RECENTE (não todas as antigas)
+  -- Verificar APENAS a enrollment key MAIS RECENTE (nao todas as antigas)
   RETURN QUERY
   SELECT 
     'enrollment_key_expired'::TEXT,

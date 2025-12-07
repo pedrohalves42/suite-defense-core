@@ -1,4 +1,4 @@
--- Criar função update_updated_at_column se não existir
+-- Criar funcao update_updated_at_column se nao existir
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -7,7 +7,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Tabela para custos de marketing (cálculo de CAC)
+-- Tabela para custos de marketing (calculo de CAC)
 CREATE TABLE IF NOT EXISTS public.marketing_costs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.marketing_costs (
   UNIQUE(tenant_id, month, channel)
 );
 
--- Tabela para pipeline de vendas (CRM básico)
+-- Tabela para pipeline de vendas (CRM basico)
 CREATE TABLE IF NOT EXISTS public.sales_pipeline (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,

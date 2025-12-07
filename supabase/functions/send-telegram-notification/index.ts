@@ -27,11 +27,11 @@ interface TelegramPayload {
 }
 
 const SEVERITY_EMOJI: Record<string, string> = {
-  critical: '🔴',
-  high: '🟠',
-  medium: '🟡',
-  low: '🟢',
-  info: 'ℹ️'
+  critical: '?',
+  high: '?',
+  medium: '?',
+  low: '?',
+  info: '[INFO] ?'
 };
 
 serve(async (req: Request) => {
@@ -85,12 +85,12 @@ serve(async (req: Request) => {
     }
 
     // Format message with Markdown
-    const emoji = SEVERITY_EMOJI[payload.alert.severity] || '⚠️';
+    const emoji = SEVERITY_EMOJI[payload.alert.severity] || '[WARN] ?';
     const message = `${emoji} *CyberShield Alert*\n\n` +
       `*${escapeMarkdown(payload.alert.title)}*\n\n` +
       `${escapeMarkdown(payload.alert.message)}\n\n` +
-      (payload.alert.agent_name ? `🖥️ Agent: \`${escapeMarkdown(payload.alert.agent_name)}\`\n` : '') +
-      `⏰ ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`;
+      (payload.alert.agent_name ? `?? Agent: \`${escapeMarkdown(payload.alert.agent_name)}\`\n` : '') +
+      `? ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`;
 
     // Send via Telegram Bot API
     const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;

@@ -103,12 +103,12 @@ Deno.serve(async (req) => {
     const monthlyChurnRate = totalCustomers > 0 ? (canceledCount / 3) / totalCustomers : 0.05; // Default 5% if no data
 
     // Calculate LTV (Customer Lifetime Value)
-    // LTV = (ARPA × Gross Margin) / Churn Rate
+    // LTV = (ARPA ? Gross Margin) / Churn Rate
     const grossMargin = 0.85; // 85% margin for SaaS
     const ltv = monthlyChurnRate > 0 ? (arpa * grossMargin) / monthlyChurnRate : arpa * 12;
 
     // Calculate Payback Period (in months)
-    // Payback = CAC / (ARPA × Gross Margin)
+    // Payback = CAC / (ARPA ? Gross Margin)
     const monthlyGrossProfit = arpa * grossMargin;
     const paybackMonths = monthlyGrossProfit > 0 ? cac / monthlyGrossProfit : 0;
 

@@ -4,7 +4,7 @@ ALTER TABLE public.security_policies
   ADD COLUMN IF NOT EXISTS priority INTEGER DEFAULT 0,
   ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
 
--- Criar tabela de regras de política
+-- Criar tabela de regras de politica
 CREATE TABLE public.security_policy_rules (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   policy_id UUID NOT NULL REFERENCES public.security_policies(id) ON DELETE CASCADE,
@@ -25,7 +25,7 @@ CREATE TABLE public.security_policy_rules (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Criar tabela de associação grupo-política
+-- Criar tabela de associacao grupo-politica
 CREATE TABLE public.agent_group_policies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id UUID NOT NULL REFERENCES public.agent_groups(id) ON DELETE CASCADE,
@@ -35,7 +35,7 @@ CREATE TABLE public.agent_group_policies (
   UNIQUE(group_id, policy_id)
 );
 
--- Criar tabela de logs de aplicação de política
+-- Criar tabela de logs de aplicacao de politica
 CREATE TABLE public.policy_enforcement_logs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -50,7 +50,7 @@ CREATE TABLE public.policy_enforcement_logs (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Índices para performance
+-- Indices para performance
 CREATE INDEX idx_security_policy_rules_policy ON public.security_policy_rules(policy_id);
 CREATE INDEX idx_agent_group_policies_group ON public.agent_group_policies(group_id);
 CREATE INDEX idx_agent_group_policies_policy ON public.agent_group_policies(policy_id);
@@ -123,6 +123,6 @@ ON public.policy_enforcement_logs FOR INSERT
 TO authenticated
 WITH CHECK (tenant_id IN (SELECT tenant_id FROM user_roles WHERE user_id = auth.uid()));
 
-COMMENT ON TABLE public.security_policy_rules IS 'Regras individuais dentro de cada política';
-COMMENT ON TABLE public.agent_group_policies IS 'Associação entre grupos de agentes e políticas';
-COMMENT ON TABLE public.policy_enforcement_logs IS 'Log de aplicação/bloqueio de políticas pelos agentes';
+COMMENT ON TABLE public.security_policy_rules IS 'Regras individuais dentro de cada politica';
+COMMENT ON TABLE public.agent_group_policies IS 'Associacao entre grupos de agentes e politicas';
+COMMENT ON TABLE public.policy_enforcement_logs IS 'Log de aplicacao/bloqueio de politicas pelos agentes';

@@ -1,4 +1,4 @@
--- SCALE-01: Função de retenção agressiva de métricas (7 dias)
+-- SCALE-01: Funcao de retencao agressiva de metricas (7 dias)
 -- Reduz crescimento de agent_system_metrics de ~1.4M/dia para ~100K
 
 CREATE OR REPLACE FUNCTION public.cleanup_old_metrics_aggressive()
@@ -11,13 +11,13 @@ DECLARE
   v_deleted_count BIGINT;
   v_oldest_remaining TIMESTAMP WITH TIME ZONE;
 BEGIN
-  -- Deletar métricas com mais de 7 dias (em vez de 30)
+  -- Deletar metricas com mais de 7 dias (em vez de 30)
   DELETE FROM public.agent_system_metrics
   WHERE collected_at < NOW() - INTERVAL '7 days';
   
   GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
   
-  -- Buscar timestamp da métrica mais antiga restante
+  -- Buscar timestamp da metrica mais antiga restante
   SELECT MIN(collected_at) INTO v_oldest_remaining
   FROM public.agent_system_metrics;
   
@@ -28,8 +28,8 @@ BEGIN
 END;
 $function$;
 
--- Função de cleanup de rate_limits otimizada (30 min já implementado)
--- Garantir que existe e está atualizada
+-- Funcao de cleanup de rate_limits otimizada (30 min ja implementado)
+-- Garantir que existe e esta atualizada
 CREATE OR REPLACE FUNCTION public.cleanup_old_rate_limits()
 RETURNS void
 LANGUAGE plpgsql
@@ -43,7 +43,7 @@ BEGIN
 END;
 $function$;
 
--- Função de cleanup de HMAC signatures (5 min)
+-- Funcao de cleanup de HMAC signatures (5 min)
 CREATE OR REPLACE FUNCTION public.cleanup_old_hmac_signatures()
 RETURNS void
 LANGUAGE plpgsql
@@ -56,22 +56,22 @@ BEGIN
 END;
 $function$;
 
--- Criar índice para acelerar cleanup de métricas se não existir
+-- Criar indice para acelerar cleanup de metricas se nao existir
 CREATE INDEX IF NOT EXISTS idx_agent_system_metrics_collected_at 
 ON public.agent_system_metrics(collected_at);
 
--- Criar índice para acelerar cleanup de rate_limits se não existir
+-- Criar indice para acelerar cleanup de rate_limits se nao existir
 CREATE INDEX IF NOT EXISTS idx_rate_limits_window_start 
 ON public.rate_limits(window_start);
 
--- Criar índice para acelerar cleanup de hmac_signatures se não existir
+-- Criar indice para acelerar cleanup de hmac_signatures se nao existir
 CREATE INDEX IF NOT EXISTS idx_hmac_signatures_used_at 
 ON public.hmac_signatures(used_at);
 
 -- NOTA: pg_cron deve ser configurado via Supabase Dashboard ou SQL direto
 -- As seguintes queries devem ser executadas manualmente no SQL Editor do Supabase:
 --
--- 1. Cleanup diário de métricas às 03:00 UTC:
+-- 1. Cleanup diario de metricas as 03:00 UTC:
 -- SELECT cron.schedule('cleanup-metrics-daily', '0 3 * * *', 'SELECT public.cleanup_old_metrics_aggressive()');
 --
 -- 2. Cleanup de rate_limits a cada 5 minutos:

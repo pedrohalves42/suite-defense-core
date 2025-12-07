@@ -2,7 +2,7 @@
 CREATE OR REPLACE FUNCTION public.auto_populate_agent_id()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Se agent_id é NULL mas agent_name está presente, buscar o agent_id
+  -- Se agent_id e NULL mas agent_name esta presente, buscar o agent_id
   IF NEW.agent_id IS NULL AND NEW.agent_name IS NOT NULL THEN
     SELECT id INTO NEW.agent_id
     FROM public.agents
@@ -10,7 +10,7 @@ BEGIN
       AND tenant_id = NEW.tenant_id
     LIMIT 1;
     
-    -- Log se não encontrou agente (debug)
+    -- Log se nao encontrou agente (debug)
     IF NEW.agent_id IS NULL THEN
       RAISE NOTICE 'auto_populate_agent_id: Agent not found for name=%, tenant=%', NEW.agent_name, NEW.tenant_id;
     END IF;
@@ -28,5 +28,5 @@ BEFORE INSERT ON public.jobs
 FOR EACH ROW
 EXECUTE FUNCTION public.auto_populate_agent_id();
 
--- Comentário explicativo
+-- Comentario explicativo
 COMMENT ON FUNCTION public.auto_populate_agent_id() IS 'Auto-popula agent_id baseado em agent_name quando NULL durante INSERT em jobs';

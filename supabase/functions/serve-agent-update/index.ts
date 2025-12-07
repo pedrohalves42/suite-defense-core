@@ -140,12 +140,12 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se script_content é placeholder (< 1000 bytes = placeholder)
+    // Verificar se script_content e placeholder (< 1000 bytes = placeholder)
     let finalScriptContent = release.script_content;
     let finalSha256 = release.sha256;
     
     if (!release.script_content || release.script_content.length < 1000) {
-      logger.warn('[serve-agent-update] Script no banco é placeholder, usando embedded', { 
+      logger.warn('[serve-agent-update] Script no banco e placeholder, usando embedded', { 
         requestId, 
         dbScriptSize: release.script_content?.length || 0,
         embeddedScriptSize: AGENT_SCRIPT_WINDOWS_CONTENT.length

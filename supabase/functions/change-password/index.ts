@@ -10,7 +10,7 @@ interface ChangePasswordPayload {
   new_password: string;
 }
 
-// Rate limiting por usuário
+// Rate limiting por usuario
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutos
@@ -45,10 +45,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Criar cliente com service role para operações admin
+    // Criar cliente com service role para operacoes admin
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Autenticar usuário via JWT
+    // Autenticar usuario via JWT
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Authorization header required' }), {
@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Criar cliente autenticado para verificar o usuário
+    // Criar cliente autenticado para verificar o usuario
     const supabaseClient = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Validar força da nova senha
+    // Validar forca da nova senha
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,72}$/;
     if (!passwordRegex.test(payload.new_password)) {
       return new Response(JSON.stringify({ 
@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
     if (signInError) {
       logger.warn(`Invalid current password for user: ${user.id}`);
       
-      // Buscar tenant_id do usuário para audit log
+      // Buscar tenant_id do usuario para audit log
       const { data: userRole } = await supabaseAdmin
         .from('user_roles')
         .select('tenant_id')

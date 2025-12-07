@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
       });
     };
 
-    // Preparar itens para inserção com novos campos
+    // Preparar itens para insercao com novos campos
     const itemsToInsert = payload.items.map(item => ({
       tenant_id: agent.tenant_id,
       agent_id: payload.agent_id,
@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
       visited_at: item.visited_at || nowIso,
     }));
 
-    // DEDUPLICAÇÃO SERVER-SIDE (defesa em profundidade)
+    // DEDUPLICACAO SERVER-SIDE (defesa em profundidade)
     // Remove duplicatas por domain+source para evitar erro de UPSERT
     const uniqueItemsMap = new Map<string, typeof itemsToInsert[0]>();
     for (const item of itemsToInsert) {
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
     const dedupedItems = Array.from(uniqueItemsMap.values());
 
     if (dedupedItems.length < itemsToInsert.length) {
-      logger.info(`Deduped ${itemsToInsert.length} → ${dedupedItems.length} items (removed ${itemsToInsert.length - dedupedItems.length} duplicates)`);
+      logger.info(`Deduped ${itemsToInsert.length} ? ${dedupedItems.length} items (removed ${itemsToInsert.length - dedupedItems.length} duplicates)`);
     }
 
     const { error: insertError } = await supabase

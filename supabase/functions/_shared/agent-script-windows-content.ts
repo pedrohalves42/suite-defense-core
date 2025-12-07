@@ -467,7 +467,7 @@ function Invoke-SoftwareInventoryJob {
 
     Write-Log "[SOFTWARE-INVENTORY] Iniciando coleta de inventario de software..." "INFO"
 
-    # OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n²)
+    # OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n?)
     \$items = New-Object System.Collections.ArrayList
 
     try {
@@ -711,7 +711,7 @@ function Invoke-WebActivityJob {
         }
 
         \$nowUtc = [DateTime]::UtcNow
-        # OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n²)
+        # OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n?)
         \$items = New-Object System.Collections.ArrayList
 
         # 1. Coletar DNS Cache

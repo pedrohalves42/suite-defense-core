@@ -156,7 +156,7 @@ export async function verifyHmacSignature(
     agent_name: agentName,
   });
 
-  // SEC-01 FIX: Cleanup probabilístico síncrono (evita race conditions com setTimeout em Deno)
+  // SEC-01 FIX: Cleanup probabilistico sincrono (evita race conditions com setTimeout em Deno)
   // 1% das requests executam cleanup - distribui carga sem depender de timers
   await probabilisticCleanup(supabase);
 
@@ -164,9 +164,9 @@ export async function verifyHmacSignature(
 }
 
 /**
- * Cleanup probabilístico para evitar race conditions em Deno Edge Functions
- * setTimeout/setInterval não são confiáveis em ambiente serverless
- * Solução: 1% das requests executam cleanup de forma síncrona
+ * Cleanup probabilistico para evitar race conditions em Deno Edge Functions
+ * setTimeout/setInterval nao sao confiaveis em ambiente serverless
+ * Solucao: 1% das requests executam cleanup de forma sincrona
  */
 const CLEANUP_PROBABILITY = 0.01; // 1% das requests
 
@@ -179,7 +179,7 @@ async function probabilisticCleanup(supabase: SupabaseClient): Promise<void> {
   try {
     await supabase.rpc('cleanup_old_hmac_signatures');
   } catch (error) {
-    // Log silencioso - cleanup é best-effort, não deve bloquear request
+    // Log silencioso - cleanup e best-effort, nao deve bloquear request
     console.warn('[HMAC] Probabilistic cleanup failed (non-blocking):', error);
   }
 }
