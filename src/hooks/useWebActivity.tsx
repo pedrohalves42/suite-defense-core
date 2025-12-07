@@ -13,19 +13,19 @@ async function fetchWebActivity(agentId: string): Promise<WebActivityItem[]> {
   // Fetch raw data and aggregate manually
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   
+  // Use explicit any to bypass type inference issues with new columns
   const { data, error } = await supabase
     .from('agent_web_activity')
-    .select('domain, visited_at, category, is_blocked')
+    .select('*')
     .eq('agent_id', agentId)
     .gte('visited_at', oneDayAgo)
-    .order('visited_at', { ascending: false });
+    .order('visited_at', { ascending: false }) as { data: WebActivityRow[] | null; error: Error | null };
 
   if (error) {
     throw new Error(`Failed to fetch web activity: ${error.message}`);
   }
 
-  // Cast to our interface since types may not be regenerated yet
-  const rows = (data || []) as unknown as WebActivityRow[];
+  const rows = data || [];
 
   // Aggregate by domain
   const aggregated = new Map<string, { 
