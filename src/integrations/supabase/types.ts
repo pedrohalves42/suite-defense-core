@@ -2239,6 +2239,177 @@ export type Database = {
           },
         ]
       }
+      notification_channels: {
+        Row: {
+          channel_type: string
+          config: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          is_verified: boolean
+          name: string
+          tenant_id: string
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          channel_type: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          name: string
+          tenant_id: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          channel_type?: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_channels_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_log: {
+        Row: {
+          alert_id: string | null
+          channel_id: string | null
+          channel_type: string
+          created_at: string
+          error_message: string | null
+          external_id: string | null
+          id: string
+          message_preview: string | null
+          recipient: string
+          sent_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          alert_id?: string | null
+          channel_id?: string | null
+          channel_type: string
+          created_at?: string
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          message_preview?: string | null
+          recipient: string
+          sent_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          alert_id?: string | null
+          channel_id?: string | null
+          channel_type?: string
+          created_at?: string
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          message_preview?: string | null
+          recipient?: string
+          sent_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_log_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "system_alerts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_log_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "notification_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          alert_types: string[]
+          channel_id: string
+          created_at: string
+          enabled: boolean
+          id: string
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          quiet_hours_timezone: string | null
+          severity_filter: string[]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          alert_types?: string[]
+          channel_id: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          quiet_hours_timezone?: string | null
+          severity_filter?: string[]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          alert_types?: string[]
+          channel_id?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          quiet_hours_timezone?: string | null
+          severity_filter?: string[]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "notification_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_preferences_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       performance_metrics: {
         Row: {
           created_at: string
