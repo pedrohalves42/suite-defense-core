@@ -2132,6 +2132,56 @@ export type Database = {
           },
         ]
       }
+      marketing_costs: {
+        Row: {
+          channel: string
+          conversions: number
+          created_at: string
+          created_by: string | null
+          id: string
+          leads_generated: number
+          month: string
+          notes: string | null
+          spend_cents: number
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          channel?: string
+          conversions?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          leads_generated?: number
+          month: string
+          notes?: string | null
+          spend_cents?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          conversions?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          leads_generated?: number
+          month?: string
+          notes?: string | null
+          spend_cents?: number
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_costs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       network_anomalies: {
         Row: {
           acknowledged: boolean | null
@@ -2796,6 +2846,84 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "sales_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_pipeline: {
+        Row: {
+          assigned_to: string | null
+          closed_at: string | null
+          company_name: string
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          converted_tenant_id: string | null
+          created_at: string
+          expected_close_date: string | null
+          expected_devices: number
+          expected_value_cents: number
+          id: string
+          notes: string | null
+          probability: number
+          source: string | null
+          stage: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          closed_at?: string | null
+          company_name: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          converted_tenant_id?: string | null
+          created_at?: string
+          expected_close_date?: string | null
+          expected_devices?: number
+          expected_value_cents?: number
+          id?: string
+          notes?: string | null
+          probability?: number
+          source?: string | null
+          stage?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          closed_at?: string | null
+          company_name?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          converted_tenant_id?: string | null
+          created_at?: string
+          expected_close_date?: string | null
+          expected_devices?: number
+          expected_value_cents?: number
+          id?: string
+          notes?: string | null
+          probability?: number
+          source?: string | null
+          stage?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_pipeline_converted_tenant_id_fkey"
+            columns: ["converted_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_pipeline_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
