@@ -4885,7 +4885,6 @@ export type Database = {
         }[]
       }
       current_user_tenant_id: { Args: never; Returns: string }
-      dearmor: { Args: { "": string }; Returns: string }
       diagnose_agent: { Args: { p_agent_name: string }; Returns: Json }
       diagnose_agent_issues: {
         Args: { p_agent_name: string }
@@ -4904,8 +4903,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      gen_random_uuid: { Args: never; Returns: string }
-      gen_salt: { Args: { "": string }; Returns: string }
       get_agent_health_metrics: {
         Args: { p_tenant_id: string }
         Returns: {
@@ -4992,10 +4989,6 @@ export type Database = {
       }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
-      pgp_armor_headers: {
-        Args: { "": string }
-        Returns: Record<string, unknown>[]
-      }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
       update_quota_usage: {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }

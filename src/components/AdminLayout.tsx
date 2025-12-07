@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import { logger } from '@/lib/logger';
+import { OutdatedAgentsBanner } from '@/components/OutdatedAgentsBanner';
 
 export const AdminLayout = () => {
   const { isAdmin, loading } = useIsAdmin();
@@ -42,6 +43,7 @@ export const AdminLayout = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      <OutdatedAgentsBanner />
       <Outlet />
     </div>
   );
