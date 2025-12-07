@@ -604,38 +604,53 @@ export type Database = {
       agent_web_activity: {
         Row: {
           agent_id: string
+          browser: string | null
           category: string | null
           created_at: string
           domain: string
           id: string
           is_blocked: boolean | null
+          page_title: string | null
           source: string
           tenant_id: string
+          total_duration_seconds: number | null
           url: string | null
+          url_full: string | null
+          visit_count: number | null
           visited_at: string
         }
         Insert: {
           agent_id: string
+          browser?: string | null
           category?: string | null
           created_at?: string
           domain: string
           id?: string
           is_blocked?: boolean | null
+          page_title?: string | null
           source?: string
           tenant_id: string
+          total_duration_seconds?: number | null
           url?: string | null
+          url_full?: string | null
+          visit_count?: number | null
           visited_at: string
         }
         Update: {
           agent_id?: string
+          browser?: string | null
           category?: string | null
           created_at?: string
           domain?: string
           id?: string
           is_blocked?: boolean | null
+          page_title?: string | null
           source?: string
           tenant_id?: string
+          total_duration_seconds?: number | null
           url?: string | null
+          url_full?: string | null
+          visit_count?: number | null
           visited_at?: string
         }
         Relationships: [

@@ -178,7 +178,7 @@ export default function JobsV3Migration() {
           )}
 
           {migrationStats.v3Percentage >= 50 && migrationStats.v3Percentage < 80 && (
-            <div className="flex items-start gap-2 p-3 border border-warning/50 bg-warning/10 rounded-lg">
+            <div className="flex items-start gap-2 p-3 border border-warning/50 bg-warning/20 rounded-lg">
               <Activity className="h-5 w-5 text-warning mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-warning">Migracao em Progresso</p>
