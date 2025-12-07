@@ -186,7 +186,7 @@ verify_jwt = true
 
 [functions.check-production-health]
 verify_jwt = false
-schedule = "0 * * * *"  # Executa a cada hora
+schedule = "0 * * * *"
 
 # === Alert Functions ===
 [functions.send-alert-email]
@@ -202,6 +202,19 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.send-welcome-email]
+verify_jwt = false
+
+# === Multi-Channel Notification Functions ===
+[functions.dispatch-notification]
+verify_jwt = false
+
+[functions.send-whatsapp-notification]
+verify_jwt = false
+
+[functions.send-telegram-notification]
+verify_jwt = false
+
+[functions.send-email-notification]
 verify_jwt = false
 
 # === Auth Functions ===
@@ -273,11 +286,11 @@ verify_jwt = false
 
 [functions.check-installation-health]
 verify_jwt = false
-schedule = "0 * * * *"  # Executa a cada hora
+schedule = "0 * * * *"
 
 [functions.monitor-stuck-agents]
 verify_jwt = false
-schedule = "*/10 * * * *"  # Executa a cada 10 minutos
+schedule = "*/10 * * * *"
 
 # === FASE 3+4: Agent Release Management ===
 [functions.register-agent-release]
@@ -288,7 +301,7 @@ verify_jwt = true
 
 [functions.process-agent-updates]
 verify_jwt = false
-schedule = "0 */6 * * *"  # Executa a cada 6 horas
+schedule = "0 */6 * * *"
 
 # === Security Features v3.10.0 ===
 [functions.submit-software-inventory]
