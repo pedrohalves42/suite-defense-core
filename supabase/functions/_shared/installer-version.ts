@@ -7,10 +7,14 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.24-SMART-UPDATE';
-export const LAST_UPDATED = '2025-12-04T23:00:00Z'; // SMART-UPDATE: Corrige bootstrap problem com deteccao inteligente de path
+export const INSTALLER_VERSION = 'v3.10.25-BLOCKED-WEBSITES';
+export const LAST_UPDATED = '2025-12-07T04:00:00Z'; // BLOCKED-WEBSITES: Adiciona sync_blocked_websites job type
 
 export const CHANGES = [
+  '[v3.10.25-BLOCKED-WEBSITES] FEATURE: Novo job type sync_blocked_websites para sincronizar lista de sites bloqueados',
+  '[v3.10.25-BLOCKED-WEBSITES] FEATURE: Salva lista de dominios bloqueados em C:\\CyberShield\\blocked_websites.json',
+  '[v3.10.25-BLOCKED-WEBSITES] FEATURE: Opcao apply_to_hosts para bloquear dominios via Windows hosts file',
+  '[v3.10.25-BLOCKED-WEBSITES] FEATURE: Limpa DNS cache apos modificar hosts file para aplicar imediatamente',
   '[v3.10.24-SMART-UPDATE] CRITICAL FIX: update_agent agora detecta automaticamente o path do script atual',
   '[v3.10.24-SMART-UPDATE] CRITICAL FIX: Tenta multiplas estrategias: PSCommandPath, AgentName, glob pattern',
   '[v3.10.24-SMART-UPDATE] CRITICAL FIX: Pula backup se script atual nao encontrado (nao falha)',
