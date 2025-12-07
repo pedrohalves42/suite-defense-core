@@ -2,12 +2,12 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.24-SMART-UPDATE
+ * Versao: v3.10.25-BLOCKED-WEBSITES
  */
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.24-SMART-UPDATE
+    CyberShield Agent - Windows v3.10.25-BLOCKED-WEBSITES
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -45,7 +45,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.24-SMART-UPDATE"
+    [string]\$AgentVersion = "v3.10.25-BLOCKED-WEBSITES"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -467,7 +467,8 @@ function Invoke-SoftwareInventoryJob {
 
     Write-Log "[SOFTWARE-INVENTORY] Iniciando coleta de inventario de software..." "INFO"
 
-    \$items = @()
+    # OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n²)
+    \$items = New-Object System.Collections.ArrayList
 
     try {
         \$keys = @(
@@ -482,12 +483,12 @@ function Invoke-SoftwareInventoryJob {
                     continue
                 }
 
-                \$items += @{
+                [void]\$items.Add(@{
                     name = \$app.DisplayName
                     version = \$app.DisplayVersion
                     vendor = \$app.Publisher
                     install_location = \$app.InstallLocation
-                }
+                })
             }
         }
 
@@ -533,7 +534,8 @@ function Invoke-LightVulnScanJob {
 
     Write-Log "[VULN-SCAN] Iniciando light vuln scan..." "INFO"
 
-    \$findings = @()
+    # OTIMIZACAO: Usar ArrayList em vez de += para melhor performance
+    \$findings = New-Object System.Collections.ArrayList
 
     try {
         # Check 1: Firewall (usando funcao com fallback netsh)
@@ -541,13 +543,13 @@ function Invoke-LightVulnScanJob {
         if (\$firewallProfiles) {
             foreach (\$p in \$firewallProfiles) {
                 if (-not \$p.Enabled) {
-                    \$findings += @{
+                    [void]\$findings.Add(@{
                         severity = "high"
                         check_key = "firewall_disabled_\$(\$p.Name)"
                         title = "Firewall desativado no perfil \$(\$p.Name)"
                         description = "Firewall deve permanecer habilitado em todos os perfis."
                         remediation = "Ativar firewall para o perfil \$(\$p.Name)."
-                    }
+                    })
                 }
             }
         }
@@ -557,26 +559,26 @@ function Invoke-LightVulnScanJob {
         \$fDenyTSConn = Get-ItemProperty -Path \$rdpKey -Name "fDenyTSConnections" -ErrorAction SilentlyContinue
 
         if (\$fDenyTSConn -and \$fDenyTSConn.fDenyTSConnections -eq 0) {
-            \$findings += @{
+            [void]\$findings.Add(@{
                 severity = "medium"
                 check_key = "rdp_enabled"
                 title = "RDP habilitado"
                 description = "RDP habilitado aumenta a superficie de ataque."
                 remediation = "Desabilitar RDP se nao for necessario."
-            }
+            })
         }
 
         # Check 3: SMBv1
         try {
             \$smbv1 = Get-WindowsOptionalFeature -Online -FeatureName SMB1Protocol -ErrorAction SilentlyContinue
             if (\$smbv1 -and \$smbv1.State -eq "Enabled") {
-                \$findings += @{
+                [void]\$findings.Add(@{
                     severity = "high"
                     check_key = "smbv1_enabled"
                     title = "SMBv1 habilitado"
                     description = "SMBv1 e vulneravel e deve ser desabilitado."
                     remediation = "Desabilitar SMBv1 via Windows Features."
-                }
+                })
             }
         } catch {
             Write-Log "[VULN-SCAN] Nao foi possivel verificar SMBv1" "WARN"
@@ -709,7 +711,8 @@ function Invoke-WebActivityJob {
         }
 
         \$nowUtc = [DateTime]::UtcNow
-        \$items = @()
+        # OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n²)
+        \$items = New-Object System.Collections.ArrayList
 
         # 1. Coletar DNS Cache
         Write-Log "[WEB-ACTIVITY] Coletando cache DNS..." "INFO"
@@ -733,11 +736,11 @@ function Invoke-WebActivityJob {
                         continue
                     }
 
-                    \$items += @{
+                    [void]\$items.Add(@{
                         domain = \$domain
                         source = "dns_cache"
                         visited_at = \$nowUtc.ToString("o")
-                    }
+                    })
                 }
                 Write-Log "[WEB-ACTIVITY] Cache DNS: \$(\$dnsEntries.Count) dominios coletados" "INFO"
             }
@@ -773,9 +776,19 @@ function Invoke-WebActivityJob {
                     
                     if (Test-Path \$tempHistoryPath) {
                         try {
-                            \$chromeData = Get-Content \$tempHistoryPath -Encoding Byte -ReadCount 0 -ErrorAction SilentlyContinue
-                            if (\$chromeData) {
-                                \$dataString = [System.Text.Encoding]::UTF8.GetString(\$chromeData)
+                            # OTIMIZACAO: Limitar leitura a 5MB para evitar picos de memoria
+                            \$maxBytes = 5 * 1024 * 1024  # 5MB
+                            \$fileInfo = Get-Item \$tempHistoryPath
+                            \$bytesToRead = [Math]::Min(\$fileInfo.Length, \$maxBytes)
+                            
+                            \$fileStream = [System.IO.File]::OpenRead(\$tempHistoryPath)
+                            \$buffer = New-Object byte[] \$bytesToRead
+                            [void]\$fileStream.Read(\$buffer, 0, \$bytesToRead)
+                            \$fileStream.Close()
+                            \$fileStream.Dispose()
+                            
+                            if (\$buffer) {
+                                \$dataString = [System.Text.Encoding]::UTF8.GetString(\$buffer)
                                 \$urlMatches = [regex]::Matches(\$dataString, 'https?://([^/\\s\\x00]+)')
                                 
                                 \$chromeDomains = \$urlMatches | 
@@ -784,13 +797,17 @@ function Invoke-WebActivityJob {
                                     Select-Object -Unique -First 50
                                 
                                 foreach (\$domain in \$chromeDomains) {
-                                    \$items += @{
+                                    [void]\$items.Add(@{
                                         domain = \$domain
                                         source = "chrome_history_\$userName"
                                         visited_at = \$nowUtc.ToString("o")
-                                    }
+                                    })
                                 }
                                 Write-Log "[WEB-ACTIVITY] Chrome (\$userName): \$(\$chromeDomains.Count) dominios" "INFO"
+                                
+                                # Liberar memoria explicitamente
+                                \$buffer = \$null
+                                \$dataString = \$null
                             }
                         } catch {
                             Write-Log "[WEB-ACTIVITY] Erro ao ler Chrome (\$userName): \$(\$_.Exception.Message)" "WARN"
@@ -815,9 +832,19 @@ function Invoke-WebActivityJob {
                             
                             if (Test-Path \$tempPlacesPath) {
                                 try {
-                                    \$firefoxData = Get-Content \$tempPlacesPath -Encoding Byte -ReadCount 0 -ErrorAction SilentlyContinue
-                                    if (\$firefoxData) {
-                                        \$dataString = [System.Text.Encoding]::UTF8.GetString(\$firefoxData)
+                                    # OTIMIZACAO: Limitar leitura a 5MB
+                                    \$maxBytes = 5 * 1024 * 1024
+                                    \$fileInfo = Get-Item \$tempPlacesPath
+                                    \$bytesToRead = [Math]::Min(\$fileInfo.Length, \$maxBytes)
+                                    
+                                    \$fileStream = [System.IO.File]::OpenRead(\$tempPlacesPath)
+                                    \$buffer = New-Object byte[] \$bytesToRead
+                                    [void]\$fileStream.Read(\$buffer, 0, \$bytesToRead)
+                                    \$fileStream.Close()
+                                    \$fileStream.Dispose()
+                                    
+                                    if (\$buffer) {
+                                        \$dataString = [System.Text.Encoding]::UTF8.GetString(\$buffer)
                                         \$urlMatches = [regex]::Matches(\$dataString, 'https?://([^/\\s\\x00]+)')
                                         
                                         \$firefoxDomains = \$urlMatches | 
@@ -826,13 +853,16 @@ function Invoke-WebActivityJob {
                                             Select-Object -Unique -First 50
                                         
                                         foreach (\$domain in \$firefoxDomains) {
-                                            \$items += @{
+                                            [void]\$items.Add(@{
                                                 domain = \$domain
                                                 source = "firefox_history_\$userName"
                                                 visited_at = \$nowUtc.ToString("o")
-                                            }
+                                            })
                                         }
                                         Write-Log "[WEB-ACTIVITY] Firefox (\$userName): \$(\$firefoxDomains.Count) dominios" "INFO"
+                                        
+                                        \$buffer = \$null
+                                        \$dataString = \$null
                                     }
                                 } catch {
                                     Write-Log "[WEB-ACTIVITY] Erro ao ler Firefox (\$userName): \$(\$_.Exception.Message)" "WARN"
@@ -856,9 +886,19 @@ function Invoke-WebActivityJob {
                     
                     if (Test-Path \$tempHistoryPath) {
                         try {
-                            \$edgeData = Get-Content \$tempHistoryPath -Encoding Byte -ReadCount 0 -ErrorAction SilentlyContinue
-                            if (\$edgeData) {
-                                \$dataString = [System.Text.Encoding]::UTF8.GetString(\$edgeData)
+                            # OTIMIZACAO: Limitar leitura a 5MB
+                            \$maxBytes = 5 * 1024 * 1024
+                            \$fileInfo = Get-Item \$tempHistoryPath
+                            \$bytesToRead = [Math]::Min(\$fileInfo.Length, \$maxBytes)
+                            
+                            \$fileStream = [System.IO.File]::OpenRead(\$tempHistoryPath)
+                            \$buffer = New-Object byte[] \$bytesToRead
+                            [void]\$fileStream.Read(\$buffer, 0, \$bytesToRead)
+                            \$fileStream.Close()
+                            \$fileStream.Dispose()
+                            
+                            if (\$buffer) {
+                                \$dataString = [System.Text.Encoding]::UTF8.GetString(\$buffer)
                                 \$urlMatches = [regex]::Matches(\$dataString, 'https?://([^/\\s\\x00]+)')
                                 
                                 \$edgeDomains = \$urlMatches | 
@@ -867,13 +907,16 @@ function Invoke-WebActivityJob {
                                     Select-Object -Unique -First 50
                                 
                                 foreach (\$domain in \$edgeDomains) {
-                                    \$items += @{
+                                    [void]\$items.Add(@{
                                         domain = \$domain
                                         source = "edge_history_\$userName"
                                         visited_at = \$nowUtc.ToString("o")
-                                    }
+                                    })
                                 }
                                 Write-Log "[WEB-ACTIVITY] Edge (\$userName): \$(\$edgeDomains.Count) dominios" "INFO"
+                                
+                                \$buffer = \$null
+                                \$dataString = \$null
                             }
                         } catch {
                             Write-Log "[WEB-ACTIVITY] Erro ao ler Edge (\$userName): \$(\$_.Exception.Message)" "WARN"
@@ -1277,6 +1320,123 @@ function Invoke-CollectNetworkInfoJob {
         return @{
             success = \$false
             error   = \$errorMsg
+        }
+    }
+}
+
+# ============================================
+#  SYNC BLOCKED WEBSITES JOB
+# ============================================
+function Invoke-SyncBlockedWebsitesJob {
+    param(
+        [Parameter(Mandatory = \$true)]
+        [object]\$Job
+    )
+    
+    try {
+        Write-Log "[BLOCKED-SITES] Iniciando sincronizacao de sites bloqueados..." "INFO"
+        
+        # Buscar lista de sites bloqueados do servidor
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/get-blocked-websites" \`
+            -Method "GET" \`
+            -TimeoutSec 30
+        
+        if (-not \$result.Success) {
+            throw "Falha ao buscar lista de sites bloqueados (HTTP \$(\$result.StatusCode))"
+        }
+        
+        \$data = \$result.Body | ConvertFrom-Json
+        \$blockedDomains = @()
+        
+        if (\$null -ne \$data.blocked_websites) {
+            \$blockedDomains = @(\$data.blocked_websites | ForEach-Object { \$_.domain_pattern })
+        }
+        
+        Write-Log "[BLOCKED-SITES] Recebidos \$(\$blockedDomains.Count) dominios bloqueados" "INFO"
+        
+        # Salvar lista localmente para uso pelo agente
+        \$blockedListPath = "C:\\CyberShield\\blocked_websites.json"
+        \$blockedData = @{
+            updated_at = [DateTime]::UtcNow.ToString("o")
+            domains = \$blockedDomains
+        }
+        
+        \$blockedJson = \$blockedData | ConvertTo-Json -Compress
+        [System.IO.File]::WriteAllText(\$blockedListPath, \$blockedJson, [System.Text.UTF8Encoding]::new(\$false))
+        
+        Write-Log "[BLOCKED-SITES] Lista salva em \$blockedListPath" "SUCCESS"
+        
+        # Aplicar bloqueios no Windows Hosts file (opcional, apenas se configurado)
+        \$payload = \$null
+        if (\$null -ne \$Job.payload) {
+            \$payload = \$Job.payload
+        }
+        
+        \$applyToHosts = \$false
+        if (\$null -ne \$payload -and \$null -ne \$payload.apply_to_hosts) {
+            \$applyToHosts = [bool]\$payload.apply_to_hosts
+        }
+        
+        \$hostsModified = 0
+        if (\$applyToHosts -and \$blockedDomains.Count -gt 0) {
+            try {
+                \$hostsPath = "\$env:SystemRoot\\System32\\drivers\\etc\\hosts"
+                \$hostsContent = Get-Content \$hostsPath -Raw -ErrorAction SilentlyContinue
+                
+                # Marcadores para identificar linhas gerenciadas pelo CyberShield
+                \$startMarker = "# BEGIN CYBERSHIELD BLOCKED"
+                \$endMarker = "# END CYBERSHIELD BLOCKED"
+                
+                # Remover bloqueios antigos do CyberShield
+                if (\$hostsContent -match "\$startMarker[\\s\\S]*?\$endMarker") {
+                    \$hostsContent = \$hostsContent -replace "\$startMarker[\\s\\S]*?\$endMarker", ""
+                    \$hostsContent = \$hostsContent.Trim()
+                }
+                
+                # Adicionar novos bloqueios
+                \$newBlockLines = @(\$startMarker)
+                foreach (\$domain in \$blockedDomains) {
+                    # Limpar wildcards para hosts file
+                    \$cleanDomain = \$domain -replace '^\\*\\.', '' -replace '\\*', ''
+                    if (\$cleanDomain -and \$cleanDomain -notmatch '^[\\s\\.]*\$') {
+                        \$newBlockLines += "127.0.0.1 \$cleanDomain"
+                        \$newBlockLines += "127.0.0.1 www.\$cleanDomain"
+                        \$hostsModified++
+                    }
+                }
+                \$newBlockLines += \$endMarker
+                
+                \$newHostsContent = "\$hostsContent\`n\`n\$(\$newBlockLines -join "\`n")"
+                Set-Content -Path \$hostsPath -Value \$newHostsContent -Force -Encoding ASCII
+                
+                Write-Log "[BLOCKED-SITES] Hosts file atualizado com \$hostsModified dominios" "SUCCESS"
+                
+                # Limpar cache DNS para aplicar mudancas imediatamente
+                ipconfig /flushdns | Out-Null
+                
+            } catch {
+                Write-Log "[BLOCKED-SITES] Erro ao modificar hosts file: \$(\$_.Exception.Message)" "WARN"
+            }
+        }
+        
+        return @{
+            success = \$true
+            output = @{
+                message = "Sites bloqueados sincronizados com sucesso"
+                domains_count = \$blockedDomains.Count
+                hosts_modified = \$hostsModified
+                list_path = \$blockedListPath
+                synced_at = [DateTime]::UtcNow.ToString("o")
+            }
+        }
+    }
+    catch {
+        \$errorMsg = "Erro em Invoke-SyncBlockedWebsitesJob: \$(\$_.Exception.Message)"
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            error = \$errorMsg
         }
     }
 }
@@ -1927,6 +2087,14 @@ function Execute-Job {
             }
             "collect_network_info" {
                 \$result = Invoke-CollectNetworkInfoJob -Job \$job
+                if (\$result.success) {
+                    \$output = \$result.output
+                } else {
+                    throw \$result.error
+                }
+            }
+            "sync_blocked_websites" {
+                \$result = Invoke-SyncBlockedWebsitesJob -Job \$job
                 if (\$result.success) {
                     \$output = \$result.output
                 } else {
