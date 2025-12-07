@@ -604,9 +604,11 @@ export type Database = {
       agent_web_activity: {
         Row: {
           agent_id: string
+          category: string | null
           created_at: string
           domain: string
           id: string
+          is_blocked: boolean | null
           source: string
           tenant_id: string
           url: string | null
@@ -614,9 +616,11 @@ export type Database = {
         }
         Insert: {
           agent_id: string
+          category?: string | null
           created_at?: string
           domain: string
           id?: string
+          is_blocked?: boolean | null
           source?: string
           tenant_id: string
           url?: string | null
@@ -624,9 +628,11 @@ export type Database = {
         }
         Update: {
           agent_id?: string
+          category?: string | null
           created_at?: string
           domain?: string
           id?: string
+          is_blocked?: boolean | null
           source?: string
           tenant_id?: string
           url?: string | null
