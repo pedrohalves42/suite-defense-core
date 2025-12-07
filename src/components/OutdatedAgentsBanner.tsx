@@ -110,10 +110,15 @@ export const OutdatedAgentsBanner = () => {
         </div>
         <div className="mt-3 flex gap-2">
           <Button asChild size="sm" variant="outline" className="gap-1">
-            <Link to="/admin/agent-health">
+            <Link to="/admin/agent-installer">
               <RefreshCw className="h-3 w-3" />
-              Ver Procedimento
+              Gerar Nova Enrollment Key
             </Link>
+          </Button>
+          <Button asChild size="sm" variant="ghost" className="gap-1 text-xs">
+            <a href="https://github.com/your-repo/docs/REINSTALL_PROCEDURE_V3.md" target="_blank" rel="noopener noreferrer">
+              Ver Procedimento Completo
+            </a>
           </Button>
         </div>
       </div>
