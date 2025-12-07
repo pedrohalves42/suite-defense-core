@@ -2,6 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { WebActivityItem } from '@/types/security';
 
+interface WebActivityRow {
+  domain: string;
+  visited_at: string;
+  category?: string | null;
+  is_blocked?: boolean | null;
+}
+
 async function fetchWebActivity(agentId: string): Promise<WebActivityItem[]> {
   // Fetch raw data and aggregate manually
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -17,6 +24,9 @@ async function fetchWebActivity(agentId: string): Promise<WebActivityItem[]> {
     throw new Error(`Failed to fetch web activity: ${error.message}`);
   }
 
+  // Cast to our interface since types may not be regenerated yet
+  const rows = (data || []) as unknown as WebActivityRow[];
+
   // Aggregate by domain
   const aggregated = new Map<string, { 
     first: string; 
@@ -26,7 +36,7 @@ async function fetchWebActivity(agentId: string): Promise<WebActivityItem[]> {
     is_blocked?: boolean;
   }>();
   
-  for (const item of data || []) {
+  for (const item of rows) {
     const existing = aggregated.get(item.domain);
     if (existing) {
       if (item.visited_at < existing.first) {
@@ -38,7 +48,7 @@ async function fetchWebActivity(agentId: string): Promise<WebActivityItem[]> {
       existing.count++;
       // Keep latest category/is_blocked values
       if (item.category) existing.category = item.category;
-      if (item.is_blocked !== null) existing.is_blocked = item.is_blocked;
+      if (item.is_blocked !== null) existing.is_blocked = item.is_blocked ?? undefined;
     } else {
       aggregated.set(item.domain, {
         first: item.visited_at,
