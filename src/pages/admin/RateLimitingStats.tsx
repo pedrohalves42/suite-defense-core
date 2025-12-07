@@ -50,6 +50,24 @@ export default function RateLimitingStats() {
       });
       
       if (error) throw error;
+      
+      // Garantir que sempre retornamos um objeto válido
+      if (!data?.data) {
+        console.error('Rate limit stats response is empty:', data);
+        return {
+          summary: [],
+          top_blocked: [],
+          hourly_breakdown: {},
+          totals: {
+            total_requests: 0,
+            total_blocked: 0,
+            unique_endpoints: 0,
+            currently_blocked: 0,
+          },
+          period_hours: parseInt(hoursBack),
+        } as RateLimitStats;
+      }
+      
       return data.data as RateLimitStats;
     },
     refetchInterval: 30000, // Auto-refresh every 30 seconds
