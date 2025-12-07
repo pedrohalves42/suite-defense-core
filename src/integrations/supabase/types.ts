@@ -3855,7 +3855,6 @@ export type Database = {
         Row: {
           channel: string | null
           created_at: string | null
-          created_by: string | null
           id: string | null
           is_active: boolean | null
           platform: string | null
@@ -3866,7 +3865,6 @@ export type Database = {
         Insert: {
           channel?: string | null
           created_at?: string | null
-          created_by?: string | null
           id?: string | null
           is_active?: boolean | null
           platform?: string | null
@@ -3877,7 +3875,6 @@ export type Database = {
         Update: {
           channel?: string | null
           created_at?: string | null
-          created_by?: string | null
           id?: string | null
           is_active?: boolean | null
           platform?: string | null
