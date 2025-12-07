@@ -296,9 +296,9 @@ const JobCreator = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Criador de Jobs
+              Central de Tarefas
             </h1>
-            <p className="text-sm text-muted-foreground">Crie e gerencie jobs para os agentes</p>
+            <p className="text-sm text-muted-foreground">Crie e gerencie tarefas para os computadores</p>
           </div>
         </div>
         <Button
@@ -328,26 +328,26 @@ const JobCreator = () => {
 
         <Card className="bg-gradient-card border-accent/20">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Jobs Recentes</CardTitle>
+            <CardTitle className="text-sm font-medium">Tarefas Recentes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-foreground">{recentJobs.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              ultimos 20 jobs
+              últimas 20 tarefas
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card border-success/20">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Jobs Pendentes</CardTitle>
+            <CardTitle className="text-sm font-medium">Tarefas Pendentes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-foreground">
               {recentJobs.filter(j => j.status === 'queued').length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              aguardando execucao
+              aguardando execução
             </p>
           </CardContent>
         </Card>
@@ -355,17 +355,17 @@ const JobCreator = () => {
 
       <Tabs defaultValue="create" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="create">Criar Job</TabsTrigger>
-          <TabsTrigger value="history">Historico</TabsTrigger>
+          <TabsTrigger value="create">Criar Tarefa</TabsTrigger>
+          <TabsTrigger value="history">Histórico</TabsTrigger>
         </TabsList>
 
         {/* Create Job Tab */}
         <TabsContent value="create" className="mt-4">
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader>
-              <CardTitle>Novo Job</CardTitle>
+              <CardTitle>Nova Tarefa</CardTitle>
               <CardDescription>
-                Configure e inicie um novo job para um agente
+                Configure e inicie uma nova tarefa para um computador
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -404,7 +404,7 @@ const JobCreator = () => {
 
                   {/* Job Type */}
                   <div className="space-y-2">
-                    <Label htmlFor="type">Tipo de Job</Label>
+                    <Label htmlFor="type">Tipo de Tarefa</Label>
                     <Select value={jobType} onValueChange={handleJobTypeChange}>
                       <SelectTrigger id="type">
                         <SelectValue placeholder="Selecione o tipo" />

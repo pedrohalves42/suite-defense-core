@@ -147,7 +147,7 @@ export function ScanFileDialog() {
               filePath.toLowerCase().includes('downloads') ||
               filePath.toLowerCase().includes('documents') ||
               filePath.toLowerCase().includes('desktop')) && (
-              <div className="rounded-md bg-destructive/10 border border-destructive/30 p-3 text-xs text-destructive">
+              <div className="rounded-md bg-destructive/20 border border-destructive/30 p-3 text-xs text-destructive">
                 <p className="font-semibold">⚠️ Caminho Invalido para SYSTEM</p>
                 <p className="mt-1">
                   O agente roda como conta SYSTEM e <strong>nao tem acesso</strong> a pastas de usuario como Downloads, Documents ou Desktop.

@@ -10,7 +10,7 @@ interface ErrorStateProps {
 
 export function ErrorState({ error, onRetry, title = "Erro ao Carregar Dados" }: ErrorStateProps) {
   return (
-    <Card className="border-destructive bg-destructive/5">
+    <Card className="border-destructive bg-destructive/15">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-destructive">
           <AlertCircle className="h-5 w-5" />
@@ -18,7 +18,7 @@ export function ErrorState({ error, onRetry, title = "Erro ao Carregar Dados" }:
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="rounded-md bg-destructive/10 p-4">
+        <div className="rounded-md bg-destructive/20 p-4">
           <p className="text-sm font-mono text-muted-foreground">
             {error.message || "Erro desconhecido ao comunicar com o backend"}
           </p>

@@ -264,7 +264,7 @@ export default function Login() {
                   </Alert>
                 )}
                 {requiresCaptcha && (
-                  <Alert variant="destructive" className="border-destructive/50 bg-destructive/5 backdrop-blur-sm animate-slide-in">
+                  <Alert variant="destructive" className="border-destructive/50 bg-destructive/15 backdrop-blur-sm animate-slide-in">
                     <AlertCircle className="h-4 w-4 animate-pulse" />
                     <AlertDescription className="font-medium">
                       🛡️ Proteção ativada: {attemptCount} tentativas falhadas. Complete o CAPTCHA para continuar.

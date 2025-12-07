@@ -1,10 +1,9 @@
-// Mapeamento de tipos de jobs para nomes amigáveis
+// Mapeamento de tipos de tarefas para nomes amigáveis
 export const JOB_TYPE_LABELS: Record<string, string> = {
   scan: '📁 Verificação de Arquivos',
   update: '🔄 Atualização do Agente',
   update_agent: '🔄 Atualização Automática',
   report: '📊 Geração de Relatório',
-  config: '⚙️ Configuração',
   software_inventory_collect: '📦 Inventário de Software',
   collect_antivirus_status: '🛡️ Status do Antivírus',
   collect_web_activity: '🌐 Atividade Web',
@@ -24,6 +23,18 @@ export const JOB_STATUS_LABELS: Record<string, string> = {
   pending: '⏸️ Pendente',
 };
 
+// Terminologia amigável para UI
+export const UI_TERMINOLOGY = {
+  job: 'Tarefa',
+  jobs: 'Tarefas',
+  createJob: 'Criar Tarefa',
+  newJob: 'Nova Tarefa',
+  recentJobs: 'Tarefas Recentes',
+  pendingJobs: 'Tarefas Pendentes',
+  jobHistory: 'Histórico de Tarefas',
+  clearPendingJobs: 'Limpar Pendentes',
+};
+
 // Funções helper
 export const getJobTypeLabel = (type: string): string => 
   JOB_TYPE_LABELS[type] || type;
@@ -37,7 +48,6 @@ export const JOB_TYPE_LABELS_NO_EMOJI: Record<string, string> = {
   update: 'Atualização do Agente',
   update_agent: 'Atualização Automática',
   report: 'Geração de Relatório',
-  config: 'Configuração',
   software_inventory_collect: 'Inventário de Software',
   collect_antivirus_status: 'Status do Antivírus',
   collect_web_activity: 'Atividade Web',
