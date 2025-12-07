@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, Bell, TrendingUp, PieChart, Target, DollarSign } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
@@ -82,6 +82,8 @@ export const AppSidebar = () => {
     { icon: PieChart, label: 'Cohort Analysis', to: '/super-admin/cohort-analysis' },
     { icon: TrendingUp, label: 'Projecoes Receita', to: '/super-admin/revenue-projections' },
     { icon: Target, label: 'Pipeline Vendas', to: '/super-admin/sales-pipeline' },
+    { icon: Presentation, label: 'Pitch Deck', to: '/super-admin/pitch-deck' },
+    { icon: Scale, label: 'Analise de Riscos', to: '/super-admin/risk-analysis' },
     { icon: CreditCard, label: 'Config Stripe', to: '/super-admin/stripe-setup' },
     { icon: Users, label: 'Todos Usuarios', to: '/super-admin/users' },
     { icon: Shield, label: 'Features', to: '/super-admin/features' },
