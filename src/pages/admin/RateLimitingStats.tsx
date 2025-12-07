@@ -46,8 +46,7 @@ export default function RateLimitingStats() {
     queryKey: ['rate-limit-stats', hoursBack],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('get-rate-limit-stats', {
-        body: null,
-        method: 'GET',
+        body: { hours_back: parseInt(hoursBack) },
       });
       
       if (error) throw error;

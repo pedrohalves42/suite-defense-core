@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: mergeHeaders(corsHeaders, ctx) });
   }
 
-  if (req.method !== 'GET') {
+  if (req.method !== 'GET' && req.method !== 'POST') {
     return new Response(
       JSON.stringify({ error: 'Method not allowed', requestId: ctx.requestId }),
       { status: 405, headers: mergeHeaders(corsHeaders, ctx) }
@@ -22,9 +22,18 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get hours_back from query params (default 24)
-    const url = new URL(req.url);
-    const hoursBack = parseInt(url.searchParams.get('hours_back') || '24');
+    // Get hours_back from body (POST) or query params (GET)
+    let hoursBack = 24;
+    try {
+      const body = await req.json();
+      if (body?.hours_back) {
+        hoursBack = parseInt(body.hours_back);
+      }
+    } catch {
+      // Fallback to query params for GET requests
+      const url = new URL(req.url);
+      hoursBack = parseInt(url.searchParams.get('hours_back') || '24');
+    }
 
     // Get summary by endpoint
     const { data: summary, error: summaryError } = await supabase
