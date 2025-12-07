@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, Bell } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, Bell, TrendingUp, PieChart, Target, DollarSign } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
@@ -77,6 +77,11 @@ export const AppSidebar = () => {
     { icon: Package, label: 'Agent Releases', to: '/admin/agent-releases', end: false },
     { icon: BarChart3, label: 'Metricas Globais', to: '/super-admin/metrics' },
     { icon: BarChart3, label: 'Analytics Subs', to: '/super-admin/subscription-analytics' },
+    // === FINANCEIRO ===
+    { icon: DollarSign, label: 'Unit Economics', to: '/super-admin/unit-economics' },
+    { icon: PieChart, label: 'Cohort Analysis', to: '/super-admin/cohort-analysis' },
+    { icon: TrendingUp, label: 'Projecoes Receita', to: '/super-admin/revenue-projections' },
+    { icon: Target, label: 'Pipeline Vendas', to: '/super-admin/sales-pipeline' },
     { icon: CreditCard, label: 'Config Stripe', to: '/super-admin/stripe-setup' },
     { icon: Users, label: 'Todos Usuarios', to: '/super-admin/users' },
     { icon: Shield, label: 'Features', to: '/super-admin/features' },
