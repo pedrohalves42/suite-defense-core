@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import React from 'react'
 import { useSubscription } from './useSubscription'
 import { supabase } from '@/integrations/supabase/client'
 
