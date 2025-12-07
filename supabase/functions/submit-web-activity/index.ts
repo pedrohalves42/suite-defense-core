@@ -10,8 +10,13 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 interface WebActivityItem {
   domain: string;
   url?: string;
+  url_full?: string;
+  page_title?: string;
   visited_at?: string;
   source?: string;
+  browser?: string;
+  visit_count?: number;
+  total_duration_seconds?: number;
 }
 
 interface WebActivityPayload {
@@ -126,13 +131,56 @@ Deno.serve(async (req) => {
 
     const nowIso = new Date().toISOString();
 
-    // Preparar itens para inserção
+    // Categorize domain using simple pattern matching
+    const categorizeDomain = (domain: string): string => {
+      const d = domain.toLowerCase();
+      if (['facebook.com', 'instagram.com', 'twitter.com', 'x.com', 'linkedin.com', 'tiktok.com'].some(p => d.includes(p))) return 'social';
+      if (['youtube.com', 'netflix.com', 'twitch.tv', 'primevideo.com'].some(p => d.includes(p))) return 'video';
+      if (['github.com', 'gitlab.com', 'notion.so', 'slack.com', 'teams.microsoft.com'].some(p => d.includes(p))) return 'work';
+      if (['amazon.com', 'mercadolivre.com', 'shopee.com'].some(p => d.includes(p))) return 'shopping';
+      if (['mail.google.com', 'outlook.com', 'yahoo.com'].some(p => d.includes(p))) return 'email';
+      if (['google.com', 'bing.com', 'duckduckgo.com'].some(p => d.includes(p))) return 'search';
+      if (['steam.com', 'epicgames.com', 'roblox.com'].some(p => d.includes(p))) return 'games';
+      if (['bet365.com', 'betfair.com', 'blaze.com', 'pixbet.com'].some(p => d.includes(p))) return 'gambling';
+      return 'other';
+    };
+
+    // Check if domain is blocked
+    const { data: blockedSites } = await supabase
+      .from('blocked_websites')
+      .select('domain_pattern')
+      .eq('tenant_id', agent.tenant_id)
+      .eq('is_active', true);
+
+    const blockedPatterns = blockedSites?.map(s => s.domain_pattern) || [];
+    const isDomainBlocked = (domain: string): boolean => {
+      const d = domain.toLowerCase();
+      return blockedPatterns.some(pattern => {
+        const p = pattern.toLowerCase();
+        if (p.startsWith('*.')) {
+          const suffix = p.slice(2);
+          return d === suffix || d.endsWith('.' + suffix);
+        }
+        return d === p || d.endsWith('.' + p);
+      });
+    };
+
+    // Preparar itens para inserção com novos campos
     const itemsToInsert = payload.items.map(item => ({
       tenant_id: agent.tenant_id,
       agent_id: payload.agent_id,
       domain: item.domain,
       url: item.url || null,
+      url_full: item.url_full || item.url || null,
+      page_title: item.page_title || null,
       source: item.source || 'dns_cache',
+      browser: item.browser || (item.source?.includes('chrome') ? 'chrome' : 
+                                item.source?.includes('firefox') ? 'firefox' : 
+                                item.source?.includes('edge') ? 'edge' : null),
+      visit_count: item.visit_count || 1,
+      total_duration_seconds: item.total_duration_seconds || 0,
+      category: categorizeDomain(item.domain),
+      is_blocked: isDomainBlocked(item.domain),
       visited_at: item.visited_at || nowIso,
     }));
 

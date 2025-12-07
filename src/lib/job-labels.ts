@@ -13,6 +13,7 @@ export const JOB_TYPE_LABELS: Record<string, string> = {
   reinstall_agent: '🔧 Reinstalação do Agente',
   fix_firewall: '🔥 Correção de Firewall',
   restart_service: '🔃 Reiniciar Serviço',
+  sync_blocked_websites: '🚫 Sincronização de Sites Bloqueados',
 };
 
 export const JOB_STATUS_LABELS: Record<string, string> = {
@@ -45,6 +46,7 @@ export const JOB_TYPE_LABELS_NO_EMOJI: Record<string, string> = {
   reinstall_agent: 'Reinstalação do Agente',
   fix_firewall: 'Correção de Firewall',
   restart_service: 'Reiniciar Serviço',
+  sync_blocked_websites: 'Sincronização de Sites Bloqueados',
 };
 
 export const getJobTypeLabelNoEmoji = (type: string): string => 

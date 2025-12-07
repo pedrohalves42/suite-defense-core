@@ -1411,6 +1411,54 @@ export type Database = {
           },
         ]
       }
+      blocked_websites: {
+        Row: {
+          blocked_by: string | null
+          created_at: string | null
+          domain_pattern: string
+          id: string
+          is_active: boolean | null
+          reason: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          blocked_by?: string | null
+          created_at?: string | null
+          domain_pattern: string
+          id?: string
+          is_active?: boolean | null
+          reason?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          blocked_by?: string | null
+          created_at?: string | null
+          domain_pattern?: string
+          id?: string
+          is_active?: boolean | null
+          reason?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocked_websites_blocked_by_fkey"
+            columns: ["blocked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_websites_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_trials: {
         Row: {
           company_name: string

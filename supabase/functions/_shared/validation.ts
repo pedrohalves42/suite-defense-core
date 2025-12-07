@@ -62,6 +62,7 @@ export const CreateJobSchema = z.object({
     'collect_antivirus_status',
     'collect_web_activity',
     'collect_network_info',
+    'sync_blocked_websites',
     'fix_firewall',
     'restart_service'
   ], { errorMap: () => ({ message: 'Tipo de job invalido' }) }),
@@ -117,6 +118,7 @@ export const CreateJobSchemaEnhanced = z.object({
     'collect_antivirus_status',
     'collect_web_activity',
     'collect_network_info',
+    'sync_blocked_websites',
     'fix_firewall',
     'restart_service'
   ], { errorMap: () => ({ message: 'Tipo de job invalido' }) }),
