@@ -45,6 +45,7 @@ export const AppSidebar = () => {
     
     // === SEGURANÇA ===
     { icon: ShieldCheck, label: 'Politicas', to: '/admin/security-policies', section: 'security' },
+    { icon: Shield, label: 'Monitoramento Seg.', to: '/admin/security-monitoring', section: 'security' },
     { icon: Package, label: 'Inventario Software', to: '/admin/software-inventory', section: 'security' },
     { icon: AlertTriangle, label: 'Vulnerabilidades', to: '/admin/vulnerabilities', section: 'security' },
     { icon: Globe, label: 'Atividade Web', to: '/admin/web-activity', section: 'security' },
