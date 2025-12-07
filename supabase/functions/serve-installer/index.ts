@@ -12,6 +12,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 import { 
   WINDOWS_INSTALLER_TEMPLATE,
@@ -151,6 +152,47 @@ Deno.serve(async (req) => {
       const url = new URL(req.url);
       const enrollmentKey = url.pathname.split('/').pop();
       
+      // SEC-02 P1 FIX: IP-based rate limiting for serve-installer
+      const clientIp = req.headers.get('cf-connecting-ip') 
+        || req.headers.get('x-real-ip') 
+        || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
+        || 'unknown';
+      
+      const supabaseClient = createClient(
+        SUPABASE_URL,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      );
+      
+      // Check rate limit: 10 requests per hour per IP, block for 30 minutes if exceeded
+      const rateLimitResult = await checkRateLimit(
+        supabaseClient,
+        clientIp,
+        'serve-installer',
+        { maxRequests: 10, windowMinutes: 60, blockMinutes: 30 }
+      );
+      
+      if (!rateLimitResult.allowed) {
+        console.warn(`[${requestId}] Rate limit exceeded for IP: ${clientIp}`, {
+          resetAt: rateLimitResult.resetAt
+        });
+        return new Response(
+          JSON.stringify({
+            error: 'Too many requests',
+            message: 'Rate limit exceeded. Please try again later.',
+            retryAfter: rateLimitResult.resetAt?.toISOString()
+          }),
+          {
+            status: 429,
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/json',
+              'Retry-After': rateLimitResult.resetAt ? 
+                Math.ceil((rateLimitResult.resetAt.getTime() - Date.now()) / 1000).toString() : '1800'
+            }
+          }
+        );
+      }
+      
       // Get mode: 'args' (default) or 'envvars'
       const mode = url.searchParams.get('mode') || 'args';
       if (mode !== 'args' && mode !== 'envvars') {
@@ -166,7 +208,7 @@ Deno.serve(async (req) => {
         );
       }
       
-      console.log(`[${requestId}] Mode: ${mode}`);
+      console.log(`[${requestId}] Mode: ${mode}, IP: ${clientIp}`);
 
       if (!enrollmentKey) {
       console.log(`[${requestId}] Missing enrollment key`);
@@ -175,11 +217,6 @@ Deno.serve(async (req) => {
         headers: corsHeaders
       });
     }
-
-    const supabaseClient = createClient(
-      SUPABASE_URL,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
 
     // Fetch enrollment key
     const { data: enrollmentData, error: enrollmentError } = await supabaseClient

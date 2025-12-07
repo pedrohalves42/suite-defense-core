@@ -4738,6 +4738,13 @@ export type Database = {
       cleanup_old_security_logs: { Args: never; Returns: undefined }
       cleanup_orphaned_agents: { Args: never; Returns: number }
       cleanup_problematic_agent: { Args: { p_agent_id: string }; Returns: Json }
+      cleanup_stale_queued_jobs: {
+        Args: { p_hours_threshold?: number }
+        Returns: {
+          cleaned_count: number
+          job_ids: string[]
+        }[]
+      }
       cleanup_stuck_builds: {
         Args: never
         Returns: {
