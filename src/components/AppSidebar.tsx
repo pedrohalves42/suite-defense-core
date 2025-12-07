@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, Bell } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
@@ -64,6 +64,7 @@ export const AppSidebar = () => {
     // === GESTÃO ===
     { icon: Users, label: 'Membros', to: '/admin/members', section: 'management' },
     { icon: Settings, label: 'Tenant', to: '/admin/tenant', section: 'management' },
+    { icon: Bell, label: 'Notificações', to: '/admin/notification-settings', section: 'management' },
     
     // === FINANCEIRO ===
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade', section: 'billing' },
