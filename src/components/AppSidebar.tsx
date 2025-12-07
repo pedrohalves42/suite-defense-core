@@ -24,7 +24,7 @@ export const AppSidebar = () => {
     { icon: Home, label: 'Dashboard', to: '/dashboard', end: true },
     { icon: Server, label: 'Monitoramento', to: '/monitoring' },
     { icon: Server, label: 'Gerenciar Agentes', to: '/agents' },
-    { icon: Zap, label: 'Criar Jobs', to: '/jobs' },
+    { icon: Zap, label: 'Tarefas', to: '/jobs' },
     { icon: Shield, label: 'Scans de Virus', to: '/virus-scans' },
     { icon: Shield, label: 'Quarentena', to: '/quarantine' },
     { icon: Package, label: 'Instalador', to: '/installer' },
@@ -55,7 +55,7 @@ export const AppSidebar = () => {
     { icon: Package, label: 'Instalacoes', to: '/admin/installations', section: 'infrastructure' },
     { icon: Package, label: 'Agent Releases', to: '/admin/agent-releases', section: 'infrastructure' },
     { icon: Gauge, label: 'Rate Limiting', to: '/admin/rate-limiting', section: 'infrastructure' },
-    { icon: Inbox, label: 'Dead Letter Queue', to: '/admin/dead-letter-queue', section: 'infrastructure' },
+    { icon: Inbox, label: 'Fila de Pendentes', to: '/admin/dead-letter-queue', section: 'infrastructure' },
     
     // === INTELIGÊNCIA ARTIFICIAL ===
     { icon: Brain, label: 'IA Insights', to: '/admin/ai-insights', section: 'ai' },

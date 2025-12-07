@@ -166,7 +166,7 @@ export default function JobsV3Migration() {
 
           {/* Alert baseado no status */}
           {migrationStats.v3Percentage < 50 && (
-            <div className="flex items-start gap-2 p-3 border border-destructive/50 bg-destructive/10 rounded-lg">
+            <div className="flex items-start gap-2 p-3 border border-destructive/50 bg-destructive/20 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-destructive mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-destructive">Migracao Abaixo do Esperado</p>
