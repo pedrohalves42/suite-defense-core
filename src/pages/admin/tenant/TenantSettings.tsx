@@ -19,6 +19,57 @@ export default function TenantSettings() {
   const [tenantName, setTenantName] = useState("");
   const [tenantSlug, setTenantSlug] = useState("");
 
+  // Fetch tenant subscription with plan details
+  const { data: subscription } = useQuery({
+    queryKey: ["tenant-subscription", tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return null;
+      
+      const { data, error } = await supabase
+        .from("tenant_subscriptions")
+        .select(`
+          *,
+          plan:subscription_plans(*)
+        `)
+        .eq("tenant_id", tenant.id)
+        .maybeSingle();
+        
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenant?.id,
+  });
+
+  // Fetch current agent count
+  const { data: agentCount } = useQuery({
+    queryKey: ["agent-count", tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return 0;
+      const { count, error } = await supabase
+        .from("agents")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", tenant.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!tenant?.id,
+  });
+
+  // Fetch current user count
+  const { data: userCount } = useQuery({
+    queryKey: ["user-count", tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return 0;
+      const { count, error } = await supabase
+        .from("user_roles")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", tenant.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!tenant?.id,
+  });
+
   // Fetch tenant settings
   const { data: settings, isLoading: settingsLoading } = useQuery({
     queryKey: ["tenant-settings", tenant?.id],
@@ -256,20 +307,31 @@ export default function TenantSettings() {
               <Label>Maximo de Agentes</Label>
               <Input
                 type="number"
-                value={5}
+                value={subscription?.plan?.max_agents ?? "Ilimitado"}
                 disabled
                 className="bg-muted"
               />
+              <p className="text-sm text-muted-foreground">
+                Usando {agentCount ?? 0} de {subscription?.plan?.max_agents ?? "∞"} agentes
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Maximo de Usuarios</Label>
               <Input
                 type="number"
-                value={10}
+                value={subscription?.plan?.max_users ?? "Ilimitado"}
                 disabled
                 className="bg-muted"
               />
+              <p className="text-sm text-muted-foreground">
+                Usando {userCount ?? 0} de {subscription?.plan?.max_users ?? "∞"} usuarios
+              </p>
             </div>
+          </div>
+          <div className="p-3 rounded-lg bg-muted/50 border">
+            <p className="text-sm font-medium">
+              Plano atual: <span className="text-primary">{subscription?.plan?.name?.toUpperCase() ?? "Carregando..."}</span>
+            </p>
           </div>
           <p className="text-sm text-muted-foreground">
             Para aumentar esses limites, faca upgrade do seu plano.
