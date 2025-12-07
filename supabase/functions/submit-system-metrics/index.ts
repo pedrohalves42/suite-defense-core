@@ -229,6 +229,27 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Memory Warning: Threshold 80% - Alerta preventivo para otimização
+    if (metrics.memory_usage_percent && metrics.memory_usage_percent > 80 && metrics.memory_usage_percent <= 90) {
+      if (!hasRecentAlert('memory_warning')) {
+        logger.info('Memory warning threshold reached');
+        alerts.push({
+          tenant_id: agent.tenant_id,
+          agent_id: agent.id,
+          alert_type: 'memory_warning',
+          severity: 'medium',
+          title: `Memória Elevada: ${agent.agent_name}`,
+          message: `Uso de memória em ${metrics.memory_usage_percent.toFixed(1)}% - considerar otimização`,
+          details: { 
+            memory_usage: metrics.memory_usage_percent,
+            memory_used_gb: metrics.memory_used_gb,
+            memory_total_gb: metrics.memory_total_gb,
+            recommendation: 'Monitorar tendência de crescimento. Considerar otimização se aproximar de 90%.'
+          },
+        });
+      }
+    }
+
     if (alerts.length > 0) {
       const { error: alertError } = await supabase
         .from('system_alerts')
