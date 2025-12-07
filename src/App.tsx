@@ -81,6 +81,7 @@ import RateLimitingStats from "./pages/admin/RateLimitingStats";
 import DeadLetterQueue from "./pages/admin/DeadLetterQueue";
 import SecurityPolicies from "./pages/admin/SecurityPolicies";
 import NotificationSettings from "./pages/admin/NotificationSettings";
+import SecurityMonitoring from "./pages/admin/SecurityMonitoring";
 
 const App = () => (
   <ErrorBoundary>
@@ -158,6 +159,7 @@ const App = () => (
                 <Route path="dead-letter-queue" element={<DeadLetterQueue />} />
                 <Route path="security-policies" element={<SecurityPolicies />} />
                 <Route path="notification-settings" element={<NotificationSettings />} />
+                <Route path="security-monitoring" element={<SecurityMonitoring />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}

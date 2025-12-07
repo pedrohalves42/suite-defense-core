@@ -368,3 +368,11 @@ verify_jwt = true
 
 [functions.sales-pipeline]
 verify_jwt = true
+
+# === Security Monitoring Functions (P0/P1) ===
+[functions.security-alert-dispatcher]
+verify_jwt = false
+
+[functions.security-cleanup-cron]
+verify_jwt = false
+schedule = "0 3 * * *"
