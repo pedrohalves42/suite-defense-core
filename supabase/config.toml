@@ -79,6 +79,9 @@ verify_jwt = false
 [functions.serve-agent-update]
 verify_jwt = false
 
+[functions.get-blocked-websites]
+verify_jwt = false
+
 [functions.create-reinstall-jobs]
 verify_jwt = true
 
