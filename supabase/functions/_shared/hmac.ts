@@ -156,39 +156,32 @@ export async function verifyHmacSignature(
     agent_name: agentName,
   });
 
-  // CRITICO: Cleanup com debounce para evitar race conditions
-  await debouncedCleanup(supabase);
+  // SEC-01 FIX: Cleanup probabilístico síncrono (evita race conditions com setTimeout em Deno)
+  // 1% das requests executam cleanup - distribui carga sem depender de timers
+  await probabilisticCleanup(supabase);
 
   return { valid: true, rawBody: body };
 }
 
 /**
- * Debounce Map para controlar chamadas de cleanup
- * Previne race conditions onde multiplos agentes chamam cleanup simultaneamente
+ * Cleanup probabilístico para evitar race conditions em Deno Edge Functions
+ * setTimeout/setInterval não são confiáveis em ambiente serverless
+ * Solução: 1% das requests executam cleanup de forma síncrona
  */
-const cleanupTimers = new Map<string, number>();
-const CLEANUP_DEBOUNCE_MS = 5000; // 5 segundos
+const CLEANUP_PROBABILITY = 0.01; // 1% das requests
 
-async function debouncedCleanup(supabase: SupabaseClient): Promise<void> {
-  const key = 'hmac_cleanup';
-  
-  // Cancelar timer anterior se existir
-  const existingTimer = cleanupTimers.get(key);
-  if (existingTimer) {
-    clearTimeout(existingTimer);
+async function probabilisticCleanup(supabase: SupabaseClient): Promise<void> {
+  // Apenas 1% das requests executam cleanup
+  if (Math.random() > CLEANUP_PROBABILITY) {
+    return;
   }
   
-  // Agendar novo cleanup
-  const timer = setTimeout(async () => {
-    try {
-      await supabase.rpc('cleanup_old_hmac_signatures');
-      cleanupTimers.delete(key);
-    } catch (error) {
-      console.error('Cleanup HMAC signatures failed:', error);
-    }
-  }, CLEANUP_DEBOUNCE_MS);
-  
-  cleanupTimers.set(key, timer as unknown as number);
+  try {
+    await supabase.rpc('cleanup_old_hmac_signatures');
+  } catch (error) {
+    // Log silencioso - cleanup é best-effort, não deve bloquear request
+    console.warn('[HMAC] Probabilistic cleanup failed (non-blocking):', error);
+  }
 }
 
 /**
