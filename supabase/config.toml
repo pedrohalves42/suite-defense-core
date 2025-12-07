@@ -376,3 +376,6 @@ verify_jwt = false
 [functions.security-cleanup-cron]
 verify_jwt = false
 schedule = "0 3 * * *"
+
+[functions.send-security-notification]
+verify_jwt = false
