@@ -24,6 +24,79 @@ interface AIInsight {
   confidence_score: number;
 }
 
+// Helper: Verificar se tenant tem feature AI habilitada e quota disponível
+async function checkTenantAIEligibility(
+  supabase: any,
+  tenantId: string
+): Promise<{ eligible: boolean; reason?: string }> {
+  // 1. Verificar subscription ativa ou trial válido
+  const { data: subscription, error: subError } = await supabase
+    .from('tenant_subscriptions')
+    .select('status, trial_end')
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (subError || !subscription) {
+    return { eligible: false, reason: 'no_subscription' };
+  }
+
+  const sub = subscription as { status: string; trial_end: string | null };
+  const isActiveSubscription = sub.status === 'active';
+  const isValidTrial = sub.status === 'trialing' && 
+    sub.trial_end && 
+    new Date(sub.trial_end) > new Date();
+
+  if (!isActiveSubscription && !isValidTrial) {
+    return { eligible: false, reason: 'subscription_inactive_or_trial_expired' };
+  }
+
+  // 2. Verificar se feature ai_insights está habilitada
+  const { data: feature, error: featureError } = await supabase
+    .from('tenant_features')
+    .select('enabled, quota_limit, quota_used')
+    .eq('tenant_id', tenantId)
+    .eq('feature_key', 'ai_insights')
+    .single();
+
+  // Se feature não existe, permitir por padrão (backward compatibility)
+  if (featureError || !feature) {
+    return { eligible: true, reason: 'feature_not_configured_allowing_default' };
+  }
+
+  const feat = feature as { enabled: boolean; quota_limit: number | null; quota_used: number };
+
+  // 3. Verificar se feature está habilitada
+  if (!feat.enabled) {
+    return { eligible: false, reason: 'feature_disabled' };
+  }
+
+  // 4. Verificar quota (se configurada)
+  if (feat.quota_limit !== null && feat.quota_used >= feat.quota_limit) {
+    return { eligible: false, reason: 'quota_exceeded' };
+  }
+
+  return { eligible: true };
+}
+
+// Helper: Incrementar uso de quota
+async function incrementAIQuotaUsage(
+  supabase: any,
+  tenantId: string,
+  insightsCount: number
+): Promise<void> {
+  try {
+    // Update direto com SQL increment
+    await supabase
+      .from('tenant_features')
+      .update({ quota_used: supabase.raw(`quota_used + ${insightsCount}`) })
+      .eq('tenant_id', tenantId)
+      .eq('feature_key', 'ai_insights');
+  } catch (error) {
+    // Quota tracking is best-effort, don't fail the analysis
+    console.log(`[ai-system-analyzer] Could not increment quota for tenant ${tenantId}:`, error);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -55,9 +128,19 @@ Deno.serve(async (req) => {
     console.log(`[ai-system-analyzer] Analyzing ${tenants.length} tenant(s)`);
 
     const insights: AIInsight[] = [];
+    const skippedTenants: { id: string; name: string; reason: string }[] = [];
 
     for (const tenant of tenants) {
       try {
+        // P0 FIX: Verificar elegibilidade do tenant antes de processar
+        const eligibility = await checkTenantAIEligibility(supabase, tenant.id);
+        
+        if (!eligibility.eligible) {
+          console.log(`[ai-system-analyzer] Skipping tenant ${tenant.name}: ${eligibility.reason}`);
+          skippedTenants.push({ id: tenant.id, name: tenant.name, reason: eligibility.reason! });
+          continue;
+        }
+
         console.log(`[ai-system-analyzer] Analyzing tenant: ${tenant.name} (${tenant.id})`);
 
         // Coletar dados dos ultimos 7 dias para analise
@@ -129,6 +212,12 @@ Deno.serve(async (req) => {
 
         // Chamar IA para analise
         const tenantInsights = await analyzeWithAI(tenant.id, tenant.name, analysisData, jobStats || []);
+        
+        // P0 FIX: Incrementar quota após gerar insights
+        if (tenantInsights.length > 0) {
+          await incrementAIQuotaUsage(supabase, tenant.id, tenantInsights.length);
+        }
+        
         insights.push(...tenantInsights);
 
       } catch (tenantError) {
@@ -176,7 +265,9 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         insightsGenerated: insights.length,
-        tenantsAnalyzed: tenants.length 
+        tenantsAnalyzed: tenants.length - skippedTenants.length,
+        tenantsSkipped: skippedTenants.length,
+        skippedDetails: skippedTenants.map(t => ({ name: t.name, reason: t.reason }))
       }), 
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
