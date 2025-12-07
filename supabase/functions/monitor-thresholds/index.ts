@@ -24,6 +24,19 @@ Deno.serve(async (req) => {
   }
 
   const requestId = crypto.randomUUID();
+
+  // SECURITY: Validate internal function secret for internal-only endpoint
+  const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+  const providedSecret = req.headers.get('X-Internal-Secret');
+
+  if (!INTERNAL_SECRET || providedSecret !== INTERNAL_SECRET) {
+    console.warn(`[${requestId}] Unauthorized access attempt to monitor-thresholds`);
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
   console.log(`[${requestId}] Starting threshold monitoring`);
 
   try {
