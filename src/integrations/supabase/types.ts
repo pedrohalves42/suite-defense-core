@@ -4851,6 +4851,13 @@ export type Database = {
       cleanup_old_failed_attempts: { Args: never; Returns: undefined }
       cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
       cleanup_old_metrics: { Args: never; Returns: undefined }
+      cleanup_old_metrics_aggressive: {
+        Args: never
+        Returns: {
+          deleted_count: number
+          oldest_remaining: string
+        }[]
+      }
       cleanup_old_performance_metrics: { Args: never; Returns: undefined }
       cleanup_old_problematic_jobs: {
         Args: { p_days_old?: number }
