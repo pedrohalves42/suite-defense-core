@@ -273,7 +273,7 @@ export default function Login() {
                   </Alert>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-foreground/90 font-medium tracking-wide">Email</Label>
+                  <Label htmlFor="email" className="text-foreground font-medium tracking-wide">Email</Label>
                   <div className="relative group">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
                     <Input
@@ -289,7 +289,7 @@ export default function Login() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-foreground/90 font-medium tracking-wide">Senha</Label>
+                  <Label htmlFor="password" className="text-foreground font-medium tracking-wide">Senha</Label>
                   <div className="relative group">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
                     <Input
@@ -358,7 +358,7 @@ export default function Login() {
             <form onSubmit={handleMagicLink}>
               <CardContent className="space-y-5 pt-6">
                 <div className="space-y-2">
-                  <Label htmlFor="magic-email" className="text-foreground/90 font-medium tracking-wide">Email</Label>
+                  <Label htmlFor="magic-email" className="text-foreground font-medium tracking-wide">Email</Label>
                   <div className="relative group">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
                     <Input
