@@ -5045,6 +5045,15 @@ export type Database = {
           unique_identifiers: number
         }[]
       }
+      get_replay_attempts: {
+        Args: { hours_back?: number }
+        Returns: {
+          attempt_count: number
+          first_attempt: string
+          last_attempt: string
+          signature: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
