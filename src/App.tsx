@@ -47,6 +47,7 @@ import AuthDebug from "./pages/debug/AuthDebug";
 import SecurityDashboard from "./pages/admin/SecurityDashboard";
 import AgentMonitoringAdvanced from "./pages/AgentMonitoringAdvanced";
 import ExeBuild from "./pages/docs/ExeBuild";
+import ClientOnboarding from "./pages/docs/ClientOnboarding";
 import SubscriptionAnalytics from "./pages/admin/SubscriptionAnalytics";
 import UnitEconomics from "./pages/admin/super/UnitEconomics";
 import CohortAnalysis from "./pages/admin/super/CohortAnalysis";
@@ -108,6 +109,8 @@ const App = () => (
             
             {/* Documentation Routes */}
             <Route path="/docs/exe-build" element={<ExeBuild />} />
+            <Route path="/docs/onboarding" element={<ClientOnboarding />} />
+            <Route path="/docs/installation" element={<ClientOnboarding />} />
             
             {/* Debug Routes - Protected */}
             <Route path="/debug/auth" element={<ProtectedRoute><AuthDebug /></ProtectedRoute>} />

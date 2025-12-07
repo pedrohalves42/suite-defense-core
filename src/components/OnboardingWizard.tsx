@@ -7,6 +7,7 @@ import { CheckCircle, Rocket, Scan, BarChart, ArrowRight, Copy, Check } from 'lu
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BookOpen } from 'lucide-react';
 
 interface OnboardingWizardProps {
   open: boolean;
@@ -98,13 +99,23 @@ export const OnboardingWizard = ({ open, onComplete }: OnboardingWizardProps) =>
             </p>
           </div>
 
-          <Button 
-            className="w-full"
-            onClick={() => navigate('/installer')}
-          >
-            Ir para Instalação Completa
-            <ArrowRight className="ml-2 w-4 h-4" />
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button 
+              className="w-full"
+              onClick={() => navigate('/installer')}
+            >
+              Ir para Instalação Completa
+              <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+            <Button 
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate('/docs/onboarding')}
+            >
+              <BookOpen className="mr-2 w-4 h-4" />
+              Ver Guia Detalhado
+            </Button>
+          </div>
         </div>
       ),
     },
