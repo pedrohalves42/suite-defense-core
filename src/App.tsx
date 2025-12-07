@@ -52,6 +52,8 @@ import UnitEconomics from "./pages/admin/super/UnitEconomics";
 import CohortAnalysis from "./pages/admin/super/CohortAnalysis";
 import RevenueProjections from "./pages/admin/super/RevenueProjections";
 import SalesPipeline from "./pages/admin/super/SalesPipeline";
+import PitchDeck from "./pages/admin/super/PitchDeck";
+import RiskAnalysis from "./pages/admin/super/RiskAnalysis";
 import StripeSetup from "./pages/admin/StripeSetup";
 import AgentDiagnostics from "./pages/admin/AgentDiagnostics.tsx";
 import AgentTroubleshooting from "./pages/admin/AgentTroubleshooting";
@@ -178,6 +180,8 @@ const App = () => (
                 <Route path="cohort-analysis" element={<CohortAnalysis />} />
                 <Route path="revenue-projections" element={<RevenueProjections />} />
                 <Route path="sales-pipeline" element={<SalesPipeline />} />
+                <Route path="pitch-deck" element={<PitchDeck />} />
+                <Route path="risk-analysis" element={<RiskAnalysis />} />
               </Route>
             </Route>
             
