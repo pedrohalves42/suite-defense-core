@@ -7,15 +7,16 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.26-RATE-LIMIT-BACKOFF';
-export const INSTALLER_VERSION_LINUX = 'v3.10.26-RATE-LIMIT-BACKOFF';
-export const INSTALLER_VERSION_MACOS = 'v3.10.26-RATE-LIMIT-BACKOFF';
-export const LAST_UPDATED = '2025-12-08T15:00:00Z'; // P1 remediation: rate limit backoff
+export const INSTALLER_VERSION = 'v3.10.27-SCAN-RETRY-BACKOFF';
+export const INSTALLER_VERSION_LINUX = 'v3.10.27-SCAN-RETRY-BACKOFF';
+export const INSTALLER_VERSION_MACOS = 'v3.10.27-SCAN-RETRY-BACKOFF';
+export const LAST_UPDATED = '2025-12-08T18:00:00Z'; // P1 FIX: scan retry with exponential backoff
 
 export const CHANGES = [
+  '[v3.10.27-SCAN-RETRY-BACKOFF] P1 FIX: Scan handler com retry e exponential backoff para reduzir falhas',
+  '[v3.10.27-SCAN-RETRY-BACKOFF] P1 FIX: 4 tentativas com delays de 5s, 10s, 20s, 40s para 429/erros',
+  '[v3.10.27-SCAN-RETRY-BACKOFF] P1 FIX: Log detalhado de cada tentativa de scan para debugging',
   '[v3.10.26-RATE-LIMIT-BACKOFF] P1 FIX: Exponential backoff para erros 429 (rate limiting)',
-  '[v3.10.26-RATE-LIMIT-BACKOFF] P1 FIX: 429 retorna gracefully ao inves de throw, permitindo jobs continuarem',
-  '[v3.10.26-RATE-LIMIT-BACKOFF] P1 FIX: Rate limit delay multiplicado por 5 (mais agressivo)',
   '[v3.10.25-LINUX-SYNC] FEATURE: Agente Linux sincronizado com features do Windows v3.10.25',
   '[v3.10.25-LINUX-SYNC] FEATURE: sync_blocked_websites - sincroniza dominios bloqueados em /opt/cybershield/blocked_websites.json',
   '[v3.10.25-LINUX-SYNC] FEATURE: update_agent com smart path detection (PSCommandPath, AgentName, glob, fallback)',
