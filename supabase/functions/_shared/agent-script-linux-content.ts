@@ -3,12 +3,12 @@
  * CyberShield Agent Linux Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-linux-v3.sh
+ * Versao: v3.10.25-BLOCKED-WEBSITES
  */
 
-export const AGENT_SCRIPT_LINUX_SH = `
-#!/usr/bin/env bash
+export const AGENT_SCRIPT_LINUX_SH = `#!/usr/bin/env bash
 # CyberShield Agent - Linux
-# Version: v3.6.0-METRICS-FIX (Auto-metrics + Report Jobs + Timestamps + Disk Usage)
+# Version: v3.10.25-BLOCKED-WEBSITES (Sync blocked sites, Smart Update, Multi-user Web Activity)
 
 set -euo pipefail
 
@@ -17,72 +17,71 @@ set -euo pipefail
 ########################################
 
 # Prioridade: argumentos > env vars curtas > env vars prefixadas CYBERSHIELD_*
-SERVER_URL="\${SERVER_URL:-\${CYBERSHIELD_SERVER_URL:-}}"
-AGENT_TOKEN="\${AGENT_TOKEN:-\${CYBERSHIELD_AGENT_TOKEN:-}}"
-HMAC_SECRET="\${HMAC_SECRET:-\${CYBERSHIELD_HMAC_SECRET:-}}"
-AGENT_NAME="\${AGENT_NAME:-\${CYBERSHIELD_AGENT_NAME:-\$(hostname -s)}}"
-AGENT_VERSION="\${AGENT_VERSION:-\${CYBERSHIELD_AGENT_VERSION:-3.6.0}}"
+SERVER_URL="\\\${SERVER_URL:-\\\${CYBERSHIELD_SERVER_URL:-}}"
+AGENT_TOKEN="\\\${AGENT_TOKEN:-\\\${CYBERSHIELD_AGENT_TOKEN:-}}"
+HMAC_SECRET="\\\${HMAC_SECRET:-\\\${CYBERSHIELD_HMAC_SECRET:-}}"
+AGENT_NAME="\\\${AGENT_NAME:-\\\${CYBERSHIELD_AGENT_NAME:-\\\$(hostname -s)}}"
+AGENT_VERSION="\\\${AGENT_VERSION:-\\\${CYBERSHIELD_AGENT_VERSION:-v3.10.25}}"
 
 # Parse argumentos (sobrescreve env vars)
-while [[ \$# -gt 0 ]]; do
-  case "\$1" in
+while [[ \\\$# -gt 0 ]]; do
+  case "\\\$1" in
     --server-url)
-      SERVER_URL="\$2"; shift 2;;
+      SERVER_URL="\\\$2"; shift 2;;
     --agent-token)
-      AGENT_TOKEN="\$2"; shift 2;;
+      AGENT_TOKEN="\\\$2"; shift 2;;
     --hmac-secret)
-      HMAC_SECRET="\$2"; shift 2;;
+      HMAC_SECRET="\\\$2"; shift 2;;
     --agent-name)
-      AGENT_NAME="\$2"; shift 2;;
+      AGENT_NAME="\\\$2"; shift 2;;
     --agent-version)
-      AGENT_VERSION="\$2"; shift 2;;
+      AGENT_VERSION="\\\$2"; shift 2;;
     *)
-      echo "Parametro desconhecido: \$1" >&2
-      echo "Uso: \$0 --server-url URL --agent-token TOKEN --hmac-secret SECRET [--agent-name NAME] [--agent-version VERSION]"
+      echo "Parametro desconhecido: \\\$1" >&2
+      echo "Uso: \\\$0 --server-url URL --agent-token TOKEN --hmac-secret SECRET [--agent-name NAME] [--agent-version VERSION]"
       exit 1;;
   esac
 done
 
 # Validacao com mensagens claras
-if [[ -z "\$SERVER_URL" ]]; then
+if [[ -z "\\\$SERVER_URL" ]]; then
   echo "SERVER_URL nao definido" >&2
-  echo "Use: --server-url URL" >&2
-  echo "  ou: SERVER_URL=... (env var)" >&2
-  echo "  ou: CYBERSHIELD_SERVER_URL=... (env var prefixada)" >&2
   exit 1
 fi
 
-if [[ -z "\$AGENT_TOKEN" ]]; then
+if [[ -z "\\\$AGENT_TOKEN" ]]; then
   echo "AGENT_TOKEN nao definido" >&2
-  echo "Use: --agent-token TOKEN ou AGENT_TOKEN=... ou CYBERSHIELD_AGENT_TOKEN=..." >&2
   exit 1
 fi
 
-if [[ -z "\$HMAC_SECRET" ]]; then
+if [[ -z "\\\$HMAC_SECRET" ]]; then
   echo "HMAC_SECRET nao definido" >&2
-  echo "Use: --hmac-secret SECRET ou HMAC_SECRET=... ou CYBERSHIELD_HMAC_SECRET=..." >&2
   exit 1
 fi
 
-SERVER_URL="\${SERVER_URL%/}" # remove trailing slash
+SERVER_URL="\\\${SERVER_URL%/}"
+
+# Install directory
+INSTALL_DIR="/opt/cybershield"
+mkdir -p "\\\$INSTALL_DIR" 2>/dev/null || true
 
 ########################################
 # LOG
 ########################################
 
 LOG_DIR="/var/log/cybershield"
-LOG_FILE="\$LOG_DIR/agent.log"
+LOG_FILE="\\\$LOG_DIR/agent.log"
 
-mkdir -p "\$LOG_DIR" || true
-touch "\$LOG_FILE" 2>/dev/null || true
+mkdir -p "\\\$LOG_DIR" || true
+touch "\\\$LOG_FILE" 2>/dev/null || true
 
 log() {
-  local level="\$1"; shift
+  local level="\\\$1"; shift
   local ts
-  ts="\$(date '+%Y-%m-%d %H:%M:%S')"
-  local line="[\$ts] [\$level] \$*"
-  echo "\$line"
-  echo "\$line" >> "\$LOG_FILE" 2>/dev/null || true
+  ts="\\\$(date '+%Y-%m-%d %H:%M:%S')"
+  local line="[\\\$ts] [\\\$level] \\\$*"
+  echo "\\\$line"
+  echo "\\\$line" >> "\\\$LOG_FILE" 2>/dev/null || true
 }
 
 ########################################
@@ -90,19 +89,17 @@ log() {
 ########################################
 
 validate_hmac_secret() {
-  if [[ ! "\$HMAC_SECRET" =~ ^[0-9a-fA-F]{64}\$ ]]; then
-    log "ERROR" "HMAC_SECRET invalido. Esperado 64 caracteres hexadecimais, recebido length=\${#HMAC_SECRET}"
+  if [[ ! "\\\$HMAC_SECRET" =~ ^[0-9a-fA-F]{64}\\\$ ]]; then
+    log "ERROR" "HMAC_SECRET invalido"
     exit 1
   fi
 }
 
 hmac_sign() {
-  local message="\$1"
-  # Secret e HEX -> usar hexkey
-  # openssl dgst -sha256 -mac HMAC -macopt hexkey:...
-  printf '%s' "\$message" \\
-    | openssl dgst -sha256 -mac HMAC -macopt "hexkey:\$HMAC_SECRET" \\
-    | awk '{print \$2}'
+  local message="\\\$1"
+  printf '%s' "\\\$message" \\\\
+    | openssl dgst -sha256 -mac HMAC -macopt "hexkey:\\\$HMAC_SECRET" \\\\
+    | awk '{print \\\$2}'
 }
 
 ########################################
@@ -113,71 +110,67 @@ SECURE_RESP_STATUS=""
 SECURE_RESP_BODY=""
 
 secure_request() {
-  local path="\$1"
-  local method="\$2"
-  local body="\${3:-}"
-  local timeout_sec="\${4:-30}"
-  local max_retries="\${5:-3}"
+  local path="\\\$1"
+  local method="\\\$2"
+  local body="\\\${3:-}"
+  local timeout_sec="\\\${4:-30}"
+  local max_retries="\\\${5:-3}"
 
-  local url="\${SERVER_URL}\${path}"
+  local url="\\\${SERVER_URL}\\\${path}"
   local retry_count=0
   local retry_delay=2
 
   while true; do
     local timestamp nonce payload signature http_code raw
-    # timestamp em ms (aprox): segundos * 1000
-    timestamp=\$(( \$(date +%s) * 1000 ))
+    timestamp=\\\$(( \\\$(date +%s) * 1000 ))
     if command -v uuidgen >/dev/null 2>&1; then
-      nonce="\$(uuidgen)"
+      nonce="\\\$(uuidgen)"
     else
-      nonce="\$(cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "nonce-\$(date +%s)")"
+      nonce="\\\$(cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "nonce-\\\$(date +%s)")"
     fi
 
-    payload="\${timestamp}:\${nonce}:\${body}"
+    payload="\\\${timestamp}:\\\${nonce}:\\\${body}"
+    signature="\\\$(hmac_sign "\\\$payload")"
 
-    signature="\$(hmac_sign "\$payload")"
+    log "DEBUG" "Request \\\$method \\\$url"
 
-    log "DEBUG" "Request \$method \$url (body_length=\${#body})"
-
-    # curl: resposta + http_code na ultima linha
-    raw="\$(
-      curl -sS \\
-        -X "\$method" \\
-        -H "X-Agent-Token: \$AGENT_TOKEN" \\
-        -H "X-HMAC-Signature: \$signature" \\
-        -H "X-Timestamp: \$timestamp" \\
-        -H "X-Nonce: \$nonce" \\
-        -H "Content-Type: application/json" \\
-        --max-time "\$timeout_sec" \\
-        -w '\\n%{http_code}' \\
-        \${body:+ -d "\$body"} \\
-        "\$url"
+    raw="\\\$(
+      curl -sS \\\\
+        -X "\\\$method" \\\\
+        -H "X-Agent-Token: \\\$AGENT_TOKEN" \\\\
+        -H "X-HMAC-Signature: \\\$signature" \\\\
+        -H "X-Timestamp: \\\$timestamp" \\\\
+        -H "X-Nonce: \\\$nonce" \\\\
+        -H "Content-Type: application/json" \\\\
+        --max-time "\\\$timeout_sec" \\\\
+        -w '\\\\n%{http_code}' \\\\
+        \\\${body:+ -d "\\\$body"} \\\\
+        "\\\$url"
     )" || true
 
-    http_code="\$(printf '%s\\n' "\$raw" | tail -n1)"
-    SECURE_RESP_BODY="\$(printf '%s\\n' "\$raw" | sed '\$d')"
-    SECURE_RESP_STATUS="\$http_code"
+    http_code="\\\$(printf '%s\\\\n' "\\\$raw" | tail -n1)"
+    SECURE_RESP_BODY="\\\$(printf '%s\\\\n' "\\\$raw" | sed '\\\$d')"
+    SECURE_RESP_STATUS="\\\$http_code"
 
-    log "DEBUG" "Response \$http_code from \$url"
+    log "DEBUG" "Response \\\$http_code"
 
-    if [[ "\$http_code" == "401" ]]; then
-      log "ERROR" "Erro de autenticacao (401). Verifique AgentToken / HmacSecret / clock."
+    if [[ "\\\$http_code" == "401" ]]; then
+      log "ERROR" "Erro de autenticacao (401)"
       return 1
     fi
 
-    if [[ "\$http_code" -ge 200 && "\$http_code" -lt 300 ]]; then
+    if [[ "\\\$http_code" -ge 200 && "\\\$http_code" -lt 300 ]]; then
       return 0
     fi
 
-    retry_count=\$((retry_count+1))
+    retry_count=\\\$((retry_count+1))
     if (( retry_count >= max_retries )); then
-      log "ERROR" "Falha definitiva apos \$max_retries tentativas em \$url (status=\$http_code)"
+      log "ERROR" "Falha definitiva apos \\\$max_retries tentativas"
       return 1
     fi
 
-    log "WARN" "Tentativa \$retry_count falhou (status=\$http_code). Aguardando \${retry_delay}s para retry..."
-    sleep "\$retry_delay"
-    retry_delay=\$((retry_delay * 2))
+    sleep "\\\$retry_delay"
+    retry_delay=\\\$((retry_delay * 2))
   done
 }
 
@@ -187,89 +180,68 @@ secure_request() {
 
 system_info_json() {
   local os_name os_version hostname total_ram_gb
-  os_name="\$(. /etc/os-release 2>/dev/null; echo "\${PRETTY_NAME:-Linux}")"
-  os_version="\$(uname -r)"
-  hostname="\$(hostname -s)"
-  total_ram_gb="\$(free -m 2>/dev/null | awk '/Mem:/ {printf "%.2f", \$2/1024}')"
+  os_name="\\\$(. /etc/os-release 2>/dev/null; echo "\\\${PRETTY_NAME:-Linux}")"
+  os_version="\\\$(uname -r)"
+  hostname="\\\$(hostname -s)"
+  total_ram_gb="\\\$(free -m 2>/dev/null | awk '/Mem:/ {printf "%.2f", \\\$2/1024}')"
 
-  jq -n \\
-    --arg os_type "Linux" \\
-    --arg os_name "\$os_name" \\
-    --arg os_version "\$os_version" \\
-    --arg hostname "\$hostname" \\
-    --arg total_ram_gb "\$total_ram_gb" \\
-    --arg agent_name "\$AGENT_NAME" \\
-    --arg agent_version "\$AGENT_VERSION" \\
-    '{
-      os_type: \$os_type,
-      os_name: \$os_name,
-      os_version: \$os_version,
-      hostname: \$hostname,
-      total_ram_gb: (\$total_ram_gb|tonumber),
-      agent_name: \$agent_name,
-      agent_version: \$agent_version
-    }'
+  jq -n \\\\
+    --arg os_type "Linux" \\\\
+    --arg os_name "\\\$os_name" \\\\
+    --arg os_version "\\\$os_version" \\\\
+    --arg hostname "\\\$hostname" \\\\
+    --arg total_ram_gb "\\\$total_ram_gb" \\\\
+    --arg agent_name "\\\$AGENT_NAME" \\\\
+    --arg agent_version "\\\$AGENT_VERSION" \\\\
+    '{os_type: \\\$os_type, os_name: \\\$os_name, os_version: \\\$os_version, hostname: \\\$hostname, total_ram_gb: (\\\$total_ram_gb|tonumber), agent_name: \\\$agent_name, agent_version: \\\$agent_version}'
 }
 
 system_metrics_json() {
   local cpu_load ram_used disk_used
-  
-  # CPU load (medio) - aproximado
-  cpu_load="\$(awk -F' ' '/cpu /{u=\$2; n=\$3; s=\$4; i=\$5; w=\$6; irq=\$7; soft=\$8; steal=\$9; idle=i+w; busy=u+n+s+irq+soft+steal; print busy/(busy+idle)*100}' /proc/stat 2>/dev/null | head -n1)"
-  cpu_load="\${cpu_load:-0}"
+  cpu_load="\\\$(awk -F' ' '/cpu /{u=\\\$2; n=\\\$3; s=\\\$4; i=\\\$5; w=\\\$6; irq=\\\$7; soft=\\\$8; steal=\\\$9; idle=i+w; busy=u+n+s+irq+soft+steal; print busy/(busy+idle)*100}' /proc/stat 2>/dev/null | head -n1)"
+  cpu_load="\\\${cpu_load:-0}"
 
-  # RAM
   if free -m >/dev/null 2>&1; then
-    ram_used="\$(free -m | awk '/Mem:/ {printf "%.2f", (\$3/\$2)*100}')"
+    ram_used="\\\$(free -m | awk '/Mem:/ {printf "%.2f", (\\\$3/\\\$2)*100}')"
   else
     ram_used="0"
   fi
 
-  # DISK (NOVO v3.6.0)
-  disk_used="\$(df / | awk 'NR==2 {print \$5}' | sed 's/%//')"
-  disk_used="\${disk_used:-0}"
+  disk_used="\\\$(df / | awk 'NR==2 {print \\\$5}' | sed 's/%//')"
+  disk_used="\\\${disk_used:-0}"
 
-  jq -n \\
-    --arg cpu_load "\$cpu_load" \\
-    --arg ram_used "\$ram_used" \\
-    --arg disk_used "\$disk_used" \\
-    '{
-      cpu_load_percent: (\$cpu_load|tonumber),
-      ram_used_percent: (\$ram_used|tonumber),
-      disk_used_percent: (\$disk_used|tonumber)
-    }'
+  jq -n \\\\
+    --arg cpu_load "\\\$cpu_load" \\\\
+    --arg ram_used "\\\$ram_used" \\\\
+    --arg disk_used "\\\$disk_used" \\\\
+    '{cpu_load_percent: (\\\$cpu_load|tonumber), ram_used_percent: (\\\$ram_used|tonumber), disk_used_percent: (\\\$disk_used|tonumber)}'
 }
 
 ########################################
-# SEND SYSTEM METRICS (NOVO v3.6.0)
+# SEND SYSTEM METRICS
 ########################################
 
 send_system_metrics() {
-  local cpu_usage_percent="\$1"
-  local memory_usage_percent="\$2"
-  local disk_usage_percent="\$3"
-  local hostname="\$4"
+  local cpu_usage_percent="\\\$1"
+  local memory_usage_percent="\\\$2"
+  local disk_usage_percent="\\\$3"
+  local hostname="\\\$4"
   
   local body
-  body="\$(jq -n \\
-    --arg cpu "\$cpu_usage_percent" \\
-    --arg mem "\$memory_usage_percent" \\
-    --arg disk "\$disk_usage_percent" \\
-    --arg host "\$hostname" \\
-    '{
-      cpu_usage_percent: (\$cpu|tonumber),
-      memory_usage_percent: (\$mem|tonumber),
-      disk_usage_percent: (\$disk|tonumber),
-      hostname: \$host
-    }'
+  body="\\\$(jq -n \\\\
+    --arg cpu "\\\$cpu_usage_percent" \\\\
+    --arg mem "\\\$memory_usage_percent" \\\\
+    --arg disk "\\\$disk_usage_percent" \\\\
+    --arg host "\\\$hostname" \\\\
+    '{cpu_usage_percent: (\\\$cpu|tonumber), memory_usage_percent: (\\\$mem|tonumber), disk_usage_percent: (\\\$disk|tonumber), hostname: \\\$host}'
   )"
   
   log "INFO" "Enviando metricas de sistema..."
-  if secure_request "/functions/v1/submit-system-metrics" "POST" "\$body" 15 3; then
-    log "SUCCESS" "Metricas enviadas com sucesso"
+  if secure_request "/functions/v1/submit-system-metrics" "POST" "\\\$body" 15 3; then
+    log "SUCCESS" "Metricas enviadas"
     return 0
   else
-    log "WARN" "Falha ao enviar metricas (status=\$SECURE_RESP_STATUS)"
+    log "WARN" "Falha ao enviar metricas"
     return 1
   fi
 }
@@ -279,51 +251,25 @@ send_system_metrics() {
 ########################################
 
 send_post_installation() {
-  local success="\${1:-true}"
-  local error_message="\${2:-""}"
-  local install_time="\${3:-0}"
+  local success="\\\${1:-true}"
+  local error_message="\\\${2:-""}"
+  local install_time="\\\${3:-0}"
 
   local sys_json metrics_json body
+  sys_json="\\\$(system_info_json)"
+  metrics_json="\\\$(system_metrics_json)"
 
-  sys_json="\$(system_info_json)"
-  metrics_json="\$(system_metrics_json)"
-
-  body="\$(
-    jq -n \\
-      --arg agent_name "\$AGENT_NAME" \\
-      --arg event_type "\$( [[ "\$success" == "true" ]] && echo "post_installation" || echo "post_installation_unverified" )" \\
-      --arg platform "linux" \\
-      --arg installation_method "one_click" \\
-      --arg success_b "\$success" \\
-      --arg error_message "\$error_message" \\
-      --arg agent_version "\$AGENT_VERSION" \\
-      --argjson metadata "\$(
-        jq -n \\
-          --argjson sys "\$sys_json" \\
-          --argjson metrics "\$metrics_json" \\
-          '{os_name: \$sys.os_name, os_version: \$sys.os_version, hostname: \$sys.hostname, total_ram_gb: \$sys.total_ram_gb, cpu_load: \$metrics.cpu_load_percent, ram_used: \$metrics.ram_used_percent, disk_used: \$metrics.disk_used_percent}'
-      )" \\
-      --arg install_time "\$install_time" \\
-      '{
-        agent_name: \$agent_name,
-        event_type: \$event_type,
-        platform: \$platform,
-        installation_method: \$installation_method,
-        success: (\$success_b=="true"),
-        installation_time_seconds: (\$install_time|tonumber),
-        error_message: \$error_message,
-        agent_version: \$agent_version,
-        network_connectivity: true,
-        metadata: \$metadata
-      }'
+  body="\\\$(jq -n \\\\
+    --arg agent_name "\\\$AGENT_NAME" \\\\
+    --arg event_type "\\\$( [[ "\\\$success" == "true" ]] && echo "post_installation" || echo "post_installation_unverified" )" \\\\
+    --arg platform "linux" \\\\
+    --arg agent_version "\\\$AGENT_VERSION" \\\\
+    --argjson metadata "\\\$(jq -n --argjson sys "\\\$sys_json" --argjson metrics "\\\$metrics_json" '{os_name: \\\$sys.os_name, os_version: \\\$sys.os_version, hostname: \\\$sys.hostname}')" \\\\
+    '{agent_name: \\\$agent_name, event_type: \\\$event_type, platform: \\\$platform, agent_version: \\\$agent_version, success: true, metadata: \\\$metadata}'
   )"
 
   log "INFO" "Enviando post_installation..."
-  if secure_request "/functions/v1/track-installation-event" "POST" "\$body" 20 2; then
-    log "SUCCESS" "post_installation enviado com sucesso"
-  else
-    log "WARN" "Falha ao enviar post_installation (status=\$SECURE_RESP_STATUS)"
-  fi
+  secure_request "/functions/v1/track-installation-event" "POST" "\\\$body" 20 2 || true
 }
 
 ########################################
@@ -332,178 +278,234 @@ send_post_installation() {
 
 send_heartbeat() {
   local sys_json metrics_json body
-  sys_json="\$(system_info_json)"
-  metrics_json="\$(system_metrics_json)"
+  sys_json="\\\$(system_info_json)"
+  metrics_json="\\\$(system_metrics_json)"
 
-  body="\$(
-    jq -n \\
-      --arg agent_name "\$AGENT_NAME" \\
-      --arg platform "linux" \\
-      --arg agent_version "\$AGENT_VERSION" \\
-      --argjson sys "\$sys_json" \\
-      --argjson metrics "\$metrics_json" \\
-      '{
-        agent_name: \$agent_name,
-        platform: \$platform,
-        os_name: \$sys.os_name,
-        os_version: \$sys.os_version,
-        hostname: \$sys.hostname,
-        agent_version: \$agent_version,
-        metrics: \$metrics
-      }'
+  body="\\\$(jq -n \\\\
+    --arg agent_name "\\\$AGENT_NAME" \\\\
+    --arg platform "linux" \\\\
+    --arg agent_version "\\\$AGENT_VERSION" \\\\
+    --argjson sys "\\\$sys_json" \\\\
+    --argjson metrics "\\\$metrics_json" \\\\
+    '{agent_name: \\\$agent_name, platform: \\\$platform, os_name: \\\$sys.os_name, os_version: \\\$sys.os_version, hostname: \\\$sys.hostname, agent_version: \\\$agent_version, metrics: \\\$metrics}'
   )"
 
   log "INFO" "Enviando heartbeat..."
-  if secure_request "/functions/v1/heartbeat" "POST" "\$body" 15 3; then
-    log "SUCCESS" "Heartbeat OK (\$SECURE_RESP_STATUS)"
+  if secure_request "/functions/v1/heartbeat" "POST" "\\\$body" 15 3; then
+    log "SUCCESS" "Heartbeat OK"
   else
-    log "ERROR" "Heartbeat falhou (status=\$SECURE_RESP_STATUS)"
+    log "ERROR" "Heartbeat falhou"
   fi
 }
 
 ########################################
-# SUBMIT JOB RESULT (ATUALIZADO v3.6.0)
+# SUBMIT JOB RESULT
 ########################################
 
 submit_job_result() {
-  local job_id="\$1"
-  local status="\$2"     # completed | failed
-  local output_json="\$3"
-  local error_message="\${4:-""}"
-  local exec_time="\${5:-0}"
-  local started_at="\${6:-\$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"  # NOVO v3.6.0
+  local job_id="\\\$1"
+  local status="\\\$2"
+  local output_json="\\\$3"
+  local error_message="\\\${4:-""}"
+  local exec_time="\\\${5:-0}"
+  local started_at="\\\${6:-\\\$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
 
   local body
-  body="\$(
-    jq -n \\
-      --arg job_id "\$job_id" \\
-      --arg status "\$status" \\
-      --arg error_message "\$error_message" \\
-      --arg exec_time "\$exec_time" \\
-      --arg started_at "\$started_at" \\
-      --argjson output "\$output_json" \\
-      '{
-        job_id: \$job_id,
-        status: \$status,
-        output: \$output,
-        error_message: \$error_message,
-        execution_time_seconds: (\$exec_time|tonumber),
-        started_at: \$started_at
-      }'
+  body="\\\$(jq -n \\\\
+    --arg job_id "\\\$job_id" \\\\
+    --arg status "\\\$status" \\\\
+    --arg error_message "\\\$error_message" \\\\
+    --arg exec_time "\\\$exec_time" \\\\
+    --arg started_at "\\\$started_at" \\\\
+    --argjson output "\\\$output_json" \\\\
+    '{job_id: \\\$job_id, status: \\\$status, output: \\\$output, error_message: \\\$error_message, execution_time_seconds: (\\\$exec_time|tonumber), started_at: \\\$started_at}'
   )"
 
-  log "INFO" "Enviando resultado do job \$job_id (status=\$status)..."
-  if secure_request "/functions/v1/submit-job-result" "POST" "\$body" 30 3; then
-    log "SUCCESS" "Resultado do job \$job_id enviado com sucesso"
-    return 0
-  else
-    log "ERROR" "Falha ao enviar resultado do job \$job_id (status=\$SECURE_RESP_STATUS)"
-    return 1
-  fi
+  log "INFO" "Enviando resultado do job \\\$job_id..."
+  secure_request "/functions/v1/submit-job-result" "POST" "\\\$body" 30 3
 }
 
 ########################################
-# EXECUCAO DE JOB (ATUALIZADO v3.6.0)
+# EXECUCAO DE JOB
 ########################################
 
 execute_job() {
-  local job_id="\$1"
-  local job_type="\$2"
-  local payload_json="\$3"
+  local job_id="\\\$1"
+  local job_type="\\\$2"
+  local payload_json="\\\$3"
 
-  log "INFO" "Executando job \$job_id (type=\$job_type)"
+  log "INFO" "Executando job \\\$job_id (type=\\\$job_type)"
   
-  local started_at
-  started_at="\$(date -u +"%Y-%m-%dT%H:%M:%SZ")"  # NOVO v3.6.0
-  local start_ts
-  start_ts=\$(date +%s)
+  local started_at="\\\$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+  local start_ts=\\\$(date +%s)
 
   local output_json status error_msg
   status="completed"
   error_msg=""
 
-  case "\$job_type" in
-    integration_test)
+  case "\\\$job_type" in
+    integration_test|collect_info|report)
       local sys metrics
-      sys="\$(system_info_json)"
-      metrics="\$(system_metrics_json)"
-      output_json="\$(
-        jq -n \\
-          --arg msg "Integration test OK" \\
-          --arg ts "\$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \\
-          --arg agent "\$AGENT_NAME" \\
-          --argjson sys "\$sys" \\
-          --argjson metrics "\$metrics" \\
-          '{
-            message: \$msg,
-            timestamp: \$ts,
-            agent: \$agent,
-            system: \$sys,
-            metrics: \$metrics
-          }'
-      )"
+      sys="\\\$(system_info_json)"
+      metrics="\\\$(system_metrics_json)"
+      output_json="\\\$(jq -n --argjson sys "\\\$sys" --argjson metrics "\\\$metrics" '{system: \\\$sys, metrics: \\\$metrics}')"
       ;;
 
-    collect_info)
-      local sys metrics
-      sys="\$(system_info_json)"
-      metrics="\$(system_metrics_json)"
-      output_json="\$(
-        jq -n \\
-          --argjson sys "\$sys" \\
-          --argjson metrics "\$metrics" \\
-          '{
-            system: \$sys,
-            metrics: \$metrics
-          }'
-      )"
+    sync_blocked_websites)
+      log "INFO" "[BLOCKED-SITES] Sincronizando..."
+      if secure_request "/functions/v1/get-blocked-websites" "GET" "" 30 3; then
+        local blocked_domains="\\\$(echo "\\\$SECURE_RESP_BODY" | jq -r '.domains // []')"
+        local count=\\\$(echo "\\\$blocked_domains" | jq 'length')
+        echo "\\\$blocked_domains" > "\\\$INSTALL_DIR/blocked_websites.json"
+        output_json="\\\$(jq -n --argjson c "\\\$count" '{success: true, domains_count: \\\$c}')"
+      else
+        status="failed"
+        error_msg="Falha ao buscar sites bloqueados"
+        output_json='{"error": "fetch_failed"}'
+      fi
       ;;
 
-    report)  # NOVO v3.6.0
-      local sys metrics cpu_percent mem_percent disk_percent hostname
-      sys="\$(system_info_json)"
-      metrics="\$(system_metrics_json)"
+    update_agent)
+      log "INFO" "[UPDATE] Iniciando auto-atualizacao..."
+      if secure_request "/functions/v1/serve-agent-update" "GET" "" 60 3; then
+        local new_version=\\\$(echo "\\\$SECURE_RESP_BODY" | jq -r '.version')
+        local script_text=\\\$(echo "\\\$SECURE_RESP_BODY" | jq -r '.script_content')
+        local expected_hash=\\\$(echo "\\\$SECURE_RESP_BODY" | jq -r '.sha256')
+        
+        local target_script="\\\$INSTALL_DIR/cybershield-agent-\\\$AGENT_NAME.sh"
+        local temp_script="/tmp/cybershield-agent-update.sh"
+        echo "\\\$script_text" > "\\\$temp_script"
+        
+        local actual_hash=\\\$(sha256sum "\\\$temp_script" | awk '{print \\\$1}')
+        if [[ "\\\$actual_hash" != "\\\$expected_hash" ]]; then
+          rm -f "\\\$temp_script"
+          status="failed"
+          error_msg="SHA256 mismatch"
+          output_json='{"error": "sha256_mismatch"}'
+        else
+          mv "\\\$temp_script" "\\\$target_script"
+          chmod +x "\\\$target_script"
+          output_json="\\\$(jq -n --arg v "\\\$new_version" '{success: true, newVersion: \\\$v}')"
+          log "SUCCESS" "[UPDATE] Atualizado para \\\$new_version"
+        fi
+      else
+        status="failed"
+        error_msg="Falha ao buscar atualizacao"
+        output_json='{"error": "fetch_failed"}'
+      fi
+      ;;
+
+    collect_web_activity)
+      log "INFO" "[WEB-ACTIVITY] Coletando..."
+      local items="[]"
+      local now_utc=\\\$(date -u +"%Y-%m-%dT%H:%M:%SZ")
       
-      cpu_percent="\$(printf '%s\\n' "\$metrics" | jq -r '.cpu_load_percent')"
-      mem_percent="\$(printf '%s\\n' "\$metrics" | jq -r '.ram_used_percent')"
-      disk_percent="\$(printf '%s\\n' "\$metrics" | jq -r '.disk_used_percent')"
-      hostname="\$(printf '%s\\n' "\$sys" | jq -r '.hostname')"
+      for user_home in /home/*; do
+        [[ -d "\\\$user_home" ]] || continue
+        local user_name=\\\$(basename "\\\$user_home")
+        
+        local chrome_history="\\\$user_home/.config/google-chrome/Default/History"
+        if [[ -f "\\\$chrome_history" ]] && command -v sqlite3 >/dev/null 2>&1; then
+          local temp_db="/tmp/chrome_\\\$\\\$_\\\$(date +%s).db"
+          cp "\\\$chrome_history" "\\\$temp_db" 2>/dev/null || continue
+          local urls=\\\$(sqlite3 "\\\$temp_db" "SELECT DISTINCT url FROM urls LIMIT 50;" 2>/dev/null || echo "")
+          rm -f "\\\$temp_db"
+          while IFS= read -r url; do
+            [[ -n "\\\$url" ]] || continue
+            local domain=\\\$(echo "\\\$url" | awk -F/ '{print \\\$3}' | sed 's/^www\\\\.//')
+            [[ -n "\\\$domain" ]] && items=\\\$(echo "\\\$items" | jq --arg d "\\\$domain" --arg s "chrome_\\\$user_name" '. + [{domain: \\\$d, source: \\\$s}]')
+          done <<< "\\\$urls"
+        fi
+      done
       
-      output_json="\$(jq -n \\
-        --arg ts "\$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \\
-        --arg host "\$hostname" \\
-        --arg cpu "\$cpu_percent" \\
-        --arg mem "\$mem_percent" \\
-        --arg disk "\$disk_percent" \\
-        '{
-          success: true,
-          timestamp: \$ts,
-          hostname: \$host,
-          cpu_percent: (\$cpu|tonumber),
-          memory_percent: (\$mem|tonumber),
-          disk_percent: (\$disk|tonumber)
-        }'
-      )"
+      local count=\\\$(echo "\\\$items" | jq 'length')
+      local body=\\\$(jq -n --argjson items "\\\$items" '{items: \\\$items}')
+      secure_request "/functions/v1/submit-web-activity" "POST" "\\\$body" 30 3 || true
+      output_json="\\\$(jq -n --argjson c "\\\$count" '{success: true, domains_count: \\\$c}')"
+      ;;
+
+    software_inventory_collect)
+      log "INFO" "[SOFTWARE] Coletando inventario..."
+      local software_list="[]"
+      
+      if command -v dpkg >/dev/null 2>&1; then
+        while IFS= read -r line; do
+          local name=\\\$(echo "\\\$line" | awk '{print \\\$2}')
+          local version=\\\$(echo "\\\$line" | awk '{print \\\$3}')
+          [[ -n "\\\$name" ]] && software_list=\\\$(echo "\\\$software_list" | jq --arg n "\\\$name" --arg v "\\\$version" '. + [{name: \\\$n, version: \\\$v}]')
+        done < <(dpkg -l 2>/dev/null | grep '^ii' | head -200)
+      fi
+      
+      local count=\\\$(echo "\\\$software_list" | jq 'length')
+      local body=\\\$(jq -n --argjson items "\\\$software_list" '{items: \\\$items}')
+      secure_request "/functions/v1/submit-software-inventory" "POST" "\\\$body" 30 3 || true
+      output_json="\\\$(jq -n --argjson c "\\\$count" '{success: true, software_count: \\\$c}')"
+      ;;
+
+    collect_antivirus_status)
+      log "INFO" "[ANTIVIRUS] Verificando..."
+      local av_name="none" av_status="not_installed" av_version=""
+      
+      if command -v clamscan >/dev/null 2>&1; then
+        av_name="ClamAV"
+        av_version=\\\$(clamscan --version 2>/dev/null | head -1 | awk '{print \\\$2}')
+        av_status="installed"
+      fi
+      
+      output_json="\\\$(jq -n --arg name "\\\$av_name" --arg status "\\\$av_status" --arg version "\\\$av_version" '{antivirus: \\\$name, status: \\\$status, version: \\\$version}')"
+      ;;
+
+    fix_firewall)
+      log "INFO" "[FIREWALL] Habilitando..."
+      local result=""
+      if command -v ufw >/dev/null 2>&1; then
+        ufw --force enable 2>/dev/null && result="ufw enabled"
+      elif command -v firewall-cmd >/dev/null 2>&1; then
+        systemctl start firewalld 2>/dev/null && result="firewalld started"
+      fi
+      output_json="\\\$(jq -n --arg r "\\\$result" '{success: true, result: \\\$r}')"
+      ;;
+
+    restart_service)
+      log "INFO" "[SERVICE] Reiniciando..."
+      local service_name=\\\$(echo "\\\$payload_json" | jq -r '.serviceName // ""')
+      if [[ -n "\\\$service_name" ]] && systemctl restart "\\\$service_name" 2>/dev/null; then
+        output_json="\\\$(jq -n --arg svc "\\\$service_name" '{success: true, service: \\\$svc}')"
+      else
+        status="failed"
+        error_msg="Falha ao reiniciar servico"
+        output_json='{"error": "restart_failed"}'
+      fi
+      ;;
+
+    collect_network_info)
+      log "INFO" "[NETWORK] Coletando..."
+      local gateway=\\\$(ip route | grep default | awk '{print \\\$3}' | head -1)
+      local public_ip=\\\$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null || echo "unknown")
+      output_json="\\\$(jq -n --arg gw "\\\$gateway" --arg ip "\\\$public_ip" '{gateway: \\\$gw, public_ip: \\\$ip}')"
+      ;;
+
+    light_vuln_scan)
+      log "INFO" "[VULN] Executando scan..."
+      local findings="[]"
+      if [[ -f "/etc/ssh/sshd_config" ]] && grep -q "^PermitRootLogin yes" /etc/ssh/sshd_config 2>/dev/null; then
+        findings=\\\$(echo "\\\$findings" | jq '. + [{severity: "high", finding: "Root login via SSH permitido"}]')
+      fi
+      local count=\\\$(echo "\\\$findings" | jq 'length')
+      output_json="\\\$(jq -n --argjson findings "\\\$findings" --argjson c "\\\$count" '{success: true, findings: \\\$findings, finding_count: \\\$c}')"
       ;;
 
     *)
       status="failed"
-      error_msg="Tipo de job nao suportado: \$job_type"
-      output_json="\$(jq -n --arg error "\$error_msg" '{error: \$error}')"
+      error_msg="Tipo de job nao suportado: \\\$job_type"
+      output_json="\\\$(jq -n --arg error "\\\$error_msg" '{error: \\\$error}')"
       ;;
-
   esac
 
-  local end_ts exec_time
-  end_ts=\$(date +%s)
-  exec_time=\$(( end_ts - start_ts ))
+  local end_ts=\\\$(date +%s)
+  local exec_time=\\\$(( end_ts - start_ts ))
 
-  if [[ "\$status" == "completed" ]]; then
-    submit_job_result "\$job_id" "completed" "\$output_json" "" "\$exec_time" "\$started_at"
-  else
-    log "ERROR" "\$error_msg"
-    submit_job_result "\$job_id" "failed" "\$output_json" "\$error_msg" "\$exec_time" "\$started_at"
-  fi
+  submit_job_result "\\\$job_id" "\\\$status" "\\\$output_json" "\\\$error_msg" "\\\$exec_time" "\\\$started_at"
 }
 
 ########################################
@@ -511,51 +513,54 @@ execute_job() {
 ########################################
 
 poll_jobs() {
-  local body
-  body="\$(
-    jq -n \\
-      --arg agent_name "\$AGENT_NAME" \\
-      --arg agent_version "\$AGENT_VERSION" \\
-      '{agent_name: \$agent_name, agent_version: \$agent_version}'
-  )"
+  local body="\\\$(jq -n --arg agent_name "\\\$AGENT_NAME" --arg agent_version "\\\$AGENT_VERSION" '{agent_name: \\\$agent_name, agent_version: \\\$agent_version}')"
 
   log "INFO" "Consultando jobs..."
-  if ! secure_request "/functions/v1/poll-jobs" "POST" "\$body" 20 3; then
-    log "ERROR" "poll-jobs falhou (status=\$SECURE_RESP_STATUS)"
+  if ! secure_request "/functions/v1/poll-jobs" "POST" "\\\$body" 20 3; then
+    log "ERROR" "poll-jobs falhou"
     return
   fi
 
-  if [[ -z "\$SECURE_RESP_BODY" ]]; then
-    log "WARN" "Resposta de poll-jobs vazia"
+  if [[ -z "\\\$SECURE_RESP_BODY" ]]; then
     return
   fi
 
-  local jobs_json="\$SECURE_RESP_BODY"
+  local jobs_json="\\\$SECURE_RESP_BODY"
   local count
-  if ! count="\$(printf '%s\\n' "\$jobs_json" | jq 'length' 2>/dev/null)"; then
-    log "ERROR" "Erro ao parsear JSON de poll-jobs"
-    return
-  fi
+  count="\\\$(printf '%s\\\\n' "\\\$jobs_json" | jq 'length' 2>/dev/null)" || return
 
-  if [[ "\$count" -eq 0 ]]; then
+  if [[ "\\\$count" -eq 0 ]]; then
     log "INFO" "Nenhum job disponivel"
     return
   fi
 
-  log "INFO" "Recebidos \$count job(s) no poll-jobs"
+  log "INFO" "Recebidos \\\$count job(s)"
 
-  printf '%s\\n' "\$jobs_json" | jq -c '.[]' | while read -r job; do
-    local job_id job_type payload_json
-    job_id="\$(printf '%s\\n' "\$job" | jq -r '.id')"
-    job_type="\$(printf '%s\\n' "\$job" | jq -r '.type')"
-    payload_json="\$(printf '%s\\n' "\$job" | jq -c '.payload // {}')"
-
-    execute_job "\$job_id" "\$job_type" "\$payload_json"
+  printf '%s\\\\n' "\\\$jobs_json" | jq -c '.[]' | while read -r job; do
+    local job_id="\\\$(printf '%s\\\\n' "\\\$job" | jq -r '.id')"
+    local job_type="\\\$(printf '%s\\\\n' "\\\$job" | jq -r '.type')"
+    local payload_json="\\\$(printf '%s\\\\n' "\\\$job" | jq -c '.payload // {}')"
+    execute_job "\\\$job_id" "\\\$job_type" "\\\$payload_json"
   done
 }
 
 ########################################
-# LOOP PRINCIPAL (ATUALIZADO v3.6.0)
+# AUTO-UPDATE CHECK (every 24h)
+########################################
+
+check_for_updates() {
+  log "INFO" "[AUTO-UPDATE] Verificando atualizacoes..."
+  secure_request "/functions/v1/check-agent-updates" "POST" "{\\"agent_version\\":\\"\\\$AGENT_VERSION\\",\\"platform\\":\\"linux\\"}" 30 3 || return
+  local update_available=\\\$(echo "\\\$SECURE_RESP_BODY" | jq -r '.update_available // false')
+  if [[ "\\\$update_available" == "true" ]]; then
+    log "INFO" "[AUTO-UPDATE] Nova versao disponivel"
+  else
+    log "INFO" "[AUTO-UPDATE] Agente atualizado"
+  fi
+}
+
+########################################
+# LOOP PRINCIPAL
 ########################################
 
 main() {
@@ -563,72 +568,57 @@ main() {
 
   local heartbeat_interval=30
   local poll_interval=30
-  local metrics_interval=300  # NOVO v3.6.0: 5 minutos
+  local metrics_interval=300
+  local update_check_interval=86400
 
   log "INFO" "============================================"
-  log "INFO" "Iniciando CyberShield Agent - Linux v\$AGENT_VERSION"
-  log "INFO" "ServerUrl = \$SERVER_URL"
-  log "INFO" "AgentName = \$AGENT_NAME"
+  log "INFO" "Iniciando CyberShield Agent - Linux \\\$AGENT_VERSION"
+  log "INFO" "ServerUrl = \\\$SERVER_URL"
+  log "INFO" "AgentName = \\\$AGENT_NAME"
+  log "INFO" "InstallDir = \\\$INSTALL_DIR"
 
-  local bootstrap_start bootstrap_elapsed
-  bootstrap_start=\$(date +%s)
-
-  # post_installation
   send_post_installation "true" "" "0"
-
-  # primeiro heartbeat
   send_heartbeat
 
-  bootstrap_elapsed=\$(( \$(date +%s) - bootstrap_start ))
-  log "INFO" "Bootstrap concluido em \${bootstrap_elapsed}s"
+  log "INFO" "Entrando no loop principal"
 
-  log "INFO" "Entrando no loop principal (heartbeat=\${heartbeat_interval}s, poll=\${poll_interval}s, metrics=\${metrics_interval}s)"
-
-  local last_hb last_poll last_metrics now
-  last_hb=\$(date +%s)
-  last_poll=\$(date +%s)
-  last_metrics=\$(date +%s)  # NOVO v3.6.0
+  local last_hb=\\\$(date +%s) last_poll=\\\$(date +%s) last_metrics=\\\$(date +%s) last_update_check=\\\$(date +%s) now
 
   while true; do
-    now=\$(date +%s)
+    now=\\\$(date +%s)
 
     if (( now - last_hb >= heartbeat_interval )); then
       send_heartbeat
-      last_hb=\$(date +%s)
+      last_hb=\\\$(date +%s)
     fi
 
     if (( now - last_poll >= poll_interval )); then
       poll_jobs
-      last_poll=\$(date +%s)
+      last_poll=\\\$(date +%s)
     fi
 
-    # Enviar metricas a cada 5 minutos - NOVO v3.6.0
     if (( now - last_metrics >= metrics_interval )); then
-      log "INFO" "Coletando metricas de sistema (5min)..."
-      local metrics_json sys_json cpu_p mem_p disk_p host
-      
-      metrics_json="\$(system_metrics_json)"
-      sys_json="\$(system_info_json)"
-      
-      cpu_p="\$(printf '%s\\n' "\$metrics_json" | jq -r '.cpu_load_percent')"
-      mem_p="\$(printf '%s\\n' "\$metrics_json" | jq -r '.ram_used_percent')"
-      disk_p="\$(printf '%s\\n' "\$metrics_json" | jq -r '.disk_used_percent')"
-      host="\$(printf '%s\\n' "\$sys_json" | jq -r '.hostname')"
-      
-      if send_system_metrics "\$cpu_p" "\$mem_p" "\$disk_p" "\$host"; then
-        log "SUCCESS" "Metricas enviadas: CPU=\${cpu_p}%, RAM=\${mem_p}%, Disco=\${disk_p}%"
-      else
-        log "WARN" "Falha ao enviar metricas (nao critico)"
-      fi
-      
-      last_metrics=\$(date +%s)
+      log "INFO" "Coletando metricas..."
+      local metrics_json="\\\$(system_metrics_json)"
+      local sys_json="\\\$(system_info_json)"
+      local cpu_p="\\\$(printf '%s\\\\n' "\\\$metrics_json" | jq -r '.cpu_load_percent')"
+      local mem_p="\\\$(printf '%s\\\\n' "\\\$metrics_json" | jq -r '.ram_used_percent')"
+      local disk_p="\\\$(printf '%s\\\\n' "\\\$metrics_json" | jq -r '.disk_used_percent')"
+      local host="\\\$(printf '%s\\\\n' "\\\$sys_json" | jq -r '.hostname')"
+      send_system_metrics "\\\$cpu_p" "\\\$mem_p" "\\\$disk_p" "\\\$host" || true
+      last_metrics=\\\$(date +%s)
+    fi
+
+    if (( now - last_update_check >= update_check_interval )); then
+      check_for_updates
+      last_update_check=\\\$(date +%s)
     fi
 
     sleep 2
   done
 }
 
-main "\$@"
+main "\\\$@"
 `;
 
 export function getAgentScriptLinux(): string {
