@@ -8,9 +8,21 @@
  */
 
 export const INSTALLER_VERSION = 'v3.10.25-BLOCKED-WEBSITES';
-export const LAST_UPDATED = '2025-12-07T04:00:00Z'; // BLOCKED-WEBSITES: Adiciona sync_blocked_websites job type
+export const INSTALLER_VERSION_LINUX = 'v3.10.25-BLOCKED-WEBSITES';
+export const LAST_UPDATED = '2025-12-08T12:00:00Z'; // Linux sync with Windows features
 
 export const CHANGES = [
+  '[v3.10.25-LINUX-SYNC] FEATURE: Agente Linux sincronizado com features do Windows v3.10.25',
+  '[v3.10.25-LINUX-SYNC] FEATURE: sync_blocked_websites - sincroniza dominios bloqueados em /opt/cybershield/blocked_websites.json',
+  '[v3.10.25-LINUX-SYNC] FEATURE: update_agent com smart path detection (PSCommandPath, AgentName, glob, fallback)',
+  '[v3.10.25-LINUX-SYNC] FEATURE: collect_web_activity multi-usuario (itera /home/* para Chrome/Firefox)',
+  '[v3.10.25-LINUX-SYNC] FEATURE: software_inventory_collect (dpkg, rpm, snap, flatpak)',
+  '[v3.10.25-LINUX-SYNC] FEATURE: collect_antivirus_status (ClamAV, Sophos)',
+  '[v3.10.25-LINUX-SYNC] FEATURE: fix_firewall (ufw, firewalld, iptables)',
+  '[v3.10.25-LINUX-SYNC] FEATURE: restart_service via systemctl',
+  '[v3.10.25-LINUX-SYNC] FEATURE: collect_network_info (gateway, DNS, IP publico)',
+  '[v3.10.25-LINUX-SYNC] FEATURE: light_vuln_scan (SSH config, permissoes, SUID)',
+  '[v3.10.25-LINUX-SYNC] FEATURE: Auto-update check a cada 24h',
   '[v3.10.25-BLOCKED-WEBSITES] FEATURE: Novo job type sync_blocked_websites para sincronizar lista de sites bloqueados',
   '[v3.10.25-BLOCKED-WEBSITES] FEATURE: Salva lista de dominios bloqueados em C:\\CyberShield\\blocked_websites.json',
   '[v3.10.25-BLOCKED-WEBSITES] FEATURE: Opcao apply_to_hosts para bloquear dominios via Windows hosts file',
