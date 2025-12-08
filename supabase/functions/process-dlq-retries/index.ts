@@ -1,10 +1,28 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { createRequestContext, mergeHeaders } from '../_shared/request-context.ts';
-import { getDLQEntriesForRetry } from '../_shared/dlq.ts';
+import { getDLQEntriesForRetry, calculateNextRetry } from '../_shared/dlq.ts';
+import { logger, loggerWithContext } from '../_shared/logger.ts';
+
+// P3: Type-safe DLQ entry interface
+interface DLQEntryRow {
+  id: string;
+  original_job_id: string;
+  tenant_id: string;
+  agent_id: string | null;
+  agent_name: string;
+  job_type: string;
+  payload: Record<string, unknown> | null;
+  error_count: number;
+  retry_count: number;
+  max_retries: number;
+  status: string;
+  metadata: Record<string, unknown> | null;
+}
 
 Deno.serve(async (req) => {
   const ctx = createRequestContext(req, 'process-dlq-retries');
+  const log = loggerWithContext(ctx.requestId);
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: mergeHeaders(corsHeaders, ctx) });
@@ -23,11 +41,13 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    console.log(`[${ctx.requestId}] Starting DLQ retry processing`);
+    log.info('Starting DLQ retry processing');
 
-    // Get entries ready for retry
-    const entries = await getDLQEntriesForRetry(supabase, 20);
-    console.log(`[${ctx.requestId}] Found ${entries.length} entries for retry`);
+    // Get entries ready for retry with proper typing
+    const rawEntries = await getDLQEntriesForRetry(supabase, 20);
+    const entries = rawEntries as unknown as DLQEntryRow[];
+    
+    log.info('Found entries for retry', { count: entries.length });
 
     const results = {
       processed: 0,
@@ -38,6 +58,7 @@ Deno.serve(async (req) => {
 
     for (const entry of entries) {
       results.processed++;
+      const entryStartTime = Date.now();
 
       try {
         // Mark as retrying
@@ -62,9 +83,11 @@ Deno.serve(async (req) => {
           throw new Error(`Failed to recreate job: ${jobError.message}`);
         }
 
-        // Calculate next retry or mark exhausted
-        const newRetryCount = (entry.retry_count || 0) + 1;
-        const exhausted = newRetryCount >= (entry.max_retries || 3);
+        // P3: Type-safe retry count calculation
+        const currentRetryCount = typeof entry.retry_count === 'number' ? entry.retry_count : 0;
+        const maxRetries = typeof entry.max_retries === 'number' ? entry.max_retries : 3;
+        const newRetryCount = currentRetryCount + 1;
+        const exhausted = newRetryCount >= maxRetries;
 
         if (exhausted) {
           await supabase
@@ -77,10 +100,8 @@ Deno.serve(async (req) => {
             .eq('id', entry.id);
           results.exhausted++;
         } else {
-          // Calculate next retry with exponential backoff
-          const delays = [60, 300, 900, 1800];
-          const delay = delays[Math.min(newRetryCount, delays.length - 1)];
-          const nextRetry = new Date(Date.now() + delay * 1000).toISOString();
+          // P2: Use shared calculateNextRetry function
+          const nextRetry = calculateNextRetry(newRetryCount);
 
           await supabase
             .from('failed_jobs_dlq')
@@ -93,11 +114,16 @@ Deno.serve(async (req) => {
           results.retried++;
         }
 
-        console.log(`[${ctx.requestId}] Processed DLQ entry ${entry.id}, retry=${newRetryCount}, exhausted=${exhausted}`);
+        // P3: Log with timing
+        logger.span('dlq_entry_processed', entryStartTime, {
+          entry_id: entry.id,
+          retry_count: newRetryCount,
+          exhausted,
+        });
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
         results.errors.push(`${entry.id}: ${errorMsg}`);
-        console.error(`[${ctx.requestId}] Error processing ${entry.id}:`, err);
+        log.error(`Error processing entry ${entry.id}`, err);
 
         // Reset to pending for next attempt
         await supabase
@@ -107,7 +133,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`[${ctx.requestId}] DLQ processing complete:`, results);
+    // P3: Log metrics
+    logger.metric('dlq_processed', results.processed);
+    logger.metric('dlq_retried', results.retried);
+    logger.metric('dlq_exhausted', results.exhausted);
+    logger.metric('dlq_errors', results.errors.length);
+
+    log.timed('DLQ processing complete', results);
 
     return new Response(
       JSON.stringify({
@@ -118,7 +150,7 @@ Deno.serve(async (req) => {
       { status: 200, headers: mergeHeaders(corsHeaders, ctx) }
     );
   } catch (err) {
-    console.error(`[${ctx.requestId}] Unexpected error:`, err);
+    log.error('Unexpected error', err);
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error', 
