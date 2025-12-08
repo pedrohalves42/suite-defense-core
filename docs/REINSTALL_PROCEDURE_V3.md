@@ -9,7 +9,7 @@ Agentes instalados com versões **v3.10.14 e anteriores** possuem um problema es
 
 ## Solução: Reinstalação Única
 
-A reinstalação manual é necessária **uma única vez**. Após reinstalar com v3.10.24+, todos os auto-updates futuros funcionarão normalmente.
+A reinstalação manual é necessária **uma única vez**. Após reinstalar com v3.10.25+, todos os auto-updates futuros funcionarão normalmente.
 
 ---
 
@@ -166,7 +166,7 @@ Get-Content "C:\CyberShield\agent.log" -Tail 20
 ### 4. Verificar Heartbeat no Dashboard
 - Acesse `/admin/dashboard`
 - Confirme que o agente aparece como **online**
-- Confirme versão **v3.10.24-SMART-UPDATE** ou superior
+- Confirme versão **v3.10.25-BLOCKED-WEBSITES** ou superior
 
 ---
 
@@ -222,13 +222,13 @@ Tipo de job nao suportado: reinstall_agent
 
 A única solução é **reinstalação manual** conforme descrito acima.
 
-Após reinstalação com v3.10.24+, jobs `reinstall_agent` funcionarão normalmente para atualizações futuras.
+Após reinstalação com v3.10.25+, jobs `reinstall_agent` funcionarão normalmente para atualizações futuras.
 
 ---
 
 ## Prevenção Futura
 
-Após reinstalação com v3.10.24+:
+Após reinstalação com v3.10.25+:
 - ✅ Auto-update funcionará normalmente
 - ✅ Path dinâmico detecta script automaticamente
 - ✅ Fallback múltiplo: PSCommandPath → AgentName → Glob → Create New
