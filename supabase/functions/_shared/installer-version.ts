@@ -9,7 +9,8 @@
 
 export const INSTALLER_VERSION = 'v3.10.25-BLOCKED-WEBSITES';
 export const INSTALLER_VERSION_LINUX = 'v3.10.25-BLOCKED-WEBSITES';
-export const LAST_UPDATED = '2025-12-08T12:00:00Z'; // Linux sync with Windows features
+export const INSTALLER_VERSION_MACOS = 'v3.10.25-BLOCKED-WEBSITES';
+export const LAST_UPDATED = '2025-12-08T14:00:00Z'; // macOS sync with Windows/Linux features
 
 export const CHANGES = [
   '[v3.10.25-LINUX-SYNC] FEATURE: Agente Linux sincronizado com features do Windows v3.10.25',
