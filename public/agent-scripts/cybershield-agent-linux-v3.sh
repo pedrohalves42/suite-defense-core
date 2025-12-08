@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # CyberShield Agent - Linux
-# Version: v3.10.15-WEB-ACTIVITY-ENHANCED (Browser History + DNS Cache)
+# Version: v3.10.25-BLOCKED-WEBSITES (Sync blocked sites, Smart Update, Multi-user Web Activity)
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ SERVER_URL="${SERVER_URL:-${CYBERSHIELD_SERVER_URL:-}}"
 AGENT_TOKEN="${AGENT_TOKEN:-${CYBERSHIELD_AGENT_TOKEN:-}}"
 HMAC_SECRET="${HMAC_SECRET:-${CYBERSHIELD_HMAC_SECRET:-}}"
 AGENT_NAME="${AGENT_NAME:-${CYBERSHIELD_AGENT_NAME:-$(hostname -s)}}"
-AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-3.10.15}}"
+AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-v3.10.25}}"
 
 # Parse argumentos (sobrescreve env vars)
 while [[ $# -gt 0 ]]; do
@@ -57,6 +57,10 @@ if [[ -z "$HMAC_SECRET" ]]; then
 fi
 
 SERVER_URL="${SERVER_URL%/}" # remove trailing slash
+
+# Install directory
+INSTALL_DIR="/opt/cybershield"
+mkdir -p "$INSTALL_DIR" 2>/dev/null || true
 
 ########################################
 # LOG
@@ -217,7 +221,7 @@ system_metrics_json() {
     ram_used="0"
   fi
 
-  # DISK (NOVO v3.6.0)
+  # DISK
   disk_used="$(df / | awk 'NR==2 {print $5}' | sed 's/%//')"
   disk_used="${disk_used:-0}"
 
@@ -233,7 +237,7 @@ system_metrics_json() {
 }
 
 ########################################
-# SEND SYSTEM METRICS (NOVO v3.6.0)
+# SEND SYSTEM METRICS
 ########################################
 
 send_system_metrics() {
@@ -354,7 +358,7 @@ send_heartbeat() {
 }
 
 ########################################
-# SUBMIT JOB RESULT (ATUALIZADO v3.6.0)
+# SUBMIT JOB RESULT
 ########################################
 
 submit_job_result() {
@@ -363,7 +367,7 @@ submit_job_result() {
   local output_json="$3"
   local error_message="${4:-""}"
   local exec_time="${5:-0}"
-  local started_at="${6:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"  # NOVO v3.6.0
+  local started_at="${6:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
 
   local body
   body="$(
@@ -395,7 +399,7 @@ submit_job_result() {
 }
 
 ########################################
-# EXECUCAO DE JOB (ATUALIZADO v3.6.0)
+# EXECUCAO DE JOB
 ########################################
 
 execute_job() {
@@ -406,7 +410,7 @@ execute_job() {
   log "INFO" "Executando job $job_id (type=$job_type)"
   
   local started_at
-  started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"  # NOVO v3.6.0
+  started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
   local start_ts
   start_ts=$(date +%s)
 
@@ -451,7 +455,7 @@ execute_job() {
       )"
       ;;
 
-    report)  # NOVO v3.6.0
+    report)
       local sys metrics cpu_percent mem_percent disk_percent hostname
       sys="$(system_info_json)"
       metrics="$(system_metrics_json)"
@@ -478,79 +482,455 @@ execute_job() {
       )"
       ;;
 
-    collect_web_activity)  # NOVO v3.10.15
-      local web_activity_array=""
-      local chrome_history="$HOME/.config/google-chrome/Default/History"
-      local firefox_profile_dir="$HOME/.mozilla/firefox"
+    sync_blocked_websites)
+      log "INFO" "[BLOCKED-SITES] Sincronizando lista de sites bloqueados..."
       
-      # Chrome history
-      if [[ -f "$chrome_history" ]]; then
-        local chrome_temp="/tmp/chrome_history_copy_$$.db"
-        cp "$chrome_history" "$chrome_temp" 2>/dev/null || true
+      # Buscar lista do servidor
+      if ! secure_request "/functions/v1/get-blocked-websites" "GET" "" 30 3; then
+        status="failed"
+        error_msg="Falha ao buscar lista de sites bloqueados"
+        output_json='{"error": "'"$error_msg"'"}'
+      else
+        local blocked_domains
+        blocked_domains="$(echo "$SECURE_RESP_BODY" | jq -r '.domains // []')"
+        local count
+        count=$(echo "$blocked_domains" | jq 'length')
         
-        if [[ -f "$chrome_temp" ]] && command -v sqlite3 >/dev/null 2>&1; then
-          local chrome_urls
-          chrome_urls="$(sqlite3 "$chrome_temp" "SELECT DISTINCT url FROM urls WHERE last_visit_time > 0 ORDER BY last_visit_time DESC LIMIT 100;" 2>/dev/null || echo "")"
+        # Salvar lista local
+        local blocked_list_path="$INSTALL_DIR/blocked_websites.json"
+        local blocked_data
+        blocked_data=$(jq -n \
+          --arg updated_at "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+          --argjson domains "$blocked_domains" \
+          '{updated_at: $updated_at, domains: $domains}')
+        
+        echo "$blocked_data" > "$blocked_list_path"
+        
+        # Aplicar ao /etc/hosts se solicitado
+        local apply_to_hosts
+        apply_to_hosts=$(echo "$payload_json" | jq -r '.apply_to_hosts // false')
+        local hosts_modified=0
+        
+        if [[ "$apply_to_hosts" == "true" ]] && (( count > 0 )); then
+          local hosts_file="/etc/hosts"
+          local start_marker="# BEGIN CYBERSHIELD BLOCKED"
+          local end_marker="# END CYBERSHIELD BLOCKED"
           
-          while IFS= read -r url; do
-            if [[ -n "$url" ]]; then
-              local domain
-              domain="$(echo "$url" | awk -F/ '{print $3}' | sed 's/^www\.//')"
-              [[ -n "$domain" ]] && web_activity_array="${web_activity_array}${domain}"$'\n'
-            fi
-          done <<< "$chrome_urls"
+          # Remover bloqueios antigos
+          sed -i "/$start_marker/,/$end_marker/d" "$hosts_file" 2>/dev/null || true
           
-          rm -f "$chrome_temp"
+          # Adicionar novos
+          {
+            echo "$start_marker"
+            echo "$blocked_domains" | jq -r '.[]' | while read -r domain; do
+              clean_domain=$(echo "$domain" | sed 's/^\*\.//' | sed 's/\*//g')
+              if [[ -n "$clean_domain" ]]; then
+                echo "127.0.0.1 $clean_domain"
+                echo "127.0.0.1 www.$clean_domain"
+                hosts_modified=$((hosts_modified + 1))
+              fi
+            done
+            echo "$end_marker"
+          } >> "$hosts_file"
+          
+          # Flush DNS cache se disponível
+          systemctl restart systemd-resolved 2>/dev/null || \
+          service nscd restart 2>/dev/null || \
+          service dnsmasq restart 2>/dev/null || true
+        fi
+        
+        output_json=$(jq -n \
+          --arg msg "Sites bloqueados sincronizados" \
+          --argjson count "$count" \
+          --argjson hosts_mod "$hosts_modified" \
+          --arg path "$blocked_list_path" \
+          --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+          '{message: $msg, domains_count: $count, hosts_modified: $hosts_mod, list_path: $path, synced_at: $ts}')
+      fi
+      ;;
+
+    update_agent)
+      log "INFO" "[UPDATE] Iniciando auto-atualizacao..."
+      
+      # Buscar nova versao do servidor
+      if ! secure_request "/functions/v1/serve-agent-update" "GET" "" 60 3; then
+        status="failed"
+        error_msg="Falha ao buscar script de atualizacao"
+        output_json='{"error": "'"$error_msg"'"}'
+      else
+        local new_version script_text expected_hash
+        new_version=$(echo "$SECURE_RESP_BODY" | jq -r '.version')
+        script_text=$(echo "$SECURE_RESP_BODY" | jq -r '.script_content')
+        expected_hash=$(echo "$SECURE_RESP_BODY" | jq -r '.sha256')
+        
+        log "INFO" "[UPDATE] Nova versao disponivel: $new_version"
+        
+        # Detectar script atual (smart path detection)
+        local target_script="$INSTALL_DIR/cybershield-agent-$AGENT_NAME.sh"
+        local current_script=""
+        
+        for path in "$0" "$INSTALL_DIR/cybershield-agent-$AGENT_NAME.sh" "$INSTALL_DIR/cybershield-agent-v3.sh" "$INSTALL_DIR/cybershield-agent.sh"; do
+          if [[ -f "$path" ]]; then
+            current_script="$path"
+            log "INFO" "[UPDATE] Script atual detectado: $current_script"
+            break
+          fi
+        done
+        
+        # Fallback: glob search
+        if [[ -z "$current_script" ]]; then
+          current_script=$(find "$INSTALL_DIR" -name "cybershield-agent-*.sh" -type f 2>/dev/null | head -1)
+          [[ -n "$current_script" ]] && log "INFO" "[UPDATE] Script via glob: $current_script"
+        fi
+        
+        # Salvar novo script
+        local temp_script="/tmp/cybershield-agent-update-$new_version.sh"
+        echo "$script_text" > "$temp_script"
+        
+        # Validar SHA256
+        local actual_hash
+        actual_hash=$(sha256sum "$temp_script" | awk '{print $1}')
+        
+        if [[ "$actual_hash" != "$expected_hash" ]]; then
+          rm -f "$temp_script"
+          status="failed"
+          error_msg="SHA256 mismatch! Esperado: $expected_hash, Obtido: $actual_hash"
+          output_json='{"error": "'"$error_msg"'"}'
+        else
+          log "SUCCESS" "[UPDATE] SHA256 validado: $actual_hash"
+          
+          # Backup (opcional)
+          if [[ -n "$current_script" && -f "$current_script" ]]; then
+            cp "$current_script" "${current_script}.backup.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
+          fi
+          
+          # Instalar novo script
+          mv "$temp_script" "$target_script"
+          chmod +x "$target_script"
+          
+          log "SUCCESS" "[UPDATE] Script instalado: $target_script"
+          
+          # Atualizar systemd service se existir
+          if [[ -f "/etc/systemd/system/cybershield-agent.service" ]]; then
+            sed -i "s|ExecStart=.*|ExecStart=/bin/bash $target_script|g" /etc/systemd/system/cybershield-agent.service
+            systemctl daemon-reload
+            log "INFO" "[UPDATE] Systemd service atualizado. Reinicie para aplicar."
+          fi
+          
+          output_json=$(jq -n \
+            --arg msg "Agent updated successfully" \
+            --arg ver "$new_version" \
+            --arg path "$target_script" \
+            --arg hash "$actual_hash" \
+            --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+            '{message: $msg, newVersion: $ver, targetPath: $path, sha256: $hash, updatedAt: $ts}')
+          
+          log "INFO" "[UPDATE] Nova versao carregada no proximo boot/restart do service"
         fi
       fi
+      ;;
+
+    collect_web_activity)
+      log "INFO" "[WEB-ACTIVITY] Iniciando coleta multi-usuario..."
+      local items="[]"
+      local now_utc
+      now_utc=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
       
-      # Firefox history
-      if [[ -d "$firefox_profile_dir" ]]; then
-        for profile in "$firefox_profile_dir"/*.default* "$firefox_profile_dir"/*.dev-edition-default*; do
-          [[ -d "$profile" ]] || continue
-          local ff_history="$profile/places.sqlite"
-          
-          if [[ -f "$ff_history" ]] && command -v sqlite3 >/dev/null 2>&1; then
-            local ff_temp="/tmp/ff_history_copy_$$.db"
-            cp "$ff_history" "$ff_temp" 2>/dev/null || true
-            
-            if [[ -f "$ff_temp" ]]; then
-              local ff_urls
-              ff_urls="$(sqlite3 "$ff_temp" "SELECT DISTINCT url FROM moz_places WHERE visit_count > 0 ORDER BY last_visit_date DESC LIMIT 100;" 2>/dev/null || echo "")"
-              
-              while IFS= read -r url; do
-                if [[ -n "$url" ]]; then
-                  local domain
-                  domain="$(echo "$url" | awk -F/ '{print $3}' | sed 's/^www\.//')"
-                  [[ -n "$domain" ]] && web_activity_array="${web_activity_array}${domain}"$'\n'
-                fi
-              done <<< "$ff_urls"
-              
-              rm -f "$ff_temp"
-            fi
-          fi
+      # 1. DNS Cache (systemd-resolve)
+      if command -v resolvectl >/dev/null 2>&1; then
+        local dns_domains
+        dns_domains=$(resolvectl statistics 2>/dev/null | grep -oE '[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}' | sort -u | head -50)
+        for domain in $dns_domains; do
+          items=$(echo "$items" | jq --arg d "$domain" --arg s "dns_cache" --arg t "$now_utc" '. + [{domain: $d, source: $s, visited_at: $t}]')
         done
       fi
       
-      # Remove duplicates and create JSON array
-      local unique_domains
-      unique_domains="$(echo "$web_activity_array" | sort -u | grep -v '^$')"
+      # 2. Iterar por todos os usuarios em /home/*
+      for user_home in /home/*; do
+        [[ -d "$user_home" ]] || continue
+        local user_name
+        user_name=$(basename "$user_home")
+        log "INFO" "[WEB-ACTIVITY] Processando usuario: $user_name"
+        
+        # Chrome
+        local chrome_history="$user_home/.config/google-chrome/Default/History"
+        if [[ -f "$chrome_history" ]] && command -v sqlite3 >/dev/null 2>&1; then
+          local temp_db="/tmp/chrome_history_$$_$(date +%s).db"
+          cp "$chrome_history" "$temp_db" 2>/dev/null || continue
+          
+          local chrome_urls
+          chrome_urls=$(sqlite3 "$temp_db" "SELECT DISTINCT url FROM urls ORDER BY last_visit_time DESC LIMIT 50;" 2>/dev/null || echo "")
+          rm -f "$temp_db"
+          
+          while IFS= read -r url; do
+            [[ -n "$url" ]] || continue
+            local domain
+            domain=$(echo "$url" | awk -F/ '{print $3}' | sed 's/^www\.//')
+            [[ -n "$domain" ]] && items=$(echo "$items" | jq --arg d "$domain" --arg s "chrome_$user_name" --arg t "$now_utc" '. + [{domain: $d, source: $s, visited_at: $t}]')
+          done <<< "$chrome_urls"
+        fi
+        
+        # Firefox
+        for ff_profile in "$user_home"/.mozilla/firefox/*.default*; do
+          [[ -d "$ff_profile" ]] || continue
+          local ff_history="$ff_profile/places.sqlite"
+          [[ -f "$ff_history" ]] || continue
+          
+          local temp_db="/tmp/firefox_history_$$_$(date +%s).db"
+          cp "$ff_history" "$temp_db" 2>/dev/null || continue
+          
+          local ff_urls
+          ff_urls=$(sqlite3 "$temp_db" "SELECT DISTINCT url FROM moz_places WHERE visit_count > 0 ORDER BY last_visit_date DESC LIMIT 50;" 2>/dev/null || echo "")
+          rm -f "$temp_db"
+          
+          while IFS= read -r url; do
+            [[ -n "$url" ]] || continue
+            local domain
+            domain=$(echo "$url" | awk -F/ '{print $3}' | sed 's/^www\.//')
+            [[ -n "$domain" ]] && items=$(echo "$items" | jq --arg d "$domain" --arg s "firefox_$user_name" --arg t "$now_utc" '. + [{domain: $d, source: $s, visited_at: $t}]')
+          done <<< "$ff_urls"
+          break
+        done
+      done
       
-      local domains_json="[]"
-      if [[ -n "$unique_domains" ]]; then
-        domains_json="$(echo "$unique_domains" | jq -R -s -c 'split("\n") | map(select(length > 0))')"
+      # Deduplicate
+      local unique_items
+      unique_items=$(echo "$items" | jq 'unique_by(.domain) | .[0:200]')
+      local count
+      count=$(echo "$unique_items" | jq 'length')
+      
+      if (( count == 0 )); then
+        output_json='{"success": true, "message": "Nenhum dominio encontrado", "domains_count": 0}'
+      else
+        # Enviar para backend
+        local body
+        body=$(jq -n --argjson items "$unique_items" '{items: $items}')
+        if secure_request "/functions/v1/submit-web-activity" "POST" "$body" 30 3; then
+          output_json=$(jq -n --argjson c "$count" '{success: true, message: "Atividade web coletada", domains_count: $c}')
+        else
+          status="failed"
+          error_msg="Falha ao enviar atividade web"
+          output_json='{"error": "'"$error_msg"'"}'
+        fi
+      fi
+      ;;
+
+    software_inventory_collect)
+      log "INFO" "[SOFTWARE] Coletando inventario de software..."
+      local software_list="[]"
+      
+      # dpkg (Debian/Ubuntu)
+      if command -v dpkg >/dev/null 2>&1; then
+        while IFS= read -r line; do
+          local name version
+          name=$(echo "$line" | awk '{print $2}')
+          version=$(echo "$line" | awk '{print $3}')
+          [[ -n "$name" ]] && software_list=$(echo "$software_list" | jq --arg n "$name" --arg v "$version" --arg s "dpkg" '. + [{name: $n, version: $v, source: $s}]')
+        done < <(dpkg -l 2>/dev/null | grep '^ii' | head -200)
       fi
       
-      output_json="$(jq -n \
-        --argjson domains "$domains_json" \
+      # rpm (RHEL/CentOS/Fedora)
+      if command -v rpm >/dev/null 2>&1; then
+        while IFS= read -r line; do
+          local name version
+          name=$(echo "$line" | cut -d' ' -f1)
+          version=$(echo "$line" | cut -d' ' -f2)
+          [[ -n "$name" ]] && software_list=$(echo "$software_list" | jq --arg n "$name" --arg v "$version" --arg s "rpm" '. + [{name: $n, version: $v, source: $s}]')
+        done < <(rpm -qa --qf '%{NAME} %{VERSION}-%{RELEASE}\n' 2>/dev/null | head -200)
+      fi
+      
+      # snap
+      if command -v snap >/dev/null 2>&1; then
+        while IFS= read -r line; do
+          local name version
+          name=$(echo "$line" | awk '{print $1}')
+          version=$(echo "$line" | awk '{print $2}')
+          [[ -n "$name" && "$name" != "Name" ]] && software_list=$(echo "$software_list" | jq --arg n "$name" --arg v "$version" --arg s "snap" '. + [{name: $n, version: $v, source: $s}]')
+        done < <(snap list 2>/dev/null | tail -n +2 | head -50)
+      fi
+      
+      # flatpak
+      if command -v flatpak >/dev/null 2>&1; then
+        while IFS= read -r line; do
+          local name version
+          name=$(echo "$line" | awk '{print $1}')
+          version=$(echo "$line" | awk '{print $3}')
+          [[ -n "$name" && "$name" != "Name" ]] && software_list=$(echo "$software_list" | jq --arg n "$name" --arg v "$version" --arg s "flatpak" '. + [{name: $n, version: $v, source: $s}]')
+        done < <(flatpak list --columns=name,version 2>/dev/null | tail -n +1 | head -50)
+      fi
+      
+      local count
+      count=$(echo "$software_list" | jq 'length')
+      
+      # Enviar para backend
+      local body
+      body=$(jq -n --argjson items "$software_list" '{items: $items}')
+      if secure_request "/functions/v1/submit-software-inventory" "POST" "$body" 30 3; then
+        output_json=$(jq -n --argjson c "$count" '{success: true, message: "Inventario coletado", software_count: $c}')
+      else
+        status="failed"
+        error_msg="Falha ao enviar inventario"
+        output_json='{"error": "'"$error_msg"'"}'
+      fi
+      ;;
+
+    collect_antivirus_status)
+      log "INFO" "[ANTIVIRUS] Verificando status do antivirus..."
+      local av_name="none"
+      local av_status="not_installed"
+      local av_version=""
+      
+      # ClamAV
+      if command -v clamscan >/dev/null 2>&1; then
+        av_name="ClamAV"
+        av_version=$(clamscan --version 2>/dev/null | head -1 | awk '{print $2}')
+        if systemctl is-active clamav-freshclam >/dev/null 2>&1 || systemctl is-active clamd >/dev/null 2>&1; then
+          av_status="active"
+        else
+          av_status="installed_inactive"
+        fi
+      fi
+      
+      # Sophos
+      if [[ -f "/opt/sophos-av/bin/savdctl" ]]; then
+        av_name="Sophos"
+        av_status=$(/opt/sophos-av/bin/savdctl status 2>/dev/null | grep -q "running" && echo "active" || echo "inactive")
+        av_version=$(/opt/sophos-av/bin/savdctl --version 2>/dev/null | head -1)
+      fi
+      
+      output_json=$(jq -n \
+        --arg name "$av_name" \
+        --arg status "$av_status" \
+        --arg version "$av_version" \
         --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-        '{
-          success: true,
-          timestamp: $ts,
-          domains: $domains,
-          source: "browser_history"
-        }'
-      )"
+        '{antivirus: $name, status: $status, version: $version, collected_at: $ts}')
+      ;;
+
+    fix_firewall)
+      log "INFO" "[FIREWALL] Habilitando firewall..."
+      local firewall_result=""
+      
+      # ufw (Ubuntu/Debian)
+      if command -v ufw >/dev/null 2>&1; then
+        ufw --force enable 2>/dev/null && firewall_result="ufw enabled"
+      # firewalld (RHEL/CentOS)
+      elif command -v firewall-cmd >/dev/null 2>&1; then
+        systemctl start firewalld 2>/dev/null
+        systemctl enable firewalld 2>/dev/null
+        firewall_result="firewalld enabled"
+      # iptables fallback
+      elif command -v iptables >/dev/null 2>&1; then
+        firewall_result="iptables available (manual config required)"
+      else
+        firewall_result="no firewall found"
+      fi
+      
+      output_json=$(jq -n \
+        --arg result "$firewall_result" \
+        --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+        '{success: true, result: $result, executed_at: $ts}')
+      ;;
+
+    restart_service)
+      log "INFO" "[SERVICE] Reiniciando servico..."
+      local service_name
+      service_name=$(echo "$payload_json" | jq -r '.serviceName // ""')
+      
+      if [[ -z "$service_name" ]]; then
+        status="failed"
+        error_msg="Nome do servico nao especificado"
+        output_json='{"error": "'"$error_msg"'"}'
+      elif systemctl restart "$service_name" 2>/dev/null; then
+        output_json=$(jq -n \
+          --arg svc "$service_name" \
+          --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+          '{success: true, service: $svc, action: "restarted", executed_at: $ts}')
+      else
+        status="failed"
+        error_msg="Falha ao reiniciar servico $service_name"
+        output_json='{"error": "'"$error_msg"'"}'
+      fi
+      ;;
+
+    collect_network_info)
+      log "INFO" "[NETWORK] Coletando informacoes de rede..."
+      local network_info="{}"
+      
+      # IP addresses
+      local ip_info
+      ip_info=$(ip addr show 2>/dev/null | jq -R -s 'split("\n") | map(select(length > 0))' || echo "[]")
+      
+      # Gateway
+      local gateway
+      gateway=$(ip route | grep default | awk '{print $3}' | head -1)
+      
+      # DNS
+      local dns_servers
+      dns_servers=$(cat /etc/resolv.conf 2>/dev/null | grep nameserver | awk '{print $2}' | jq -R -s 'split("\n") | map(select(length > 0))')
+      
+      # Public IP
+      local public_ip
+      public_ip=$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null || echo "unknown")
+      
+      # Firewall status
+      local fw_status="unknown"
+      if command -v ufw >/dev/null 2>&1; then
+        fw_status=$(ufw status 2>/dev/null | head -1)
+      elif command -v firewall-cmd >/dev/null 2>&1; then
+        fw_status=$(firewall-cmd --state 2>/dev/null || echo "unknown")
+      fi
+      
+      output_json=$(jq -n \
+        --arg gateway "$gateway" \
+        --argjson dns "$dns_servers" \
+        --arg public_ip "$public_ip" \
+        --arg firewall "$fw_status" \
+        --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+        '{gateway: $gateway, dns_servers: $dns, public_ip: $public_ip, firewall_status: $firewall, collected_at: $ts}')
+      ;;
+
+    light_vuln_scan)
+      log "INFO" "[VULN] Executando scan de vulnerabilidades..."
+      local findings="[]"
+      
+      # Check SSH config
+      if [[ -f "/etc/ssh/sshd_config" ]]; then
+        if grep -q "^PermitRootLogin yes" /etc/ssh/sshd_config 2>/dev/null; then
+          findings=$(echo "$findings" | jq '. + [{severity: "high", category: "ssh", finding: "Root login via SSH permitido"}]')
+        fi
+        if grep -q "^PasswordAuthentication yes" /etc/ssh/sshd_config 2>/dev/null; then
+          findings=$(echo "$findings" | jq '. + [{severity: "medium", category: "ssh", finding: "Autenticacao por senha SSH habilitada"}]')
+        fi
+      fi
+      
+      # Check for common vulnerabilities
+      # Writable /etc/passwd
+      if [[ -w "/etc/passwd" ]]; then
+        findings=$(echo "$findings" | jq '. + [{severity: "critical", category: "permissions", finding: "/etc/passwd e gravavel"}]')
+      fi
+      
+      # World-writable files in /etc
+      local ww_files
+      ww_files=$(find /etc -perm -002 -type f 2>/dev/null | head -5 | tr '\n' ' ')
+      if [[ -n "$ww_files" ]]; then
+        findings=$(echo "$findings" | jq --arg f "$ww_files" '. + [{severity: "high", category: "permissions", finding: ("Arquivos world-writable em /etc: " + $f)}]')
+      fi
+      
+      # SUID binaries
+      local suid_count
+      suid_count=$(find / -perm -4000 -type f 2>/dev/null | wc -l)
+      if (( suid_count > 100 )); then
+        findings=$(echo "$findings" | jq --argjson c "$suid_count" '. + [{severity: "medium", category: "suid", finding: ("Alto numero de binarios SUID: " + ($c|tostring))}]')
+      fi
+      
+      local finding_count
+      finding_count=$(echo "$findings" | jq 'length')
+      
+      output_json=$(jq -n \
+        --argjson findings "$findings" \
+        --argjson count "$finding_count" \
+        --arg ts "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+        '{success: true, findings: $findings, finding_count: $count, scanned_at: $ts}')
       ;;
 
     *)
@@ -622,7 +1002,31 @@ poll_jobs() {
 }
 
 ########################################
-# LOOP PRINCIPAL (ATUALIZADO v3.6.0)
+# AUTO-UPDATE CHECK (every 24h)
+########################################
+
+check_for_updates() {
+  log "INFO" "[AUTO-UPDATE] Verificando atualizacoes..."
+  
+  if ! secure_request "/functions/v1/check-agent-updates" "POST" "{\"agent_version\":\"$AGENT_VERSION\",\"platform\":\"linux\"}" 30 3; then
+    log "WARN" "[AUTO-UPDATE] Falha ao verificar atualizacoes"
+    return
+  fi
+  
+  local update_available
+  update_available=$(echo "$SECURE_RESP_BODY" | jq -r '.update_available // false')
+  
+  if [[ "$update_available" == "true" ]]; then
+    local new_version
+    new_version=$(echo "$SECURE_RESP_BODY" | jq -r '.latest_version')
+    log "INFO" "[AUTO-UPDATE] Nova versao disponivel: $new_version (atual: $AGENT_VERSION)"
+  else
+    log "INFO" "[AUTO-UPDATE] Agente esta atualizado"
+  fi
+}
+
+########################################
+# LOOP PRINCIPAL
 ########################################
 
 main() {
@@ -630,12 +1034,14 @@ main() {
 
   local heartbeat_interval=30
   local poll_interval=30
-  local metrics_interval=300  # NOVO v3.6.0: 5 minutos
+  local metrics_interval=300  # 5 minutos
+  local update_check_interval=86400  # 24 horas
 
   log "INFO" "============================================"
-  log "INFO" "Iniciando CyberShield Agent - Linux v$AGENT_VERSION"
+  log "INFO" "Iniciando CyberShield Agent - Linux $AGENT_VERSION"
   log "INFO" "ServerUrl = $SERVER_URL"
   log "INFO" "AgentName = $AGENT_NAME"
+  log "INFO" "InstallDir = $INSTALL_DIR"
 
   local bootstrap_start bootstrap_elapsed
   bootstrap_start=$(date +%s)
@@ -651,10 +1057,11 @@ main() {
 
   log "INFO" "Entrando no loop principal (heartbeat=${heartbeat_interval}s, poll=${poll_interval}s, metrics=${metrics_interval}s)"
 
-  local last_hb last_poll last_metrics now
+  local last_hb last_poll last_metrics last_update_check now
   last_hb=$(date +%s)
   last_poll=$(date +%s)
-  last_metrics=$(date +%s)  # NOVO v3.6.0
+  last_metrics=$(date +%s)
+  last_update_check=$(date +%s)
 
   while true; do
     now=$(date +%s)
@@ -669,7 +1076,7 @@ main() {
       last_poll=$(date +%s)
     fi
 
-    # Enviar metricas a cada 5 minutos - NOVO v3.6.0
+    # Enviar metricas a cada 5 minutos
     if (( now - last_metrics >= metrics_interval )); then
       log "INFO" "Coletando metricas de sistema (5min)..."
       local metrics_json sys_json cpu_p mem_p disk_p host
@@ -689,6 +1096,12 @@ main() {
       fi
       
       last_metrics=$(date +%s)
+    fi
+
+    # Verificar atualizacoes a cada 24h
+    if (( now - last_update_check >= update_check_interval )); then
+      check_for_updates
+      last_update_check=$(date +%s)
     fi
 
     sleep 2
