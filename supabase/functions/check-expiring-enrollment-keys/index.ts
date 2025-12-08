@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
         expires_at,
         created_at,
         description,
-        tenants!inner(id, name, owner_user_id)
+        tenants!enrollment_keys_tenant_id_fkey(id, name, owner_user_id)
       `)
       .lt('expires_at', oneHourFromNow)
       .gt('expires_at', now)
