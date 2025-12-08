@@ -204,9 +204,20 @@ Deno.serve(async (req) => {
       .insert(dedupedItems);
 
     if (insertError) {
-      logger.error('Failed to insert web activity', insertError);
+      logger.error('Failed to insert web activity', { 
+        error: insertError.message,
+        code: insertError.code,
+        details: insertError.details,
+        hint: insertError.hint,
+        itemCount: dedupedItems.length,
+        agentName: agent.agent_name
+      });
       return new Response(
-        JSON.stringify({ error: 'Failed to store web activity' }),
+        JSON.stringify({ 
+          error: 'Failed to store web activity',
+          details: insertError.message,
+          code: insertError.code
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -225,9 +236,18 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    logger.error('Web activity submission failed', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    logger.error('Web activity submission failed', { 
+      error: errorMessage, 
+      stack: errorStack,
+      phase: 'uncaught_exception'
+    });
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }), 
+      JSON.stringify({ 
+        error: 'Internal server error',
+        details: errorMessage 
+      }), 
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
