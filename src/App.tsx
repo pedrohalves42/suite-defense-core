@@ -82,6 +82,7 @@ import DeadLetterQueue from "./pages/admin/DeadLetterQueue";
 import SecurityPolicies from "./pages/admin/SecurityPolicies";
 import NotificationSettings from "./pages/admin/NotificationSettings";
 import SecurityMonitoring from "./pages/admin/SecurityMonitoring";
+import MassReinstall from "./pages/admin/MassReinstall";
 
 const App = () => (
   <ErrorBoundary>
@@ -160,6 +161,7 @@ const App = () => (
                 <Route path="security-policies" element={<SecurityPolicies />} />
                 <Route path="notification-settings" element={<NotificationSettings />} />
                 <Route path="security-monitoring" element={<SecurityMonitoring />} />
+                <Route path="mass-reinstall" element={<MassReinstall />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
