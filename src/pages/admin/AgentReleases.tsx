@@ -13,10 +13,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.24-SMART-UPDATE';
+const CURRENT_VERSION = 'v3.10.25-BLOCKED-WEBSITES';
 
-// SHA256 will be calculated automatically WITH BOM by useAgentReleases hook
-// No need for manual SHA256 anymore - the hook handles BOM compatibility automatically
+// SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
+// No need for manual SHA256 anymore - the hook handles calculation automatically
 
 export default function AgentReleases() {
   const { releases, isLoading, error, refetch, registerRelease, isRegistering } = useAgentReleases();
@@ -94,7 +94,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'OPEN-PORTS-FIX: Corrige coleta de portas abertas usando Get-NetTCPConnection/Get-NetUDPEndpoint (mais confiável que netstat). Coleta TCP e UDP listening ports com nome do processo.',
+        release_notes: 'BLOCKED-WEBSITES: Novo job type sync_blocked_websites para sincronizar lista de sites bloqueados. Salva dominios em C:\\CyberShield\\blocked_websites.json. Opcao apply_to_hosts para bloquear via Windows hosts file. Limpa DNS cache automaticamente.',
         channel: 'stable'
       });
 
@@ -148,7 +148,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'OPEN-PORTS-FIX: Corrige coleta de portas abertas usando Get-NetTCPConnection/Get-NetUDPEndpoint (mais confiável que netstat). Coleta TCP e UDP listening ports com nome do processo.',
+        release_notes: 'BLOCKED-WEBSITES: Novo job type sync_blocked_websites para sincronizar lista de sites bloqueados. Salva dominios em C:\\CyberShield\\blocked_websites.json. Opcao apply_to_hosts para bloquear via Windows hosts file. Limpa DNS cache automaticamente.',
         channel: 'stable'
       });
 
