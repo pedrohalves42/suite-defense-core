@@ -2,7 +2,7 @@
 // Embedded version of the reinstall script for Edge Function delivery
 
 export const REINSTALL_SCRIPT_CONTENT = `# CyberShield Agent - Reinstallation Script
-# Version: 1.0.0
+# Version: 1.1.0 (P1 Remediation - Legacy Agent Update)
 # Usage: .\\reinstall-cybershield-agent.ps1 -EnrollmentKey "xxx" -ServerUrl "https://xxx.supabase.co"
 
 param(
