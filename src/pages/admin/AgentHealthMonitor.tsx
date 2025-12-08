@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ErrorState } from "@/components/ErrorState";
 import { InstallationHealthCard } from "@/components/admin/InstallationHealthCard";
 import { DynamicValidationSystem } from "@/components/admin/DynamicValidationSystem";
+import { OfflineAgentAlerts } from "@/components/admin/OfflineAgentAlerts";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAgentMetricsHistory } from "@/hooks/useAgentMetricsHistory";
@@ -256,6 +257,9 @@ export default function AgentHealthMonitor() {
         <h1 className="text-3xl font-bold">Monitor de Saude</h1>
         <p className="text-muted-foreground">Acompanhe o status de todos os computadores protegidos</p>
       </div>
+
+      {/* Offline Agent Alerts - Real-time monitoring */}
+      <OfflineAgentAlerts />
 
       {/* Installation Health Card */}
       <InstallationHealthCard />
