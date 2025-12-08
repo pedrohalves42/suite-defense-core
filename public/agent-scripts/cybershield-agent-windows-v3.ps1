@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.25-BLOCKED-WEBSITES
+    CyberShield Agent - Windows v3.10.26-RATE-LIMIT-BACKOFF
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.25-BLOCKED-WEBSITES"
+    [string]$AgentVersion = "v3.10.26-RATE-LIMIT-BACKOFF"
 )
 
 $ErrorActionPreference = "Stop"
@@ -340,6 +340,27 @@ function Invoke-SecureRequest {
             if ($statusCode -eq 401) {
                 Write-Log "[ERROR] Erro de autenticacao (401). Verifique AgentToken / HmacSecret / clock." "ERROR"
                 throw
+            }
+
+            # P1 FIX: Tratamento especial para rate limiting (429)
+            if ($statusCode -eq 429) {
+                # Exponential backoff mais agressivo para rate limiting
+                $rateLimitDelay = $retryDelay * 5
+                Write-Log "[RATE-LIMIT] 429 Too Many Requests - aguardando $rateLimitDelay segundos..." "WARN"
+                Start-Sleep -Seconds $rateLimitDelay
+                $retryCount++
+                $retryDelay *= 2
+                
+                if ($retryCount -ge $MaxRetries) {
+                    Write-Log "[ERROR] Rate limit excedido apos $MaxRetries tentativas em $uri" "ERROR"
+                    # Retornar erro sem throw para permitir que o job continue
+                    return [pscustomobject]@{
+                        Success    = $false
+                        StatusCode = 429
+                        Body       = "Rate limit exceeded"
+                    }
+                }
+                continue
             }
 
             if ($retryCount -ge $MaxRetries) {
