@@ -5840,7 +5840,7 @@ export type Database = {
       cleanup_expired_keys: { Args: never; Returns: undefined }
       cleanup_old_data: { Args: never; Returns: undefined }
       cleanup_old_failed_attempts: { Args: never; Returns: undefined }
-      cleanup_old_hmac_signatures: { Args: never; Returns: undefined }
+      cleanup_old_hmac_signatures: { Args: never; Returns: number }
       cleanup_old_metrics: { Args: never; Returns: undefined }
       cleanup_old_metrics_aggressive: {
         Args: never
