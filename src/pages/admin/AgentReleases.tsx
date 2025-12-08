@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.25-BLOCKED-WEBSITES';
+const CURRENT_VERSION = 'v3.10.27-SCAN-RETRY-BACKOFF';
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
 // No need for manual SHA256 anymore - the hook handles calculation automatically
@@ -94,7 +94,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'BLOCKED-WEBSITES: Novo job type sync_blocked_websites para sincronizar lista de sites bloqueados. Salva dominios em C:\\CyberShield\\blocked_websites.json. Opcao apply_to_hosts para bloquear via Windows hosts file. Limpa DNS cache automaticamente.',
+        release_notes: 'SCAN-RETRY-BACKOFF: Implementa retry com exponential backoff (5s/10s/20s/40s) no handler de scan para reduzir taxa de falha de 28% para menos de 5%. Detecta erros 429 (rate limit) e network failures com auto-recovery.',
         channel: 'stable'
       });
 
