@@ -112,9 +112,12 @@ Deno.serve(async (req) => {
 
     const payload: WebActivityPayload = await req.json();
 
-    if (!payload.agent_id || !Array.isArray(payload.items)) {
+    // Use agent_id from payload if provided, otherwise use authenticated agent's id
+    const effectiveAgentId = payload.agent_id || agent.id;
+
+    if (!effectiveAgentId || !Array.isArray(payload.items)) {
       return new Response(
-        JSON.stringify({ error: 'agent_id and items are required' }),
+        JSON.stringify({ error: 'items array is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -168,7 +171,7 @@ Deno.serve(async (req) => {
     // Preparar itens para insercao com novos campos
     const itemsToInsert = payload.items.map(item => ({
       tenant_id: agent.tenant_id,
-      agent_id: payload.agent_id,
+      agent_id: effectiveAgentId,
       domain: item.domain,
       url: item.url || null,
       url_full: item.url_full || item.url || null,
