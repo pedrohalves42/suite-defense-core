@@ -492,6 +492,903 @@ export type Database = {
           },
         ]
       }
+      agent_system_metrics_2025_12: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_01: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_02: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_03: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_04: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_05: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_06: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_07: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_08: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_09: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_10: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_2026_11: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
+      agent_system_metrics_partitioned: {
+        Row: {
+          agent_id: string
+          collected_at: string
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string
+          uptime_seconds: number | null
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id: string
+          uptime_seconds?: number | null
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string
+          cpu_cores?: number | null
+          cpu_name?: string | null
+          cpu_usage_percent?: number | null
+          created_at?: string
+          disk_free_gb?: number | null
+          disk_total_gb?: number | null
+          disk_usage_percent?: number | null
+          disk_used_gb?: number | null
+          id?: string
+          last_boot_time?: string | null
+          memory_free_gb?: number | null
+          memory_total_gb?: number | null
+          memory_usage_percent?: number | null
+          memory_used_gb?: number | null
+          network_bytes_received?: number | null
+          network_bytes_sent?: number | null
+          tenant_id?: string
+          uptime_seconds?: number | null
+        }
+        Relationships: []
+      }
       agent_tokens: {
         Row: {
           agent_id: string
@@ -4081,6 +4978,31 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_system_metrics_unified: {
+        Row: {
+          agent_id: string | null
+          collected_at: string | null
+          cpu_cores: number | null
+          cpu_name: string | null
+          cpu_usage_percent: number | null
+          created_at: string | null
+          disk_free_gb: number | null
+          disk_total_gb: number | null
+          disk_usage_percent: number | null
+          disk_used_gb: number | null
+          id: string | null
+          last_boot_time: string | null
+          memory_free_gb: number | null
+          memory_total_gb: number | null
+          memory_usage_percent: number | null
+          memory_used_gb: number | null
+          network_bytes_received: number | null
+          network_bytes_sent: number | null
+          tenant_id: string | null
+          uptime_seconds: number | null
+        }
+        Relationships: []
+      }
       agent_timeline_events: {
         Row: {
           agent_id: string | null
@@ -4960,6 +5882,7 @@ export type Database = {
           job_ids: string[]
         }[]
       }
+      create_metrics_partition_if_needed: { Args: never; Returns: undefined }
       current_user_tenant_id: { Args: never; Returns: string }
       diagnose_agent: { Args: { p_agent_name: string }; Returns: Json }
       diagnose_agent_issues: {
@@ -4969,6 +5892,12 @@ export type Database = {
           details: Json
           issue_type: string
           severity: string
+        }[]
+      }
+      drop_old_metrics_partitions: {
+        Args: { retention_months?: number }
+        Returns: {
+          partition_dropped: string
         }[]
       }
       ensure_tenant_features: {
