@@ -7,12 +7,14 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.28-WEB-ACTIVITY-DEDUP-FIX';
-export const INSTALLER_VERSION_LINUX = 'v3.10.28-WEB-ACTIVITY-DEDUP-FIX';
-export const INSTALLER_VERSION_MACOS = 'v3.10.28-WEB-ACTIVITY-DEDUP-FIX';
-export const LAST_UPDATED = '2025-12-09T01:15:00Z'; // All platforms synced to v3.10.28
+export const INSTALLER_VERSION = 'v3.10.29-FORCED-RESTART';
+export const INSTALLER_VERSION_LINUX = 'v3.10.29-FORCED-RESTART';
+export const INSTALLER_VERSION_MACOS = 'v3.10.29-FORCED-RESTART';
+export const LAST_UPDATED = '2025-12-09T21:45:00Z'; // All platforms synced to v3.10.29
 
 export const CHANGES = [
+  '[v3.10.29-FORCED-RESTART] CRITICAL FIX: update_agent agora encerra processo atual com exit 0 apos iniciar nova task',
+  '[v3.10.29-FORCED-RESTART] CRITICAL FIX: Nova versao assume imediatamente, nao precisa mais aguardar reboot',
   '[v3.10.28-WEB-ACTIVITY-DEDUP-FIX] P0 FIX: Deduplicacao de web activity usando hashtable ao inves de Sort-Object -Unique',
   '[v3.10.28-WEB-ACTIVITY-DEDUP-FIX] P0 FIX: Sort-Object -Unique nao funciona corretamente com hashtables',
   '[v3.10.28-WEB-ACTIVITY-DEDUP-FIX] P0 FIX: Edge Function submit-web-activity agora loga payload invalido detalhadamente',
