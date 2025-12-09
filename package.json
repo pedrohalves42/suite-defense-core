@@ -25,6 +25,7 @@
     "sync:agent:linux": "bash scripts/sync-agent-linux.sh",
     "sync:agent:macos": "bash scripts/sync-agent-macos.sh",
     "sync:agent:all": "npm run sync:agent:linux && npm run sync:agent:macos",
+    "sync:agent:all-platforms": "node scripts/sync-all-agents.js --all",
     "validate:sync": "npm run sync:agent && git diff --exit-code supabase/functions/_shared/agent-script-windows-content.ts"
   },
   "dependencies": {
