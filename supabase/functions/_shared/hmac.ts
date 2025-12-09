@@ -168,7 +168,7 @@ export async function verifyHmacSignature(
  * setTimeout/setInterval nao sao confiaveis em ambiente serverless
  * Solucao: 1% das requests executam cleanup de forma sincrona
  */
-const CLEANUP_PROBABILITY = 0.01; // 1% das requests
+const CLEANUP_PROBABILITY = 0.05; // 5% das requests (increased from 1% for faster cleanup)
 
 async function probabilisticCleanup(supabase: SupabaseClient): Promise<void> {
   // Apenas 1% das requests executam cleanup
