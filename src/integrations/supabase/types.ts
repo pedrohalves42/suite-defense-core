@@ -3998,6 +3998,83 @@ export type Database = {
           },
         ]
       }
+      scheduled_reports: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          day_of_week: number | null
+          hour: number | null
+          id: string
+          include_agents_summary: boolean | null
+          include_antivirus: boolean | null
+          include_software_inventory: boolean | null
+          include_vulnerabilities: boolean | null
+          include_web_activity: boolean | null
+          is_active: boolean | null
+          last_sent_at: string | null
+          name: string
+          next_send_at: string | null
+          recipients: string[]
+          report_type: string
+          schedule: string
+          tenant_id: string
+          timezone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          day_of_week?: number | null
+          hour?: number | null
+          id?: string
+          include_agents_summary?: boolean | null
+          include_antivirus?: boolean | null
+          include_software_inventory?: boolean | null
+          include_vulnerabilities?: boolean | null
+          include_web_activity?: boolean | null
+          is_active?: boolean | null
+          last_sent_at?: string | null
+          name?: string
+          next_send_at?: string | null
+          recipients?: string[]
+          report_type?: string
+          schedule?: string
+          tenant_id: string
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          day_of_week?: number | null
+          hour?: number | null
+          id?: string
+          include_agents_summary?: boolean | null
+          include_antivirus?: boolean | null
+          include_software_inventory?: boolean | null
+          include_vulnerabilities?: boolean | null
+          include_web_activity?: boolean | null
+          is_active?: boolean | null
+          last_sent_at?: string | null
+          name?: string
+          next_send_at?: string | null
+          recipients?: string[]
+          report_type?: string
+          schedule?: string
+          tenant_id?: string
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_events: {
         Row: {
           agent_id: string | null

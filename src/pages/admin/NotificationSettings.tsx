@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,13 +19,15 @@ import {
   Send, 
   Plus, 
   Trash2, 
-  Settings2, 
   CheckCircle2, 
   XCircle,
   Clock,
   History,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Calendar,
+  FileText,
+  X
 } from 'lucide-react';
 import {
   Dialog,
@@ -78,6 +80,25 @@ interface NotificationLog {
   created_at: string;
 }
 
+interface ScheduledReport {
+  id: string;
+  tenant_id: string;
+  name: string;
+  schedule: string;
+  day_of_week: number;
+  hour: number;
+  recipients: string[];
+  include_software_inventory: boolean;
+  include_vulnerabilities: boolean;
+  include_web_activity: boolean;
+  include_antivirus: boolean;
+  include_agents_summary: boolean;
+  is_active: boolean;
+  last_sent_at: string | null;
+  next_send_at: string | null;
+  created_at: string;
+}
+
 const CHANNEL_ICONS = {
   whatsapp: MessageCircle,
   telegram: Send,
@@ -111,12 +132,28 @@ const ALERT_TYPE_OPTIONS = [
   { value: 'job_failed', label: 'Tarefa Falhou' }
 ];
 
+const DAY_OF_WEEK_OPTIONS = [
+  { value: 0, label: 'Domingo' },
+  { value: 1, label: 'Segunda-feira' },
+  { value: 2, label: 'Terça-feira' },
+  { value: 3, label: 'Quarta-feira' },
+  { value: 4, label: 'Quinta-feira' },
+  { value: 5, label: 'Sexta-feira' },
+  { value: 6, label: 'Sábado' }
+];
+
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, i) => ({
+  value: i,
+  label: `${i.toString().padStart(2, '0')}:00`
+}));
+
 export default function NotificationSettings() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [channels, setChannels] = useState<NotificationChannel[]>([]);
   const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
   const [logs, setLogs] = useState<NotificationLog[]>([]);
+  const [scheduledReports, setScheduledReports] = useState<ScheduledReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [tenantId, setTenantId] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -124,6 +161,23 @@ export default function NotificationSettings() {
     type: 'email' as 'whatsapp' | 'telegram' | 'email',
     name: '',
     config: {} as Record<string, string>
+  });
+  
+  // Scheduled Reports State
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [newRecipient, setNewRecipient] = useState('');
+  const [sendingReport, setSendingReport] = useState<string | null>(null);
+  const [newReport, setNewReport] = useState({
+    name: 'Relatório Semanal de Segurança',
+    schedule: 'weekly',
+    day_of_week: 1,
+    hour: 9,
+    recipients: [] as string[],
+    include_software_inventory: true,
+    include_vulnerabilities: true,
+    include_web_activity: true,
+    include_antivirus: true,
+    include_agents_summary: true,
   });
 
   useEffect(() => {
@@ -156,12 +210,12 @@ export default function NotificationSettings() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!tenantId) return;
     setLoading(true);
 
     try {
-      const [channelsRes, logsRes] = await Promise.all([
+      const [channelsRes, logsRes, reportsRes] = await Promise.all([
         supabase
           .from('notification_channels')
           .select('*')
@@ -172,7 +226,12 @@ export default function NotificationSettings() {
           .select('*')
           .eq('tenant_id', tenantId)
           .order('created_at', { ascending: false })
-          .limit(50)
+          .limit(50),
+        supabase
+          .from('scheduled_reports')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .order('created_at', { ascending: false })
       ]);
 
       if (channelsRes.data) {
@@ -195,13 +254,17 @@ export default function NotificationSettings() {
       if (logsRes.data) {
         setLogs(logsRes.data);
       }
+
+      if (reportsRes.data) {
+        setScheduledReports(reportsRes.data as ScheduledReport[]);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Erro ao carregar configurações');
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId]);
 
   const handleAddChannel = async () => {
     if (!tenantId || !newChannel.name) {
@@ -337,6 +400,144 @@ export default function NotificationSettings() {
     }
   };
 
+  // Scheduled Reports handlers
+  const handleAddReport = async () => {
+    if (!tenantId) return;
+    if (newReport.recipients.length === 0) {
+      toast.error('Adicione pelo menos um destinatário');
+      return;
+    }
+
+    try {
+      // Calculate next_send_at
+      const now = new Date();
+      const nextSend = new Date(now);
+      nextSend.setHours(newReport.hour + 3, 0, 0, 0); // Convert to UTC
+      
+      if (newReport.schedule === 'weekly') {
+        const currentDay = now.getDay();
+        let daysUntil = newReport.day_of_week - currentDay;
+        if (daysUntil <= 0) daysUntil += 7;
+        nextSend.setDate(nextSend.getDate() + daysUntil);
+      } else if (nextSend <= now) {
+        nextSend.setDate(nextSend.getDate() + 1);
+      }
+
+      const { error } = await supabase
+        .from('scheduled_reports')
+        .insert({
+          tenant_id: tenantId,
+          ...newReport,
+          next_send_at: nextSend.toISOString(),
+          is_active: true,
+          created_by: user?.id
+        });
+
+      if (error) throw error;
+
+      toast.success('Relatório agendado com sucesso!');
+      setReportDialogOpen(false);
+      setNewReport({
+        name: 'Relatório Semanal de Segurança',
+        schedule: 'weekly',
+        day_of_week: 1,
+        hour: 9,
+        recipients: [],
+        include_software_inventory: true,
+        include_vulnerabilities: true,
+        include_web_activity: true,
+        include_antivirus: true,
+        include_agents_summary: true,
+      });
+      fetchData();
+    } catch (error) {
+      console.error('Error adding report:', error);
+      toast.error('Erro ao criar relatório');
+    }
+  };
+
+  const handleDeleteReport = async (id: string) => {
+    if (!confirm('Tem certeza que deseja remover este relatório?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('scheduled_reports')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success('Relatório removido');
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      toast.error('Erro ao remover relatório');
+    }
+  };
+
+  const handleToggleReport = async (id: string, isActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('scheduled_reports')
+        .update({ is_active: isActive })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setScheduledReports(prev => prev.map(r => r.id === id ? { ...r, is_active: isActive } : r));
+      toast.success(isActive ? 'Relatório ativado' : 'Relatório desativado');
+    } catch (error) {
+      console.error('Error toggling report:', error);
+      toast.error('Erro ao atualizar relatório');
+    }
+  };
+
+  const handleSendReportNow = async (report: ScheduledReport) => {
+    setSendingReport(report.id);
+    try {
+      toast.info('Enviando relatório...');
+      
+      const { error } = await supabase.functions.invoke('send-scheduled-report', {
+        body: {
+          report_id: report.id,
+          tenant_id: tenantId
+        }
+      });
+
+      if (error) throw error;
+      toast.success('Relatório enviado com sucesso!');
+      fetchData();
+    } catch (error) {
+      console.error('Error sending report:', error);
+      toast.error('Erro ao enviar relatório');
+    } finally {
+      setSendingReport(null);
+    }
+  };
+
+  const addRecipient = () => {
+    if (!newRecipient || !newRecipient.includes('@')) {
+      toast.error('Digite um email válido');
+      return;
+    }
+    if (newReport.recipients.includes(newRecipient)) {
+      toast.error('Este email já foi adicionado');
+      return;
+    }
+    setNewReport(prev => ({
+      ...prev,
+      recipients: [...prev.recipients, newRecipient]
+    }));
+    setNewRecipient('');
+  };
+
+  const removeRecipient = (email: string) => {
+    setNewReport(prev => ({
+      ...prev,
+      recipients: prev.recipients.filter(r => r !== email)
+    }));
+  };
+
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -467,6 +668,10 @@ export default function NotificationSettings() {
               <Bell className="h-4 w-4 mr-2" />
               Canais ({channels.length})
             </TabsTrigger>
+            <TabsTrigger value="reports">
+              <Calendar className="h-4 w-4 mr-2" />
+              Relatórios ({scheduledReports.length})
+            </TabsTrigger>
             <TabsTrigger value="history">
               <History className="h-4 w-4 mr-2" />
               Histórico
@@ -578,6 +783,163 @@ export default function NotificationSettings() {
                     </Card>
                   );
                 })}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="reports" className="space-y-4">
+            <div className="flex justify-end">
+              <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Relatório
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Agendar Relatório</DialogTitle>
+                    <DialogDescription>
+                      Configure um relatório automático de segurança por email.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+                    <div className="space-y-2">
+                      <Label>Nome do Relatório</Label>
+                      <Input 
+                        value={newReport.name}
+                        onChange={(e) => setNewReport(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Frequência</Label>
+                        <Select value={newReport.schedule} onValueChange={(v) => setNewReport(prev => ({ ...prev, schedule: v }))}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="daily">Diário</SelectItem>
+                            <SelectItem value="weekly">Semanal</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {newReport.schedule === 'weekly' && (
+                        <div className="space-y-2">
+                          <Label>Dia</Label>
+                          <Select value={String(newReport.day_of_week)} onValueChange={(v) => setNewReport(prev => ({ ...prev, day_of_week: parseInt(v) }))}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {DAY_OF_WEEK_OPTIONS.map(d => <SelectItem key={d.value} value={String(d.value)}>{d.label}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label>Horário</Label>
+                        <Select value={String(newReport.hour)} onValueChange={(v) => setNewReport(prev => ({ ...prev, hour: parseInt(v) }))}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {HOUR_OPTIONS.map(h => <SelectItem key={h.value} value={String(h.value)}>{h.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Destinatários</Label>
+                      <div className="flex gap-2">
+                        <Input placeholder="email@exemplo.com" value={newRecipient} onChange={(e) => setNewRecipient(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addRecipient())} />
+                        <Button type="button" onClick={addRecipient}>Adicionar</Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {newReport.recipients.map(r => (
+                          <Badge key={r} variant="secondary" className="gap-1">
+                            {r}
+                            <X className="h-3 w-3 cursor-pointer" onClick={() => removeRecipient(r)} />
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Incluir no Relatório</Label>
+                      <div className="space-y-2">
+                        {[
+                          { key: 'include_agents_summary', label: '🖥️ Status dos Computadores' },
+                          { key: 'include_vulnerabilities', label: '🔴 Vulnerabilidades' },
+                          { key: 'include_software_inventory', label: '📦 Inventário de Software' },
+                          { key: 'include_web_activity', label: '🌐 Atividade Web' },
+                          { key: 'include_antivirus', label: '🛡️ Status Antivírus' },
+                        ].map(item => (
+                          <div key={item.key} className="flex items-center gap-2">
+                            <Checkbox checked={newReport[item.key as keyof typeof newReport] as boolean} onCheckedChange={(c) => setNewReport(prev => ({ ...prev, [item.key]: c }))} />
+                            <Label className="font-normal">{item.label}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setReportDialogOpen(false)}>Cancelar</Button>
+                    <Button onClick={handleAddReport}>Criar Relatório</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {scheduledReports.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Nenhum relatório agendado</h3>
+                  <p className="text-muted-foreground text-center mb-4">
+                    Configure relatórios automáticos de segurança por email.
+                  </p>
+                  <Button onClick={() => setReportDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar Relatório
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-4">
+                {scheduledReports.map((report) => (
+                  <Card key={report.id}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <FileText className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-lg">{report.name}</CardTitle>
+                            <CardDescription>
+                              {report.schedule === 'weekly' ? `Semanal - ${DAY_OF_WEEK_OPTIONS.find(d => d.value === report.day_of_week)?.label}` : 'Diário'} às {report.hour}:00
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <Switch checked={report.is_active} onCheckedChange={(c) => handleToggleReport(report.id, c)} />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="text-sm text-muted-foreground">
+                        <strong>Destinatários:</strong> {report.recipients.join(', ')}
+                      </div>
+                      {report.last_sent_at && (
+                        <div className="text-xs text-muted-foreground">
+                          Último envio: {new Date(report.last_sent_at).toLocaleString('pt-BR')}
+                        </div>
+                      )}
+                      <div className="flex gap-2 pt-2">
+                        <Button variant="outline" size="sm" onClick={() => handleSendReportNow(report)} disabled={sendingReport === report.id}>
+                          {sendingReport === report.id ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Send className="h-3 w-3 mr-1" />}
+                          Enviar Agora
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDeleteReport(report.id)}>
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Remover
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             )}
           </TabsContent>
