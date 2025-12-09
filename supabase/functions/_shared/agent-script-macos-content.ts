@@ -3,12 +3,12 @@
  * CyberShield Agent macOS Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-macos-v3.sh
- * Versao: v3.10.25-BLOCKED-WEBSITES
+ * Versao: v3.10.28-WEB-ACTIVITY-DEDUP-FIX
  */
 
 export const AGENT_SCRIPT_MACOS_SH = `#!/usr/bin/env bash
 # CyberShield Agent - macOS
-# Version: v3.10.25-BLOCKED-WEBSITES (Full sync with Windows/Linux features)
+# Version: v3.10.28-WEB-ACTIVITY-DEDUP-FIX (Sync all platforms)
 
 set -euo pipefail
 
@@ -20,7 +20,7 @@ SERVER_URL="\\\${SERVER_URL:-\\\${CYBERSHIELD_SERVER_URL:-}}"
 AGENT_TOKEN="\\\${AGENT_TOKEN:-\\\${CYBERSHIELD_AGENT_TOKEN:-}}"
 HMAC_SECRET="\\\${HMAC_SECRET:-\\\${CYBERSHIELD_HMAC_SECRET:-}}"
 AGENT_NAME="\\\${AGENT_NAME:-\\\${CYBERSHIELD_AGENT_NAME:-\\\$(hostname -s)}}"
-AGENT_VERSION="\\\${AGENT_VERSION:-\\\${CYBERSHIELD_AGENT_VERSION:-v3.10.25}}"
+AGENT_VERSION="\\\${AGENT_VERSION:-\\\${CYBERSHIELD_AGENT_VERSION:-v3.10.28}}"
 
 while [[ \\\$# -gt 0 ]]; do
   case "\\\$1" in
