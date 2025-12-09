@@ -10,7 +10,7 @@
 export const INSTALLER_VERSION = 'v3.10.28-WEB-ACTIVITY-DEDUP-FIX';
 export const INSTALLER_VERSION_LINUX = 'v3.10.28-WEB-ACTIVITY-DEDUP-FIX';
 export const INSTALLER_VERSION_MACOS = 'v3.10.28-WEB-ACTIVITY-DEDUP-FIX';
-export const LAST_UPDATED = '2025-12-09T00:30:00Z'; // P0 FIX: web activity deduplication fix
+export const LAST_UPDATED = '2025-12-09T01:15:00Z'; // All platforms synced to v3.10.28
 
 export const CHANGES = [
   '[v3.10.28-WEB-ACTIVITY-DEDUP-FIX] P0 FIX: Deduplicacao de web activity usando hashtable ao inves de Sort-Object -Unique',

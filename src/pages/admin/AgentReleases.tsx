@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.27-SCAN-RETRY-BACKOFF';
+const CURRENT_VERSION = 'v3.10.28-WEB-ACTIVITY-DEDUP-FIX';
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
 // No need for manual SHA256 anymore - the hook handles calculation automatically
@@ -94,7 +94,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'SCAN-RETRY-BACKOFF: Implementa retry com exponential backoff (5s/10s/20s/40s) no handler de scan para reduzir taxa de falha de 28% para menos de 5%. Detecta erros 429 (rate limit) e network failures com auto-recovery.',
+        release_notes: 'WEB-ACTIVITY-DEDUP-FIX: Corrige deduplicacao de web activity usando hashtable em vez de Sort-Object -Unique. Sincroniza Windows/macOS/Linux para mesma versao.',
         channel: 'stable'
       });
 
