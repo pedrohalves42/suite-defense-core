@@ -56,8 +56,8 @@ Deno.serve(async (req: Request) => {
     stats.hmac_signatures_deleted = hmacDeleted?.length || 0;
     console.log(`[${requestId}] Deleted ${stats.hmac_signatures_deleted} old HMAC signatures`);
 
-    // 2. Cleanup rate_limits > 7 days
-    const rateLimitCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    // 2. Cleanup rate_limits > 2 hours (P1 optimization - reduced from 7 days)
+    const rateLimitCutoff = new Date(now.getTime() - 2 * 60 * 60 * 1000);
     const { data: rateLimitsDeleted, error: rlError } = await supabase
       .from('rate_limits')
       .delete()
