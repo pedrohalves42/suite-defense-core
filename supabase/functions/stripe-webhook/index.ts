@@ -88,18 +88,54 @@ Deno.serve(async (request) => {
           // Get plan name for feature sync
           const { data: plan } = await supabase
             .from("subscription_plans")
-            .select("name")
+            .select("name, max_devices")
             .eq("id", tenantSub.plan_id)
             .single();
 
           if (plan) {
-            // Sync tenant features
+            // Sync tenant features with max_devices from plan
             await supabase.rpc("ensure_tenant_features", {
               p_tenant_id: tenantSub.tenant_id,
               p_plan_name: plan.name,
-              p_device_quantity: quantity,
+              p_device_quantity: plan.max_devices || quantity,
             });
           }
+        }
+        break;
+      }
+
+      case "customer.subscription.trial_will_end": {
+        // V4: Send reminder 3 days before trial ends
+        const subscription = event.data.object as Stripe.Subscription;
+        console.log(`[STRIPE-WEBHOOK] Trial ending soon: ${subscription.id}`);
+
+        const customerId = subscription.customer as string;
+
+        const { data: tenantSub } = await supabase
+          .from("tenant_subscriptions")
+          .select("tenant_id")
+          .eq("stripe_customer_id", customerId)
+          .maybeSingle();
+
+        if (tenantSub) {
+          // Create system alert for trial ending
+          await supabase
+            .from("system_alerts")
+            .insert({
+              tenant_id: tenantSub.tenant_id,
+              alert_type: "trial_ending",
+              severity: "medium",
+              title: "Seu período de trial está acabando",
+              message: "Seu trial gratuito expira em 3 dias. Atualize seu método de pagamento para continuar usando o CyberShield.",
+              details: {
+                subscription_id: subscription.id,
+                trial_end: subscription.trial_end 
+                  ? new Date(subscription.trial_end * 1000).toISOString()
+                  : null,
+              },
+            });
+
+          console.log(`[STRIPE-WEBHOOK] Trial ending alert created for tenant: ${tenantSub.tenant_id}`);
         }
         break;
       }
@@ -141,7 +177,7 @@ Deno.serve(async (request) => {
             await supabase.rpc("ensure_tenant_features", {
               p_tenant_id: tenantSub.tenant_id,
               p_plan_name: "free",
-              p_device_quantity: 0,
+              p_device_quantity: 3, // Free tier: 3 devices
             });
 
             console.log(`[STRIPE-WEBHOOK] Downgraded to free plan: ${tenantSub.tenant_id}`);
@@ -180,7 +216,7 @@ Deno.serve(async (request) => {
               alert_type: "payment_failed",
               severity: "high",
               title: "Falha no Pagamento",
-              message: `O pagamento da fatura ${invoice.number} falhou. Por favor, atualize seu metodo de pagamento.`,
+              message: `O pagamento da fatura ${invoice.number} falhou. Por favor, atualize seu método de pagamento.`,
               details: {
                 invoice_id: invoice.id,
                 amount_due: invoice.amount_due,

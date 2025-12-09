@@ -10,6 +10,7 @@ import { AppLayout } from "./components/AppLayout";
 import { CookieConsent } from "./components/CookieConsent";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import Landing from "./pages/Landing";
+import Pricing from "./pages/Pricing";
 import ServerDashboard from "./pages/ServerDashboard";
 import VirusScans from './pages/VirusScans';
 import Quarantine from './pages/Quarantine';
@@ -99,6 +100,7 @@ const App = () => (
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
+            <Route path="/pricing" element={<Pricing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
