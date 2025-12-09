@@ -3,6 +3,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { getTenantIdForUser } from '../_shared/tenant.ts';
 import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
+import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 
 // Validation schema
@@ -42,6 +43,45 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // P1 Fix: Rate limiting - 60 requests/min por IP
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+    
+    const rateLimitResult = await checkRateLimit(supabase, clientIp, 'track-installation-event', {
+      maxRequests: 60,
+      windowMinutes: 1,
+      blockMinutes: 5
+    });
+    
+    if (!rateLimitResult.allowed) {
+      logger.warn('[track-installation-event] Rate limit exceeded', { 
+        requestId, 
+        ip: clientIp,
+        resetAt: rateLimitResult.resetAt 
+      });
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          tracked: false,
+          reason: 'rate_limit_exceeded',
+          requestId,
+          details: { 
+            message: 'Too many requests. Please try again later.',
+            resetAt: rateLimitResult.resetAt?.toISOString()
+          }
+        } as TelemetryResponse),
+        { 
+          status: 429, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Retry-After': '60'
+          } 
+        }
+      );
+    }
 
     // Parse JSON with error handling
     let body: any;
