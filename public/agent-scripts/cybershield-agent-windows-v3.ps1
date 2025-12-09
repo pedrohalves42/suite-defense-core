@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.28-WEB-ACTIVITY-DEDUP-FIX
+    CyberShield Agent - Windows v3.10.29-FORCED-RESTART
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.28-WEB-ACTIVITY-DEDUP-FIX"
+    [string]$AgentVersion = "v3.10.29-FORCED-RESTART"
 )
 
 $ErrorActionPreference = "Stop"
@@ -2007,6 +2007,7 @@ function Execute-Job {
                     Start-ScheduledTask -TaskName "CyberShieldAgent"
                     
                     Write-Log "[SUCCESS] Task recriada e iniciada com path correto" "SUCCESS"
+                    Write-Log "[INFO] Encerrando processo atual para nova versao assumir..." "INFO"
 
                     $output = @{
                         message     = "Agent updated successfully with smart path detection"
@@ -2015,7 +2016,10 @@ function Execute-Job {
                         sha256      = $actualHash
                         restartedAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
-                    break
+                    
+                    # CRITICAL: Encerrar este processo para que a nova task com v3.10.29 assuma
+                    # O exit 0 aqui e SEGURO pois a nova task ja foi iniciada com Start-ScheduledTask
+                    exit 0
                 }
                 catch {
                     throw $_.Exception.Message
