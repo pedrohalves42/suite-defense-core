@@ -7,12 +7,17 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.29-FORCED-RESTART';
-export const INSTALLER_VERSION_LINUX = 'v3.10.29-FORCED-RESTART';
-export const INSTALLER_VERSION_MACOS = 'v3.10.29-FORCED-RESTART';
-export const LAST_UPDATED = '2025-12-09T21:45:00Z'; // All platforms synced to v3.10.29
+export const INSTALLER_VERSION = 'v3.10.30-UPTIME';
+export const INSTALLER_VERSION_LINUX = 'v3.10.30-UPTIME';
+export const INSTALLER_VERSION_MACOS = 'v3.10.30-UPTIME';
+export const LAST_UPDATED = '2025-12-09T23:30:00Z'; // All platforms synced to v3.10.30-UPTIME
 
 export const CHANGES = [
+  '[v3.10.30-UPTIME] FEATURE: Coleta de uptime_seconds e last_boot_time para todos os agentes',
+  '[v3.10.30-UPTIME] FEATURE: Windows usa WMI Win32_OperatingSystem.LastBootUpTime',
+  '[v3.10.30-UPTIME] FEATURE: Linux usa /proc/uptime para calcular uptime_seconds',
+  '[v3.10.30-UPTIME] FEATURE: macOS usa sysctl kern.boottime para calcular uptime',
+  '[v3.10.30-UPTIME] FIX: Dashboard agora exibe coluna "Tempo Ligado" com valor real',
   '[v3.10.29-FORCED-RESTART] CRITICAL FIX: update_agent agora encerra processo atual com exit 0 apos iniciar nova task',
   '[v3.10.29-FORCED-RESTART] CRITICAL FIX: Nova versao assume imediatamente, nao precisa mais aguardar reboot',
   '[v3.10.28-WEB-ACTIVITY-DEDUP-FIX] P0 FIX: Deduplicacao de web activity usando hashtable ao inves de Sort-Object -Unique',
