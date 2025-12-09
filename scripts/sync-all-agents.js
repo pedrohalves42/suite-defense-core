@@ -47,10 +47,10 @@ const AGENTS = {
 // Escapa caracteres especiais para PowerShell em template literal
 function escapePowerShell(content) {
   return content
-    .replace(/\\/g, '\\\\')  // Backslash primeiro
-    .replace(/`/g, '\\`')    // Backtick
-    .replace(/\$/g, '\\$')   // Dollar sign
-    .replace(/\${/g, '\\${'); // Template literal expressions
+    .replace(/\\/g, '\\\\')       // Backslash primeiro
+    .replace(/`/g, '\\`')         // Backtick
+    .replace(/\$\{/g, '\\${')     // Template literal ${ ANTES do $
+    .replace(/\$(?!\{)/g, '\\$'); // Dollar NOT seguido de { (usa negative lookahead)
 }
 
 // Escapa caracteres especiais para Bash em template literal
