@@ -76,16 +76,77 @@ const Landing = () => {
   };
   const currentContent = content[audience];
 
-  // Cálculo baseado em tiers fixos (sincronizado com /pricing)
-  const calculateTier = (devices: number): { price: number; plan: string; maxDevices: number; isEnterprise: boolean } => {
-    if (devices <= 0 || Number.isNaN(devices)) return { price: 0, plan: 'Free', maxDevices: 3, isEnterprise: false };
+  // Cálculo baseado em tiers híbridos (base + adicional por dispositivo)
+  const calculateTier = (devices: number): { 
+    price: number; 
+    plan: string; 
+    baseDevices: number;
+    maxDevices: number; 
+    basePrice: number;
+    extraDevices: number;
+    extraPrice: number;
+    pricePerExtra: number;
+    isEnterprise: boolean 
+  } => {
+    if (devices <= 0 || Number.isNaN(devices)) 
+      return { price: 0, plan: 'Free', baseDevices: 3, maxDevices: 3, basePrice: 0, extraDevices: 0, extraPrice: 0, pricePerExtra: 0, isEnterprise: false };
     
-    if (devices <= 3) return { price: 0, plan: 'Free', maxDevices: 3, isEnterprise: false };
-    if (devices <= 5) return { price: 150, plan: 'Starter', maxDevices: 5, isEnterprise: false };
-    if (devices <= 25) return { price: 450, plan: 'Business', maxDevices: 25, isEnterprise: false };
-    if (devices <= 100) return { price: 1200, plan: 'Scale', maxDevices: 100, isEnterprise: false };
+    // Free: até 3 dispositivos
+    if (devices <= 3) 
+      return { price: 0, plan: 'Free', baseDevices: 3, maxDevices: 3, basePrice: 0, extraDevices: 0, extraPrice: 0, pricePerExtra: 0, isEnterprise: false };
     
-    return { price: 0, plan: 'Enterprise', maxDevices: devices, isEnterprise: true };
+    // Starter: R$ 150 base (5 disp) + R$ 20/adicional (máx 30)
+    if (devices <= 30) {
+      const basePrice = 150;
+      const baseDevices = 5;
+      const pricePerExtra = 20;
+      const extraDevices = Math.max(0, devices - baseDevices);
+      const extraPrice = extraDevices * pricePerExtra;
+      return { 
+        price: basePrice + extraPrice, 
+        plan: 'Starter', 
+        baseDevices, 
+        maxDevices: 30, 
+        basePrice, 
+        extraDevices, 
+        extraPrice,
+        pricePerExtra,
+        isEnterprise: false 
+      };
+    }
+    
+    // Business: R$ 450 base (25 disp) + R$ 18/adicional (máx 200)
+    if (devices <= 200) {
+      const basePrice = 450;
+      const baseDevices = 25;
+      const pricePerExtra = 18;
+      const extraDevices = Math.max(0, devices - baseDevices);
+      const extraPrice = extraDevices * pricePerExtra;
+      return { 
+        price: basePrice + extraPrice, 
+        plan: 'Business', 
+        baseDevices, 
+        maxDevices: 200, 
+        basePrice, 
+        extraDevices, 
+        extraPrice,
+        pricePerExtra,
+        isEnterprise: false 
+      };
+    }
+    
+    // Enterprise: +200 dispositivos
+    return { 
+      price: 0, 
+      plan: 'Enterprise', 
+      baseDevices: 200, 
+      maxDevices: Infinity, 
+      basePrice: 0, 
+      extraDevices: 0, 
+      extraPrice: 0,
+      pricePerExtra: 0,
+      isEnterprise: true 
+    };
   };
 
   const tierResult = calculateTier(deviceCount);
@@ -139,12 +200,12 @@ const Landing = () => {
                 <div className="text-sm text-muted-foreground">Trial grátis</div>
               </div>
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? '200+' : '1-10'}</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? 'até 200' : '1-10'}</div>
                 <div className="text-sm text-muted-foreground">{currentContent.hero.stat2Label}</div>
               </div>
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">100%</div>
-                <div className="text-sm text-muted-foreground">Visibilidade dos PCs</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">5 min</div>
+                <div className="text-sm text-muted-foreground">Configure em minutos</div>
               </div>
             </div>
 
@@ -439,13 +500,13 @@ const Landing = () => {
           <div className="text-center mb-16 animate-fade-in">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 border border-primary/30 backdrop-blur-sm animate-pulse-glow mb-6">
               <Shield className="w-4 h-4 text-primary animate-pulse" />
-              <span className="text-sm font-medium text-foreground">🎉 Trial de 14 dias - Sem cartão necessário</span>
+              <span className="text-sm font-medium text-foreground">🎉 Iniciar teste grátis – 14 dias (cartão requerido)</span>
             </div>
             <h2 className="text-2xl md:text-3xl font-bold mb-4">
-              {audience === 'business' ? "Planos Transparentes" : "Planos para Sua Casa"}
+              {audience === 'business' ? "Proteção completa sem equipe de TI" : "Planos para Sua Casa"}
             </h2>
             <p className="text-lg text-muted-foreground">
-              {audience === 'business' ? "Escolha o plano ideal para o tamanho da sua empresa" : "Planos acessiveis para proteger todos os computadores da sua casa"}
+              {audience === 'business' ? "Inventário, antivírus, vulnerabilidades, web, desempenho — tudo em um painel. Agente leve que não deixa o computador lento." : "Planos acessíveis para proteger todos os computadores da sua casa"}
             </p>
           </div>
 
@@ -457,13 +518,19 @@ const Landing = () => {
                 <div className="p-2 bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
                   <Zap className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-2xl font-bold">{audience === 'business' ? "Starter" : "Basico"}</h3>
+                <h3 className="text-2xl font-bold">{audience === 'business' ? "Starter" : "Básico"}</h3>
               </div>
-              <div className="relative mb-6">
+              <div className="relative mb-2">
                 <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? "R$ 150" : "R$ 15"}</span>
-                <span className="text-muted-foreground">/{audience === 'business' ? "mês (até 5 dispositivos)" : "computador/mês"}</span>
+                <span className="text-muted-foreground">/{audience === 'business' ? "mês" : "computador/mês"}</span>
               </div>
-              <p className="relative text-sm text-muted-foreground mb-6">{audience === 'business' ? "Ideal para pequenas empresas e escritórios" : "Ideal para ate 3 computadores em casa"}</p>
+              {audience === 'business' && (
+                <p className="relative text-xs text-muted-foreground mb-4">
+                  Base: 5 dispositivos • +R$ 20/dispositivo adicional<br/>
+                  <span className="font-medium text-primary">Até 30 dispositivos</span>
+                </p>
+              )}
+              <p className="relative text-sm text-muted-foreground mb-6">{audience === 'business' ? "Ideal para micro e pequenas empresas" : "Ideal para até 3 computadores em casa"}</p>
               <ul className="relative space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
@@ -475,20 +542,20 @@ const Landing = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Alertas de segurança" : "Monitoramento básico em tempo real"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Inventário de software" : "Monitoramento básico em tempo real"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Suporte por email" : "Suporte via WhatsApp"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Status do antivírus" : "Suporte via WhatsApp"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "14 dias de trial grátis" : "14 dias grátis para testar"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Suporte por email" : "14 dias grátis para testar"}</span>
                 </li>
               </ul>
               <Button variant="outline" className="relative w-full group-hover:bg-primary/10 transition-colors" asChild>
                 <Link to="/signup">
-                  {audience === 'business' ? "Começar Trial Grátis" : "Começar Agora"}
+                  Iniciar teste grátis – 14 dias
                 </Link>
               </Button>
             </div>
@@ -504,11 +571,17 @@ const Landing = () => {
                 </div>
                 <h3 className="text-2xl font-bold">{audience === 'business' ? "Business" : "Completo"}</h3>
               </div>
-              <div className="mb-6">
+              <div className="mb-2">
                 <span className="text-3xl font-bold">{audience === 'business' ? "R$ 450" : "R$ 30"}</span>
-                <span className="opacity-90">/{audience === 'business' ? "mês (até 25 dispositivos)" : "computador/mês"}</span>
+                <span className="opacity-90">/{audience === 'business' ? "mês" : "computador/mês"}</span>
               </div>
-              <p className="text-sm opacity-90 mb-6">{audience === 'business' ? "Para empresas em crescimento" : "Proteção completa para até 10 computadores"}</p>
+              {audience === 'business' && (
+                <p className="text-xs opacity-80 mb-4">
+                  Base: 25 dispositivos • +R$ 18/dispositivo adicional<br/>
+                  <span className="font-medium">Até 200 dispositivos</span>
+                </p>
+              )}
+              <p className="text-sm opacity-90 mb-6">{audience === 'business' ? "Para pequenas e médias empresas" : "Proteção completa para até 10 computadores"}</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -528,12 +601,12 @@ const Landing = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Alertas avançados" : "Relatórios simples e claros"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Analytics avançado" : "Relatórios simples e claros"}</span>
                 </li>
               </ul>
               <Button variant="outline" className="w-full bg-white/20 hover:bg-white/30 border-white/30" asChild>
                 <Link to="/signup">
-                  {audience === 'business' ? "Começar Trial Grátis" : "Assinar Agora"}
+                  Iniciar teste grátis – 14 dias
                 </Link>
               </Button>
             </div>
@@ -551,7 +624,7 @@ const Landing = () => {
                 <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? "Sob consulta" : "R$ 50"}</span>
                 <span className="text-muted-foreground">{audience === 'business' ? "" : "/computador/mês"}</span>
               </div>
-              <p className="relative text-sm text-muted-foreground mb-6">{audience === 'business' ? "Para grandes empresas - dispositivos ilimitados" : "Para casas com muitos dispositivos e necessidades especiais"}</p>
+              <p className="relative text-sm text-muted-foreground mb-6">{audience === 'business' ? "Para grandes empresas - dispositivos ilimitados" : "Para casas com muitos dispositivos"}</p>
               <ul className="relative space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
@@ -567,13 +640,13 @@ const Landing = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "SLA garantido e onboarding dedicado" : "Relatórios detalhados para sua família"}</span>
+                  <span className="text-sm">{audience === 'business' ? "SLA garantido e onboarding dedicado" : "Relatórios detalhados"}</span>
                 </li>
               </ul>
               <Button variant="outline" className="relative w-full group-hover:bg-primary/10 transition-colors" asChild>
-                <Link to="/signup">
-                  {audience === 'business' ? "Fale Conosco" : "Fale Conosco"}
-                </Link>
+                <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                  Fale Conosco
+                </a>
               </Button>
             </div>
           </div>

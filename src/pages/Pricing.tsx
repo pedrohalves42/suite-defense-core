@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Zap, Crown, Building2, ArrowRight } from 'lucide-react';
+import { Check, Zap, Crown, Building2, ArrowRight, Shield, Monitor } from 'lucide-react';
 import { CONTACT } from '@/constants/config';
 
 export default function Pricing() {
@@ -11,8 +11,8 @@ export default function Pricing() {
       name: 'Free',
       description: 'Perfeito para testar',
       price: 'Grátis',
-      priceNote: '14 dias para avaliar',
-      icon: Zap,
+      priceNote: '3 dispositivos',
+      icon: Shield,
       color: 'text-muted-foreground',
       bgColor: 'bg-muted',
       features: [
@@ -26,73 +26,66 @@ export default function Pricing() {
     },
     {
       name: 'Starter',
-      description: 'Ideal para micro-empresas',
+      description: 'Micro e pequenas empresas',
       price: 'R$ 150',
-      priceNote: '/mês • até 5 dispositivos',
+      priceNote: '/mês • 5 dispositivos base',
+      priceExtra: '+R$ 20 por dispositivo adicional',
+      maxDevices: 'Até 30 dispositivos',
       icon: Zap,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
       popular: true,
       features: [
-        'Até 5 dispositivos',
+        'Base: 5 dispositivos inclusos',
+        '+R$ 20/dispositivo adicional (até 30)',
         'Dashboard avançado',
-        'Relatórios de segurança',
+        'Monitoramento em tempo real',
+        'Inventário de software',
+        'Status do antivírus',
         'Suporte por email',
         '14 dias de trial grátis',
       ],
-      cta: 'Começar Trial Grátis',
+      cta: 'Iniciar teste grátis – 14 dias',
       ctaVariant: 'default' as const,
     },
     {
       name: 'Business',
-      description: 'Para pequenas empresas',
+      description: 'Pequenas e médias empresas',
       price: 'R$ 450',
-      priceNote: '/mês • até 25 dispositivos',
+      priceNote: '/mês • 25 dispositivos base',
+      priceExtra: '+R$ 18 por dispositivo adicional',
+      maxDevices: 'Até 200 dispositivos',
       icon: Crown,
       color: 'text-yellow-500',
       bgColor: 'bg-yellow-500/10',
       features: [
-        'Até 25 dispositivos',
-        'Scans ilimitados',
+        'Base: 25 dispositivos inclusos',
+        '+R$ 18/dispositivo adicional (até 200)',
+        'Tudo do Starter, mais:',
+        'Scans avançados ilimitados',
         'Analytics avançado',
         'Suporte prioritário',
         'API access',
         'Relatórios customizados',
       ],
-      cta: 'Começar Trial Grátis',
-      ctaVariant: 'secondary' as const,
-    },
-    {
-      name: 'Scale',
-      description: 'Para médias empresas',
-      price: 'R$ 1.200',
-      priceNote: '/mês • até 100 dispositivos',
-      icon: Crown,
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-500/10',
-      features: [
-        'Até 100 dispositivos',
-        'Todas as features Business',
-        'SLA garantido',
-        'Onboarding dedicado',
-        'Suporte telefônico',
-      ],
-      cta: 'Começar Trial Grátis',
+      cta: 'Iniciar teste grátis – 14 dias',
       ctaVariant: 'secondary' as const,
     },
     {
       name: 'Enterprise',
-      description: 'Para grandes organizações',
+      description: 'Grandes organizações',
       price: 'Sob consulta',
       icon: Building2,
       color: 'text-red-500',
       bgColor: 'bg-red-500/10',
       features: [
         'Dispositivos ilimitados',
+        'Tudo do Business, mais:',
         'Suporte 24/7',
         'SLA personalizado',
         'Integração customizada',
         'Gerente de conta dedicado',
+        'Onboarding dedicado',
       ],
       cta: 'Falar com Vendas',
       ctaVariant: 'outline' as const,
@@ -122,20 +115,27 @@ export default function Pricing() {
       {/* Hero */}
       <section className="py-16 px-4">
         <div className="container mx-auto text-center max-w-3xl">
-          <Badge className="mb-4">Preços Simples</Badge>
+          <Badge className="mb-4">Proteção completa sem equipe de TI</Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Proteção que cabe no seu bolso
           </h1>
-          <p className="text-xl text-muted-foreground mb-8">
-            Escolha o plano ideal para sua empresa. Todos incluem 14 dias de trial grátis.
+          <p className="text-xl text-muted-foreground mb-4">
+            Inventário, antivírus, vulnerabilidades, web, desempenho — tudo em um painel.
           </p>
+          <p className="text-lg text-muted-foreground mb-8">
+            Configure em 3 minutos. Agente leve — não deixa o computador lento.
+          </p>
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Monitor className="h-4 w-4" />
+            <span>14 dias de trial grátis (cartão requerido)</span>
+          </div>
         </div>
       </section>
 
       {/* Pricing Cards */}
       <section className="pb-16 px-4">
         <div className="container mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {plans.map((plan) => {
               const Icon = plan.icon;
               return (
@@ -161,6 +161,12 @@ export default function Pricing() {
                       <span className="text-3xl font-bold">{plan.price}</span>
                       {plan.priceNote && (
                         <p className="text-sm text-muted-foreground">{plan.priceNote}</p>
+                      )}
+                      {plan.priceExtra && (
+                        <p className="text-xs text-primary font-medium mt-1">{plan.priceExtra}</p>
+                      )}
+                      {plan.maxDevices && (
+                        <p className="text-xs text-muted-foreground mt-1">{plan.maxDevices}</p>
                       )}
                     </div>
                   </CardHeader>
@@ -198,8 +204,41 @@ export default function Pricing() {
         </div>
       </section>
 
+      {/* Pricing Calculator Example */}
+      <section className="py-12 px-4 bg-muted/30">
+        <div className="container mx-auto max-w-3xl">
+          <h2 className="text-2xl font-bold text-center mb-8">Exemplos de Preço</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <p className="text-4xl font-bold text-primary">10</p>
+                <p className="text-muted-foreground mb-4">dispositivos</p>
+                <p className="text-2xl font-bold">R$ 250/mês</p>
+                <p className="text-xs text-muted-foreground">Plano Starter: R$ 150 + 5×R$ 20</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <p className="text-4xl font-bold text-primary">50</p>
+                <p className="text-muted-foreground mb-4">dispositivos</p>
+                <p className="text-2xl font-bold">R$ 900/mês</p>
+                <p className="text-xs text-muted-foreground">Plano Business: R$ 450 + 25×R$ 18</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <p className="text-4xl font-bold text-primary">100</p>
+                <p className="text-muted-foreground mb-4">dispositivos</p>
+                <p className="text-2xl font-bold">R$ 1.800/mês</p>
+                <p className="text-xs text-muted-foreground">Plano Business: R$ 450 + 75×R$ 18</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Annual Discount */}
-      <section className="py-12 px-4 bg-muted/50">
+      <section className="py-12 px-4 bg-primary/5">
         <div className="container mx-auto max-w-3xl text-center">
           <h2 className="text-2xl font-bold mb-4">💰 Economize com pagamento anual</h2>
           <p className="text-muted-foreground mb-6">
@@ -207,7 +246,7 @@ export default function Pricing() {
           </p>
           <Link to="/register">
             <Button size="lg">
-              Começar Agora
+              Iniciar teste grátis – 14 dias
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </Link>
@@ -233,10 +272,11 @@ export default function Pricing() {
               </p>
             </div>
             <div className="border rounded-lg p-6">
-              <h3 className="font-semibold mb-2">E se eu precisar de mais dispositivos?</h3>
+              <h3 className="font-semibold mb-2">Como funciona o preço por dispositivo adicional?</h3>
               <p className="text-muted-foreground">
-                Entre em contato com nossa equipe de vendas para planos customizados 
-                que atendam às suas necessidades específicas.
+                Cada plano inclui uma quantidade base de dispositivos. Se precisar de mais, 
+                você paga um valor fixo por dispositivo adicional: R$ 20 no Starter (até 30) 
+                ou R$ 18 no Business (até 200).
               </p>
             </div>
             <div className="border rounded-lg p-6">
@@ -244,6 +284,13 @@ export default function Pricing() {
               <p className="text-muted-foreground">
                 Todos os planos pagos incluem suporte por email. Planos Business e superiores 
                 têm suporte prioritário com tempos de resposta mais rápidos.
+              </p>
+            </div>
+            <div className="border rounded-lg p-6">
+              <h3 className="font-semibold mb-2">O agente deixa o computador lento?</h3>
+              <p className="text-muted-foreground">
+                Não! O agente CyberShield é extremamente leve e otimizado para rodar em segundo plano
+                sem impactar o desempenho do computador.
               </p>
             </div>
           </div>
