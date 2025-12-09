@@ -1,4 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { checkRateLimit } from '../_shared/rate-limit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -306,10 +308,53 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Log access
-  const clientIP = req.headers.get('x-forwarded-for') || 'unknown';
+  // Only allow GET requests
+  if (req.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
   const userAgent = req.headers.get('user-agent') || 'unknown';
-  console.log(`[get-diagnostic-script] Access from IP: ${clientIP}, UA: ${userAgent}`);
+
+  // Rate limiting: 10 requests per 5 minutes, block for 15 minutes if exceeded
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { allowed, remainingRequests, resetAt } = await checkRateLimit(
+      supabase,
+      clientIP,
+      'get-diagnostic-script',
+      { maxRequests: 10, windowMinutes: 5, blockMinutes: 15 }
+    );
+
+    if (!allowed) {
+      const retryAfter = resetAt ? Math.ceil((resetAt.getTime() - Date.now()) / 1000) : 900;
+      console.warn(`[get-diagnostic-script] Rate limit exceeded for IP: ${clientIP}`);
+      
+      return new Response(JSON.stringify({ 
+        error: 'Rate limit exceeded', 
+        retry_after_seconds: retryAfter 
+      }), {
+        status: 429,
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Retry-After': retryAfter.toString()
+        },
+      });
+    }
+
+    console.log(`[get-diagnostic-script] Access from IP: ${clientIP}, UA: ${userAgent.slice(0, 50)}, remaining: ${remainingRequests}`);
+  } catch (rateLimitError) {
+    // If rate limiting fails, log and continue (don't block legitimate requests)
+    console.error('[get-diagnostic-script] Rate limit check failed:', rateLimitError);
+  }
 
   return new Response(DIAGNOSTIC_SCRIPT, {
     headers: {
