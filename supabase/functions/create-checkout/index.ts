@@ -39,12 +39,12 @@ Deno.serve(async (req) => {
     if (userError || !userData.user?.email) throw new Error("User not authenticated");
     logStep("User authenticated", { userId: userData.user.id, email: userData.user.email });
 
-    // Get request body
-    const { planName, deviceQuantity } = await req.json();
-    if (!planName || !deviceQuantity) {
-      throw new Error("planName and deviceQuantity are required");
+    // Get request body - V4: only planName required (fixed pricing per plan)
+    const { planName } = await req.json();
+    if (!planName) {
+      throw new Error("planName is required");
     }
-    logStep("Request parameters", { planName, deviceQuantity });
+    logStep("Request parameters", { planName });
 
     // Get tenant_id using helper (handles multiple roles)
     const tenantId = await getTenantIdForUser(supabaseClient, userData.user.id);
@@ -63,22 +63,19 @@ Deno.serve(async (req) => {
 
     if (existingSubscription?.stripe_subscription_id && existingSubscription?.status === "active") {
       logStep("Active subscription exists", { subscriptionId: existingSubscription.stripe_subscription_id });
-      throw new Error("Voce ja possui uma assinatura ativa. Use o portal do cliente para gerenciar.");
+      throw new Error("Você já possui uma assinatura ativa. Use o portal do cliente para gerenciar.");
     }
 
     // Get plan details
     const { data: plan } = await supabaseClient
       .from("subscription_plans")
-      .select("stripe_price_id, max_devices, price_per_device")
+      .select("stripe_price_id, max_devices, price_per_device, trial_days")
       .eq("name", planName)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (!plan?.stripe_price_id) throw new Error("Plan not found or not configured");
-    if (deviceQuantity < 1 || deviceQuantity > plan.max_devices) {
-      throw new Error(`Device quantity must be between 1 and ${plan.max_devices}`);
-    }
     logStep("Plan validated", { priceId: plan.stripe_price_id, maxDevices: plan.max_devices });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
@@ -96,35 +93,37 @@ Deno.serve(async (req) => {
       logStep("New customer created", { customerId });
     }
 
-    // Create checkout session
+    // Create checkout session - V4: Fixed price (quantity: 1), 14 days trial
     const origin = req.headers.get("origin") || "http://localhost:8080";
+    const trialDays = plan.trial_days || 14;
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
         {
           price: plan.stripe_price_id,
-          quantity: deviceQuantity,
+          quantity: 1, // V4: Fixed price per plan, not per device
         },
       ],
       mode: "subscription",
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/admin/plan-upgrade?canceled=true`,
       subscription_data: {
-        trial_period_days: 30,
+        trial_period_days: trialDays, // PLG: Collect card at start, charge after trial
         metadata: {
           tenant_id: tenantId,
           plan_name: planName,
-          device_quantity: deviceQuantity.toString(),
+          max_devices: plan.max_devices.toString(),
         },
       },
       metadata: {
         tenant_id: tenantId,
         plan_name: planName,
-        device_quantity: deviceQuantity.toString(),
+        max_devices: plan.max_devices.toString(),
       },
     });
 
-    logStep("Checkout session created", { sessionId: session.id, url: session.url });
+    logStep("Checkout session created", { sessionId: session.id, url: session.url, trialDays });
 
     return new Response(
       JSON.stringify({ url: session.url }),
