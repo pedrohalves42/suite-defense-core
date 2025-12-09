@@ -121,27 +121,27 @@ const Landing = () => {
               <span className="text-sm font-medium text-foreground">{currentContent.hero.badge}</span>
             </div>
 
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
               <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-gradient-x">{currentContent.hero.title1}</span>
               <br />
               <span className="text-foreground">{currentContent.hero.title2}</span>
             </h1>
 
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               {currentContent.hero.description}<span className="text-foreground font-semibold">{currentContent.hero.descriptionBold}</span>
             </p>
 
             <div className="flex flex-wrap justify-center gap-8 pt-4">
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">15 dias</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">15 dias</div>
                 <div className="text-sm text-muted-foreground">Trial gratuito</div>
               </div>
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? '200+' : '1-10'}</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? '200+' : '1-10'}</div>
                 <div className="text-sm text-muted-foreground">{currentContent.hero.stat2Label}</div>
               </div>
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">100%</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">100%</div>
                 <div className="text-sm text-muted-foreground">Visibilidade dos PCs</div>
               </div>
             </div>
@@ -161,10 +161,10 @@ const Landing = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-background/50 to-transparent" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">
               {audience === 'business' ? "Por Que Escolher o CyberShield" : "Benefícios para Sua Casa"}
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
               {audience === 'business' ? "Proteção empresarial simplificada com tecnologia de ponta" : "Segurança digital fácil para proteger sua família e seus dispositivos"}
             </p>
           </div>
@@ -210,10 +210,10 @@ const Landing = () => {
       <section className="py-20 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">
               {audience === 'business' ? "Casos de Uso Específicos" : "Como o CyberShield Protege Sua Casa"}
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
               {audience === 'business' ? "Soluções para diferentes setores e necessidades empresariais" : "Proteção para todos os dispositivos e membros da família"}
             </p>
           </div>
@@ -349,7 +349,7 @@ const Landing = () => {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div className="animate-fade-in">
-              <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold mb-6">
                 {audience === 'business' ? "Recursos Essenciais" : "Recursos para Sua Casa"}
               </h2>
               <div className="space-y-6">
@@ -439,10 +439,10 @@ const Landing = () => {
               <Shield className="w-4 h-4 text-primary animate-pulse" />
               <span className="text-sm font-medium text-foreground">🎉 Trial de 14 dias - Sem cartão necessário</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">
               {audience === 'business' ? "Planos Transparentes" : "Planos para Sua Casa"}
             </h2>
-            <p className="text-xl text-muted-foreground">
+            <p className="text-lg text-muted-foreground">
               {audience === 'business' ? "Escolha o plano ideal para o tamanho da sua empresa" : "Planos acessiveis para proteger todos os computadores da sua casa"}
             </p>
           </div>
@@ -458,7 +458,7 @@ const Landing = () => {
                 <h3 className="text-2xl font-bold">{audience === 'business' ? "Starter" : "Basico"}</h3>
               </div>
               <div className="relative mb-6">
-                <span className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? "R$ 30" : "R$ 15"}</span>
+                <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? "R$ 30" : "R$ 15"}</span>
                 <span className="text-muted-foreground">/{audience === 'business' ? "dispositivo/mes" : "computador/mes"}</span>
               </div>
               <p className="relative text-sm text-muted-foreground mb-6">{audience === 'business' ? "Ideal para pequenas empresas (ate 30 dispositivos)" : "Ideal para ate 3 computadores em casa"}</p>
@@ -503,7 +503,7 @@ const Landing = () => {
                 <h3 className="text-2xl font-bold">{audience === 'business' ? "Pro" : "Completo"}</h3>
               </div>
               <div className="mb-6">
-                <span className="text-4xl font-bold">{audience === 'business' ? "R$ 50" : "R$ 30"}</span>
+                <span className="text-3xl font-bold">{audience === 'business' ? "R$ 50" : "R$ 30"}</span>
                 <span className="opacity-90">/{audience === 'business' ? "dispositivo/mes" : "computador/mes"}</span>
               </div>
               <p className="text-sm opacity-90 mb-6">{audience === 'business' ? "Para empresas em crescimento (ate 200 dispositivos)" : "Protecao completa para ate 10 computadores"}</p>
@@ -546,7 +546,7 @@ const Landing = () => {
                 <h3 className="text-2xl font-bold">{audience === 'business' ? "Enterprise" : "Avancado"}</h3>
               </div>
               <div className="relative mb-6">
-                <span className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? "R$ 100" : "R$ 50"}</span>
+                <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? "R$ 100" : "R$ 50"}</span>
                 <span className="text-muted-foreground">/{audience === 'business' ? "dispositivo/mes" : "computador/mes"}</span>
               </div>
               <p className="relative text-sm text-muted-foreground mb-6">{audience === 'business' ? "Para grandes empresas e necessidades avancadas" : "Para casas com muitos dispositivos e necessidades especiais"}</p>
