@@ -6123,7 +6123,7 @@ export type Database = {
       }
       get_enrollment_key_full: { Args: { p_key_id: string }; Returns: string }
       get_installation_health_status: {
-        Args: never
+        Args: { p_tenant_id: string }
         Returns: {
           failure_rate_pct: number
           status: string
