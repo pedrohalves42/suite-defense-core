@@ -7,12 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.30-UPTIME';
+export const INSTALLER_VERSION = 'v3.10.31-SUBMIT-BEFORE-EXIT';
 export const INSTALLER_VERSION_LINUX = 'v3.10.30-UPTIME';
 export const INSTALLER_VERSION_MACOS = 'v3.10.30-UPTIME';
-export const LAST_UPDATED = '2025-12-09T23:30:00Z'; // All platforms synced to v3.10.30-UPTIME
+export const LAST_UPDATED = '2025-12-09T23:45:00Z'; // Windows synced to v3.10.31-SUBMIT-BEFORE-EXIT
 
 export const CHANGES = [
+  '[v3.10.31-SUBMIT-BEFORE-EXIT] CRITICAL FIX: update_agent e reinstall_agent agora submetem resultado ANTES de exit 0',
+  '[v3.10.31-SUBMIT-BEFORE-EXIT] CRITICAL FIX: Resolve jobs stuck em delivered (nunca recebiam completion)',
+  '[v3.10.31-SUBMIT-BEFORE-EXIT] CRITICAL FIX: Agentes nao ficam mais offline apos auto-update',
   '[v3.10.30-UPTIME] FEATURE: Coleta de uptime_seconds e last_boot_time para todos os agentes',
   '[v3.10.30-UPTIME] FEATURE: Windows usa WMI Win32_OperatingSystem.LastBootUpTime',
   '[v3.10.30-UPTIME] FEATURE: Linux usa /proc/uptime para calcular uptime_seconds',

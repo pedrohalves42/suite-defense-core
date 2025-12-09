@@ -3,9 +3,9 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.30-UPTIME
- * SHA256: e2a83c22c1dd63c298743c81fb8b2673d410b87c191075cc21f8cf128d6a8916
- * Gerado em: 2025-12-09T17:16:31.580Z
+ * Versao: v3.10.31-SUBMIT-BEFORE-EXIT
+ * SHA256: pending-regeneration
+ * Gerado em: 2025-12-09T23:50:00.000Z
  */
 
 export function getAgentScriptWindows(): string {
@@ -13,7 +13,7 @@ export function getAgentScriptWindows(): string {
 }
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
-    CyberShield Agent - Windows v3.10.30-UPTIME
+    CyberShield Agent - Windows v3.10.31-SUBMIT-BEFORE-EXIT
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -51,7 +51,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.30-UPTIME"
+    [string]\$AgentVersion = "v3.10.31-SUBMIT-BEFORE-EXIT"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -483,7 +483,7 @@ function Invoke-ReportJob {
         \$report.uptime_seconds = \$uptimeSeconds
         \$report.last_boot_time = \$lastBootIso
 
-        Write-Log "[REPORT] Metricas coletadas: CPU=\$(\$report.cpu_percent)%, MEM=\$(\$report.memory_percent)%, DISK=\$(\$report.disk_percent)%, UPTIME=\\${uptimeSeconds}s" "INFO"
+        Write-Log "[REPORT] Metricas coletadas: CPU=\$(\$report.cpu_percent)%, MEM=\$(\$report.memory_percent)%, DISK=\$(\$report.disk_percent)%, UPTIME=\${uptimeSeconds}s" "INFO"
 
         return @{
             success = \$true
@@ -1667,7 +1667,7 @@ function Submit-JobResult {
             return \$false
         }
     } catch {
-        Write-Log "[ERROR] Erro ao enviar resultado do job \\${JobId}: \$(\$_.Exception.Message)" "ERROR"
+        Write-Log "[ERROR] Erro ao enviar resultado do job \${JobId}: \$(\$_.Exception.Message)" "ERROR"
         Write-Log "Stack trace: \$(\$_.ScriptStackTrace)" "ERROR"
         return \$false
     }
@@ -2046,8 +2046,20 @@ function Execute-Job {
                         restartedAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
                     
-                    # CRITICAL: Encerrar este processo para que a nova task com v3.10.29 assuma
-                    # O exit 0 aqui e SEGURO pois a nova task ja foi iniciada com Start-ScheduledTask
+                    # CRITICAL FIX v3.10.31: Submeter resultado ANTES de encerrar processo
+                    \$execTime = [int]((Get-Date) - \$startTime).TotalSeconds
+                    \$startTimeISO = \$startTime.ToUniversalTime().ToString("o")
+                    
+                    Submit-JobResult \`
+                        -JobId \$job.id \`
+                        -Status "completed" \`
+                        -Output \$output \`
+                        -ExecutionTimeSeconds \$execTime \`
+                        -StartedAt \$startTimeISO
+                    
+                    Write-Log "[SUCCESS] Resultado submetido, encerrando processo atual..." "SUCCESS"
+                    
+                    # CRITICAL: Encerrar este processo para que a nova task assuma
                     exit 0
                 }
                 catch {
@@ -2127,8 +2139,21 @@ function Execute-Job {
                         reinstalledAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
                     
-                    Write-Log "[SUCCESS] Reinstalacao concluida, nova task iniciada" "SUCCESS"
-                    break
+                    # CRITICAL FIX v3.10.31: Submeter resultado ANTES de encerrar processo
+                    \$execTime = [int]((Get-Date) - \$startTime).TotalSeconds
+                    \$startTimeISO = \$startTime.ToUniversalTime().ToString("o")
+                    
+                    Submit-JobResult \`
+                        -JobId \$job.id \`
+                        -Status "completed" \`
+                        -Output \$output \`
+                        -ExecutionTimeSeconds \$execTime \`
+                        -StartedAt \$startTimeISO
+                    
+                    Write-Log "[SUCCESS] Resultado submetido, encerrando processo atual..." "SUCCESS"
+                    
+                    # CRITICAL: Encerrar este processo para que a nova task assuma
+                    exit 0
                 }
                 catch {
                     throw \$_.Exception.Message
@@ -2294,7 +2319,7 @@ try {
     Send-Heartbeat
 
     \$bootstrapElapsed = [int]((Get-Date) - \$bootstrapStart).TotalSeconds
-    Write-Log "[SUCCESS] Bootstrap concluido em \\${bootstrapElapsed}s" "SUCCESS"
+    Write-Log "[SUCCESS] Bootstrap concluido em \${bootstrapElapsed}s" "SUCCESS"
 
     Write-Log "[INFO] Entrando no loop principal (intervalo=\$(\$Global:PollIntervalSeconds)s)" "INFO"
 
