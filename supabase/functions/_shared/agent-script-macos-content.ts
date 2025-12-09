@@ -5,7 +5,7 @@
  * Fonte: public/agent-scripts/cybershield-agent-macos-v3.sh
  * Versao: v3.10.30-UPTIME
  * SHA256: 6c33166f476beed988e24eb832ddc737dd1180650276cc45afa3af344e57a103
- * Gerado em: 2025-12-09T17:16:31.587Z
+ * Gerado em: 2025-12-09T17:28:55.793Z
  */
 
 export function getAgentScriptMacos(): string {
@@ -23,11 +23,11 @@ set -euo pipefail
 ########################################
 
 # Prioridade: argumentos > env vars curtas > env vars prefixadas CYBERSHIELD_*
-SERVER_URL="\\${SERVER_URL:-\\${CYBERSHIELD_SERVER_URL:-}}"
-AGENT_TOKEN="\\${AGENT_TOKEN:-\\${CYBERSHIELD_AGENT_TOKEN:-}}"
-HMAC_SECRET="\\${HMAC_SECRET:-\\${CYBERSHIELD_HMAC_SECRET:-}}"
-AGENT_NAME="\\${AGENT_NAME:-\\${CYBERSHIELD_AGENT_NAME:-\$(hostname -s)}}"
-AGENT_VERSION="\\${AGENT_VERSION:-\\${CYBERSHIELD_AGENT_VERSION:-v3.10.30}}"
+SERVER_URL="\${SERVER_URL:-\${CYBERSHIELD_SERVER_URL:-}}"
+AGENT_TOKEN="\${AGENT_TOKEN:-\${CYBERSHIELD_AGENT_TOKEN:-}}"
+HMAC_SECRET="\${HMAC_SECRET:-\${CYBERSHIELD_HMAC_SECRET:-}}"
+AGENT_NAME="\${AGENT_NAME:-\${CYBERSHIELD_AGENT_NAME:-\$(hostname -s)}}"
+AGENT_VERSION="\${AGENT_VERSION:-\${CYBERSHIELD_AGENT_VERSION:-v3.10.30}}"
 
 # Parse argumentos (sobrescreve env vars)
 while [[ \$# -gt 0 ]]; do
@@ -70,7 +70,7 @@ if [[ -z "\$HMAC_SECRET" ]]; then
   exit 1
 fi
 
-SERVER_URL="\\${SERVER_URL%/}"
+SERVER_URL="\${SERVER_URL%/}"
 
 ########################################
 # DIRETÓRIOS DE INSTALAÇÃO
@@ -105,7 +105,7 @@ log() {
 
 validate_hmac_secret() {
   if [[ ! "\$HMAC_SECRET" =~ ^[0-9a-fA-F]{64}\$ ]]; then
-    log "ERROR" "HMAC_SECRET invalido. Esperado 64 caracteres hexadecimais, recebido length=\\${#HMAC_SECRET}"
+    log "ERROR" "HMAC_SECRET invalido. Esperado 64 caracteres hexadecimais, recebido length=\${#HMAC_SECRET}"
     exit 1
   fi
 }
@@ -128,11 +128,11 @@ SECURE_RESP_BODY=""
 secure_request() {
   local path="\$1"
   local method="\$2"
-  local body="\\${3:-}"
-  local timeout_sec="\\${4:-30}"
-  local max_retries="\\${5:-3}"
+  local body="\${3:-}"
+  local timeout_sec="\${4:-30}"
+  local max_retries="\${5:-3}"
 
-  local url="\\${SERVER_URL}\\${path}"
+  local url="\${SERVER_URL}\${path}"
   local retry_count=0
   local retry_delay=2
 
@@ -147,10 +147,10 @@ secure_request() {
       nonce="nonce-\$(date +%s)"
     fi
 
-    payload="\\${timestamp}:\\${nonce}:\\${body}"
+    payload="\${timestamp}:\${nonce}:\${body}"
     signature="\$(hmac_sign "\$payload")"
 
-    log "DEBUG" "Request \$method \$url (body_length=\\${#body})"
+    log "DEBUG" "Request \$method \$url (body_length=\${#body})"
 
     raw="\$(
       curl -sS \\
@@ -162,7 +162,7 @@ secure_request() {
         -H "Content-Type: application/json" \\
         --max-time "\$timeout_sec" \\
         -w '\\n%{http_code}' \\
-        \\${body:+ -d "\$body"} \\
+        \${body:+ -d "\$body"} \\
         "\$url"
     )" || true
 
@@ -187,7 +187,7 @@ secure_request() {
       return 1
     fi
 
-    log "WARN" "Tentativa \$retry_count falhou (status=\$http_code). Aguardando \\${retry_delay}s..."
+    log "WARN" "Tentativa \$retry_count falhou (status=\$http_code). Aguardando \${retry_delay}s..."
     sleep "\$retry_delay"
     retry_delay=\$((retry_delay * 2))
   done
@@ -232,7 +232,7 @@ system_metrics_json() {
 
   # CPU load medio (1 minuto) - usar "uptime"
   cpu_load="\$(uptime | awk -F'load averages:' '{print \$2}' 2>/dev/null | awk '{print \$1}' | tr -d ',')"
-  cpu_load="\\${cpu_load:-0}"
+  cpu_load="\${cpu_load:-0}"
 
   # RAM usada (%) - macOS: usar vm_stat para calcular uso real
   ram_used="\$(vm_stat | awk '
@@ -250,16 +250,16 @@ system_metrics_json() {
         print "0"
       }
     }')"
-  ram_used="\\${ram_used:-0}"
+  ram_used="\${ram_used:-0}"
 
   # DISCO (%)
   disk_used="\$(df / | awk 'NR==2 {print \$5}' | sed 's/%//')"
-  disk_used="\\${disk_used:-0}"
+  disk_used="\${disk_used:-0}"
 
   # UPTIME - tempo desde ultimo boot via sysctl
   local boot_epoch current_epoch
   boot_epoch="\$(sysctl -n kern.boottime 2>/dev/null | awk -F'sec = ' '{print \$2}' | awk -F',' '{print \$1}')"
-  boot_epoch="\\${boot_epoch:-0}"
+  boot_epoch="\${boot_epoch:-0}"
   current_epoch="\$(date +%s)"
   uptime_seconds=\$((current_epoch - boot_epoch))
   
@@ -290,8 +290,8 @@ send_system_metrics() {
   local memory_usage_percent="\$2"
   local disk_usage_percent="\$3"
   local hostname="\$4"
-  local uptime_seconds="\\${5:-0}"
-  local last_boot_time="\\${6:-}"
+  local uptime_seconds="\${5:-0}"
+  local last_boot_time="\${6:-}"
   
   local body
   body="\$(jq -n \\
@@ -326,9 +326,9 @@ send_system_metrics() {
 ########################################
 
 send_post_installation() {
-  local success="\\${1:-true}"
-  local error_message="\\${2:-""}"
-  local install_time="\\${3:-0}"
+  local success="\${1:-true}"
+  local error_message="\${2:-""}"
+  local install_time="\${3:-0}"
 
   local sys_json metrics_json body
   sys_json="\$(system_info_json)"
@@ -425,9 +425,9 @@ submit_job_result() {
   local job_id="\$1"
   local status="\$2"
   local output_json="\$3"
-  local error_message="\\${4:-""}"
-  local exec_time="\\${5:-0}"
-  local started_at="\\${6:-\$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
+  local error_message="\${4:-""}"
+  local exec_time="\${5:-0}"
+  local started_at="\${6:-\$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
 
   local body
   body="\$(
@@ -465,7 +465,7 @@ submit_job_result() {
 # Handler: sync_blocked_websites
 handle_sync_blocked_websites() {
   local payload_json="\$1"
-  local apply_to_hosts="\\${2:-false}"
+  local apply_to_hosts="\${2:-false}"
   
   log "INFO" "Executando sync_blocked_websites..."
   
@@ -562,14 +562,14 @@ handle_update_agent() {
   local current_script_path=""
   
   # Estrategia 1: Usar \$0 se valido
-  if [[ -n "\\${BASH_SOURCE[0]:-}" ]] && [[ -f "\\${BASH_SOURCE[0]}" ]]; then
-    current_script_path="\\${BASH_SOURCE[0]}"
+  if [[ -n "\${BASH_SOURCE[0]:-}" ]] && [[ -f "\${BASH_SOURCE[0]}" ]]; then
+    current_script_path="\${BASH_SOURCE[0]}"
     log "DEBUG" "Found script via BASH_SOURCE: \$current_script_path"
   fi
   
   # Estrategia 2: Buscar por nome do agente
   if [[ -z "\$current_script_path" ]]; then
-    local agent_pattern="\$INSTALL_DIR/cybershield-agent-\\${AGENT_NAME}.sh"
+    local agent_pattern="\$INSTALL_DIR/cybershield-agent-\${AGENT_NAME}.sh"
     if [[ -f "\$agent_pattern" ]]; then
       current_script_path="\$agent_pattern"
       log "DEBUG" "Found script via agent name: \$current_script_path"
@@ -589,14 +589,14 @@ handle_update_agent() {
   
   # Estrategia 4: Path padrao
   if [[ -z "\$current_script_path" ]]; then
-    current_script_path="\$INSTALL_DIR/cybershield-agent-\\${AGENT_NAME}.sh"
+    current_script_path="\$INSTALL_DIR/cybershield-agent-\${AGENT_NAME}.sh"
     log "DEBUG" "Using default path: \$current_script_path"
   fi
   
   # Backup do script atual (se existir)
   if [[ -f "\$current_script_path" ]]; then
-    cp "\$current_script_path" "\\${current_script_path}.backup" 2>/dev/null || true
-    log "INFO" "Backup created: \\${current_script_path}.backup"
+    cp "\$current_script_path" "\${current_script_path}.backup" 2>/dev/null || true
+    log "INFO" "Backup created: \${current_script_path}.backup"
   fi
   
   # Validar SHA256 se fornecido
@@ -662,7 +662,7 @@ handle_collect_web_activity() {
     # Safari history
     local safari_history="\$user_home/Library/Safari/History.db"
     if [[ -f "\$safari_history" ]] && command -v sqlite3 >/dev/null 2>&1; then
-      local safari_temp="/tmp/safari_history_\\${username}_\$\$.db"
+      local safari_temp="/tmp/safari_history_\${username}_\$\$.db"
       cp "\$safari_history" "\$safari_temp" 2>/dev/null || true
       
       if [[ -f "\$safari_temp" ]]; then
@@ -676,7 +676,7 @@ handle_collect_web_activity() {
             if [[ -n "\$domain" ]] && [[ ! "\$domain" =~ ^(google|apple|icloud|microsoft) ]]; then
               web_activity_items="\$(printf '%s\\n' "\$web_activity_items" | jq \\
                 --arg domain "\$domain" \\
-                --arg source "safari_\\${username}" \\
+                --arg source "safari_\${username}" \\
                 --arg url "\$url" \\
                 '. + [{"domain": \$domain, "source": \$source, "url_full": \$url}]')"
               total_domains=\$((total_domains + 1))
@@ -691,7 +691,7 @@ handle_collect_web_activity() {
     # Chrome history
     local chrome_history="\$user_home/Library/Application Support/Google/Chrome/Default/History"
     if [[ -f "\$chrome_history" ]] && command -v sqlite3 >/dev/null 2>&1; then
-      local chrome_temp="/tmp/chrome_history_\\${username}_\$\$.db"
+      local chrome_temp="/tmp/chrome_history_\${username}_\$\$.db"
       cp "\$chrome_history" "\$chrome_temp" 2>/dev/null || true
       
       if [[ -f "\$chrome_temp" ]]; then
@@ -705,7 +705,7 @@ handle_collect_web_activity() {
             if [[ -n "\$domain" ]] && [[ ! "\$domain" =~ ^(google|googleapis|gstatic) ]]; then
               web_activity_items="\$(printf '%s\\n' "\$web_activity_items" | jq \\
                 --arg domain "\$domain" \\
-                --arg source "chrome_\\${username}" \\
+                --arg source "chrome_\${username}" \\
                 --arg url "\$url" \\
                 '. + [{"domain": \$domain, "source": \$source, "url_full": \$url}]')"
               total_domains=\$((total_domains + 1))
@@ -725,7 +725,7 @@ handle_collect_web_activity() {
         local ff_history="\$profile/places.sqlite"
         
         if [[ -f "\$ff_history" ]] && command -v sqlite3 >/dev/null 2>&1; then
-          local ff_temp="/tmp/ff_history_\\${username}_\$\$.db"
+          local ff_temp="/tmp/ff_history_\${username}_\$\$.db"
           cp "\$ff_history" "\$ff_temp" 2>/dev/null || true
           
           if [[ -f "\$ff_temp" ]]; then
@@ -739,7 +739,7 @@ handle_collect_web_activity() {
                 if [[ -n "\$domain" ]] && [[ ! "\$domain" =~ ^(mozilla|firefox) ]]; then
                   web_activity_items="\$(printf '%s\\n' "\$web_activity_items" | jq \\
                     --arg domain "\$domain" \\
-                    --arg source "firefox_\\${username}" \\
+                    --arg source "firefox_\${username}" \\
                     --arg url "\$url" \\
                     '. + [{"domain": \$domain, "source": \$source, "url_full": \$url}]')"
                   total_domains=\$((total_domains + 1))
@@ -973,7 +973,7 @@ handle_restart_service() {
   log "INFO" "Restarting service: \$service_name"
   
   # Tentar LaunchDaemon primeiro
-  local plist_path="/Library/LaunchDaemons/\\${service_name}.plist"
+  local plist_path="/Library/LaunchDaemons/\${service_name}.plist"
   if [[ -f "\$plist_path" ]]; then
     sudo launchctl unload "\$plist_path" 2>/dev/null || true
     sleep 1
@@ -991,7 +991,7 @@ handle_restart_service() {
   fi
   
   # Tentar LaunchAgent
-  plist_path="/Library/LaunchAgents/\\${service_name}.plist"
+  plist_path="/Library/LaunchAgents/\${service_name}.plist"
   if [[ -f "\$plist_path" ]]; then
     sudo launchctl unload "\$plist_path" 2>/dev/null || true
     sleep 1
@@ -1049,7 +1049,7 @@ handle_collect_network_info() {
       adapters="\$(printf '%s\\n' "\$adapters" | jq \\
         --arg name "\$interface" \\
         --arg ip "\$ip_addr" \\
-        --arg mac "\\${mac_addr:-unknown}" \\
+        --arg mac "\${mac_addr:-unknown}" \\
         '. + [{"name": \$name, "ip_address": \$ip, "mac_address": \$mac}]')"
     fi
   done < <(networksetup -listallhardwareports 2>/dev/null | awk '/Device:/ {print \$2}')
@@ -1236,7 +1236,7 @@ execute_job() {
   local job_id="\$1"
   local job_type="\$2"
   local payload_json="\$3"
-  local job_agent_id="\\${4:-}"
+  local job_agent_id="\${4:-}"
 
   log "INFO" "Executando job \$job_id (type=\$job_type)"
   
@@ -1448,9 +1448,9 @@ main() {
   send_heartbeat
 
   bootstrap_elapsed=\$(( \$(date +%s) - bootstrap_start ))
-  log "INFO" "Bootstrap concluido em \\${bootstrap_elapsed}s"
+  log "INFO" "Bootstrap concluido em \${bootstrap_elapsed}s"
 
-  log "INFO" "Entrando no loop principal (heartbeat=\\${heartbeat_interval}s, poll=\\${poll_interval}s, metrics=\\${metrics_interval}s, update_check=\\${update_check_interval}s)"
+  log "INFO" "Entrando no loop principal (heartbeat=\${heartbeat_interval}s, poll=\${poll_interval}s, metrics=\${metrics_interval}s, update_check=\${update_check_interval}s)"
 
   local last_hb last_poll last_metrics last_update_check now
   last_hb=\$(date +%s)
@@ -1487,7 +1487,7 @@ main() {
       host="\$(printf '%s\\n' "\$sys_json" | jq -r '.hostname')"
       
       if send_system_metrics "\$cpu_p" "\$mem_p" "\$disk_p" "\$host" "\$uptime_s" "\$boot_time"; then
-        log "SUCCESS" "Metricas enviadas: CPU=\\${cpu_p}%, RAM=\\${mem_p}%, Disco=\\${disk_p}%, Uptime=\\${uptime_s}s"
+        log "SUCCESS" "Metricas enviadas: CPU=\${cpu_p}%, RAM=\${mem_p}%, Disco=\${disk_p}%, Uptime=\${uptime_s}s"
       else
         log "WARN" "Falha ao enviar metricas (nao critico)"
       fi
