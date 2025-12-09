@@ -74,20 +74,28 @@ Deno.serve(async (req) => {
     let needsUpdate = true;
     
     try {
-      const storageUrl = `${SUPABASE_URL}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`;
-      const storageResponse = await fetch(storageUrl);
+      // Use signed URL since bucket is now private
+      const { data: signedUrlData } = await supabase.storage
+        .from('agent-installers')
+        .createSignedUrl('cybershield-agent-windows.ps1', 60);
       
-      if (storageResponse.ok) {
-        const currentContent = await storageResponse.text();
-        const currentData = encoder.encode(currentContent);
-        const currentHashBuffer = await crypto.subtle.digest('SHA-256', currentData);
-        const currentHashArray = Array.from(new Uint8Array(currentHashBuffer));
-        currentHash = currentHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        
-        needsUpdate = (currentHash !== sourceHash);
-        console.log(`[${requestId}] Current storage script hash: ${currentHash}`);
-      } else {
+      if (!signedUrlData?.signedUrl) {
         console.log(`[${requestId}] No existing storage script, will upload`);
+      } else {
+        const storageResponse = await fetch(signedUrlData.signedUrl);
+      
+        if (storageResponse.ok) {
+          const currentContent = await storageResponse.text();
+          const currentData = encoder.encode(currentContent);
+          const currentHashBuffer = await crypto.subtle.digest('SHA-256', currentData);
+          const currentHashArray = Array.from(new Uint8Array(currentHashBuffer));
+          currentHash = currentHashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          
+          needsUpdate = (currentHash !== sourceHash);
+          console.log(`[${requestId}] Current storage script hash: ${currentHash}`);
+        } else {
+          console.log(`[${requestId}] No existing storage script, will upload`);
+        }
       }
     } catch (error) {
       console.log(`[${requestId}] Error checking storage, will upload:`, error);
