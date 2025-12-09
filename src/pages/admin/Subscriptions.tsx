@@ -83,7 +83,9 @@ export default function Subscriptions() {
   const rawPlan = subscription?.plan_name ?? 'Carregando...';
   const planLabelMap: Record<string, string> = {
     free: 'Free',
-    pro: 'Pro',
+    starter: 'Starter',
+    pro: 'Business',
+    scale: 'Scale',
     enterprise: 'Enterprise',
     custom: 'Custom',
   };

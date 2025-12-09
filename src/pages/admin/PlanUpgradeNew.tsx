@@ -185,7 +185,7 @@ export default function PlanUpgradeNew() {
       priceNote: '/mês • até 100 dispositivos',
       features: [
         'Até 100 dispositivos',
-        'Todas as features Pro',
+        'Todas as features Business',
         'SLA garantido',
         'Onboarding dedicado',
         'Suporte telefônico',
