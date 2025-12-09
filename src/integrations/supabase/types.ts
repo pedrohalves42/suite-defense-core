@@ -2671,6 +2671,8 @@ export type Database = {
       }
       failed_login_attempts: {
         Row: {
+          block_count: number | null
+          blocked_until: string | null
           created_at: string
           email: string | null
           id: string
@@ -2679,6 +2681,8 @@ export type Database = {
           user_agent: string | null
         }
         Insert: {
+          block_count?: number | null
+          blocked_until?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -2687,6 +2691,8 @@ export type Database = {
           user_agent?: string | null
         }
         Update: {
+          block_count?: number | null
+          blocked_until?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -5999,6 +6005,15 @@ export type Database = {
         Args: { p_action_type: string; p_tenant_id: string }
         Returns: boolean
       }
+      check_and_block_ip: {
+        Args: { p_email?: string; p_ip_address: string }
+        Returns: {
+          attempt_count: number
+          block_level: number
+          blocked_until: string
+          is_blocked: boolean
+        }[]
+      }
       check_installation_failure_rate: {
         Args: {
           p_hours_back?: number
@@ -6068,7 +6083,7 @@ export type Database = {
       current_user_tenant_id: { Args: never; Returns: string }
       diagnose_agent: { Args: { p_agent_name: string }; Returns: Json }
       diagnose_agent_issues: {
-        Args: { p_agent_name: string }
+        Args: { p_agent_name: string; p_tenant_id: string }
         Returns: {
           description: string
           details: Json
