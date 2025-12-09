@@ -162,6 +162,7 @@ const App = () => (
                 <Route path="notification-settings" element={<NotificationSettings />} />
                 <Route path="security-monitoring" element={<SecurityMonitoring />} />
                 <Route path="mass-reinstall" element={<MassReinstall />} />
+                <Route path="invites" element={<Invites />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}

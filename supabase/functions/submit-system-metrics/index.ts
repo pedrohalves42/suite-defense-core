@@ -186,8 +186,8 @@ Deno.serve(async (req) => {
       return !!recentAlert;
     };
 
-    // CPU: Threshold 95% (increased from 90%)
-    if (metrics.cpu_usage_percent && metrics.cpu_usage_percent > 95) {
+    // CPU: Threshold 98% (increased from 95% to reduce false positives from momentary spikes)
+    if (metrics.cpu_usage_percent && metrics.cpu_usage_percent > 98) {
       if (!hasRecentAlert('high_cpu')) {
         logger.info('High CPU usage detected');
         alerts.push({
@@ -196,7 +196,7 @@ Deno.serve(async (req) => {
           alert_type: 'high_cpu',
           severity: 'critical',
           title: `CPU Critico: ${agent.agent_name}`,
-          message: `Uso de CPU em ${metrics.cpu_usage_percent.toFixed(1)}% (limite: 95%)`,
+          message: `Uso de CPU em ${metrics.cpu_usage_percent.toFixed(1)}% (limite: 98%)`,
           details: { cpu_usage: metrics.cpu_usage_percent },
         });
       }

@@ -128,6 +128,8 @@ export default function Reports() {
   const handleExportPDF = async () => {
     setIsGenerating(true);
     try {
+      toast.info("Gerando relatório PDF...");
+      
       const params = new URLSearchParams({ format: "json" });
       if (selectedAgent !== "all") {
         params.append("agent_id", selectedAgent);
@@ -138,11 +140,18 @@ export default function Reports() {
         { method: "GET" }
       );
 
-      if (error) throw error;
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(`Erro ao buscar dados: ${error.message}`);
+      }
+
+      if (!data) {
+        throw new Error("Nenhum dado retornado do servidor");
+      }
 
       const reportData = data as SecurityReport;
       
-      // Dynamic import of jsPDF
+      // Dynamic import of jsPDF with error handling
       const { jsPDF } = await import('jspdf');
       const autoTableModule = await import('jspdf-autotable');
       
