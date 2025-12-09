@@ -3,10 +3,16 @@
  * CyberShield Agent Linux Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-linux-v3.sh
+ * Versao: v3.10.30-UPTIME
+ * SHA256: d2bc782858d776b2640055bf0a6d9cac6151a487b32003aced750b21a8bb8870
+ * Gerado em: 2025-12-09T17:16:31.585Z
  */
 
-export const AGENT_SCRIPT_LINUX_SH = `
-#!/usr/bin/env bash
+export function getAgentScriptLinux(): string {
+  return AGENT_SCRIPT_LINUX_SH;
+}
+
+export const AGENT_SCRIPT_LINUX_SH = `#!/usr/bin/env bash
 # CyberShield Agent - Linux
 # Version: v3.10.30-UPTIME
 
@@ -17,11 +23,11 @@ set -euo pipefail
 ########################################
 
 # Prioridade: argumentos > env vars curtas > env vars prefixadas CYBERSHIELD_*
-SERVER_URL="\${SERVER_URL:-\${CYBERSHIELD_SERVER_URL:-}}"
-AGENT_TOKEN="\${AGENT_TOKEN:-\${CYBERSHIELD_AGENT_TOKEN:-}}"
-HMAC_SECRET="\${HMAC_SECRET:-\${CYBERSHIELD_HMAC_SECRET:-}}"
-AGENT_NAME="\${AGENT_NAME:-\${CYBERSHIELD_AGENT_NAME:-\$(hostname -s)}}"
-AGENT_VERSION="\${AGENT_VERSION:-\${CYBERSHIELD_AGENT_VERSION:-v3.10.30}}"
+SERVER_URL="\\${SERVER_URL:-\\${CYBERSHIELD_SERVER_URL:-}}"
+AGENT_TOKEN="\\${AGENT_TOKEN:-\\${CYBERSHIELD_AGENT_TOKEN:-}}"
+HMAC_SECRET="\\${HMAC_SECRET:-\\${CYBERSHIELD_HMAC_SECRET:-}}"
+AGENT_NAME="\\${AGENT_NAME:-\\${CYBERSHIELD_AGENT_NAME:-\$(hostname -s)}}"
+AGENT_VERSION="\\${AGENT_VERSION:-\\${CYBERSHIELD_AGENT_VERSION:-v3.10.30}}"
 
 # Parse argumentos (sobrescreve env vars)
 while [[ \$# -gt 0 ]]; do
@@ -64,7 +70,7 @@ if [[ -z "\$HMAC_SECRET" ]]; then
   exit 1
 fi
 
-SERVER_URL="\${SERVER_URL%/}" # remove trailing slash
+SERVER_URL="\\${SERVER_URL%/}" # remove trailing slash
 
 # Install directory
 INSTALL_DIR="/opt/cybershield"
@@ -95,7 +101,7 @@ log() {
 
 validate_hmac_secret() {
   if [[ ! "\$HMAC_SECRET" =~ ^[0-9a-fA-F]{64}\$ ]]; then
-    log "ERROR" "HMAC_SECRET invalido. Esperado 64 caracteres hexadecimais, recebido length=\${#HMAC_SECRET}"
+    log "ERROR" "HMAC_SECRET invalido. Esperado 64 caracteres hexadecimais, recebido length=\\${#HMAC_SECRET}"
     exit 1
   fi
 }
@@ -119,11 +125,11 @@ SECURE_RESP_BODY=""
 secure_request() {
   local path="\$1"
   local method="\$2"
-  local body="\${3:-}"
-  local timeout_sec="\${4:-30}"
-  local max_retries="\${5:-3}"
+  local body="\\${3:-}"
+  local timeout_sec="\\${4:-30}"
+  local max_retries="\\${5:-3}"
 
-  local url="\${SERVER_URL}\${path}"
+  local url="\\${SERVER_URL}\\${path}"
   local retry_count=0
   local retry_delay=2
 
@@ -137,11 +143,11 @@ secure_request() {
       nonce="\$(cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "nonce-\$(date +%s)")"
     fi
 
-    payload="\${timestamp}:\${nonce}:\${body}"
+    payload="\\${timestamp}:\\${nonce}:\\${body}"
 
     signature="\$(hmac_sign "\$payload")"
 
-    log "DEBUG" "Request \$method \$url (body_length=\${#body})"
+    log "DEBUG" "Request \$method \$url (body_length=\\${#body})"
 
     # curl: resposta + http_code na ultima linha
     raw="\$(
@@ -154,7 +160,7 @@ secure_request() {
         -H "Content-Type: application/json" \\
         --max-time "\$timeout_sec" \\
         -w '\\n%{http_code}' \\
-        \${body:+ -d "\$body"} \\
+        \\${body:+ -d "\$body"} \\
         "\$url"
     )" || true
 
@@ -179,7 +185,7 @@ secure_request() {
       return 1
     fi
 
-    log "WARN" "Tentativa \$retry_count falhou (status=\$http_code). Aguardando \${retry_delay}s para retry..."
+    log "WARN" "Tentativa \$retry_count falhou (status=\$http_code). Aguardando \\${retry_delay}s para retry..."
     sleep "\$retry_delay"
     retry_delay=\$((retry_delay * 2))
   done
@@ -191,7 +197,7 @@ secure_request() {
 
 system_info_json() {
   local os_name os_version hostname total_ram_gb
-  os_name="\$(. /etc/os-release 2>/dev/null; echo "\${PRETTY_NAME:-Linux}")"
+  os_name="\$(. /etc/os-release 2>/dev/null; echo "\\${PRETTY_NAME:-Linux}")"
   os_version="\$(uname -r)"
   hostname="\$(hostname -s)"
   total_ram_gb="\$(free -m 2>/dev/null | awk '/Mem:/ {printf "%.2f", \$2/1024}')"
@@ -220,7 +226,7 @@ system_metrics_json() {
   
   # CPU load (medio) - aproximado
   cpu_load="\$(awk -F' ' '/cpu /{u=\$2; n=\$3; s=\$4; i=\$5; w=\$6; irq=\$7; soft=\$8; steal=\$9; idle=i+w; busy=u+n+s+irq+soft+steal; print busy/(busy+idle)*100}' /proc/stat 2>/dev/null | head -n1)"
-  cpu_load="\${cpu_load:-0}"
+  cpu_load="\\${cpu_load:-0}"
 
   # RAM
   if free -m >/dev/null 2>&1; then
@@ -231,16 +237,16 @@ system_metrics_json() {
 
   # DISK
   disk_used="\$(df / | awk 'NR==2 {print \$5}' | sed 's/%//')"
-  disk_used="\${disk_used:-0}"
+  disk_used="\\${disk_used:-0}"
 
   # UPTIME - tempo desde ultimo boot
   uptime_seconds="\$(cat /proc/uptime 2>/dev/null | awk '{print int(\$1)}')"
-  uptime_seconds="\${uptime_seconds:-0}"
+  uptime_seconds="\\${uptime_seconds:-0}"
 
   # Boot time ISO
   local boot_epoch
   boot_epoch="\$(awk -v now="\$(date +%s)" '{print int(now - \$1)}' /proc/uptime 2>/dev/null)"
-  boot_epoch="\${boot_epoch:-0}"
+  boot_epoch="\\${boot_epoch:-0}"
   last_boot_time="\$(date -d "@\$boot_epoch" -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo "")"
 
   jq -n \\
@@ -267,8 +273,8 @@ send_system_metrics() {
   local memory_usage_percent="\$2"
   local disk_usage_percent="\$3"
   local hostname="\$4"
-  local uptime_seconds="\${5:-0}"
-  local last_boot_time="\${6:-}"
+  local uptime_seconds="\\${5:-0}"
+  local last_boot_time="\\${6:-}"
   
   local body
   body="\$(jq -n \\
@@ -303,9 +309,9 @@ send_system_metrics() {
 ########################################
 
 send_post_installation() {
-  local success="\${1:-true}"
-  local error_message="\${2:-""}"
-  local install_time="\${3:-0}"
+  local success="\\${1:-true}"
+  local error_message="\\${2:-""}"
+  local install_time="\\${3:-0}"
 
   local sys_json metrics_json body
 
@@ -393,9 +399,9 @@ submit_job_result() {
   local job_id="\$1"
   local status="\$2"     # completed | failed
   local output_json="\$3"
-  local error_message="\${4:-""}"
-  local exec_time="\${5:-0}"
-  local started_at="\${6:-\$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
+  local error_message="\\${4:-""}"
+  local exec_time="\\${5:-0}"
+  local started_at="\\${6:-\$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
 
   local body
   body="\$(
@@ -629,7 +635,7 @@ execute_job() {
           
           # Backup (opcional)
           if [[ -n "\$current_script" && -f "\$current_script" ]]; then
-            cp "\$current_script" "\${current_script}.backup.\$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
+            cp "\$current_script" "\\${current_script}.backup.\$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
           fi
           
           # Instalar novo script
@@ -1081,9 +1087,9 @@ main() {
   send_heartbeat
 
   bootstrap_elapsed=\$(( \$(date +%s) - bootstrap_start ))
-  log "INFO" "Bootstrap concluido em \${bootstrap_elapsed}s"
+  log "INFO" "Bootstrap concluido em \\${bootstrap_elapsed}s"
 
-  log "INFO" "Entrando no loop principal (heartbeat=\${heartbeat_interval}s, poll=\${poll_interval}s, metrics=\${metrics_interval}s)"
+  log "INFO" "Entrando no loop principal (heartbeat=\\${heartbeat_interval}s, poll=\\${poll_interval}s, metrics=\\${metrics_interval}s)"
 
   local last_hb last_poll last_metrics last_update_check now
   last_hb=\$(date +%s)
@@ -1120,7 +1126,7 @@ main() {
       host="\$(printf '%s\\n' "\$sys_json" | jq -r '.hostname')"
       
       if send_system_metrics "\$cpu_p" "\$mem_p" "\$disk_p" "\$host" "\$uptime_s" "\$boot_time"; then
-        log "SUCCESS" "Metricas enviadas: CPU=\${cpu_p}%, RAM=\${mem_p}%, Disco=\${disk_p}%, Uptime=\${uptime_s}s"
+        log "SUCCESS" "Metricas enviadas: CPU=\\${cpu_p}%, RAM=\\${mem_p}%, Disco=\\${disk_p}%, Uptime=\\${uptime_s}s"
       else
         log "WARN" "Falha ao enviar metricas (nao critico)"
       fi
@@ -1140,7 +1146,3 @@ main() {
 
 main "\$@"
 `;
-
-export function getAgentScriptLinux(): string {
-  return AGENT_SCRIPT_LINUX_SH;
-}

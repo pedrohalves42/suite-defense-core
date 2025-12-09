@@ -1,12 +1,18 @@
+/* eslint-disable no-useless-escape */
 /**
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
  * Versao: v3.10.30-UPTIME
+ * SHA256: e2a83c22c1dd63c298743c81fb8b2673d410b87c191075cc21f8cf128d6a8916
+ * Gerado em: 2025-12-09T17:16:31.580Z
  */
 
-export const AGENT_SCRIPT_WINDOWS_CONTENT = `
-<#
+export function getAgentScriptWindows(): string {
+  return AGENT_SCRIPT_WINDOWS_CONTENT;
+}
+
+export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
     CyberShield Agent - Windows v3.10.30-UPTIME
     
     Funcionalidades:
@@ -477,7 +483,7 @@ function Invoke-ReportJob {
         \$report.uptime_seconds = \$uptimeSeconds
         \$report.last_boot_time = \$lastBootIso
 
-        Write-Log "[REPORT] Metricas coletadas: CPU=\$(\$report.cpu_percent)%, MEM=\$(\$report.memory_percent)%, DISK=\$(\$report.disk_percent)%, UPTIME=\${uptimeSeconds}s" "INFO"
+        Write-Log "[REPORT] Metricas coletadas: CPU=\$(\$report.cpu_percent)%, MEM=\$(\$report.memory_percent)%, DISK=\$(\$report.disk_percent)%, UPTIME=\\${uptimeSeconds}s" "INFO"
 
         return @{
             success = \$true
@@ -1661,7 +1667,7 @@ function Submit-JobResult {
             return \$false
         }
     } catch {
-        Write-Log "[ERROR] Erro ao enviar resultado do job \${JobId}: \$(\$_.Exception.Message)" "ERROR"
+        Write-Log "[ERROR] Erro ao enviar resultado do job \\${JobId}: \$(\$_.Exception.Message)" "ERROR"
         Write-Log "Stack trace: \$(\$_.ScriptStackTrace)" "ERROR"
         return \$false
     }
@@ -2288,7 +2294,7 @@ try {
     Send-Heartbeat
 
     \$bootstrapElapsed = [int]((Get-Date) - \$bootstrapStart).TotalSeconds
-    Write-Log "[SUCCESS] Bootstrap concluido em \${bootstrapElapsed}s" "SUCCESS"
+    Write-Log "[SUCCESS] Bootstrap concluido em \\${bootstrapElapsed}s" "SUCCESS"
 
     Write-Log "[INFO] Entrando no loop principal (intervalo=\$(\$Global:PollIntervalSeconds)s)" "INFO"
 
@@ -2416,7 +2422,3 @@ catch {
     exit 1
 }
 `;
-
-export function getAgentScriptWindows(): string {
-  return AGENT_SCRIPT_WINDOWS_CONTENT;
-}
