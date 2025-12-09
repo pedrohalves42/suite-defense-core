@@ -2,16 +2,12 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.29-FORCED-RESTART
+ * Versao: v3.10.30-UPTIME
  */
-
-export function getAgentScriptWindows(): string {
-  return AGENT_SCRIPT_WINDOWS_CONTENT;
-}
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.29-FORCED-RESTART
+    CyberShield Agent - Windows v3.10.30-UPTIME
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -49,7 +45,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.29-FORCED-RESTART"
+    [string]\$AgentVersion = "v3.10.30-UPTIME"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -466,7 +462,22 @@ function Invoke-ReportJob {
         \$report.memory_percent = \$memUsage
         \$report.disk_percent   = \$diskPercent
 
-        Write-Log "[REPORT] Metricas coletadas: CPU=\$(\$report.cpu_percent)%, MEM=\$(\$report.memory_percent)%, DISK=\$(\$report.disk_percent)%" "INFO"
+        # Uptime - calcular tempo desde ultimo boot via WMI
+        try {
+            \$bootTime = (Get-WmiObject Win32_OperatingSystem).LastBootUpTime
+            \$boot = [Management.ManagementDateTimeConverter]::ToDateTime(\$bootTime)
+            \$uptimeSeconds = [math]::Floor((New-TimeSpan -Start \$boot -End (Get-Date)).TotalSeconds)
+            \$lastBootIso = \$boot.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        } catch {
+            Write-Log "[METRICS] Falha ao obter uptime via WMI, usando 0" "WARN"
+            \$uptimeSeconds = 0
+            \$lastBootIso = \$null
+        }
+
+        \$report.uptime_seconds = \$uptimeSeconds
+        \$report.last_boot_time = \$lastBootIso
+
+        Write-Log "[REPORT] Metricas coletadas: CPU=\$(\$report.cpu_percent)%, MEM=\$(\$report.memory_percent)%, DISK=\$(\$report.disk_percent)%, UPTIME=\${uptimeSeconds}s" "INFO"
 
         return @{
             success = \$true
@@ -954,46 +965,50 @@ function Invoke-WebActivityJob {
             }
         }
 
-        # 3. Deduplicar usando Hashtable (P0 FIX v3.10.28)
-        Write-Log "[WEB-ACTIVITY] Deduplicando \$(\$items.Count) itens usando hashtable..." "INFO"
-        \$uniqueItemsHash = @{}
+        # FIX v3.10.28: Deduplicacao robusta usando hashtable (Sort-Object -Unique nao funciona com hashtables)
+        # Usa domain como chave para garantir unicidade real
+        \$dedupMap = @{}
         foreach (\$item in \$items) {
             \$key = \$item.domain
-            if (-not \$uniqueItemsHash.ContainsKey(\$key)) {
-                \$uniqueItemsHash[\$key] = \$item
+            if (-not \$dedupMap.ContainsKey(\$key)) {
+                \$dedupMap[\$key] = \$item
             }
         }
-        \$uniqueItems = @(\$uniqueItemsHash.Values)
-        Write-Log "[WEB-ACTIVITY] Apos deduplicacao: \$(\$uniqueItems.Count) dominios unicos" "INFO"
+        \$uniqueItems = @(\$dedupMap.Values) | Select-Object -First \$maxDomains
+        
+        Write-Log "[WEB-ACTIVITY] Deduplicacao: \$(\$items.Count) items -> \$(\$uniqueItems.Count) unicos" "INFO"
 
-        # Limitar ao maximo configurado
-        if (\$uniqueItems.Count -gt \$maxDomains) {
-            \$uniqueItems = \$uniqueItems | Select-Object -First \$maxDomains
-        }
+        if (-not \$uniqueItems.Count) {
+            Write-Log "[WEB-ACTIVITY] Nenhum dominio encontrado em nenhuma fonte" "INFO"
 
-        Write-Log "[WEB-ACTIVITY] Total de dominios a enviar: \$(\$uniqueItems.Count)" "SUCCESS"
-
-        if (\$uniqueItems.Count -gt 0) {
-            # P0 FIX v3.10.28: Enviar como array, nao hashtable
-            \$body = @{
-                agent_id = \$Job.agent_id
-                items    = @(\$uniqueItems)
-            }
-
-            \$result = Invoke-SecureRequest \`
-                -Path "/functions/v1/submit-web-activity" \`
-                -Method "POST" \`
-                -Body \$body \`
-                -TimeoutSec 30
-
-            if (-not \$result.Success) {
-                throw "Falha ao enviar atividade web (HTTP \$(\$result.StatusCode))"
+            return @{
+                success = \$true
+                output  = "Nenhum dominio encontrado"
             }
         }
+
+        Write-Log "[WEB-ACTIVITY] Total de dominios unicos coletados: \$(\$uniqueItems.Count)" "INFO"
+
+        \$body = @{
+            agent_id = \$Job.agent_id
+            items    = \$uniqueItems  # FIX v3.10.22: Usar lista deduplicada ao inves de \$items
+        }
+
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/submit-web-activity" \`
+            -Method "POST" \`
+            -Body \$body \`
+            -TimeoutSec 30
+
+        if (-not \$result.Success) {
+            throw "Falha ao enviar atividade web (HTTP \$(\$result.StatusCode))"
+        }
+
+        Write-Log "[WEB-ACTIVITY] Atividade enviada. Dominios unicos: \$(\$uniqueItems.Count)" "SUCCESS"
 
         return @{
             success = \$true
-            output  = "Atividade web coletada. Dominios: \$(\$uniqueItems.Count)"
+            output  = "Atividade web enviada. Dominios unicos: \$(\$uniqueItems.Count)"
         }
     }
     catch {
@@ -1438,7 +1453,7 @@ function Invoke-SyncBlockedWebsitesJob {
                 }
                 \$newBlockLines += \$endMarker
                 
-                \$newHostsContent = "\$hostsContent\`n\`n\$(\$newBlockLines -join \"\`n\")"
+                \$newHostsContent = "\$hostsContent\`n\`n\$(\$newBlockLines -join "\`n")"
                 Set-Content -Path \$hostsPath -Value \$newHostsContent -Force -Encoding ASCII
                 
                 Write-Log "[BLOCKED-SITES] Hosts file atualizado com \$hostsModified dominios" "SUCCESS"
@@ -1454,10 +1469,11 @@ function Invoke-SyncBlockedWebsitesJob {
         return @{
             success = \$true
             output = @{
-                message = "Sites bloqueados sincronizados"
+                message = "Sites bloqueados sincronizados com sucesso"
                 domains_count = \$blockedDomains.Count
                 hosts_modified = \$hostsModified
-                applied_to_hosts = \$applyToHosts
+                list_path = \$blockedListPath
+                synced_at = [DateTime]::UtcNow.ToString("o")
             }
         }
     }
@@ -1472,25 +1488,38 @@ function Invoke-SyncBlockedWebsitesJob {
 }
 
 # ============================================
-#  POST INSTALLATION EVENT
+#  POST INSTALLATION
 # ============================================
 function Send-PostInstallationEvent {
     param(
-        [Parameter(Mandatory = \$true)]
-        [bool]\$Success,
-
-        [Parameter(Mandatory = \$true)]
-        [int]\$InstallationTimeSeconds
+        [bool]\$Success = \$true,
+        [string]\$ErrorMessage = "",
+        [int]\$InstallationTimeSeconds = 0
     )
 
-    \$body = @{
-        event_type       = "post_installation"
-        agent_name       = \$Global:AgentName
-        success          = \$Success
-        agent_version    = \$Global:AgentVersion
-        installation_time_seconds = \$InstallationTimeSeconds
-        timestamp        = (Get-Date).ToUniversalTime().ToString("o")
+    \$sys = Get-SystemInfo
+
+    # PowerShell 5.1 compatibility: calculate event_type outside hashtable
+    \$eventType = if (\$Success) { 
+        "post_installation" 
+    } else { 
+        "post_installation_unverified" 
     }
+
+    \$body = @{
+        agent_name                = \$Global:AgentName
+        event_type                = \$eventType
+        platform                  = "windows"
+        installation_method       = "one_click"
+        success                   = \$Success
+        installation_time_seconds = \$InstallationTimeSeconds
+        error_message             = \$ErrorMessage
+        agent_version             = \$Global:AgentVersion
+        network_connectivity      = \$true
+        metadata                  = \$sys
+    }
+
+    Write-Log "Enviando post_installation..." "INFO"
 
     try {
         \$result = Invoke-SecureRequest \`
@@ -1690,7 +1719,7 @@ function Execute-Job {
                 try {
                     Write-Log "[SCAN] Job type 'scan' recebido" "INFO"
 
-                    # Payload esperado: { "filePath": "C:\\path\\file.exe", "tenantId": "uuid" }
+                    # Payload esperado: { "filePath": "C:\\\\path\\\\file.exe", "tenantId": "uuid" }
                     \$filePath = \$payload.filePath
                     \$tenantId = \$payload.tenantId
 
@@ -1699,7 +1728,7 @@ function Execute-Job {
                     }
 
                     # Expandir variaveis de ambiente estilo Windows (%VAR%)
-                    # CRITICAL FIX v3.10.18: %USERPROFILE% expande para usuarios reais, nao SYSTEM
+                    # CRITICAL FIX v3.10.18: %USERPROFILE% expande para todos os usuarios reais, nao SYSTEM
                     if (\$filePath -match '%USERPROFILE%') {
                         Write-Log "[SCAN] Detectado %USERPROFILE%, expandindo para usuarios reais..." "DEBUG"
                         
@@ -1884,7 +1913,7 @@ function Execute-Job {
             }
             "update_agent" {
                 try {
-                    Write-Log "[INFO] Job 'update_agent' recebido - SMART UPDATE v3.10.29" "INFO"
+                    Write-Log "[INFO] Job 'update_agent' recebido - SMART UPDATE v3.10.24" "INFO"
 
                     # Chama serve-agent-update
                     \$updateResult = Invoke-SecureRequest \`
@@ -2347,11 +2376,13 @@ try {
                                 memory_usage_percent = \$metricsData.memory_percent
                                 disk_usage_percent = \$metricsData.disk_percent
                                 hostname = \$metricsData.hostname
+                                uptime_seconds = \$metricsData.uptime_seconds
+                                last_boot_time = \$metricsData.last_boot_time
                             }
                             
                             \$sent = Send-SystemMetrics -Metrics \$payload
                             if (\$sent) {
-                                Write-Log "[SUCCESS] Metricas enviadas: CPU=\$(\$metricsData.cpu_percent)%, RAM=\$(\$metricsData.memory_percent)%, Disco=\$(\$metricsData.disk_percent)%" "SUCCESS"
+                                Write-Log "[SUCCESS] Metricas enviadas: CPU=\$(\$metricsData.cpu_percent)%, RAM=\$(\$metricsData.memory_percent)%, Disco=\$(\$metricsData.disk_percent)%, Uptime=\$(\$metricsData.uptime_seconds)s" "SUCCESS"
                             }
                         } catch {
                             Write-Log "[WARN] Falha ao parsear metricas: \$(\$_.Exception.Message)" "WARN"
@@ -2385,3 +2416,7 @@ catch {
     exit 1
 }
 `;
+
+export function getAgentScriptWindows(): string {
+  return AGENT_SCRIPT_WINDOWS_CONTENT;
+}
