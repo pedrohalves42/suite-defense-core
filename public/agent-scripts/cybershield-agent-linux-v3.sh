@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # CyberShield Agent - Linux
-# Version: v3.10.28-WEB-ACTIVITY-DEDUP-FIX (Sync all platforms)
+# Version: v3.10.30-UPTIME
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ SERVER_URL="${SERVER_URL:-${CYBERSHIELD_SERVER_URL:-}}"
 AGENT_TOKEN="${AGENT_TOKEN:-${CYBERSHIELD_AGENT_TOKEN:-}}"
 HMAC_SECRET="${HMAC_SECRET:-${CYBERSHIELD_HMAC_SECRET:-}}"
 AGENT_NAME="${AGENT_NAME:-${CYBERSHIELD_AGENT_NAME:-$(hostname -s)}}"
-AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-v3.10.28}}"
+AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-v3.10.30}}"
 
 # Parse argumentos (sobrescreve env vars)
 while [[ $# -gt 0 ]]; do
@@ -208,7 +208,7 @@ system_info_json() {
 }
 
 system_metrics_json() {
-  local cpu_load ram_used disk_used
+  local cpu_load ram_used disk_used uptime_seconds last_boot_time
   
   # CPU load (medio) - aproximado
   cpu_load="$(awk -F' ' '/cpu /{u=$2; n=$3; s=$4; i=$5; w=$6; irq=$7; soft=$8; steal=$9; idle=i+w; busy=u+n+s+irq+soft+steal; print busy/(busy+idle)*100}' /proc/stat 2>/dev/null | head -n1)"
@@ -225,14 +225,28 @@ system_metrics_json() {
   disk_used="$(df / | awk 'NR==2 {print $5}' | sed 's/%//')"
   disk_used="${disk_used:-0}"
 
+  # UPTIME - tempo desde ultimo boot
+  uptime_seconds="$(cat /proc/uptime 2>/dev/null | awk '{print int($1)}')"
+  uptime_seconds="${uptime_seconds:-0}"
+
+  # Boot time ISO
+  local boot_epoch
+  boot_epoch="$(awk -v now="$(date +%s)" '{print int(now - $1)}' /proc/uptime 2>/dev/null)"
+  boot_epoch="${boot_epoch:-0}"
+  last_boot_time="$(date -d "@$boot_epoch" -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo "")"
+
   jq -n \
     --arg cpu_load "$cpu_load" \
     --arg ram_used "$ram_used" \
     --arg disk_used "$disk_used" \
+    --arg uptime_seconds "$uptime_seconds" \
+    --arg last_boot_time "$last_boot_time" \
     '{
       cpu_load_percent: ($cpu_load|tonumber),
       ram_used_percent: ($ram_used|tonumber),
-      disk_used_percent: ($disk_used|tonumber)
+      disk_used_percent: ($disk_used|tonumber),
+      uptime_seconds: ($uptime_seconds|tonumber),
+      last_boot_time: $last_boot_time
     }'
 }
 
@@ -245,6 +259,8 @@ send_system_metrics() {
   local memory_usage_percent="$2"
   local disk_usage_percent="$3"
   local hostname="$4"
+  local uptime_seconds="${5:-0}"
+  local last_boot_time="${6:-}"
   
   local body
   body="$(jq -n \
@@ -252,11 +268,15 @@ send_system_metrics() {
     --arg mem "$memory_usage_percent" \
     --arg disk "$disk_usage_percent" \
     --arg host "$hostname" \
+    --arg uptime "$uptime_seconds" \
+    --arg boot "$last_boot_time" \
     '{
       cpu_usage_percent: ($cpu|tonumber),
       memory_usage_percent: ($mem|tonumber),
       disk_usage_percent: ($disk|tonumber),
-      hostname: $host
+      hostname: $host,
+      uptime_seconds: ($uptime|tonumber),
+      last_boot_time: $boot
     }'
   )"
   
@@ -1079,7 +1099,7 @@ main() {
     # Enviar metricas a cada 5 minutos
     if (( now - last_metrics >= metrics_interval )); then
       log "INFO" "Coletando metricas de sistema (5min)..."
-      local metrics_json sys_json cpu_p mem_p disk_p host
+      local metrics_json sys_json cpu_p mem_p disk_p host uptime_s boot_time
       
       metrics_json="$(system_metrics_json)"
       sys_json="$(system_info_json)"
@@ -1087,10 +1107,12 @@ main() {
       cpu_p="$(printf '%s\n' "$metrics_json" | jq -r '.cpu_load_percent')"
       mem_p="$(printf '%s\n' "$metrics_json" | jq -r '.ram_used_percent')"
       disk_p="$(printf '%s\n' "$metrics_json" | jq -r '.disk_used_percent')"
+      uptime_s="$(printf '%s\n' "$metrics_json" | jq -r '.uptime_seconds')"
+      boot_time="$(printf '%s\n' "$metrics_json" | jq -r '.last_boot_time')"
       host="$(printf '%s\n' "$sys_json" | jq -r '.hostname')"
       
-      if send_system_metrics "$cpu_p" "$mem_p" "$disk_p" "$host"; then
-        log "SUCCESS" "Metricas enviadas: CPU=${cpu_p}%, RAM=${mem_p}%, Disco=${disk_p}%"
+      if send_system_metrics "$cpu_p" "$mem_p" "$disk_p" "$host" "$uptime_s" "$boot_time"; then
+        log "SUCCESS" "Metricas enviadas: CPU=${cpu_p}%, RAM=${mem_p}%, Disco=${disk_p}%, Uptime=${uptime_s}s"
       else
         log "WARN" "Falha ao enviar metricas (nao critico)"
       fi

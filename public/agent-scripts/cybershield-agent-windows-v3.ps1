@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.29-FORCED-RESTART
+    CyberShield Agent - Windows v3.10.30-UPTIME
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.29-FORCED-RESTART"
+    [string]$AgentVersion = "v3.10.30-UPTIME"
 )
 
 $ErrorActionPreference = "Stop"
@@ -454,7 +454,22 @@ function Invoke-ReportJob {
         $report.memory_percent = $memUsage
         $report.disk_percent   = $diskPercent
 
-        Write-Log "[REPORT] Metricas coletadas: CPU=$($report.cpu_percent)%, MEM=$($report.memory_percent)%, DISK=$($report.disk_percent)%" "INFO"
+        # Uptime - calcular tempo desde ultimo boot via WMI
+        try {
+            $bootTime = (Get-WmiObject Win32_OperatingSystem).LastBootUpTime
+            $boot = [Management.ManagementDateTimeConverter]::ToDateTime($bootTime)
+            $uptimeSeconds = [math]::Floor((New-TimeSpan -Start $boot -End (Get-Date)).TotalSeconds)
+            $lastBootIso = $boot.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        } catch {
+            Write-Log "[METRICS] Falha ao obter uptime via WMI, usando 0" "WARN"
+            $uptimeSeconds = 0
+            $lastBootIso = $null
+        }
+
+        $report.uptime_seconds = $uptimeSeconds
+        $report.last_boot_time = $lastBootIso
+
+        Write-Log "[REPORT] Metricas coletadas: CPU=$($report.cpu_percent)%, MEM=$($report.memory_percent)%, DISK=$($report.disk_percent)%, UPTIME=${uptimeSeconds}s" "INFO"
 
         return @{
             success = $true
@@ -2353,11 +2368,13 @@ try {
                                 memory_usage_percent = $metricsData.memory_percent
                                 disk_usage_percent = $metricsData.disk_percent
                                 hostname = $metricsData.hostname
+                                uptime_seconds = $metricsData.uptime_seconds
+                                last_boot_time = $metricsData.last_boot_time
                             }
                             
                             $sent = Send-SystemMetrics -Metrics $payload
                             if ($sent) {
-                                Write-Log "[SUCCESS] Metricas enviadas: CPU=$($metricsData.cpu_percent)%, RAM=$($metricsData.memory_percent)%, Disco=$($metricsData.disk_percent)%" "SUCCESS"
+                                Write-Log "[SUCCESS] Metricas enviadas: CPU=$($metricsData.cpu_percent)%, RAM=$($metricsData.memory_percent)%, Disco=$($metricsData.disk_percent)%, Uptime=$($metricsData.uptime_seconds)s" "SUCCESS"
                             }
                         } catch {
                             Write-Log "[WARN] Falha ao parsear metricas: $($_.Exception.Message)" "WARN"
