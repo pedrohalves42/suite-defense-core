@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.28-WEB-ACTIVITY-DEDUP-FIX';
+const CURRENT_VERSION = 'v3.10.29-FORCED-RESTART';
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
 // No need for manual SHA256 anymore - the hook handles calculation automatically
@@ -94,7 +94,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'WEB-ACTIVITY-DEDUP-FIX: Corrige deduplicacao de web activity usando hashtable em vez de Sort-Object -Unique. Sincroniza Windows/macOS/Linux para mesma versao.',
+        release_notes: 'FORCED-RESTART: Handler update_agent agora encerra processo atual com exit 0 apos iniciar nova Scheduled Task, garantindo carregamento imediato da nova versao sem aguardar reinicio do Windows.',
         channel: 'stable'
       });
 
