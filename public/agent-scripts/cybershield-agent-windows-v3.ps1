@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.30-UPTIME
+    CyberShield Agent - Windows v3.10.31-SUBMIT-BEFORE-EXIT
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.30-UPTIME"
+    [string]$AgentVersion = "v3.10.31-SUBMIT-BEFORE-EXIT"
 )
 
 $ErrorActionPreference = "Stop"
@@ -2032,8 +2032,20 @@ function Execute-Job {
                         restartedAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
                     
-                    # CRITICAL: Encerrar este processo para que a nova task com v3.10.29 assuma
-                    # O exit 0 aqui e SEGURO pois a nova task ja foi iniciada com Start-ScheduledTask
+                    # CRITICAL FIX v3.10.31: Submeter resultado ANTES de encerrar processo
+                    $execTime = [int]((Get-Date) - $startTime).TotalSeconds
+                    $startTimeISO = $startTime.ToUniversalTime().ToString("o")
+                    
+                    Submit-JobResult `
+                        -JobId $job.id `
+                        -Status "completed" `
+                        -Output $output `
+                        -ExecutionTimeSeconds $execTime `
+                        -StartedAt $startTimeISO
+                    
+                    Write-Log "[SUCCESS] Resultado submetido, encerrando processo atual..." "SUCCESS"
+                    
+                    # CRITICAL: Encerrar este processo para que a nova task assuma
                     exit 0
                 }
                 catch {
@@ -2113,8 +2125,21 @@ function Execute-Job {
                         reinstalledAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
                     
-                    Write-Log "[SUCCESS] Reinstalacao concluida, nova task iniciada" "SUCCESS"
-                    break
+                    # CRITICAL FIX v3.10.31: Submeter resultado ANTES de encerrar processo
+                    $execTime = [int]((Get-Date) - $startTime).TotalSeconds
+                    $startTimeISO = $startTime.ToUniversalTime().ToString("o")
+                    
+                    Submit-JobResult `
+                        -JobId $job.id `
+                        -Status "completed" `
+                        -Output $output `
+                        -ExecutionTimeSeconds $execTime `
+                        -StartedAt $startTimeISO
+                    
+                    Write-Log "[SUCCESS] Resultado submetido, encerrando processo atual..." "SUCCESS"
+                    
+                    # CRITICAL: Encerrar este processo para que a nova task assuma
+                    exit 0
                 }
                 catch {
                     throw $_.Exception.Message
