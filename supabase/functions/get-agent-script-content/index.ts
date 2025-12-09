@@ -1,6 +1,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 import { AGENT_SCRIPT_WINDOWS_CONTENT } from '../_shared/agent-script-windows-content.ts';
+import { AGENT_SCRIPT_LINUX_SH } from '../_shared/agent-script-linux-content.ts';
+import { AGENT_SCRIPT_MACOS_SH } from '../_shared/agent-script-macos-content.ts';
 
 const requestId = crypto.randomUUID();
 
@@ -24,6 +26,19 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
+    }
+
+    // Parse request body for platform parameter
+    let platform = 'windows';
+    try {
+      if (req.method === 'POST') {
+        const body = await req.json();
+        if (body?.platform && ['windows', 'linux', 'macos'].includes(body.platform)) {
+          platform = body.platform;
+        }
+      }
+    } catch {
+      // Default to windows if body parsing fails
     }
 
     // Create Supabase client with user's JWT for authentication
@@ -93,14 +108,30 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[${requestId}] Super admin ${user.id} requesting agent script content`);
+    console.log(`[${requestId}] Super admin ${user.id} requesting agent script content for platform: ${platform}`);
 
-    // Return the embedded agent script content directly
+    // Select the appropriate script based on platform
+    let scriptContent: string;
+    switch (platform) {
+      case 'linux':
+        scriptContent = AGENT_SCRIPT_LINUX_SH;
+        break;
+      case 'macos':
+        scriptContent = AGENT_SCRIPT_MACOS_SH;
+        break;
+      case 'windows':
+      default:
+        scriptContent = AGENT_SCRIPT_WINDOWS_CONTENT;
+        break;
+    }
+
+    // Return the embedded agent script content
     return new Response(
       JSON.stringify({
         success: true,
-        script_content: AGENT_SCRIPT_WINDOWS_CONTENT,
-        size_bytes: AGENT_SCRIPT_WINDOWS_CONTENT.length,
+        script_content: scriptContent,
+        size_bytes: scriptContent.length,
+        platform,
         source: 'embedded',
         requestId
       }),

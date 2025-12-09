@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.29-FORCED-RESTART';
+const CURRENT_VERSION = 'v3.10.30-UPTIME';
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
 // No need for manual SHA256 anymore - the hook handles calculation automatically
@@ -94,7 +94,7 @@ export default function AgentReleases() {
         version: CURRENT_VERSION,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'FORCED-RESTART: Handler update_agent agora encerra processo atual com exit 0 apos iniciar nova Scheduled Task, garantindo carregamento imediato da nova versao sem aguardar reinicio do Windows.',
+        release_notes: 'UPTIME: Corrigido coleta de uptime_seconds e last_boot_time em todos os agentes (Windows, Linux, macOS). Metricas agora mostram tempo ligado corretamente.',
         channel: 'stable'
       });
 
@@ -106,55 +106,60 @@ export default function AgentReleases() {
     }
   };
 
-  const handleForceReregister = async () => {
-    if (!confirm(`FORÇAR RE-REGISTRO de ${CURRENT_VERSION}?\n\nIsso ira:\n1. Deletar a entrada atual do banco\n2. Buscar o script atualizado\n3. Re-registrar a versao\n\nContinuar?`)) {
+  const handleForceReregister = async (platform: 'windows' | 'linux' | 'macos' = 'windows') => {
+    const platformLabel = platform === 'windows' ? 'Windows' : platform === 'linux' ? 'Linux' : 'macOS';
+    
+    if (!confirm(`FORÇAR RE-REGISTRO de ${CURRENT_VERSION} (${platformLabel})?\n\nIsso ira:\n1. Deletar a entrada atual do banco\n2. Buscar o script atualizado\n3. Re-registrar a versao\n\nContinuar?`)) {
       return;
     }
 
     try {
       setIsForceReregistering(true);
-      toast.info('Deletando entrada atual...');
+      toast.info(`Deletando entrada atual (${platformLabel})...`);
 
-      // Delete existing entry
+      // Delete existing entry for this platform
       const { error: deleteError } = await supabase
         .from('agent_releases')
         .delete()
         .eq('version', CURRENT_VERSION)
-        .eq('platform', 'windows');
+        .eq('platform', platform);
 
       if (deleteError) throw deleteError;
 
       toast.success('Entrada deletada. Buscando script...');
 
-      // Now register the correct version
+      // Fetch the appropriate script based on platform
       const { data: scriptData, error: scriptError } = await supabase.functions.invoke(
-        'get-agent-script-content'
+        'get-agent-script-content',
+        { body: { platform } }
       );
 
       if (scriptError) throw scriptError;
       if (!scriptData?.script_content) {
-        throw new Error('No script content received');
+        throw new Error(`No script content received for ${platformLabel}. Run: node scripts/sync-all-agents.js --${platform}`);
       }
 
       const scriptContent = scriptData.script_content;
-      if (scriptContent.length < 10000) {
-        throw new Error(`Script too small (${scriptContent.length} bytes) - likely placeholder`);
+      const minSize = platform === 'windows' ? 40000 : 20000; // Windows scripts are larger
+      
+      if (scriptContent.length < minSize) {
+        throw new Error(`Script ${platformLabel} muito pequeno (${(scriptContent.length / 1024).toFixed(1)} KB). Execute: node scripts/sync-all-agents.js --${platform}`);
       }
 
-      toast.success(`Script obtido: ${(scriptContent.length / 1024).toFixed(1)} KB`);
+      toast.success(`Script ${platformLabel} obtido: ${(scriptContent.length / 1024).toFixed(1)} KB`);
 
-      // Register the release - SHA256 with BOM will be calculated automatically
+      // Register the release - SHA256 will be calculated automatically
       registerRelease({
         version: CURRENT_VERSION,
-        platform: 'windows',
+        platform: platform,
         script_content: scriptContent,
-        release_notes: 'BLOCKED-WEBSITES: Novo job type sync_blocked_websites para sincronizar lista de sites bloqueados. Salva dominios em C:\\CyberShield\\blocked_websites.json. Opcao apply_to_hosts para bloquear via Windows hosts file. Limpa DNS cache automaticamente.',
+        release_notes: 'UPTIME: Corrigido coleta de uptime_seconds e last_boot_time em todos os agentes (Windows, Linux, macOS). Metricas agora mostram tempo ligado corretamente.',
         channel: 'stable'
       });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Erro ao forcar re-registro: ${errorMessage}`);
+      toast.error(`Erro ao re-registrar ${platformLabel}: ${errorMessage}`);
     } finally {
       setIsForceReregistering(false);
     }
@@ -202,20 +207,38 @@ export default function AgentReleases() {
           <h1 className="text-3xl font-bold">Agent Releases</h1>
           <p className="text-muted-foreground">Gerenciar versoes de agentes e auto-update</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button 
-            onClick={handleForceReregister}
+            onClick={() => handleForceReregister('windows')}
             disabled={isForceReregistering || fetchingScript || isRegistering}
             variant="destructive"
+            size="sm"
           >
-            {isForceReregistering ? "Re-registrando..." : "Forçar Re-registro"}
+            {isForceReregistering ? "Re-registrando..." : "Re-registrar Windows"}
+          </Button>
+          <Button 
+            onClick={() => handleForceReregister('linux')}
+            disabled={isForceReregistering || fetchingScript || isRegistering}
+            variant="outline"
+            size="sm"
+          >
+            Re-registrar Linux
+          </Button>
+          <Button 
+            onClick={() => handleForceReregister('macos')}
+            disabled={isForceReregistering || fetchingScript || isRegistering}
+            variant="outline"
+            size="sm"
+          >
+            Re-registrar macOS
           </Button>
           <Button 
             onClick={handleForceUpdateCheck}
             disabled={isProcessingUpdates}
             variant="outline"
+            size="sm"
           >
-            {isProcessingUpdates ? "Processando..." : "Forçar Verificação de Updates"}
+            {isProcessingUpdates ? "Processando..." : "Verificar Updates"}
           </Button>
         </div>
       </div>
