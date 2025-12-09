@@ -152,10 +152,17 @@ export default function Reports() {
       const reportData = data as SecurityReport;
       
       // Dynamic import of jsPDF with error handling
-      const { jsPDF } = await import('jspdf');
-      const autoTableModule = await import('jspdf-autotable');
+      let jsPDFClass: any;
+      try {
+        const jsPDFModule = await import('jspdf');
+        jsPDFClass = jsPDFModule.jsPDF;
+        await import('jspdf-autotable');
+      } catch (importError) {
+        console.error("Failed to import jsPDF:", importError);
+        throw new Error("Erro ao carregar biblioteca de PDF. Tente recarregar a página.");
+      }
       
-      const doc = new jsPDF();
+      const doc = new jsPDFClass();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       let yPos = 20;
