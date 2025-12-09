@@ -153,10 +153,12 @@ export default function Reports() {
       
       // Dynamic import of jsPDF with error handling
       let jsPDFClass: any;
+      let autoTable: any;
       try {
         const jsPDFModule = await import('jspdf');
         jsPDFClass = jsPDFModule.jsPDF;
-        await import('jspdf-autotable');
+        const autoTableModule = await import('jspdf-autotable');
+        autoTable = autoTableModule.default;
       } catch (importError) {
         console.error("Failed to import jsPDF:", importError);
         throw new Error("Erro ao carregar biblioteca de PDF. Tente recarregar a página.");
@@ -214,7 +216,7 @@ export default function Reports() {
         ['Scans Maliciosos', `${reportData.statistics.malicious_scans}/${reportData.statistics.total_scans}`],
       ];
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Métrica', 'Valor']],
         body: summaryData,
@@ -247,7 +249,7 @@ export default function Reports() {
           sw.risk_level || 'unknown'
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['Nome', 'Versão', 'Fornecedor', 'Risco']],
           body: softwareData,
@@ -292,7 +294,7 @@ export default function Reports() {
           (vuln.description || '-').substring(0, 40),
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['Severidade', 'Título', 'Descrição']],
           body: vulnData,
@@ -328,7 +330,7 @@ export default function Reports() {
           av.threats_found || '0'
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['Engine', 'Versão', 'Status', 'Ameaças']],
           body: avData,
@@ -360,7 +362,7 @@ export default function Reports() {
           new Date(web.visited_at).toLocaleDateString('pt-BR')
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['Domínio', 'Fonte', 'Data']],
           body: webData,
