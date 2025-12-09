@@ -10,9 +10,14 @@
  * Se nenhum argumento for passado, sincroniza todos.
  */
 
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
 
 // Configuração dos agentes
 const AGENTS = {
@@ -80,7 +85,7 @@ function syncAgent(platform) {
   console.log(`\n📦 Sincronizando ${platform.toUpperCase()}...`);
   
   // Verifica se o arquivo fonte existe
-  const sourcePath = path.join(process.cwd(), config.source);
+  const sourcePath = path.join(projectRoot, config.source);
   if (!fs.existsSync(sourcePath)) {
     console.error(`❌ Arquivo fonte não encontrado: ${config.source}`);
     return false;
@@ -117,7 +122,7 @@ export const ${config.exportName} = \`${escapedContent}\`;
 `;
   
   // Escreve o arquivo de destino
-  const targetPath = path.join(process.cwd(), config.target);
+  const targetPath = path.join(projectRoot, config.target);
   fs.writeFileSync(targetPath, tsContent, 'utf8');
   
   const targetSize = fs.statSync(targetPath).size;
