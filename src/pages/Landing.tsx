@@ -76,17 +76,19 @@ const Landing = () => {
   };
   const currentContent = content[audience];
 
-  // Cálculo dinâmico por tier (FASE 1)
-  const calculatePrice = (devices: number): number => {
-    if (devices <= 0 || Number.isNaN(devices)) return 0;
-    const pricePerDevice = devices <= 30 ? 4.61 :
-    // R$ 59,90 / 13 dispositivos
-    devices <= 200 ? 0.75 :
-    // R$ 149,90 / 200 dispositivos  
-    0.29; // R$ 299,90 / 1000 dispositivos
-
-    return Number((devices * pricePerDevice).toFixed(2));
+  // Cálculo baseado em tiers fixos (sincronizado com /pricing)
+  const calculateTier = (devices: number): { price: number; plan: string; maxDevices: number; isEnterprise: boolean } => {
+    if (devices <= 0 || Number.isNaN(devices)) return { price: 0, plan: 'Free', maxDevices: 3, isEnterprise: false };
+    
+    if (devices <= 3) return { price: 0, plan: 'Free', maxDevices: 3, isEnterprise: false };
+    if (devices <= 5) return { price: 150, plan: 'Starter', maxDevices: 5, isEnterprise: false };
+    if (devices <= 25) return { price: 450, plan: 'Business', maxDevices: 25, isEnterprise: false };
+    if (devices <= 100) return { price: 1200, plan: 'Scale', maxDevices: 100, isEnterprise: false };
+    
+    return { price: 0, plan: 'Enterprise', maxDevices: devices, isEnterprise: true };
   };
+
+  const tierResult = calculateTier(deviceCount);
   return <div className="min-h-screen bg-background">
       <Navbar />
       <WhatsAppButton />
@@ -758,20 +760,53 @@ const Landing = () => {
       <section className="py-20 bg-muted/30">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center">
-            {audience === 'business' ? "Calculadora de Preco" : "Calculadora de Preco para Casa"}
+            {audience === 'business' ? "Qual Plano é Ideal Para Você?" : "Qual Plano é Ideal Para Sua Casa?"}
           </h2>
           <p className="text-center text-muted-foreground mb-8">
             {currentContent.calculator.label}
           </p>
-          <div className="flex flex-col sm:flex-row items-center gap-4 justify-center">
-            <Input type="number" min={1} max={1000} value={deviceCount} onChange={e => setDeviceCount(Number(e.target.value))} className="max-w-xs" aria-label={currentContent.calculator.label} />
-            <div className="text-2xl font-bold">
-              {`R$ ${calculatePrice(deviceCount).toFixed(2)} / ${audience === 'business' ? 'mes' : 'mes'}`}
-            </div>
+          <div className="flex flex-col items-center gap-6 justify-center">
+            <Input 
+              type="number" 
+              min={1} 
+              max={500} 
+              value={deviceCount} 
+              onChange={e => setDeviceCount(Math.max(1, Math.min(500, Number(e.target.value) || 1)))} 
+              className="max-w-xs text-center text-lg" 
+              aria-label={currentContent.calculator.label} 
+            />
+            
+            <Card className="w-full max-w-md border-primary/20 bg-card/50 backdrop-blur">
+              <CardContent className="pt-6 text-center">
+                {tierResult.isEnterprise ? (
+                  <>
+                    <div className="text-sm text-muted-foreground mb-2">Plano Recomendado</div>
+                    <div className="text-2xl font-bold text-primary mb-2">Enterprise</div>
+                    <p className="text-muted-foreground mb-4">
+                      Para {deviceCount}+ dispositivos, entre em contato para um plano personalizado.
+                    </p>
+                    <Button asChild className="w-full">
+                      <Link to="/pricing">Ver Planos Enterprise</Link>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm text-muted-foreground mb-2">Plano Recomendado</div>
+                    <div className="text-2xl font-bold text-primary mb-1">{tierResult.plan}</div>
+                    <div className="text-3xl font-bold mb-2">
+                      {tierResult.price === 0 ? 'Grátis' : `R$ ${tierResult.price}/mês`}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Inclui até {tierResult.maxDevices} {audience === 'business' ? 'dispositivos' : 'computadores'}
+                    </p>
+                    <Button asChild className="w-full">
+                      <Link to="/pricing">Ver Detalhes do Plano</Link>
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
-          <p className="text-center text-sm text-muted-foreground mt-4">
-            {audience === 'business' ? "Precos baseados no numero de dispositivos monitorados." : "Precos baseados no numero de computadores protegidos."}
-          </p>
         </div>
       </section>
 
