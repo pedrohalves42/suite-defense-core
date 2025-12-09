@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.30-UPTIME';
+const CURRENT_VERSION = 'v3.10.31-SUBMIT-BEFORE-EXIT';
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
 // No need for manual SHA256 anymore - the hook handles calculation automatically
