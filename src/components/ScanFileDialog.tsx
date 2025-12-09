@@ -66,6 +66,23 @@ export function ScanFileDialog() {
     },
   });
 
+  // Validação de path inválido para conta SYSTEM
+  const isInvalidPath = (path: string) => {
+    const invalidPatterns = [
+      '%USERPROFILE%',
+      '%APPDATA%',
+      '%TEMP%',
+      '%LOCALAPPDATA%',
+      '\\users\\',
+      '/users/',
+      'downloads',
+      'documents',
+      'desktop',
+    ];
+    const lowerPath = path.toLowerCase();
+    return invalidPatterns.some(pattern => lowerPath.includes(pattern.toLowerCase()));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!agentName || !filePath) {
@@ -76,6 +93,17 @@ export function ScanFileDialog() {
       });
       return;
     }
+    
+    // Bloquear paths inválidos para SYSTEM
+    if (isInvalidPath(filePath)) {
+      toast({
+        title: 'Caminho Invalido',
+        description: 'O agente roda como SYSTEM e nao tem acesso a pastas de usuario. Use caminhos como C:\\Program Files\\...',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     createScanJob.mutate();
   };
 

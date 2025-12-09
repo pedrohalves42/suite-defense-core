@@ -110,11 +110,48 @@ Deno.serve(async (req) => {
       );
     }
 
-    const payload: WebActivityPayload = await req.json();
-
-    if (!payload.agent_id || !Array.isArray(payload.items)) {
+    let payload: WebActivityPayload;
+    let rawBody: string = '';
+    
+    try {
+      rawBody = await req.text();
+      payload = JSON.parse(rawBody);
+    } catch (parseError) {
+      // P0 FIX: Log detalhado quando payload e invalido
+      logger.error('Failed to parse web activity payload', { 
+        error: parseError instanceof Error ? parseError.message : String(parseError),
+        rawBodyLength: rawBody.length,
+        rawBodyPreview: rawBody.substring(0, 500),
+        agentName: agent.agent_name
+      });
       return new Response(
-        JSON.stringify({ error: 'agent_id and items are required' }),
+        JSON.stringify({ 
+          error: 'Invalid JSON payload',
+          details: 'Failed to parse request body',
+          bodyLength: rawBody.length
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Use agent_id from payload if provided, otherwise use authenticated agent's id
+    const effectiveAgentId = payload.agent_id || agent.id;
+
+    if (!effectiveAgentId || !Array.isArray(payload.items)) {
+      // P0 FIX: Log detalhado quando payload nao tem items
+      logger.error('Invalid web activity payload structure', { 
+        hasAgentId: !!effectiveAgentId,
+        hasItems: !!payload.items,
+        isArray: Array.isArray(payload.items),
+        payloadKeys: Object.keys(payload || {}),
+        rawBodyLength: rawBody.length,
+        agentName: agent.agent_name
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'items array is required',
+          details: `agent_id: ${!!effectiveAgentId}, items: ${!!payload.items}, isArray: ${Array.isArray(payload.items)}`
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -165,24 +202,38 @@ Deno.serve(async (req) => {
       });
     };
 
-    // Preparar itens para insercao com novos campos
-    const itemsToInsert = payload.items.map(item => ({
-      tenant_id: agent.tenant_id,
-      agent_id: payload.agent_id,
-      domain: item.domain,
-      url: item.url || null,
-      url_full: item.url_full || item.url || null,
-      page_title: item.page_title || null,
-      source: item.source || 'dns_cache',
-      browser: item.browser || (item.source?.includes('chrome') ? 'chrome' : 
-                                item.source?.includes('firefox') ? 'firefox' : 
-                                item.source?.includes('edge') ? 'edge' : null),
-      visit_count: item.visit_count || 1,
-      total_duration_seconds: item.total_duration_seconds || 0,
-      category: categorizeDomain(item.domain),
-      is_blocked: isDomainBlocked(item.domain),
-      visited_at: item.visited_at || nowIso,
-    }));
+    // Preparar itens para insercao com novos campos e validacao robusta
+    const itemsToInsert = payload.items
+      .filter(item => {
+        // Validar que domain existe e e uma string nao vazia
+        if (!item.domain || typeof item.domain !== 'string' || item.domain.trim() === '') {
+          logger.warn('Skipping item with invalid domain', { item });
+          return false;
+        }
+        return true;
+      })
+      .map(item => {
+        // Sanitizar domain - remover caracteres invalidos
+        const sanitizedDomain = item.domain.trim().toLowerCase().replace(/[^\w.-]/g, '');
+        
+        return {
+          tenant_id: agent.tenant_id,
+          agent_id: effectiveAgentId,
+          domain: sanitizedDomain || 'unknown',
+          url: item.url || null,
+          url_full: item.url_full || item.url || null,
+          page_title: item.page_title || null,
+          source: item.source || 'dns_cache',
+          browser: item.browser || (item.source?.includes('chrome') ? 'chrome' : 
+                                    item.source?.includes('firefox') ? 'firefox' : 
+                                    item.source?.includes('edge') ? 'edge' : null),
+          visit_count: typeof item.visit_count === 'number' ? item.visit_count : 1,
+          total_duration_seconds: typeof item.total_duration_seconds === 'number' ? item.total_duration_seconds : 0,
+          category: categorizeDomain(sanitizedDomain),
+          is_blocked: isDomainBlocked(sanitizedDomain),
+          visited_at: item.visited_at || nowIso,
+        };
+      });
 
     // DEDUPLICACAO SERVER-SIDE (defesa em profundidade)
     // Remove duplicatas por domain+source para evitar erro de UPSERT

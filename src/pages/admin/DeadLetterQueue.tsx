@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,12 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertCircle, RefreshCw, Trash2, CheckCircle, RotateCcw, Eye, Inbox } from 'lucide-react';
+import { AlertCircle, RefreshCw, Trash2, CheckCircle, RotateCcw, Eye, Inbox, Zap, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { getJobTypeLabel } from '@/lib/job-labels';
+import { Progress } from '@/components/ui/progress';
 
 interface DLQEntry {
   id: string;
@@ -22,8 +23,8 @@ interface DLQEntry {
   tenant_id: string;
   agent_name: string;
   job_type: string;
-  payload: any;
-  error_message: string;
+  payload: Record<string, unknown> | null;
+  error_message: string | null;
   error_count: number;
   retry_count: number;
   max_retries: number;
@@ -33,13 +34,15 @@ interface DLQEntry {
   next_retry_at: string | null;
   resolution_notes: string | null;
   resolved_at: string | null;
+  resolved_by: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
-const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pending: { label: 'Pending', variant: 'secondary' },
-  retrying: { label: 'Retrying', variant: 'default' },
-  exhausted: { label: 'Exhausted', variant: 'destructive' },
-  resolved: { label: 'Resolved', variant: 'outline' },
+const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }> = {
+  pending: { label: 'Aguardando', variant: 'secondary', icon: <Clock className="h-3 w-3" /> },
+  retrying: { label: 'Tentando', variant: 'default', icon: <RefreshCw className="h-3 w-3 animate-spin" /> },
+  exhausted: { label: 'Esgotado', variant: 'destructive', icon: <AlertTriangle className="h-3 w-3" /> },
+  resolved: { label: 'Resolvido', variant: 'outline', icon: <CheckCircle2 className="h-3 w-3" /> },
 };
 
 export default function DeadLetterQueue() {
@@ -147,52 +150,160 @@ export default function DeadLetterQueue() {
     return acc;
   }, {} as Record<string, number>) || {};
 
+  const totalEntries = entries?.length ?? 0;
+  const resolvedCount = statusCounts['resolved'] ?? 0;
+  const resolutionRate = totalEntries > 0 ? Math.round((resolvedCount / totalEntries) * 100) : 0;
+
+  // P2: Bulk actions
+  const bulkRetryMutation = useMutation({
+    mutationFn: async () => {
+      const pendingEntries = entries?.filter(e => e.status === 'pending' || e.status === 'exhausted') ?? [];
+      let successCount = 0;
+      
+      for (const entry of pendingEntries.slice(0, 10)) {
+        try {
+          await supabase.functions.invoke('create-job', {
+            body: {
+              agent_name: entry.agent_name,
+              job_type: entry.job_type,
+              payload: entry.payload,
+            }
+          });
+          
+          await supabase
+            .from('failed_jobs_dlq')
+            .update({ status: 'retrying', retry_count: entry.retry_count + 1 })
+            .eq('id', entry.id);
+          
+          successCount++;
+        } catch {
+          // Continue with next entry
+        }
+      }
+      
+      return { successCount, total: pendingEntries.length };
+    },
+    onSuccess: ({ successCount, total }) => {
+      toast.success(`${successCount} de ${Math.min(total, 10)} jobs reenviados`);
+      queryClient.invalidateQueries({ queryKey: ['dlq-entries'] });
+    },
+    onError: () => {
+      toast.error('Falha ao reenviar jobs em lote');
+    },
+  });
+
+  const triggerAutoRetry = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('process-dlq-retries', {
+        body: {}
+      });
+      
+      if (error) throw error;
+      
+      toast.success(`Processamento automático: ${data?.results?.retried ?? 0} jobs reenviados`);
+      queryClient.invalidateQueries({ queryKey: ['dlq-entries'] });
+    } catch (err) {
+      toast.error('Falha ao processar retries automáticos');
+    }
+  }, [queryClient]);
+
   return (
     <AdminPageLayout 
-      title="Dead Letter Queue" 
-      description="Monitor and manage failed jobs"
+      title="Fila de Tarefas Pendentes" 
+      description="Gerencie jobs que falharam e aguardam retry"
     >
       <div className="space-y-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* P2: Enhanced Summary Cards with Resolution Rate */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {Object.entries(statusConfig).map(([status, config]) => (
-            <Card key={status} className="cursor-pointer hover:bg-accent/50" onClick={() => setStatusFilter(status)}>
+            <Card 
+              key={status} 
+              className={`cursor-pointer transition-all hover:shadow-md ${statusFilter === status ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setStatusFilter(status)}
+            >
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground capitalize">{config.label}</span>
+                  <div className="flex items-center gap-2">
+                    {config.icon}
+                    <span className="text-sm text-muted-foreground">{config.label}</span>
+                  </div>
                   <Badge variant={config.variant}>{statusCounts[status] || 0}</Badge>
                 </div>
               </CardContent>
             </Card>
           ))}
-        </div>
-
-        {/* Controls */}
-        <div className="flex justify-between items-center">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="retrying">Retrying</SelectItem>
-              <SelectItem value="exhausted">Exhausted</SelectItem>
-              <SelectItem value="resolved">Resolved</SelectItem>
-            </SelectContent>
-          </Select>
           
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          {/* Resolution Rate Card */}
+          <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10">
+            <CardContent className="pt-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Taxa de Resolução</span>
+                  <span className="text-lg font-bold text-green-600">{resolutionRate}%</span>
+                </div>
+                <Progress value={resolutionRate} className="h-1" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Table */}
+        {/* P2: Enhanced Controls with Bulk Actions */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                <SelectItem value="pending">Aguardando</SelectItem>
+                <SelectItem value="retrying">Tentando</SelectItem>
+                <SelectItem value="exhausted">Esgotado</SelectItem>
+                <SelectItem value="resolved">Resolvido</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {/* P2: Trigger auto-retry */}
+            <Button 
+              variant="secondary" 
+              size="sm" 
+              onClick={triggerAutoRetry}
+              disabled={(statusCounts['pending'] ?? 0) === 0}
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              Processar Retries
+            </Button>
+            
+            {/* P2: Bulk retry */}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => bulkRetryMutation.mutate()}
+              disabled={bulkRetryMutation.isPending || ((statusCounts['pending'] ?? 0) + (statusCounts['exhausted'] ?? 0)) === 0}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reenviar Lote (até 10)
+            </Button>
+            
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
+        </div>
+
+        {/* P2: Enhanced Table with Better Descriptions */}
         <Card>
           <CardHeader>
-            <CardTitle>Failed Jobs</CardTitle>
-            <CardDescription>Jobs that failed and were moved to the dead letter queue</CardDescription>
+            <CardTitle>Jobs com Falha</CardTitle>
+            <CardDescription>
+              Jobs que falharam e foram movidos para a fila de retry. 
+              {(statusCounts['pending'] ?? 0) > 0 && (
+                <span className="text-primary"> {statusCounts['pending']} aguardando próxima tentativa.</span>
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -224,7 +335,8 @@ export default function DeadLetterQueue() {
                         <Badge variant="outline">{getJobTypeLabel(entry.job_type)}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statusConfig[entry.status]?.variant || 'secondary'}>
+                        <Badge variant={statusConfig[entry.status]?.variant || 'secondary'} className="flex items-center gap-1 w-fit">
+                          {statusConfig[entry.status]?.icon}
                           {statusConfig[entry.status]?.label || entry.status}
                         </Badge>
                       </TableCell>

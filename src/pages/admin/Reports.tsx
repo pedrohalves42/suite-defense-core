@@ -128,6 +128,8 @@ export default function Reports() {
   const handleExportPDF = async () => {
     setIsGenerating(true);
     try {
+      toast.info("Gerando relatório PDF...");
+      
       const params = new URLSearchParams({ format: "json" });
       if (selectedAgent !== "all") {
         params.append("agent_id", selectedAgent);
@@ -138,15 +140,31 @@ export default function Reports() {
         { method: "GET" }
       );
 
-      if (error) throw error;
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(`Erro ao buscar dados: ${error.message}`);
+      }
+
+      if (!data) {
+        throw new Error("Nenhum dado retornado do servidor");
+      }
 
       const reportData = data as SecurityReport;
       
-      // Dynamic import of jsPDF
-      const { jsPDF } = await import('jspdf');
-      const autoTableModule = await import('jspdf-autotable');
+      // Dynamic import of jsPDF with error handling
+      let jsPDFClass: any;
+      let autoTable: any;
+      try {
+        const jsPDFModule = await import('jspdf');
+        jsPDFClass = jsPDFModule.jsPDF;
+        const autoTableModule = await import('jspdf-autotable');
+        autoTable = autoTableModule.default;
+      } catch (importError) {
+        console.error("Failed to import jsPDF:", importError);
+        throw new Error("Erro ao carregar biblioteca de PDF. Tente recarregar a página.");
+      }
       
-      const doc = new jsPDF();
+      const doc = new jsPDFClass();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       let yPos = 20;
@@ -198,7 +216,7 @@ export default function Reports() {
         ['Scans Maliciosos', `${reportData.statistics.malicious_scans}/${reportData.statistics.total_scans}`],
       ];
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Métrica', 'Valor']],
         body: summaryData,
@@ -231,7 +249,7 @@ export default function Reports() {
           sw.risk_level || 'unknown'
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['Nome', 'Versão', 'Fornecedor', 'Risco']],
           body: softwareData,
@@ -276,7 +294,7 @@ export default function Reports() {
           (vuln.description || '-').substring(0, 40),
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['Severidade', 'Título', 'Descrição']],
           body: vulnData,
@@ -312,7 +330,7 @@ export default function Reports() {
           av.threats_found || '0'
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['Engine', 'Versão', 'Status', 'Ameaças']],
           body: avData,
@@ -344,7 +362,7 @@ export default function Reports() {
           new Date(web.visited_at).toLocaleDateString('pt-BR')
         ]);
 
-        (doc as any).autoTable({
+        autoTable(doc, {
           startY: yPos,
           head: [['Domínio', 'Fonte', 'Data']],
           body: webData,

@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.25-BLOCKED-WEBSITES
+    CyberShield Agent - Windows v3.10.30-UPTIME
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.25-BLOCKED-WEBSITES"
+    [string]$AgentVersion = "v3.10.30-UPTIME"
 )
 
 $ErrorActionPreference = "Stop"
@@ -342,6 +342,27 @@ function Invoke-SecureRequest {
                 throw
             }
 
+            # P1 FIX: Tratamento especial para rate limiting (429)
+            if ($statusCode -eq 429) {
+                # Exponential backoff mais agressivo para rate limiting
+                $rateLimitDelay = $retryDelay * 5
+                Write-Log "[RATE-LIMIT] 429 Too Many Requests - aguardando $rateLimitDelay segundos..." "WARN"
+                Start-Sleep -Seconds $rateLimitDelay
+                $retryCount++
+                $retryDelay *= 2
+                
+                if ($retryCount -ge $MaxRetries) {
+                    Write-Log "[ERROR] Rate limit excedido apos $MaxRetries tentativas em $uri" "ERROR"
+                    # Retornar erro sem throw para permitir que o job continue
+                    return [pscustomobject]@{
+                        Success    = $false
+                        StatusCode = 429
+                        Body       = "Rate limit exceeded"
+                    }
+                }
+                continue
+            }
+
             if ($retryCount -ge $MaxRetries) {
                 Write-Log "[ERROR] Falha definitiva apos $MaxRetries tentativas em $uri" "ERROR"
                 throw
@@ -433,7 +454,22 @@ function Invoke-ReportJob {
         $report.memory_percent = $memUsage
         $report.disk_percent   = $diskPercent
 
-        Write-Log "[REPORT] Metricas coletadas: CPU=$($report.cpu_percent)%, MEM=$($report.memory_percent)%, DISK=$($report.disk_percent)%" "INFO"
+        # Uptime - calcular tempo desde ultimo boot via WMI
+        try {
+            $bootTime = (Get-WmiObject Win32_OperatingSystem).LastBootUpTime
+            $boot = [Management.ManagementDateTimeConverter]::ToDateTime($bootTime)
+            $uptimeSeconds = [math]::Floor((New-TimeSpan -Start $boot -End (Get-Date)).TotalSeconds)
+            $lastBootIso = $boot.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        } catch {
+            Write-Log "[METRICS] Falha ao obter uptime via WMI, usando 0" "WARN"
+            $uptimeSeconds = 0
+            $lastBootIso = $null
+        }
+
+        $report.uptime_seconds = $uptimeSeconds
+        $report.last_boot_time = $lastBootIso
+
+        Write-Log "[REPORT] Metricas coletadas: CPU=$($report.cpu_percent)%, MEM=$($report.memory_percent)%, DISK=$($report.disk_percent)%, UPTIME=${uptimeSeconds}s" "INFO"
 
         return @{
             success = $true
@@ -921,8 +957,18 @@ function Invoke-WebActivityJob {
             }
         }
 
-        # Deduplicate and limit
-        $uniqueItems = $items | Sort-Object -Property domain -Unique | Select-Object -First $maxDomains
+        # FIX v3.10.28: Deduplicacao robusta usando hashtable (Sort-Object -Unique nao funciona com hashtables)
+        # Usa domain como chave para garantir unicidade real
+        $dedupMap = @{}
+        foreach ($item in $items) {
+            $key = $item.domain
+            if (-not $dedupMap.ContainsKey($key)) {
+                $dedupMap[$key] = $item
+            }
+        }
+        $uniqueItems = @($dedupMap.Values) | Select-Object -First $maxDomains
+        
+        Write-Log "[WEB-ACTIVITY] Deduplicacao: $($items.Count) items -> $($uniqueItems.Count) unicos" "INFO"
 
         if (-not $uniqueItems.Count) {
             Write-Log "[WEB-ACTIVITY] Nenhum dominio encontrado em nenhuma fonte" "INFO"
@@ -1764,15 +1810,56 @@ function Execute-Job {
                         fileHash   = $fileHash
                     }
 
-                    # Chama backend scan-virus
-                    $scanResult = Invoke-SecureRequest `
-                        -Path "/functions/v1/scan-virus" `
-                        -Method POST `
-                        -Body $scanBody `
-                        -TimeoutSec 60
-
-                    if (-not $scanResult.Success) {
-                        throw "Falha ao chamar scan-virus: HTTP $($scanResult.StatusCode)"
+                    # Chama backend scan-virus COM RETRY E EXPONENTIAL BACKOFF
+                    # Implementado em v3.10.27 para reduzir taxa de falha de 28% para <5%
+                    $scanResult = $null
+                    $scanMaxRetries = 4
+                    $scanRetryDelay = 5  # segundos iniciais
+                    $scanAttempt = 0
+                    
+                    while ($scanAttempt -lt $scanMaxRetries) {
+                        $scanAttempt++
+                        try {
+                            Write-Log "[SCAN] Tentativa $scanAttempt/$scanMaxRetries - chamando scan-virus..." "INFO"
+                            
+                            $scanResult = Invoke-SecureRequest `
+                                -Path "/functions/v1/scan-virus" `
+                                -Method POST `
+                                -Body $scanBody `
+                                -TimeoutSec 60
+                            
+                            if ($scanResult.Success) {
+                                Write-Log "[SCAN] scan-virus respondeu com sucesso na tentativa $scanAttempt" "SUCCESS"
+                                break
+                            }
+                            
+                            # Check for rate limiting (429)
+                            if ($scanResult.StatusCode -eq 429) {
+                                $waitSeconds = $scanRetryDelay * [Math]::Pow(2, $scanAttempt - 1)
+                                Write-Log "[SCAN] Rate limit (429) detectado. Aguardando $waitSeconds segundos antes de retry..." "WARN"
+                                Start-Sleep -Seconds $waitSeconds
+                                continue
+                            }
+                            
+                            # Other errors - also retry with backoff
+                            $waitSeconds = $scanRetryDelay * [Math]::Pow(2, $scanAttempt - 1)
+                            Write-Log "[SCAN] Erro HTTP $($scanResult.StatusCode). Aguardando $waitSeconds segundos..." "WARN"
+                            Start-Sleep -Seconds $waitSeconds
+                            
+                        } catch {
+                            Write-Log "[SCAN] Excecao na tentativa $scanAttempt`: $($_.Exception.Message)" "WARN"
+                            if ($scanAttempt -lt $scanMaxRetries) {
+                                $waitSeconds = $scanRetryDelay * [Math]::Pow(2, $scanAttempt - 1)
+                                Write-Log "[SCAN] Aguardando $waitSeconds segundos antes de retry..." "WARN"
+                                Start-Sleep -Seconds $waitSeconds
+                            }
+                        }
+                    }
+                    
+                    # Verificar se conseguimos resultado apos todas as tentativas
+                    if ($null -eq $scanResult -or -not $scanResult.Success) {
+                        $finalStatusCode = if ($null -ne $scanResult) { $scanResult.StatusCode } else { "N/A" }
+                        throw "Falha ao chamar scan-virus apos $scanMaxRetries tentativas: HTTP $finalStatusCode"
                     }
 
                     $scanData = $scanResult.Body | ConvertFrom-Json
@@ -1935,6 +2022,7 @@ function Execute-Job {
                     Start-ScheduledTask -TaskName "CyberShieldAgent"
                     
                     Write-Log "[SUCCESS] Task recriada e iniciada com path correto" "SUCCESS"
+                    Write-Log "[INFO] Encerrando processo atual para nova versao assumir..." "INFO"
 
                     $output = @{
                         message     = "Agent updated successfully with smart path detection"
@@ -1943,7 +2031,10 @@ function Execute-Job {
                         sha256      = $actualHash
                         restartedAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
-                    break
+                    
+                    # CRITICAL: Encerrar este processo para que a nova task com v3.10.29 assuma
+                    # O exit 0 aqui e SEGURO pois a nova task ja foi iniciada com Start-ScheduledTask
+                    exit 0
                 }
                 catch {
                     throw $_.Exception.Message
@@ -2277,11 +2368,13 @@ try {
                                 memory_usage_percent = $metricsData.memory_percent
                                 disk_usage_percent = $metricsData.disk_percent
                                 hostname = $metricsData.hostname
+                                uptime_seconds = $metricsData.uptime_seconds
+                                last_boot_time = $metricsData.last_boot_time
                             }
                             
                             $sent = Send-SystemMetrics -Metrics $payload
                             if ($sent) {
-                                Write-Log "[SUCCESS] Metricas enviadas: CPU=$($metricsData.cpu_percent)%, RAM=$($metricsData.memory_percent)%, Disco=$($metricsData.disk_percent)%" "SUCCESS"
+                                Write-Log "[SUCCESS] Metricas enviadas: CPU=$($metricsData.cpu_percent)%, RAM=$($metricsData.memory_percent)%, Disco=$($metricsData.disk_percent)%, Uptime=$($metricsData.uptime_seconds)s" "SUCCESS"
                             }
                         } catch {
                             Write-Log "[WARN] Falha ao parsear metricas: $($_.Exception.Message)" "WARN"

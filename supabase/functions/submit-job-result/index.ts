@@ -3,11 +3,16 @@ import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logSecurityEvent } from '../_shared/security-log.ts'
+import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 
 Deno.serve(async (req) => {
+  // QUAL-01: Proper HTTP method validation
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return handleCorsPreflightRequest()
   }
+  
+  const methodError = validateHttpMethod(req, ['POST'])
+  if (methodError) return methodError
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,

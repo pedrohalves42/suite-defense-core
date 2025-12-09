@@ -51,9 +51,12 @@ export default function RateLimitingStats() {
       
       if (error) throw error;
       
+      // A Edge Function retorna diretamente o objeto, não data.data
+      const stats = data as RateLimitStats;
+      
       // Garantir que sempre retornamos um objeto válido
-      if (!data?.data) {
-        console.error('Rate limit stats response is empty:', data);
+      if (!stats || !stats.totals) {
+        console.warn('Rate limit stats response is empty or invalid:', data);
         return {
           summary: [],
           top_blocked: [],
@@ -68,7 +71,7 @@ export default function RateLimitingStats() {
         } as RateLimitStats;
       }
       
-      return data.data as RateLimitStats;
+      return stats;
     },
     refetchInterval: 30000, // Auto-refresh every 30 seconds
   });

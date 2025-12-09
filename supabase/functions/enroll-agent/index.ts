@@ -5,14 +5,19 @@ import { createAuditLog } from '../_shared/audit.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { checkQuotaAvailable } from '../_shared/quota.ts';
 import { logger } from '../_shared/logger.ts';
+import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts';
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   const startTime = Date.now();
   
+  // QUAL-01: Proper HTTP method validation
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflightRequest();
   }
+  
+  const methodError = validateHttpMethod(req, ['POST']);
+  if (methodError) return methodError;
 
   logger.info(`[${requestId}] Starting enrollment request`);
 

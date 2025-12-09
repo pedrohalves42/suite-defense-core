@@ -3,6 +3,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
+import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -26,9 +27,13 @@ interface SystemMetrics {
 }
 
 Deno.serve(async (req) => {
+  // QUAL-01: Proper HTTP method validation
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflightRequest();
   }
+  
+  const methodError = validateHttpMethod(req, ['POST']);
+  if (methodError) return methodError;
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -181,8 +186,8 @@ Deno.serve(async (req) => {
       return !!recentAlert;
     };
 
-    // CPU: Threshold 95% (increased from 90%)
-    if (metrics.cpu_usage_percent && metrics.cpu_usage_percent > 95) {
+    // CPU: Threshold 98% (increased from 95% to reduce false positives from momentary spikes)
+    if (metrics.cpu_usage_percent && metrics.cpu_usage_percent > 98) {
       if (!hasRecentAlert('high_cpu')) {
         logger.info('High CPU usage detected');
         alerts.push({
@@ -191,7 +196,7 @@ Deno.serve(async (req) => {
           alert_type: 'high_cpu',
           severity: 'critical',
           title: `CPU Critico: ${agent.agent_name}`,
-          message: `Uso de CPU em ${metrics.cpu_usage_percent.toFixed(1)}% (limite: 95%)`,
+          message: `Uso de CPU em ${metrics.cpu_usage_percent.toFixed(1)}% (limite: 98%)`,
           details: { cpu_usage: metrics.cpu_usage_percent },
         });
       }

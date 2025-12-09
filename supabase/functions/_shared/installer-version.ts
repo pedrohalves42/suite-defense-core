@@ -7,12 +7,26 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.25-BLOCKED-WEBSITES';
-export const INSTALLER_VERSION_LINUX = 'v3.10.25-BLOCKED-WEBSITES';
-export const INSTALLER_VERSION_MACOS = 'v3.10.25-BLOCKED-WEBSITES';
-export const LAST_UPDATED = '2025-12-08T14:00:00Z'; // macOS sync with Windows/Linux features
+export const INSTALLER_VERSION = 'v3.10.30-UPTIME';
+export const INSTALLER_VERSION_LINUX = 'v3.10.30-UPTIME';
+export const INSTALLER_VERSION_MACOS = 'v3.10.30-UPTIME';
+export const LAST_UPDATED = '2025-12-09T23:30:00Z'; // All platforms synced to v3.10.30-UPTIME
 
 export const CHANGES = [
+  '[v3.10.30-UPTIME] FEATURE: Coleta de uptime_seconds e last_boot_time para todos os agentes',
+  '[v3.10.30-UPTIME] FEATURE: Windows usa WMI Win32_OperatingSystem.LastBootUpTime',
+  '[v3.10.30-UPTIME] FEATURE: Linux usa /proc/uptime para calcular uptime_seconds',
+  '[v3.10.30-UPTIME] FEATURE: macOS usa sysctl kern.boottime para calcular uptime',
+  '[v3.10.30-UPTIME] FIX: Dashboard agora exibe coluna "Tempo Ligado" com valor real',
+  '[v3.10.29-FORCED-RESTART] CRITICAL FIX: update_agent agora encerra processo atual com exit 0 apos iniciar nova task',
+  '[v3.10.29-FORCED-RESTART] CRITICAL FIX: Nova versao assume imediatamente, nao precisa mais aguardar reboot',
+  '[v3.10.28-WEB-ACTIVITY-DEDUP-FIX] P0 FIX: Deduplicacao de web activity usando hashtable ao inves de Sort-Object -Unique',
+  '[v3.10.28-WEB-ACTIVITY-DEDUP-FIX] P0 FIX: Sort-Object -Unique nao funciona corretamente com hashtables',
+  '[v3.10.28-WEB-ACTIVITY-DEDUP-FIX] P0 FIX: Edge Function submit-web-activity agora loga payload invalido detalhadamente',
+  '[v3.10.27-SCAN-RETRY-BACKOFF] P1 FIX: Scan handler com retry e exponential backoff para reduzir falhas',
+  '[v3.10.27-SCAN-RETRY-BACKOFF] P1 FIX: 4 tentativas com delays de 5s, 10s, 20s, 40s para 429/erros',
+  '[v3.10.27-SCAN-RETRY-BACKOFF] P1 FIX: Log detalhado de cada tentativa de scan para debugging',
+  '[v3.10.26-RATE-LIMIT-BACKOFF] P1 FIX: Exponential backoff para erros 429 (rate limiting)',
   '[v3.10.25-LINUX-SYNC] FEATURE: Agente Linux sincronizado com features do Windows v3.10.25',
   '[v3.10.25-LINUX-SYNC] FEATURE: sync_blocked_websites - sincroniza dominios bloqueados em /opt/cybershield/blocked_websites.json',
   '[v3.10.25-LINUX-SYNC] FEATURE: update_agent com smart path detection (PSCommandPath, AgentName, glob, fallback)',

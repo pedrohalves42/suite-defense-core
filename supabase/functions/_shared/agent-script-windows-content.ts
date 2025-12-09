@@ -2,12 +2,16 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.25-BLOCKED-WEBSITES
+ * Versao: v3.10.29-FORCED-RESTART
  */
+
+export function getAgentScriptWindows(): string {
+  return AGENT_SCRIPT_WINDOWS_CONTENT;
+}
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.25-BLOCKED-WEBSITES
+    CyberShield Agent - Windows v3.10.29-FORCED-RESTART
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -45,7 +49,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.25-BLOCKED-WEBSITES"
+    [string]\$AgentVersion = "v3.10.29-FORCED-RESTART"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -348,6 +352,27 @@ function Invoke-SecureRequest {
             if (\$statusCode -eq 401) {
                 Write-Log "[ERROR] Erro de autenticacao (401). Verifique AgentToken / HmacSecret / clock." "ERROR"
                 throw
+            }
+
+            # P1 FIX: Tratamento especial para rate limiting (429)
+            if (\$statusCode -eq 429) {
+                # Exponential backoff mais agressivo para rate limiting
+                \$rateLimitDelay = \$retryDelay * 5
+                Write-Log "[RATE-LIMIT] 429 Too Many Requests - aguardando \$rateLimitDelay segundos..." "WARN"
+                Start-Sleep -Seconds \$rateLimitDelay
+                \$retryCount++
+                \$retryDelay *= 2
+                
+                if (\$retryCount -ge \$MaxRetries) {
+                    Write-Log "[ERROR] Rate limit excedido apos \$MaxRetries tentativas em \$uri" "ERROR"
+                    # Retornar erro sem throw para permitir que o job continue
+                    return [pscustomobject]@{
+                        Success    = \$false
+                        StatusCode = 429
+                        Body       = "Rate limit exceeded"
+                    }
+                }
+                continue
             }
 
             if (\$retryCount -ge \$MaxRetries) {
@@ -929,40 +954,46 @@ function Invoke-WebActivityJob {
             }
         }
 
-        # Deduplicate and limit
-        \$uniqueItems = \$items | Sort-Object -Property domain -Unique | Select-Object -First \$maxDomains
+        # 3. Deduplicar usando Hashtable (P0 FIX v3.10.28)
+        Write-Log "[WEB-ACTIVITY] Deduplicando \$(\$items.Count) itens usando hashtable..." "INFO"
+        \$uniqueItemsHash = @{}
+        foreach (\$item in \$items) {
+            \$key = \$item.domain
+            if (-not \$uniqueItemsHash.ContainsKey(\$key)) {
+                \$uniqueItemsHash[\$key] = \$item
+            }
+        }
+        \$uniqueItems = @(\$uniqueItemsHash.Values)
+        Write-Log "[WEB-ACTIVITY] Apos deduplicacao: \$(\$uniqueItems.Count) dominios unicos" "INFO"
 
-        if (-not \$uniqueItems.Count) {
-            Write-Log "[WEB-ACTIVITY] Nenhum dominio encontrado em nenhuma fonte" "INFO"
+        # Limitar ao maximo configurado
+        if (\$uniqueItems.Count -gt \$maxDomains) {
+            \$uniqueItems = \$uniqueItems | Select-Object -First \$maxDomains
+        }
 
-            return @{
-                success = \$true
-                output  = "Nenhum dominio encontrado"
+        Write-Log "[WEB-ACTIVITY] Total de dominios a enviar: \$(\$uniqueItems.Count)" "SUCCESS"
+
+        if (\$uniqueItems.Count -gt 0) {
+            # P0 FIX v3.10.28: Enviar como array, nao hashtable
+            \$body = @{
+                agent_id = \$Job.agent_id
+                items    = @(\$uniqueItems)
+            }
+
+            \$result = Invoke-SecureRequest \`
+                -Path "/functions/v1/submit-web-activity" \`
+                -Method "POST" \`
+                -Body \$body \`
+                -TimeoutSec 30
+
+            if (-not \$result.Success) {
+                throw "Falha ao enviar atividade web (HTTP \$(\$result.StatusCode))"
             }
         }
 
-        Write-Log "[WEB-ACTIVITY] Total de dominios unicos coletados: \$(\$uniqueItems.Count)" "INFO"
-
-        \$body = @{
-            agent_id = \$Job.agent_id
-            items    = \$uniqueItems  # FIX v3.10.22: Usar lista deduplicada ao inves de \$items
-        }
-
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/submit-web-activity" \`
-            -Method "POST" \`
-            -Body \$body \`
-            -TimeoutSec 30
-
-        if (-not \$result.Success) {
-            throw "Falha ao enviar atividade web (HTTP \$(\$result.StatusCode))"
-        }
-
-        Write-Log "[WEB-ACTIVITY] Atividade enviada. Dominios unicos: \$(\$uniqueItems.Count)" "SUCCESS"
-
         return @{
             success = \$true
-            output  = "Atividade web enviada. Dominios unicos: \$(\$uniqueItems.Count)"
+            output  = "Atividade web coletada. Dominios: \$(\$uniqueItems.Count)"
         }
     }
     catch {
@@ -1407,7 +1438,7 @@ function Invoke-SyncBlockedWebsitesJob {
                 }
                 \$newBlockLines += \$endMarker
                 
-                \$newHostsContent = "\$hostsContent\`n\`n\$(\$newBlockLines -join "\`n")"
+                \$newHostsContent = "\$hostsContent\`n\`n\$(\$newBlockLines -join \"\`n\")"
                 Set-Content -Path \$hostsPath -Value \$newHostsContent -Force -Encoding ASCII
                 
                 Write-Log "[BLOCKED-SITES] Hosts file atualizado com \$hostsModified dominios" "SUCCESS"
@@ -1423,11 +1454,10 @@ function Invoke-SyncBlockedWebsitesJob {
         return @{
             success = \$true
             output = @{
-                message = "Sites bloqueados sincronizados com sucesso"
+                message = "Sites bloqueados sincronizados"
                 domains_count = \$blockedDomains.Count
                 hosts_modified = \$hostsModified
-                list_path = \$blockedListPath
-                synced_at = [DateTime]::UtcNow.ToString("o")
+                applied_to_hosts = \$applyToHosts
             }
         }
     }
@@ -1442,38 +1472,25 @@ function Invoke-SyncBlockedWebsitesJob {
 }
 
 # ============================================
-#  POST INSTALLATION
+#  POST INSTALLATION EVENT
 # ============================================
 function Send-PostInstallationEvent {
     param(
-        [bool]\$Success = \$true,
-        [string]\$ErrorMessage = "",
-        [int]\$InstallationTimeSeconds = 0
+        [Parameter(Mandatory = \$true)]
+        [bool]\$Success,
+
+        [Parameter(Mandatory = \$true)]
+        [int]\$InstallationTimeSeconds
     )
 
-    \$sys = Get-SystemInfo
-
-    # PowerShell 5.1 compatibility: calculate event_type outside hashtable
-    \$eventType = if (\$Success) { 
-        "post_installation" 
-    } else { 
-        "post_installation_unverified" 
-    }
-
     \$body = @{
-        agent_name                = \$Global:AgentName
-        event_type                = \$eventType
-        platform                  = "windows"
-        installation_method       = "one_click"
-        success                   = \$Success
+        event_type       = "post_installation"
+        agent_name       = \$Global:AgentName
+        success          = \$Success
+        agent_version    = \$Global:AgentVersion
         installation_time_seconds = \$InstallationTimeSeconds
-        error_message             = \$ErrorMessage
-        agent_version             = \$Global:AgentVersion
-        network_connectivity      = \$true
-        metadata                  = \$sys
+        timestamp        = (Get-Date).ToUniversalTime().ToString("o")
     }
-
-    Write-Log "Enviando post_installation..." "INFO"
 
     try {
         \$result = Invoke-SecureRequest \`
@@ -1673,7 +1690,7 @@ function Execute-Job {
                 try {
                     Write-Log "[SCAN] Job type 'scan' recebido" "INFO"
 
-                    # Payload esperado: { "filePath": "C:\\\\path\\\\file.exe", "tenantId": "uuid" }
+                    # Payload esperado: { "filePath": "C:\\path\\file.exe", "tenantId": "uuid" }
                     \$filePath = \$payload.filePath
                     \$tenantId = \$payload.tenantId
 
@@ -1682,7 +1699,7 @@ function Execute-Job {
                     }
 
                     # Expandir variaveis de ambiente estilo Windows (%VAR%)
-                    # CRITICAL FIX v3.10.18: %USERPROFILE% expande para todos os usuarios reais, nao SYSTEM
+                    # CRITICAL FIX v3.10.18: %USERPROFILE% expande para usuarios reais, nao SYSTEM
                     if (\$filePath -match '%USERPROFILE%') {
                         Write-Log "[SCAN] Detectado %USERPROFILE%, expandindo para usuarios reais..." "DEBUG"
                         
@@ -1772,15 +1789,56 @@ function Execute-Job {
                         fileHash   = \$fileHash
                     }
 
-                    # Chama backend scan-virus
-                    \$scanResult = Invoke-SecureRequest \`
-                        -Path "/functions/v1/scan-virus" \`
-                        -Method POST \`
-                        -Body \$scanBody \`
-                        -TimeoutSec 60
-
-                    if (-not \$scanResult.Success) {
-                        throw "Falha ao chamar scan-virus: HTTP \$(\$scanResult.StatusCode)"
+                    # Chama backend scan-virus COM RETRY E EXPONENTIAL BACKOFF
+                    # Implementado em v3.10.27 para reduzir taxa de falha de 28% para <5%
+                    \$scanResult = \$null
+                    \$scanMaxRetries = 4
+                    \$scanRetryDelay = 5  # segundos iniciais
+                    \$scanAttempt = 0
+                    
+                    while (\$scanAttempt -lt \$scanMaxRetries) {
+                        \$scanAttempt++
+                        try {
+                            Write-Log "[SCAN] Tentativa \$scanAttempt/\$scanMaxRetries - chamando scan-virus..." "INFO"
+                            
+                            \$scanResult = Invoke-SecureRequest \`
+                                -Path "/functions/v1/scan-virus" \`
+                                -Method POST \`
+                                -Body \$scanBody \`
+                                -TimeoutSec 60
+                            
+                            if (\$scanResult.Success) {
+                                Write-Log "[SCAN] scan-virus respondeu com sucesso na tentativa \$scanAttempt" "SUCCESS"
+                                break
+                            }
+                            
+                            # Check for rate limiting (429)
+                            if (\$scanResult.StatusCode -eq 429) {
+                                \$waitSeconds = \$scanRetryDelay * [Math]::Pow(2, \$scanAttempt - 1)
+                                Write-Log "[SCAN] Rate limit (429) detectado. Aguardando \$waitSeconds segundos antes de retry..." "WARN"
+                                Start-Sleep -Seconds \$waitSeconds
+                                continue
+                            }
+                            
+                            # Other errors - also retry with backoff
+                            \$waitSeconds = \$scanRetryDelay * [Math]::Pow(2, \$scanAttempt - 1)
+                            Write-Log "[SCAN] Erro HTTP \$(\$scanResult.StatusCode). Aguardando \$waitSeconds segundos..." "WARN"
+                            Start-Sleep -Seconds \$waitSeconds
+                            
+                        } catch {
+                            Write-Log "[SCAN] Excecao na tentativa \$scanAttempt\`: \$(\$_.Exception.Message)" "WARN"
+                            if (\$scanAttempt -lt \$scanMaxRetries) {
+                                \$waitSeconds = \$scanRetryDelay * [Math]::Pow(2, \$scanAttempt - 1)
+                                Write-Log "[SCAN] Aguardando \$waitSeconds segundos antes de retry..." "WARN"
+                                Start-Sleep -Seconds \$waitSeconds
+                            }
+                        }
+                    }
+                    
+                    # Verificar se conseguimos resultado apos todas as tentativas
+                    if (\$null -eq \$scanResult -or -not \$scanResult.Success) {
+                        \$finalStatusCode = if (\$null -ne \$scanResult) { \$scanResult.StatusCode } else { "N/A" }
+                        throw "Falha ao chamar scan-virus apos \$scanMaxRetries tentativas: HTTP \$finalStatusCode"
                     }
 
                     \$scanData = \$scanResult.Body | ConvertFrom-Json
@@ -1826,7 +1884,7 @@ function Execute-Job {
             }
             "update_agent" {
                 try {
-                    Write-Log "[INFO] Job 'update_agent' recebido - SMART UPDATE v3.10.24" "INFO"
+                    Write-Log "[INFO] Job 'update_agent' recebido - SMART UPDATE v3.10.29" "INFO"
 
                     # Chama serve-agent-update
                     \$updateResult = Invoke-SecureRequest \`
@@ -1943,6 +2001,7 @@ function Execute-Job {
                     Start-ScheduledTask -TaskName "CyberShieldAgent"
                     
                     Write-Log "[SUCCESS] Task recriada e iniciada com path correto" "SUCCESS"
+                    Write-Log "[INFO] Encerrando processo atual para nova versao assumir..." "INFO"
 
                     \$output = @{
                         message     = "Agent updated successfully with smart path detection"
@@ -1951,7 +2010,10 @@ function Execute-Job {
                         sha256      = \$actualHash
                         restartedAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
-                    break
+                    
+                    # CRITICAL: Encerrar este processo para que a nova task com v3.10.29 assuma
+                    # O exit 0 aqui e SEGURO pois a nova task ja foi iniciada com Start-ScheduledTask
+                    exit 0
                 }
                 catch {
                     throw \$_.Exception.Message
@@ -2323,7 +2385,3 @@ catch {
     exit 1
 }
 `;
-
-export function getAgentScriptWindows(): string {
-  return AGENT_SCRIPT_WINDOWS_CONTENT;
-}

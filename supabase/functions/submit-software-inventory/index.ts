@@ -3,6 +3,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
+import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -42,9 +43,13 @@ interface InventoryPayload {
 }
 
 Deno.serve(async (req) => {
+  // QUAL-01: Proper HTTP method validation
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return handleCorsPreflightRequest();
   }
+  
+  const methodError = validateHttpMethod(req, ['POST']);
+  if (methodError) return methodError;
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);

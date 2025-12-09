@@ -379,3 +379,7 @@ schedule = "0 3 * * *"
 
 [functions.send-security-notification]
 verify_jwt = false
+
+# === Scheduled Reports ===
+[functions.send-scheduled-report]
+verify_jwt = false
