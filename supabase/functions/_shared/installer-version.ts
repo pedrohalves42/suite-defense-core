@@ -7,12 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.27-SCAN-RETRY-BACKOFF';
-export const INSTALLER_VERSION_LINUX = 'v3.10.27-SCAN-RETRY-BACKOFF';
-export const INSTALLER_VERSION_MACOS = 'v3.10.27-SCAN-RETRY-BACKOFF';
-export const LAST_UPDATED = '2025-12-08T18:00:00Z'; // P1 FIX: scan retry with exponential backoff
+export const INSTALLER_VERSION = 'v3.10.28-WEB-ACTIVITY-DEDUP-FIX';
+export const INSTALLER_VERSION_LINUX = 'v3.10.28-WEB-ACTIVITY-DEDUP-FIX';
+export const INSTALLER_VERSION_MACOS = 'v3.10.28-WEB-ACTIVITY-DEDUP-FIX';
+export const LAST_UPDATED = '2025-12-09T00:30:00Z'; // P0 FIX: web activity deduplication fix
 
 export const CHANGES = [
+  '[v3.10.28-WEB-ACTIVITY-DEDUP-FIX] P0 FIX: Deduplicacao de web activity usando hashtable ao inves de Sort-Object -Unique',
+  '[v3.10.28-WEB-ACTIVITY-DEDUP-FIX] P0 FIX: Sort-Object -Unique nao funciona corretamente com hashtables',
+  '[v3.10.28-WEB-ACTIVITY-DEDUP-FIX] P0 FIX: Edge Function submit-web-activity agora loga payload invalido detalhadamente',
   '[v3.10.27-SCAN-RETRY-BACKOFF] P1 FIX: Scan handler com retry e exponential backoff para reduzir falhas',
   '[v3.10.27-SCAN-RETRY-BACKOFF] P1 FIX: 4 tentativas com delays de 5s, 10s, 20s, 40s para 429/erros',
   '[v3.10.27-SCAN-RETRY-BACKOFF] P1 FIX: Log detalhado de cada tentativa de scan para debugging',

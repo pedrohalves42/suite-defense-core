@@ -110,14 +110,48 @@ Deno.serve(async (req) => {
       );
     }
 
-    const payload: WebActivityPayload = await req.json();
+    let payload: WebActivityPayload;
+    let rawBody: string = '';
+    
+    try {
+      rawBody = await req.text();
+      payload = JSON.parse(rawBody);
+    } catch (parseError) {
+      // P0 FIX: Log detalhado quando payload e invalido
+      logger.error('Failed to parse web activity payload', { 
+        error: parseError instanceof Error ? parseError.message : String(parseError),
+        rawBodyLength: rawBody.length,
+        rawBodyPreview: rawBody.substring(0, 500),
+        agentName: agent.agent_name
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid JSON payload',
+          details: 'Failed to parse request body',
+          bodyLength: rawBody.length
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Use agent_id from payload if provided, otherwise use authenticated agent's id
     const effectiveAgentId = payload.agent_id || agent.id;
 
     if (!effectiveAgentId || !Array.isArray(payload.items)) {
+      // P0 FIX: Log detalhado quando payload nao tem items
+      logger.error('Invalid web activity payload structure', { 
+        hasAgentId: !!effectiveAgentId,
+        hasItems: !!payload.items,
+        isArray: Array.isArray(payload.items),
+        payloadKeys: Object.keys(payload || {}),
+        rawBodyLength: rawBody.length,
+        agentName: agent.agent_name
+      });
       return new Response(
-        JSON.stringify({ error: 'items array is required' }),
+        JSON.stringify({ 
+          error: 'items array is required',
+          details: `agent_id: ${!!effectiveAgentId}, items: ${!!payload.items}, isArray: ${Array.isArray(payload.items)}`
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
