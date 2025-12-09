@@ -2760,6 +2760,111 @@ export type Database = {
         }
         Relationships: []
       }
+      hmac_signatures_2025_12: {
+        Row: {
+          agent_name: string
+          id: string
+          signature: string
+          used_at: string
+        }
+        Insert: {
+          agent_name: string
+          id?: string
+          signature: string
+          used_at?: string
+        }
+        Update: {
+          agent_name?: string
+          id?: string
+          signature?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
+      hmac_signatures_2026_01: {
+        Row: {
+          agent_name: string
+          id: string
+          signature: string
+          used_at: string
+        }
+        Insert: {
+          agent_name: string
+          id?: string
+          signature: string
+          used_at?: string
+        }
+        Update: {
+          agent_name?: string
+          id?: string
+          signature?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
+      hmac_signatures_2026_02: {
+        Row: {
+          agent_name: string
+          id: string
+          signature: string
+          used_at: string
+        }
+        Insert: {
+          agent_name: string
+          id?: string
+          signature: string
+          used_at?: string
+        }
+        Update: {
+          agent_name?: string
+          id?: string
+          signature?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
+      hmac_signatures_2026_03: {
+        Row: {
+          agent_name: string
+          id: string
+          signature: string
+          used_at: string
+        }
+        Insert: {
+          agent_name: string
+          id?: string
+          signature: string
+          used_at?: string
+        }
+        Update: {
+          agent_name?: string
+          id?: string
+          signature?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
+      hmac_signatures_partitioned: {
+        Row: {
+          agent_name: string
+          id: string
+          signature: string
+          used_at: string
+        }
+        Insert: {
+          agent_name: string
+          id?: string
+          signature: string
+          used_at?: string
+        }
+        Update: {
+          agent_name?: string
+          id?: string
+          signature?: string
+          used_at?: string
+        }
+        Relationships: []
+      }
       installation_analytics: {
         Row: {
           agent_id: string | null
