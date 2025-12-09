@@ -2,12 +2,12 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.27-SCAN-RETRY-BACKOFF
+ * Versao: v3.10.28-WEB-ACTIVITY-DEDUP-FIX
  */
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.27-SCAN-RETRY-BACKOFF
+    CyberShield Agent - Windows v3.10.28-WEB-ACTIVITY-DEDUP-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -45,7 +45,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.27-SCAN-RETRY-BACKOFF"
+    [string]\$AgentVersion = "v3.10.28-WEB-ACTIVITY-DEDUP-FIX"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -950,8 +950,18 @@ function Invoke-WebActivityJob {
             }
         }
 
-        # Deduplicate and limit
-        \$uniqueItems = \$items | Sort-Object -Property domain -Unique | Select-Object -First \$maxDomains
+        # FIX v3.10.28: Deduplicacao robusta usando hashtable (Sort-Object -Unique nao funciona com hashtables)
+        # Usa domain como chave para garantir unicidade real
+        \$dedupMap = @{}
+        foreach (\$item in \$items) {
+            \$key = \$item.domain
+            if (-not \$dedupMap.ContainsKey(\$key)) {
+                \$dedupMap[\$key] = \$item
+            }
+        }
+        \$uniqueItems = @(\$dedupMap.Values) | Select-Object -First \$maxDomains
+        
+        Write-Log "[WEB-ACTIVITY] Deduplicacao: \$(\$items.Count) items -> \$(\$uniqueItems.Count) unicos" "INFO"
 
         if (-not \$uniqueItems.Count) {
             Write-Log "[WEB-ACTIVITY] Nenhum dominio encontrado em nenhuma fonte" "INFO"
