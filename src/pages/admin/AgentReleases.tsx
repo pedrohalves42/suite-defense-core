@@ -286,7 +286,7 @@ export default function AgentReleases() {
       <div className="grid gap-4">
         {releases.map((release, idx) => {
           const sizeKB = Math.round(release.script_content.length / 1024);
-          const isValid = sizeKB > 40;
+          const isValid = sizeKB > 35;
 
           return (
             <motion.div
