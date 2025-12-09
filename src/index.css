@@ -169,6 +169,10 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    font-size: 13px; /* Reduced from 16px for a more compact, professional look */
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
