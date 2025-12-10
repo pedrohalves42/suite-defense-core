@@ -14,6 +14,7 @@ import { AlertCircle, CheckCircle, Loader2, Shield } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { logger } from '@/lib/logger';
 import { MFASettings } from '@/components/mfa/MFASettings';
+import { PasswordChangeCard } from '@/components/settings/PasswordChangeCard';
 
 interface TenantSettings {
   id: string;
@@ -683,6 +684,8 @@ export default function Settings() {
         {/* Security Tab */}
         <TabsContent value="security" className="space-y-4">
           <MFASettings />
+          
+          <PasswordChangeCard />
           
           <Card>
             <CardHeader>
