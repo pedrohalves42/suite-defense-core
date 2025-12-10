@@ -1871,6 +1871,65 @@ export type Database = {
           },
         ]
       }
+      ai_inference_metrics: {
+        Row: {
+          circuit_breaker_state: string | null
+          created_at: string | null
+          error: string | null
+          function_name: string
+          id: string
+          latency_ms: number
+          model: string
+          request_metadata: Json | null
+          success: boolean
+          tenant_id: string | null
+          tokens_completion: number | null
+          tokens_prompt: number | null
+          tokens_total: number | null
+          used_fallback: boolean | null
+        }
+        Insert: {
+          circuit_breaker_state?: string | null
+          created_at?: string | null
+          error?: string | null
+          function_name: string
+          id?: string
+          latency_ms: number
+          model: string
+          request_metadata?: Json | null
+          success?: boolean
+          tenant_id?: string | null
+          tokens_completion?: number | null
+          tokens_prompt?: number | null
+          tokens_total?: number | null
+          used_fallback?: boolean | null
+        }
+        Update: {
+          circuit_breaker_state?: string | null
+          created_at?: string | null
+          error?: string | null
+          function_name?: string
+          id?: string
+          latency_ms?: number
+          model?: string
+          request_metadata?: Json | null
+          success?: boolean
+          tenant_id?: string | null
+          tokens_completion?: number | null
+          tokens_prompt?: number | null
+          tokens_total?: number | null
+          used_fallback?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_inference_metrics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_insights: {
         Row: {
           acknowledged: boolean | null
@@ -4966,6 +5025,62 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      threat_intelligence_cache: {
+        Row: {
+          cached_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          raw_responses: Json | null
+          reputation: string
+          risk_score: number | null
+          sources: Json | null
+          ssl_data: Json | null
+          target: string
+          target_type: string
+          tenant_id: string | null
+          whois_data: Json | null
+        }
+        Insert: {
+          cached_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          raw_responses?: Json | null
+          reputation: string
+          risk_score?: number | null
+          sources?: Json | null
+          ssl_data?: Json | null
+          target: string
+          target_type: string
+          tenant_id?: string | null
+          whois_data?: Json | null
+        }
+        Update: {
+          cached_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          raw_responses?: Json | null
+          reputation?: string
+          risk_score?: number | null
+          sources?: Json | null
+          ssl_data?: Json | null
+          target?: string
+          target_type?: string
+          tenant_id?: string | null
+          whois_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threat_intelligence_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       url_reputation: {
         Row: {
