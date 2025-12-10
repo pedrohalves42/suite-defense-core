@@ -9,10 +9,12 @@
 
 export const INSTALLER_VERSION = 'v3.10.31-SUBMIT-BEFORE-EXIT';
 export const INSTALLER_VERSION_LINUX = 'v3.10.32-LINUX-AGENTID-FIX';
-export const INSTALLER_VERSION_MACOS = 'v3.10.30-UPTIME';
-export const LAST_UPDATED = '2025-12-10T14:30:00Z'; // Linux synced to v3.10.32-LINUX-AGENTID-FIX
+export const INSTALLER_VERSION_MACOS = 'v3.10.32-MACOS-AGENTID-FIX';
+export const LAST_UPDATED = '2025-12-10T15:00:00Z'; // macOS synced to v3.10.32-MACOS-AGENTID-FIX
 
 export const CHANGES = [
+  '[v3.10.32-MACOS-AGENTID-FIX] SYNC: macOS sincronizado com consistencia de versao Linux/Windows',
+  '[v3.10.32-MACOS-AGENTID-FIX] FEATURE: Handlers incluem agent_id no payload (consistente com Linux)',
   '[v3.10.32-LINUX-AGENTID-FIX] CRITICAL FIX: Handlers software_inventory e collect_web_activity agora incluem agent_id no payload',
   '[v3.10.32-LINUX-AGENTID-FIX] CRITICAL FIX: poll_jobs extrai agent_id do job e passa para execute_job como 4o argumento',
   '[v3.10.32-LINUX-AGENTID-FIX] CRITICAL FIX: Resolve erro 400 "agent_id and items are required" em coletas Linux',
