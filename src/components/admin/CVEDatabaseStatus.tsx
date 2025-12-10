@@ -38,10 +38,11 @@ export default function CVEDatabaseStatus() {
       const { data, error } = await supabase
         .from('cve_sync_status')
         .select('*')
-        .eq('id', 'default')
-        .single();
+        .order('last_sync_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error) throw error;
       return data as CVESyncStatus | null;
     },
   });
