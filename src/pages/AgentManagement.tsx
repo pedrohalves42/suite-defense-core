@@ -33,6 +33,10 @@ interface Agent {
   enrolled_at: string;
   last_heartbeat: string | null;
   tenant_id: string;
+  os_type: string | null;
+  os_version: string | null;
+  hostname: string | null;
+  agent_version: string | null;
 }
 
 export default function AgentManagement() {
@@ -51,7 +55,7 @@ export default function AgentManagement() {
     queryFn: async () => {
       if (!tenant?.id) return [];
 
-      let query = supabase.from('agents').select('*').eq('tenant_id', tenant.id);
+      let query = supabase.from('agents').select('id, agent_name, status, enrolled_at, last_heartbeat, tenant_id, os_type, os_version, hostname, agent_version').eq('tenant_id', tenant.id);
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
       }
@@ -447,6 +451,8 @@ export default function AgentManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome do Agente</TableHead>
+                <TableHead>Sistema Operacional</TableHead>
+                <TableHead>Versao Agente</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ultimo Heartbeat</TableHead>
                 <TableHead>Registrado em</TableHead>
@@ -458,6 +464,21 @@ export default function AgentManagement() {
                 <React.Fragment key={agent.id}>
                   <TableRow>
                     <TableCell className="font-medium">{agent.agent_name}</TableCell>
+                    <TableCell>
+                      {agent.os_type ? (
+                        <div className="flex flex-col">
+                          <span className="font-medium">{agent.os_type}</span>
+                          <span className="text-xs text-muted-foreground">{agent.os_version || 'N/A'}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {agent.agent_version || 'N/A'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{getStatusBadge(agent)}</TableCell>
                     <TableCell>{getTimeSince(agent.last_heartbeat)}</TableCell>
                     <TableCell>

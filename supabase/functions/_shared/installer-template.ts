@@ -839,7 +839,30 @@ EOF
 chmod 600 "$INSTALL_DIR/cybershield-agent.env"
 echo "[OK] Environment file created"
 
-# Create systemd service
+# Check dependencies
+echo "[INFO] Verificando dependencias..."
+check_install_dep() {
+  local cmd="\$1"
+  local pkg="\$2"
+  if ! command -v "\$cmd" >/dev/null 2>&1; then
+    echo "[INFO] Instalando \$pkg..."
+    if command -v apt-get >/dev/null 2>&1; then
+      apt-get update -qq && apt-get install -y -qq "\$pkg" || true
+    elif command -v yum >/dev/null 2>&1; then
+      yum install -y "\$pkg" || true
+    elif command -v dnf >/dev/null 2>&1; then
+      dnf install -y "\$pkg" || true
+    fi
+  fi
+}
+
+check_install_dep "jq" "jq"
+check_install_dep "curl" "curl"
+check_install_dep "openssl" "openssl"
+check_install_dep "sqlite3" "sqlite3"
+echo "[OK] Dependencias verificadas"
+
+# Create systemd service (permissive for security scans)
 echo "[INFO] Creating systemd service..."
 cat > /etc/systemd/system/cybershield-agent.service <<EOF
 [Unit]
@@ -849,15 +872,12 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=$INSTALL_DIR/cybershield-agent.sh
+ExecStart=/bin/bash $INSTALL_DIR/cybershield-agent.sh
 EnvironmentFile=$INSTALL_DIR/cybershield-agent.env
 Restart=always
 RestartSec=30
 StandardOutput=journal
 StandardError=journal
-NoNewPrivileges=true
-ProtectSystem=strict
-ReadWritePaths=$LOG_DIR $INSTALL_DIR
 
 [Install]
 WantedBy=multi-user.target
