@@ -247,8 +247,12 @@ export default function EnrollmentKeys() {
     },
   });
 
-  const copyToClipboard = (key: string) => {
+  // FASE 1: Audit logging para copia de chave
+  const copyToClipboard = async (key: string, keyId: string) => {
     navigator.clipboard.writeText(key);
+    await logSensitiveAccess('enrollment_key', keyId, 'copy', { 
+      key_prefix: key.substring(0, 8) + '...' 
+    });
     toast({ title: 'Chave copiada!' });
   };
 

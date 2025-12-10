@@ -390,3 +390,8 @@ verify_jwt = true
 
 [functions.scan-vulnerabilities]
 verify_jwt = false
+
+# === HMAC Cleanup (every 2 hours) ===
+[functions.hmac-cleanup-scheduled]
+verify_jwt = false
+schedule = "0 */2 * * *"
