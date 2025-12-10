@@ -3,11 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, Zap, Crown, Loader2, Building2 } from 'lucide-react';
+import { Check, Zap, Crown, Loader2, Building2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useTenant } from '@/hooks/useTenant';
 import { CONTACT } from '@/constants/config';
+import { useEffect, useState } from 'react';
+import { logger } from '@/lib/logger';
 
 interface Plan {
   id: string;
@@ -21,21 +23,57 @@ interface Plan {
   trial_days: number | null;
 }
 
+const LOADING_TIMEOUT_MS = 15000; // 15 seconds timeout
+
 export default function PlanUpgradeNew() {
   const { toast } = useToast();
   const { subscription, isLoading: subscriptionLoading, refetch: refetchSubscription } = useSubscription();
   const { tenant, loading: tenantLoading } = useTenant();
+  const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+
+  // Debug logging for loading states
+  useEffect(() => {
+    logger.debug('PlanUpgradeNew loading states', {
+      subscriptionLoading,
+      tenantLoading,
+      hasSubscription: !!subscription,
+      hasTenant: !!tenant,
+    });
+  }, [subscriptionLoading, tenantLoading, subscription, tenant]);
+
+  // Loading timeout protection
+  useEffect(() => {
+    if (subscriptionLoading || tenantLoading) {
+      const timeoutId = setTimeout(() => {
+        logger.warn('PlanUpgradeNew loading timeout exceeded', {
+          subscriptionLoading,
+          tenantLoading,
+          timeoutMs: LOADING_TIMEOUT_MS,
+        });
+        setLoadingTimedOut(true);
+      }, LOADING_TIMEOUT_MS);
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      setLoadingTimedOut(false);
+    }
+  }, [subscriptionLoading, tenantLoading]);
 
   // Fetch all available plans
-  const { data: allPlans = [] } = useQuery({
+  const { data: allPlans = [], isLoading: plansLoading, error: plansError } = useQuery({
     queryKey: ['all-plans'],
     queryFn: async () => {
+      logger.debug('Fetching subscription plans');
       const { data, error } = await supabase
         .from('subscription_plans')
         .select('*')
         .order('price_per_device', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        logger.error('Failed to fetch plans', error);
+        throw error;
+      }
+      logger.debug('Plans fetched successfully', { count: data?.length });
       return data as Plan[];
     },
   });
@@ -213,12 +251,62 @@ export default function PlanUpgradeNew() {
     .map(name => allPlans.find(p => p.name === name))
     .filter(Boolean) as Plan[];
 
-  if (tenantLoading || subscriptionLoading) {
+  // Show timeout error if loading takes too long
+  if (loadingTimedOut) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <AlertTriangle className="h-10 w-10 text-yellow-500 mx-auto" />
+          <div>
+            <h3 className="font-semibold text-lg">Carregamento demorado</h3>
+            <p className="text-muted-foreground text-sm mt-1">
+              O carregamento está demorando mais que o esperado.
+            </p>
+          </div>
+          <Button 
+            onClick={() => {
+              setLoadingTimedOut(false);
+              refetchSubscription();
+              window.location.reload();
+            }}
+          >
+            Tentar novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (tenantLoading || subscriptionLoading || plansLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="text-muted-foreground">Carregando planos...</p>
+          <p className="text-xs text-muted-foreground/60">
+            {subscriptionLoading && 'Verificando assinatura... '}
+            {tenantLoading && 'Carregando tenant... '}
+            {plansLoading && 'Buscando planos...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (plansError) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <AlertTriangle className="h-10 w-10 text-destructive mx-auto" />
+          <div>
+            <h3 className="font-semibold text-lg">Erro ao carregar planos</h3>
+            <p className="text-muted-foreground text-sm mt-1">
+              {plansError instanceof Error ? plansError.message : 'Erro desconhecido'}
+            </p>
+          </div>
+          <Button onClick={() => window.location.reload()}>
+            Tentar novamente
+          </Button>
         </div>
       </div>
     );
