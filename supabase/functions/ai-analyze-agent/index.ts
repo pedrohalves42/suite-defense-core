@@ -2,8 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { sanitizeForAI, sanitizeObjectForAI, anonymizeAgentName, validateAIResponse } from "../_shared/ai-sanitizer.ts";
 import { withCircuitBreaker, executeWithTimeout } from "../_shared/ai-circuit-breaker.ts";
-import { createMetricsLogger, extractTokenUsage } from "../_shared/ai-metrics.ts";
-
+import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from "../_shared/ai-metrics.ts";
+import { persistAIMetrics } from "../_shared/ai-metrics-persistence.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -153,8 +153,21 @@ Responda APENAS com JSON valido no formato:
     const content = aiResponse.choices?.[0]?.message?.content;
     const tokenUsage = extractTokenUsage(aiResponse);
 
-    // Log success metrics
+    // Log success metrics and persist to database
     metricsLogger.logSuccess(startTime, undefined, tokenUsage);
+    
+    // Persist metrics to DB for dashboard
+    const successMetrics: AIInferenceMetrics = {
+      timestamp: new Date().toISOString(),
+      function_name: 'ai-analyze-agent',
+      model: AI_MODEL,
+      latency_ms: Date.now() - startTime,
+      success: true,
+      tokens_prompt: tokenUsage.prompt,
+      tokens_completion: tokenUsage.completion,
+      tokens_total: tokenUsage.total,
+    };
+    await persistAIMetrics(successMetrics);
 
     if (!content) {
       return new Response(

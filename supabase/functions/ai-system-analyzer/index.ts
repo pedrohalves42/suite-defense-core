@@ -2,7 +2,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sanitizeForAI, anonymizeAgentName } from '../_shared/ai-sanitizer.ts';
 import { withCircuitBreaker, executeWithTimeout } from '../_shared/ai-circuit-breaker.ts';
-import { createMetricsLogger, extractTokenUsage } from '../_shared/ai-metrics.ts';
+import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from '../_shared/ai-metrics.ts';
+import { persistAIMetrics } from '../_shared/ai-metrics-persistence.ts';
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -512,8 +513,22 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     const content = aiResponse.choices?.[0]?.message?.content;
     const tokenUsage = extractTokenUsage(aiResponse);
 
-    // Log success metrics
+    // Log success metrics and persist to database
     aiMetricsLogger.logSuccess(startTime, tenantId, tokenUsage);
+    
+    // Persist metrics to DB for dashboard
+    const successMetrics: AIInferenceMetrics = {
+      timestamp: new Date().toISOString(),
+      function_name: 'ai-system-analyzer',
+      model: AI_MODEL,
+      latency_ms: Date.now() - startTime,
+      success: true,
+      tokens_prompt: tokenUsage.prompt,
+      tokens_completion: tokenUsage.completion,
+      tokens_total: tokenUsage.total,
+      tenant_id: tenantId,
+    };
+    await persistAIMetrics(successMetrics);
 
     if (!content) {
       console.error('[ai-system-analyzer] No content in AI response');

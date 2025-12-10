@@ -2,8 +2,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { sanitizeForAI, sanitizeObjectForAI, anonymizeAgentName } from "../_shared/ai-sanitizer.ts";
 import { withCircuitBreaker, executeWithTimeout } from "../_shared/ai-circuit-breaker.ts";
-import { createMetricsLogger, extractTokenUsage } from "../_shared/ai-metrics.ts";
-
+import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from "../_shared/ai-metrics.ts";
+import { persistAIMetrics } from "../_shared/ai-metrics-persistence.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -245,8 +245,21 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
     const analysis = aiData.choices?.[0]?.message?.content;
     const tokenUsage = extractTokenUsage(aiData);
 
-    // Log success metrics
+    // Log success metrics and persist to database
     metricsLogger.logSuccess(metricsStartTime, undefined, tokenUsage);
+    
+    // Persist metrics to DB for dashboard
+    const successMetrics: AIInferenceMetrics = {
+      timestamp: new Date().toISOString(),
+      function_name: 'analyze-network-anomalies',
+      model: AI_MODEL,
+      latency_ms: Date.now() - metricsStartTime,
+      success: true,
+      tokens_prompt: tokenUsage.prompt,
+      tokens_completion: tokenUsage.completion,
+      tokens_total: tokenUsage.total,
+    };
+    await persistAIMetrics(successMetrics);
 
     console.log('[analyze-network-anomalies] Analysis completed successfully');
 
