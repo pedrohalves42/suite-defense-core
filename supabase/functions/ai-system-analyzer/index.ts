@@ -307,22 +307,100 @@ async function analyzeWithAI(
       ? (data.failurePatterns.length / data.installationStats.length) * 100
       : 0;
 
-    const avgCpuUsage = data.agentMetrics.length > 0
-      ? data.agentMetrics.reduce((sum, m) => sum + (m.cpu_usage_percent || 0), 0) / data.agentMetrics.length
-      : 0;
+    // MELHORADO: Análise POR AGENTE em vez de médias globais
+    const agentMetricsMap = new Map<string, { 
+      cpu: number[]; 
+      memory: number[]; 
+      disk: number[];
+      agent_name: string;
+    }>();
+    
+    for (const metric of data.agentMetrics) {
+      const agentId = metric.agent_id;
+      if (!agentMetricsMap.has(agentId)) {
+        agentMetricsMap.set(agentId, { 
+          cpu: [], 
+          memory: [], 
+          disk: [],
+          agent_name: metric.agent_name || agentId.slice(0, 8)
+        });
+      }
+      const agentData = agentMetricsMap.get(agentId)!;
+      if (metric.cpu_usage_percent != null) agentData.cpu.push(metric.cpu_usage_percent);
+      if (metric.memory_usage_percent != null) agentData.memory.push(metric.memory_usage_percent);
+      if (metric.disk_usage_percent != null) agentData.disk.push(metric.disk_usage_percent);
+    }
 
-    const avgMemoryUsage = data.agentMetrics.length > 0
-      ? data.agentMetrics.reduce((sum, m) => sum + (m.memory_usage_percent || 0), 0) / data.agentMetrics.length
-      : 0;
+    // Calcular médias e identificar outliers por agente
+    const agentSummaries = Array.from(agentMetricsMap.entries()).map(([agentId, data]) => {
+      const avgCpu = data.cpu.length > 0 ? data.cpu.reduce((a, b) => a + b, 0) / data.cpu.length : 0;
+      const avgMemory = data.memory.length > 0 ? data.memory.reduce((a, b) => a + b, 0) / data.memory.length : 0;
+      const avgDisk = data.disk.length > 0 ? data.disk.reduce((a, b) => a + b, 0) / data.disk.length : 0;
+      const maxCpu = data.cpu.length > 0 ? Math.max(...data.cpu) : 0;
+      const maxMemory = data.memory.length > 0 ? Math.max(...data.memory) : 0;
+      const maxDisk = data.disk.length > 0 ? Math.max(...data.disk) : 0;
+      
+      return {
+        agent_id: agentId,
+        agent_name: data.agent_name,
+        samples: data.cpu.length,
+        avg_cpu: avgCpu,
+        avg_memory: avgMemory,
+        avg_disk: avgDisk,
+        max_cpu: maxCpu,
+        max_memory: maxMemory,
+        max_disk: maxDisk,
+        // Flags de problemas
+        high_cpu: maxCpu > 90,
+        high_memory: maxMemory > 85,
+        critical_disk: maxDisk > 90,
+      };
+    });
+
+    // Identificar agentes problemáticos
+    const problematicAgents = agentSummaries.filter(a => a.high_cpu || a.high_memory || a.critical_disk);
+
+    // Correlacionar alertas com agentes específicos
+    const alertsByAgent = new Map<string, number>();
+    for (const alert of data.systemAlerts) {
+      const agentId = alert.agent_id || 'system';
+      alertsByAgent.set(agentId, (alertsByAgent.get(agentId) || 0) + 1);
+    }
 
     const jobStatusCounts = jobStats.reduce((acc, job) => {
       acc[job.status] = (acc[job.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
+    // Médias globais para contexto geral
+    const avgCpuUsage = agentSummaries.length > 0
+      ? agentSummaries.reduce((sum, a) => sum + a.avg_cpu, 0) / agentSummaries.length
+      : 0;
+    const avgMemoryUsage = agentSummaries.length > 0
+      ? agentSummaries.reduce((sum, a) => sum + a.avg_memory, 0) / agentSummaries.length
+      : 0;
+
     const prompt = `Voce e um especialista em analise de sistemas de monitoramento de agentes. Analise os dados abaixo e identifique problemas, anomalias, e oportunidades de otimizacao.
 
+**IMPORTANTE:** Analise CADA AGENTE individualmente. Nao se deixe enganar por medias globais baixas - pode haver agentes especificos com problemas criticos.
+
 **Dados do Tenant: ${tenantName}**
+
+**Resumo Global (use apenas como contexto):**
+- CPU media global: ${avgCpuUsage.toFixed(1)}%
+- Memoria media global: ${avgMemoryUsage.toFixed(1)}%
+- Total de agentes: ${agentSummaries.length}
+
+**Analise POR AGENTE (PRIORIDADE):**
+${agentSummaries.slice(0, 10).map(a => 
+  `- ${a.agent_name}: CPU max=${a.max_cpu.toFixed(1)}% avg=${a.avg_cpu.toFixed(1)}%, Mem max=${a.max_memory.toFixed(1)}% avg=${a.avg_memory.toFixed(1)}%, Disco max=${a.max_disk.toFixed(1)}% (${a.samples} amostras)${a.high_cpu ? ' ⚠️CPU' : ''}${a.high_memory ? ' ⚠️MEM' : ''}${a.critical_disk ? ' 🔴DISCO' : ''}`
+).join('\n')}
+
+**Agentes Problematicos Identificados:** ${problematicAgents.length}
+${problematicAgents.map(a => `- ${a.agent_name}: ${a.critical_disk ? 'DISCO CRITICO ' + a.max_disk.toFixed(1) + '%' : ''}${a.high_memory ? 'MEMORIA ALTA ' + a.max_memory.toFixed(1) + '%' : ''}${a.high_cpu ? 'CPU ALTA ' + a.max_cpu.toFixed(1) + '%' : ''}`).join('\n')}
+
+**Alertas por Agente:**
+${Array.from(alertsByAgent.entries()).slice(0, 5).map(([id, count]) => `- ${id.slice(0, 8)}: ${count} alertas`).join('\n')}
 
 **Metricas de Instalacao (ultimos 7 dias):**
 - Total de tentativas: ${data.installationStats.length}
@@ -330,24 +408,19 @@ async function analyzeWithAI(
 - Taxa de falha: ${failureRate.toFixed(1)}%
 
 **Jobs Problematicos:**
-- Total de jobs problematicos: ${data.problematicJobs.length}
-- Status dos jobs: ${JSON.stringify(jobStatusCounts)}
-
-**Metricas de Performance dos Agentes:**
-- Amostras coletadas: ${data.agentMetrics.length}
-- CPU media: ${avgCpuUsage.toFixed(1)}%
-- Memoria media: ${avgMemoryUsage.toFixed(1)}%
+- Total: ${data.problematicJobs.length}
+- Status: ${JSON.stringify(jobStatusCounts)}
 
 **Alertas do Sistema:**
-- Total de alertas: ${data.systemAlerts.length}
-- Alertas criticos: ${data.systemAlerts.filter(a => a.severity === 'critical').length}
+- Total: ${data.systemAlerts.length}
+- Criticos: ${data.systemAlerts.filter(a => a.severity === 'critical').length}
 
 **Sua tarefa:**
-1. Identifique ate 3 insights mais relevantes
+1. Identifique ate 3 insights mais relevantes, PRIORIZANDO agentes especificos com problemas
 2. Para cada insight, retorne um objeto JSON com:
    - insight_type: 'anomaly_detection', 'optimization', 'prediction', ou 'root_cause'
    - severity: 'info', 'warning', ou 'critical'
-   - title: titulo curto e descritivo
+   - title: titulo curto e descritivo (INCLUA nome do agente se for problema especifico)
    - description: descricao detalhada do problema (2-3 frases)
    - recommendation: recomendacao clara de acao
    - confidence_score: valor entre 0.0 e 1.0
@@ -355,12 +428,12 @@ async function analyzeWithAI(
 Responda APENAS com um array JSON valido de insights. Exemplo:
 [
   {
-    "insight_type": "anomaly_detection",
-    "severity": "warning",
-    "title": "Taxa de falha acima do normal",
-    "description": "A taxa de falha de instalacao esta 40% acima da baseline dos ultimos 30 dias. Concentracao de erros no horario noturno.",
-    "recommendation": "Investigar conectividade de rede durante o periodo noturno e considerar aumentar timeout de instalacao.",
-    "confidence_score": 0.85
+    "insight_type": "root_cause",
+    "severity": "critical",
+    "title": "Disco critico no agente PC-Finance",
+    "description": "O agente PC-Finance esta com 95.2% de uso de disco, gerando 18 alertas criticos nas ultimas 24h. Isso pode causar falha do sistema.",
+    "recommendation": "Liberar espaco em disco imediatamente: limpar logs antigos, arquivos temporarios, e downloads.",
+    "confidence_score": 0.95
   }
 ]`;
 
