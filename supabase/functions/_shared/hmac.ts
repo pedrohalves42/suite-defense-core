@@ -166,12 +166,12 @@ export async function verifyHmacSignature(
 /**
  * Cleanup probabilistico para evitar race conditions em Deno Edge Functions
  * setTimeout/setInterval nao sao confiaveis em ambiente serverless
- * Solucao: 1% das requests executam cleanup de forma sincrona
+ * Solucao: 10% das requests executam cleanup de forma sincrona
  */
-const CLEANUP_PROBABILITY = 0.05; // 5% das requests (increased from 1% for faster cleanup)
+const CLEANUP_PROBABILITY = 0.10; // 10% das requests (P1 optimization for better table hygiene at scale)
 
 async function probabilisticCleanup(supabase: SupabaseClient): Promise<void> {
-  // Apenas 1% das requests executam cleanup
+  // 10% das requests executam cleanup
   if (Math.random() > CLEANUP_PROBABILITY) {
     return;
   }
