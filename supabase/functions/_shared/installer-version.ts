@@ -8,11 +8,14 @@
  */
 
 export const INSTALLER_VERSION = 'v3.10.31-SUBMIT-BEFORE-EXIT';
-export const INSTALLER_VERSION_LINUX = 'v3.10.30-UPTIME';
+export const INSTALLER_VERSION_LINUX = 'v3.10.32-LINUX-AGENTID-FIX';
 export const INSTALLER_VERSION_MACOS = 'v3.10.30-UPTIME';
-export const LAST_UPDATED = '2025-12-09T23:45:00Z'; // Windows synced to v3.10.31-SUBMIT-BEFORE-EXIT
+export const LAST_UPDATED = '2025-12-10T14:30:00Z'; // Linux synced to v3.10.32-LINUX-AGENTID-FIX
 
 export const CHANGES = [
+  '[v3.10.32-LINUX-AGENTID-FIX] CRITICAL FIX: Handlers software_inventory e collect_web_activity agora incluem agent_id no payload',
+  '[v3.10.32-LINUX-AGENTID-FIX] CRITICAL FIX: poll_jobs extrai agent_id do job e passa para execute_job como 4o argumento',
+  '[v3.10.32-LINUX-AGENTID-FIX] CRITICAL FIX: Resolve erro 400 "agent_id and items are required" em coletas Linux',
   '[v3.10.31-SUBMIT-BEFORE-EXIT] CRITICAL FIX: update_agent e reinstall_agent agora submetem resultado ANTES de exit 0',
   '[v3.10.31-SUBMIT-BEFORE-EXIT] CRITICAL FIX: Resolve jobs stuck em delivered (nunca recebiam completion)',
   '[v3.10.31-SUBMIT-BEFORE-EXIT] CRITICAL FIX: Agentes nao ficam mais offline apos auto-update',
