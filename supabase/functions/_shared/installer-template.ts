@@ -966,6 +966,28 @@ EOF
 sudo chmod 600 "$INSTALL_DIR/cybershield-agent.env"
 echo "[OK] Environment file created"
 
+# Check dependencies
+echo "[INFO] Verificando dependencias..."
+check_macos_dep() {
+    local cmd="\$1"
+    if ! command -v "\$cmd" >/dev/null 2>&1; then
+        echo "[INFO] \$cmd nao encontrado, tentando instalar via Homebrew..."
+        if command -v brew >/dev/null 2>&1; then
+            brew install "\$cmd" 2>/dev/null || echo "[WARN] Falha ao instalar \$cmd via Homebrew"
+        else
+            echo "[WARN] Homebrew nao disponivel. Instale \$cmd manualmente se necessario."
+        fi
+    else
+        echo "[OK] \$cmd disponivel"
+    fi
+}
+
+# curl, openssl, sqlite3 geralmente ja existem no macOS
+check_macos_dep "jq"
+check_macos_dep "curl"
+check_macos_dep "openssl"
+echo "[OK] Dependencias verificadas"
+
 # Create LaunchDaemon
 echo "[INFO] Creating LaunchDaemon..."
 sudo tee /Library/LaunchDaemons/com.cybershield.agent.plist > /dev/null <<EOF
@@ -977,10 +999,15 @@ sudo tee /Library/LaunchDaemons/com.cybershield.agent.plist > /dev/null <<EOF
     <string>com.cybershield.agent</string>
     <key>ProgramArguments</key>
     <array>
+        <string>/bin/bash</string>
         <string>$INSTALL_DIR/cybershield-agent.sh</string>
     </array>
+    <key>WorkingDirectory</key>
+    <string>$INSTALL_DIR</string>
     <key>EnvironmentVariables</key>
     <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
         <key>SERVER_URL</key>
         <string>$SERVER_URL</string>
         <key>AGENT_TOKEN</key>
