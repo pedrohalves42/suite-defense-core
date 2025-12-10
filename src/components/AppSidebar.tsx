@@ -61,6 +61,7 @@ export const AppSidebar = () => {
     // === INTELIGÊNCIA ARTIFICIAL ===
     { icon: Brain, label: 'IA Insights', to: '/admin/ai-insights', section: 'ai' },
     { icon: CheckCircle, label: 'IA Acoes', to: '/admin/ai-actions', section: 'ai' },
+    { icon: BarChart3, label: 'IA Metricas', to: '/admin/ai-metrics', section: 'ai' },
     
     // === GESTÃO ===
     { icon: Users, label: 'Membros', to: '/admin/members', section: 'management' },

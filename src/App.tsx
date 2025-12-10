@@ -84,6 +84,7 @@ import SecurityPolicies from "./pages/admin/SecurityPolicies";
 import NotificationSettings from "./pages/admin/NotificationSettings";
 import SecurityMonitoring from "./pages/admin/SecurityMonitoring";
 import MassReinstall from "./pages/admin/MassReinstall";
+import AIMetrics from "./pages/admin/AIMetrics";
 
 const App = () => (
   <ErrorBoundary>
@@ -146,6 +147,7 @@ const App = () => (
                 <Route path="problematic-agents" element={<ProblematicAgentsManager />} />
                 <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="ai-actions" element={<AIActionApproval />} />
+                <Route path="ai-metrics" element={<AIMetrics />} />
                 <Route path="system-logs" element={<SystemLogs />} />
                 <Route path="tenant" element={<Tenant />} />
                 <Route path="jobs-v3-migration" element={<JobsV3Migration />} />

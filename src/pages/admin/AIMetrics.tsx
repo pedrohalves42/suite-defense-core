@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Brain, Clock, CheckCircle, XCircle, Zap, DollarSign, Activity, TrendingUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import CVEDatabaseStatus from '@/components/admin/CVEDatabaseStatus';
 
 interface AIMetric {
   id: string;
@@ -298,6 +299,9 @@ export default function AIMetrics() {
             </CardContent>
           </Card>
         </div>
+        
+        {/* CVE Database Status */}
+        <CVEDatabaseStatus />
         
         {/* Model Distribution & Errors */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
