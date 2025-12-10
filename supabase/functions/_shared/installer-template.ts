@@ -782,3 +782,227 @@ sudo launchctl load /Library/LaunchDaemons/com.cybershield.agent.plist
 
 echo "[OK]  CyberShield Agent installed successfully!"
 `;
+
+// Linux Installer Template (v3.1) - EMBEDDED (no external download)
+export const LINUX_INSTALLER_TEMPLATE_V3_EMBEDDED = String.raw`#!/usr/bin/env bash
+# CyberShield Agent - Linux Installation Script v3.1 (Embedded)
+# Version: {{INSTALLER_VERSION}}
+# Generated: {{TIMESTAMP}}
+
+set -euo pipefail
+
+echo "=========================================="
+echo " CyberShield Agent Linux Installer"
+echo " Version: {{INSTALLER_VERSION}}"
+echo "=========================================="
+
+SERVER_URL="{{SERVER_URL}}"
+AGENT_TOKEN="{{AGENT_TOKEN}}"
+HMAC_SECRET="{{HMAC_SECRET}}"
+AGENT_NAME="{{AGENT_NAME}}"
+
+echo "[INFO] Agent Name: $AGENT_NAME"
+echo "[INFO] Server: $SERVER_URL"
+
+# Create directories
+INSTALL_DIR="/opt/cybershield"
+LOG_DIR="/var/log/cybershield"
+
+echo "[INFO] Creating directories..."
+mkdir -p "$INSTALL_DIR"
+mkdir -p "$LOG_DIR"
+
+# Write embedded agent script
+echo "[INFO] Installing agent script..."
+cat > "$INSTALL_DIR/cybershield-agent.sh" << 'CYBERSHIELD_AGENT_SCRIPT_END'
+{{AGENT_SCRIPT_CONTENT}}
+CYBERSHIELD_AGENT_SCRIPT_END
+
+chmod +x "$INSTALL_DIR/cybershield-agent.sh"
+SCRIPT_SIZE=$(stat -c%s "$INSTALL_DIR/cybershield-agent.sh" 2>/dev/null || stat -f%z "$INSTALL_DIR/cybershield-agent.sh" 2>/dev/null || echo "0")
+echo "[OK] Agent script created: $SCRIPT_SIZE bytes"
+
+# Validate script size
+if [[ "$SCRIPT_SIZE" -lt 10000 ]]; then
+    echo "[ERROR] Agent script too small ($SCRIPT_SIZE bytes). Installation may be corrupted."
+    exit 1
+fi
+
+# Create environment file
+echo "[INFO] Creating environment file..."
+cat > "$INSTALL_DIR/cybershield-agent.env" <<EOF
+SERVER_URL=$SERVER_URL
+AGENT_TOKEN=$AGENT_TOKEN
+HMAC_SECRET=$HMAC_SECRET
+AGENT_NAME=$AGENT_NAME
+EOF
+chmod 600 "$INSTALL_DIR/cybershield-agent.env"
+echo "[OK] Environment file created"
+
+# Create systemd service
+echo "[INFO] Creating systemd service..."
+cat > /etc/systemd/system/cybershield-agent.service <<EOF
+[Unit]
+Description=CyberShield Security Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=$INSTALL_DIR/cybershield-agent.sh
+EnvironmentFile=$INSTALL_DIR/cybershield-agent.env
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=$LOG_DIR $INSTALL_DIR
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Start service
+echo "[INFO] Starting agent service..."
+systemctl daemon-reload
+systemctl enable cybershield-agent.service
+systemctl start cybershield-agent.service
+
+# Verify service started
+sleep 2
+if systemctl is-active --quiet cybershield-agent.service; then
+    echo "[OK] CyberShield Agent service is running"
+else
+    echo "[WARN] Service may not have started correctly. Check: journalctl -u cybershield-agent.service"
+fi
+
+echo ""
+echo "=========================================="
+echo " CyberShield Agent installed successfully!"
+echo "=========================================="
+echo ""
+echo "Useful commands:"
+echo "  Status:  sudo systemctl status cybershield-agent"
+echo "  Logs:    sudo journalctl -u cybershield-agent -f"
+echo "  Stop:    sudo systemctl stop cybershield-agent"
+echo "  Restart: sudo systemctl restart cybershield-agent"
+echo ""
+`;
+
+// macOS Installer Template (v3.1) - EMBEDDED (no external download)
+export const MACOS_INSTALLER_TEMPLATE_V3_EMBEDDED = String.raw`#!/bin/zsh
+# CyberShield Agent - macOS Installation Script v3.1 (Embedded)
+# Version: {{INSTALLER_VERSION}}
+# Generated: {{TIMESTAMP}}
+
+set -euo pipefail
+
+echo "=========================================="
+echo " CyberShield Agent macOS Installer"
+echo " Version: {{INSTALLER_VERSION}}"
+echo "=========================================="
+
+SERVER_URL="{{SERVER_URL}}"
+AGENT_TOKEN="{{AGENT_TOKEN}}"
+HMAC_SECRET="{{HMAC_SECRET}}"
+AGENT_NAME="{{AGENT_NAME}}"
+
+echo "[INFO] Agent Name: $AGENT_NAME"
+echo "[INFO] Server: $SERVER_URL"
+
+# Create directories
+INSTALL_DIR="/Library/Application Support/CyberShield"
+LOG_DIR="/Library/Logs/CyberShield"
+
+echo "[INFO] Creating directories..."
+sudo mkdir -p "$INSTALL_DIR"
+sudo mkdir -p "$LOG_DIR"
+
+# Write embedded agent script
+echo "[INFO] Installing agent script..."
+sudo tee "$INSTALL_DIR/cybershield-agent.sh" > /dev/null << 'CYBERSHIELD_AGENT_SCRIPT_END'
+{{AGENT_SCRIPT_CONTENT}}
+CYBERSHIELD_AGENT_SCRIPT_END
+
+sudo chmod +x "$INSTALL_DIR/cybershield-agent.sh"
+SCRIPT_SIZE=$(stat -f%z "$INSTALL_DIR/cybershield-agent.sh" 2>/dev/null || echo "0")
+echo "[OK] Agent script created: $SCRIPT_SIZE bytes"
+
+# Validate script size
+if [[ "$SCRIPT_SIZE" -lt 10000 ]]; then
+    echo "[ERROR] Agent script too small ($SCRIPT_SIZE bytes). Installation may be corrupted."
+    exit 1
+fi
+
+# Create environment file
+echo "[INFO] Creating environment file..."
+sudo tee "$INSTALL_DIR/cybershield-agent.env" > /dev/null <<EOF
+SERVER_URL=$SERVER_URL
+AGENT_TOKEN=$AGENT_TOKEN
+HMAC_SECRET=$HMAC_SECRET
+AGENT_NAME=$AGENT_NAME
+EOF
+sudo chmod 600 "$INSTALL_DIR/cybershield-agent.env"
+echo "[OK] Environment file created"
+
+# Create LaunchDaemon
+echo "[INFO] Creating LaunchDaemon..."
+sudo tee /Library/LaunchDaemons/com.cybershield.agent.plist > /dev/null <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cybershield.agent</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>$INSTALL_DIR/cybershield-agent.sh</string>
+    </array>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>SERVER_URL</key>
+        <string>$SERVER_URL</string>
+        <key>AGENT_TOKEN</key>
+        <string>$AGENT_TOKEN</string>
+        <key>HMAC_SECRET</key>
+        <string>$HMAC_SECRET</string>
+        <key>AGENT_NAME</key>
+        <string>$AGENT_NAME</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Library/Logs/CyberShield/agent.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Library/Logs/CyberShield/agent.error.log</string>
+</dict>
+</plist>
+EOF
+
+# Load service
+echo "[INFO] Loading agent service..."
+sudo launchctl load /Library/LaunchDaemons/com.cybershield.agent.plist
+
+# Verify service started
+sleep 2
+if sudo launchctl list | grep -q "com.cybershield.agent"; then
+    echo "[OK] CyberShield Agent service is running"
+else
+    echo "[WARN] Service may not have started correctly. Check logs."
+fi
+
+echo ""
+echo "=========================================="
+echo " CyberShield Agent installed successfully!"
+echo "=========================================="
+echo ""
+echo "Useful commands:"
+echo "  Status:  sudo launchctl list | grep cybershield"
+echo "  Logs:    sudo tail -f /Library/Logs/CyberShield/agent.log"
+echo "  Stop:    sudo launchctl unload /Library/LaunchDaemons/com.cybershield.agent.plist"
+echo "  Start:   sudo launchctl load /Library/LaunchDaemons/com.cybershield.agent.plist"
+echo ""
+`;
