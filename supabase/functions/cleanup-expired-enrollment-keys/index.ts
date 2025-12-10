@@ -1,15 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { logger, loggerWithContext } from '../_shared/logger.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const requestId = crypto.randomUUID();
+  const log = loggerWithContext(requestId);
+
   try {
     // Extrair token de autorizacao
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      log.warn('Authorization header missing');
       return new Response(
         JSON.stringify({ error: 'Authorization header required' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -26,6 +31,7 @@ Deno.serve(async (req) => {
     // Verificar se usuario e admin
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError || !user) {
+      log.warn('Invalid token provided');
       return new Response(
         JSON.stringify({ error: 'Unauthorized: Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -38,6 +44,7 @@ Deno.serve(async (req) => {
     });
 
     if (roleError || !hasRole) {
+      log.warn('User lacks admin role', { userId: user.id });
       return new Response(
         JSON.stringify({ error: 'Forbidden: Admin role required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -47,6 +54,8 @@ Deno.serve(async (req) => {
     // Deletar enrollment keys expiradas ha mais de 48 horas e inativas
     const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
+    log.info('Starting cleanup of expired enrollment keys', { threshold: fortyEightHoursAgo.toISOString() });
+
     const { data, error } = await supabaseClient
       .from('enrollment_keys')
       .delete()
@@ -55,13 +64,13 @@ Deno.serve(async (req) => {
       .select('id');
 
     if (error) {
-      console.error('Error deleting expired keys:', error);
+      log.error('Error deleting expired keys', error);
       throw error;
     }
 
     const deletedCount = data?.length || 0;
 
-    console.log(`Cleanup completed: ${deletedCount} expired keys deleted at ${new Date().toISOString()}`);
+    log.success('Cleanup completed', { deletedCount, timestamp: new Date().toISOString() });
 
     return new Response(
       JSON.stringify({
@@ -79,7 +88,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Cleanup error:', error);
+    log.error('Cleanup error', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(
       JSON.stringify({ 
