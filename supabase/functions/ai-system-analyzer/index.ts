@@ -1,10 +1,14 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { sanitizeForAI, anonymizeAgentName } from '../_shared/ai-sanitizer.ts';
+import { withCircuitBreaker, executeWithTimeout } from '../_shared/ai-circuit-breaker.ts';
+import { createMetricsLogger, extractTokenUsage } from '../_shared/ai-metrics.ts';
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const AI_MODEL = 'google/gemini-2.5-flash';
+const AI_TIMEOUT_MS = 15000; // 15 seconds
 
 interface AnalysisData {
   problematicJobs: any[];
@@ -452,43 +456,64 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     }
     const prompt = promptSanitizeResult.sanitized;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'Voce e um especialista em analise de sistemas. Responda APENAS com JSON valido, sem texto adicional.' 
-          },
-          { role: 'user', content: prompt }
-        ],
-      }),
-    });
+    // Start metrics tracking
+    const aiMetricsLogger = createMetricsLogger('ai-system-analyzer', AI_MODEL);
+    const startTime = aiMetricsLogger.logStart(tenantId);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      
-      if (response.status === 429) {
-        console.error('[ai-system-analyzer] Rate limit exceeded, will retry next cycle');
-        return [];
+    // Use circuit breaker with timeout
+    const aiResult = await withCircuitBreaker(
+      async () => {
+        return executeWithTimeout(async () => {
+          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: AI_MODEL,
+              messages: [
+                { 
+                  role: 'system', 
+                  content: 'Voce e um especialista em analise de sistemas. Responda APENAS com JSON valido, sem texto adicional.' 
+                },
+                { role: 'user', content: prompt }
+              ],
+            }),
+          });
+
+          if (!response.ok) {
+            if (response.status === 429) {
+              throw new Error('Rate limit exceeded');
+            }
+            if (response.status === 402) {
+              throw new Error('Payment required - credits exhausted');
+            }
+            throw new Error(`AI API error: ${response.status}`);
+          }
+
+          return response.json();
+        }, AI_TIMEOUT_MS);
+      },
+      { 
+        timeoutMs: AI_TIMEOUT_MS,
+        fallbackResponse: null 
       }
-      
-      if (response.status === 402) {
-        console.error('[ai-system-analyzer] Payment required - Lovable AI credits exhausted');
-        return [];
-      }
-      
-      console.error('[ai-system-analyzer] AI API error:', response.status, errorText);
+    );
+
+    // Handle circuit breaker result
+    if (!aiResult.success || !aiResult.data) {
+      aiMetricsLogger.logFailure(startTime, aiResult.error || 'Unknown error', tenantId, aiResult.usedFallback);
+      console.error('[ai-system-analyzer] AI call failed for tenant:', tenantId, aiResult.error);
       return [];
     }
 
-    const aiResponse = await response.json();
+    const aiResponse = aiResult.data;
     const content = aiResponse.choices?.[0]?.message?.content;
+    const tokenUsage = extractTokenUsage(aiResponse);
+
+    // Log success metrics
+    aiMetricsLogger.logSuccess(startTime, tenantId, tokenUsage);
 
     if (!content) {
       console.error('[ai-system-analyzer] No content in AI response');
