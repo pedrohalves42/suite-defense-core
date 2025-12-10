@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { sanitizeForAI, sanitizeObjectForAI, anonymizeAgentName } from "../_shared/ai-sanitizer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -104,13 +105,28 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Preparar contexto para analise da IA
+    // Preparar contexto para analise da IA (com anonimização)
+    const anonymizedAgents = agents?.map(a => ({
+      agent_id: anonymizeAgentName(a.agent_name),
+      status: a.status,
+      last_heartbeat: a.last_heartbeat,
+      enrolled_at: a.enrolled_at,
+    })) || [];
+    
+    const anonymizedJobs = jobs?.map(j => ({
+      agent_id: anonymizeAgentName(j.agent_name),
+      type: j.type,
+      status: j.status,
+      created_at: j.created_at,
+      completed_at: j.completed_at,
+    })) || [];
+
     const analysisContext = {
       timeRange: `${timeRangeHours} horas`,
       totalAgents: agents?.length || 0,
       totalJobs: jobs?.length || 0,
-      agents: agents,
-      jobs: jobs,
+      agents: anonymizedAgents,
+      jobs: anonymizedJobs.slice(0, 100), // Limitar para evitar prompts muito grandes
       statistics: {
         jobsByStatus: jobs?.reduce((acc: Record<string, number>, job) => {
           acc[job.status] = (acc[job.status] || 0) + 1;
@@ -127,12 +143,18 @@ Deno.serve(async (req) => {
       }
     };
 
+    // Sanitizar o contexto antes de enviar à IA
+    const { sanitized: sanitizedContext, warnings } = sanitizeObjectForAI(analysisContext);
+    if (warnings.length > 0) {
+      console.warn('[analyze-network-anomalies] Sanitization warnings:', warnings);
+    }
+
     // Chamar Lovable AI para analise
-    const aiPrompt = `Voce e um especialista em seguranca de rede e analise de comportamento de sistemas.
+    const rawPrompt = `Voce e um especialista em seguranca de rede e analise de comportamento de sistemas.
 
-Analise os seguintes dados de uma rede de seguranca de endpoints (CyberShield) e identifique possiveis anomalias, problemas ou padroes suspeitos:
+Analise os seguintes dados de uma rede de seguranca de endpoints e identifique possiveis anomalias, problemas ou padroes suspeitos:
 
-${JSON.stringify(analysisContext, null, 2)}
+${JSON.stringify(sanitizedContext, null, 2)}
 
 Forneca uma analise detalhada incluindo:
 1. **Resumo Executivo**: Visao geral do estado da rede
@@ -142,6 +164,13 @@ Forneca uma analise detalhada incluindo:
 5. **Recomendacoes**: Acoes sugeridas para melhorar a seguranca
 
 Seja especifico e tecnico, focando em seguranca cibernetica.`;
+
+    // Sanitizar o prompt final
+    const promptSanitizeResult = sanitizeForAI(rawPrompt);
+    if (promptSanitizeResult.blocked) {
+      console.warn('[analyze-network-anomalies] Prompt injection blocked:', promptSanitizeResult.blockedPatterns);
+    }
+    const aiPrompt = promptSanitizeResult.sanitized;
 
     if (!LOVABLE_API_KEY) {
       console.warn('LOVABLE_API_KEY not configured');
