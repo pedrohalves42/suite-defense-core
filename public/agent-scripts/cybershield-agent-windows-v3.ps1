@@ -817,7 +817,7 @@ function Invoke-WebActivityJob {
                             
                             if ($buffer) {
                                 $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
-                                $urlMatches = [regex]::Matches($dataString, 'https?://([^/\s\x00]+)')
+                                $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
                                 
                                 $chromeDomains = $urlMatches | 
                                     ForEach-Object { $_.Groups[1].Value } | 
@@ -873,7 +873,7 @@ function Invoke-WebActivityJob {
                                     
                                     if ($buffer) {
                                         $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
-                                        $urlMatches = [regex]::Matches($dataString, 'https?://([^/\s\x00]+)')
+                                        $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
                                         
                                         $firefoxDomains = $urlMatches | 
                                             ForEach-Object { $_.Groups[1].Value } | 
@@ -927,7 +927,7 @@ function Invoke-WebActivityJob {
                             
                             if ($buffer) {
                                 $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
-                                $urlMatches = [regex]::Matches($dataString, 'https?://([^/\s\x00]+)')
+                                $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
                                 
                                 $edgeDomains = $urlMatches | 
                                     ForEach-Object { $_.Groups[1].Value } | 
