@@ -24,7 +24,6 @@ interface CVESyncStatus {
 interface TopCVE {
   cve_id: string;
   cvss_score: number | null;
-  cvss_severity: string | null;
   description: string | null;
   published_date: string | null;
 }
@@ -64,7 +63,7 @@ export default function CVEDatabaseStatus() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('cve_database')
-        .select('cve_id, cvss_score, cvss_severity, description, published_date')
+        .select('cve_id, cvss_score, description, published_date')
         .not('cvss_score', 'is', null)
         .order('cvss_score', { ascending: false })
         .order('published_date', { ascending: false })
@@ -103,14 +102,20 @@ export default function CVEDatabaseStatus() {
     },
   });
   
-  const getSeverityColor = (severity: string) => {
-    switch (severity?.toUpperCase()) {
-      case 'CRITICAL': return 'destructive';
-      case 'HIGH': return 'destructive';
-      case 'MEDIUM': return 'secondary';
-      case 'LOW': return 'outline';
-      default: return 'outline';
-    }
+  const getSeverityFromScore = (score: number | null): string => {
+    if (!score) return 'N/A';
+    if (score >= 9.0) return 'CRITICAL';
+    if (score >= 7.0) return 'HIGH';
+    if (score >= 4.0) return 'MEDIUM';
+    return 'LOW';
+  };
+  
+  const getSeverityColor = (score: number | null) => {
+    if (!score) return 'outline';
+    if (score >= 9.0) return 'destructive';
+    if (score >= 7.0) return 'destructive';
+    if (score >= 4.0) return 'secondary';
+    return 'outline';
   };
   
   const getStatusColor = (status: string) => {
@@ -185,9 +190,9 @@ export default function CVEDatabaseStatus() {
             {/* Sync Status */}
             <div className="p-4 rounded-lg border bg-muted/50">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                {syncStatus?.status === 'success' ? (
+                {syncStatus?.sync_status === 'success' ? (
                   <CheckCircle className="h-4 w-4 text-green-500" />
-                ) : syncStatus?.status === 'failed' ? (
+                ) : syncStatus?.sync_status === 'failed' ? (
                   <AlertTriangle className="h-4 w-4 text-destructive" />
                 ) : (
                   <RefreshCw className="h-4 w-4" />
@@ -197,25 +202,25 @@ export default function CVEDatabaseStatus() {
               {statusLoading ? (
                 <Skeleton className="h-8 w-20" />
               ) : (
-                <Badge variant={getStatusColor(syncStatus?.status || '')}>
-                  {syncStatus?.status === 'success' ? 'Sucesso' : 
-                   syncStatus?.status === 'partial' ? 'Parcial' : 
-                   syncStatus?.status === 'failed' ? 'Falhou' : 'Pendente'}
+                <Badge variant={getStatusColor(syncStatus?.sync_status || '')}>
+                  {syncStatus?.sync_status === 'success' ? 'Sucesso' : 
+                   syncStatus?.sync_status === 'partial' ? 'Parcial' : 
+                   syncStatus?.sync_status === 'failed' ? 'Falhou' : 'Pendente'}
                 </Badge>
               )}
             </div>
             
-            {/* Keywords Processed */}
+            {/* Total Synced */}
             <div className="p-4 rounded-lg border bg-muted/50">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Database className="h-4 w-4" />
-                <span className="text-sm">Keywords</span>
+                <span className="text-sm">CVEs Sincronizados</span>
               </div>
               {statusLoading ? (
                 <Skeleton className="h-8 w-16" />
               ) : (
                 <span className="text-lg font-medium">
-                  {syncStatus?.keywords_processed || 0} processadas
+                  {syncStatus?.total_cves_synced?.toLocaleString() || 0}
                 </span>
               )}
             </div>
@@ -263,8 +268,8 @@ export default function CVEDatabaseStatus() {
                       {cve.cve_id}
                     </a>
                     <div className="flex items-center gap-2">
-                      <Badge variant={getSeverityColor(cve.cvss_severity)}>
-                        {cve.cvss_severity}
+                      <Badge variant={getSeverityColor(cve.cvss_score)}>
+                        {getSeverityFromScore(cve.cvss_score)}
                       </Badge>
                       <span className="font-bold text-sm">
                         {cve.cvss_score?.toFixed(1)}
