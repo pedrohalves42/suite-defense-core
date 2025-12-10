@@ -3,9 +3,8 @@
  * CyberShield Agent Macos Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-macos-v3.sh
- * Versao: v3.10.30-UPTIME
- * SHA256: 6c33166f476beed988e24eb832ddc737dd1180650276cc45afa3af344e57a103
- * Gerado em: 2025-12-09T17:28:55.793Z
+ * Versao: v3.10.32-MACOS-AGENTID-FIX
+ * Gerado em: 2025-12-10T15:00:00.000Z
  */
 
 export function getAgentScriptMacos(): string {
@@ -14,7 +13,7 @@ export function getAgentScriptMacos(): string {
 
 export const AGENT_SCRIPT_MACOS_SH = `#!/usr/bin/env bash
 # CyberShield Agent - macOS
-# Version: v3.10.30-UPTIME
+# Version: v3.10.32-MACOS-AGENTID-FIX
 
 set -euo pipefail
 
@@ -27,7 +26,7 @@ SERVER_URL="\${SERVER_URL:-\${CYBERSHIELD_SERVER_URL:-}}"
 AGENT_TOKEN="\${AGENT_TOKEN:-\${CYBERSHIELD_AGENT_TOKEN:-}}"
 HMAC_SECRET="\${HMAC_SECRET:-\${CYBERSHIELD_HMAC_SECRET:-}}"
 AGENT_NAME="\${AGENT_NAME:-\${CYBERSHIELD_AGENT_NAME:-\$(hostname -s)}}"
-AGENT_VERSION="\${AGENT_VERSION:-\${CYBERSHIELD_AGENT_VERSION:-v3.10.30}}"
+AGENT_VERSION="\${AGENT_VERSION:-\${CYBERSHIELD_AGENT_VERSION:-v3.10.32}}"
 
 # Parse argumentos (sobrescreve env vars)
 while [[ \$# -gt 0 ]]; do
