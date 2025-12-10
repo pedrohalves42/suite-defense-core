@@ -522,7 +522,7 @@ const AgentInstaller = () => {
     const { data: credentials, error: credError } = await retryWithBackoff(
       () => enrollmentCircuitBreaker.execute(() => 
         supabase.functions.invoke('auto-generate-enrollment', {
-          body: { agentName: agentName.trim() }
+          body: { agentName: agentName.trim(), platform }
         })
       )
     );

@@ -295,8 +295,8 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       return handleValidationError(validation.error, undefined, requestId);
     }
 
-    const { agentName } = validation.data;
-    logger.info(`[${requestId}] Valid agent name`, { agentName });
+    const { agentName, platform } = validation.data;
+    logger.info(`[${requestId}] Valid agent name`, { agentName, platform });
 
     // Generate enrollment key
     const generateKey = () => {
@@ -433,10 +433,13 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       agentId = existingAgent.id;
       logger.info(`[${requestId}] Re-enrolling existing agent`, { agentId });
       
-      // Update HMAC secret for security
+      // Update HMAC secret and os_type for re-enrollment
       const { error: updateError } = await supabase
         .from('agents')
-        .update({ hmac_secret: hmacSecret })
+        .update({ 
+          hmac_secret: hmacSecret,
+          os_type: platform, // Update platform if changed
+        })
         .eq('id', agentId);
       
       if (updateError) {
@@ -456,7 +459,7 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
     } else {
       // Create new agent
       logger.info(`[${requestId}] Creating new agent`, { agentName });
-    // [OK]  FASE 1.2: Create agent record com enrolled_at sempre definido
+    // Create agent record with os_type from platform
     const { data: newAgent, error: agentError } = await supabase
         .from('agents')
         .insert({
@@ -464,7 +467,8 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
           tenant_id: tenantId,
           hmac_secret: hmacSecret,
           status: 'pending',
-          enrolled_at: new Date().toISOString(), // [OK]  Garantir enrolled_at sempre definido
+          enrolled_at: new Date().toISOString(),
+          os_type: platform, // Linux/macOS/Windows from frontend
         })
         .select('id')
         .maybeSingle();
