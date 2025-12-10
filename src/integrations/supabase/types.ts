@@ -6411,6 +6411,15 @@ export type Database = {
       }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      log_sensitive_access: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_resource_id: string
+          p_resource_type: string
+        }
+        Returns: undefined
+      }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
       update_quota_usage: {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }
