@@ -4,6 +4,7 @@ import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { AGENT_SCRIPT_WINDOWS_CONTENT } from '../_shared/agent-script-windows-content.ts';
 import { INSTALLER_VERSION } from '../_shared/installer-version.ts';
+import { hashToken } from '../_shared/token-hash.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -34,11 +35,12 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Buscar token e agente (como faz heartbeat)
+    // Buscar token e agente via hash (P0 security fix)
+    const tokenHash = await hashToken(agentToken);
     const { data: tokenData, error: tokenError } = await supabase
       .from('agent_tokens')
       .select('agent_id, is_active, agents!inner(id, agent_name, hmac_secret, agent_version, os_type)')
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .single();
 

@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
+import { hashToken } from '../_shared/token-hash.ts';
 
 /**
  * Edge Function para agentes verificarem updates disponiveis
@@ -47,7 +48,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Buscar agent e validar token
+    // 2. Buscar agent e validar token via hash (P0 security fix)
+    const tokenHash = await hashToken(agentToken);
     const { data: tokenData, error: tokenError } = await supabase
       .from('agent_tokens')
       .select(`
@@ -59,7 +61,7 @@ Deno.serve(async (req) => {
           os_type
         )
       `)
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .single();
 

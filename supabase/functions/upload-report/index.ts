@@ -4,6 +4,7 @@ import { handleException, handleValidationError, corsHeaders } from '../_shared/
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logSecurityEvent, extractIpAddress } from '../_shared/security-log.ts'
+import { hashToken } from '../_shared/token-hash.ts'
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID()
@@ -34,11 +35,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Buscar agente pelo token na tabela dedicada com tenant_id
+    // Buscar agente pelo token via hash (P0 security fix)
+    const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
       .select('agent_id, agents!inner(agent_name, hmac_secret, tenant_id)')
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -95,11 +97,11 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Atualizar last_used_at do token
+    // Atualizar last_used_at do token via hash (P0 security fix)
     await supabase
       .from('agent_tokens')
       .update({ last_used_at: new Date().toISOString() })
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
 
     // Detectar tipo de content (JSON ou multipart form)
     const contentType = req.headers.get('content-type') || ''
