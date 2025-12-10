@@ -6,6 +6,7 @@ import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { checkQuotaAvailable } from '../_shared/quota.ts';
 import { logger } from '../_shared/logger.ts';
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts';
+import { hashToken, getTokenPrefix } from '../_shared/token-hash.ts';
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -245,13 +246,19 @@ Deno.serve(async (req) => {
       agentId = newAgent!.id;
     }
 
-    // Create token in dedicated table
+    // Create token in dedicated table with hash
     const expiresAt = new Date();
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
+    // FASE 2: Armazenar token com hash
+    const tokenHash = await hashToken(agentToken);
+    const tokenPrefix = getTokenPrefix(agentToken);
+
     await supabase.from('agent_tokens').insert({
       agent_id: agentId,
-      token: agentToken,
+      token: agentToken,         // Manter temporariamente para rollback
+      token_hash: tokenHash,
+      token_prefix: tokenPrefix,
       expires_at: expiresAt.toISOString(),
     });
 
