@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,8 +41,13 @@ interface ThreatIntelResult {
   cached_at?: string;
 }
 
-export default function ThreatIntelligenceLookup() {
-  const [target, setTarget] = useState('');
+interface ThreatIntelligenceLookupProps {
+  initialTarget?: string;
+  onAnalyze?: (result: ThreatIntelResult) => void;
+}
+
+export default function ThreatIntelligenceLookup({ initialTarget, onAnalyze }: ThreatIntelligenceLookupProps) {
+  const [target, setTarget] = useState(initialTarget || '');
   const [result, setResult] = useState<ThreatIntelResult | null>(null);
   
   const lookupMutation = useMutation({
@@ -56,6 +61,7 @@ export default function ThreatIntelligenceLookup() {
     },
     onSuccess: (data) => {
       setResult(data);
+      onAnalyze?.(data);
       if (data.reputation === 'malicious') {
         toast.error('Ameaça detectada! Este alvo foi identificado como malicioso.');
       } else if (data.reputation === 'suspicious') {
@@ -69,6 +75,14 @@ export default function ThreatIntelligenceLookup() {
     },
   });
   
+  // Auto-trigger analysis when initialTarget changes
+  useEffect(() => {
+    if (initialTarget && initialTarget !== target) {
+      setTarget(initialTarget);
+      lookupMutation.mutate(initialTarget.trim());
+    }
+  }, [initialTarget]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!target.trim()) {

@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { AgentSelector } from '@/components/AgentSelector';
 import { useWebActivity } from '@/hooks/useWebActivity';
 import { useBlockedWebsites } from '@/hooks/useBlockedWebsites';
+import ThreatIntelligenceLookup from '@/components/admin/ThreatIntelligenceLookup';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,8 @@ import {
   ShieldAlert,
   Filter,
   Clock,
-  Eye
+  Eye,
+  Shield
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -44,6 +46,8 @@ export default function WebActivity() {
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [domainToBlock, setDomainToBlock] = useState('');
   const [blockReason, setBlockReason] = useState('');
+  const [threatTarget, setThreatTarget] = useState('');
+  const threatSectionRef = useRef<HTMLDivElement>(null);
   
   const { data: activity, isLoading, error } = useWebActivity(selectedAgent, !!selectedAgent);
   const { blockedWebsites, blockWebsite, unblockWebsite, isBlocked } = useBlockedWebsites();
@@ -113,6 +117,13 @@ export default function WebActivity() {
     setDomainToBlock(domain);
     setBlockReason('');
     setBlockDialogOpen(true);
+  };
+
+  const handleAnalyzeDomain = (domain: string) => {
+    setThreatTarget(domain);
+    setTimeout(() => {
+      threatSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
   };
 
   const confirmBlock = async () => {
@@ -236,6 +247,11 @@ export default function WebActivity() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Threat Intelligence Analysis */}
+            <div ref={threatSectionRef}>
+              <ThreatIntelligenceLookup initialTarget={threatTarget} />
+            </div>
 
             {/* Charts Row */}
             <div className="grid gap-4 md:grid-cols-2">
@@ -436,30 +452,40 @@ export default function WebActivity() {
                             {format(new Date(item.last_seen_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                           </TableCell>
                           <TableCell className="text-right">
-                            {!item.isBlocked ? (
+                            <div className="flex items-center justify-end gap-2">
                               <Button
-                                variant="destructive"
+                                variant="ghost"
                                 size="sm"
-                                onClick={() => handleBlockSite(item.domain)}
+                                onClick={() => handleAnalyzeDomain(item.domain)}
+                                title="Analisar ameaça"
                               >
-                                <Ban className="h-4 w-4 mr-1" />
-                                Bloquear
+                                <Shield className="h-4 w-4" />
                               </Button>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  const blocked = blockedWebsites?.find(b => 
-                                    item.domain.includes(b.domain_pattern) || 
-                                    b.domain_pattern.includes(item.domain)
-                                  );
-                                  if (blocked) unblockWebsite.mutate(blocked.id);
-                                }}
-                              >
-                                Desbloquear
-                              </Button>
-                            )}
+                              {!item.isBlocked ? (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleBlockSite(item.domain)}
+                                >
+                                  <Ban className="h-4 w-4 mr-1" />
+                                  Bloquear
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const blocked = blockedWebsites?.find(b => 
+                                      item.domain.includes(b.domain_pattern) || 
+                                      b.domain_pattern.includes(item.domain)
+                                    );
+                                    if (blocked) unblockWebsite.mutate(blocked.id);
+                                  }}
+                                >
+                                  Desbloquear
+                                </Button>
+                              )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
