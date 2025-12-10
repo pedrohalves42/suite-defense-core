@@ -170,13 +170,14 @@ export async function getAIMetricsSummary(tenantId?: string, hoursBack = 24): Pr
       return acc;
     }, {} as Record<string, typeof data>);
     
-    for (const [fn, fnMetrics] of Object.entries(functionGroups)) {
-      const fnSuccess = fnMetrics.filter((m: any) => m.success).length;
-      const fnLatencies = fnMetrics.map((m: any) => m.latency_ms);
+    for (const [fn, fnMetricsArr] of Object.entries(functionGroups)) {
+      const fnMetrics = fnMetricsArr as typeof data;
+      const fnSuccess = fnMetrics.filter((m) => m.success).length;
+      const fnLatencies = fnMetrics.map((m) => m.latency_ms);
       byFunction[fn] = {
         calls: fnMetrics.length,
         success_rate: (fnSuccess / fnMetrics.length) * 100,
-        avg_latency: fnLatencies.reduce((a: number, b: number) => a + b, 0) / fnLatencies.length,
+        avg_latency: fnLatencies.reduce((a, b) => a + b, 0) / fnLatencies.length,
       };
     }
     
@@ -190,10 +191,11 @@ export async function getAIMetricsSummary(tenantId?: string, hoursBack = 24): Pr
       return acc;
     }, {} as Record<string, typeof data>);
     
-    for (const [model, modelMetrics] of Object.entries(modelGroups)) {
+    for (const [model, modelMetricsArr] of Object.entries(modelGroups)) {
+      const modelMetrics = modelMetricsArr as typeof data;
       byModel[model] = {
         calls: modelMetrics.length,
-        total_tokens: modelMetrics.reduce((sum: number, m: any) => sum + (m.tokens_total || 0), 0),
+        total_tokens: modelMetrics.reduce((sum, m) => sum + (m.tokens_total || 0), 0),
       };
     }
     
