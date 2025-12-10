@@ -11,6 +11,7 @@ import { Shield, Mail, AlertCircle, Lock, Loader2, Eye, EyeOff } from 'lucide-re
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { logger } from '@/lib/logger';
+import { MFAVerificationDialog } from '@/components/mfa/MFAVerificationDialog';
 
 const loginSchema = z.object({
   email: z.string()
@@ -32,6 +33,7 @@ export default function Login() {
   const [attemptCount, setAttemptCount] = useState(0);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showMFADialog, setShowMFADialog] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -113,12 +115,19 @@ export default function Login() {
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: validation.data.email,
       password: validation.data.password,
     });
 
     if (error) {
+      // Check if MFA is required
+      if (error.message?.includes('mfa_required') || 
+          (error as any)?.code === 'mfa_required') {
+        setShowMFADialog(true);
+        setLoading(false);
+        return;
+      }
       
       // Registrar tentativa falhada com audit log
       try {
@@ -156,20 +165,52 @@ export default function Login() {
         title: message,
         description,
       });
-    } else {
-      // Limpar tentativas falhadas
-      await supabase.functions.invoke('clear-failed-logins', {
-        body: {},
-      });
-
-      toast({
-        title: 'Login realizado com sucesso',
-        description: 'Redirecionando...',
-      });
-      navigate('/dashboard');
+      setLoading(false);
+      return;
     }
 
+    // Check if user has MFA factors that need verification
+    const { data: factors } = await supabase.auth.mfa.listFactors();
+    const hasVerifiedTOTP = factors?.totp?.some(f => f.status === 'verified');
+    
+    if (hasVerifiedTOTP) {
+      // User has MFA enabled, need to verify
+      setShowMFADialog(true);
+      setLoading(false);
+      return;
+    }
+
+    // No MFA, proceed with login
+    await completeLogin();
+  };
+
+  const completeLogin = async () => {
+    // Limpar tentativas falhadas
+    await supabase.functions.invoke('clear-failed-logins', {
+      body: {},
+    });
+
+    toast({
+      title: 'Login realizado com sucesso',
+      description: 'Redirecionando...',
+    });
+    navigate('/dashboard');
     setLoading(false);
+  };
+
+  const handleMFASuccess = async () => {
+    setShowMFADialog(false);
+    await completeLogin();
+  };
+
+  const handleMFACancel = async () => {
+    // Sign out if MFA verification is cancelled
+    await supabase.auth.signOut();
+    setShowMFADialog(false);
+    toast({
+      title: 'Login cancelado',
+      description: 'Você precisa completar a verificação de dois fatores para entrar.',
+    });
   };
 
   const handleMagicLink = async (e: React.FormEvent) => {
@@ -420,6 +461,14 @@ export default function Login() {
           </TabsContent>
         </Tabs>
       </Card>
+
+      {/* MFA Verification Dialog */}
+      <MFAVerificationDialog
+        open={showMFADialog}
+        onOpenChange={setShowMFADialog}
+        onSuccess={handleMFASuccess}
+        onCancel={handleMFACancel}
+      />
     </div>
   );
 }
