@@ -314,7 +314,7 @@ export default function AgentTest() {
         <div>
           <h1 className="text-3xl font-bold">Teste de Integracao de Agentes</h1>
           <p className="text-muted-foreground mt-2">
-            Valide o fluxo completo: criar job ? polling ? execucao ? report ? ACK
+            Valide o fluxo completo: criar job, polling, execucao, report e ACK
           </p>
         </div>
         <AlertDialog>

@@ -100,7 +100,7 @@ const ServerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState<number>(0);
 
-  // Buscar mapeamento de tenant_id ? tenant_name
+  // Buscar mapeamento de tenant_id para tenant_name
   const [tenantNames, setTenantNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
