@@ -383,3 +383,10 @@ verify_jwt = false
 # === Scheduled Reports ===
 [functions.send-scheduled-report]
 verify_jwt = false
+
+# === NVD CVE Integration ===
+[functions.fetch-nvd-cves]
+verify_jwt = true
+
+[functions.scan-vulnerabilities]
+verify_jwt = false
