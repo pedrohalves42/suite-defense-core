@@ -842,19 +842,19 @@ echo "[OK] Environment file created"
 # Check dependencies
 echo "[INFO] Verificando dependencias..."
 check_install_dep() {
-  local cmd="\${1}"
-  local pkg="\${2}"
-  if ! command -v "\${cmd}" >/dev/null 2>&1; then
-    echo "[INFO] Instalando \${pkg}..."
+  local cmd="$1"
+  local pkg="$2"
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    echo "[INFO] Instalando $pkg..."
     if command -v apt-get >/dev/null 2>&1; then
-      apt-get update -qq && apt-get install -y -qq "\${pkg}" || true
+      apt-get update -qq && apt-get install -y -qq "$pkg" || true
     elif command -v yum >/dev/null 2>&1; then
-      yum install -y "\${pkg}" || true
+      yum install -y "$pkg" || true
     elif command -v dnf >/dev/null 2>&1; then
-      dnf install -y "\${pkg}" || true
+      dnf install -y "$pkg" || true
     fi
   else
-    echo "[OK] \${cmd} disponivel"
+    echo "[OK] $cmd disponivel"
   fi
 }
 
@@ -971,16 +971,16 @@ echo "[OK] Environment file created"
 # Check dependencies
 echo "[INFO] Verificando dependencias..."
 check_macos_dep() {
-    local cmd="\${1}"
-    if ! command -v "\${cmd}" >/dev/null 2>&1; then
-        echo "[INFO] \${cmd} nao encontrado, tentando instalar via Homebrew..."
+    local cmd="$1"
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "[INFO] $cmd nao encontrado, tentando instalar via Homebrew..."
         if command -v brew >/dev/null 2>&1; then
-            brew install "\${cmd}" 2>/dev/null || echo "[WARN] Falha ao instalar \${cmd} via Homebrew"
+            brew install "$cmd" 2>/dev/null || echo "[WARN] Falha ao instalar $cmd via Homebrew"
         else
-            echo "[WARN] Homebrew nao disponivel. Instale \${cmd} manualmente se necessario."
+            echo "[WARN] Homebrew nao disponivel. Instale $cmd manualmente se necessario."
         fi
     else
-        echo "[OK] \${cmd} disponivel"
+        echo "[OK] $cmd disponivel"
     fi
 }
 
