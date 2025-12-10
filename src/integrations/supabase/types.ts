@@ -1398,6 +1398,8 @@ export type Database = {
           is_active: boolean
           last_used_at: string | null
           token: string
+          token_hash: string
+          token_prefix: string
         }
         Insert: {
           agent_id: string
@@ -1407,6 +1409,8 @@ export type Database = {
           is_active?: boolean
           last_used_at?: string | null
           token: string
+          token_hash: string
+          token_prefix: string
         }
         Update: {
           agent_id?: string
@@ -1416,6 +1420,8 @@ export type Database = {
           is_active?: boolean
           last_used_at?: string | null
           token?: string
+          token_hash?: string
+          token_prefix?: string
         }
         Relationships: [
           {
@@ -6398,6 +6404,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      hash_agent_token: { Args: { p_token: string }; Returns: string }
       installation_health_summary: {
         Args: never
         Returns: {

@@ -4,6 +4,7 @@ import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts';
+import { hashToken } from '../_shared/token-hash.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -47,7 +48,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar agente via token (CORRIGIDO)
+    // FASE 2: Buscar agente via hash do token
+    const tokenHash = await hashToken(agentToken)
     const { data: tokenData, error: tokenError } = await supabase
       .from('agent_tokens')
       .select(`
@@ -61,7 +63,7 @@ Deno.serve(async (req) => {
           status
         )
       `)
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)

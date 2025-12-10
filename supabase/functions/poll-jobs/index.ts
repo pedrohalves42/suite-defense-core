@@ -5,6 +5,7 @@ import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logger } from '../_shared/logger.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
+import { hashToken } from '../_shared/token-hash.ts'
 
 Deno.serve(async (req) => {
   // QUAL-01: Proper HTTP method validation
@@ -38,11 +39,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Buscar agente pelo token na tabela dedicada
+    // FASE 2: Buscar agente pelo hash do token
+    const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
       .select('agent_id, agents!inner(agent_name, hmac_secret)')
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -105,7 +107,7 @@ Deno.serve(async (req) => {
 
     logger.debug('Agent polling', { agentName: agent.agent_name })
 
-    // Atualizar heartbeat e last_used_at do token
+    // Atualizar heartbeat e last_used_at do token (usando hash)
     await Promise.all([
       supabase
         .from('agents')
@@ -114,7 +116,7 @@ Deno.serve(async (req) => {
       supabase
         .from('agent_tokens')
         .update({ last_used_at: new Date().toISOString() })
-        .eq('token', agentToken)
+        .eq('token_hash', tokenHash)
     ])
 
     logger.debug('Fetching jobs for agent', { agentName: agent.agent_name })

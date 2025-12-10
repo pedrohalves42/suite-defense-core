@@ -3,6 +3,7 @@ import { JobIdSchema, AgentTokenSchema } from '../_shared/validation.ts'
 import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
+import { hashToken } from '../_shared/token-hash.ts'
 
 Deno.serve(async (req) => {
   // [WARN] ? DEPRECATION WARNING - This endpoint is being phased out
@@ -35,11 +36,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Buscar agente pelo token na tabela dedicada
+    // FASE 2: Buscar agente pelo hash do token
+    const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
       .select('agent_id, agents!inner(agent_name, hmac_secret)')
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -100,11 +102,11 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Atualizar last_used_at do token
+    // Atualizar last_used_at do token (usando hash)
     await supabase
       .from('agent_tokens')
       .update({ last_used_at: new Date().toISOString() })
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
 
     // Extrair job_id da URL ou do body (prioridade: URL para compatibilidade)
     const url = new URL(req.url)
