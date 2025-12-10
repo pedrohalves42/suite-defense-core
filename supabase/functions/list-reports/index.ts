@@ -3,6 +3,7 @@ import { AgentTokenSchema } from '../_shared/validation.ts'
 import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
+import { hashToken } from '../_shared/token-hash.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -32,11 +33,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Buscar agente pelo token na tabela dedicada
+    // Buscar agente pelo token via hash (P0 security fix)
+    const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
       .select('agent_id, agents!inner(agent_name, hmac_secret)')
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -84,11 +86,11 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Atualizar last_used_at do token
+    // Atualizar last_used_at do token via hash (P0 security fix)
     await supabase
       .from('agent_tokens')
       .update({ last_used_at: new Date().toISOString() })
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
 
     console.log('Listando relatorios para agente:', agent.agent_name)
 

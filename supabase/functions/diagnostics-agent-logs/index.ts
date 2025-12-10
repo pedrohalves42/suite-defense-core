@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
 import { logger } from '../_shared/logger.ts'
+import { hashToken } from '../_shared/token-hash.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -20,11 +21,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Buscar agente pelo token
+    // Buscar agente pelo token via hash (P0 security fix)
+    const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
       .select('agent_id, agents!inner(id, agent_name, tenant_id)')
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .maybeSingle()
 

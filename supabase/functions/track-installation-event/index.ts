@@ -5,6 +5,7 @@ import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { hashToken } from '../_shared/token-hash.ts';
 
 // Validation schema
 const InstallationEventSchema = z.object({
@@ -138,11 +139,12 @@ Deno.serve(async (req) => {
       logger.info('[track-installation-event] Using agent-token mode with HMAC validation', { requestId });
       
       try {
-        // 1. BUSCAR AGENTE PELO TOKEN (igual ao heartbeat)
+        // 1. BUSCAR AGENTE PELO TOKEN via hash (P0 security fix)
+        const tokenHash = await hashToken(agentToken);
         const { data: tokenData } = await supabase
           .from('agent_tokens')
           .select('agent_id, agents!inner(id, tenant_id, agent_name, hmac_secret)')
-          .eq('token', agentToken)
+          .eq('token_hash', tokenHash)
           .eq('is_active', true)
           .order('created_at', { ascending: false })
           .limit(1)
