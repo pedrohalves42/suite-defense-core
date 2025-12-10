@@ -37,12 +37,18 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError || !userData.user) throw new Error("Unauthorized");
 
+    // Check for admin OR super_admin role
     const { data: isAdmin } = await supabaseClient.rpc('has_role', {
       _user_id: userData.user.id,
       _role: 'admin'
     });
+    
+    const { data: isSuperAdmin } = await supabaseClient.rpc('has_role', {
+      _user_id: userData.user.id,
+      _role: 'super_admin'
+    });
 
-    if (!isAdmin) {
+    if (!isAdmin && !isSuperAdmin) {
       throw new Error("Only admins can create Stripe products");
     }
 
