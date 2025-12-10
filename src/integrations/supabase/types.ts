@@ -2433,6 +2433,102 @@ export type Database = {
           },
         ]
       }
+      cve_database: {
+        Row: {
+          affected_products: Json | null
+          affected_versions: Json | null
+          cached_at: string | null
+          cpe_matches: Json | null
+          created_at: string | null
+          cve_id: string
+          cve_references: Json | null
+          cvss_score: number | null
+          cvss_vector: string | null
+          cvss_version: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          last_modified: string | null
+          published_date: string | null
+          severity: string | null
+          source: string | null
+          weaknesses: Json | null
+        }
+        Insert: {
+          affected_products?: Json | null
+          affected_versions?: Json | null
+          cached_at?: string | null
+          cpe_matches?: Json | null
+          created_at?: string | null
+          cve_id: string
+          cve_references?: Json | null
+          cvss_score?: number | null
+          cvss_vector?: string | null
+          cvss_version?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_modified?: string | null
+          published_date?: string | null
+          severity?: string | null
+          source?: string | null
+          weaknesses?: Json | null
+        }
+        Update: {
+          affected_products?: Json | null
+          affected_versions?: Json | null
+          cached_at?: string | null
+          cpe_matches?: Json | null
+          created_at?: string | null
+          cve_id?: string
+          cve_references?: Json | null
+          cvss_score?: number | null
+          cvss_vector?: string | null
+          cvss_version?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_modified?: string | null
+          published_date?: string | null
+          severity?: string | null
+          source?: string | null
+          weaknesses?: Json | null
+        }
+        Relationships: []
+      }
+      cve_sync_status: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          last_modified_date: string | null
+          last_sync_at: string | null
+          sync_status: string | null
+          total_cves_synced: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          last_modified_date?: string | null
+          last_sync_at?: string | null
+          sync_status?: string | null
+          total_cves_synced?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          last_modified_date?: string | null
+          last_sync_at?: string | null
+          sync_status?: string | null
+          total_cves_synced?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       enrollment_keys: {
         Row: {
           agent_id: string | null
