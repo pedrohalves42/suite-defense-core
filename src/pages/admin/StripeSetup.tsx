@@ -523,7 +523,7 @@ export default function StripeSetup() {
                 <p className="text-sm">
                   <strong>Solucao:</strong> 
                   <ol className="list-decimal list-inside mt-2 space-y-1">
-                    <li>Acesse Stripe Dashboard ? Developers ? Webhooks</li>
+                    <li>Acesse Stripe Dashboard &gt; Developers &gt; Webhooks</li>
                     <li>Verifique se o endpoint esta listado</li>
                     <li>Confirme que os 4 eventos estao selecionados</li>
                     <li>Teste enviando um evento de teste</li>
