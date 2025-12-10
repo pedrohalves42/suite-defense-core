@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { sanitizeForAI, sanitizeObjectForAI, anonymizeAgentName, validateAIResponse } from "../_shared/ai-sanitizer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,8 +65,15 @@ serve(async (req) => {
       );
     }
 
-    // Build context summary for AI
-    const contextSummary = buildContextSummary(agent, context);
+    // Build context summary for AI with sanitization
+    const rawContextSummary = buildContextSummary(agent, context);
+    const sanitizeResult = sanitizeForAI(rawContextSummary);
+    
+    if (sanitizeResult.blocked) {
+      console.warn('[ai-analyze-agent] Prompt injection attempt blocked:', sanitizeResult.blockedPatterns);
+    }
+    
+    const contextSummary = sanitizeResult.sanitized;
 
     const systemPrompt = `Voce e um especialista em seguranca de sistemas e monitoramento de agentes. 
 Analise o contexto do agente e forneca:
@@ -165,10 +173,14 @@ function buildContextSummary(agent: Agent, context: AgentContext): string {
   const failedJobs = context.recentJobs.filter(j => j.status === 'failed').length;
   const totalJobs = context.recentJobs.length;
   
+  // Anonimizar dados sensíveis antes de enviar à IA
+  const anonAgentName = anonymizeAgentName(agent.agent_name);
+  const anonHostname = anonymizeAgentName(agent.hostname || 'unknown');
+  
   return `
-Agente: ${agent.agent_name}
+Agente: ${anonAgentName}
 Sistema Operacional: ${agent.os_type}
-Hostname: ${agent.hostname}
+Hostname: ${anonHostname}
 
 METRICAS DE SISTEMA:
 - CPU: ${metrics?.cpu_usage_percent ?? 'N/A'}%

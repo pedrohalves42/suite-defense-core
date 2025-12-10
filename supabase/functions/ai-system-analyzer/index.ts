@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { sanitizeForAI, anonymizeAgentName } from '../_shared/ai-sanitizer.ts';
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -331,7 +332,7 @@ async function analyzeWithAI(
       if (metric.disk_usage_percent != null) agentData.disk.push(metric.disk_usage_percent);
     }
 
-    // Calcular médias e identificar outliers por agente
+    // Calcular médias e identificar outliers por agente (com anonimização)
     const agentSummaries = Array.from(agentMetricsMap.entries()).map(([agentId, data]) => {
       const avgCpu = data.cpu.length > 0 ? data.cpu.reduce((a, b) => a + b, 0) / data.cpu.length : 0;
       const avgMemory = data.memory.length > 0 ? data.memory.reduce((a, b) => a + b, 0) / data.memory.length : 0;
@@ -340,9 +341,13 @@ async function analyzeWithAI(
       const maxMemory = data.memory.length > 0 ? Math.max(...data.memory) : 0;
       const maxDisk = data.disk.length > 0 ? Math.max(...data.disk) : 0;
       
+      // Anonimizar nome do agente antes de enviar à IA
+      const anonName = anonymizeAgentName(data.agent_name);
+      
       return {
         agent_id: agentId,
-        agent_name: data.agent_name,
+        agent_name: anonName,
+        original_name: data.agent_name, // Manter original para correlação interna
         samples: data.cpu.length,
         avg_cpu: avgCpu,
         avg_memory: avgMemory,
@@ -360,10 +365,10 @@ async function analyzeWithAI(
     // Identificar agentes problemáticos
     const problematicAgents = agentSummaries.filter(a => a.high_cpu || a.high_memory || a.critical_disk);
 
-    // Correlacionar alertas com agentes específicos
+    // Correlacionar alertas com agentes específicos (anonimizado)
     const alertsByAgent = new Map<string, number>();
     for (const alert of data.systemAlerts) {
-      const agentId = alert.agent_id || 'system';
+      const agentId = alert.agent_id ? anonymizeAgentName(alert.agent_id) : 'system';
       alertsByAgent.set(agentId, (alertsByAgent.get(agentId) || 0) + 1);
     }
 
@@ -380,11 +385,14 @@ async function analyzeWithAI(
       ? agentSummaries.reduce((sum, a) => sum + a.avg_memory, 0) / agentSummaries.length
       : 0;
 
-    const prompt = `Voce e um especialista em analise de sistemas de monitoramento de agentes. Analise os dados abaixo e identifique problemas, anomalias, e oportunidades de otimizacao.
+    // Anonimizar nome do tenant para o prompt
+    const anonTenantName = anonymizeAgentName(tenantName);
+
+    const rawPrompt = `Voce e um especialista em analise de sistemas de monitoramento de agentes. Analise os dados abaixo e identifique problemas, anomalias, e oportunidades de otimizacao.
 
 **IMPORTANTE:** Analise CADA AGENTE individualmente. Nao se deixe enganar por medias globais baixas - pode haver agentes especificos com problemas criticos.
 
-**Dados do Tenant: ${tenantName}**
+**Dados do Tenant: ${anonTenantName}**
 
 **Resumo Global (use apenas como contexto):**
 - CPU media global: ${avgCpuUsage.toFixed(1)}%
@@ -436,6 +444,13 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
     "confidence_score": 0.95
   }
 ]`;
+
+    // Sanitizar o prompt antes de enviar à IA
+    const promptSanitizeResult = sanitizeForAI(rawPrompt);
+    if (promptSanitizeResult.blocked) {
+      console.warn('[ai-system-analyzer] Prompt injection blocked for tenant:', tenantId, promptSanitizeResult.blockedPatterns);
+    }
+    const prompt = promptSanitizeResult.sanitized;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
