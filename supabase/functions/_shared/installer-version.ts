@@ -7,12 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.31-SUBMIT-BEFORE-EXIT';
+export const INSTALLER_VERSION = 'v3.10.33-WEB-ACTIVITY-REGEX-FIX';
 export const INSTALLER_VERSION_LINUX = 'v3.10.32-LINUX-AGENTID-FIX';
 export const INSTALLER_VERSION_MACOS = 'v3.10.32-MACOS-AGENTID-FIX';
-export const LAST_UPDATED = '2025-12-10T15:00:00Z'; // macOS synced to v3.10.32-MACOS-AGENTID-FIX
+export const LAST_UPDATED = '2025-12-10T18:00:00Z'; // Windows regex fix for web activity
 
 export const CHANGES = [
+  '[v3.10.33-WEB-ACTIVITY-REGEX-FIX] FIX: Regex de extracao de URL mais preciso para evitar dominios corrompidos',
+  '[v3.10.33-WEB-ACTIVITY-REGEX-FIX] FIX: Hook useWebActivity usa visit_count do agente ao inves de contagem simples',
+  '[v3.10.33-WEB-ACTIVITY-REGEX-FIX] FIX: Fuso horario brasileiro (America/Sao_Paulo) em AIInsights.tsx',
   '[v3.10.32-MACOS-AGENTID-FIX] SYNC: macOS sincronizado com consistencia de versao Linux/Windows',
   '[v3.10.32-MACOS-AGENTID-FIX] FEATURE: Handlers incluem agent_id no payload (consistente com Linux)',
   '[v3.10.32-LINUX-AGENTID-FIX] CRITICAL FIX: Handlers software_inventory e collect_web_activity agora incluem agent_id no payload',

@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.31-SUBMIT-BEFORE-EXIT
+    CyberShield Agent - Windows v3.10.33-WEB-ACTIVITY-REGEX-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -37,7 +37,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.31-SUBMIT-BEFORE-EXIT"
+    [string]$AgentVersion = "v3.10.33-WEB-ACTIVITY-REGEX-FIX"
 )
 
 $ErrorActionPreference = "Stop"
