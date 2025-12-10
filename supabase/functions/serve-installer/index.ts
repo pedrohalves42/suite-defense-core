@@ -16,8 +16,8 @@ import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { withTimeout, createTimeoutResponse } from '../_shared/timeout.ts';
 import { 
   WINDOWS_INSTALLER_TEMPLATE,
-  LINUX_INSTALLER_TEMPLATE_V3,
-  MACOS_INSTALLER_TEMPLATE_V3
+  LINUX_INSTALLER_TEMPLATE_V3_EMBEDDED,
+  MACOS_INSTALLER_TEMPLATE_V3_EMBEDDED
 } from '../_shared/installer-template.ts';
 import { 
   LINUX_INSTALLER_TEMPLATE_V3_ENVVARS,
@@ -383,22 +383,23 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
       templateContent = WINDOWS_INSTALLER_TEMPLATE;
       agentScriptContentForPlatform = agentScriptContent;
       agentScriptUrl = ''; // Windows embeds script in installer
+      console.log('[' + requestId + '] Using Windows embedded template (' + agentScriptContentForPlatform.length + ' bytes)');
     } else if (platform === 'macos') {
-      // macOS can use args or envvars mode
+      // macOS: use embedded template (no external download) or envvars mode
       templateContent = mode === 'envvars' 
         ? MACOS_INSTALLER_TEMPLATE_V3_ENVVARS 
-        : MACOS_INSTALLER_TEMPLATE_V3;
+        : MACOS_INSTALLER_TEMPLATE_V3_EMBEDDED;
       agentScriptContentForPlatform = AGENT_SCRIPT_MACOS_SH;
-      agentScriptUrl = `${SUPABASE_URL}/storage/v1/object/public/agents/cybershield-agent-macos-v3.sh`;
-      console.log('[' + requestId + '] Using macOS agent script v3 (mode: ' + mode + ', ' + agentScriptContentForPlatform.length + ' bytes)');
+      agentScriptUrl = ''; // macOS now embeds script in installer
+      console.log('[' + requestId + '] Using macOS embedded template (mode: ' + mode + ', script: ' + agentScriptContentForPlatform.length + ' bytes)');
     } else { // linux
-      // Linux can use args or envvars mode
+      // Linux: use embedded template (no external download) or envvars mode
       templateContent = mode === 'envvars'
         ? LINUX_INSTALLER_TEMPLATE_V3_ENVVARS
-        : LINUX_INSTALLER_TEMPLATE_V3;
+        : LINUX_INSTALLER_TEMPLATE_V3_EMBEDDED;
       agentScriptContentForPlatform = AGENT_SCRIPT_LINUX_SH;
-      agentScriptUrl = `${SUPABASE_URL}/storage/v1/object/public/agents/cybershield-agent-linux-v3.sh`;
-      console.log('[' + requestId + '] Using Linux agent script v3 (mode: ' + mode + ', ' + agentScriptContentForPlatform.length + ' bytes)');
+      agentScriptUrl = ''; // Linux now embeds script in installer
+      console.log('[' + requestId + '] Using Linux embedded template (mode: ' + mode + ', script: ' + agentScriptContentForPlatform.length + ' bytes)');
     }
 
     // FASE 2: Replace placeholders with validated credentials
