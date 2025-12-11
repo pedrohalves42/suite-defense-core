@@ -25,7 +25,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { Plus, XCircle, ChevronLeft, ChevronRight, TrendingUp, Key, Users, Clock, Trash, Loader2 } from 'lucide-react';
-import { format, subDays } from 'date-fns';
+import { subDays } from 'date-fns';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -527,11 +528,11 @@ export default function EnrollmentKeys() {
                           </TableCell>
                           <TableCell>{key.current_uses}/{key.max_uses}</TableCell>
                           <TableCell>{key.creator_name || '-'}</TableCell>
-                          <TableCell className="text-sm">{format(new Date(key.created_at), 'dd/MM/yy HH:mm')}</TableCell>
-                          <TableCell className="text-sm">{key.used_at ? format(new Date(key.used_at), 'dd/MM/yy HH:mm') : '-'}</TableCell>
+                          <TableCell className="text-sm">{formatBrazilDateTime(key.created_at, 'short')}</TableCell>
+                          <TableCell className="text-sm">{key.used_at ? formatBrazilDateTime(key.used_at, 'short') : '-'}</TableCell>
                           <TableCell className="text-sm">
                             <div className="flex flex-col gap-1">
-                              <span className="text-muted-foreground">{format(new Date(key.expires_at), 'dd/MM/yy HH:mm')}</span>
+                              <span className="text-muted-foreground">{formatBrazilDateTime(key.expires_at, 'short')}</span>
                               <CountdownTimer expiresAt={key.expires_at} />
                             </div>
                           </TableCell>
