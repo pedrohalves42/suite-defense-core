@@ -7,12 +7,25 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.31-SUBMIT-BEFORE-EXIT';
-export const INSTALLER_VERSION_LINUX = 'v3.10.30-UPTIME';
-export const INSTALLER_VERSION_MACOS = 'v3.10.30-UPTIME';
-export const LAST_UPDATED = '2025-12-09T23:45:00Z'; // Windows synced to v3.10.31-SUBMIT-BEFORE-EXIT
+export const INSTALLER_VERSION = 'v3.10.34-AV-ENHANCED';
+export const INSTALLER_VERSION_LINUX = 'v3.10.32-LINUX-AGENTID-FIX';
+export const INSTALLER_VERSION_MACOS = 'v3.10.32-MACOS-AGENTID-FIX';
+export const LAST_UPDATED = '2025-12-11T16:30:00Z'; // Enhanced AV collection with Get-MpComputerStatus
 
 export const CHANGES = [
+  '[v3.10.34-AV-ENHANCED] FEATURE: Antivirus collection agora usa Get-MpComputerStatus para Windows Defender',
+  '[v3.10.34-AV-ENHANCED] FEATURE: Captura last_scan_at (LastQuickScanEndTime/LastFullScanEndTime)',
+  '[v3.10.34-AV-ENHANCED] FEATURE: Captura last_update_at (AntivirusSignatureLastUpdated)',
+  '[v3.10.34-AV-ENHANCED] FEATURE: Captura threats_found (CurrentNumberOfThreats)',
+  '[v3.10.34-AV-ENHANCED] FEATURE: Captura raw_data com RealTimeProtection, SignatureAge, ScanAge',
+  '[v3.10.33-WEB-ACTIVITY-REGEX-FIX] FIX: Regex de extracao de URL mais preciso para evitar dominios corrompidos',
+  '[v3.10.33-WEB-ACTIVITY-REGEX-FIX] FIX: Hook useWebActivity usa visit_count do agente ao inves de contagem simples',
+  '[v3.10.33-WEB-ACTIVITY-REGEX-FIX] FIX: Fuso horario brasileiro (America/Sao_Paulo) em AIInsights.tsx',
+  '[v3.10.32-MACOS-AGENTID-FIX] SYNC: macOS sincronizado com consistencia de versao Linux/Windows',
+  '[v3.10.32-MACOS-AGENTID-FIX] FEATURE: Handlers incluem agent_id no payload (consistente com Linux)',
+  '[v3.10.32-LINUX-AGENTID-FIX] CRITICAL FIX: Handlers software_inventory e collect_web_activity agora incluem agent_id no payload',
+  '[v3.10.32-LINUX-AGENTID-FIX] CRITICAL FIX: poll_jobs extrai agent_id do job e passa para execute_job como 4o argumento',
+  '[v3.10.32-LINUX-AGENTID-FIX] CRITICAL FIX: Resolve erro 400 "agent_id and items are required" em coletas Linux',
   '[v3.10.31-SUBMIT-BEFORE-EXIT] CRITICAL FIX: update_agent e reinstall_agent agora submetem resultado ANTES de exit 0',
   '[v3.10.31-SUBMIT-BEFORE-EXIT] CRITICAL FIX: Resolve jobs stuck em delivered (nunca recebiam completion)',
   '[v3.10.31-SUBMIT-BEFORE-EXIT] CRITICAL FIX: Agentes nao ficam mais offline apos auto-update',

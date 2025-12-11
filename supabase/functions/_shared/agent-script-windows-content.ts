@@ -3,9 +3,15 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
+<<<<<<< HEAD
  * Versao: v3.10.31-SUBMIT-BEFORE-EXIT
  * SHA256: bda98db634b220c9e38cfb436748f4f884869ff6edca9dff97f792d12e2454b3
  * Gerado em: 2025-12-09T18:11:32.652Z
+=======
+ * Versao: v3.10.33-WEB-ACTIVITY-REGEX-FIX
+ * SHA256: pending-calculation
+ * Gerado em: 2025-12-10T20:00:00.000Z
+>>>>>>> 54c2dd7b972173917be16ebc88af5e2824692a98
  */
 
 export function getAgentScriptWindows(): string {
@@ -13,7 +19,7 @@ export function getAgentScriptWindows(): string {
 }
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
-    CyberShield Agent - Windows v3.10.31-SUBMIT-BEFORE-EXIT
+    CyberShield Agent - Windows v3.10.33-WEB-ACTIVITY-REGEX-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -51,7 +57,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.31-SUBMIT-BEFORE-EXIT"
+    [string]\$AgentVersion = "v3.10.33-WEB-ACTIVITY-REGEX-FIX"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -831,7 +837,7 @@ function Invoke-WebActivityJob {
                             
                             if (\$buffer) {
                                 \$dataString = [System.Text.Encoding]::UTF8.GetString(\$buffer)
-                                \$urlMatches = [regex]::Matches(\$dataString, 'https?://([^/\\s\\x00]+)')
+                                \$urlMatches = [regex]::Matches(\$dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\\-\\.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,})')
                                 
                                 \$chromeDomains = \$urlMatches | 
                                     ForEach-Object { \$_.Groups[1].Value } | 
@@ -887,7 +893,7 @@ function Invoke-WebActivityJob {
                                     
                                     if (\$buffer) {
                                         \$dataString = [System.Text.Encoding]::UTF8.GetString(\$buffer)
-                                        \$urlMatches = [regex]::Matches(\$dataString, 'https?://([^/\\s\\x00]+)')
+                                        \$urlMatches = [regex]::Matches(\$dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\\-\\.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,})')
                                         
                                         \$firefoxDomains = \$urlMatches | 
                                             ForEach-Object { \$_.Groups[1].Value } | 
@@ -941,7 +947,7 @@ function Invoke-WebActivityJob {
                             
                             if (\$buffer) {
                                 \$dataString = [System.Text.Encoding]::UTF8.GetString(\$buffer)
-                                \$urlMatches = [regex]::Matches(\$dataString, 'https?://([^/\\s\\x00]+)')
+                                \$urlMatches = [regex]::Matches(\$dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\\-\\.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,})')
                                 
                                 \$edgeDomains = \$urlMatches | 
                                     ForEach-Object { \$_.Groups[1].Value } | 

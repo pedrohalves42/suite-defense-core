@@ -3,6 +3,7 @@ import { corsHeaders } from '../_shared/cors.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
 import { logger } from '../_shared/logger.ts';
+import { hashToken } from '../_shared/token-hash.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -41,7 +42,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar agente via token
+    // Buscar agente via token hash (P0 security fix)
+    const tokenHash = await hashToken(agentToken);
     const { data: tokenData, error: tokenError } = await supabase
       .from('agent_tokens')
       .select(`
@@ -55,7 +57,7 @@ Deno.serve(async (req) => {
           status
         )
       `)
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -236,42 +238,84 @@ Deno.serve(async (req) => {
       });
 
     // DEDUPLICACAO SERVER-SIDE (defesa em profundidade)
-    // Remove duplicatas por domain+source para evitar erro de UPSERT
+    // Remove duplicatas por domain+source, somando visit_count
     const uniqueItemsMap = new Map<string, typeof itemsToInsert[0]>();
     for (const item of itemsToInsert) {
       const key = `${item.domain}:${item.source}`;
-      if (!uniqueItemsMap.has(key)) {
-        uniqueItemsMap.set(key, item);
+      const existing = uniqueItemsMap.get(key);
+      if (existing) {
+        // Soma visit_count e mantém o mais recente visited_at
+        existing.visit_count = (existing.visit_count || 1) + (item.visit_count || 1);
+        existing.total_duration_seconds = (existing.total_duration_seconds || 0) + (item.total_duration_seconds || 0);
+        if (new Date(item.visited_at) > new Date(existing.visited_at)) {
+          existing.visited_at = item.visited_at;
+          existing.page_title = item.page_title || existing.page_title;
+          existing.url = item.url || existing.url;
+          existing.url_full = item.url_full || existing.url_full;
+        }
+      } else {
+        uniqueItemsMap.set(key, { ...item });
       }
     }
     const dedupedItems = Array.from(uniqueItemsMap.values());
 
     if (dedupedItems.length < itemsToInsert.length) {
-      logger.info(`Deduped ${itemsToInsert.length} ? ${dedupedItems.length} items (removed ${itemsToInsert.length - dedupedItems.length} duplicates)`);
+      logger.info(`Deduped ${itemsToInsert.length} → ${dedupedItems.length} items (merged ${itemsToInsert.length - dedupedItems.length} duplicates)`);
     }
 
-    const { error: insertError } = await supabase
-      .from('agent_web_activity')
-      .insert(dedupedItems);
+    // UPSERT: incrementa visit_count se já existir registro do mesmo domain hoje
+    let insertedCount = 0;
+    let updatedCount = 0;
+    
+    for (const item of dedupedItems) {
+      // Verificar se já existe registro para este domain/agent hoje
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      
+      const { data: existingRecord } = await supabase
+        .from('agent_web_activity')
+        .select('id, visit_count, total_duration_seconds')
+        .eq('agent_id', effectiveAgentId)
+        .eq('domain', item.domain)
+        .gte('visited_at', todayStart.toISOString())
+        .order('visited_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (insertError) {
-      logger.error('Failed to insert web activity', { 
-        error: insertError.message,
-        code: insertError.code,
-        details: insertError.details,
-        hint: insertError.hint,
-        itemCount: dedupedItems.length,
-        agentName: agent.agent_name
-      });
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to store web activity',
-          details: insertError.message,
-          code: insertError.code
-        }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (existingRecord) {
+        // Atualizar registro existente
+        const { error: updateError } = await supabase
+          .from('agent_web_activity')
+          .update({
+            visit_count: (existingRecord.visit_count || 1) + (item.visit_count || 1),
+            total_duration_seconds: (existingRecord.total_duration_seconds || 0) + (item.total_duration_seconds || 0),
+            visited_at: item.visited_at,
+            page_title: item.page_title,
+            url: item.url,
+            url_full: item.url_full,
+          })
+          .eq('id', existingRecord.id);
+
+        if (updateError) {
+          logger.warn('Failed to update existing web activity', { error: updateError.message, domain: item.domain });
+        } else {
+          updatedCount++;
+        }
+      } else {
+        // Inserir novo registro
+        const { error: insertError } = await supabase
+          .from('agent_web_activity')
+          .insert(item);
+
+        if (insertError) {
+          logger.warn('Failed to insert web activity', { error: insertError.message, domain: item.domain });
+        } else {
+          insertedCount++;
+        }
+      }
     }
+
+    logger.info(`Web activity processed: ${insertedCount} inserted, ${updatedCount} updated`);
 
     logger.success(`Web activity stored: ${payload.items.length} items`);
 

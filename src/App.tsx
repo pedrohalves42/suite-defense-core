@@ -10,6 +10,7 @@ import { AppLayout } from "./components/AppLayout";
 import { CookieConsent } from "./components/CookieConsent";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import Landing from "./pages/Landing";
+import Pricing from "./pages/Pricing";
 import ServerDashboard from "./pages/ServerDashboard";
 import VirusScans from './pages/VirusScans';
 import Quarantine from './pages/Quarantine';
@@ -83,6 +84,7 @@ import SecurityPolicies from "./pages/admin/SecurityPolicies";
 import NotificationSettings from "./pages/admin/NotificationSettings";
 import SecurityMonitoring from "./pages/admin/SecurityMonitoring";
 import MassReinstall from "./pages/admin/MassReinstall";
+import AIMetrics from "./pages/admin/AIMetrics";
 
 const App = () => (
   <ErrorBoundary>
@@ -99,6 +101,7 @@ const App = () => (
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
+            <Route path="/pricing" element={<Pricing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -144,6 +147,7 @@ const App = () => (
                 <Route path="problematic-agents" element={<ProblematicAgentsManager />} />
                 <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="ai-actions" element={<AIActionApproval />} />
+                <Route path="ai-metrics" element={<AIMetrics />} />
                 <Route path="system-logs" element={<SystemLogs />} />
                 <Route path="tenant" element={<Tenant />} />
                 <Route path="jobs-v3-migration" element={<JobsV3Migration />} />

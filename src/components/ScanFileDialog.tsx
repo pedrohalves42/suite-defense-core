@@ -85,10 +85,22 @@ export function ScanFileDialog() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!agentName || !filePath) {
+    
+    const trimmedPath = filePath.trim();
+    
+    if (!agentName) {
       toast({
-        title: 'Campos Obrigatorios',
-        description: 'Selecione um agente e informe o caminho do arquivo.',
+        title: 'Agente Obrigatório',
+        description: 'Selecione um agente ativo para executar o scan.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    if (!trimmedPath) {
+      toast({
+        title: 'Caminho Obrigatório',
+        description: 'Informe o caminho completo do arquivo a ser escaneado.',
         variant: 'destructive',
       });
       return;

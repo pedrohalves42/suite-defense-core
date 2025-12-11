@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -23,8 +23,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, Copy, XCircle, ChevronLeft, ChevronRight, TrendingUp, Key, Users, Clock, Trash, Loader2 } from 'lucide-react';
-import { format, subDays } from 'date-fns';
+import { useAuditLog } from '@/hooks/useAuditLog';
+import { Plus, XCircle, ChevronLeft, ChevronRight, TrendingUp, Key, Users, Clock, Trash, Loader2 } from 'lucide-react';
+import { subDays } from 'date-fns';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -79,6 +81,7 @@ export default function EnrollmentKeys() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { canWrite, loading: roleLoading } = useUserRole();
+  const { logSensitiveAccess } = useAuditLog();
   const [open, setOpen] = useState(false);
   const [expiresInHours, setExpiresInHours] = useState('24');
   const [maxUses, setMaxUses] = useState('1');
@@ -88,6 +91,19 @@ export default function EnrollmentKeys() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  
+  // Audit log: list view
+  const logListView = useCallback(async () => {
+    await logSensitiveAccess('enrollment_key', 'list', 'list', { 
+      page, 
+      filter: statusFilter,
+      search: searchTerm || null 
+    });
+  }, [logSensitiveAccess, page, statusFilter, searchTerm]);
+  
+  useEffect(() => {
+    logListView();
+  }, [logListView]);
 
   // FASE 1.3: Usar view segura com mascara ao inves de tabela direta
   const { data: keys, isLoading } = useQuery({
@@ -132,22 +148,24 @@ export default function EnrollmentKeys() {
     },
   });
 
+  // FASE 2: Usar view segura para estatisticas
   const { data: stats } = useQuery({
     queryKey: ['enrollment-keys-stats'],
     queryFn: async () => {
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
       
+      // Usar enrollment_keys_safe ao inves de enrollment_keys
       const { data: allKeys } = await supabase
-        .from('enrollment_keys')
+        .from('enrollment_keys_safe')
         .select('*');
 
       const { data: recentKeys } = await supabase
-        .from('enrollment_keys')
+        .from('enrollment_keys_safe')
         .select('*')
         .gte('created_at', thirtyDaysAgo);
 
       const { data: usedKeys } = await supabase
-        .from('enrollment_keys')
+        .from('enrollment_keys_safe')
         .select('*')
         .not('used_at', 'is', null)
         .gte('used_at', thirtyDaysAgo);
@@ -195,26 +213,47 @@ export default function EnrollmentKeys() {
     },
   });
 
+  // FASE 2: Usar Edge Function para revogar ao inves de acesso direto
   const revokeKey = useMutation({
     mutationFn: async (key: any) => {
-      const { error } = await supabase
-        .from('enrollment_keys')
-        .update({ is_active: false })
-        .eq('id', key.id);
-      if (error) throw error;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/revoke-enrollment-key`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ keyId: key.id }),
+        }
+      );
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to revoke key');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['enrollment-keys'] });
       queryClient.invalidateQueries({ queryKey: ['enrollment-keys-stats'] });
       toast({ title: 'Chave revogada com sucesso!' });
     },
-    onError: () => {
-      toast({ title: 'Erro ao revogar chave', variant: 'destructive' });
+    onError: (error: Error) => {
+      toast({ title: 'Erro ao revogar chave', description: error.message, variant: 'destructive' });
     },
   });
 
-  const copyToClipboard = (key: string) => {
+  // FASE 1: Audit logging para copia de chave
+  const copyToClipboard = async (key: string, keyId: string) => {
     navigator.clipboard.writeText(key);
+    await logSensitiveAccess('enrollment_key', keyId, 'copy', { 
+      key_prefix: key.substring(0, 8) + '...' 
+    });
     toast({ title: 'Chave copiada!' });
   };
 
@@ -489,11 +528,11 @@ export default function EnrollmentKeys() {
                           </TableCell>
                           <TableCell>{key.current_uses}/{key.max_uses}</TableCell>
                           <TableCell>{key.creator_name || '-'}</TableCell>
-                          <TableCell className="text-sm">{format(new Date(key.created_at), 'dd/MM/yy HH:mm')}</TableCell>
-                          <TableCell className="text-sm">{key.used_at ? format(new Date(key.used_at), 'dd/MM/yy HH:mm') : '-'}</TableCell>
+                          <TableCell className="text-sm">{formatBrazilDateTime(key.created_at, 'short')}</TableCell>
+                          <TableCell className="text-sm">{key.used_at ? formatBrazilDateTime(key.used_at, 'short') : '-'}</TableCell>
                           <TableCell className="text-sm">
                             <div className="flex flex-col gap-1">
-                              <span className="text-muted-foreground">{format(new Date(key.expires_at), 'dd/MM/yy HH:mm')}</span>
+                              <span className="text-muted-foreground">{formatBrazilDateTime(key.expires_at, 'short')}</span>
                               <CountdownTimer expiresAt={key.expires_at} />
                             </div>
                           </TableCell>

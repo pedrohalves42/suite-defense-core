@@ -9,6 +9,50 @@ const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
 console.log("[STRIPE-WEBHOOK] Function initialized");
 
+// Helper to find tenant by customer_id OR by metadata.tenant_id
+async function findTenantByCustomerOrMetadata(
+  supabase: any,
+  customerId: string,
+  metadata?: Stripe.Metadata | null
+): Promise<{ tenant_id: string; plan_id: string | null } | null> {
+  // First try by stripe_customer_id
+  const { data: tenantSub, error } = await supabase
+    .from("tenant_subscriptions")
+    .select("tenant_id, plan_id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+
+  if (tenantSub) {
+    console.log(`[STRIPE-WEBHOOK] Found tenant by customer_id: ${tenantSub.tenant_id}`);
+    return tenantSub;
+  }
+
+  // Fallback: try by metadata.tenant_id (for first-time checkout)
+  if (metadata?.tenant_id) {
+    console.log(`[STRIPE-WEBHOOK] Trying fallback by metadata.tenant_id: ${metadata.tenant_id}`);
+    
+    const { data: tenantSubByMeta } = await supabase
+      .from("tenant_subscriptions")
+      .select("tenant_id, plan_id")
+      .eq("tenant_id", metadata.tenant_id)
+      .maybeSingle();
+
+    if (tenantSubByMeta) {
+      // Update the stripe_customer_id for future lookups
+      await supabase
+        .from("tenant_subscriptions")
+        .update({ stripe_customer_id: customerId })
+        .eq("tenant_id", metadata.tenant_id);
+      
+      console.log(`[STRIPE-WEBHOOK] Linked customer ${customerId} to tenant ${metadata.tenant_id}`);
+      return tenantSubByMeta;
+    }
+  }
+
+  console.error(`[STRIPE-WEBHOOK] Tenant not found for customer: ${customerId}`);
+  return null;
+}
+
 Deno.serve(async (request) => {
   const signature = request.headers.get("Stripe-Signature");
 
@@ -42,6 +86,43 @@ Deno.serve(async (request) => {
     );
 
     switch (event.type) {
+      case "checkout.session.completed": {
+        // Handle first-time checkout - link customer to tenant
+        const session = event.data.object as Stripe.Checkout.Session;
+        console.log(`[STRIPE-WEBHOOK] Checkout completed: ${session.id}`);
+
+        const customerId = session.customer as string;
+        const tenantId = session.metadata?.tenant_id;
+        const planName = session.metadata?.plan_name;
+
+        if (tenantId && customerId) {
+          // Get plan ID
+          const { data: plan } = await supabase
+            .from("subscription_plans")
+            .select("id, max_devices")
+            .eq("name", planName)
+            .single();
+
+          // Update tenant subscription with customer_id and plan
+          const { error: updateError } = await supabase
+            .from("tenant_subscriptions")
+            .update({
+              stripe_customer_id: customerId,
+              plan_id: plan?.id,
+              status: "trialing",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("tenant_id", tenantId);
+
+          if (updateError) {
+            console.error("[STRIPE-WEBHOOK] Error linking customer:", updateError);
+          } else {
+            console.log(`[STRIPE-WEBHOOK] Linked customer ${customerId} to tenant ${tenantId}`);
+          }
+        }
+        break;
+      }
+
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
@@ -55,15 +136,14 @@ Deno.serve(async (request) => {
           : null;
         const currentPeriodEnd = new Date(subscription.current_period_end * 1000).toISOString();
 
-        // Find tenant by stripe_customer_id
-        const { data: tenantSub, error: findError } = await supabase
-          .from("tenant_subscriptions")
-          .select("tenant_id, plan_id")
-          .eq("stripe_customer_id", customerId)
-          .maybeSingle();
+        // Get metadata from subscription
+        const metadata = subscription.metadata;
 
-        if (findError || !tenantSub) {
-          console.error("[STRIPE-WEBHOOK] Tenant not found for customer:", customerId);
+        // Find tenant by customer_id or metadata fallback
+        const tenantSub = await findTenantByCustomerOrMetadata(supabase, customerId, metadata);
+
+        if (!tenantSub) {
+          console.error("[STRIPE-WEBHOOK] Could not find tenant for subscription");
           break;
         }
 
@@ -86,20 +166,63 @@ Deno.serve(async (request) => {
           console.log(`[STRIPE-WEBHOOK] Subscription updated for tenant: ${tenantSub.tenant_id}`);
           
           // Get plan name for feature sync
-          const { data: plan } = await supabase
-            .from("subscription_plans")
-            .select("name")
-            .eq("id", tenantSub.plan_id)
-            .single();
+          const planName = metadata?.plan_name;
+          const maxDevices = metadata?.max_devices ? parseInt(metadata.max_devices) : null;
 
-          if (plan) {
+          if (planName) {
             // Sync tenant features
             await supabase.rpc("ensure_tenant_features", {
               p_tenant_id: tenantSub.tenant_id,
-              p_plan_name: plan.name,
-              p_device_quantity: quantity,
+              p_plan_name: planName,
+              p_device_quantity: maxDevices || quantity,
             });
+          } else if (tenantSub.plan_id) {
+            // Fallback: get plan from DB
+            const { data: plan } = await supabase
+              .from("subscription_plans")
+              .select("name, max_devices")
+              .eq("id", tenantSub.plan_id)
+              .single();
+
+            if (plan) {
+              await supabase.rpc("ensure_tenant_features", {
+                p_tenant_id: tenantSub.tenant_id,
+                p_plan_name: plan.name,
+                p_device_quantity: plan.max_devices || quantity,
+              });
+            }
           }
+        }
+        break;
+      }
+
+      case "customer.subscription.trial_will_end": {
+        const subscription = event.data.object as Stripe.Subscription;
+        console.log(`[STRIPE-WEBHOOK] Trial ending soon: ${subscription.id}`);
+
+        const customerId = subscription.customer as string;
+        const metadata = subscription.metadata;
+
+        const tenantSub = await findTenantByCustomerOrMetadata(supabase, customerId, metadata);
+
+        if (tenantSub) {
+          await supabase
+            .from("system_alerts")
+            .insert({
+              tenant_id: tenantSub.tenant_id,
+              alert_type: "trial_ending",
+              severity: "medium",
+              title: "Seu período de trial está acabando",
+              message: "Seu trial gratuito expira em 3 dias. Atualize seu método de pagamento para continuar usando o CyberShield.",
+              details: {
+                subscription_id: subscription.id,
+                trial_end: subscription.trial_end 
+                  ? new Date(subscription.trial_end * 1000).toISOString()
+                  : null,
+              },
+            });
+
+          console.log(`[STRIPE-WEBHOOK] Trial ending alert created for tenant: ${tenantSub.tenant_id}`);
         }
         break;
       }
@@ -109,16 +232,11 @@ Deno.serve(async (request) => {
         console.log(`[STRIPE-WEBHOOK] Subscription deleted: ${subscription.id}`);
 
         const customerId = subscription.customer as string;
+        const metadata = subscription.metadata;
 
-        // Find and update to free plan
-        const { data: tenantSub } = await supabase
-          .from("tenant_subscriptions")
-          .select("tenant_id")
-          .eq("stripe_customer_id", customerId)
-          .maybeSingle();
+        const tenantSub = await findTenantByCustomerOrMetadata(supabase, customerId, metadata);
 
         if (tenantSub) {
-          // Get free plan
           const { data: freePlan } = await supabase
             .from("subscription_plans")
             .select("id")
@@ -137,11 +255,10 @@ Deno.serve(async (request) => {
               })
               .eq("tenant_id", tenantSub.tenant_id);
 
-            // Reset features to free tier
             await supabase.rpc("ensure_tenant_features", {
               p_tenant_id: tenantSub.tenant_id,
               p_plan_name: "free",
-              p_device_quantity: 0,
+              p_device_quantity: 3,
             });
 
             console.log(`[STRIPE-WEBHOOK] Downgraded to free plan: ${tenantSub.tenant_id}`);
@@ -156,12 +273,7 @@ Deno.serve(async (request) => {
 
         const customerId = invoice.customer as string;
 
-        // Find tenant and update status
-        const { data: tenantSub } = await supabase
-          .from("tenant_subscriptions")
-          .select("tenant_id")
-          .eq("stripe_customer_id", customerId)
-          .maybeSingle();
+        const tenantSub = await findTenantByCustomerOrMetadata(supabase, customerId, null);
 
         if (tenantSub) {
           await supabase
@@ -172,7 +284,6 @@ Deno.serve(async (request) => {
             })
             .eq("tenant_id", tenantSub.tenant_id);
 
-          // Create system alert
           await supabase
             .from("system_alerts")
             .insert({
@@ -180,7 +291,7 @@ Deno.serve(async (request) => {
               alert_type: "payment_failed",
               severity: "high",
               title: "Falha no Pagamento",
-              message: `O pagamento da fatura ${invoice.number} falhou. Por favor, atualize seu metodo de pagamento.`,
+              message: `O pagamento da fatura ${invoice.number} falhou. Por favor, atualize seu método de pagamento.`,
               details: {
                 invoice_id: invoice.id,
                 amount_due: invoice.amount_due,

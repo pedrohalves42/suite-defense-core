@@ -38,6 +38,7 @@ interface DiagnosticIssue {
 interface Agent {
   id: string;
   agent_name: string;
+  tenant_id: string;
   status: string;
   last_heartbeat: string | null;
   os_type: string;
@@ -73,7 +74,8 @@ export default function AgentDiagnostics() {
       if (!agent) return [];
 
       const { data, error } = await supabase.rpc('diagnose_agent_issues', {
-        p_agent_name: agent.agent_name
+        p_agent_name: agent.agent_name,
+        p_tenant_id: agent.tenant_id
       });
 
       if (error) throw error;

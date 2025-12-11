@@ -1,12 +1,18 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
-
+import { sanitizeForAI, sanitizeObjectForAI, anonymizeAgentName } from "../_shared/ai-sanitizer.ts";
+import { withCircuitBreaker, executeWithTimeout } from "../_shared/ai-circuit-breaker.ts";
+import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from "../_shared/ai-metrics.ts";
+import { persistAIMetrics } from "../_shared/ai-metrics-persistence.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+const AI_MODEL = 'openai/gpt-5-mini';
+const AI_TIMEOUT_MS = 15000; // 15 seconds for network analysis
+const metricsLogger = createMetricsLogger('analyze-network-anomalies', AI_MODEL);
 
 interface AnalysisRequest {
   agentName?: string;
@@ -14,7 +20,6 @@ interface AnalysisRequest {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -30,7 +35,6 @@ Deno.serve(async (req) => {
       }
     );
 
-    // Verificar autenticacao
     const {
       data: { user },
       error: authError,
@@ -49,7 +53,6 @@ Deno.serve(async (req) => {
 
     const { agentName, timeRangeHours = 24 }: AnalysisRequest = await req.json();
 
-    // Usar service role para consultar dados
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -57,7 +60,6 @@ Deno.serve(async (req) => {
 
     const startTime = new Date(Date.now() - timeRangeHours * 60 * 60 * 1000).toISOString();
 
-    // Coletar dados dos agentes
     let agentsQuery = supabaseAdmin
       .from('agents')
       .select('agent_name, status, last_heartbeat, enrolled_at')
@@ -80,12 +82,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Coletar dados dos jobs (com limite para evitar DoS)
     let jobsQuery = supabaseAdmin
       .from('jobs')
       .select('agent_name, type, status, created_at, completed_at')
       .gte('created_at', startTime)
-      .limit(1000); // P0 FIX: Protecao contra DoS com muitos jobs
+      .limit(1000);
 
     if (agentName) {
       jobsQuery = jobsQuery.eq('agent_name', agentName);
@@ -104,13 +105,27 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Preparar contexto para analise da IA
+    const anonymizedAgents = agents?.map(a => ({
+      agent_id: anonymizeAgentName(a.agent_name),
+      status: a.status,
+      last_heartbeat: a.last_heartbeat,
+      enrolled_at: a.enrolled_at,
+    })) || [];
+    
+    const anonymizedJobs = jobs?.map(j => ({
+      agent_id: anonymizeAgentName(j.agent_name),
+      type: j.type,
+      status: j.status,
+      created_at: j.created_at,
+      completed_at: j.completed_at,
+    })) || [];
+
     const analysisContext = {
       timeRange: `${timeRangeHours} horas`,
       totalAgents: agents?.length || 0,
       totalJobs: jobs?.length || 0,
-      agents: agents,
-      jobs: jobs,
+      agents: anonymizedAgents,
+      jobs: anonymizedJobs.slice(0, 100),
       statistics: {
         jobsByStatus: jobs?.reduce((acc: Record<string, number>, job) => {
           acc[job.status] = (acc[job.status] || 0) + 1;
@@ -127,12 +142,16 @@ Deno.serve(async (req) => {
       }
     };
 
-    // Chamar Lovable AI para analise
-    const aiPrompt = `Voce e um especialista em seguranca de rede e analise de comportamento de sistemas.
+    const { sanitized: sanitizedContext, warnings } = sanitizeObjectForAI(analysisContext);
+    if (warnings.length > 0) {
+      console.warn('[analyze-network-anomalies] Sanitization warnings:', warnings);
+    }
 
-Analise os seguintes dados de uma rede de seguranca de endpoints (CyberShield) e identifique possiveis anomalias, problemas ou padroes suspeitos:
+    const rawPrompt = `Voce e um especialista em seguranca de rede e analise de comportamento de sistemas.
 
-${JSON.stringify(analysisContext, null, 2)}
+Analise os seguintes dados de uma rede de seguranca de endpoints e identifique possiveis anomalias, problemas ou padroes suspeitos:
+
+${JSON.stringify(sanitizedContext, null, 2)}
 
 Forneca uma analise detalhada incluindo:
 1. **Resumo Executivo**: Visao geral do estado da rede
@@ -142,6 +161,12 @@ Forneca uma analise detalhada incluindo:
 5. **Recomendacoes**: Acoes sugeridas para melhorar a seguranca
 
 Seja especifico e tecnico, focando em seguranca cibernetica.`;
+
+    const promptSanitizeResult = sanitizeForAI(rawPrompt);
+    if (promptSanitizeResult.blocked) {
+      console.warn('[analyze-network-anomalies] Prompt injection blocked:', promptSanitizeResult.blockedPatterns);
+    }
+    const aiPrompt = promptSanitizeResult.sanitized;
 
     if (!LOVABLE_API_KEY) {
       console.warn('LOVABLE_API_KEY not configured');
@@ -157,47 +182,86 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
       );
     }
 
-    const aiResponse = await fetch('https://api.lovable.app/v1/ai/completion', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-5-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'Voce e um especialista em seguranca de rede e deteccao de anomalias.'
-          },
-          {
-            role: 'user',
-            content: aiPrompt
-          }
-        ],
-        max_completion_tokens: 2000,
-      }),
-    });
+    // Start metrics tracking
+    const metricsStartTime = metricsLogger.logStart();
 
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API error:', errorText);
+    // Use circuit breaker with timeout
+    const aiResult = await withCircuitBreaker(
+      async () => {
+        return executeWithTimeout(async () => {
+          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: AI_MODEL,
+              messages: [
+                {
+                  role: 'system',
+                  content: 'Voce e um especialista em seguranca de rede e deteccao de anomalias.'
+                },
+                {
+                  role: 'user',
+                  content: aiPrompt
+                }
+              ],
+              max_completion_tokens: 2000,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`AI API error: ${response.status}`);
+          }
+
+          return response.json();
+        }, AI_TIMEOUT_MS);
+      },
+      { 
+        timeoutMs: AI_TIMEOUT_MS,
+        fallbackResponse: null 
+      }
+    );
+
+    // Handle circuit breaker result
+    if (!aiResult.success || !aiResult.data) {
+      metricsLogger.logFailure(metricsStartTime, aiResult.error || 'Unknown error', undefined, aiResult.usedFallback);
+      console.error('[analyze-network-anomalies] AI call failed:', aiResult.error);
       return new Response(
         JSON.stringify({ 
-          error: 'Erro ao analisar dados com IA',
-          rawData: analysisContext 
+          error: 'Erro ao analisar dados com IA - servico temporariamente indisponivel',
+          rawData: analysisContext,
+          fallback: true
         }),
         {
-          status: 500,
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
     }
 
-    const aiData = await aiResponse.json();
-    const analysis = aiData.choices[0].message.content;
+    const aiData = aiResult.data;
+    const analysis = aiData.choices?.[0]?.message?.content;
+    const tokenUsage = extractTokenUsage(aiData);
 
-    console.log('Network analysis completed successfully');
+    // Log success metrics and persist to database
+    metricsLogger.logSuccess(metricsStartTime, undefined, tokenUsage);
+    
+    // Persist metrics to DB for dashboard
+    const successMetrics: AIInferenceMetrics = {
+      timestamp: new Date().toISOString(),
+      function_name: 'analyze-network-anomalies',
+      model: AI_MODEL,
+      latency_ms: Date.now() - metricsStartTime,
+      success: true,
+      tokens_prompt: tokenUsage.prompt,
+      tokens_completion: tokenUsage.completion,
+      tokens_total: tokenUsage.total,
+    };
+    await persistAIMetrics(successMetrics);
+
+    console.log('[analyze-network-anomalies] Analysis completed successfully');
 
     return new Response(
       JSON.stringify({

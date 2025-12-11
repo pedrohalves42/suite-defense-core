@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { AlertCircle, Trash2, RotateCcw, AlertTriangle, CheckCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -203,10 +203,10 @@ export default function ProblematicAgentsManager() {
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                           <span>Status: <strong>{agent.status}</strong></span>
                           <span>Tokens: <strong>{agent.token_count}</strong> (ativos: {agent.has_active_token})</span>
-                          <span>Inscrito: {format(new Date(agent.enrolled_at), 'dd/MM/yyyy HH:mm')}</span>
+                          <span>Inscrito: {formatBrazilDateTime(agent.enrolled_at, 'datetime')}</span>
                           <span>Tempo decorrido: <strong>{Math.floor(agent.minutes_since_enrollment)}min</strong></span>
                           <span>Jobs pendentes: <strong>{agent.pending_jobs_count}</strong></span>
-                          <span>Ultimo heartbeat: <strong>{agent.last_heartbeat ? format(new Date(agent.last_heartbeat), 'dd/MM HH:mm') : 'Nunca'}</strong></span>
+                          <span>Ultimo heartbeat: <strong>{agent.last_heartbeat ? formatBrazilDateTime(agent.last_heartbeat, 'short') : 'Nunca'}</strong></span>
                         </div>
                       </CardDescription>
                     </div>

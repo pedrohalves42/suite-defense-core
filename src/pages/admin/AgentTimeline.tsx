@@ -10,7 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertCircle, Clock, Activity, ChevronDown, Heart, Zap, Shield, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { format } from 'date-fns';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 const getEventIcon = (eventType: string) => {
   switch (eventType.toLowerCase()) {
@@ -157,7 +157,7 @@ export default function AgentTimeline() {
                                 <ChevronDown className={`h-4 w-4 transition-transform ${openItems.has(eventId) ? 'rotate-180' : ''}`} />
                               </div>
                               <CardDescription className="text-left text-xs">
-                                {format(new Date(event.event_time), 'dd/MM/yyyy HH:mm:ss')}
+                                {formatBrazilDateTime(event.event_time, 'full')}
                               </CardDescription>
                             </CardHeader>
                           </CollapsibleTrigger>

@@ -3,6 +3,7 @@ import { AgentTokenSchema } from '../_shared/validation.ts'
 import { corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { logger } from '../_shared/logger.ts'
+import { hashToken } from '../_shared/token-hash.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -40,10 +41,12 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Buscar agente via token hash (P0 security fix)
+    const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
       .select('agent_id, agents!inner(id, agent_name, hmac_secret, status)')
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .maybeSingle()
 

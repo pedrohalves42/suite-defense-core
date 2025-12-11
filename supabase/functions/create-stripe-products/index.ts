@@ -12,16 +12,15 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log("[CREATE-STRIPE-PRODUCTS] Starting product creation");
+    console.log("[CREATE-STRIPE-PRODUCTS] Starting V4 product creation");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
     
-    // Validate key format
     if (!stripeKey.startsWith('sk_test_') && !stripeKey.startsWith('sk_live_')) {
       throw new Error(
         "STRIPE_SECRET_KEY must be a Secret Key starting with 'sk_test_' or 'sk_live_'. " +
-        "Restricted keys (rk_*) are not supported. Please update your secret in Supabase Dashboard."
+        "Restricted keys (rk_*) are not supported."
       );
     }
 
@@ -38,78 +37,96 @@ Deno.serve(async (req) => {
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError || !userData.user) throw new Error("Unauthorized");
 
-    // Check if user is admin using RPC
-    const { data: isAdmin, error: roleError } = await supabaseClient.rpc('has_role', {
+    // Check for admin OR super_admin role
+    const { data: isAdmin } = await supabaseClient.rpc('has_role', {
       _user_id: userData.user.id,
       _role: 'admin'
     });
+    
+    const { data: isSuperAdmin } = await supabaseClient.rpc('has_role', {
+      _user_id: userData.user.id,
+      _role: 'super_admin'
+    });
 
-    if (roleError) {
-      console.error('[CREATE-STRIPE-PRODUCTS] Role check error:', roleError);
-      throw new Error('Failed to verify admin permissions');
-    }
-
-    if (!isAdmin) {
+    if (!isAdmin && !isSuperAdmin) {
       throw new Error("Only admins can create Stripe products");
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    // Create Starter Product
-    console.log("[CREATE-STRIPE-PRODUCTS] Creating Starter product");
-    const starterProduct = await stripe.products.create({
-      name: "CyberShield Starter",
-      description: "Protecao avancada para ate 30 dispositivos",
+    // V4 Pricing: Fixed price per plan (not per device)
+    const products = [
+      {
+        name: 'starter',
+        stripeName: 'CyberShield - Starter',
+        description: 'Até 5 dispositivos - monitoramento básico para PMEs',
+        price: 15000, // R$ 150,00
+        metadata: { plan: 'starter', max_devices: '5' }
+      },
+      {
+        name: 'pro',
+        stripeName: 'CyberShield - Business',
+        description: 'Até 25 dispositivos - alertas avançados e relatórios',
+        price: 45000, // R$ 450,00
+        metadata: { plan: 'pro', max_devices: '25' }
+      },
+      {
+        name: 'scale',
+        stripeName: 'CyberShield - Scale',
+        description: 'Até 100 dispositivos - onboarding e SLA',
+        price: 120000, // R$ 1.200,00
+        metadata: { plan: 'scale', max_devices: '100' }
+      }
+    ];
+
+    const createdProducts: Record<string, { product_id: string; price_id: string }> = {};
+
+    for (const plan of products) {
+      console.log(`[CREATE-STRIPE-PRODUCTS] Creating ${plan.name} product`);
+      
+      const product = await stripe.products.create({
+        name: plan.stripeName,
+        description: plan.description,
+        metadata: plan.metadata
+      });
+
+      const price = await stripe.prices.create({
+        product: product.id,
+        unit_amount: plan.price,
+        currency: "brl",
+        recurring: { interval: "month" },
+      });
+
+      // Update database with price ID
+      await supabaseClient
+        .from("subscription_plans")
+        .update({ stripe_price_id: price.id })
+        .eq("name", plan.name);
+
+      createdProducts[plan.name] = {
+        product_id: product.id,
+        price_id: price.id,
+      };
+
+      console.log(`[CREATE-STRIPE-PRODUCTS] ${plan.name}: ${price.id}`);
+    }
+
+    // Create annual discount coupon (2 months free = 16.67%)
+    console.log("[CREATE-STRIPE-PRODUCTS] Creating annual discount coupon");
+    const annualCoupon = await stripe.coupons.create({
+      percent_off: 16.67,
+      duration: 'forever',
+      name: 'Desconto Anual - 2 meses grátis',
+      metadata: { type: 'annual_discount' }
     });
 
-    const starterPrice = await stripe.prices.create({
-      product: starterProduct.id,
-      unit_amount: 3000, // R$ 30.00
-      currency: "brl",
-      recurring: { interval: "month" },
-    });
-
-    // Create Pro Product
-    console.log("[CREATE-STRIPE-PRODUCTS] Creating Pro product");
-    const proProduct = await stripe.products.create({
-      name: "CyberShield Pro",
-      description: "Protecao completa para ate 200 dispositivos",
-    });
-
-    const proPrice = await stripe.prices.create({
-      product: proProduct.id,
-      unit_amount: 5000, // R$ 50.00
-      currency: "brl",
-      recurring: { interval: "month" },
-    });
-
-    // Update database with price IDs
-    console.log("[CREATE-STRIPE-PRODUCTS] Updating database with price IDs");
-    await supabaseClient
-      .from("subscription_plans")
-      .update({ stripe_price_id: starterPrice.id })
-      .eq("name", "starter");
-
-    await supabaseClient
-      .from("subscription_plans")
-      .update({ stripe_price_id: proPrice.id })
-      .eq("name", "pro");
-
-    console.log("[CREATE-STRIPE-PRODUCTS] Products created successfully");
+    console.log("[CREATE-STRIPE-PRODUCTS] All products created successfully");
 
     return new Response(
       JSON.stringify({
         success: true,
-        products: {
-          starter: {
-            product_id: starterProduct.id,
-            price_id: starterPrice.id,
-          },
-          pro: {
-            product_id: proProduct.id,
-            price_id: proPrice.id,
-          },
-        },
+        products: createdProducts,
+        annual_coupon_id: annualCoupon.id,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );

@@ -103,6 +103,7 @@ export const AgentTokenSchema = z.string().uuid('Agent token deve ser um UUID va
 // Auto-generate enrollment validation
 export const AutoGenerateEnrollmentSchema = z.object({
   agentName: AgentNameSchema,
+  platform: z.enum(['windows', 'linux', 'macos']).optional().default('windows'),
 });
 
 // Enhanced CreateJobSchema with additional security validations

@@ -9,52 +9,71 @@ Deno.serve(async (req) => {
 
   try {
     await withTimeout(async () => {
-      console.log('[check-installation-health] Verificando taxa de falha...')
+      console.log('[check-installation-health] Verificando taxa de falha por tenant...')
 
-      // Query para taxa de falha nas ultimas 24h
-      const { data: failureRate, error } = await supabase
-        .rpc('get_installation_health_status')
+      // Get all active tenants
+      const { data: tenants, error: tenantsError } = await supabase
+        .from('tenants')
+        .select('id, name')
 
-      if (error) {
-        console.error('[check-installation-health] Erro ao buscar health status:', error)
+      if (tenantsError) {
+        console.error('[check-installation-health] Erro ao buscar tenants:', tenantsError)
         return
       }
 
-      if (!failureRate || failureRate.length === 0) {
-        console.log('[check-installation-health] Nenhum dado de instalacao disponivel')
+      if (!tenants || tenants.length === 0) {
+        console.log('[check-installation-health] Nenhum tenant encontrado')
         return
       }
 
-      const healthData = failureRate[0]
-      const failureRatePct = healthData.failure_rate_pct || 0
-      const threshold = healthData.threshold || 30
+      console.log(`[check-installation-health] Verificando ${tenants.length} tenants`)
 
-      console.log(`[check-installation-health] Taxa de falha: ${failureRatePct}% (threshold: ${threshold}%)`)
+      for (const tenant of tenants) {
+        // Query para taxa de falha nas ultimas 24h para este tenant
+        const { data: failureRate, error } = await supabase
+          .rpc('get_installation_health_status', { p_tenant_id: tenant.id })
 
-      // Criar alerta se exceder threshold
-      if (failureRatePct > threshold) {
-        console.log(`[check-installation-health] ALERTA: Taxa de falha excedeu threshold!`)
-
-        const { error: alertError } = await supabase
-          .from('system_alerts')
-          .insert({
-            severity: 'high',
-            alert_type: 'installation_failure',
-            title: 'Alta taxa de falha em instalacoes',
-            message: `Taxa de falha de instalacao: ${failureRatePct}% (threshold: ${threshold}%)`,
-            details: healthData,
-            tenant_id: '00000000-0000-0000-0000-000000000000' // System-level alert
-          })
-
-        if (alertError) {
-          console.error('[check-installation-health] Erro ao criar alerta:', alertError)
-        } else {
-          console.log('[check-installation-health] Alerta criado com sucesso')
+        if (error) {
+          console.error(`[check-installation-health] Erro ao buscar health status para tenant ${tenant.id}:`, error)
+          continue
         }
-      } else {
-        console.log('[check-installation-health] Health OK - sem alertas')
+
+        if (!failureRate || failureRate.length === 0) {
+          console.log(`[check-installation-health] Tenant ${tenant.name}: nenhum dado de instalacao`)
+          continue
+        }
+
+        const healthData = failureRate[0]
+        const failureRatePct = healthData.failure_rate_pct || 0
+        const threshold = healthData.threshold || 30
+
+        console.log(`[check-installation-health] Tenant ${tenant.name}: ${failureRatePct}% (threshold: ${threshold}%)`)
+
+        // Criar alerta se exceder threshold
+        if (failureRatePct > threshold) {
+          console.log(`[check-installation-health] ALERTA: Tenant ${tenant.name} - Taxa de falha excedeu threshold!`)
+
+          const { error: alertError } = await supabase
+            .from('system_alerts')
+            .insert({
+              severity: 'high',
+              alert_type: 'installation_failure',
+              title: 'Alta taxa de falha em instalacoes',
+              message: `Taxa de falha de instalacao: ${failureRatePct}% (threshold: ${threshold}%)`,
+              details: healthData,
+              tenant_id: tenant.id
+            })
+
+          if (alertError) {
+            console.error(`[check-installation-health] Erro ao criar alerta para tenant ${tenant.id}:`, alertError)
+          } else {
+            console.log(`[check-installation-health] Alerta criado para tenant ${tenant.name}`)
+          }
+        }
       }
-    }, { timeoutMs: 20000 })
+
+      console.log('[check-installation-health] Verificacao concluida')
+    }, { timeoutMs: 60000 }) // Increased timeout for multi-tenant processing
 
     return new Response(
       JSON.stringify({ success: true }),

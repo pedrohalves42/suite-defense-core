@@ -129,11 +129,102 @@ export default function SecurityPolicies() {
     (gp: { policy_id: string }) => gp.policy_id === selectedPolicy?.id
   );
 
+  const [showTutorial, setShowTutorial] = useState(false);
+
   return (
     <AdminPageLayout
       title="Políticas de Segurança"
       description="Configure políticas de segurança personalizadas por grupo de computadores"
     >
+      {/* Tutorial Card */}
+      <Card className="mb-6 border-primary/20 bg-primary/5">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Como usar Políticas de Segurança
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => setShowTutorial(!showTutorial)}>
+              {showTutorial ? 'Ocultar' : 'Ver Tutorial'}
+            </Button>
+          </div>
+        </CardHeader>
+        {showTutorial && (
+          <CardContent className="space-y-4 text-sm">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2 p-3 bg-background rounded-lg border">
+                <div className="font-semibold flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
+                  Criar Política
+                </div>
+                <p className="text-muted-foreground">
+                  Clique em "Nova" para criar uma política. Dê um nome descritivo e defina a prioridade (políticas com maior prioridade têm precedência).
+                </p>
+              </div>
+              <div className="space-y-2 p-3 bg-background rounded-lg border">
+                <div className="font-semibold flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
+                  Adicionar Regras
+                </div>
+                <p className="text-muted-foreground">
+                  Selecione a política e clique em "Adicionar Regra". Escolha o tipo de regra (USB, software, website, etc.), a ação (bloquear, permitir, monitorar) e o alvo.
+                </p>
+              </div>
+              <div className="space-y-2 p-3 bg-background rounded-lg border">
+                <div className="font-semibold flex items-center gap-2">
+                  <span className="bg-primary text-primary-foreground w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span>
+                  Atribuir a Grupos
+                </div>
+                <p className="text-muted-foreground">
+                  Na aba "Grupos Atribuídos", vincule a política aos grupos de computadores desejados. As regras serão aplicadas automaticamente.
+                </p>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-3">
+              <h4 className="font-semibold">Tipos de Regras Disponíveis:</h4>
+              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Usb className="h-4 w-4" /> <span>Controle USB</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Package className="h-4 w-4" /> <span>Restrição de Software</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Globe className="h-4 w-4" /> <span>Bloqueio de Sites</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <ShieldCheck className="h-4 w-4" /> <span>Regras de Firewall</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <XCircle className="h-4 w-4" /> <span>Bloqueio de Processos</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <FileWarning className="h-4 w-4" /> <span>Acesso a Arquivos</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Database className="h-4 w-4" /> <span>Proteção de Registro</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Wifi className="h-4 w-4" /> <span>Restrição de Rede</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-semibold">Dicas:</h4>
+              <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                <li>Use <code className="bg-muted px-1 rounded">*</code> como wildcard. Ex: <code className="bg-muted px-1 rounded">*.facebook.com</code> bloqueia todos os subdomínios.</li>
+                <li>Políticas podem ser ativadas/desativadas sem excluí-las.</li>
+                <li>Um grupo pode ter múltiplas políticas. A de maior prioridade prevalece em conflitos.</li>
+              </ul>
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Lista de Políticas */}
         <Card className="lg:col-span-1">

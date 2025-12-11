@@ -1,10 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
+import { sanitizeForAI, sanitizeObjectForAI, anonymizeAgentName, validateAIResponse } from "../_shared/ai-sanitizer.ts";
+import { withCircuitBreaker, executeWithTimeout } from "../_shared/ai-circuit-breaker.ts";
+import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from "../_shared/ai-metrics.ts";
+import { persistAIMetrics } from "../_shared/ai-metrics-persistence.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const AI_MODEL = 'google/gemini-2.5-flash';
+const AI_TIMEOUT_MS = 10000; // 10 seconds
+const metricsLogger = createMetricsLogger('ai-analyze-agent', AI_MODEL);
 
 interface AgentContext {
   metrics: {
@@ -57,15 +64,21 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       console.error('LOVABLE_API_KEY not configured');
-      // Return a basic analysis without AI
       return new Response(
         JSON.stringify(generateBasicAnalysis(context)),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Build context summary for AI
-    const contextSummary = buildContextSummary(agent, context);
+    // Build context summary for AI with sanitization
+    const rawContextSummary = buildContextSummary(agent, context);
+    const sanitizeResult = sanitizeForAI(rawContextSummary);
+    
+    if (sanitizeResult.blocked) {
+      console.warn('[ai-analyze-agent] Prompt injection attempt blocked:', sanitizeResult.blockedPatterns);
+    }
+    
+    const contextSummary = sanitizeResult.sanitized;
 
     const systemPrompt = `Voce e um especialista em seguranca de sistemas e monitoramento de agentes. 
 Analise o contexto do agente e forneca:
@@ -90,32 +103,71 @@ Responda APENAS com JSON valido no formato:
   "riskFactors": [string]
 }`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: contextSummary }
-        ],
-        temperature: 0.3,
-      }),
-    });
+    // Start metrics tracking
+    const startTime = metricsLogger.logStart();
 
-    if (!response.ok) {
-      console.error('AI API error:', response.status, await response.text());
+    // Use circuit breaker with timeout for AI call
+    const aiResult = await withCircuitBreaker(
+      async () => {
+        return executeWithTimeout(async () => {
+          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: AI_MODEL,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: contextSummary }
+              ],
+              temperature: 0.3,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`AI API error: ${response.status}`);
+          }
+
+          return response.json();
+        }, AI_TIMEOUT_MS);
+      },
+      { 
+        timeoutMs: AI_TIMEOUT_MS,
+        fallbackResponse: null 
+      }
+    );
+
+    // Handle circuit breaker result
+    if (!aiResult.success || !aiResult.data) {
+      metricsLogger.logFailure(startTime, aiResult.error || 'Unknown error', undefined, aiResult.usedFallback);
+      console.warn('[ai-analyze-agent] AI call failed, using basic analysis:', aiResult.error);
       return new Response(
         JSON.stringify(generateBasicAnalysis(context)),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const aiResponse = await response.json();
+    const aiResponse = aiResult.data;
     const content = aiResponse.choices?.[0]?.message?.content;
+    const tokenUsage = extractTokenUsage(aiResponse);
+
+    // Log success metrics and persist to database
+    metricsLogger.logSuccess(startTime, undefined, tokenUsage);
+    
+    // Persist metrics to DB for dashboard
+    const successMetrics: AIInferenceMetrics = {
+      timestamp: new Date().toISOString(),
+      function_name: 'ai-analyze-agent',
+      model: AI_MODEL,
+      latency_ms: Date.now() - startTime,
+      success: true,
+      tokens_prompt: tokenUsage.prompt,
+      tokens_completion: tokenUsage.completion,
+      tokens_total: tokenUsage.total,
+    };
+    await persistAIMetrics(successMetrics);
 
     if (!content) {
       return new Response(
@@ -127,7 +179,6 @@ Responda APENAS com JSON valido no formato:
     // Parse AI response
     let analysis: AIAnalysis;
     try {
-      // Extract JSON from potential markdown code blocks
       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
       analysis = JSON.parse(jsonStr);
@@ -165,10 +216,14 @@ function buildContextSummary(agent: Agent, context: AgentContext): string {
   const failedJobs = context.recentJobs.filter(j => j.status === 'failed').length;
   const totalJobs = context.recentJobs.length;
   
+  // Anonimizar dados sensíveis antes de enviar à IA
+  const anonAgentName = anonymizeAgentName(agent.agent_name);
+  const anonHostname = anonymizeAgentName(agent.hostname || 'unknown');
+  
   return `
-Agente: ${agent.agent_name}
+Agente: ${anonAgentName}
 Sistema Operacional: ${agent.os_type}
-Hostname: ${agent.hostname}
+Hostname: ${anonHostname}
 
 METRICAS DE SISTEMA:
 - CPU: ${metrics?.cpu_usage_percent ?? 'N/A'}%

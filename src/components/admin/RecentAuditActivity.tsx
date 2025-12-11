@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface RecentAuditActivityProps {
   tenantId?: string;
@@ -36,7 +35,7 @@ export function RecentAuditActivity({ tenantId }: RecentAuditActivityProps) {
             <span className="text-muted-foreground"> ? {log.resource_type}</span>
           </div>
           <span className="text-xs text-muted-foreground">
-            {format(new Date(log.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+            {formatBrazilDateTime(log.created_at, 'datetime')}
           </span>
         </div>
       ))}

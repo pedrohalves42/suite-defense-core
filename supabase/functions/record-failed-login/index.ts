@@ -45,81 +45,69 @@ Deno.serve(async (req) => {
         ip_address: ipAddress,
         email: email || null,
         user_agent: userAgent || null,
+        block_count: 0,
       });
 
-    // Verificar se deve bloquear IP (5 tentativas em 15 minutos - mais agressivo)
-    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-    const { count } = await supabaseAdmin
-      .from('failed_login_attempts')
-      .select('*', { count: 'exact', head: true })
-      .eq('ip_address', ipAddress)
-      .gte('created_at', fifteenMinutesAgo);
+    // P1 Fix: Usar função de bloqueio progressivo em vez de lógica hardcoded
+    // 5 tentativas = 5min, 10 = 15min, 15+ = 60min
+    const { data: blockResult, error: blockError } = await supabaseAdmin
+      .rpc('check_and_block_ip', {
+        p_ip_address: ipAddress,
+        p_email: email || null
+      });
 
-    if (count && count >= 5) {
-      // Bloquear IP por 1 hora (mais restritivo)
-      const blockedUntil = new Date(Date.now() + 60 * 60 * 1000);
-      await supabaseAdmin
-        .from('ip_blocklist')
-        .upsert({
-          ip_address: ipAddress,
-          blocked_until: blockedUntil.toISOString(),
-          reason: 'Multiplas tentativas de login falhadas',
-        }, {
-          onConflict: 'ip_address',
-        });
+    if (blockError) {
+      console.error('[BRUTE-FORCE] Error checking block status:', blockError);
+    }
 
-      // Logar evento de seguranca como bloqueado
-      await supabaseAdmin
-        .from('security_logs')
-        .insert({
-          ip_address: ipAddress,
-          endpoint: '/auth/login',
-          attack_type: 'brute_force',
-          severity: 'critical',
-          blocked: true,
-          details: { 
-            email, 
-            user_agent: userAgent,
-            attempt_count: count,
-            blocked_until: blockedUntil.toISOString(),
-          },
-          user_agent: userAgent || null,
-        });
+    const blockData = blockResult?.[0];
+    
+    if (blockData?.is_blocked) {
+      console.log(`[BRUTE-FORCE] IP ${ipAddress} blocked until ${blockData.blocked_until} (level ${blockData.block_level})`);
+      
+      // Enviar alerta apenas para bloqueios de nível 2+ (10+ tentativas)
 
-      // Enviar alerta em tempo real para admins
-      try {
-        await supabaseAdmin.functions.invoke('send-brute-force-alert', {
-          headers: {
-            'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
-          },
-          body: {
-            ipAddress,
-            email,
-            attemptCount: count,
-            blockedUntil: blockedUntil.toISOString(),
-            userAgent,
-          }
-        });
-      } catch (alertError) {
-        console.error('[BRUTE-FORCE] Failed to send alert:', alertError);
+      if (blockData.block_level >= 2) {
+        // Enviar alerta em tempo real para admins
+        try {
+          await supabaseAdmin.functions.invoke('send-brute-force-alert', {
+            headers: {
+              'X-Internal-Secret': Deno.env.get('INTERNAL_FUNCTION_SECRET') || '',
+            },
+            body: {
+              ipAddress,
+              email,
+              attemptCount: blockData.attempt_count,
+              blockedUntil: blockData.blocked_until,
+              userAgent,
+              blockLevel: blockData.block_level,
+            }
+          });
+        } catch (alertError) {
+          console.error('[BRUTE-FORCE] Failed to send alert:', alertError);
+        }
       }
-    } else {
-      // Logar evento de seguranca
-      await supabaseAdmin
-        .from('security_logs')
-        .insert({
-          ip_address: ipAddress,
-          endpoint: '/auth/login',
-          attack_type: 'brute_force',
-          severity: 'medium',
-          blocked: false,
-          details: { email, user_agent: userAgent },
-          user_agent: userAgent || null,
-        });
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          blocked: true,
+          blockedUntil: blockData.blocked_until,
+          blockLevel: blockData.block_level,
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ 
+        success: true,
+        blocked: false,
+        attemptCount: blockData?.attempt_count || 0,
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

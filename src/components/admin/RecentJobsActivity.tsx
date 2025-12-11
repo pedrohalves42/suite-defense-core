@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { getJobTypeLabel, getJobStatusLabel } from '@/lib/job-labels';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface RecentJobsActivityProps {
   tenantId?: string;
@@ -64,7 +63,7 @@ export function RecentJobsActivity({ tenantId }: RecentJobsActivityProps) {
               {getJobStatusLabel(job.normalized_status)}
             </Badge>
             <span className="text-xs text-muted-foreground">
-              {format(new Date(job.created_at), "dd/MM HH:mm", { locale: ptBR })}
+              {formatBrazilDateTime(job.created_at, 'short')}
             </span>
           </div>
         </div>

@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAgentReleases } from "@/hooks/useAgentReleases";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Package, CheckCircle, AlertCircle, Download } from "lucide-react";
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from "@/components/ErrorState";
@@ -13,7 +12,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 
-const CURRENT_VERSION = 'v3.10.31-SUBMIT-BEFORE-EXIT';
+// Versões específicas por plataforma
+const CURRENT_VERSIONS = {
+  windows: 'v3.10.33-WEB-ACTIVITY-REGEX-FIX',
+  linux: 'v3.10.33-LINUX-SYNC',
+  macos: 'v3.10.33-MACOS-SYNC'
+} as const;
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
 // No need for manual SHA256 anymore - the hook handles calculation automatically
@@ -64,7 +68,8 @@ export default function AgentReleases() {
   const [fetchingScript, setFetchingScript] = useState(false);
 
   const handleRegisterCurrentVersion = async () => {
-    if (!confirm(`Registrar ${CURRENT_VERSION} com script completo?\n\nIsso ira buscar o script atual e registrar no agent_releases.`)) {
+    const version = CURRENT_VERSIONS.windows;
+    if (!confirm(`Registrar ${version} com script completo?\n\nIsso ira buscar o script atual e registrar no agent_releases.`)) {
       return;
     }
 
@@ -89,12 +94,12 @@ export default function AgentReleases() {
 
       toast.success(`Script obtido: ${(scriptContent.length / 1024).toFixed(1)} KB`);
 
-      // Register the release - SHA256 with BOM will be calculated automatically
+      // Register the release - SHA256 will be calculated automatically
       registerRelease({
-        version: CURRENT_VERSION,
+        version: version,
         platform: 'windows',
         script_content: scriptContent,
-        release_notes: 'UPTIME: Corrigido coleta de uptime_seconds e last_boot_time em todos os agentes (Windows, Linux, macOS). Metricas agora mostram tempo ligado corretamente.',
+        release_notes: 'WEB-ACTIVITY-REGEX-FIX: Corrigido regex de coleta de web activity para extrair dominios corretamente.',
         channel: 'stable'
       });
 
@@ -108,8 +113,9 @@ export default function AgentReleases() {
 
   const handleForceReregister = async (platform: 'windows' | 'linux' | 'macos' = 'windows') => {
     const platformLabel = platform === 'windows' ? 'Windows' : platform === 'linux' ? 'Linux' : 'macOS';
+    const currentVersion = CURRENT_VERSIONS[platform];
     
-    if (!confirm(`FORÇAR RE-REGISTRO de ${CURRENT_VERSION} (${platformLabel})?\n\nIsso ira:\n1. Deletar a entrada atual do banco\n2. Buscar o script atualizado\n3. Re-registrar a versao\n\nContinuar?`)) {
+    if (!confirm(`FORÇAR RE-REGISTRO de ${currentVersion} (${platformLabel})?\n\nIsso ira:\n1. Deletar a entrada atual do banco\n2. Buscar o script atualizado\n3. Re-registrar a versao\n\nContinuar?`)) {
       return;
     }
 
@@ -121,7 +127,7 @@ export default function AgentReleases() {
       const { error: deleteError } = await supabase
         .from('agent_releases')
         .delete()
-        .eq('version', CURRENT_VERSION)
+        .eq('version', currentVersion)
         .eq('platform', platform);
 
       if (deleteError) throw deleteError;
@@ -149,11 +155,15 @@ export default function AgentReleases() {
       toast.success(`Script ${platformLabel} obtido: ${(scriptContent.length / 1024).toFixed(1)} KB`);
 
       // Register the release - SHA256 will be calculated automatically
+      const releaseNotes = platform === 'windows' 
+        ? 'WEB-ACTIVITY-REGEX-FIX: Corrigido regex de coleta de web activity para extrair dominios corretamente.'
+        : `${platformLabel.toUpperCase()}-SYNC: Sincronização completa do script v3.10.33 com todas as correções.`;
+      
       registerRelease({
-        version: CURRENT_VERSION,
+        version: currentVersion,
         platform: platform,
         script_content: scriptContent,
-        release_notes: 'UPTIME: Corrigido coleta de uptime_seconds e last_boot_time em todos os agentes (Windows, Linux, macOS). Metricas agora mostram tempo ligado corretamente.',
+        release_notes: releaseNotes,
         channel: 'stable'
       });
 
@@ -194,9 +204,9 @@ export default function AgentReleases() {
     );
   }
 
-  const currentVersion = releases.find(r => r.version === CURRENT_VERSION && r.platform === 'windows');
-  const scriptSizeKB = currentVersion ? Math.round(currentVersion.script_content.length / 1024) : 0;
-  const needsRegistration = !currentVersion || scriptSizeKB < 40;
+  const windowsRelease = releases.find(r => r.version === CURRENT_VERSIONS.windows && r.platform === 'windows');
+  const scriptSizeKB = windowsRelease ? Math.round(windowsRelease.script_content.length / 1024) : 0;
+  const needsRegistration = !windowsRelease || scriptSizeKB < 40;
   const latestRelease = releases[0]; // First release is the most recent (order by created_at desc)
 
   return (
@@ -251,14 +261,14 @@ export default function AgentReleases() {
               <AlertCircle className="h-5 w-5 text-orange-600" />
               Acao Necessaria
             </CardTitle>
-            <CardDescription className="text-orange-800 dark:text-orange-200">
-              {CURRENT_VERSION} precisa ser registrado com script completo
+          <CardDescription className="text-orange-800 dark:text-orange-200">
+              {CURRENT_VERSIONS.windows} precisa ser registrado com script completo
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <p className="text-sm text-orange-800 dark:text-orange-200">
-                {currentVersion 
+                {windowsRelease 
                   ? `Script atual: ${scriptSizeKB}KB (placeholder). Necessario: >40KB`
                   : 'Release nao encontrada no banco de dados'}
               </p>
@@ -275,7 +285,7 @@ export default function AgentReleases() {
                 className="gap-2"
               >
                 <Package className="h-4 w-4" />
-                {fetchingScript ? 'Buscando Script...' : isRegistering ? 'Registrando...' : `Registrar ${CURRENT_VERSION}`}
+                {fetchingScript ? 'Buscando Script...' : isRegistering ? 'Registrando...' : `Registrar ${CURRENT_VERSIONS.windows}`}
               </Button>
             </div>
           </CardContent>
@@ -286,7 +296,7 @@ export default function AgentReleases() {
       <div className="grid gap-4">
         {releases.map((release, idx) => {
           const sizeKB = Math.round(release.script_content.length / 1024);
-          const isValid = sizeKB > 40;
+          const isValid = sizeKB > 35;
 
           return (
             <motion.div
@@ -316,7 +326,7 @@ export default function AgentReleases() {
                         <Badge variant="secondary">{release.platform}</Badge>
                         <Badge variant="outline">{release.channel}</Badge>
                         <span>•</span>
-                        <span>{format(new Date(release.created_at), 'PPp', { locale: ptBR })}</span>
+                        <span>{formatBrazilDateTime(release.created_at, 'datetime')}</span>
                       </div>
                     </div>
                     {isValid ? (

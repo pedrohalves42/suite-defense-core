@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # CyberShield Agent - Linux
-# Version: v3.10.30-UPTIME
+# Version: v3.10.33-LINUX-SYNC
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ SERVER_URL="${SERVER_URL:-${CYBERSHIELD_SERVER_URL:-}}"
 AGENT_TOKEN="${AGENT_TOKEN:-${CYBERSHIELD_AGENT_TOKEN:-}}"
 HMAC_SECRET="${HMAC_SECRET:-${CYBERSHIELD_HMAC_SECRET:-}}"
 AGENT_NAME="${AGENT_NAME:-${CYBERSHIELD_AGENT_NAME:-$(hostname -s)}}"
-AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-v3.10.30}}"
+AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-v3.10.33}}"
 
 # Parse argumentos (sobrescreve env vars)
 while [[ $# -gt 0 ]]; do
@@ -426,8 +426,9 @@ execute_job() {
   local job_id="$1"
   local job_type="$2"
   local payload_json="$3"
+  local job_agent_id="${4:-}"  # agent_id from poll-jobs response
 
-  log "INFO" "Executando job $job_id (type=$job_type)"
+  log "INFO" "Executando job $job_id (type=$job_type, agent_id=$job_agent_id)"
   
   local started_at
   started_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -722,10 +723,10 @@ execute_job() {
       if (( count == 0 )); then
         output_json='{"success": true, "message": "Nenhum dominio encontrado", "domains_count": 0}'
       else
-        # Enviar para backend
-        local body
-        body=$(jq -n --argjson items "$unique_items" '{items: $items}')
-        if secure_request "/functions/v1/submit-web-activity" "POST" "$body" 30 3; then
+      # Enviar para backend - incluir agent_id
+      local body
+      body=$(jq -n --arg agent_id "$job_agent_id" --argjson items "$unique_items" '{agent_id: $agent_id, items: $items}')
+      if secure_request "/functions/v1/submit-web-activity" "POST" "$body" 30 3; then
           output_json=$(jq -n --argjson c "$count" '{success: true, message: "Atividade web coletada", domains_count: $c}')
         else
           status="failed"
@@ -782,9 +783,9 @@ execute_job() {
       local count
       count=$(echo "$software_list" | jq 'length')
       
-      # Enviar para backend
+      # Enviar para backend - incluir agent_id
       local body
-      body=$(jq -n --argjson items "$software_list" '{items: $items}')
+      body=$(jq -n --arg agent_id "$job_agent_id" --argjson items "$software_list" '{agent_id: $agent_id, items: $items}')
       if secure_request "/functions/v1/submit-software-inventory" "POST" "$body" 30 3; then
         output_json=$(jq -n --argjson c "$count" '{success: true, message: "Inventario coletado", software_count: $c}')
       else
@@ -1012,12 +1013,13 @@ poll_jobs() {
   log "INFO" "Recebidos $count job(s) no poll-jobs"
 
   printf '%s\n' "$jobs_json" | jq -c '.[]' | while read -r job; do
-    local job_id job_type payload_json
+    local job_id job_type payload_json job_agent_id
     job_id="$(printf '%s\n' "$job" | jq -r '.id')"
     job_type="$(printf '%s\n' "$job" | jq -r '.type')"
     payload_json="$(printf '%s\n' "$job" | jq -c '.payload // {}')"
+    job_agent_id="$(printf '%s\n' "$job" | jq -r '.agent_id // ""')"
 
-    execute_job "$job_id" "$job_type" "$payload_json"
+    execute_job "$job_id" "$job_type" "$payload_json" "$job_agent_id"
   done
 }
 

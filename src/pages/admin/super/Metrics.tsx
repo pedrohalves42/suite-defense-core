@@ -98,7 +98,9 @@ export default function SuperAdminMetrics() {
       return {
         total: tenants.length,
         free: planCounts.free || 0,
+        starter: planCounts.starter || 0,
         pro: planCounts.pro || 0,
+        scale: planCounts.scale || 0,
         enterprise: planCounts.enterprise || 0,
       };
     },
@@ -117,7 +119,9 @@ export default function SuperAdminMetrics() {
 
   const planChartData = [
     { name: 'Free', value: tenantStats?.free || 0, color: 'hsl(var(--secondary))' },
-    { name: 'Pro', value: tenantStats?.pro || 0, color: 'hsl(var(--primary))' },
+    { name: 'Starter', value: tenantStats?.starter || 0, color: 'hsl(var(--muted))' },
+    { name: 'Business', value: tenantStats?.pro || 0, color: 'hsl(var(--primary))' },
+    { name: 'Scale', value: tenantStats?.scale || 0, color: 'hsl(var(--accent))' },
     { name: 'Enterprise', value: tenantStats?.enterprise || 0, color: 'hsl(var(--destructive))' },
   ];
 
@@ -137,9 +141,11 @@ export default function SuperAdminMetrics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{tenantStats?.total || 0}</div>
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2 mt-2 flex-wrap">
               <Badge variant="secondary">Free: {tenantStats?.free || 0}</Badge>
-              <Badge>Pro: {tenantStats?.pro || 0}</Badge>
+              <Badge variant="outline">Starter: {tenantStats?.starter || 0}</Badge>
+              <Badge>Business: {tenantStats?.pro || 0}</Badge>
+              <Badge variant="default">Scale: {tenantStats?.scale || 0}</Badge>
             </div>
           </CardContent>
         </Card>

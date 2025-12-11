@@ -1,9 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { sanitizeForAI, anonymizeAgentName } from '../_shared/ai-sanitizer.ts';
+import { withCircuitBreaker, executeWithTimeout } from '../_shared/ai-circuit-breaker.ts';
+import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from '../_shared/ai-metrics.ts';
+import { persistAIMetrics } from '../_shared/ai-metrics-persistence.ts';
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const AI_MODEL = 'google/gemini-2.5-flash';
+const AI_TIMEOUT_MS = 15000; // 15 seconds
 
 interface AnalysisData {
   problematicJobs: any[];
@@ -307,22 +313,113 @@ async function analyzeWithAI(
       ? (data.failurePatterns.length / data.installationStats.length) * 100
       : 0;
 
-    const avgCpuUsage = data.agentMetrics.length > 0
-      ? data.agentMetrics.reduce((sum, m) => sum + (m.cpu_usage_percent || 0), 0) / data.agentMetrics.length
-      : 0;
+    // MELHORADO: Análise POR AGENTE em vez de médias globais
+    const agentMetricsMap = new Map<string, { 
+      cpu: number[]; 
+      memory: number[]; 
+      disk: number[];
+      agent_name: string;
+    }>();
+    
+    for (const metric of data.agentMetrics) {
+      const agentId = metric.agent_id;
+      if (!agentMetricsMap.has(agentId)) {
+        agentMetricsMap.set(agentId, { 
+          cpu: [], 
+          memory: [], 
+          disk: [],
+          agent_name: metric.agent_name || agentId.slice(0, 8)
+        });
+      }
+      const agentData = agentMetricsMap.get(agentId)!;
+      if (metric.cpu_usage_percent != null) agentData.cpu.push(metric.cpu_usage_percent);
+      if (metric.memory_usage_percent != null) agentData.memory.push(metric.memory_usage_percent);
+      if (metric.disk_usage_percent != null) agentData.disk.push(metric.disk_usage_percent);
+    }
 
-    const avgMemoryUsage = data.agentMetrics.length > 0
-      ? data.agentMetrics.reduce((sum, m) => sum + (m.memory_usage_percent || 0), 0) / data.agentMetrics.length
-      : 0;
+    // Calcular médias e identificar outliers por agente (com anonimização)
+    // Criar mapa de anonimizado -> original para tradução reversa
+    const anonToOriginalMap = new Map<string, string>();
+    
+    const agentSummaries = Array.from(agentMetricsMap.entries()).map(([agentId, data]) => {
+      const avgCpu = data.cpu.length > 0 ? data.cpu.reduce((a, b) => a + b, 0) / data.cpu.length : 0;
+      const avgMemory = data.memory.length > 0 ? data.memory.reduce((a, b) => a + b, 0) / data.memory.length : 0;
+      const avgDisk = data.disk.length > 0 ? data.disk.reduce((a, b) => a + b, 0) / data.disk.length : 0;
+      const maxCpu = data.cpu.length > 0 ? Math.max(...data.cpu) : 0;
+      const maxMemory = data.memory.length > 0 ? Math.max(...data.memory) : 0;
+      const maxDisk = data.disk.length > 0 ? Math.max(...data.disk) : 0;
+      
+      // Anonimizar nome do agente antes de enviar à IA
+      const anonName = anonymizeAgentName(data.agent_name);
+      
+      // Guardar mapeamento para tradução reversa
+      anonToOriginalMap.set(anonName, data.agent_name);
+      
+      return {
+        agent_id: agentId,
+        agent_name: anonName,
+        original_name: data.agent_name, // Manter original para correlação interna
+        samples: data.cpu.length,
+        avg_cpu: avgCpu,
+        avg_memory: avgMemory,
+        avg_disk: avgDisk,
+        max_cpu: maxCpu,
+        max_memory: maxMemory,
+        max_disk: maxDisk,
+        // Flags de problemas
+        high_cpu: maxCpu > 90,
+        high_memory: maxMemory > 85,
+        critical_disk: maxDisk > 90,
+      };
+    });
+
+    // Identificar agentes problemáticos
+    const problematicAgents = agentSummaries.filter(a => a.high_cpu || a.high_memory || a.critical_disk);
+
+    // Correlacionar alertas com agentes específicos (anonimizado)
+    const alertsByAgent = new Map<string, number>();
+    for (const alert of data.systemAlerts) {
+      const agentId = alert.agent_id ? anonymizeAgentName(alert.agent_id) : 'system';
+      alertsByAgent.set(agentId, (alertsByAgent.get(agentId) || 0) + 1);
+    }
 
     const jobStatusCounts = jobStats.reduce((acc, job) => {
       acc[job.status] = (acc[job.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    const prompt = `Voce e um especialista em analise de sistemas de monitoramento de agentes. Analise os dados abaixo e identifique problemas, anomalias, e oportunidades de otimizacao.
+    // Médias globais para contexto geral
+    const avgCpuUsage = agentSummaries.length > 0
+      ? agentSummaries.reduce((sum, a) => sum + a.avg_cpu, 0) / agentSummaries.length
+      : 0;
+    const avgMemoryUsage = agentSummaries.length > 0
+      ? agentSummaries.reduce((sum, a) => sum + a.avg_memory, 0) / agentSummaries.length
+      : 0;
 
-**Dados do Tenant: ${tenantName}**
+    // Anonimizar nome do tenant para o prompt
+    const anonTenantName = anonymizeAgentName(tenantName);
+
+    const rawPrompt = `Voce e um especialista em analise de sistemas de monitoramento de agentes. Analise os dados abaixo e identifique problemas, anomalias, e oportunidades de otimizacao.
+
+**IMPORTANTE:** Analise CADA AGENTE individualmente. Nao se deixe enganar por medias globais baixas - pode haver agentes especificos com problemas criticos.
+
+**Dados do Tenant: ${anonTenantName}**
+
+**Resumo Global (use apenas como contexto):**
+- CPU media global: ${avgCpuUsage.toFixed(1)}%
+- Memoria media global: ${avgMemoryUsage.toFixed(1)}%
+- Total de agentes: ${agentSummaries.length}
+
+**Analise POR AGENTE (PRIORIDADE):**
+${agentSummaries.slice(0, 10).map(a => 
+  `- ${a.agent_name}: CPU max=${a.max_cpu.toFixed(1)}% avg=${a.avg_cpu.toFixed(1)}%, Mem max=${a.max_memory.toFixed(1)}% avg=${a.avg_memory.toFixed(1)}%, Disco max=${a.max_disk.toFixed(1)}% (${a.samples} amostras)${a.high_cpu ? ' ⚠️CPU' : ''}${a.high_memory ? ' ⚠️MEM' : ''}${a.critical_disk ? ' 🔴DISCO' : ''}`
+).join('\n')}
+
+**Agentes Problematicos Identificados:** ${problematicAgents.length}
+${problematicAgents.map(a => `- ${a.agent_name}: ${a.critical_disk ? 'DISCO CRITICO ' + a.max_disk.toFixed(1) + '%' : ''}${a.high_memory ? 'MEMORIA ALTA ' + a.max_memory.toFixed(1) + '%' : ''}${a.high_cpu ? 'CPU ALTA ' + a.max_cpu.toFixed(1) + '%' : ''}`).join('\n')}
+
+**Alertas por Agente:**
+${Array.from(alertsByAgent.entries()).slice(0, 5).map(([id, count]) => `- ${id.slice(0, 8)}: ${count} alertas`).join('\n')}
 
 **Metricas de Instalacao (ultimos 7 dias):**
 - Total de tentativas: ${data.installationStats.length}
@@ -330,24 +427,19 @@ async function analyzeWithAI(
 - Taxa de falha: ${failureRate.toFixed(1)}%
 
 **Jobs Problematicos:**
-- Total de jobs problematicos: ${data.problematicJobs.length}
-- Status dos jobs: ${JSON.stringify(jobStatusCounts)}
-
-**Metricas de Performance dos Agentes:**
-- Amostras coletadas: ${data.agentMetrics.length}
-- CPU media: ${avgCpuUsage.toFixed(1)}%
-- Memoria media: ${avgMemoryUsage.toFixed(1)}%
+- Total: ${data.problematicJobs.length}
+- Status: ${JSON.stringify(jobStatusCounts)}
 
 **Alertas do Sistema:**
-- Total de alertas: ${data.systemAlerts.length}
-- Alertas criticos: ${data.systemAlerts.filter(a => a.severity === 'critical').length}
+- Total: ${data.systemAlerts.length}
+- Criticos: ${data.systemAlerts.filter(a => a.severity === 'critical').length}
 
 **Sua tarefa:**
-1. Identifique ate 3 insights mais relevantes
+1. Identifique ate 3 insights mais relevantes, PRIORIZANDO agentes especificos com problemas
 2. Para cada insight, retorne um objeto JSON com:
    - insight_type: 'anomaly_detection', 'optimization', 'prediction', ou 'root_cause'
    - severity: 'info', 'warning', ou 'critical'
-   - title: titulo curto e descritivo
+   - title: titulo curto e descritivo (INCLUA nome do agente se for problema especifico)
    - description: descricao detalhada do problema (2-3 frases)
    - recommendation: recomendacao clara de acao
    - confidence_score: valor entre 0.0 e 1.0
@@ -355,52 +447,94 @@ async function analyzeWithAI(
 Responda APENAS com um array JSON valido de insights. Exemplo:
 [
   {
-    "insight_type": "anomaly_detection",
-    "severity": "warning",
-    "title": "Taxa de falha acima do normal",
-    "description": "A taxa de falha de instalacao esta 40% acima da baseline dos ultimos 30 dias. Concentracao de erros no horario noturno.",
-    "recommendation": "Investigar conectividade de rede durante o periodo noturno e considerar aumentar timeout de instalacao.",
-    "confidence_score": 0.85
+    "insight_type": "root_cause",
+    "severity": "critical",
+    "title": "Disco critico no agente PC-Finance",
+    "description": "O agente PC-Finance esta com 95.2% de uso de disco, gerando 18 alertas criticos nas ultimas 24h. Isso pode causar falha do sistema.",
+    "recommendation": "Liberar espaco em disco imediatamente: limpar logs antigos, arquivos temporarios, e downloads.",
+    "confidence_score": 0.95
   }
 ]`;
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'Voce e um especialista em analise de sistemas. Responda APENAS com JSON valido, sem texto adicional.' 
-          },
-          { role: 'user', content: prompt }
-        ],
-      }),
-    });
+    // Sanitizar o prompt antes de enviar à IA
+    const promptSanitizeResult = sanitizeForAI(rawPrompt);
+    if (promptSanitizeResult.blocked) {
+      console.warn('[ai-system-analyzer] Prompt injection blocked for tenant:', tenantId, promptSanitizeResult.blockedPatterns);
+    }
+    const prompt = promptSanitizeResult.sanitized;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      
-      if (response.status === 429) {
-        console.error('[ai-system-analyzer] Rate limit exceeded, will retry next cycle');
-        return [];
+    // Start metrics tracking
+    const aiMetricsLogger = createMetricsLogger('ai-system-analyzer', AI_MODEL);
+    const startTime = aiMetricsLogger.logStart(tenantId);
+
+    // Use circuit breaker with timeout
+    const aiResult = await withCircuitBreaker(
+      async () => {
+        return executeWithTimeout(async () => {
+          const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: AI_MODEL,
+              messages: [
+                { 
+                  role: 'system', 
+                  content: 'Voce e um especialista em analise de sistemas. Responda APENAS com JSON valido, sem texto adicional.' 
+                },
+                { role: 'user', content: prompt }
+              ],
+            }),
+          });
+
+          if (!response.ok) {
+            if (response.status === 429) {
+              throw new Error('Rate limit exceeded');
+            }
+            if (response.status === 402) {
+              throw new Error('Payment required - credits exhausted');
+            }
+            throw new Error(`AI API error: ${response.status}`);
+          }
+
+          return response.json();
+        }, AI_TIMEOUT_MS);
+      },
+      { 
+        timeoutMs: AI_TIMEOUT_MS,
+        fallbackResponse: null 
       }
-      
-      if (response.status === 402) {
-        console.error('[ai-system-analyzer] Payment required - Lovable AI credits exhausted');
-        return [];
-      }
-      
-      console.error('[ai-system-analyzer] AI API error:', response.status, errorText);
+    );
+
+    // Handle circuit breaker result
+    if (!aiResult.success || !aiResult.data) {
+      aiMetricsLogger.logFailure(startTime, aiResult.error || 'Unknown error', tenantId, aiResult.usedFallback);
+      console.error('[ai-system-analyzer] AI call failed for tenant:', tenantId, aiResult.error);
       return [];
     }
 
-    const aiResponse = await response.json();
+    const aiResponse = aiResult.data;
     const content = aiResponse.choices?.[0]?.message?.content;
+    const tokenUsage = extractTokenUsage(aiResponse);
+
+    // Log success metrics and persist to database
+    aiMetricsLogger.logSuccess(startTime, tenantId, tokenUsage);
+    
+    // Persist metrics to DB for dashboard
+    const successMetrics: AIInferenceMetrics = {
+      timestamp: new Date().toISOString(),
+      function_name: 'ai-system-analyzer',
+      model: AI_MODEL,
+      latency_ms: Date.now() - startTime,
+      success: true,
+      tokens_prompt: tokenUsage.prompt,
+      tokens_completion: tokenUsage.completion,
+      tokens_total: tokenUsage.total,
+      tenant_id: tenantId,
+    };
+    await persistAIMetrics(successMetrics);
 
     if (!content) {
       console.error('[ai-system-analyzer] No content in AI response');
@@ -422,13 +556,24 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
       return [];
     }
 
+    // Função para traduzir nomes anonimizados de volta para originais
+    const translateToOriginal = (text: string): string => {
+      let translated = text;
+      for (const [anonName, originalName] of anonToOriginalMap.entries()) {
+        // Substituir todas as ocorrências do nome anonimizado pelo original
+        translated = translated.replace(new RegExp(anonName, 'gi'), originalName);
+      }
+      return translated;
+    };
+
     // Mapear para formato do banco de dados
     return parsedInsights.map((insight: any) => ({
       tenant_id: tenantId,
       insight_type: insight.insight_type,
       severity: insight.severity,
-      title: insight.title,
-      description: insight.description,
+      // Traduzir nomes anonimizados de volta para originais
+      title: translateToOriginal(insight.title || ''),
+      description: translateToOriginal(insight.description || ''),
       evidence: {
         failureRate,
         avgCpuUsage,
@@ -437,7 +582,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
         systemAlertsCount: data.systemAlerts.length,
         analysisDate: new Date().toISOString(),
       },
-      recommendation: insight.recommendation,
+      recommendation: translateToOriginal(insight.recommendation || ''),
       confidence_score: insight.confidence_score,
     }));
 

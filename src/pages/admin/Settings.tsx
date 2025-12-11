@@ -10,9 +10,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/hooks/useTenant';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, Shield } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { logger } from '@/lib/logger';
+import { MFASettings } from '@/components/mfa/MFASettings';
+import { PasswordChangeCard } from '@/components/settings/PasswordChangeCard';
 
 interface TenantSettings {
   id: string;
@@ -285,6 +287,10 @@ export default function Settings() {
       <Tabs defaultValue="tenant" className="w-full">
         <TabsList>
           <TabsTrigger value="tenant">Tenant</TabsTrigger>
+          <TabsTrigger value="security" className="flex items-center gap-1">
+            <Shield className="h-4 w-4" />
+            Segurança
+          </TabsTrigger>
           <TabsTrigger value="alerts">Alertas</TabsTrigger>
           <TabsTrigger value="integrations">Integracoes</TabsTrigger>
           <TabsTrigger value="features">Features</TabsTrigger>
@@ -671,6 +677,49 @@ export default function Settings() {
                   Salvar Feature Flags
                 </Button>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Security Tab */}
+        <TabsContent value="security" className="space-y-4">
+          <MFASettings />
+          
+          <PasswordChangeCard />
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Dicas de Segurança</CardTitle>
+              <CardDescription>Recomendações para manter sua conta segura</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                <Shield className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <p className="font-medium text-sm">Use senhas fortes</p>
+                  <p className="text-sm text-muted-foreground">
+                    Combine letras maiúsculas, minúsculas, números e símbolos.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                <Shield className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <p className="font-medium text-sm">Ative a autenticação de dois fatores</p>
+                  <p className="text-sm text-muted-foreground">
+                    Adicione uma camada extra de segurança à sua conta.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                <Shield className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <p className="font-medium text-sm">Mantenha seu email atualizado</p>
+                  <p className="text-sm text-muted-foreground">
+                    Garanta que você tenha acesso ao email vinculado à conta.
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

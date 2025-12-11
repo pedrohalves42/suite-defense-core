@@ -6,8 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Shield, AlertTriangle, Activity, Ban, Unlock, Clock, User } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -284,7 +283,7 @@ export default function SecurityDashboard() {
                       {logs.map((log) => (
                         <TableRow key={log.id}>
                           <TableCell className="font-mono text-xs">
-                            {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}
+                            {formatBrazilDateTime(log.created_at, 'full')}
                           </TableCell>
                           <TableCell className="font-mono text-xs">{log.endpoint}</TableCell>
                           <TableCell>
@@ -353,12 +352,12 @@ export default function SecurityDashboard() {
                               {block.ip_address}
                             </TableCell>
                             <TableCell className="font-mono text-xs">
-                              {format(new Date(block.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}
+                              {formatBrazilDateTime(block.created_at, 'full')}
                             </TableCell>
                             <TableCell className="font-mono text-xs">
                               <div className="flex items-center gap-2">
                                 <Clock className="h-3 w-3" />
-                                {format(new Date(block.blocked_until), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}
+                                {formatBrazilDateTime(block.blocked_until, 'full')}
                               </div>
                             </TableCell>
                             <TableCell className="text-xs">{block.reason}</TableCell>
@@ -415,7 +414,7 @@ export default function SecurityDashboard() {
                         {failedAttempts.map((attempt) => (
                           <TableRow key={attempt.id}>
                             <TableCell className="font-mono text-xs">
-                              {format(new Date(attempt.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}
+                              {formatBrazilDateTime(attempt.created_at, 'full')}
                             </TableCell>
                             <TableCell className="font-mono text-sm font-semibold">
                               {attempt.ip_address}

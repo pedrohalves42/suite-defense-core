@@ -3,8 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { CheckCircle, Clock, AlertCircle, Copy, Heart } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 
 interface AgentInstallationGuideProps {
@@ -46,7 +45,7 @@ export default function AgentInstallationGuide({
             <div className="flex-1">
               <div className="font-medium">1. Instalador Gerado</div>
               <div className="text-sm text-muted-foreground">
-                {format(new Date(agent.enrolled_at), "dd/MM/yyyy 'as' HH:mm:ss", { locale: ptBR })}
+                {formatBrazilDateTime(agent.enrolled_at, 'full')}
               </div>
             </div>
             <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
@@ -130,7 +129,7 @@ export default function AgentInstallationGuide({
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground">
-                  Ultimo heartbeat: {format(new Date(agent.last_heartbeat), "dd/MM/yyyy 'as' HH:mm:ss", { locale: ptBR })}
+                  Ultimo heartbeat: {formatBrazilDateTime(agent.last_heartbeat, 'full')}
                 </div>
               )}
             </div>

@@ -74,6 +74,11 @@ const { validateAgentScriptContent } = await import('../_shared/agent-script-val
     console.log(`[${requestId}] Size: ${scriptContent.length} bytes`);
     console.log(`[${requestId}] SHA256: ${hash}`);
 
+    // Generate signed URL (valid for 15 minutes) instead of public URL
+    const { data: signedUrlData } = await supabase.storage
+      .from('agent-installers')
+      .createSignedUrl('cybershield-agent-windows.ps1', 900); // 15 minutes
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -81,7 +86,7 @@ const { validateAgentScriptContent } = await import('../_shared/agent-script-val
         size: scriptContent.length,
         sha256: hash,
         path: data.path,
-        publicUrl: `${SUPABASE_URL}/storage/v1/object/public/agent-installers/cybershield-agent-windows.ps1`,
+        signedUrl: signedUrlData?.signedUrl || null,
         requestId,
         timestamp: new Date().toISOString()
       }),

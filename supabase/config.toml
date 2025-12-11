@@ -383,3 +383,25 @@ verify_jwt = false
 # === Scheduled Reports ===
 [functions.send-scheduled-report]
 verify_jwt = false
+
+# === NVD CVE Integration ===
+[functions.fetch-nvd-cves]
+verify_jwt = true
+
+[functions.scan-vulnerabilities]
+verify_jwt = false
+
+[functions.sync-cve-database]
+verify_jwt = true
+
+[functions.translate-cve]
+verify_jwt = true
+
+# === HMAC Cleanup (every 2 hours) ===
+[functions.hmac-cleanup-scheduled]
+verify_jwt = false
+schedule = "0 */2 * * *"
+
+# === AI Quality & Governance (P2/P3) ===
+[functions.ai-quality-check]
+verify_jwt = true

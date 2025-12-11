@@ -4,6 +4,7 @@ import { verifyHmacSignature } from '../_shared/hmac.ts'
 import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logSecurityEvent } from '../_shared/security-log.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
+import { hashToken } from '../_shared/token-hash.ts'
 
 Deno.serve(async (req) => {
   // QUAL-01: Proper HTTP method validation
@@ -40,11 +41,12 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Buscar agente via token
+    // FASE 2: Buscar agente via hash do token
+    const tokenHash = await hashToken(agentToken)
     const { data: token, error: tokenError } = await supabase
       .from('agent_tokens')
       .select('agent_id, agents!inner(id, agent_name, tenant_id, hmac_secret)')
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .maybeSingle()
 

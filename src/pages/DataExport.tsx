@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { Download, FileSpreadsheet, FileText, Calendar, CheckCircle, Loader2 } from 'lucide-react';
-import { format, subDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { subDays } from 'date-fns';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import * as XLSX from 'xlsx';
 import { logger } from '@/lib/logger';
 
@@ -85,14 +85,14 @@ export default function DataExport() {
           data = agents.map(a => ({
             'Nome do Agente': a.agent_name,
             'Status': a.status,
-            'Data de Registro': format(new Date(a.enrolled_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
+            'Data de Registro': formatBrazilDateTime(a.enrolled_at, 'datetime'),
             'Ultimo Heartbeat': a.last_heartbeat 
-              ? format(new Date(a.last_heartbeat), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+              ? formatBrazilDateTime(a.last_heartbeat, 'datetime')
               : 'Nunca',
             'Tenant ID': a.tenant_id,
           }));
 
-          filename = `agentes_${format(new Date(), 'yyyy-MM-dd_HHmm')}`;
+          filename = `agentes_${formatBrazilDateTime(new Date(), 'filename')}`;
           break;
         }
 
@@ -114,11 +114,11 @@ export default function DataExport() {
             'Hash': s.file_hash,
             'Resultado': s.is_malicious ? 'Malicioso' : 'Limpo',
             'Deteccoes': `${s.positives}/${s.total_scans}`,
-            'Data do Scan': format(new Date(s.scanned_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
+            'Data do Scan': formatBrazilDateTime(s.scanned_at, 'datetime'),
             'Link VirusTotal': s.virustotal_permalink || '',
           }));
 
-          filename = `scans_${format(new Date(), 'yyyy-MM-dd_HHmm')}`;
+          filename = `scans_${formatBrazilDateTime(new Date(), 'filename')}`;
           break;
         }
 
@@ -138,21 +138,21 @@ export default function DataExport() {
             'Agente': j.agent_name,
             'Tipo': j.type,
             'Status': j.status,
-            'Criado em': format(new Date(j.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
+            'Criado em': formatBrazilDateTime(j.created_at, 'datetime'),
             'Entregue em': j.delivered_at 
-              ? format(new Date(j.delivered_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+              ? formatBrazilDateTime(j.delivered_at, 'datetime')
               : '-',
             'Concluido em': j.completed_at 
-              ? format(new Date(j.completed_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+              ? formatBrazilDateTime(j.completed_at, 'datetime')
               : '-',
             'Aprovado': j.approved ? 'Sim' : 'Nao',
             'Agendado para': j.scheduled_at 
-              ? format(new Date(j.scheduled_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+              ? formatBrazilDateTime(j.scheduled_at, 'datetime')
               : '-',
             'Recorrente': j.is_recurring ? 'Sim' : 'Nao',
           }));
 
-          filename = `jobs_${format(new Date(), 'yyyy-MM-dd_HHmm')}`;
+          filename = `jobs_${formatBrazilDateTime(new Date(), 'filename')}`;
           break;
         }
 
@@ -174,13 +174,13 @@ export default function DataExport() {
             'Hash': q.file_hash,
             'Motivo': q.quarantine_reason,
             'Status': q.status,
-            'Quarentinado em': format(new Date(q.quarantined_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
+            'Quarentinado em': formatBrazilDateTime(q.quarantined_at, 'datetime'),
             'Restaurado em': q.restored_at 
-              ? format(new Date(q.restored_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+              ? formatBrazilDateTime(q.restored_at, 'datetime')
               : '-',
           }));
 
-          filename = `quarentena_${format(new Date(), 'yyyy-MM-dd_HHmm')}`;
+          filename = `quarentena_${formatBrazilDateTime(new Date(), 'filename')}`;
           break;
         }
 
@@ -201,12 +201,12 @@ export default function DataExport() {
             'Tipo de Recurso': l.resource_type,
             'ID do Recurso': l.resource_id || '-',
             'Sucesso': l.success ? 'Sim' : 'Nao',
-            'Data': format(new Date(l.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR }),
+            'Data': formatBrazilDateTime(l.created_at, 'full'),
             'IP': l.ip_address || '-',
             'User Agent': l.user_agent || '-',
           }));
 
-          filename = `logs_auditoria_${format(new Date(), 'yyyy-MM-dd_HHmm')}`;
+          filename = `logs_auditoria_${formatBrazilDateTime(new Date(), 'filename')}`;
           break;
         }
       }

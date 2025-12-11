@@ -1398,6 +1398,8 @@ export type Database = {
           is_active: boolean
           last_used_at: string | null
           token: string
+          token_hash: string
+          token_prefix: string
         }
         Insert: {
           agent_id: string
@@ -1407,6 +1409,8 @@ export type Database = {
           is_active?: boolean
           last_used_at?: string | null
           token: string
+          token_hash: string
+          token_prefix: string
         }
         Update: {
           agent_id?: string
@@ -1416,6 +1420,8 @@ export type Database = {
           is_active?: boolean
           last_used_at?: string | null
           token?: string
+          token_hash?: string
+          token_prefix?: string
         }
         Relationships: [
           {
@@ -1864,6 +1870,65 @@ export type Database = {
           },
           {
             foreignKeyName: "ai_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_inference_metrics: {
+        Row: {
+          circuit_breaker_state: string | null
+          created_at: string | null
+          error: string | null
+          function_name: string
+          id: string
+          latency_ms: number
+          model: string
+          request_metadata: Json | null
+          success: boolean
+          tenant_id: string | null
+          tokens_completion: number | null
+          tokens_prompt: number | null
+          tokens_total: number | null
+          used_fallback: boolean | null
+        }
+        Insert: {
+          circuit_breaker_state?: string | null
+          created_at?: string | null
+          error?: string | null
+          function_name: string
+          id?: string
+          latency_ms: number
+          model: string
+          request_metadata?: Json | null
+          success?: boolean
+          tenant_id?: string | null
+          tokens_completion?: number | null
+          tokens_prompt?: number | null
+          tokens_total?: number | null
+          used_fallback?: boolean | null
+        }
+        Update: {
+          circuit_breaker_state?: string | null
+          created_at?: string | null
+          error?: string | null
+          function_name?: string
+          id?: string
+          latency_ms?: number
+          model?: string
+          request_metadata?: Json | null
+          success?: boolean
+          tenant_id?: string | null
+          tokens_completion?: number | null
+          tokens_prompt?: number | null
+          tokens_total?: number | null
+          used_fallback?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_inference_metrics_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2433,6 +2498,102 @@ export type Database = {
           },
         ]
       }
+      cve_database: {
+        Row: {
+          affected_products: Json | null
+          affected_versions: Json | null
+          cached_at: string | null
+          cpe_matches: Json | null
+          created_at: string | null
+          cve_id: string
+          cve_references: Json | null
+          cvss_score: number | null
+          cvss_vector: string | null
+          cvss_version: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          last_modified: string | null
+          published_date: string | null
+          severity: string | null
+          source: string | null
+          weaknesses: Json | null
+        }
+        Insert: {
+          affected_products?: Json | null
+          affected_versions?: Json | null
+          cached_at?: string | null
+          cpe_matches?: Json | null
+          created_at?: string | null
+          cve_id: string
+          cve_references?: Json | null
+          cvss_score?: number | null
+          cvss_vector?: string | null
+          cvss_version?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_modified?: string | null
+          published_date?: string | null
+          severity?: string | null
+          source?: string | null
+          weaknesses?: Json | null
+        }
+        Update: {
+          affected_products?: Json | null
+          affected_versions?: Json | null
+          cached_at?: string | null
+          cpe_matches?: Json | null
+          created_at?: string | null
+          cve_id?: string
+          cve_references?: Json | null
+          cvss_score?: number | null
+          cvss_vector?: string | null
+          cvss_version?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_modified?: string | null
+          published_date?: string | null
+          severity?: string | null
+          source?: string | null
+          weaknesses?: Json | null
+        }
+        Relationships: []
+      }
+      cve_sync_status: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          last_modified_date: string | null
+          last_sync_at: string | null
+          sync_status: string | null
+          total_cves_synced: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          last_modified_date?: string | null
+          last_sync_at?: string | null
+          sync_status?: string | null
+          total_cves_synced?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          last_modified_date?: string | null
+          last_sync_at?: string | null
+          sync_status?: string | null
+          total_cves_synced?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       enrollment_keys: {
         Row: {
           agent_id: string | null
@@ -2671,6 +2832,8 @@ export type Database = {
       }
       failed_login_attempts: {
         Row: {
+          block_count: number | null
+          blocked_until: string | null
           created_at: string
           email: string | null
           id: string
@@ -2679,6 +2842,8 @@ export type Database = {
           user_agent: string | null
         }
         Insert: {
+          block_count?: number | null
+          blocked_until?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -2687,6 +2852,8 @@ export type Database = {
           user_agent?: string | null
         }
         Update: {
+          block_count?: number | null
+          blocked_until?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -4865,6 +5032,62 @@ export type Database = {
         }
         Relationships: []
       }
+      threat_intelligence_cache: {
+        Row: {
+          cached_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          raw_responses: Json | null
+          reputation: string
+          risk_score: number | null
+          sources: Json | null
+          ssl_data: Json | null
+          target: string
+          target_type: string
+          tenant_id: string | null
+          whois_data: Json | null
+        }
+        Insert: {
+          cached_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          raw_responses?: Json | null
+          reputation: string
+          risk_score?: number | null
+          sources?: Json | null
+          ssl_data?: Json | null
+          target: string
+          target_type: string
+          tenant_id?: string | null
+          whois_data?: Json | null
+        }
+        Update: {
+          cached_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          raw_responses?: Json | null
+          reputation?: string
+          risk_score?: number | null
+          sources?: Json | null
+          ssl_data?: Json | null
+          target?: string
+          target_type?: string
+          tenant_id?: string | null
+          whois_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threat_intelligence_cache_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       url_reputation: {
         Row: {
           category: string | null
@@ -5999,6 +6222,15 @@ export type Database = {
         Args: { p_action_type: string; p_tenant_id: string }
         Returns: boolean
       }
+      check_and_block_ip: {
+        Args: { p_email?: string; p_ip_address: string }
+        Returns: {
+          attempt_count: number
+          block_level: number
+          blocked_until: string
+          is_blocked: boolean
+        }[]
+      }
       check_installation_failure_rate: {
         Args: {
           p_hours_back?: number
@@ -6068,7 +6300,7 @@ export type Database = {
       current_user_tenant_id: { Args: never; Returns: string }
       diagnose_agent: { Args: { p_agent_name: string }; Returns: Json }
       diagnose_agent_issues: {
-        Args: { p_agent_name: string }
+        Args: { p_agent_name: string; p_tenant_id: string }
         Returns: {
           description: string
           details: Json
@@ -6108,7 +6340,7 @@ export type Database = {
       }
       get_enrollment_key_full: { Args: { p_key_id: string }; Returns: string }
       get_installation_health_status: {
-        Args: never
+        Args: { p_tenant_id: string }
         Returns: {
           failure_rate_pct: number
           status: string
@@ -6172,6 +6404,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      hash_agent_token: { Args: { p_token: string }; Returns: string }
       installation_health_summary: {
         Args: never
         Returns: {
@@ -6185,6 +6418,15 @@ export type Database = {
       }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      log_sensitive_access: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_resource_id: string
+          p_resource_type: string
+        }
+        Returns: undefined
+      }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
       update_quota_usage: {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }

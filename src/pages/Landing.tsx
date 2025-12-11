@@ -24,7 +24,7 @@ const Landing = () => {
         descriptionBold: " Visibilidade completa, e resposta em tempo real.",
         stat2Label: "Dispositivos por plano",
         ctaButton: "Começar Trial Grátis",
-        reassurance: "✓ 15 dias de trial gratuito | ✓ Instalação em 5 minutos | ✓ Suporte 100% em português"
+        reassurance: "✓ 14 dias de trial grátis | ✓ Instalação em 5 minutos | ✓ Suporte 100% em português"
       },
       benefits: {
         card1: {
@@ -53,7 +53,7 @@ const Landing = () => {
         descriptionBold: " Proteja fotos, documentos e a privacidade da família contra vírus e ameaças.",
         stat2Label: "Ideal para 1-10 PCs",
         ctaButton: "Proteger Minha Casa Agora",
-        reassurance: "✓ 30 dias grátis | ✓ Instale você mesmo em 5min | ✓ Suporte em português via WhatsApp"
+        reassurance: "✓ 14 dias grátis | ✓ Instale você mesmo em 5min | ✓ Suporte em português via WhatsApp"
       },
       benefits: {
         card1: {
@@ -76,17 +76,80 @@ const Landing = () => {
   };
   const currentContent = content[audience];
 
-  // Cálculo dinâmico por tier (FASE 1)
-  const calculatePrice = (devices: number): number => {
-    if (devices <= 0 || Number.isNaN(devices)) return 0;
-    const pricePerDevice = devices <= 30 ? 4.61 :
-    // R$ 59,90 / 13 dispositivos
-    devices <= 200 ? 0.75 :
-    // R$ 149,90 / 200 dispositivos  
-    0.29; // R$ 299,90 / 1000 dispositivos
-
-    return Number((devices * pricePerDevice).toFixed(2));
+  // Cálculo baseado em tiers híbridos (base + adicional por dispositivo)
+  const calculateTier = (devices: number): { 
+    price: number; 
+    plan: string; 
+    baseDevices: number;
+    maxDevices: number; 
+    basePrice: number;
+    extraDevices: number;
+    extraPrice: number;
+    pricePerExtra: number;
+    isEnterprise: boolean 
+  } => {
+    if (devices <= 0 || Number.isNaN(devices)) 
+      return { price: 0, plan: 'Free', baseDevices: 3, maxDevices: 3, basePrice: 0, extraDevices: 0, extraPrice: 0, pricePerExtra: 0, isEnterprise: false };
+    
+    // Free: até 3 dispositivos
+    if (devices <= 3) 
+      return { price: 0, plan: 'Free', baseDevices: 3, maxDevices: 3, basePrice: 0, extraDevices: 0, extraPrice: 0, pricePerExtra: 0, isEnterprise: false };
+    
+    // Starter: R$ 150 base (5 disp) + R$ 20/adicional (máx 30)
+    if (devices <= 30) {
+      const basePrice = 150;
+      const baseDevices = 5;
+      const pricePerExtra = 20;
+      const extraDevices = Math.max(0, devices - baseDevices);
+      const extraPrice = extraDevices * pricePerExtra;
+      return { 
+        price: basePrice + extraPrice, 
+        plan: 'Starter', 
+        baseDevices, 
+        maxDevices: 30, 
+        basePrice, 
+        extraDevices, 
+        extraPrice,
+        pricePerExtra,
+        isEnterprise: false 
+      };
+    }
+    
+    // Business: R$ 450 base (25 disp) + R$ 18/adicional (máx 200)
+    if (devices <= 200) {
+      const basePrice = 450;
+      const baseDevices = 25;
+      const pricePerExtra = 18;
+      const extraDevices = Math.max(0, devices - baseDevices);
+      const extraPrice = extraDevices * pricePerExtra;
+      return { 
+        price: basePrice + extraPrice, 
+        plan: 'Business', 
+        baseDevices, 
+        maxDevices: 200, 
+        basePrice, 
+        extraDevices, 
+        extraPrice,
+        pricePerExtra,
+        isEnterprise: false 
+      };
+    }
+    
+    // Enterprise: +200 dispositivos
+    return { 
+      price: 0, 
+      plan: 'Enterprise', 
+      baseDevices: 200, 
+      maxDevices: Infinity, 
+      basePrice: 0, 
+      extraDevices: 0, 
+      extraPrice: 0,
+      pricePerExtra: 0,
+      isEnterprise: true 
+    };
   };
+
+  const tierResult = calculateTier(deviceCount);
   return <div className="min-h-screen bg-background">
       <Navbar />
       <WhatsAppButton />
@@ -133,16 +196,16 @@ const Landing = () => {
 
             <div className="flex flex-wrap justify-center gap-8 pt-4">
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">15 dias</div>
-                <div className="text-sm text-muted-foreground">Trial gratuito</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">14 dias</div>
+                <div className="text-sm text-muted-foreground">Trial grátis</div>
               </div>
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? '200+' : '1-10'}</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? 'até 200' : '1-10'}</div>
                 <div className="text-sm text-muted-foreground">{currentContent.hero.stat2Label}</div>
               </div>
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">100%</div>
-                <div className="text-sm text-muted-foreground">Visibilidade dos PCs</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">5 min</div>
+                <div className="text-sm text-muted-foreground">Configure em minutos</div>
               </div>
             </div>
 
@@ -437,13 +500,13 @@ const Landing = () => {
           <div className="text-center mb-16 animate-fade-in">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 border border-primary/30 backdrop-blur-sm animate-pulse-glow mb-6">
               <Shield className="w-4 h-4 text-primary animate-pulse" />
-              <span className="text-sm font-medium text-foreground">🎉 Trial de 14 dias - Sem cartão necessário</span>
+              <span className="text-sm font-medium text-foreground">🎉 Iniciar teste grátis – 14 dias (cartão requerido)</span>
             </div>
             <h2 className="text-2xl md:text-3xl font-bold mb-4">
-              {audience === 'business' ? "Planos Transparentes" : "Planos para Sua Casa"}
+              {audience === 'business' ? "Proteção completa sem equipe de TI" : "Planos para Sua Casa"}
             </h2>
             <p className="text-lg text-muted-foreground">
-              {audience === 'business' ? "Escolha o plano ideal para o tamanho da sua empresa" : "Planos acessiveis para proteger todos os computadores da sua casa"}
+              {audience === 'business' ? "Inventário, antivírus, vulnerabilidades, web, desempenho — tudo em um painel. Agente leve que não deixa o computador lento." : "Planos acessíveis para proteger todos os computadores da sua casa"}
             </p>
           </div>
 
@@ -455,43 +518,49 @@ const Landing = () => {
                 <div className="p-2 bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
                   <Zap className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-2xl font-bold">{audience === 'business' ? "Starter" : "Basico"}</h3>
+                <h3 className="text-2xl font-bold">{audience === 'business' ? "Starter" : "Básico"}</h3>
               </div>
-              <div className="relative mb-6">
-                <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? "R$ 30" : "R$ 15"}</span>
-                <span className="text-muted-foreground">/{audience === 'business' ? "dispositivo/mes" : "computador/mes"}</span>
+              <div className="relative mb-2">
+                <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? "R$ 150" : "R$ 15"}</span>
+                <span className="text-muted-foreground">/{audience === 'business' ? "mês" : "computador/mês"}</span>
               </div>
-              <p className="relative text-sm text-muted-foreground mb-6">{audience === 'business' ? "Ideal para pequenas empresas (ate 30 dispositivos)" : "Ideal para ate 3 computadores em casa"}</p>
+              {audience === 'business' && (
+                <p className="relative text-xs text-muted-foreground mb-4">
+                  Base: 5 dispositivos • +R$ 20/dispositivo adicional<br/>
+                  <span className="font-medium text-primary">Até 30 dispositivos</span>
+                </p>
+              )}
+              <p className="relative text-sm text-muted-foreground mb-6">{audience === 'business' ? "Ideal para micro e pequenas empresas" : "Ideal para até 3 computadores em casa"}</p>
               <ul className="relative space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Dashboard avancado" : "Protecao basica contra virus"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Dashboard centralizado" : "Proteção básica contra vírus"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "2 scans avancados por dia" : "Scans automaticos semanais"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Monitoramento em tempo real" : "Scans automáticos semanais"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Monitoramento em tempo real" : "Monitoramento basico em tempo real"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Inventário de software" : "Monitoramento básico em tempo real"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Suporte por email" : "Suporte via WhatsApp"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Status do antivírus" : "Suporte via WhatsApp"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "30 dias de trial gratuito" : "30 dias gratis para testar"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Suporte por email" : "14 dias grátis para testar"}</span>
                 </li>
               </ul>
               <Button variant="outline" className="relative w-full group-hover:bg-primary/10 transition-colors" asChild>
                 <Link to="/signup">
-                  {audience === 'business' ? "Comecar Trial Gratis" : "Comecar Agora"}
+                  Iniciar teste grátis – 14 dias
                 </Link>
               </Button>
             </div>
 
-            {/* Pro */}
+            {/* Business */}
             <div className={`relative p-8 rounded-2xl scale-105 shadow-2xl backdrop-blur-xl border-2 transition-all duration-300 hover:scale-110 ${audience === 'business' ? 'bg-gradient-to-br from-primary via-primary/90 to-accent text-primary-foreground border-primary' : 'bg-gradient-to-br from-green-400 via-green-500 to-green-600 text-white border-green-400'}`}>
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground px-4 py-1.5 rounded-full text-sm font-bold shadow-lg animate-pulse-glow">
                 {audience === 'business' ? "RECOMENDADO" : "MELHOR PARA CASA"}
@@ -500,38 +569,44 @@ const Landing = () => {
                 <div className="p-2 bg-white/20 rounded-lg">
                   <Crown className="w-6 h-6" />
                 </div>
-                <h3 className="text-2xl font-bold">{audience === 'business' ? "Pro" : "Completo"}</h3>
+                <h3 className="text-2xl font-bold">{audience === 'business' ? "Business" : "Completo"}</h3>
               </div>
-              <div className="mb-6">
-                <span className="text-3xl font-bold">{audience === 'business' ? "R$ 50" : "R$ 30"}</span>
-                <span className="opacity-90">/{audience === 'business' ? "dispositivo/mes" : "computador/mes"}</span>
+              <div className="mb-2">
+                <span className="text-3xl font-bold">{audience === 'business' ? "R$ 450" : "R$ 30"}</span>
+                <span className="opacity-90">/{audience === 'business' ? "mês" : "computador/mês"}</span>
               </div>
-              <p className="text-sm opacity-90 mb-6">{audience === 'business' ? "Para empresas em crescimento (ate 200 dispositivos)" : "Protecao completa para ate 10 computadores"}</p>
+              {audience === 'business' && (
+                <p className="text-xs opacity-80 mb-4">
+                  Base: 25 dispositivos • +R$ 18/dispositivo adicional<br/>
+                  <span className="font-medium">Até 200 dispositivos</span>
+                </p>
+              )}
+              <p className="text-sm opacity-90 mb-6">{audience === 'business' ? "Para pequenas e médias empresas" : "Proteção completa para até 10 computadores"}</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Tudo do Starter, mais:" : "Tudo do Basico, mais:"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Tudo do Starter, mais:" : "Tudo do Básico, mais:"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Scans avancados ilimitados" : "Scans diarios automaticos"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Scans avançados ilimitados" : "Scans diários automáticos"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Quarentena automatica" : "Isolamento automatico de ameacas"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Relatórios customizados" : "Isolamento automático de ameaças"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Suporte prioritario" : "Suporte dedicado via WhatsApp"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Suporte prioritário" : "Suporte dedicado via WhatsApp"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Relatorios customizados" : "Relatorios simples e claros"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Analytics avançado" : "Relatórios simples e claros"}</span>
                 </li>
               </ul>
               <Button variant="outline" className="w-full bg-white/20 hover:bg-white/30 border-white/30" asChild>
                 <Link to="/signup">
-                  {audience === 'business' ? "Comecar Trial Gratis" : "Assinar Agora"}
+                  Iniciar teste grátis – 14 dias
                 </Link>
               </Button>
             </div>
@@ -543,17 +618,17 @@ const Landing = () => {
                 <div className="p-2 bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
                   <ShieldCheck className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-2xl font-bold">{audience === 'business' ? "Enterprise" : "Avancado"}</h3>
+                <h3 className="text-2xl font-bold">{audience === 'business' ? "Enterprise" : "Avançado"}</h3>
               </div>
               <div className="relative mb-6">
-                <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? "R$ 100" : "R$ 50"}</span>
-                <span className="text-muted-foreground">/{audience === 'business' ? "dispositivo/mes" : "computador/mes"}</span>
+                <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? "Sob consulta" : "R$ 50"}</span>
+                <span className="text-muted-foreground">{audience === 'business' ? "" : "/computador/mês"}</span>
               </div>
-              <p className="relative text-sm text-muted-foreground mb-6">{audience === 'business' ? "Para grandes empresas e necessidades avancadas" : "Para casas com muitos dispositivos e necessidades especiais"}</p>
+              <p className="relative text-sm text-muted-foreground mb-6">{audience === 'business' ? "Para grandes empresas - dispositivos ilimitados" : "Para casas com muitos dispositivos"}</p>
               <ul className="relative space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Tudo do Pro, mais:" : "Tudo do Completo, mais:"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Tudo do Business, mais:" : "Tudo do Completo, mais:"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
@@ -561,17 +636,17 @@ const Landing = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Consultoria personalizada" : "Consultoria para seguranca domestica"}</span>
+                  <span className="text-sm">{audience === 'business' ? "Consultoria personalizada" : "Consultoria para segurança doméstica"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">{audience === 'business' ? "Relatorios avancados e auditoria" : "Relatorios detalhados para sua familia"}</span>
+                  <span className="text-sm">{audience === 'business' ? "SLA garantido e onboarding dedicado" : "Relatórios detalhados"}</span>
                 </li>
               </ul>
               <Button variant="outline" className="relative w-full group-hover:bg-primary/10 transition-colors" asChild>
-                <Link to="/signup">
-                  {audience === 'business' ? "Fale Conosco" : "Fale Conosco"}
-                </Link>
+                <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                  Fale Conosco
+                </a>
               </Button>
             </div>
           </div>
@@ -758,20 +833,53 @@ const Landing = () => {
       <section className="py-20 bg-muted/30">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center">
-            {audience === 'business' ? "Calculadora de Preco" : "Calculadora de Preco para Casa"}
+            {audience === 'business' ? "Qual Plano é Ideal Para Você?" : "Qual Plano é Ideal Para Sua Casa?"}
           </h2>
           <p className="text-center text-muted-foreground mb-8">
             {currentContent.calculator.label}
           </p>
-          <div className="flex flex-col sm:flex-row items-center gap-4 justify-center">
-            <Input type="number" min={1} max={1000} value={deviceCount} onChange={e => setDeviceCount(Number(e.target.value))} className="max-w-xs" aria-label={currentContent.calculator.label} />
-            <div className="text-2xl font-bold">
-              {`R$ ${calculatePrice(deviceCount).toFixed(2)} / ${audience === 'business' ? 'mes' : 'mes'}`}
-            </div>
+          <div className="flex flex-col items-center gap-6 justify-center">
+            <Input 
+              type="number" 
+              min={1} 
+              max={500} 
+              value={deviceCount} 
+              onChange={e => setDeviceCount(Math.max(1, Math.min(500, Number(e.target.value) || 1)))} 
+              className="max-w-xs text-center text-lg" 
+              aria-label={currentContent.calculator.label} 
+            />
+            
+            <Card className="w-full max-w-md border-primary/20 bg-card/50 backdrop-blur">
+              <CardContent className="pt-6 text-center">
+                {tierResult.isEnterprise ? (
+                  <>
+                    <div className="text-sm text-muted-foreground mb-2">Plano Recomendado</div>
+                    <div className="text-2xl font-bold text-primary mb-2">Enterprise</div>
+                    <p className="text-muted-foreground mb-4">
+                      Para {deviceCount}+ dispositivos, entre em contato para um plano personalizado.
+                    </p>
+                    <Button asChild className="w-full">
+                      <Link to="/pricing">Ver Planos Enterprise</Link>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm text-muted-foreground mb-2">Plano Recomendado</div>
+                    <div className="text-2xl font-bold text-primary mb-1">{tierResult.plan}</div>
+                    <div className="text-3xl font-bold mb-2">
+                      {tierResult.price === 0 ? 'Grátis' : `R$ ${tierResult.price}/mês`}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Inclui até {tierResult.maxDevices} {audience === 'business' ? 'dispositivos' : 'computadores'}
+                    </p>
+                    <Button asChild className="w-full">
+                      <Link to="/pricing">Ver Detalhes do Plano</Link>
+                    </Button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
-          <p className="text-center text-sm text-muted-foreground mt-4">
-            {audience === 'business' ? "Precos baseados no numero de dispositivos monitorados." : "Precos baseados no numero de computadores protegidos."}
-          </p>
         </div>
       </section>
 
