@@ -19,8 +19,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useToast } from '@/hooks/use-toast';
 import { MFAEnrollmentDialog } from './MFAEnrollmentDialog';
 import { Shield, ShieldCheck, ShieldAlert, Trash2, Loader2, AlertCircle } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatRelativeTime } from '@/lib/date-utils';
 
 export function MFASettings() {
   const { factors, hasMFA, loading, unenrollFactor } = useMFA();
@@ -125,10 +124,7 @@ export function MFASettings() {
                         {factor.friendly_name || 'Aplicativo Autenticador'}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Adicionado {formatDistanceToNow(new Date(factor.created_at), { 
-                          addSuffix: true, 
-                          locale: ptBR 
-                        })}
+                        Adicionado {formatRelativeTime(factor.created_at)}
                       </p>
                     </div>
                   </div>

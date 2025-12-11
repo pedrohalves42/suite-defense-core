@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { subDays, format } from "date-fns";
+import { subDays } from "date-fns";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useTenant } from "@/hooks/useTenant";
 import { logger } from "@/lib/logger";
@@ -253,9 +253,11 @@ const AgentMonitoring = () => {
     const days = [];
     for (let i = 6; i >= 0; i--) {
       const date = subDays(new Date(), i);
+      const dateStr = date.toISOString().split('T')[0];
+      const label = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
       days.push({
-        date: format(date, 'yyyy-MM-dd'),
-        label: format(date, 'dd/MM')
+        date: dateStr,
+        label: label
       });
     }
     return days;

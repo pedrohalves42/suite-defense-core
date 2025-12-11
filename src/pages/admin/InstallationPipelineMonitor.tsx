@@ -17,8 +17,7 @@ import {
   Clock,
   XCircle
 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatBrazilDateTime } from "@/lib/date-utils";
 import {
   FunnelChart,
   Funnel,
@@ -214,7 +213,7 @@ export default function InstallationPipelineMonitor() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Periodo:</span>
                 <span className="font-semibold">
-                  {format(new Date(failureRate.period_start), 'HH:mm', { locale: ptBR })} - {format(new Date(failureRate.period_end), 'HH:mm', { locale: ptBR })}
+                  {formatBrazilDateTime(failureRate.period_start, 'time')} - {formatBrazilDateTime(failureRate.period_end, 'time')}
                 </span>
               </div>
             </div>
@@ -273,7 +272,7 @@ export default function InstallationPipelineMonitor() {
                       lifecycle_stage: a.lifecycle_stage,
                       status: a.status_badge.label,
                       install_time_seconds: a.metrics.install_time_seconds || 0,
-                      last_seen: a.metrics.last_seen ? format(new Date(a.metrics.last_seen), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'Nunca',
+                      last_seen: a.metrics.last_seen ? formatBrazilDateTime(a.metrics.last_seen, 'datetime') : 'Nunca',
                       is_stuck: a.flags.is_stuck ? 'Sim' : 'Nao',
                       has_errors: a.flags.has_errors ? 'Sim' : 'Nao',
                     })),
@@ -352,7 +351,7 @@ export default function InstallationPipelineMonitor() {
                     {agent.metrics.install_time_seconds ? `${agent.metrics.install_time_seconds}s` : '-'}
                   </TableCell>
                   <TableCell>
-                    {agent.metrics.last_seen ? format(new Date(agent.metrics.last_seen), "dd/MM HH:mm", { locale: ptBR }) : 'Nunca'}
+                    {agent.metrics.last_seen ? formatBrazilDateTime(agent.metrics.last_seen, 'short') : 'Nunca'}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">

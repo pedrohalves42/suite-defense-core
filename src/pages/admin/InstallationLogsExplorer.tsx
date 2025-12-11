@@ -8,8 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useInstallationLogs } from "@/hooks/useAgentLifecycle";
 import { Search, FileText, CheckCircle, XCircle, AlertTriangle, Download } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatBrazilDateTime } from "@/lib/date-utils";
 import {
   Sheet,
   SheetContent,
@@ -117,7 +116,7 @@ export default function InstallationLogsExplorer() {
                 success: log.success ? 'Sim' : 'Nao',
                 platform: log.platform,
                 error_message: log.error_message || '',
-                created_at: format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR }),
+                created_at: formatBrazilDateTime(log.created_at, 'full'),
               })),
               'installation-logs',
               [
@@ -277,7 +276,7 @@ export default function InstallationLogsExplorer() {
                 return (
                   <TableRow key={log.id}>
                     <TableCell className="whitespace-nowrap">
-                      {format(new Date(log.created_at), "dd/MM/yy HH:mm:ss", { locale: ptBR })}
+                      {formatBrazilDateTime(log.created_at, 'full')}
                     </TableCell>
                     <TableCell className="font-medium">{log.agent_name}</TableCell>
                     <TableCell>
@@ -310,7 +309,7 @@ export default function InstallationLogsExplorer() {
                           <SheetHeader>
                             <SheetTitle>{log.agent_name} - Detalhes</SheetTitle>
                             <SheetDescription>
-                              {format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
+                              {formatBrazilDateTime(log.created_at, 'full')}
                             </SheetDescription>
                           </SheetHeader>
                           <ScrollArea className="h-[calc(100vh-120px)] mt-4">
