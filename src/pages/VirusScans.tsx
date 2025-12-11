@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight, ExternalLink, Shield, AlertTriangle, CheckCircle2, FileSearch, TrendingUp } from 'lucide-react';
-import { format, subDays } from 'date-fns';
+import { subDays, format } from 'date-fns';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { ScanFileDialog } from '@/components/ScanFileDialog';
 import { SystemScanButton } from '@/components/SystemScanButton';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -155,7 +156,7 @@ export default function VirusScans() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-muted-foreground">Data do Scan</p>
-                <p className="text-sm mt-1">{format(new Date(scan.scanned_at), 'dd/MM/yyyy HH:mm:ss')}</p>
+                <p className="text-sm mt-1">{formatBrazilDateTime(scan.scanned_at, 'full')}</p>
               </div>
               <div>
                 <p className="text-sm font-semibold text-muted-foreground">Deteccoes</p>
@@ -352,7 +353,7 @@ export default function VirusScans() {
                       return (
                         <TableRow key={scan.id} className={scan.is_malicious ? 'bg-destructive/5' : ''}>
                           <TableCell className="text-sm">
-                            {format(new Date(scan.scanned_at), 'dd/MM/yyyy HH:mm')}
+                            {formatBrazilDateTime(scan.scanned_at, 'datetime')}
                           </TableCell>
                           <TableCell className="font-mono text-xs">{scan.agent_name}</TableCell>
                           <TableCell className="max-w-xs truncate text-sm" title={scan.file_path}>

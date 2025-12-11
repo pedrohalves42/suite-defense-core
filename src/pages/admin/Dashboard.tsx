@@ -7,8 +7,7 @@ import { useTenant } from '@/hooks/useTenant';
 import { Activity, Shield, Users, Server, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDateTime, TIMEZONE_INDICATOR } from '@/lib/date-utils';
 import { RecentAuditActivity } from '@/components/admin/RecentAuditActivity';
 import { RecentJobsActivity } from '@/components/admin/RecentJobsActivity';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -244,7 +243,7 @@ export default function Dashboard() {
                       {alert.message}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {format(new Date(alert.created_at), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}
+                      {formatBrazilDateTime(alert.created_at, 'datetime')}
                     </div>
                   </div>
                   <Badge 
@@ -412,7 +411,7 @@ export default function Dashboard() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {format(new Date(scan.scanned_at), 'dd/MM HH:mm', { locale: ptBR })}
+                        {formatBrazilDateTime(scan.scanned_at, 'short')}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -453,7 +452,7 @@ export default function Dashboard() {
                         {activity.resource_type} {activity.resource_id && `? ${activity.resource_id}`}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(new Date(activity.created_at), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}
+                        {formatBrazilDateTime(activity.created_at, 'datetime')}
                       </p>
                     </div>
                     <Badge variant={activity.success ? 'default' : 'destructive'} className="shrink-0">

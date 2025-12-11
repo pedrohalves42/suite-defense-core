@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Shield, AlertTriangle, CheckCircle, Trash2, RotateCcw, Search, FileWarning } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 export default function Quarantine() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -257,7 +257,7 @@ export default function Quarantine() {
                         )}
                       </TableCell>
                       <TableCell>{getStatusBadge(file.status)}</TableCell>
-                      <TableCell>{format(new Date(file.quarantined_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                      <TableCell>{formatBrazilDateTime(file.quarantined_at, 'datetime')}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           {file.status === 'quarantined' && (

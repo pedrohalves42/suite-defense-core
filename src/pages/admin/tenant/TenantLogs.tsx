@@ -8,8 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTenant } from "@/hooks/useTenant";
 import { Search, FileText } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatRelativeTime } from '@/lib/date-utils';
 import { useDebounce } from "@/hooks/useDebounce";
 
 export default function TenantLogs() {
@@ -189,10 +188,7 @@ export default function TenantLogs() {
                       {log.details ? JSON.stringify(log.details).substring(0, 50) + "..." : "-"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(log.created_at), {
-                        addSuffix: true,
-                        locale: ptBR,
-                      })}
+                      {formatRelativeTime(log.created_at)}
                     </TableCell>
                   </TableRow>
                 ))

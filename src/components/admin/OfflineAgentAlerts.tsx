@@ -7,8 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatRelativeTime } from '@/lib/date-utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -254,11 +253,7 @@ export function OfflineAgentAlerts() {
                           <p className={cn('font-medium', config.text)}>{agent.agent_name}</p>
                           <p className="text-xs text-muted-foreground">
                             {agent.hostname && `${agent.hostname} • `}
-                            Offline há{' '}
-                            {formatDistanceToNow(new Date(agent.last_heartbeat), {
-                              locale: ptBR,
-                              addSuffix: false,
-                            })}
+                            Offline {formatRelativeTime(agent.last_heartbeat)}
                           </p>
                         </div>
                       </div>

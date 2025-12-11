@@ -11,8 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/useTenant";
 import { Mail, Trash2, RefreshCw } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatRelativeTime } from '@/lib/date-utils';
 
 export default function TenantInvites() {
   const { toast } = useToast();
@@ -197,20 +196,14 @@ export default function TenantInvites() {
                     <TableCell>
                       {new Date(invite.expires_at) > new Date() ? (
                         <span className="text-sm">
-                          {formatDistanceToNow(new Date(invite.expires_at), {
-                            addSuffix: true,
-                            locale: ptBR,
-                          })}
+                          {formatRelativeTime(invite.expires_at)}
                         </span>
                       ) : (
                         <span className="text-sm text-destructive">Expirado</span>
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(invite.created_at), {
-                        addSuffix: true,
-                        locale: ptBR,
-                      })}
+                      {formatRelativeTime(invite.created_at)}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

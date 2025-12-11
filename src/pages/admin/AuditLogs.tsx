@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatBrazilDateTime, TIMEZONE_INDICATOR } from '@/lib/date-utils';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -147,7 +147,7 @@ export default function AuditLogs() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Data/Hora</TableHead>
+                    <TableHead>Data/Hora {TIMEZONE_INDICATOR}</TableHead>
                     <TableHead>Usuario</TableHead>
                     <TableHead>Acao</TableHead>
                     <TableHead>Recurso</TableHead>
@@ -159,7 +159,7 @@ export default function AuditLogs() {
                   {logs?.data?.map((log: any) => (
                     <TableRow key={log.id}>
                       <TableCell className="text-sm">
-                        {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss')}
+                        {formatBrazilDateTime(log.created_at, 'full')}
                       </TableCell>
                       <TableCell>{log.actor?.full_name || 'Sistema'}</TableCell>
                       <TableCell className="font-mono text-xs">{log.action}</TableCell>

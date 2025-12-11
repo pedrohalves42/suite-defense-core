@@ -22,7 +22,8 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from 'recharts';
 import { toast } from 'sonner';
-import { format, subHours } from 'date-fns';
+import { subHours, format } from 'date-fns';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface SecurityMetrics {
   rate_limit_breaches: number;
@@ -410,7 +411,7 @@ export default function SecurityMonitoring() {
                             {event.ip_address?.slice(0, 15)}
                           </TableCell>
                           <TableCell className="text-xs">
-                            {format(new Date(event.created_at), 'HH:mm:ss')}
+                            {formatBrazilDateTime(event.created_at, 'time')}
                           </TableCell>
                         </TableRow>
                       ))
@@ -458,7 +459,7 @@ export default function SecurityMonitoring() {
                           <TableCell className="text-xs">
                             <Badge variant="outline">
                               <Clock className="h-3 w-3 mr-1" />
-                              {format(new Date(ip.blocked_until), 'HH:mm')}
+                              {formatBrazilDateTime(ip.blocked_until, 'time')}
                             </Badge>
                           </TableCell>
                           <TableCell>
