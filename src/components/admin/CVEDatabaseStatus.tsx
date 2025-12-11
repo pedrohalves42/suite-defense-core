@@ -7,8 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Shield, RefreshCw, Clock, Database, AlertTriangle, CheckCircle, Languages } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatRelativeTime } from '@/lib/date-utils';
 
 interface CVESyncStatus {
   id: string;
@@ -226,10 +225,7 @@ export default function CVEDatabaseStatus() {
                 <Skeleton className="h-8 w-32" />
               ) : syncStatus?.last_sync_at ? (
                 <span className="text-lg font-medium">
-                  {formatDistanceToNow(new Date(syncStatus.last_sync_at), { 
-                    addSuffix: true,
-                    locale: ptBR,
-                  })}
+                  {formatRelativeTime(syncStatus.last_sync_at)}
                 </span>
               ) : (
                 <span className="text-lg text-muted-foreground">Nunca</span>

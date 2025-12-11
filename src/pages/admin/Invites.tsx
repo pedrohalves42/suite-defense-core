@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Copy, Trash2, Mail } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useTenant } from '@/hooks/useTenant';
 
 export default function Invites() {
@@ -183,8 +183,8 @@ export default function Invites() {
                       <TableCell>
                         <Badge variant={status.variant}>{status.text}</Badge>
                       </TableCell>
-                      <TableCell>{format(new Date(invite.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
-                      <TableCell>{format(new Date(invite.expires_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                      <TableCell>{formatBrazilDateTime(invite.created_at, 'datetime')}</TableCell>
+                      <TableCell>{formatBrazilDateTime(invite.expires_at, 'datetime')}</TableCell>
                       <TableCell className="text-right space-x-2">
                         {invite.status === 'pending' && (
                           <Button 
