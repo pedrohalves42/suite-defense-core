@@ -4,8 +4,8 @@
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
  * Versao: v3.10.31-SUBMIT-BEFORE-EXIT
- * SHA256: pending-regeneration
- * Gerado em: 2025-12-09T23:50:00.000Z
+ * SHA256: bda98db634b220c9e38cfb436748f4f884869ff6edca9dff97f792d12e2454b3
+ * Gerado em: 2025-12-09T18:11:32.652Z
  */
 
 export function getAgentScriptWindows(): string {
