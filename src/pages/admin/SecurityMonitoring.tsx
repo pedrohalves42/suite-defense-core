@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from 'recharts';
 import { toast } from 'sonner';
-import { subHours, format } from 'date-fns';
+import { subHours } from 'date-fns';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface SecurityMetrics {
@@ -187,7 +187,8 @@ export default function SecurityMonitoring() {
 
   // Event timeline chart data
   const chartData = recentEvents?.reduce((acc: Record<string, { hour: string; events: number; blocked: number }>, event: SecurityEvent) => {
-    const hour = format(new Date(event.created_at), 'HH:00');
+    const eventDate = new Date(event.created_at);
+    const hour = `${String(eventDate.getHours()).padStart(2, '0')}:00`;
     if (!acc[hour]) {
       acc[hour] = { hour, events: 0, blocked: 0 };
     }
@@ -514,7 +515,7 @@ export default function SecurityMonitoring() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {format(new Date(stat.last_attempt), 'dd/MM HH:mm:ss')}
+                        {formatBrazilDateTime(stat.last_attempt, 'short')}
                       </TableCell>
                       <TableCell>
                         {stat.count >= 10 ? (

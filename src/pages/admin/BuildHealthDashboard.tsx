@@ -5,8 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Activity, AlertCircle, CheckCircle2, Clock, XCircle, Trash2 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatBrazilDateTime } from "@/lib/date-utils";
 import { toast } from "sonner";
 
 export default function BuildHealthDashboard() {
@@ -176,7 +175,7 @@ export default function BuildHealthDashboard() {
                       Build ID: {build.id.slice(0, 8)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(build.created_at), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}
+                      {formatBrazilDateTime(build.created_at, 'datetime')}
                     </p>
                     {build.error_message && (
                       <p className="text-xs text-destructive mt-1">
