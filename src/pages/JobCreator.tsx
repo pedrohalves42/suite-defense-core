@@ -56,7 +56,7 @@ const JobCreator = () => {
   const loadAgents = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from("agents")
+        .from("agents_safe")
         .select("*")
         .order("agent_name", { ascending: true });
 

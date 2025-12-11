@@ -157,7 +157,7 @@ const ServerDashboard = () => {
   const loadDashboardData = async () => {
     try {
       const [agentsRes, jobsRes, reportsRes, tokensRes, rateLimitsRes, scansRes, logsRes] = await Promise.all([
-        supabase.from("agents").select("*").order("enrolled_at", { ascending: false }),
+        supabase.from("agents_safe").select("*").order("enrolled_at", { ascending: false }),
         supabase.from("jobs").select("*").order("created_at", { ascending: false }).limit(100),
         supabase.from("reports").select("*").order("created_at", { ascending: false }).limit(100),
         supabase.from("agent_tokens").select("*, agents(agent_name)").order("created_at", { ascending: false }),
