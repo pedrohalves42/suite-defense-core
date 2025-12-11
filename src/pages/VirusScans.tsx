@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight, ExternalLink, Shield, AlertTriangle, CheckCircle2, FileSearch, TrendingUp } from 'lucide-react';
-import { subDays, format } from 'date-fns';
+import { subDays } from 'date-fns';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { ScanFileDialog } from '@/components/ScanFileDialog';
 import { SystemScanButton } from '@/components/SystemScanButton';
@@ -96,7 +96,7 @@ export default function VirusScans() {
       if (error) throw error;
 
       const grouped = data.reduce((acc, scan) => {
-        const date = format(new Date(scan.scanned_at), 'yyyy-MM-dd');
+        const date = new Date(scan.scanned_at).toISOString().split('T')[0];
         if (!acc[date]) {
           acc[date] = { date, total: 0, malicious: 0 };
         }

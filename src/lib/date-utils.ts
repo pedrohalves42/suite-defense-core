@@ -12,7 +12,7 @@ export const TIMEZONE_INDICATOR = '(UTC-3)';
  */
 export function formatBrazilDateTime(
   dateString: string | Date | null | undefined,
-  formatType: 'full' | 'date' | 'time' | 'short' | 'datetime' = 'datetime'
+  formatType: 'full' | 'date' | 'time' | 'short' | 'datetime' | 'filename' | 'day-month' = 'datetime'
 ): string {
   if (!dateString) return '-';
   
@@ -64,6 +64,22 @@ export function formatBrazilDateTime(
         ...options,
         hour: '2-digit',
         minute: '2-digit',
+      });
+    case 'filename':
+      // Format for filenames: yyyy-MM-dd_HHmm
+      return date.toLocaleString('pt-BR', {
+        ...options,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).replace(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2})/, '$3-$2-$1_$4$5');
+    case 'day-month':
+      return date.toLocaleDateString('pt-BR', {
+        ...options,
+        day: '2-digit',
+        month: '2-digit',
       });
     default:
       return date.toLocaleString('pt-BR', options);
