@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Shield, RefreshCw, Clock, Database, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Shield, RefreshCw, Clock, Database, AlertTriangle, CheckCircle, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -28,8 +28,13 @@ interface TopCVE {
   published_date: string | null;
 }
 
+// Cache de traduções para evitar chamadas repetidas
+const translationCache: Record<string, string> = {};
+
 export default function CVEDatabaseStatus() {
   const [isSyncing, setIsSyncing] = useState(false);
+  const [translations, setTranslations] = useState<Record<string, string>>({});
+  const [isTranslating, setIsTranslating] = useState(false);
   const queryClient = useQueryClient();
   
   const { data: syncStatus, isLoading: statusLoading } = useQuery({
@@ -74,6 +79,47 @@ export default function CVEDatabaseStatus() {
       return data as TopCVE[];
     },
   });
+
+  // Função para traduzir CVEs automaticamente
+  const translateCVEs = async () => {
+    if (!topCVEs || topCVEs.length === 0) return;
+    
+    setIsTranslating(true);
+    const newTranslations: Record<string, string> = { ...translations };
+    
+    for (const cve of topCVEs) {
+      if (!cve.description || translationCache[cve.cve_id]) {
+        if (translationCache[cve.cve_id]) {
+          newTranslations[cve.cve_id] = translationCache[cve.cve_id];
+        }
+        continue;
+      }
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('translate-cve', {
+          body: { cve_id: cve.cve_id, description: cve.description },
+        });
+        
+        if (!error && data?.translated) {
+          translationCache[cve.cve_id] = data.translated;
+          newTranslations[cve.cve_id] = data.translated;
+        }
+      } catch (err) {
+        console.error('Translation error for', cve.cve_id, err);
+      }
+    }
+    
+    setTranslations(newTranslations);
+    setIsTranslating(false);
+    toast.success('CVEs traduzidos para português');
+  };
+
+  // Auto-traduzir quando CVEs carregarem
+  useEffect(() => {
+    if (topCVEs && topCVEs.length > 0 && Object.keys(translations).length === 0) {
+      translateCVEs();
+    }
+  }, [topCVEs]);
   
   const syncMutation = useMutation({
     mutationFn: async () => {
@@ -94,6 +140,8 @@ export default function CVEDatabaseStatus() {
       queryClient.invalidateQueries({ queryKey: ['cve-sync-status'] });
       queryClient.invalidateQueries({ queryKey: ['cve-count'] });
       queryClient.invalidateQueries({ queryKey: ['top-cves'] });
+      // Limpar traduções para re-traduzir novos CVEs
+      setTranslations({});
     },
     onError: (error) => {
       toast.error(`Erro na sincronização: ${error.message}`);
@@ -242,8 +290,21 @@ export default function CVEDatabaseStatus() {
       {/* Top CVEs */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">CVEs Críticos Recentes</CardTitle>
-          <CardDescription>Vulnerabilidades com maior pontuação CVSS</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">CVEs Críticos Recentes</CardTitle>
+              <CardDescription>Vulnerabilidades com maior pontuação CVSS</CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={translateCVEs}
+              disabled={isTranslating || !topCVEs?.length}
+            >
+              <Languages className={`h-4 w-4 mr-2 ${isTranslating ? 'animate-pulse' : ''}`} />
+              {isTranslating ? 'Traduzindo...' : 'Traduzir'}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {topLoading ? (
@@ -269,6 +330,12 @@ export default function CVEDatabaseStatus() {
                       {cve.cve_id}
                     </a>
                     <div className="flex items-center gap-2">
+                      {translations[cve.cve_id] && (
+                        <Badge variant="outline" className="text-xs">
+                          <Languages className="h-3 w-3 mr-1" />
+                          PT
+                        </Badge>
+                      )}
                       <Badge variant={getSeverityColor(cve.cvss_score)}>
                         {getSeverityFromScore(cve.cvss_score)}
                       </Badge>
@@ -278,11 +345,13 @@ export default function CVEDatabaseStatus() {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">
-                    {cve.description}
+                    {translations[cve.cve_id] || cve.description}
                   </p>
-                  <span className="text-xs text-muted-foreground">
-                    Publicado: {new Date(cve.published_date).toLocaleDateString('pt-BR')}
-                  </span>
+                  {cve.published_date && (
+                    <span className="text-xs text-muted-foreground">
+                      Publicado: {new Date(cve.published_date).toLocaleDateString('pt-BR')}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

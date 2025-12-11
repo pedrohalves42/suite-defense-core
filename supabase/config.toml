@@ -391,6 +391,12 @@ verify_jwt = true
 [functions.scan-vulnerabilities]
 verify_jwt = false
 
+[functions.sync-cve-database]
+verify_jwt = true
+
+[functions.translate-cve]
+verify_jwt = true
+
 # === HMAC Cleanup (every 2 hours) ===
 [functions.hmac-cleanup-scheduled]
 verify_jwt = false
