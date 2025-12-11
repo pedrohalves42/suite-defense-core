@@ -338,6 +338,9 @@ async function analyzeWithAI(
     }
 
     // Calcular médias e identificar outliers por agente (com anonimização)
+    // Criar mapa de anonimizado -> original para tradução reversa
+    const anonToOriginalMap = new Map<string, string>();
+    
     const agentSummaries = Array.from(agentMetricsMap.entries()).map(([agentId, data]) => {
       const avgCpu = data.cpu.length > 0 ? data.cpu.reduce((a, b) => a + b, 0) / data.cpu.length : 0;
       const avgMemory = data.memory.length > 0 ? data.memory.reduce((a, b) => a + b, 0) / data.memory.length : 0;
@@ -348,6 +351,9 @@ async function analyzeWithAI(
       
       // Anonimizar nome do agente antes de enviar à IA
       const anonName = anonymizeAgentName(data.agent_name);
+      
+      // Guardar mapeamento para tradução reversa
+      anonToOriginalMap.set(anonName, data.agent_name);
       
       return {
         agent_id: agentId,
@@ -550,13 +556,24 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
       return [];
     }
 
+    // Função para traduzir nomes anonimizados de volta para originais
+    const translateToOriginal = (text: string): string => {
+      let translated = text;
+      for (const [anonName, originalName] of anonToOriginalMap.entries()) {
+        // Substituir todas as ocorrências do nome anonimizado pelo original
+        translated = translated.replace(new RegExp(anonName, 'gi'), originalName);
+      }
+      return translated;
+    };
+
     // Mapear para formato do banco de dados
     return parsedInsights.map((insight: any) => ({
       tenant_id: tenantId,
       insight_type: insight.insight_type,
       severity: insight.severity,
-      title: insight.title,
-      description: insight.description,
+      // Traduzir nomes anonimizados de volta para originais
+      title: translateToOriginal(insight.title || ''),
+      description: translateToOriginal(insight.description || ''),
       evidence: {
         failureRate,
         avgCpuUsage,
@@ -565,7 +582,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
         systemAlertsCount: data.systemAlerts.length,
         analysisDate: new Date().toISOString(),
       },
-      recommendation: insight.recommendation,
+      recommendation: translateToOriginal(insight.recommendation || ''),
       confidence_score: insight.confidence_score,
     }));
 
