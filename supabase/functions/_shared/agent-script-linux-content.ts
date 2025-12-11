@@ -3,9 +3,9 @@
  * CyberShield Agent Linux Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-linux-v3.sh
- * Versao: v3.10.33-LINUX-SYNC
+ * Versao: v3.10.34-AV-ENHANCED
  * SHA256: pending-calculation
- * Gerado em: 2025-12-11T00:00:00.000Z
+ * Gerado em: 2025-12-11T12:00:00.000Z
  */
 
 export function getAgentScriptLinux(): string {
@@ -14,7 +14,7 @@ export function getAgentScriptLinux(): string {
 
 export const AGENT_SCRIPT_LINUX_SH = `#!/usr/bin/env bash
 # CyberShield Agent - Linux
-# Version: v3.10.33-LINUX-SYNC
+# Version: v3.10.34-AV-ENHANCED
 
 set -euo pipefail
 
@@ -27,7 +27,7 @@ SERVER_URL="\${SERVER_URL:-\${CYBERSHIELD_SERVER_URL:-}}"
 AGENT_TOKEN="\${AGENT_TOKEN:-\${CYBERSHIELD_AGENT_TOKEN:-}}"
 HMAC_SECRET="\${HMAC_SECRET:-\${CYBERSHIELD_HMAC_SECRET:-}}"
 AGENT_NAME="\${AGENT_NAME:-\${CYBERSHIELD_AGENT_NAME:-\$(hostname -s)}}"
-AGENT_VERSION="\${AGENT_VERSION:-\${CYBERSHIELD_AGENT_VERSION:-v3.10.33}}"
+AGENT_VERSION="\${AGENT_VERSION:-\${CYBERSHIELD_AGENT_VERSION:-v3.10.34}}"
 
 # Parse argumentos (sobrescreve env vars)
 while [[ \$# -gt 0 ]]; do
