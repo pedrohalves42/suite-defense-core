@@ -32,7 +32,7 @@ export default function DataExport() {
       if (!tenant?.id) return null;
 
       const [agents, scans, jobs, quarantine, auditLogs] = await Promise.all([
-        supabase.from('agents').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+        supabase.from('agents_safe').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
         supabase.from('virus_scans').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
         supabase.from('jobs').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
         supabase.from('quarantined_files').select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
@@ -72,7 +72,7 @@ export default function DataExport() {
       switch (exportType) {
         case 'agents': {
           const query = supabase
-            .from('agents')
+            .from('agents_safe')
             .select('*')
             .eq('tenant_id', tenant.id)
             .order('enrolled_at', { ascending: false });
