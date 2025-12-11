@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { Download, FileSpreadsheet, FileText, Calendar, CheckCircle, Loader2 } from 'lucide-react';
-import { format, subDays } from 'date-fns';
+import { subDays } from 'date-fns';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import * as XLSX from 'xlsx';
 import { logger } from '@/lib/logger';
@@ -92,7 +92,7 @@ export default function DataExport() {
             'Tenant ID': a.tenant_id,
           }));
 
-          filename = `agentes_${format(new Date(), 'yyyy-MM-dd_HHmm')}`;
+          filename = `agentes_${formatBrazilDateTime(new Date(), 'filename')}`;
           break;
         }
 
@@ -118,7 +118,7 @@ export default function DataExport() {
             'Link VirusTotal': s.virustotal_permalink || '',
           }));
 
-          filename = `scans_${format(new Date(), 'yyyy-MM-dd_HHmm')}`;
+          filename = `scans_${formatBrazilDateTime(new Date(), 'filename')}`;
           break;
         }
 
@@ -152,7 +152,7 @@ export default function DataExport() {
             'Recorrente': j.is_recurring ? 'Sim' : 'Nao',
           }));
 
-          filename = `jobs_${format(new Date(), 'yyyy-MM-dd_HHmm')}`;
+          filename = `jobs_${formatBrazilDateTime(new Date(), 'filename')}`;
           break;
         }
 
@@ -180,7 +180,7 @@ export default function DataExport() {
               : '-',
           }));
 
-          filename = `quarentena_${format(new Date(), 'yyyy-MM-dd_HHmm')}`;
+          filename = `quarentena_${formatBrazilDateTime(new Date(), 'filename')}`;
           break;
         }
 
@@ -206,7 +206,7 @@ export default function DataExport() {
             'User Agent': l.user_agent || '-',
           }));
 
-          filename = `logs_auditoria_${format(new Date(), 'yyyy-MM-dd_HHmm')}`;
+          filename = `logs_auditoria_${formatBrazilDateTime(new Date(), 'filename')}`;
           break;
         }
       }

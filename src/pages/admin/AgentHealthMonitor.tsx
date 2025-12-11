@@ -14,7 +14,7 @@ import { OfflineAgentAlerts } from "@/components/admin/OfflineAgentAlerts";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAgentMetricsHistory } from "@/hooks/useAgentMetricsHistory";
-import { eachDayOfInterval, subDays, format } from 'date-fns';
+import { eachDayOfInterval, subDays } from 'date-fns';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import {
   AreaChart,
@@ -119,8 +119,8 @@ export default function AgentHealthMonitor() {
     });
 
     return last7Days.map(day => {
-      const dayStr = format(day, 'yyyy-MM-dd');
-      const dayLabel = format(day, 'dd/MM');
+      const dayStr = day.toISOString().split('T')[0];
+      const dayLabel = formatBrazilDateTime(day, 'day-month');
       
       // Filter metrics for this day
       const dayMetrics = metricsHistory.filter(m => 
