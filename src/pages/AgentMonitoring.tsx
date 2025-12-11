@@ -4,12 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { format, subDays } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { subDays, format } from "date-fns";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useTenant } from "@/hooks/useTenant";
 import { logger } from "@/lib/logger";
 import { getJobTypeLabel, getJobStatusLabel } from "@/lib/job-labels";
+import { formatBrazilDateTime } from "@/lib/date-utils";
 
 interface Agent {
   id: string;
@@ -255,7 +255,7 @@ const AgentMonitoring = () => {
       const date = subDays(new Date(), i);
       days.push({
         date: format(date, 'yyyy-MM-dd'),
-        label: format(date, 'dd/MM', { locale: ptBR })
+        label: format(date, 'dd/MM')
       });
     }
     return days;
@@ -508,14 +508,14 @@ const AgentMonitoring = () => {
                         Ultimo heartbeat: {getTimeSince(agent.last_heartbeat)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Registrado: {format(new Date(agent.enrolled_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                        Registrado: {formatBrazilDateTime(agent.enrolled_at, 'datetime')}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     {getStatusBadge(agent.status, agent.last_heartbeat)}
                     <span className="text-xs text-muted-foreground">
-                      {format(new Date(agent.enrolled_at), "dd/MM/yyyy", { locale: ptBR })}
+                      {formatBrazilDateTime(agent.enrolled_at, 'date')}
                     </span>
                   </div>
                 </div>
@@ -547,7 +547,7 @@ const AgentMonitoring = () => {
                   <div>
                     <p className="font-medium text-sm">{job.type}</p>
                     <p className="text-xs text-muted-foreground">
-                      Agente: {job.agent_name} ? {format(new Date(job.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                      Agente: {job.agent_name} ? {formatBrazilDateTime(job.created_at, 'short')}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">

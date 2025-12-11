@@ -4,12 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle, Clock, Mail, Activity, Shield, Filter } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { useTenant } from "@/hooks/useTenant";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { RecentAuditActivity } from "@/components/admin/RecentAuditActivity";
 import { toast } from "sonner";
+import { formatBrazilDateTime } from "@/lib/date-utils";
 import { useState } from "react";
 import {
   Select,
@@ -268,24 +267,16 @@ export default function SystemLogs() {
                     </div>
                     <div className="text-right text-sm text-muted-foreground ml-4">
                       <div>
-                        {format(new Date(alert.created_at), "dd/MM/yyyy HH:mm:ss", {
-                          locale: ptBR,
-                        })}
+                        {formatBrazilDateTime(alert.created_at, 'full')}
                       </div>
                       {alert.resolved_at && (
                         <div className="text-xs mt-1">
-                          Resolvido em{" "}
-                          {format(new Date(alert.resolved_at), "dd/MM HH:mm", {
-                            locale: ptBR,
-                          })}
+                          Resolvido em {formatBrazilDateTime(alert.resolved_at, 'short')}
                         </div>
                       )}
                       {alert.email_sent_at && (
                         <div className="text-xs mt-1">
-                          Email em{" "}
-                          {format(new Date(alert.email_sent_at), "dd/MM HH:mm", {
-                            locale: ptBR,
-                          })}
+                          Email em {formatBrazilDateTime(alert.email_sent_at, 'short')}
                         </div>
                       )}
                     </div>
@@ -366,9 +357,7 @@ export default function SystemLogs() {
                       )}
                     </div>
                     <div className="text-right text-sm text-muted-foreground ml-4">
-                      {format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", {
-                        locale: ptBR,
-                      })}
+                      {formatBrazilDateTime(log.created_at, 'full')}
                     </div>
                   </div>
                 </div>
