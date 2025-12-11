@@ -25,8 +25,7 @@ import {
   Shield
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { getCategoryForDomain, WEBSITE_CATEGORIES } from '@/lib/website-categories';
 import { 
   Dialog, 
@@ -446,10 +445,10 @@ export default function WebActivity() {
                             <Badge variant="outline">{item.hits}</Badge>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {format(new Date(item.first_seen_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            {formatBrazilDateTime(item.first_seen_at, 'datetime')}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {format(new Date(item.last_seen_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            {formatBrazilDateTime(item.last_seen_at, 'datetime')}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-2">

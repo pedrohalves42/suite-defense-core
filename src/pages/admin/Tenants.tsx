@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Building2, Users } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface Tenant {
   id: string;
@@ -287,7 +287,7 @@ export default function Tenants() {
                         {getUsersCountByTenant(tenant.id)}
                       </div>
                     </TableCell>
-                    <TableCell>{format(new Date(tenant.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                    <TableCell>{formatBrazilDateTime(tenant.created_at, 'datetime')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

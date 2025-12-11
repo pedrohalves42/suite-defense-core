@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { ChevronLeft, ChevronRight, Mail, UserCheck, UserX } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Link } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { AppRole, isValidRole, assertValidRole } from '@/types/roles';
@@ -262,7 +262,7 @@ export default function Users() {
                         {getUserStatusText(user.is_active)}
                       </Badge>
                     </TableCell>
-                    <TableCell>{format(new Date(user.created_at), 'dd/MM/yyyy')}</TableCell>
+                    <TableCell>{formatBrazilDateTime(user.created_at, 'date')}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Select

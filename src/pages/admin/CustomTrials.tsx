@@ -24,8 +24,7 @@ import {
   Copy,
   RefreshCw
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface CustomTrial {
   id: string;
@@ -353,7 +352,7 @@ export default function CustomTrials() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-3 w-3" />
-                        {trial.trial_days} dias ({format(new Date(trial.trial_start), 'dd/MM/yyyy', { locale: ptBR })} - {format(new Date(trial.trial_end), 'dd/MM/yyyy', { locale: ptBR })})
+                        {trial.trial_days} dias ({formatBrazilDateTime(trial.trial_start, 'date')} - {formatBrazilDateTime(trial.trial_end, 'date')})
                       </div>
                       {trial.notes && (
                         <div className="text-xs italic mt-1">

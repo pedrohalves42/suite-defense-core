@@ -11,8 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { AlertCircle, RefreshCw, Trash2, CheckCircle, RotateCcw, Eye, Inbox, Zap, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatDistanceToNow } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatRelativeTime } from '@/lib/date-utils';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { getJobTypeLabel } from '@/lib/job-labels';
 import { Progress } from '@/components/ui/progress';
@@ -346,7 +345,7 @@ export default function DeadLetterQueue() {
                         </span>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(entry.last_failure_at), { addSuffix: true, locale: ptBR })}
+                        {formatRelativeTime(entry.last_failure_at)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">

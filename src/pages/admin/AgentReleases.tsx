@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAgentReleases } from "@/hooks/useAgentReleases";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Package, CheckCircle, AlertCircle, Download } from "lucide-react";
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from "@/components/ErrorState";
@@ -327,7 +326,7 @@ export default function AgentReleases() {
                         <Badge variant="secondary">{release.platform}</Badge>
                         <Badge variant="outline">{release.channel}</Badge>
                         <span>•</span>
-                        <span>{format(new Date(release.created_at), 'PPp', { locale: ptBR })}</span>
+                        <span>{formatBrazilDateTime(release.created_at, 'datetime')}</span>
                       </div>
                     </div>
                     {isValid ? (

@@ -20,8 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatBrazilDateTime, formatRelativeTime } from '@/lib/date-utils';
 import { Server, Trash2, Power, PowerOff, CheckCircle, XCircle, Clock, Activity, Edit, FileText, AlertTriangle, RefreshCw, Loader2, Trash } from 'lucide-react';
 import AgentInstallationGuide from '@/components/AgentInstallationGuide';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -482,7 +481,7 @@ export default function AgentManagement() {
                     <TableCell>{getStatusBadge(agent)}</TableCell>
                     <TableCell>{getTimeSince(agent.last_heartbeat)}</TableCell>
                     <TableCell>
-                      {format(new Date(agent.enrolled_at), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR })}
+                      {formatBrazilDateTime(agent.enrolled_at, 'datetime')}
                     </TableCell>
                     <TableCell className="text-right space-x-2">
                       {agent.status === 'disabled' ? (
