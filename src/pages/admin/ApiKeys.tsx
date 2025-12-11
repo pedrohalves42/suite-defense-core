@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/hooks/useTenant';
 import { Plus, Copy, Eye, EyeOff, Trash2, Key } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { z } from 'zod';
@@ -306,11 +306,11 @@ export default function ApiKeys() {
                     </TableCell>
                     <TableCell>
                       {key.last_used_at
-                        ? format(new Date(key.last_used_at), 'dd/MM/yyyy HH:mm')
+                        ? formatBrazilDateTime(key.last_used_at, 'datetime')
                         : 'Nunca'}
                     </TableCell>
                     <TableCell>
-                      {format(new Date(key.expires_at), 'dd/MM/yyyy')}
+                      {formatBrazilDateTime(key.expires_at, 'date')}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

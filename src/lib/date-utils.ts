@@ -1,6 +1,11 @@
 const BRASILIA_TIMEZONE = 'America/Sao_Paulo';
 
 /**
+ * Indicador visual de timezone para exibição em headers
+ */
+export const TIMEZONE_INDICATOR = '(UTC-3)';
+
+/**
  * Formata data/hora para o fuso horário de Brasília (UTC-3)
  * @param dateString - Data em formato ISO string (UTC)
  * @param formatType - Tipo de formato desejado

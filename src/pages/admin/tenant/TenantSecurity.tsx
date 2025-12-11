@@ -5,8 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useTenant } from "@/hooks/useTenant";
 import { Shield, AlertTriangle, CheckCircle2, XCircle, Activity } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatRelativeTime } from '@/lib/date-utils';
 
 export default function TenantSecurity() {
   const { tenant, loading: tenantLoading } = useTenant();
@@ -158,10 +157,7 @@ export default function TenantSecurity() {
                     </TableCell>
                     <TableCell className="font-mono text-sm">{log.ip_address || "-"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(log.created_at), {
-                        addSuffix: true,
-                        locale: ptBR,
-                      })}
+                      {formatRelativeTime(log.created_at)}
                     </TableCell>
                   </TableRow>
                 ))
@@ -204,10 +200,7 @@ export default function TenantSecurity() {
                       {attempt.user_agent}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(attempt.created_at), {
-                        addSuffix: true,
-                        locale: ptBR,
-                      })}
+                      {formatRelativeTime(attempt.created_at)}
                     </TableCell>
                   </TableRow>
                 ))
