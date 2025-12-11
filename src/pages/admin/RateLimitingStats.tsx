@@ -51,8 +51,11 @@ export default function RateLimitingStats() {
       
       if (error) throw error;
       
-      // A Edge Function retorna diretamente o objeto, não data.data
-      const stats = data as RateLimitStats;
+      // A Edge Function retorna { success: true, data: {...} }
+      const response = data as { success?: boolean; data?: RateLimitStats } | RateLimitStats;
+      
+      // Verificar se é resposta encapsulada ou direta
+      const stats = 'data' in response && response.data ? response.data : response as RateLimitStats;
       
       // Garantir que sempre retornamos um objeto válido
       if (!stats || !stats.totals) {
