@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, Code } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
@@ -57,6 +57,7 @@ export const AppSidebar = () => {
     { icon: Package, label: 'Agent Releases', to: '/admin/agent-releases', section: 'infrastructure' },
     { icon: Gauge, label: 'Rate Limiting', to: '/admin/rate-limiting', section: 'infrastructure' },
     { icon: Inbox, label: 'Fila de Pendentes', to: '/admin/dead-letter-queue', section: 'infrastructure' },
+    { icon: Code, label: 'API Docs', to: '/admin/api-docs', section: 'infrastructure' },
     
     // === INTELIGÊNCIA ARTIFICIAL ===
     { icon: Brain, label: 'IA Insights', to: '/admin/ai-insights', section: 'ai' },

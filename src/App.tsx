@@ -85,6 +85,7 @@ import NotificationSettings from "./pages/admin/NotificationSettings";
 import SecurityMonitoring from "./pages/admin/SecurityMonitoring";
 import MassReinstall from "./pages/admin/MassReinstall";
 import AIMetrics from "./pages/admin/AIMetrics";
+import ApiDocumentation from "./pages/admin/ApiDocumentation";
 
 const App = () => (
   <ErrorBoundary>
@@ -167,6 +168,7 @@ const App = () => (
                 <Route path="security-monitoring" element={<SecurityMonitoring />} />
                 <Route path="mass-reinstall" element={<MassReinstall />} />
                 <Route path="invites" element={<Invites />} />
+                <Route path="api-docs" element={<ApiDocumentation />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
