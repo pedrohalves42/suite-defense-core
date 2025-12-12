@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.35-OPTIMIZED-INTERVALS
+    CyberShield Agent - Windows v3.10.36-SAFE-UPDATE
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -2111,16 +2111,56 @@ function Execute-Job {
                     Register-ScheduledTask -TaskName "CyberShieldAgent" -Action $action -Trigger $trigger `
                         -Settings $settings -Principal $principal -Force | Out-Null
                     
-                    Start-ScheduledTask -TaskName "CyberShieldAgent"
+                    # Iniciar nova task
+                    Start-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
                     
-                    Write-Log "[SUCCESS] Task recriada e iniciada com path correto" "SUCCESS"
-                    Write-Log "[INFO] Encerrando processo atual para nova versao assumir..." "INFO"
-
+                    # CRITICAL FIX v3.10.36: Verificar se task realmente iniciou antes de fazer exit
+                    Write-Log "[INFO] Aguardando 5 segundos para verificar se nova task iniciou..." "INFO"
+                    Start-Sleep -Seconds 5
+                    
+                    $newTaskInfo = Get-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
+                    $taskRunning = $false
+                    
+                    if ($newTaskInfo) {
+                        # Verificar estado da task
+                        if ($newTaskInfo.State -eq "Running") {
+                            $taskRunning = $true
+                            Write-Log "[SUCCESS] Nova task confirmada rodando (State=Running)" "SUCCESS"
+                        } else {
+                            # Tentar verificar via Get-ScheduledTaskInfo
+                            $taskInfoDetails = Get-ScheduledTaskInfo -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
+                            if ($taskInfoDetails -and $taskInfoDetails.LastTaskResult -eq 0) {
+                                $taskRunning = $true
+                                Write-Log "[SUCCESS] Nova task confirmada OK (LastTaskResult=0)" "SUCCESS"
+                            } else {
+                                Write-Log "[WARN] Task existe mas estado nao confirmado: State=$($newTaskInfo.State), LastResult=$($taskInfoDetails.LastTaskResult)" "WARN"
+                            }
+                        }
+                    }
+                    
+                    if (-not $taskRunning) {
+                        # Fallback: tentar iniciar novamente com retry
+                        Write-Log "[WARN] Task nao iniciou, tentando novamente..." "WARN"
+                        
+                        for ($retry = 1; $retry -le 3; $retry++) {
+                            Start-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
+                            Start-Sleep -Seconds 3
+                            
+                            $retryInfo = Get-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
+                            if ($retryInfo -and $retryInfo.State -eq "Running") {
+                                $taskRunning = $true
+                                Write-Log "[SUCCESS] Task iniciada na tentativa $retry" "SUCCESS"
+                                break
+                            }
+                        }
+                    }
+                    
                     $output = @{
                         message     = "Agent updated successfully with smart path detection"
                         newVersion  = $newVersion
                         targetPath  = $targetScript
                         sha256      = $actualHash
+                        taskStarted = $taskRunning
                         restartedAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
                     
@@ -2135,10 +2175,17 @@ function Execute-Job {
                         -ExecutionTimeSeconds $execTime `
                         -StartedAt $startTimeISO
                     
-                    Write-Log "[SUCCESS] Resultado submetido, encerrando processo atual..." "SUCCESS"
-                    
-                    # CRITICAL: Encerrar este processo para que a nova task assuma
-                    exit 0
+                    if ($taskRunning) {
+                        Write-Log "[SUCCESS] Resultado submetido, encerrando processo atual..." "SUCCESS"
+                        # Nova task confirmada rodando - seguro fazer exit
+                        exit 0
+                    } else {
+                        # CRITICAL: NAO fazer exit se task nao iniciou
+                        # Continua rodando versao atual para manter agente vivo
+                        Write-Log "[ERROR] Nova task NAO iniciou - mantendo processo atual ativo para evitar morte do agente" "ERROR"
+                        Write-Log "[INFO] Script foi atualizado em disco, nova versao sera carregada no proximo boot" "INFO"
+                        # NAO faz exit - agente continua rodando
+                    }
                 }
                 catch {
                     throw $_.Exception.Message
