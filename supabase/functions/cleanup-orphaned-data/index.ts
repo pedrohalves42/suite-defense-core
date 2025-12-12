@@ -125,7 +125,7 @@ Deno.serve(async (req) => {
 
       // 5. Delete metrics for testev10
       const { data: deletedMetrics, error: metricsError } = await supabase
-        .from('agent_system_metrics')
+        .from('agent_system_metrics_partitioned')
         .delete()
         .eq('agent_id', testAgent.id)
         .select('id');

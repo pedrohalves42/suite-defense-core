@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
 
         // 3. Metricas de agentes
         const { data: agentMetrics } = await supabase
-          .from('agent_system_metrics')
+          .from('agent_system_metrics_partitioned')
           .select('*')
           .eq('tenant_id', tenant.id)
           .gte('collected_at', cutoffDate.toISOString())

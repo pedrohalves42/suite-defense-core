@@ -91,7 +91,7 @@ Deno.serve(async (req: Request) => {
     // 5. Cleanup old agent_system_metrics > 30 days
     const metricsCutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const { data: metricsDeleted, error: metricsError } = await supabase
-      .from('agent_system_metrics')
+      .from('agent_system_metrics_partitioned')
       .delete()
       .lt('collected_at', metricsCutoff.toISOString())
       .select('id');

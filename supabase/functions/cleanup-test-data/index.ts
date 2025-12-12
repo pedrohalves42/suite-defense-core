@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
 
     // 2. Limpar metricas de sistema
     const { error: metricsError, count: metricsCount } = await supabaseAdmin
-      .from('agent_system_metrics')
+      .from('agent_system_metrics_partitioned')
       .delete()
       .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
 
