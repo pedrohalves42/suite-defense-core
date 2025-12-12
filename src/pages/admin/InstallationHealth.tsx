@@ -7,9 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle, RefreshCw, Activity, TrendingUp, Clock, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { InstallationHealthCard } from "@/components/admin/InstallationHealthCard";
+import { InstallationTrendChart } from "@/components/admin/InstallationTrendChart";
+import { AgentQuickActions } from "@/components/admin/AgentQuickActions";
 import { getJobTypeLabel } from "@/lib/job-labels";
 
 type ProblematicAgent = {
+  id: string;
   agent_name: string;
   status: string;
   enrolled_at: string;
@@ -46,7 +49,7 @@ export default function InstallationHealth() {
       // Agentes problematicos
       const { data: agents, error: agentsError } = await supabase
         .from('agents')
-        .select('agent_name, status, enrolled_at, last_heartbeat')
+        .select('id, agent_name, status, enrolled_at, last_heartbeat')
         .or('status.eq.pending,last_heartbeat.is.null')
         .gte('enrolled_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
         .order('enrolled_at', { ascending: false });
@@ -56,6 +59,7 @@ export default function InstallationHealth() {
         toast.error('Erro ao carregar agentes problematicos');
       } else {
         const formatted: ProblematicAgent[] = (agents || []).map(a => ({
+          id: a.id,
           agent_name: a.agent_name,
           status: a.status,
           enrolled_at: a.enrolled_at,
@@ -156,6 +160,9 @@ export default function InstallationHealth() {
       {/* Taxa de sucesso global */}
       <InstallationHealthCard />
 
+      {/* P2-04: Gráfico de tendência de instalações */}
+      <InstallationTrendChart />
+
       {/* Tabs para diferentes views */}
       <Tabs defaultValue="agents" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
@@ -201,7 +208,7 @@ export default function InstallationHealth() {
                 <div className="space-y-3">
                   {problematicAgents.map((agent) => (
                     <div
-                      key={agent.agent_name}
+                      key={agent.id}
                       className="flex items-center justify-between p-4 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors"
                     >
                       <div className="flex-1">
@@ -215,10 +222,11 @@ export default function InstallationHealth() {
                           )}
                         </div>
                         <div className="text-sm text-muted-foreground mt-1">
-                          Criado ha {agent.minutes_since_enrollment} minutos
+                          Criado há {agent.minutes_since_enrollment} minutos
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
+                        <AgentQuickActions agentId={agent.id} agentName={agent.agent_name} />
                         <div
                           className={`w-3 h-3 rounded-full ${getSeverityColor(agent.minutes_since_enrollment)}`}
                         />

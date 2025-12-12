@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,16 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { 
   AlertCircle, 
   CheckCircle, 
@@ -20,7 +30,8 @@ import {
   Shield,
   Wifi,
   Globe,
-  Server
+  Server,
+  Power
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { SecurityJobDispatcher } from '@/components/admin/SecurityJobDispatcher';
@@ -48,7 +59,9 @@ interface Agent {
 
 export default function AgentDiagnostics() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
+  const [showRestartDialog, setShowRestartDialog] = useState(false);
 
   // Buscar todos os agentes
   const { data: agents = [], isLoading: agentsLoading, refetch: refetchAgents } = useQuery({
@@ -101,9 +114,40 @@ export default function AgentDiagnostics() {
       });
       refetchDiagnostics();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: 'Erro no health check',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // P2-03: Mutation para reiniciar agente
+  const restartAgent = useMutation({
+    mutationFn: async (agentName: string) => {
+      const { data, error } = await supabase.functions.invoke('create-job', {
+        body: {
+          agentName,
+          type: 'reinstall_agent',
+          payload: { reason: 'manual_restart_from_diagnostics' },
+          approved: true,
+        },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Job de reinstalação criado',
+        description: 'O agente será reinstalado na próxima comunicação',
+      });
+      setShowRestartDialog(false);
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro ao criar job',
         description: error.message,
         variant: 'destructive',
       });
@@ -300,22 +344,38 @@ export default function AgentDiagnostics() {
                     <h3 className="font-semibold">
                       {diagnostics.length} problema(s) detectado(s)
                     </h3>
-                    <Button
-                      onClick={() => {
-                        const agent = agents.find(a => a.id === selectedAgent);
-                        if (agent) healthCheck.mutate(agent.agent_name);
-                      }}
-                      variant="outline"
-                      size="sm"
-                      disabled={healthCheck.isPending}
-                    >
-                      {healthCheck.isPending ? (
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Activity className="h-4 w-4 mr-2" />
-                      )}
-                      Health Check
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => setShowRestartDialog(true)}
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive border-destructive hover:bg-destructive/10"
+                        disabled={restartAgent.isPending}
+                      >
+                        {restartAgent.isPending ? (
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Power className="h-4 w-4 mr-2" />
+                        )}
+                        Reiniciar
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          const agent = agents.find(a => a.id === selectedAgent);
+                          if (agent) healthCheck.mutate(agent.agent_name);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        disabled={healthCheck.isPending}
+                      >
+                        {healthCheck.isPending ? (
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Activity className="h-4 w-4 mr-2" />
+                        )}
+                        Health Check
+                      </Button>
+                    </div>
                   </div>
 
                   <ScrollArea className="h-[500px]">
@@ -410,6 +470,41 @@ export default function AgentDiagnostics() {
           </CardContent>
         </Card>
       </div>
+
+      {/* P2-03: Dialog de confirmação para reiniciar agente */}
+      <AlertDialog open={showRestartDialog} onOpenChange={setShowRestartDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Power className="h-5 w-5 text-destructive" />
+              Reiniciar Agente
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a criar um job de reinstalação para o agente{' '}
+              <strong>{agents.find(a => a.id === selectedAgent)?.agent_name}</strong>.
+              <br /><br />
+              Esta ação irá:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Criar um job do tipo <code>reinstall_agent</code></li>
+                <li>O agente será reinstalado na próxima comunicação</li>
+                <li>Tokens e configurações serão mantidos</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const agent = agents.find(a => a.id === selectedAgent);
+                if (agent) restartAgent.mutate(agent.agent_name);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirmar Reinício
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
