@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # CyberShield Agent - Linux
-# Version: v3.10.35-OPTIMIZED-INTERVALS
+# Version: v3.10.36-SAFE-UPDATE
 
 set -euo pipefail
 
