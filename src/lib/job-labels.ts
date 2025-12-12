@@ -1,8 +1,7 @@
 // Mapeamento de tipos de tarefas para nomes amigáveis
 export const JOB_TYPE_LABELS: Record<string, string> = {
   scan: '📁 Verificação de Arquivos',
-  update: '🔄 Atualização do Agente',
-  update_agent: '🔄 Atualização Automática',
+  update_agent: '🔄 Atualização do Agente',
   report: '📊 Geração de Relatório',
   software_inventory_collect: '📦 Inventário de Software',
   collect_antivirus_status: '🛡️ Status do Antivírus',
@@ -45,8 +44,7 @@ export const getJobStatusLabel = (status: string): string =>
 // Versão sem emoji para contextos específicos
 export const JOB_TYPE_LABELS_NO_EMOJI: Record<string, string> = {
   scan: 'Verificação de Arquivos',
-  update: 'Atualização do Agente',
-  update_agent: 'Atualização Automática',
+  update_agent: 'Atualização do Agente',
   report: 'Geração de Relatório',
   software_inventory_collect: 'Inventário de Software',
   collect_antivirus_status: 'Status do Antivírus',
