@@ -18,7 +18,7 @@ export function useAgentMetricsHistory(tenantId: string | undefined, daysBack: n
       const startDate = subDays(new Date(), daysBack).toISOString();
       
       const { data, error } = await supabase
-        .from('agent_system_metrics')
+        .from('agent_system_metrics_partitioned')
         .select(`
           collected_at,
           cpu_usage_percent,
