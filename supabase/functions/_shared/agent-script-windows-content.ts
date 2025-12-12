@@ -1,13 +1,18 @@
+/* eslint-disable no-useless-escape */
 /**
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.36-SAFE-UPDATE
+ * Versao: v3.10.37-NO-EXIT-EVER
  */
+
+export function getAgentScriptWindows(): string {
+  return AGENT_SCRIPT_WINDOWS_CONTENT;
+}
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.36-SAFE-UPDATE
+    CyberShield Agent - Windows v3.10.37-NO-EXIT-EVER
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -46,7 +51,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.36-SAFE-UPDATE"
+    [string]\$AgentVersion = "v3.10.37-NO-EXIT-EVER"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -2005,7 +2010,7 @@ function Execute-Job {
             }
             "update_agent" {
                 try {
-                    Write-Log "[INFO] Job 'update_agent' recebido - SMART UPDATE v3.10.24" "INFO"
+                    Write-Log "[INFO] Job 'update_agent' recebido - NO-EXIT-EVER v3.10.37" "INFO"
 
                     # Chama serve-agent-update
                     \$updateResult = Invoke-SecureRequest \`
@@ -2094,45 +2099,25 @@ function Execute-Job {
                     Remove-Item \$tempScript -Force
                     Write-Log "[SUCCESS] Script instalado: \$targetScript" "SUCCESS"
                     
-                    # Recriar Scheduled Task com path correto
-                    \$taskName = "CyberShieldAgent"
-                    \$existingTask = Get-ScheduledTask -TaskName \$taskName -ErrorAction SilentlyContinue
-                    if (-not \$existingTask) {
-                        # Tentar nome antigo
-                        \$taskName = "CyberShield Agent"
-                        \$existingTask = Get-ScheduledTask -TaskName \$taskName -ErrorAction SilentlyContinue
-                    }
+                    # v3.10.37-NO-EXIT-EVER: NAO tenta reiniciar task nem fazer exit
+                    # Script salvo em disco sera carregado automaticamente no proximo boot do Windows
+                    # v3.10.37-NO-EXIT-EVER: NUNCA fazer exit 0
+                    # Nova versao sera carregada automaticamente no proximo boot do Windows
+                    Write-Log "[SUCCESS] Script v\$newVersion instalado em \$targetScript" "SUCCESS"
+                    Write-Log "[INFO] Nova versao sera carregada no proximo boot do sistema" "INFO"
+                    Write-Log "[INFO] Agente continua operando normalmente com versao \$(\$Global:AgentVersion)" "INFO"
                     
-                    if (\$existingTask) {
-                        Stop-ScheduledTask -TaskName \$taskName -ErrorAction SilentlyContinue
-                        Unregister-ScheduledTask -TaskName \$taskName -Confirm:\$false -ErrorAction SilentlyContinue
-                    }
-                    
-                    # Criar nova task com path correto
-                    \$action = New-ScheduledTaskAction -Execute "powershell.exe" \`
-                        -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File \`"\$targetScript\`""
-                    \$trigger = New-ScheduledTaskTrigger -AtStartup
-                    \$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries \`
-                        -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-                    \$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
-                    
-                    Register-ScheduledTask -TaskName "CyberShieldAgent" -Action \$action -Trigger \$trigger \`
-                        -Settings \$settings -Principal \$principal -Force | Out-Null
-                    
-                    Start-ScheduledTask -TaskName "CyberShieldAgent"
-                    
-                    Write-Log "[SUCCESS] Task recriada e iniciada com path correto" "SUCCESS"
-                    Write-Log "[INFO] Encerrando processo atual para nova versao assumir..." "INFO"
-
                     \$output = @{
-                        message     = "Agent updated successfully with smart path detection"
+                        message     = "Update saved - will be active after Windows reboot"
                         newVersion  = \$newVersion
+                        currentVersion = \$Global:AgentVersion
                         targetPath  = \$targetScript
                         sha256      = \$actualHash
-                        restartedAt = (Get-Date).ToUniversalTime().ToString("o")
+                        requiresReboot = \$true
+                        savedAt     = (Get-Date).ToUniversalTime().ToString("o")
                     }
                     
-                    # CRITICAL FIX v3.10.31: Submeter resultado ANTES de encerrar processo
+                    # CRITICAL: Submeter resultado e CONTINUAR RODANDO (sem exit)
                     \$execTime = [int]((Get-Date) - \$startTime).TotalSeconds
                     \$startTimeISO = \$startTime.ToUniversalTime().ToString("o")
                     
@@ -2143,10 +2128,8 @@ function Execute-Job {
                         -ExecutionTimeSeconds \$execTime \`
                         -StartedAt \$startTimeISO
                     
-                    Write-Log "[SUCCESS] Resultado submetido, encerrando processo atual..." "SUCCESS"
-                    
-                    # CRITICAL: Encerrar este processo para que a nova task assuma
-                    exit 0
+                    Write-Log "[SUCCESS] Resultado submetido - agente continua rodando (NO-EXIT-EVER)" "SUCCESS"
+                    # NÃO FAZ EXIT - agente continua operando normalmente
                 }
                 catch {
                     throw \$_.Exception.Message
@@ -2540,7 +2523,3 @@ catch {
     exit 1
 }
 `;
-
-export function getAgentScriptWindows(): string {
-  return AGENT_SCRIPT_WINDOWS_CONTENT;
-}
