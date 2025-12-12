@@ -428,7 +428,7 @@ export default function Reports() {
     }
   };
 
-  // NEW: Export professional "Laudo de Segurança" PDF
+  // NEW: Export professional "Laudo de Segurança" PDF with certification seal, QR code, validity date
   const handleExportLaudo = async () => {
     setIsGenerating(true);
     try {
@@ -454,73 +454,129 @@ export default function Reports() {
       const jsPDFClass = jsPDFModule.jsPDF;
       const autoTableModule = await import('jspdf-autotable');
       const autoTable = autoTableModule.default;
+      const QRCode = await import('qrcode');
       
       const doc = new jsPDFClass();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       let yPos = 0;
 
+      // Generate unique laudo ID and dates
+      const laudoId = crypto.randomUUID().substring(0, 8).toUpperCase();
+      const generatedDate = new Date(reportData.generated_at);
+      const validUntilDate = new Date(generatedDate);
+      validUntilDate.setDate(validUntilDate.getDate() + 30);
+      
+      const dateStrFull = generatedDate.toLocaleDateString('pt-BR', { 
+        day: '2-digit', month: 'long', year: 'numeric' 
+      });
+      const validUntilStr = validUntilDate.toLocaleDateString('pt-BR', { 
+        day: '2-digit', month: 'long', year: 'numeric' 
+      });
+
+      // Generate QR code for verification
+      const verificationUrl = `https://cybershield.com.br/verificar/${laudoId}`;
+      const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, { 
+        width: 100, 
+        margin: 1,
+        color: { dark: '#0f172a', light: '#ffffff' }
+      });
+
+      // Helper function to format values (fix "N" issue)
+      const formatValue = (value: any, fallback: string = 'Não disponível'): string => {
+        if (value === null || value === undefined || value === '' || value === 'N' || value === 'N/A') {
+          return fallback;
+        }
+        return String(value);
+      };
+
+      // Extract risk data with proper fallbacks
+      const riskScore = reportData.risk_score ?? 0;
+      const riskClass = reportData.risk_classification || { 
+        level: 'Não calculado', 
+        color: 'gray', 
+        description: 'Aguardando análise de segurança' 
+      };
+      const stats = reportData.statistics;
+      const unprotected = reportData.unprotected_pcs || { no_antivirus: 0, outdated_av: 0, offline_agents: 0 };
+
       // ==================== PAGE 1: COVER ====================
       // Full dark background
       doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, pageWidth, pageHeight, 'F');
       
-      // Logo area
+      // Logo area with shield icon
       doc.setFillColor(37, 99, 235);
-      doc.circle(pageWidth / 2, 60, 25, 'F');
+      doc.circle(pageWidth / 2, 55, 22, 'F');
+      doc.setFillColor(59, 130, 246);
+      doc.circle(pageWidth / 2, 55, 18, 'F');
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(24);
+      doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('🛡️', pageWidth / 2, 67, { align: 'center' });
+      doc.text('CS', pageWidth / 2, 60, { align: 'center' });
       
       // Title
-      doc.setFontSize(36);
-      doc.text('LAUDO DE SEGURANÇA', pageWidth / 2, 110, { align: 'center' });
-      
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Análise Completa de Vulnerabilidades e Riscos', pageWidth / 2, 125, { align: 'center' });
-      
-      // Risk Score Circle
-      const riskScore = reportData.risk_score || 0;
-      const riskClass = reportData.risk_classification || { level: 'N/A', color: 'gray', description: '' };
-      
-      // Risk circle color
-      if (riskClass.color === 'green') doc.setFillColor(34, 197, 94);
-      else if (riskClass.color === 'yellow') doc.setFillColor(234, 179, 8);
-      else if (riskClass.color === 'orange') doc.setFillColor(249, 115, 22);
-      else doc.setFillColor(239, 68, 68);
-      
-      doc.circle(pageWidth / 2, 170, 35, 'F');
-      doc.setTextColor(255, 255, 255);
       doc.setFontSize(32);
+      doc.text('LAUDO DE SEGURANÇA', pageWidth / 2, 100, { align: 'center' });
+      
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Análise Completa de Vulnerabilidades e Riscos', pageWidth / 2, 112, { align: 'center' });
+      
+      // Risk Score Circle with gradient effect
+      const getRiskColor = (): [number, number, number] => {
+        if (riskClass.color === 'green') return [34, 197, 94];
+        if (riskClass.color === 'yellow') return [234, 179, 8];
+        if (riskClass.color === 'orange') return [249, 115, 22];
+        return [239, 68, 68];
+      };
+      const riskColor = getRiskColor();
+      
+      // Outer ring
+      doc.setFillColor(riskColor[0], riskColor[1], riskColor[2]);
+      doc.circle(pageWidth / 2, 155, 32, 'F');
+      // Inner dark circle
+      doc.setFillColor(15, 23, 42);
+      doc.circle(pageWidth / 2, 155, 26, 'F');
+      // Score text
+      doc.setTextColor(riskColor[0], riskColor[1], riskColor[2]);
+      doc.setFontSize(28);
       doc.setFont('helvetica', 'bold');
-      doc.text(String(riskScore), pageWidth / 2, 175, { align: 'center' });
+      doc.text(String(riskScore), pageWidth / 2, 160, { align: 'center' });
       doc.setFontSize(10);
-      doc.text('SCORE', pageWidth / 2, 185, { align: 'center' });
+      doc.setTextColor(150, 150, 150);
+      doc.text('SCORE', pageWidth / 2, 170, { align: 'center' });
       
       // Risk level badge
-      doc.setFontSize(14);
-      doc.text(`NÍVEL DE RISCO: ${riskClass.level}`, pageWidth / 2, 220, { align: 'center' });
+      doc.setFillColor(riskColor[0], riskColor[1], riskColor[2]);
+      doc.roundedRect(pageWidth / 2 - 35, 185, 70, 12, 3, 3, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`RISCO: ${formatValue(riskClass.level, 'PENDENTE')}`, pageWidth / 2, 193, { align: 'center' });
       
-      // Metadata
-      doc.setFontSize(12);
+      // Metadata box
+      doc.setFillColor(30, 41, 59);
+      doc.roundedRect(30, 210, pageWidth - 60, 50, 5, 5, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
-      const dateStr = new Date(reportData.generated_at).toLocaleDateString('pt-BR', { 
-        day: '2-digit', month: 'long', year: 'numeric' 
-      });
-      doc.text(`Data: ${dateStr}`, pageWidth / 2, 250, { align: 'center' });
       
       const filterText = reportData.agent_filter === 'all' 
         ? 'Todos os Computadores' 
         : `Computador: ${agents?.find(a => a.id === reportData.agent_filter)?.agent_name || reportData.agent_filter}`;
-      doc.text(`Escopo: ${filterText}`, pageWidth / 2, 260, { align: 'center' });
+      
+      doc.text(`Laudo Nº: ${laudoId}`, 40, 225);
+      doc.text(`Data de Emissão: ${dateStrFull}`, 40, 235);
+      doc.text(`Válido até: ${validUntilStr}`, 40, 245);
+      doc.text(`Escopo: ${filterText}`, 40, 255);
       
       // Footer on cover
       doc.setFontSize(10);
-      doc.setTextColor(150, 150, 150);
-      doc.text('CyberShield Security Platform', pageWidth / 2, pageHeight - 20, { align: 'center' });
-      doc.text('www.cybershield.com.br', pageWidth / 2, pageHeight - 12, { align: 'center' });
+      doc.setTextColor(100, 100, 100);
+      doc.text('CyberShield Security Platform', pageWidth / 2, pageHeight - 25, { align: 'center' });
+      doc.text('www.cybershield.com.br', pageWidth / 2, pageHeight - 17, { align: 'center' });
 
       // ==================== PAGE 2: EXECUTIVE SUMMARY ====================
       doc.addPage();
@@ -531,50 +587,86 @@ export default function Reports() {
       doc.rect(0, 0, pageWidth, 15, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(10);
-      doc.text('LAUDO DE SEGURANÇA - CYBERSHIELD', pageWidth / 2, 10, { align: 'center' });
+      doc.text(`LAUDO DE SEGURANÇA - Nº ${laudoId}`, pageWidth / 2, 10, { align: 'center' });
       
-      // Section title
+      // Section 1 title
       doc.setTextColor(15, 23, 42);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
       doc.text('1. SUMÁRIO EXECUTIVO', 14, yPos + 10);
       yPos += 20;
       
-      // Risk classification box
-      doc.setFillColor(riskClass.color === 'green' ? 220 : riskClass.color === 'yellow' ? 254 : riskClass.color === 'orange' ? 255 : 254, 
-                       riskClass.color === 'green' ? 252 : riskClass.color === 'yellow' ? 249 : riskClass.color === 'orange' ? 237 : 226, 
-                       riskClass.color === 'green' ? 231 : riskClass.color === 'yellow' ? 195 : riskClass.color === 'orange' ? 213 : 226);
-      doc.rect(14, yPos, pageWidth - 28, 25, 'F');
+      // Risk classification box with proper color coding
+      const bgColors: Record<string, [number, number, number]> = {
+        green: [220, 252, 231],
+        yellow: [254, 249, 195],
+        orange: [255, 237, 213],
+        red: [254, 226, 226],
+        gray: [241, 245, 249]
+      };
+      const textColors: Record<string, [number, number, number]> = {
+        green: [22, 101, 52],
+        yellow: [113, 63, 18],
+        orange: [154, 52, 18],
+        red: [153, 27, 27],
+        gray: [71, 85, 105]
+      };
       
-      doc.setTextColor(riskClass.color === 'green' ? 22 : riskClass.color === 'yellow' ? 113 : riskClass.color === 'orange' ? 154 : 153, 
-                       riskClass.color === 'green' ? 101 : riskClass.color === 'yellow' ? 63 : riskClass.color === 'orange' ? 52 : 27, 
-                       riskClass.color === 'green' ? 52 : riskClass.color === 'yellow' ? 18 : riskClass.color === 'orange' ? 18 : 27);
+      const bgColor = bgColors[riskClass.color] || bgColors.gray;
+      const txtColor = textColors[riskClass.color] || textColors.gray;
+      
+      doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
+      doc.roundedRect(14, yPos, pageWidth - 28, 30, 3, 3, 'F');
+      
+      doc.setTextColor(txtColor[0], txtColor[1], txtColor[2]);
       doc.setFontSize(14);
-      doc.text(`Classificação: ${riskClass.level} (Score: ${riskScore}/100)`, 20, yPos + 10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Classificação: ${formatValue(riskClass.level, 'Pendente')} (Score: ${riskScore}/100)`, 20, yPos + 12);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text(riskClass.description, 20, yPos + 18);
-      yPos += 35;
+      doc.text(formatValue(riskClass.description, 'Análise de risco em andamento'), 20, yPos + 22);
+      yPos += 40;
       
-      // Key metrics
+      // Visual Risk Bar
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Indicador Visual de Risco:', 14, yPos);
+      yPos += 6;
+      
+      // Background bar
+      doc.setFillColor(229, 231, 235);
+      doc.roundedRect(14, yPos, pageWidth - 28, 8, 2, 2, 'F');
+      // Filled portion based on score
+      const barWidth = ((100 - riskScore) / 100) * (pageWidth - 28);
+      doc.setFillColor(riskColor[0], riskColor[1], riskColor[2]);
+      doc.roundedRect(14, yPos, Math.max(barWidth, 5), 8, 2, 2, 'F');
+      
+      // Labels under bar
+      yPos += 12;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text('0 (Crítico)', 14, yPos);
+      doc.text('100 (Seguro)', pageWidth - 14, yPos, { align: 'right' });
+      yPos += 12;
+
+      // Key metrics table
       doc.setTextColor(15, 23, 42);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.text('Principais Indicadores:', 14, yPos);
-      yPos += 8;
-      
-      const stats = reportData.statistics;
-      const unprotected = reportData.unprotected_pcs || { no_antivirus: 0, outdated_av: 0, offline_agents: 0 };
+      yPos += 6;
       
       const keyMetrics = [
-        ['Computadores Monitorados', String(stats.total_agents)],
-        ['Computadores Desprotegidos', String(unprotected.no_antivirus)],
-        ['Antivírus Desatualizado', String(unprotected.outdated_av)],
-        ['Computadores Offline', String(unprotected.offline_agents)],
-        ['Vulnerabilidades Críticas', String(stats.critical_vulnerabilities)],
-        ['Vulnerabilidades Altas', String(stats.high_vulnerabilities)],
-        ['Ameaças Detectadas', String(stats.threats_found)],
-        ['Tentativas Login Suspeitas (24h)', String(stats.failed_login_attempts_24h || 0)],
+        ['Computadores Monitorados', formatValue(stats.total_agents, '0')],
+        ['Computadores Desprotegidos', formatValue(unprotected.no_antivirus, '0')],
+        ['Antivírus Desatualizado', formatValue(unprotected.outdated_av, '0')],
+        ['Computadores Offline', formatValue(unprotected.offline_agents, '0')],
+        ['Vulnerabilidades Críticas', formatValue(stats.critical_vulnerabilities, '0')],
+        ['Vulnerabilidades Altas', formatValue(stats.high_vulnerabilities, '0')],
+        ['Ameaças Detectadas', formatValue(stats.threats_found, '0')],
+        ['Tentativas Login Suspeitas (24h)', formatValue(stats.failed_login_attempts_24h, '0')],
       ];
 
       autoTable(doc, {
@@ -589,9 +681,64 @@ export default function Reports() {
       });
       yPos = (doc as any).lastAutoTable.finalY + 15;
 
-      // ==================== METHODOLOGY ====================
+      // ==================== VULNERABILITY PIE CHART (Visual) ====================
+      if (yPos > pageHeight - 80) { doc.addPage(); yPos = 25; }
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text('Distribuição de Vulnerabilidades por Severidade:', 14, yPos);
+      yPos += 10;
+      
+      const vulnCritical = stats.critical_vulnerabilities || 0;
+      const vulnHigh = stats.high_vulnerabilities || 0;
+      const vulnMedium = stats.medium_vulnerabilities || 0;
+      const vulnLow = stats.low_vulnerabilities || 0;
+      const vulnTotal = vulnCritical + vulnHigh + vulnMedium + vulnLow;
+      
+      if (vulnTotal > 0) {
+        // Draw legend with colored boxes
+        const legendItems = [
+          { label: `Críticas: ${vulnCritical}`, color: [220, 38, 38] as [number, number, number], pct: Math.round((vulnCritical / vulnTotal) * 100) },
+          { label: `Altas: ${vulnHigh}`, color: [249, 115, 22] as [number, number, number], pct: Math.round((vulnHigh / vulnTotal) * 100) },
+          { label: `Médias: ${vulnMedium}`, color: [234, 179, 8] as [number, number, number], pct: Math.round((vulnMedium / vulnTotal) * 100) },
+          { label: `Baixas: ${vulnLow}`, color: [34, 197, 94] as [number, number, number], pct: Math.round((vulnLow / vulnTotal) * 100) },
+        ];
+        
+        // Draw horizontal bars for each severity
+        legendItems.forEach((item, idx) => {
+          const barY = yPos + (idx * 12);
+          // Label
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(15, 23, 42);
+          doc.text(item.label, 14, barY + 6);
+          // Bar background
+          doc.setFillColor(229, 231, 235);
+          doc.roundedRect(55, barY, 100, 8, 2, 2, 'F');
+          // Bar filled
+          const filledWidth = (item.pct / 100) * 100;
+          doc.setFillColor(item.color[0], item.color[1], item.color[2]);
+          doc.roundedRect(55, barY, Math.max(filledWidth, 2), 8, 2, 2, 'F');
+          // Percentage
+          doc.setTextColor(100, 100, 100);
+          doc.text(`${item.pct}%`, 160, barY + 6);
+        });
+        yPos += 55;
+      } else {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(34, 197, 94);
+        doc.text('✓ Nenhuma vulnerabilidade detectada', 14, yPos);
+        yPos += 15;
+      }
+
+      // ==================== SECTION 2: METHODOLOGY ====================
+      if (yPos > pageHeight - 60) { doc.addPage(); yPos = 25; }
+      
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
       doc.text('2. METODOLOGIA', 14, yPos);
       yPos += 10;
       
@@ -618,12 +765,12 @@ export default function Reports() {
       doc.addPage();
       yPos = 25;
       
-      // Vulnerabilities section
+      // Header bar
       doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, pageWidth, 15, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(10);
-      doc.text('LAUDO DE SEGURANÇA - CYBERSHIELD', pageWidth / 2, 10, { align: 'center' });
+      doc.text(`LAUDO DE SEGURANÇA - Nº ${laudoId}`, pageWidth / 2, 10, { align: 'center' });
       
       doc.setTextColor(15, 23, 42);
       doc.setFontSize(18);
@@ -638,9 +785,9 @@ export default function Reports() {
         yPos += 8;
 
         const vulnData = reportData.data.vulnerabilities.slice(0, 20).map((v: any) => [
-          (v.severity || '-').toUpperCase(),
-          (v.title || v.check_key || '-').substring(0, 35),
-          (v.description || '-').substring(0, 50),
+          formatValue(v.severity, 'Desconhecido').toUpperCase(),
+          formatValue(v.title || v.check_key, 'Sem título').substring(0, 35),
+          formatValue(v.description, 'Sem descrição').substring(0, 50),
         ]);
 
         autoTable(doc, {
@@ -681,9 +828,9 @@ export default function Reports() {
 
       if (unprotected.no_antivirus > 0 || unprotected.outdated_av > 0) {
         const unprotectedData = [
-          ['Sem Antivírus', String(unprotected.no_antivirus), 'Instalar solução antivírus'],
-          ['Antivírus Desatualizado', String(unprotected.outdated_av), 'Atualizar definições de vírus'],
-          ['Offline', String(unprotected.offline_agents), 'Verificar conectividade'],
+          ['Sem Antivírus', formatValue(unprotected.no_antivirus, '0'), 'Instalar solução antivírus'],
+          ['Antivírus Desatualizado', formatValue(unprotected.outdated_av, '0'), 'Atualizar definições de vírus'],
+          ['Offline', formatValue(unprotected.offline_agents, '0'), 'Verificar conectividade'],
         ];
 
         autoTable(doc, {
@@ -714,10 +861,10 @@ export default function Reports() {
         yPos += 8;
 
         const avData = reportData.data.antivirus_status.slice(0, 15).map((av: any) => [
-          av.engine_name || '-',
-          av.status || '-',
-          av.threats_found || '0',
-          av.last_update_at ? new Date(av.last_update_at).toLocaleDateString('pt-BR') : '-'
+          formatValue(av.engine_name, 'Desconhecido'),
+          formatValue(av.status, 'Desconhecido'),
+          formatValue(av.threats_found, '0'),
+          av.last_update_at ? new Date(av.last_update_at).toLocaleDateString('pt-BR') : 'Não disponível'
         ]);
 
         autoTable(doc, {
@@ -741,8 +888,8 @@ export default function Reports() {
         yPos += 8;
 
         const loginData = reportData.data.failed_login_attempts.slice(0, 15).map((f: any) => [
-          f.email || '-',
-          f.ip_address || '-',
+          formatValue(f.email, 'Não informado'),
+          formatValue(f.ip_address, 'Não identificado'),
           new Date(f.created_at).toLocaleString('pt-BR'),
         ]);
 
@@ -766,7 +913,7 @@ export default function Reports() {
       doc.rect(0, 0, pageWidth, 15, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(10);
-      doc.text('LAUDO DE SEGURANÇA - CYBERSHIELD', pageWidth / 2, 10, { align: 'center' });
+      doc.text(`LAUDO DE SEGURANÇA - Nº ${laudoId}`, pageWidth / 2, 10, { align: 'center' });
       
       doc.setTextColor(15, 23, 42);
       doc.setFontSize(18);
@@ -775,7 +922,7 @@ export default function Reports() {
       yPos += 12;
 
       if (reportData.recommendations && reportData.recommendations.length > 0) {
-        reportData.recommendations.forEach((rec, idx) => {
+        reportData.recommendations.forEach((rec) => {
           if (yPos > pageHeight - 40) { doc.addPage(); yPos = 25; }
           
           // Priority badge
@@ -799,11 +946,11 @@ export default function Reports() {
           doc.setTextColor(15, 23, 42);
           doc.setFontSize(12);
           doc.setFont('helvetica', 'bold');
-          doc.text(`[${rec.category}] ${rec.title}`, 28, yPos + 2);
+          doc.text(`[${formatValue(rec.category, 'Geral')}] ${formatValue(rec.title, 'Recomendação')}`, 28, yPos + 2);
           
           doc.setFontSize(10);
           doc.setFont('helvetica', 'normal');
-          doc.text(rec.description, 28, yPos + 10);
+          doc.text(formatValue(rec.description, 'Sem descrição detalhada'), 28, yPos + 10);
           yPos += 20;
         });
       } else {
@@ -814,7 +961,9 @@ export default function Reports() {
         yPos += 12;
       }
 
-      // ==================== CONCLUSION ====================
+      // ==================== SECTION 5: CONCLUSION ====================
+      if (yPos > pageHeight - 100) { doc.addPage(); yPos = 25; }
+      
       yPos += 10;
       doc.setTextColor(15, 23, 42);
       doc.setFontSize(18);
@@ -825,9 +974,9 @@ export default function Reports() {
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       const conclusionLines = [
-        `Este laudo analisou ${stats.total_agents} computador(es) protegido(s) pelo CyberShield.`,
+        `Este laudo analisou ${formatValue(stats.total_agents, '0')} computador(es) protegido(s) pelo CyberShield.`,
         ``,
-        `O ambiente apresenta nível de risco ${riskClass.level} com score ${riskScore}/100.`,
+        `O ambiente apresenta nível de risco ${formatValue(riskClass.level, 'Pendente')} com score ${riskScore}/100.`,
         ``,
         reportData.recommendations && reportData.recommendations.length > 0 
           ? `Foram identificadas ${reportData.recommendations.length} recomendação(ões) prioritária(s) que devem ser`
@@ -836,7 +985,8 @@ export default function Reports() {
           ? 'tratadas para melhorar a postura de segurança do ambiente.'
           : '',
         ``,
-        `Recomenda-se a execução de novo laudo em 30 dias para acompanhamento.`,
+        `Este laudo é válido por 30 dias a partir da data de emissão.`,
+        `Recomenda-se a execução de novo laudo após este período para acompanhamento.`,
       ];
       
       conclusionLines.forEach(line => {
@@ -845,6 +995,46 @@ export default function Reports() {
           yPos += 5;
         }
       });
+
+      // ==================== CERTIFICATION SEAL & QR CODE ====================
+      yPos += 15;
+      
+      // Certification box
+      doc.setFillColor(241, 245, 249);
+      doc.roundedRect(14, yPos, pageWidth - 28, 55, 5, 5, 'F');
+      doc.setDrawColor(15, 23, 42);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(14, yPos, pageWidth - 28, 55, 5, 5, 'S');
+      
+      // Seal icon area
+      doc.setFillColor(37, 99, 235);
+      doc.circle(35, yPos + 27, 12, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('✓', 35, 31 + yPos, { align: 'center' });
+      
+      // Certification text
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('CERTIFICADO DE SEGURANÇA', 55, yPos + 15);
+      
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Laudo Nº: ${laudoId}`, 55, yPos + 25);
+      doc.text(`Emitido em: ${dateStrFull}`, 55, yPos + 33);
+      doc.text(`Válido até: ${validUntilStr}`, 55, yPos + 41);
+      
+      // QR Code
+      try {
+        doc.addImage(qrCodeDataUrl, 'PNG', pageWidth - 55, yPos + 5, 35, 35);
+        doc.setFontSize(7);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Verifique online', pageWidth - 37.5, yPos + 45, { align: 'center' });
+      } catch (qrError) {
+        console.warn('Failed to add QR code:', qrError);
+      }
 
       // Add page numbers to all pages
       const totalPages = doc.internal.pages.length - 1;
