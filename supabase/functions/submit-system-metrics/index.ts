@@ -236,8 +236,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Memory Warning: Threshold 80% - Alerta preventivo para otimizacao
-    if (metrics.memory_usage_percent && metrics.memory_usage_percent > 80 && metrics.memory_usage_percent <= 90) {
+    // Memory Warning: Threshold 85% - Alerta preventivo para otimizacao (otimizado v3.10.35)
+    if (metrics.memory_usage_percent && metrics.memory_usage_percent > 85 && metrics.memory_usage_percent <= 90) {
       if (!hasRecentAlert('memory_warning')) {
         logger.info('Memory warning threshold reached');
         alerts.push({

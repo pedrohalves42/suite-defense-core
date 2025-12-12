@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Shield, CheckCircle, Zap, Lock, BarChart, Users, ArrowRight, Mail, MessageCircle, MapPin, Crown, Activity, TrendingUp, Calculator, Home, Briefcase, Laptop, Baby, Building2, ShieldCheck, HeadphonesIcon } from "lucide-react";
+import { Shield, CheckCircle, Zap, Lock, BarChart, Users, ArrowRight, Mail, MessageCircle, MapPin, Crown, Activity, TrendingUp, Calculator, Home, Briefcase, Laptop, Baby, Building2, ShieldCheck, HeadphonesIcon, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ContactForm } from "@/components/ContactForm";
 import { Navbar } from "@/components/Navbar";
@@ -489,6 +489,86 @@ const Landing = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pain Points Section */}
+      <section className="py-20 relative overflow-hidden bg-gradient-to-b from-destructive/5 to-background">
+        <div className="absolute inset-0 bg-grid-white/[0.02]" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16 animate-fade-in">
+            <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-destructive/10 border border-destructive/30 backdrop-blur-sm mb-6">
+              <AlertTriangle className="w-4 h-4 text-destructive" />
+              <span className="text-sm font-medium text-destructive">A Realidade Sem Proteção</span>
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">
+              {audience === 'business' ? "Os Riscos São Reais Para Sua Empresa" : "Os Riscos São Reais Para Sua Família"}
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+              {audience === 'business' 
+                ? "67% das PMEs fecham em 6 meses após um ataque severo. Não seja a próxima estatística."
+                : "Dados pessoais, fotos de família e informações bancárias estão em risco todos os dias."}
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            {audience === 'business' ? (
+              <>
+                <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
+                  <div className="text-3xl mb-3">💸</div>
+                  <h3 className="font-bold text-lg mb-2 text-destructive">R$ 200.000</h3>
+                  <p className="text-sm text-muted-foreground">Custo médio de um ataque cibernético para PMEs no Brasil</p>
+                </div>
+                <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
+                  <div className="text-3xl mb-3">⏱️</div>
+                  <h3 className="font-bold text-lg mb-2 text-destructive">27 dias</h3>
+                  <p className="text-sm text-muted-foreground">Tempo médio para recuperar de um ataque de ransomware</p>
+                </div>
+                <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
+                  <div className="text-3xl mb-3">📋</div>
+                  <h3 className="font-bold text-lg mb-2 text-destructive">2% do faturamento</h3>
+                  <p className="text-sm text-muted-foreground">Multas da LGPD podem chegar a 2% do faturamento anual</p>
+                </div>
+                <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
+                  <div className="text-3xl mb-3">😰</div>
+                  <h3 className="font-bold text-lg mb-2 text-destructive">67%</h3>
+                  <p className="text-sm text-muted-foreground">das PMEs fecham em 6 meses após um ataque severo</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
+                  <div className="text-3xl mb-3">📸</div>
+                  <h3 className="font-bold text-lg mb-2 text-destructive">Fotos Perdidas</h3>
+                  <p className="text-sm text-muted-foreground">Fotos de família sequestradas por ransomware — você pagaria para tê-las de volta?</p>
+                </div>
+                <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
+                  <div className="text-3xl mb-3">💳</div>
+                  <h3 className="font-bold text-lg mb-2 text-destructive">Dados Bancários</h3>
+                  <p className="text-sm text-muted-foreground">Dados bancários roubados por malware podem drenar sua conta</p>
+                </div>
+                <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
+                  <div className="text-3xl mb-3">👨‍👩‍👧</div>
+                  <h3 className="font-bold text-lg mb-2 text-destructive">Crianças em Risco</h3>
+                  <p className="text-sm text-muted-foreground">Crianças podem ser expostas a sites perigosos sem monitoramento</p>
+                </div>
+                <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
+                  <div className="text-3xl mb-3">🖥️</div>
+                  <h3 className="font-bold text-lg mb-2 text-destructive">PC Lento</h3>
+                  <p className="text-sm text-muted-foreground">Computador lento por vírus escondidos consumindo recursos</p>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="text-center mt-12">
+            <Button asChild size="lg" className="bg-gradient-to-r from-primary to-accent hover:shadow-glow-primary transition-all hover:scale-105">
+              <Link to="/signup">
+                Proteja-se Agora – 14 dias grátis
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
           </div>
         </div>
       </section>

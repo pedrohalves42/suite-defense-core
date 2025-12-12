@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Activity, Shield, Ban, Clock, RefreshCw, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 
 interface RateLimitSummary {
   endpoint: string;
@@ -89,10 +91,12 @@ export default function RateLimitingStats() {
     blocked: s.blocked_count,
   })) || [];
 
+  const hasNoData = !isLoading && data?.totals.total_requests === 0;
+
   return (
     <AdminPageLayout 
-      title="Rate Limiting Stats" 
-      description="Monitor API rate limiting and blocked requests"
+      title="Estatísticas de Rate Limiting" 
+      description="Monitoramento de limites de requisições e bloqueios da API"
     >
       <div className="space-y-6">
         {/* Controls */}
@@ -112,9 +116,20 @@ export default function RateLimitingStats() {
           
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
+            Atualizar
           </Button>
         </div>
+
+        {/* No Data Alert */}
+        {hasNoData && (
+          <Alert>
+            <Info className="h-4 w-4" />
+            <AlertTitle>Nenhum dado de rate limiting encontrado</AlertTitle>
+            <AlertDescription>
+              Ainda não há dados de rate limiting no período selecionado. Isso é normal se o sistema foi recém-implantado ou não há tráfego recente nas APIs protegidas.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

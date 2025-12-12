@@ -38,7 +38,7 @@ const AgentMonitoring = () => {
     queryKey: ['agents-monitoring'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents_safe')
         .select('*')
         .order('enrolled_at', { ascending: false });
       

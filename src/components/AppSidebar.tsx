@@ -65,6 +65,7 @@ export const AppSidebar = () => {
     
     // === GESTÃO ===
     { icon: Users, label: 'Membros', to: '/admin/members', section: 'management' },
+    { icon: Mail, label: 'Convites', to: '/admin/invites', section: 'management' },
     { icon: Settings, label: 'Tenant', to: '/admin/tenant', section: 'management' },
     { icon: Bell, label: 'Notificações', to: '/admin/notification-settings', section: 'management' },
     

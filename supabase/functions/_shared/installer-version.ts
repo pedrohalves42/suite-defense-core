@@ -7,12 +7,16 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.34-AV-ENHANCED';
-export const INSTALLER_VERSION_LINUX = 'v3.10.32-LINUX-AGENTID-FIX';
-export const INSTALLER_VERSION_MACOS = 'v3.10.32-MACOS-AGENTID-FIX';
-export const LAST_UPDATED = '2025-12-11T16:30:00Z'; // Enhanced AV collection with Get-MpComputerStatus
+export const INSTALLER_VERSION = 'v3.10.35-OPTIMIZED-INTERVALS';
+export const INSTALLER_VERSION_LINUX = 'v3.10.35-OPTIMIZED-INTERVALS';
+export const INSTALLER_VERSION_MACOS = 'v3.10.35-OPTIMIZED-INTERVALS';
+export const LAST_UPDATED = '2025-12-12T12:00:00Z'; // Optimized agent intervals and log rotation
 
 export const CHANGES = [
+  '[v3.10.35-OPTIMIZED-INTERVALS] OPTIMIZE: Heartbeat interval aumentado de 30s para 60s (-50% requests)',
+  '[v3.10.35-OPTIMIZED-INTERVALS] OPTIMIZE: Metrics interval aumentado de 5min para 10min (-50% requests)',
+  '[v3.10.35-OPTIMIZED-INTERVALS] FEATURE: Rotacao automatica de logs (Windows) - max 10MB, retencao 7 dias',
+  '[v3.10.35-OPTIMIZED-INTERVALS] OPTIMIZE: Memory warning threshold ajustado de 80% para 85%',
   '[v3.10.34-AV-ENHANCED] FEATURE: Antivirus collection agora usa Get-MpComputerStatus para Windows Defender',
   '[v3.10.34-AV-ENHANCED] FEATURE: Captura last_scan_at (LastQuickScanEndTime/LastFullScanEndTime)',
   '[v3.10.34-AV-ENHANCED] FEATURE: Captura last_update_at (AntivirusSignatureLastUpdated)',
