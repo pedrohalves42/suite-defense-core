@@ -3,14 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAgentReleases } from "@/hooks/useAgentReleases";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-import { Package, CheckCircle, AlertCircle, Download, Upload } from "lucide-react";
+import { Package, CheckCircle, AlertCircle } from "lucide-react";
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from "@/components/ErrorState";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState, useRef } from "react";
+import { useState } from "react";
 
 // Versões específicas por plataforma
 const CURRENT_VERSIONS = {
@@ -27,9 +27,7 @@ export default function AgentReleases() {
   const { isSuperAdmin, loading: isCheckingRole } = useSuperAdmin();
   const [isProcessingUpdates, setIsProcessingUpdates] = useState(false);
   const [isForceReregistering, setIsForceReregistering] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadPlatform, setUploadPlatform] = useState<'windows' | 'linux' | 'macos'>('windows');
+  const [fetchingScript, setFetchingScript] = useState(false);
 
   const handleForceUpdateCheck = async () => {
     try {
@@ -68,116 +66,72 @@ export default function AgentReleases() {
       setIsProcessingUpdates(false);
     }
   };
-  const [fetchingScript, setFetchingScript] = useState(false);
 
-  // Handle file upload
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const platform = uploadPlatform;
+  // Fetch and register script directly from public/agent-scripts folder
+  const handleRegisterFromPublic = async (platform: 'windows' | 'linux' | 'macos') => {
     const platformLabel = platform === 'windows' ? 'Windows' : platform === 'linux' ? 'Linux' : 'macOS';
-
-    try {
-      setIsUploading(true);
-      toast.info(`Lendo arquivo ${file.name}...`);
-
-      const content = await file.text();
-      const minSize = platform === 'windows' ? 40000 : 20000;
-      
-      if (content.length < minSize) {
-        throw new Error(`Arquivo muito pequeno (${(content.length / 1024).toFixed(1)}KB). Esperado: >${(minSize / 1024).toFixed(0)}KB`);
-      }
-
-      toast.info(`Fazendo upload para storage (${(content.length / 1024).toFixed(1)}KB)...`);
-
-      // Upload to storage bucket via Edge Function
-      const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-agent-script', {
-        body: { platform, script_content: content }
-      });
-
-      if (uploadError) throw uploadError;
-      if (!uploadData?.success) throw new Error(uploadData?.error || 'Upload failed');
-
-      toast.success(`Script ${platformLabel} carregado para storage! SHA256: ${uploadData.sha256?.substring(0, 16)}...`);
-
-      // Now register the release
-      toast.info('Registrando release...');
-      
-      const version = CURRENT_VERSIONS[platform];
-      registerRelease({
-        version,
-        platform,
-        script_content: content,
-        release_notes: `${version}: Upload manual do script ${platformLabel} com todas as otimizações v3.10.35 (heartbeat 60s, metrics 10min, log rotation).`,
-        channel: 'stable'
-      });
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Erro no upload ${platformLabel}: ${errorMessage}`);
-    } finally {
-      setIsUploading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const triggerFileUpload = (platform: 'windows' | 'linux' | 'macos') => {
-    setUploadPlatform(platform);
-    fileInputRef.current?.click();
-  };
-  const handleRegisterCurrentVersion = async () => {
-    const version = CURRENT_VERSIONS.windows;
-    if (!confirm(`Registrar ${version} com script completo?\n\nIsso ira buscar o script atual e registrar no agent_releases.`)) {
+    const version = CURRENT_VERSIONS[platform];
+    const scriptFileName = platform === 'windows' 
+      ? 'cybershield-agent-windows-v3.ps1'
+      : platform === 'linux'
+        ? 'cybershield-agent-linux-v3.sh'
+        : 'cybershield-agent-macos-v3.sh';
+    
+    if (!confirm(`Registrar ${version} (${platformLabel}) com script completo?\n\nIsso irá:\n1. Carregar o script de /agent-scripts/${scriptFileName}\n2. Calcular SHA256\n3. Registrar no banco de dados\n\nContinuar?`)) {
       return;
     }
 
     try {
       setFetchingScript(true);
-      toast.info('Buscando script do agente...');
+      toast.info(`Carregando script ${platformLabel} de /agent-scripts/...`);
 
-      // Fetch the embedded agent script directly (no enrollment key needed)
-      const { data: scriptData, error: scriptError } = await supabase.functions.invoke(
-        'get-agent-script-content'
-      );
-
-      if (scriptError) throw scriptError;
-      if (!scriptData?.script_content) {
-        throw new Error('No script content received');
+      // Fetch the script directly from the public folder
+      const response = await fetch(`/agent-scripts/${scriptFileName}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch script: ${response.status} ${response.statusText}`);
       }
 
-      const scriptContent = scriptData.script_content;
-      if (scriptContent.length < 10000) {
-        throw new Error(`Script too small (${scriptContent.length} bytes) - likely placeholder`);
+      const scriptContent = await response.text();
+      const minSize = platform === 'windows' ? 40000 : 20000;
+      
+      if (scriptContent.length < minSize) {
+        throw new Error(`Script ${platformLabel} muito pequeno (${(scriptContent.length / 1024).toFixed(1)} KB). Esperado: >${(minSize / 1024).toFixed(0)} KB`);
       }
 
-      toast.success(`Script obtido: ${(scriptContent.length / 1024).toFixed(1)} KB`);
+      toast.success(`Script ${platformLabel} carregado: ${(scriptContent.length / 1024).toFixed(1)} KB`);
 
-      // Register the release - SHA256 will be calculated automatically
+      // Register the release - SHA256 will be calculated automatically by the hook
       registerRelease({
         version: version,
-        platform: 'windows',
+        platform: platform,
         script_content: scriptContent,
-        release_notes: 'WEB-ACTIVITY-REGEX-FIX: Corrigido regex de coleta de web activity para extrair dominios corretamente.',
+        release_notes: `${version}: Script ${platformLabel} com otimizações v3.10.35 (heartbeat 60s, metrics 10min, log rotation 7d/10MB).`,
         channel: 'stable'
       });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      toast.error(`Erro ao registrar release: ${errorMessage}`);
+      toast.error(`Erro ao registrar ${platformLabel}: ${errorMessage}`);
     } finally {
       setFetchingScript(false);
     }
   };
 
+  // Legacy function for backward compatibility
+  const handleRegisterCurrentVersion = async () => {
+    await handleRegisterFromPublic('windows');
+  };
+
   const handleForceReregister = async (platform: 'windows' | 'linux' | 'macos' = 'windows') => {
     const platformLabel = platform === 'windows' ? 'Windows' : platform === 'linux' ? 'Linux' : 'macOS';
     const currentVersion = CURRENT_VERSIONS[platform];
+    const scriptFileName = platform === 'windows' 
+      ? 'cybershield-agent-windows-v3.ps1'
+      : platform === 'linux'
+        ? 'cybershield-agent-linux-v3.sh'
+        : 'cybershield-agent-macos-v3.sh';
     
-    if (!confirm(`FORÇAR RE-REGISTRO de ${currentVersion} (${platformLabel})?\n\nIsso ira:\n1. Deletar a entrada atual do banco\n2. Buscar o script atualizado\n3. Re-registrar a versao\n\nContinuar?`)) {
+    if (!confirm(`FORÇAR RE-REGISTRO de ${currentVersion} (${platformLabel})?\n\nIsso irá:\n1. Deletar a entrada atual do banco\n2. Carregar script de /agent-scripts/${scriptFileName}\n3. Re-registrar a versão\n\nContinuar?`)) {
       return;
     }
 
@@ -194,38 +148,29 @@ export default function AgentReleases() {
 
       if (deleteError) throw deleteError;
 
-      toast.success('Entrada deletada. Buscando script...');
+      toast.success('Entrada deletada. Carregando script...');
 
-      // Fetch the appropriate script based on platform
-      const { data: scriptData, error: scriptError } = await supabase.functions.invoke(
-        'get-agent-script-content',
-        { body: { platform } }
-      );
-
-      if (scriptError) throw scriptError;
-      if (!scriptData?.script_content) {
-        throw new Error(`No script content received for ${platformLabel}. Run: node scripts/sync-all-agents.js --${platform}`);
+      // Fetch the script directly from the public folder
+      const response = await fetch(`/agent-scripts/${scriptFileName}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch script: ${response.status} ${response.statusText}`);
       }
 
-      const scriptContent = scriptData.script_content;
-      const minSize = platform === 'windows' ? 40000 : 20000; // Windows scripts are larger
+      const scriptContent = await response.text();
+      const minSize = platform === 'windows' ? 40000 : 20000;
       
       if (scriptContent.length < minSize) {
-        throw new Error(`Script ${platformLabel} muito pequeno (${(scriptContent.length / 1024).toFixed(1)} KB). Execute: node scripts/sync-all-agents.js --${platform}`);
+        throw new Error(`Script ${platformLabel} muito pequeno (${(scriptContent.length / 1024).toFixed(1)} KB). Esperado: >${(minSize / 1024).toFixed(0)} KB`);
       }
 
-      toast.success(`Script ${platformLabel} obtido: ${(scriptContent.length / 1024).toFixed(1)} KB`);
+      toast.success(`Script ${platformLabel} carregado: ${(scriptContent.length / 1024).toFixed(1)} KB`);
 
       // Register the release - SHA256 will be calculated automatically
-      const releaseNotes = platform === 'windows' 
-        ? 'WEB-ACTIVITY-REGEX-FIX: Corrigido regex de coleta de web activity para extrair dominios corretamente.'
-        : `${platformLabel.toUpperCase()}-SYNC: Sincronização completa do script v3.10.33 com todas as correções.`;
-      
       registerRelease({
         version: currentVersion,
         platform: platform,
         script_content: scriptContent,
-        release_notes: releaseNotes,
+        release_notes: `${currentVersion}: Script ${platformLabel} com otimizações v3.10.35 (heartbeat 60s, metrics 10min, log rotation 7d/10MB).`,
         channel: 'stable'
       });
 
@@ -273,14 +218,6 @@ export default function AgentReleases() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Hidden file input for script upload */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".ps1,.sh"
-        onChange={handleFileUpload}
-        className="hidden"
-      />
 
       {/* Header */}
       <div className="flex justify-between items-center">
@@ -289,36 +226,36 @@ export default function AgentReleases() {
           <p className="text-muted-foreground">Gerenciar versoes de agentes e auto-update</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {/* Upload buttons - primary method */}
+          {/* Register from public folder - primary method */}
           <Button 
-            onClick={() => triggerFileUpload('windows')}
-            disabled={isUploading || isRegistering}
+            onClick={() => handleRegisterFromPublic('windows')}
+            disabled={fetchingScript || isRegistering}
             variant="default"
             size="sm"
             className="gap-1"
           >
-            <Upload className="h-3 w-3" />
-            Upload Windows
+            <Package className="h-3 w-3" />
+            Registrar Windows
           </Button>
           <Button 
-            onClick={() => triggerFileUpload('linux')}
-            disabled={isUploading || isRegistering}
+            onClick={() => handleRegisterFromPublic('linux')}
+            disabled={fetchingScript || isRegistering}
             variant="secondary"
             size="sm"
             className="gap-1"
           >
-            <Upload className="h-3 w-3" />
-            Upload Linux
+            <Package className="h-3 w-3" />
+            Registrar Linux
           </Button>
           <Button 
-            onClick={() => triggerFileUpload('macos')}
-            disabled={isUploading || isRegistering}
+            onClick={() => handleRegisterFromPublic('macos')}
+            disabled={fetchingScript || isRegistering}
             variant="secondary"
             size="sm"
             className="gap-1"
           >
-            <Upload className="h-3 w-3" />
-            Upload macOS
+            <Package className="h-3 w-3" />
+            Registrar macOS
           </Button>
           <Button 
             onClick={handleForceUpdateCheck}
@@ -358,12 +295,12 @@ export default function AgentReleases() {
               )}
               
               <Button
-                onClick={handleRegisterCurrentVersion}
+                onClick={() => handleRegisterFromPublic('windows')}
                 disabled={!isSuperAdmin || fetchingScript || isRegistering || isCheckingRole}
                 className="gap-2"
               >
                 <Package className="h-4 w-4" />
-                {fetchingScript ? 'Buscando Script...' : isRegistering ? 'Registrando...' : `Registrar ${CURRENT_VERSIONS.windows}`}
+                {fetchingScript ? 'Carregando Script...' : isRegistering ? 'Registrando...' : `Registrar ${CURRENT_VERSIONS.windows}`}
               </Button>
             </div>
           </CardContent>
@@ -435,7 +372,7 @@ export default function AgentReleases() {
         {releases.length === 0 && (
           <Card className="p-12 text-center">
             <div className="flex flex-col items-center gap-4">
-              <Download className="h-12 w-12 text-muted-foreground/50" />
+              <Package className="h-12 w-12 text-muted-foreground/50" />
               <div>
                 <p className="text-lg font-medium">Nenhuma release registrada</p>
                 <p className="text-sm text-muted-foreground">
