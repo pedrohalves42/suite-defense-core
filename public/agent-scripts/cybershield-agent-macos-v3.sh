@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # CyberShield Agent - macOS
-# Version: v3.10.33-MACOS-SYNC
+# Version: v3.10.35-OPTIMIZED-INTERVALS
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ SERVER_URL="${SERVER_URL:-${CYBERSHIELD_SERVER_URL:-}}"
 AGENT_TOKEN="${AGENT_TOKEN:-${CYBERSHIELD_AGENT_TOKEN:-}}"
 HMAC_SECRET="${HMAC_SECRET:-${CYBERSHIELD_HMAC_SECRET:-}}"
 AGENT_NAME="${AGENT_NAME:-${CYBERSHIELD_AGENT_NAME:-$(hostname -s)}}"
-AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-v3.10.33}}"
+AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-v3.10.35}}"
 
 # Parse argumentos (sobrescreve env vars)
 while [[ $# -gt 0 ]]; do
@@ -1417,9 +1417,9 @@ poll_jobs() {
 main() {
   validate_hmac_secret
 
-  local heartbeat_interval=30
+  local heartbeat_interval=60   # Otimizado v3.10.35 (antes: 30s)
   local poll_interval=30
-  local metrics_interval=300  # 5 minutos
+  local metrics_interval=600    # Otimizado v3.10.35 (antes: 300s / 5min)
   local update_check_interval=86400  # 24 horas
 
   log "INFO" "============================================"
