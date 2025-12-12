@@ -38,7 +38,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.35-OPTIMIZED-INTERVALS"
+    [string]$AgentVersion = "v3.10.36-SAFE-UPDATE"
 )
 
 $ErrorActionPreference = "Stop"

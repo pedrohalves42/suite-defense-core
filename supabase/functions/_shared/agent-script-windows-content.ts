@@ -2,12 +2,12 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.35-OPTIMIZED-INTERVALS
+ * Versao: v3.10.36-SAFE-UPDATE
  */
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.35-OPTIMIZED-INTERVALS
+    CyberShield Agent - Windows v3.10.36-SAFE-UPDATE
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -46,7 +46,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.35-OPTIMIZED-INTERVALS"
+    [string]\$AgentVersion = "v3.10.36-SAFE-UPDATE"
 )
 
 \$ErrorActionPreference = "Stop"
