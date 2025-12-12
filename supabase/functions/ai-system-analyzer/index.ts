@@ -379,8 +379,15 @@ async function analyzeWithAI(
     // Correlacionar alertas com agentes específicos (anonimizado)
     const alertsByAgent = new Map<string, number>();
     for (const alert of data.systemAlerts) {
-      const agentId = alert.agent_id ? anonymizeAgentName(alert.agent_id) : 'system';
-      alertsByAgent.set(agentId, (alertsByAgent.get(agentId) || 0) + 1);
+      if (alert.agent_id) {
+        // Encontrar o nome anonimizado no mapa ou criar novo
+        const agentName = data.agentMetrics.find(m => m.agent_id === alert.agent_id)?.agent_name || alert.agent_id.slice(0, 8);
+        const anonName = anonymizeAgentName(agentName);
+        anonToOriginalMap.set(anonName, agentName);
+        alertsByAgent.set(anonName, (alertsByAgent.get(anonName) || 0) + 1);
+      } else {
+        alertsByAgent.set('system', (alertsByAgent.get('system') || 0) + 1);
+      }
     }
 
     const jobStatusCounts = jobStats.reduce((acc, job) => {
@@ -419,7 +426,7 @@ ${agentSummaries.slice(0, 10).map(a =>
 ${problematicAgents.map(a => `- ${a.agent_name}: ${a.critical_disk ? 'DISCO CRITICO ' + a.max_disk.toFixed(1) + '%' : ''}${a.high_memory ? 'MEMORIA ALTA ' + a.max_memory.toFixed(1) + '%' : ''}${a.high_cpu ? 'CPU ALTA ' + a.max_cpu.toFixed(1) + '%' : ''}`).join('\n')}
 
 **Alertas por Agente:**
-${Array.from(alertsByAgent.entries()).slice(0, 5).map(([id, count]) => `- ${id.slice(0, 8)}: ${count} alertas`).join('\n')}
+${Array.from(alertsByAgent.entries()).slice(0, 5).map(([anonName, count]) => `- ${anonName}: ${count} alertas`).join('\n')}
 
 **Metricas de Instalacao (ultimos 7 dias):**
 - Total de tentativas: ${data.installationStats.length}
