@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.36-SAFE-UPDATE
+    CyberShield Agent - Windows v3.10.37-NO-EXIT-EVER
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -38,7 +38,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.36-SAFE-UPDATE"
+    [string]$AgentVersion = "v3.10.37-NO-EXIT-EVER"
 )
 
 $ErrorActionPreference = "Stop"
@@ -1997,7 +1997,7 @@ function Execute-Job {
             }
             "update_agent" {
                 try {
-                    Write-Log "[INFO] Job 'update_agent' recebido - SMART UPDATE v3.10.24" "INFO"
+                    Write-Log "[INFO] Job 'update_agent' recebido - NO-EXIT-EVER v3.10.37" "INFO"
 
                     # Chama serve-agent-update
                     $updateResult = Invoke-SecureRequest `
@@ -2086,85 +2086,25 @@ function Execute-Job {
                     Remove-Item $tempScript -Force
                     Write-Log "[SUCCESS] Script instalado: $targetScript" "SUCCESS"
                     
-                    # Recriar Scheduled Task com path correto
-                    $taskName = "CyberShieldAgent"
-                    $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-                    if (-not $existingTask) {
-                        # Tentar nome antigo
-                        $taskName = "CyberShield Agent"
-                        $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-                    }
-                    
-                    if ($existingTask) {
-                        Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
-                        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-                    }
-                    
-                    # Criar nova task com path correto
-                    $action = New-ScheduledTaskAction -Execute "powershell.exe" `
-                        -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$targetScript`""
-                    $trigger = New-ScheduledTaskTrigger -AtStartup
-                    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-                        -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-                    $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
-                    
-                    Register-ScheduledTask -TaskName "CyberShieldAgent" -Action $action -Trigger $trigger `
-                        -Settings $settings -Principal $principal -Force | Out-Null
-                    
-                    # Iniciar nova task
-                    Start-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
-                    
-                    # CRITICAL FIX v3.10.36: Verificar se task realmente iniciou antes de fazer exit
-                    Write-Log "[INFO] Aguardando 5 segundos para verificar se nova task iniciou..." "INFO"
-                    Start-Sleep -Seconds 5
-                    
-                    $newTaskInfo = Get-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
-                    $taskRunning = $false
-                    
-                    if ($newTaskInfo) {
-                        # Verificar estado da task
-                        if ($newTaskInfo.State -eq "Running") {
-                            $taskRunning = $true
-                            Write-Log "[SUCCESS] Nova task confirmada rodando (State=Running)" "SUCCESS"
-                        } else {
-                            # Tentar verificar via Get-ScheduledTaskInfo
-                            $taskInfoDetails = Get-ScheduledTaskInfo -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
-                            if ($taskInfoDetails -and $taskInfoDetails.LastTaskResult -eq 0) {
-                                $taskRunning = $true
-                                Write-Log "[SUCCESS] Nova task confirmada OK (LastTaskResult=0)" "SUCCESS"
-                            } else {
-                                Write-Log "[WARN] Task existe mas estado nao confirmado: State=$($newTaskInfo.State), LastResult=$($taskInfoDetails.LastTaskResult)" "WARN"
-                            }
-                        }
-                    }
-                    
-                    if (-not $taskRunning) {
-                        # Fallback: tentar iniciar novamente com retry
-                        Write-Log "[WARN] Task nao iniciou, tentando novamente..." "WARN"
-                        
-                        for ($retry = 1; $retry -le 3; $retry++) {
-                            Start-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
-                            Start-Sleep -Seconds 3
-                            
-                            $retryInfo = Get-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
-                            if ($retryInfo -and $retryInfo.State -eq "Running") {
-                                $taskRunning = $true
-                                Write-Log "[SUCCESS] Task iniciada na tentativa $retry" "SUCCESS"
-                                break
-                            }
-                        }
-                    }
+                    # v3.10.37-NO-EXIT-EVER: NAO tenta reiniciar task nem fazer exit
+                    # Script salvo em disco sera carregado automaticamente no proximo boot do Windows
+                    # v3.10.37-NO-EXIT-EVER: NUNCA fazer exit 0
+                    # Nova versao sera carregada automaticamente no proximo boot do Windows
+                    Write-Log "[SUCCESS] Script v$newVersion instalado em $targetScript" "SUCCESS"
+                    Write-Log "[INFO] Nova versao sera carregada no proximo boot do sistema" "INFO"
+                    Write-Log "[INFO] Agente continua operando normalmente com versao $($Global:AgentVersion)" "INFO"
                     
                     $output = @{
-                        message     = "Agent updated successfully with smart path detection"
+                        message     = "Update saved - will be active after Windows reboot"
                         newVersion  = $newVersion
+                        currentVersion = $Global:AgentVersion
                         targetPath  = $targetScript
                         sha256      = $actualHash
-                        taskStarted = $taskRunning
-                        restartedAt = (Get-Date).ToUniversalTime().ToString("o")
+                        requiresReboot = $true
+                        savedAt     = (Get-Date).ToUniversalTime().ToString("o")
                     }
                     
-                    # CRITICAL FIX v3.10.31: Submeter resultado ANTES de encerrar processo
+                    # CRITICAL: Submeter resultado e CONTINUAR RODANDO (sem exit)
                     $execTime = [int]((Get-Date) - $startTime).TotalSeconds
                     $startTimeISO = $startTime.ToUniversalTime().ToString("o")
                     
@@ -2175,17 +2115,8 @@ function Execute-Job {
                         -ExecutionTimeSeconds $execTime `
                         -StartedAt $startTimeISO
                     
-                    if ($taskRunning) {
-                        Write-Log "[SUCCESS] Resultado submetido, encerrando processo atual..." "SUCCESS"
-                        # Nova task confirmada rodando - seguro fazer exit
-                        exit 0
-                    } else {
-                        # CRITICAL: NAO fazer exit se task nao iniciou
-                        # Continua rodando versao atual para manter agente vivo
-                        Write-Log "[ERROR] Nova task NAO iniciou - mantendo processo atual ativo para evitar morte do agente" "ERROR"
-                        Write-Log "[INFO] Script foi atualizado em disco, nova versao sera carregada no proximo boot" "INFO"
-                        # NAO faz exit - agente continua rodando
-                    }
+                    Write-Log "[SUCCESS] Resultado submetido - agente continua rodando (NO-EXIT-EVER)" "SUCCESS"
+                    # NÃO FAZ EXIT - agente continua operando normalmente
                 }
                 catch {
                     throw $_.Exception.Message

@@ -7,17 +7,17 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.36-SAFE-UPDATE';
+export const INSTALLER_VERSION = 'v3.10.37-NO-EXIT-EVER';
 export const INSTALLER_VERSION_LINUX = 'v3.10.35-OPTIMIZED-INTERVALS';
 export const INSTALLER_VERSION_MACOS = 'v3.10.35-OPTIMIZED-INTERVALS';
-export const LAST_UPDATED = '2025-12-12T18:00:00Z'; // Safe update - verifies task started before exit
+export const LAST_UPDATED = '2025-12-12T20:00:00Z'; // NO-EXIT-EVER - never calls exit 0 after update
 
 export const CHANGES = [
-  '[v3.10.36-SAFE-UPDATE] CRITICAL FIX: Auto-update agora verifica se nova task realmente iniciou antes de fazer exit 0',
-  '[v3.10.36-SAFE-UPDATE] CRITICAL FIX: Se task nao iniciar em 5 segundos, tenta novamente ate 3x com retry',
-  '[v3.10.36-SAFE-UPDATE] CRITICAL FIX: Se task nao iniciar apos retries, NAO faz exit - agente continua rodando',
-  '[v3.10.36-SAFE-UPDATE] CRITICAL FIX: Previne morte do agente quando Start-ScheduledTask falha silenciosamente',
-  '[v3.10.36-SAFE-UPDATE] CRITICAL FIX: Script atualizado em disco, nova versao carrega no proximo boot',
+  '[v3.10.37-NO-EXIT-EVER] CRITICAL FIX: Handler update_agent NUNCA faz exit 0 - elimina mortes de agente definitivamente',
+  '[v3.10.37-NO-EXIT-EVER] CRITICAL FIX: Nova versao salva em disco, sera carregada no proximo boot do Windows',
+  '[v3.10.37-NO-EXIT-EVER] CRITICAL FIX: Agente continua operando 24/7 sem interrupcao durante auto-updates',
+  '[v3.10.37-NO-EXIT-EVER] CRITICAL FIX: Removida logica de reinicio de Scheduled Task (causava mortes)',
+  '[v3.10.37-NO-EXIT-EVER] CRITICAL FIX: Output inclui requiresReboot=true para indicar que nova versao requer reboot',
   '[v3.10.35-OPTIMIZED-INTERVALS] OPTIMIZE: Heartbeat interval aumentado de 30s para 60s (-50% requests)',
   '[v3.10.35-OPTIMIZED-INTERVALS] OPTIMIZE: Metrics interval aumentado de 5min para 10min (-50% requests)',
   '[v3.10.35-OPTIMIZED-INTERVALS] FEATURE: Rotacao automatica de logs (Windows) - max 10MB, retencao 7 dias',
