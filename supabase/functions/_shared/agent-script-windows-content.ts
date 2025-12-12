@@ -1,24 +1,12 @@
-/* eslint-disable no-useless-escape */
 /**
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
-<<<<<<< HEAD
- * Versao: v3.10.31-SUBMIT-BEFORE-EXIT
- * SHA256: bda98db634b220c9e38cfb436748f4f884869ff6edca9dff97f792d12e2454b3
- * Gerado em: 2025-12-09T18:11:32.652Z
-=======
  * Versao: v3.10.33-WEB-ACTIVITY-REGEX-FIX
- * SHA256: pending-calculation
- * Gerado em: 2025-12-10T20:00:00.000Z
->>>>>>> 54c2dd7b972173917be16ebc88af5e2824692a98
  */
 
-export function getAgentScriptWindows(): string {
-  return AGENT_SCRIPT_WINDOWS_CONTENT;
-}
-
-export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
+export const AGENT_SCRIPT_WINDOWS_CONTENT = `
+<#
     CyberShield Agent - Windows v3.10.33-WEB-ACTIVITY-REGEX-FIX
     
     Funcionalidades:
@@ -677,19 +665,78 @@ function Invoke-CollectAntivirusStatusJob {
     Write-Log "[AV-STATUS] Coletando status de antivirus..." "INFO"
 
     try {
-        \$statusList = @()
+        \$statusList = [System.Collections.ArrayList]::new()
 
+        # 1. Coletar do SecurityCenter2 (AV de terceiros)
         try {
             \$avProducts = Get-CimInstance -Namespace "root/SecurityCenter2" -ClassName "AntiVirusProduct" -ErrorAction SilentlyContinue
             foreach (\$av in \$avProducts) {
-                \$statusList += @{
+                \$null = \$statusList.Add(@{
                     engine_name = \$av.displayName
                     engine_version = \$av.productState.ToString()
                     status = "active"
-                }
+                })
             }
+            Write-Log "[AV-STATUS] SecurityCenter2: \$(\$statusList.Count) produtos encontrados" "DEBUG"
         } catch {
             Write-Log "[AV-STATUS] Erro ao ler SecurityCenter2: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        # 2. Coletar do Windows Defender via Get-MpComputerStatus (mais detalhado)
+        try {
+            \$defender = Get-MpComputerStatus -ErrorAction SilentlyContinue
+            if (\$defender) {
+                # Determinar data do ultimo scan (mais recente entre Quick e Full)
+                \$lastScan = \$null
+                if (\$defender.LastQuickScanEndTime) {
+                    \$lastScan = \$defender.LastQuickScanEndTime
+                }
+                if (\$defender.LastFullScanEndTime -and (!\$lastScan -or \$defender.LastFullScanEndTime -gt \$lastScan)) {
+                    \$lastScan = \$defender.LastFullScanEndTime
+                }
+                
+                # Determinar status
+                \$defenderStatus = "disabled"
+                if (\$defender.RealTimeProtectionEnabled -and \$defender.AntivirusEnabled) {
+                    \$defenderStatus = "active"
+                } elseif (\$defender.AntivirusEnabled) {
+                    \$defenderStatus = "passive"
+                }
+                
+                # Verificar se ja existe Windows Defender na lista (evitar duplicata)
+                \$existingDefender = \$statusList | Where-Object { \$_.engine_name -like "*Windows Defender*" -or \$_.engine_name -like "*Microsoft Defender*" }
+                if (-not \$existingDefender) {
+                    \$null = \$statusList.Add(@{
+                        engine_name = "Windows Defender"
+                        engine_version = \$defender.AMServiceVersion
+                        status = \$defenderStatus
+                        last_update_at = if (\$defender.AntivirusSignatureLastUpdated) { \$defender.AntivirusSignatureLastUpdated.ToString("o") } else { \$null }
+                        last_scan_at = if (\$lastScan) { \$lastScan.ToString("o") } else { \$null }
+                        threats_found = [int]\$defender.CurrentNumberOfThreats
+                        raw_data = @{
+                            RealTimeProtection = \$defender.RealTimeProtectionEnabled
+                            AntivirusEnabled = \$defender.AntivirusEnabled
+                            QuickScanAge = \$defender.QuickScanAge
+                            FullScanAge = \$defender.FullScanAge
+                            SignatureAge = \$defender.AntivirusSignatureAge
+                        }
+                    })
+                } else {
+                    # Atualizar entrada existente com dados detalhados
+                    \$idx = \$statusList.IndexOf(\$existingDefender)
+                    if (\$idx -ge 0) {
+                        \$statusList[\$idx].engine_version = \$defender.AMServiceVersion
+                        \$statusList[\$idx].status = \$defenderStatus
+                        \$statusList[\$idx].last_update_at = if (\$defender.AntivirusSignatureLastUpdated) { \$defender.AntivirusSignatureLastUpdated.ToString("o") } else { \$null }
+                        \$statusList[\$idx].last_scan_at = if (\$lastScan) { \$lastScan.ToString("o") } else { \$null }
+                        \$statusList[\$idx].threats_found = [int]\$defender.CurrentNumberOfThreats
+                    }
+                }
+                
+                Write-Log "[AV-STATUS] Windows Defender: Status=\$defenderStatus, LastScan=\$lastScan, Threats=\$(\$defender.CurrentNumberOfThreats)" "DEBUG"
+            }
+        } catch {
+            Write-Log "[AV-STATUS] Erro ao ler Get-MpComputerStatus: \$(\$_.Exception.Message)" "WARN"
         }
 
         if (-not \$statusList.Count) {
@@ -703,7 +750,7 @@ function Invoke-CollectAntivirusStatusJob {
 
         \$body = @{
             agent_id = \$Job.agent_id
-            items    = \$statusList
+            items    = @(\$statusList)
         }
 
         \$result = Invoke-SecureRequest \`
@@ -2453,3 +2500,7 @@ catch {
     exit 1
 }
 `;
+
+export function getAgentScriptWindows(): string {
+  return AGENT_SCRIPT_WINDOWS_CONTENT;
+}
