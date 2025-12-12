@@ -1,12 +1,25 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-import { AGENT_SCRIPT_WINDOWS_CONTENT } from '../_shared/agent-script-windows-content.ts';
-import { AGENT_SCRIPT_LINUX_SH } from '../_shared/agent-script-linux-content.ts';
-import { AGENT_SCRIPT_MACOS_SH } from '../_shared/agent-script-macos-content.ts';
 
-const requestId = crypto.randomUUID();
+/**
+ * Get Agent Script Content
+ * 
+ * Busca o script do agente para registro de releases.
+ * Prioridade:
+ * 1. Buscar da tabela agent_releases (se existir release ativa com script completo)
+ * 2. Tentar buscar do storage bucket 'agent-installers'
+ * 3. Retornar erro instruindo a executar npm run sync:agent
+ */
+
+const MIN_SCRIPT_SIZE = {
+  windows: 40000,
+  linux: 20000,
+  macos: 20000
+};
 
 Deno.serve(async (req) => {
+  const requestId = crypto.randomUUID();
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -29,12 +42,12 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body for platform parameter
-    let platform = 'windows';
+    let platform: 'windows' | 'linux' | 'macos' = 'windows';
     try {
       if (req.method === 'POST') {
         const body = await req.json();
         if (body?.platform && ['windows', 'linux', 'macos'].includes(body.platform)) {
-          platform = body.platform;
+          platform = body.platform as 'windows' | 'linux' | 'macos';
         }
       }
     } catch {
@@ -110,29 +123,85 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Super admin ${user.id} requesting agent script content for platform: ${platform}`);
 
-    // Select the appropriate script based on platform
-    let scriptContent: string;
-    switch (platform) {
-      case 'linux':
-        scriptContent = AGENT_SCRIPT_LINUX_SH;
-        break;
-      case 'macos':
-        scriptContent = AGENT_SCRIPT_MACOS_SH;
-        break;
-      case 'windows':
-      default:
-        scriptContent = AGENT_SCRIPT_WINDOWS_CONTENT;
-        break;
+    const minSize = MIN_SCRIPT_SIZE[platform];
+    let scriptContent: string | null = null;
+    let source = 'unknown';
+
+    // Strategy 1: Try to fetch from storage bucket
+    try {
+      const scriptFileName = platform === 'windows' 
+        ? 'cybershield-agent-windows-v3.ps1'
+        : platform === 'linux'
+          ? 'cybershield-agent-linux-v3.sh'
+          : 'cybershield-agent-macos-v3.sh';
+
+      const { data: fileData, error: storageError } = await supabaseAdmin.storage
+        .from('agent-installers')
+        .download(`scripts/${scriptFileName}`);
+
+      if (!storageError && fileData) {
+        const text = await fileData.text();
+        if (text.length >= minSize) {
+          scriptContent = text;
+          source = 'storage';
+          console.log(`[${requestId}] Found script in storage: ${text.length} bytes`);
+        }
+      }
+    } catch (e) {
+      console.log(`[${requestId}] Storage lookup failed, trying next strategy...`);
     }
 
-    // Return the embedded agent script content
+    // Strategy 2: Try to fetch from agent_releases table (existing release)
+    if (!scriptContent) {
+      try {
+        const { data: release } = await supabaseAdmin
+          .from('agent_releases')
+          .select('script_content, version')
+          .eq('platform', platform)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (release?.script_content && release.script_content.length >= minSize) {
+          scriptContent = release.script_content;
+          source = 'agent_releases';
+          console.log(`[${requestId}] Found script in agent_releases (${release.version}): ${release.script_content.length} bytes`);
+        }
+      } catch (e) {
+        console.log(`[${requestId}] agent_releases lookup failed`);
+      }
+    }
+
+    // If no valid script found, return helpful error
+    if (!scriptContent || scriptContent.length < minSize) {
+      const platformLabel = platform === 'windows' ? 'Windows' : platform === 'linux' ? 'Linux' : 'macOS';
+      console.error(`[${requestId}] No valid script found for ${platform}. Size: ${scriptContent?.length || 0} bytes (min: ${minSize})`);
+      
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Script ${platformLabel} não encontrado ou muito pequeno.`,
+          details: `Execute localmente: node scripts/sync-all-agents.js --${platform}`,
+          found_size: scriptContent?.length || 0,
+          min_size: minSize,
+          requestId
+        }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Return the script content
     return new Response(
       JSON.stringify({
         success: true,
         script_content: scriptContent,
         size_bytes: scriptContent.length,
         platform,
-        source: 'embedded',
+        source,
         requestId
       }),
       {

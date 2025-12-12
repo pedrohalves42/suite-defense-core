@@ -3,14 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAgentReleases } from "@/hooks/useAgentReleases";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-import { Package, CheckCircle, AlertCircle, Download } from "lucide-react";
+import { Package, CheckCircle, AlertCircle, Download, Upload } from "lucide-react";
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ErrorState } from "@/components/ErrorState";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 // Versões específicas por plataforma
 const CURRENT_VERSIONS = {
@@ -27,6 +27,9 @@ export default function AgentReleases() {
   const { isSuperAdmin, loading: isCheckingRole } = useSuperAdmin();
   const [isProcessingUpdates, setIsProcessingUpdates] = useState(false);
   const [isForceReregistering, setIsForceReregistering] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadPlatform, setUploadPlatform] = useState<'windows' | 'linux' | 'macos'>('windows');
 
   const handleForceUpdateCheck = async () => {
     try {
@@ -67,6 +70,65 @@ export default function AgentReleases() {
   };
   const [fetchingScript, setFetchingScript] = useState(false);
 
+  // Handle file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const platform = uploadPlatform;
+    const platformLabel = platform === 'windows' ? 'Windows' : platform === 'linux' ? 'Linux' : 'macOS';
+
+    try {
+      setIsUploading(true);
+      toast.info(`Lendo arquivo ${file.name}...`);
+
+      const content = await file.text();
+      const minSize = platform === 'windows' ? 40000 : 20000;
+      
+      if (content.length < minSize) {
+        throw new Error(`Arquivo muito pequeno (${(content.length / 1024).toFixed(1)}KB). Esperado: >${(minSize / 1024).toFixed(0)}KB`);
+      }
+
+      toast.info(`Fazendo upload para storage (${(content.length / 1024).toFixed(1)}KB)...`);
+
+      // Upload to storage bucket via Edge Function
+      const { data: uploadData, error: uploadError } = await supabase.functions.invoke('upload-agent-script', {
+        body: { platform, script_content: content }
+      });
+
+      if (uploadError) throw uploadError;
+      if (!uploadData?.success) throw new Error(uploadData?.error || 'Upload failed');
+
+      toast.success(`Script ${platformLabel} carregado para storage! SHA256: ${uploadData.sha256?.substring(0, 16)}...`);
+
+      // Now register the release
+      toast.info('Registrando release...');
+      
+      const version = CURRENT_VERSIONS[platform];
+      registerRelease({
+        version,
+        platform,
+        script_content: content,
+        release_notes: `${version}: Upload manual do script ${platformLabel} com todas as otimizações v3.10.35 (heartbeat 60s, metrics 10min, log rotation).`,
+        channel: 'stable'
+      });
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Erro no upload ${platformLabel}: ${errorMessage}`);
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const triggerFileUpload = (platform: 'windows' | 'linux' | 'macos') => {
+    setUploadPlatform(platform);
+    fileInputRef.current?.click();
+  };
   const handleRegisterCurrentVersion = async () => {
     const version = CURRENT_VERSIONS.windows;
     if (!confirm(`Registrar ${version} com script completo?\n\nIsso ira buscar o script atual e registrar no agent_releases.`)) {
@@ -211,6 +273,15 @@ export default function AgentReleases() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
+      {/* Hidden file input for script upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".ps1,.sh"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -218,29 +289,36 @@ export default function AgentReleases() {
           <p className="text-muted-foreground">Gerenciar versoes de agentes e auto-update</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {/* Upload buttons - primary method */}
           <Button 
-            onClick={() => handleForceReregister('windows')}
-            disabled={isForceReregistering || fetchingScript || isRegistering}
-            variant="destructive"
+            onClick={() => triggerFileUpload('windows')}
+            disabled={isUploading || isRegistering}
+            variant="default"
             size="sm"
+            className="gap-1"
           >
-            {isForceReregistering ? "Re-registrando..." : "Re-registrar Windows"}
+            <Upload className="h-3 w-3" />
+            Upload Windows
           </Button>
           <Button 
-            onClick={() => handleForceReregister('linux')}
-            disabled={isForceReregistering || fetchingScript || isRegistering}
-            variant="outline"
+            onClick={() => triggerFileUpload('linux')}
+            disabled={isUploading || isRegistering}
+            variant="secondary"
             size="sm"
+            className="gap-1"
           >
-            Re-registrar Linux
+            <Upload className="h-3 w-3" />
+            Upload Linux
           </Button>
           <Button 
-            onClick={() => handleForceReregister('macos')}
-            disabled={isForceReregistering || fetchingScript || isRegistering}
-            variant="outline"
+            onClick={() => triggerFileUpload('macos')}
+            disabled={isUploading || isRegistering}
+            variant="secondary"
             size="sm"
+            className="gap-1"
           >
-            Re-registrar macOS
+            <Upload className="h-3 w-3" />
+            Upload macOS
           </Button>
           <Button 
             onClick={handleForceUpdateCheck}
