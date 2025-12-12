@@ -6273,6 +6273,13 @@ export type Database = {
       }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       cleanup_old_security_logs: { Args: never; Returns: undefined }
+      cleanup_old_system_metrics: {
+        Args: { retention_days?: number }
+        Returns: {
+          deleted_count: number
+          partition_name: string
+        }[]
+      }
       cleanup_orphaned_agents: { Args: never; Returns: number }
       cleanup_problematic_agent: { Args: { p_agent_id: string }; Returns: Json }
       cleanup_stale_queued_jobs: {
