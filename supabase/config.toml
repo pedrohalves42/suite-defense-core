@@ -105,6 +105,9 @@ verify_jwt = false
 verify_jwt = false
 
 # === Admin Functions ===
+[functions.upload-agent-script]
+verify_jwt = true
+
 [functions.create-job]
 verify_jwt = true
 
