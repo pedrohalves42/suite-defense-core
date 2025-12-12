@@ -14,7 +14,7 @@ import { useState } from "react";
 
 // Versões específicas por plataforma
 const CURRENT_VERSIONS = {
-  windows: 'v3.10.35-OPTIMIZED-INTERVALS',
+  windows: 'v3.10.36-SAFE-UPDATE',
   linux: 'v3.10.35-OPTIMIZED-INTERVALS',
   macos: 'v3.10.35-OPTIMIZED-INTERVALS'
 } as const;
