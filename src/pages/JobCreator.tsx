@@ -42,6 +42,7 @@ const JobCreator = () => {
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [latestVersion, setLatestVersion] = useState<string>("v3.10.35-OPTIMIZED-INTERVALS");
 
   // Form state
   const [selectedAgent, setSelectedAgent] = useState<string>("");
@@ -83,11 +84,31 @@ const JobCreator = () => {
     }
   }, []);
 
+  const loadLatestVersion = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("agent_releases")
+        .select("version")
+        .eq("platform", "windows")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (data?.version) {
+        setLatestVersion(data.version);
+        logger.info("Versão mais recente carregada", { version: data.version });
+      }
+    } catch (error) {
+      logger.warn("Erro ao carregar versão mais recente, usando fallback", error);
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     setLoadingData(true);
-    await Promise.all([loadAgents(), loadJobs()]);
+    await Promise.all([loadAgents(), loadJobs(), loadLatestVersion()]);
     setLoadingData(false);
-  }, [loadAgents, loadJobs]);
+  }, [loadAgents, loadJobs, loadLatestVersion]);
 
   useEffect(() => {
     loadData();
@@ -137,7 +158,7 @@ const JobCreator = () => {
     }
   };
 
-  const getJobTypeExamples = (type: string) => {
+  const getJobTypeExamples = useCallback((type: string) => {
     const examples: Record<string, any> = {
       scan: {
         filePath: "C:\\Windows\\System32",
@@ -145,7 +166,7 @@ const JobCreator = () => {
         extensions: [".exe", ".dll", ".bat"]
       },
       update: {
-        target_version: "v3.10.15-WEB-ACTIVITY-ENHANCED",
+        target_version: latestVersion,
         force: false
       },
       report: {
@@ -164,7 +185,14 @@ const JobCreator = () => {
       light_vuln_scan: {}
     };
     return JSON.stringify(examples[type] || {}, null, 2);
-  };
+  }, [latestVersion]);
+
+  // Atualiza payload quando a versão muda e o tipo é update
+  useEffect(() => {
+    if (jobType === "update") {
+      setPayload(getJobTypeExamples("update"));
+    }
+  }, [latestVersion, jobType, getJobTypeExamples]);
 
   const handleJobTypeChange = (newType: string) => {
     setJobType(newType);
