@@ -79,6 +79,31 @@ export default function AIInsights() {
     },
   });
 
+  const acknowledgeAllMutation = useMutation({
+    mutationFn: async (insightIds: string[]) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('ai_insights')
+        .update({
+          acknowledged: true,
+          acknowledged_by: user.id,
+          acknowledged_at: new Date().toISOString(),
+        })
+        .in('id', insightIds);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-insights'] });
+      toast.success('Todos os insights foram reconhecidos');
+    },
+    onError: (error) => {
+      toast.error('Erro ao reconhecer insights: ' + error.message);
+    },
+  });
+
   const executeSolutionMutation = useMutation({
     mutationFn: async ({ actionId, solutionType, parameters }: { actionId: string; solutionType: string; parameters?: any }) => {
       const { data, error } = await supabase.functions.invoke('ai-execute-solution', {
@@ -176,7 +201,7 @@ export default function AIInsights() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Brain className="h-8 w-8 text-primary" />
@@ -186,10 +211,22 @@ export default function AIInsights() {
             Insights gerados automaticamente pela analise de dados do sistema
           </p>
         </div>
-        <Badge variant="outline" className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4" />
-          FASE 1: IA Observadora
-        </Badge>
+        <div className="flex items-center gap-3">
+          {pendingInsights.length > 0 && (
+            <Button
+              onClick={() => acknowledgeAllMutation.mutate(pendingInsights.map(i => i.id))}
+              disabled={acknowledgeAllMutation.isPending}
+              variant="default"
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Reconhecer Todos ({pendingInsights.length})
+            </Button>
+          )}
+          <Badge variant="outline" className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            FASE 1: IA Observadora
+          </Badge>
+        </div>
       </div>
 
       {/* Statistics Cards */}
