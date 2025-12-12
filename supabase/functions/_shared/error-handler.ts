@@ -1,6 +1,8 @@
-// Enhanced error handler with standardized responses
-export { corsHeaders } from './cors.ts';
+// Enhanced error handler with standardized responses and CORS support
+import { corsHeaders } from './cors.ts';
 import { ZodError } from 'https://esm.sh/zod@3.23.8';
+
+export { corsHeaders };
 
 export interface StandardError {
   error: {
@@ -65,7 +67,7 @@ export function createErrorResponse(
       JSON.stringify(error),
       {
         status: statusCode,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
@@ -80,7 +82,7 @@ export function createErrorResponse(
     JSON.stringify(standardError),
     {
       status: statusCode,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     }
   );
 }
@@ -100,7 +102,13 @@ export function handleException(
     requestId
   );
   
-  return createErrorResponse(standardError, 500);
+  return new Response(
+    JSON.stringify(standardError),
+    {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    }
+  );
 }
 
 export function createValidationError(
@@ -126,7 +134,13 @@ export function createValidationError(
     errorDetails,
     requestId
   );
-  return createErrorResponse(error, 400);
+  return new Response(
+    JSON.stringify(error),
+    {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    }
+  );
 }
 
 // Backward compatibility alias
@@ -142,7 +156,13 @@ export function createAuthError(
     undefined,
     requestId
   );
-  return createErrorResponse(error, 401);
+  return new Response(
+    JSON.stringify(error),
+    {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    }
+  );
 }
 
 export function createNotFoundError(
@@ -155,5 +175,11 @@ export function createNotFoundError(
     undefined,
     requestId
   );
-  return createErrorResponse(error, 404);
+  return new Response(
+    JSON.stringify(error),
+    {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    }
+  );
 }
