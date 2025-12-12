@@ -109,7 +109,7 @@ export default function AgentMonitoringAdvanced() {
 
     const metricsChannel = supabase
       .channel('metrics-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'agent_system_metrics' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'agent_system_metrics_partitioned' }, () => {
         fetchDashboardData();
       })
       .subscribe();
