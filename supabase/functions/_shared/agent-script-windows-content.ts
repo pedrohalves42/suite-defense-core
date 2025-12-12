@@ -2,13 +2,12 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
-<<<<<<< HEAD
- * Versao: v3.10.33-WEB-ACTIVITY-REGEX-FIX
+ * Versao: v3.10.35-OPTIMIZED-INTERVALS
  */
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.33-WEB-ACTIVITY-REGEX-FIX
+    CyberShield Agent - Windows v3.10.35-OPTIMIZED-INTERVALS
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -23,6 +22,7 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `
     - Coleta de status de antivirus (collect_antivirus_status)
     - Atividade web de TODOS OS PERFIS DE USUARIO (collect_web_activity)
     - Auto-remediacao basica (fix_firewall, restart_service)
+    - Rotacao automatica de logs (7 dias / 10MB max)
     
     Uso:
     powershell.exe -ExecutionPolicy Bypass -File .\\cybershield-agent-windows-v3.ps1 \`
@@ -46,7 +46,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.33-WEB-ACTIVITY-REGEX-FIX"
+    [string]\$AgentVersion = "v3.10.35-OPTIMIZED-INTERVALS"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -94,8 +94,40 @@ if (-not (Test-Path \$logDir)) {
 }
 \$Global:LogFilePath = Join-Path -Path \$logDir -ChildPath "cybershield-agent-v3.log"
 
-# Intervalos
-\$Global:PollIntervalSeconds = 30
+# Intervalos (otimizados v3.10.35)
+\$Global:PollIntervalSeconds = 60  # Heartbeat a cada 60s (antes: 30s)
+
+# ============================================
+#  ROTACAO DE LOGS (7 dias / 10MB max)
+# ============================================
+function Invoke-LogRotation {
+    \$maxSizeMB = 10
+    \$maxAgeDays = 7
+    \$logPath = \$Global:LogFilePath
+    
+    try {
+        if (Test-Path \$logPath) {
+            \$file = Get-Item \$logPath -ErrorAction SilentlyContinue
+            
+            # Rotacionar se maior que 10MB
+            if (\$file -and \$file.Length -gt (\$maxSizeMB * 1MB)) {
+                \$archivePath = "\$logPath.\$(Get-Date -Format 'yyyyMMdd-HHmmss').bak"
+                Move-Item \$logPath \$archivePath -Force -ErrorAction SilentlyContinue
+                Write-Log "[LOG] Arquivo de log rotacionado para \$archivePath" "INFO"
+            }
+        }
+        
+        # Limpar arquivos de backup com mais de 7 dias
+        \$logDir = Split-Path \$logPath -Parent
+        if (Test-Path \$logDir) {
+            Get-ChildItem -Path \$logDir -Filter "*.bak" -ErrorAction SilentlyContinue | 
+                Where-Object { \$_.LastWriteTime -lt (Get-Date).AddDays(-\$maxAgeDays) } |
+                Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+    } catch {
+        # Nao falhar se rotacao de log falhar
+    }
+}
 
 # ============================================
 #  CONFIGURACAO DE REDE (TLS 1.2 + Proxy)
@@ -2444,9 +2476,16 @@ try {
                 \$lastUpdateCheck = Get-Date  # Reset para evitar loop infinito
             }
 
-            # FASE 2: Enviar metricas a cada 5 minutos
+            # Rotacao de logs (executar 1x por hora)
             try {
-                if (((\$now - \$lastMetrics).TotalSeconds) -ge 300) {
+                if (((\$now - \$lastMetrics).TotalSeconds) -ge 3600) {
+                    Invoke-LogRotation
+                }
+            } catch { }
+
+            # FASE 2: Enviar metricas a cada 10 minutos (otimizado v3.10.35)
+            try {
+                if (((\$now - \$lastMetrics).TotalSeconds) -ge 600) {
                     Write-Log "[METRICS] Coletando metricas de sistema..." "INFO"
                     \$metricsJob = @{ id = "auto-metrics"; type = "report" }
                     \$metricsResult = Invoke-ReportJob -Job \$metricsJob
@@ -2505,18 +2544,3 @@ catch {
 export function getAgentScriptWindows(): string {
   return AGENT_SCRIPT_WINDOWS_CONTENT;
 }
-=======
- * Versao: v3.10.35-OPTIMIZED-INTERVALS
- * SHA256: pending-calculation
- * Gerado em: 2025-12-12T00:00:00.000Z
- * 
- * NOTA: Script completo deve ser registrado via Admin > Agent Releases
- */
-
-export function getAgentScriptWindows(): string {
-  return AGENT_SCRIPT_WINDOWS_CONTENT;
-}
-
-// Script placeholder - versao completa sera carregada do agent_releases no banco
-export const AGENT_SCRIPT_WINDOWS_CONTENT = "<#\n    CyberShield Agent - Windows v3.10.35-OPTIMIZED-INTERVALS\n    Placeholder - fetch from agent_releases table\n#>\nWrite-Host 'Placeholder script - fetch from agent_releases'\nexit 1";
->>>>>>> 786791c3ce4a5e3315d4944b286ae5499007ffe0
