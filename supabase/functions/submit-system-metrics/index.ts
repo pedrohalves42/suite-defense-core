@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
     logger.debug('Inserting metrics into database');
     // Inserir metricas no banco
     const { error: insertError } = await supabase
-      .from('agent_system_metrics')
+      .from('agent_system_metrics_partitioned')
       .insert({
         agent_id: agent.id,
         tenant_id: agent.tenant_id,

@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
 
     // Get latest metrics (should be < 10 minutes old)
     const { data: metrics } = await supabase
-      .from('agent_system_metrics')
+      .from('agent_system_metrics_partitioned')
       .select('*')
       .eq('agent_id', agent.id)
       .order('collected_at', { ascending: false })
