@@ -146,6 +146,7 @@ export default function AgentManagement() {
       try {
         await supabase.from('jobs').delete().match({ agent_id: agentId });
         await supabase.from('agent_system_metrics').delete().match({ agent_id: agentId });
+        await supabase.from('agent_system_metrics_partitioned').delete().match({ agent_id: agentId });
         await supabase.from('installation_analytics').delete().match({ agent_id: agentId });
         await supabase.from('agent_tokens').delete().match({ agent_id: agentId });
         await supabase.from('enrollment_keys').delete().match({ agent_id: agentId });
