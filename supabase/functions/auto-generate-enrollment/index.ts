@@ -536,13 +536,28 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       logger.success(`[${requestId}] Agent created successfully - ${agentName} (${agentId})`);
     }
 
-    // Create agent token
+    // Create agent token with hash and prefix
     const tokenExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+    
+    // Generate token hash using SHA-256
+    const tokenHashBuffer = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(agentToken)
+    );
+    const tokenHash = Array.from(new Uint8Array(tokenHashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    
+    // Extract token prefix (first 8 characters)
+    const tokenPrefix = agentToken.substring(0, 8);
+    
     const { error: tokenError } = await supabase
       .from('agent_tokens')
       .insert({
         agent_id: agentId,
         token: agentToken,
+        token_hash: tokenHash,
+        token_prefix: tokenPrefix,
         expires_at: tokenExpiresAt.toISOString(),
         is_active: true,
       });
