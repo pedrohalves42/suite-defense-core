@@ -8,9 +8,9 @@
  */
 
 export const INSTALLER_VERSION = 'v3.10.37-NO-EXIT-EVER';
-export const INSTALLER_VERSION_LINUX = 'v3.10.36-SAFE-UPDATE';
-export const INSTALLER_VERSION_MACOS = 'v3.10.36-SAFE-UPDATE';
-export const LAST_UPDATED = '2025-12-12T21:00:00Z'; // Linux/macOS synchronized to v3.10.36-SAFE-UPDATE
+export const INSTALLER_VERSION_LINUX = 'v3.10.37-NO-EXIT-EVER';
+export const INSTALLER_VERSION_MACOS = 'v3.10.37-NO-EXIT-EVER';
+export const LAST_UPDATED = '2025-12-12T22:00:00Z'; // All platforms synchronized to v3.10.37-NO-EXIT-EVER
 
 export const CHANGES = [
   '[v3.10.37-NO-EXIT-EVER] CRITICAL FIX: Handler update_agent NUNCA faz exit 0 - elimina mortes de agente definitivamente',
