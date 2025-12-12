@@ -14,9 +14,9 @@ import { useState } from "react";
 
 // Versões específicas por plataforma
 const CURRENT_VERSIONS = {
-  windows: 'v3.10.33-WEB-ACTIVITY-REGEX-FIX',
-  linux: 'v3.10.33-LINUX-SYNC',
-  macos: 'v3.10.33-MACOS-SYNC'
+  windows: 'v3.10.35-OPTIMIZED-INTERVALS',
+  linux: 'v3.10.35-OPTIMIZED-INTERVALS',
+  macos: 'v3.10.35-OPTIMIZED-INTERVALS'
 } as const;
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
