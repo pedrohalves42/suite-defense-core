@@ -20,18 +20,20 @@ import {
 import { useState } from 'react';
 
 interface ProblematicAgent {
-  id: string;
-  agent_name: string;
-  status: string;
-  enrolled_at: string;
+  id: string | null;
+  agent_name: string | null;
+  status: string | null;
+  enrolled_at: string | null;
   last_heartbeat: string | null;
-  tenant_id: string;
-  tenant_name: string;
-  minutes_since_enrollment: number;
-  issue_type: string;
-  token_count: number;
-  has_active_token: boolean;
-  pending_jobs_count: number;
+  tenant_id: string | null;
+  tenant_name: string | null;
+  hostname: string | null;
+  os_type: string | null;
+  minutes_since_enrollment: number | null;
+  issue_type: string | null;
+  token_count: number | null;
+  has_active_token: boolean | null;
+  pending_jobs_count: number | null;
 }
 
 export default function ProblematicAgentsManager() {
@@ -184,16 +186,16 @@ export default function ProblematicAgentsManager() {
       ) : (
         <div className="grid gap-4">
           {agents?.map((agent) => {
-            const issueInfo = getIssueInfo(agent.issue_type);
+            const issueInfo = getIssueInfo(agent.issue_type ?? 'other');
             const IssueIcon = issueInfo.icon;
             
             return (
-              <Card key={agent.id}>
+              <Card key={agent.id ?? 'unknown'}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle className="flex items-center gap-2">
-                        {agent.agent_name}
+                        {agent.agent_name ?? 'Unknown'}
                         <Badge variant={issueInfo.variant}>
                           <IssueIcon className="mr-1 h-3 w-3" />
                           {issueInfo.label}
@@ -201,11 +203,11 @@ export default function ProblematicAgentsManager() {
                       </CardTitle>
                       <CardDescription className="mt-2 space-y-1">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                          <span>Status: <strong>{agent.status}</strong></span>
-                          <span>Tokens: <strong>{agent.token_count}</strong> (ativos: {agent.has_active_token})</span>
-                          <span>Inscrito: {formatBrazilDateTime(agent.enrolled_at, 'datetime')}</span>
-                          <span>Tempo decorrido: <strong>{Math.floor(agent.minutes_since_enrollment)}min</strong></span>
-                          <span>Jobs pendentes: <strong>{agent.pending_jobs_count}</strong></span>
+                          <span>Status: <strong>{agent.status ?? 'N/A'}</strong></span>
+                          <span>Tokens: <strong>{agent.token_count ?? 0}</strong> (ativos: {agent.has_active_token ? 'sim' : 'não'})</span>
+                          <span>Inscrito: {agent.enrolled_at ? formatBrazilDateTime(agent.enrolled_at, 'datetime') : 'N/A'}</span>
+                          <span>Tempo decorrido: <strong>{agent.minutes_since_enrollment ? Math.floor(agent.minutes_since_enrollment) : 0}min</strong></span>
+                          <span>Jobs pendentes: <strong>{agent.pending_jobs_count ?? 0}</strong></span>
                           <span>Ultimo heartbeat: <strong>{agent.last_heartbeat ? formatBrazilDateTime(agent.last_heartbeat, 'short') : 'Nunca'}</strong></span>
                         </div>
                       </CardDescription>
@@ -228,13 +230,13 @@ export default function ProblematicAgentsManager() {
                   </div>
                 </CardHeader>
                 
-                {agent.pending_jobs_count > 0 && (
+                {(agent.pending_jobs_count ?? 0) > 0 && (
                   <CardContent>
                     <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded">
                       <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
                       <div className="text-sm">
                         <p className="font-semibold text-yellow-900">
-                          {agent.pending_jobs_count} job{agent.pending_jobs_count > 1 ? 's' : ''} pendente{agent.pending_jobs_count > 1 ? 's' : ''}
+                          {agent.pending_jobs_count} job{(agent.pending_jobs_count ?? 0) > 1 ? 's' : ''} pendente{(agent.pending_jobs_count ?? 0) > 1 ? 's' : ''}
                         </p>
                         <p className="text-yellow-700">
                           Estes jobs serao removidos durante a limpeza
@@ -253,12 +255,12 @@ export default function ProblematicAgentsManager() {
       <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Limpar agente {selectedAgent?.agent_name}?</AlertDialogTitle>
+            <AlertDialogTitle>Limpar agente {selectedAgent?.agent_name ?? 'Unknown'}?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <p>Esta acao ira:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Invalidar todos os tokens ativos ({selectedAgent?.token_count || 0})</li>
-                <li>Remover jobs pendentes ({selectedAgent?.pending_jobs_count || 0})</li>
+                <li>Invalidar todos os tokens ativos ({selectedAgent?.token_count ?? 0})</li>
+                <li>Remover jobs pendentes ({selectedAgent?.pending_jobs_count ?? 0})</li>
                 <li>Resetar o status do agente para "pending"</li>
               </ul>
               <p className="font-semibold mt-3">
@@ -269,7 +271,7 @@ export default function ProblematicAgentsManager() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => selectedAgent && cleanupAgent.mutate(selectedAgent.id)}
+              onClick={() => selectedAgent?.id && cleanupAgent.mutate(selectedAgent.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Limpar Agente

@@ -12,11 +12,11 @@ export type LifecycleStage =
   | 'active';
 
 export interface AgentLifecycleState {
-  agent_id: string;
-  agent_name: string;
-  tenant_id: string;
-  agent_status: string;
-  enrolled_at: string;
+  agent_id: string | null;
+  agent_name: string | null;
+  tenant_id: string | null;
+  agent_status: string | null;
+  enrolled_at: string | null;
   last_heartbeat: string | null;
   os_type: string | null;
   os_version: string | null;
@@ -29,7 +29,7 @@ export interface AgentLifecycleState {
   installed_at: string | null;
   
   // Current lifecycle stage
-  lifecycle_stage: LifecycleStage;
+  lifecycle_stage: string | null;
   
   // Installation metrics
   installation_time_seconds: number | null;
@@ -45,7 +45,7 @@ export interface AgentLifecycleState {
   installation_method: string | null;
   
   // Metadata
-  installation_metadata: Record<string, any> | null;
+  installation_metadata: Record<string, unknown> | null;
   
   // Time calculations
   minutes_since_heartbeat: number | null;
@@ -53,7 +53,7 @@ export interface AgentLifecycleState {
   minutes_between_copy_and_install: number | null;
   
   // Stuck detection
-  is_stuck: boolean;
+  is_stuck: boolean | null;
 }
 
 export interface InstallationTelemetryPayload {
