@@ -24,6 +24,7 @@ import { formatBrazilDateTime, formatRelativeTime } from '@/lib/date-utils';
 import { Server, Trash2, Power, PowerOff, CheckCircle, XCircle, Clock, Activity, Edit, FileText, AlertTriangle, RefreshCw, Loader2, Trash } from 'lucide-react';
 import AgentInstallationGuide from '@/components/AgentInstallationGuide';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { HelpTooltip } from '@/components/ui/tech-tooltip';
 
 interface Agent {
   id: string;
@@ -450,13 +451,13 @@ export default function AgentManagement() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome do Agente</TableHead>
+                <TableHead>Nome do Computador</TableHead>
                 <TableHead>Sistema Operacional</TableHead>
-                <TableHead>Versao Agente</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ultimo Heartbeat</TableHead>
+                <TableHead>Versão do Agente <HelpTooltip term="agente" /></TableHead>
+                <TableHead>Status <HelpTooltip term="status" /></TableHead>
+                <TableHead>Último Sinal de Vida <HelpTooltip term="heartbeat" /></TableHead>
                 <TableHead>Registrado em</TableHead>
-                <TableHead className="text-right">Acoes</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

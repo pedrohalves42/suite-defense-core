@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import { useTenant } from "@/hooks/useTenant";
 import { formatRelativeTime } from "@/lib/date-utils";
+import { HelpTooltip } from "@/components/ui/tech-tooltip";
 
 interface ProblematicAgent {
   id: string;
@@ -293,7 +294,9 @@ export default function AgentDiagnosticsUnified() {
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
-                          <span className="text-muted-foreground">Status:</span>
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            Status <HelpTooltip term="status" />
+                          </span>
                           <div className="font-medium">{agent.status || 'Desconhecido'}</div>
                         </div>
                         <div>
@@ -303,7 +306,9 @@ export default function AgentDiagnosticsUnified() {
                           </div>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Credenciais:</span>
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            Credenciais <HelpTooltip term="credenciais" />
+                          </span>
                           <div className="font-medium flex items-center gap-1">
                             {agent.has_active_token ? (
                               <><CheckCircle2 className="h-3 w-3 text-success" /> Válidas</>
@@ -313,7 +318,9 @@ export default function AgentDiagnosticsUnified() {
                           </div>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">Tarefas Falhando:</span>
+                          <span className="text-muted-foreground flex items-center gap-1">
+                            Tarefas Falhando <HelpTooltip term="tarefa" />
+                          </span>
                           <div className="font-medium">{agent.failed_jobs_24h || 0}</div>
                         </div>
                       </div>
