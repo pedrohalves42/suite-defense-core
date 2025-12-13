@@ -31,7 +31,7 @@ import { toast } from "sonner";
 
 export default function InstallationPipelineMonitor() {
   const { tenant } = useTenant();
-  const [hoursBack, setHoursBack] = useState<number>(24);
+  const [hoursBack, setHoursBack] = useState<number | null>(null); // null = all time
   const [stageFilter, setStageFilter] = useState<string>('all');
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
 
@@ -100,16 +100,17 @@ export default function InstallationPipelineMonitor() {
           >
             Atualizar Agora
           </Button>
-          <Select value={hoursBack.toString()} onValueChange={(v) => setHoursBack(parseInt(v))}>
+          <Select value={hoursBack?.toString() ?? 'all'} onValueChange={(v) => setHoursBack(v === 'all' ? null : parseInt(v))}>
             <SelectTrigger className="w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1">Ultima hora</SelectItem>
-              <SelectItem value="6">Ultimas 6 horas</SelectItem>
-              <SelectItem value="24">Ultimas 24 horas</SelectItem>
-              <SelectItem value="72">Ultimos 3 dias</SelectItem>
-              <SelectItem value="168">Ultima semana</SelectItem>
+              <SelectItem value="all">Histórico Completo</SelectItem>
+              <SelectItem value="1">Última hora</SelectItem>
+              <SelectItem value="6">Últimas 6 horas</SelectItem>
+              <SelectItem value="24">Últimas 24 horas</SelectItem>
+              <SelectItem value="72">Últimos 3 dias</SelectItem>
+              <SelectItem value="168">Última semana</SelectItem>
             </SelectContent>
           </Select>
         </div>

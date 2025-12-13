@@ -87,7 +87,7 @@ interface AuditLog {
 
 const ServerDashboard = () => {
   const navigate = useNavigate();
-  const { showOnboarding, completeOnboarding } = useOnboarding();
+  const { showOnboarding, completeOnboarding, dismissFor7Days } = useOnboarding();
   const { isAdmin } = useIsAdmin();
   const { isOnline } = useOnlineStatus();
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -1143,6 +1143,7 @@ const ServerDashboard = () => {
         open={showOnboarding}
         onClose={() => {}}
         onComplete={completeOnboarding}
+        onDismiss7Days={dismissFor7Days}
       />
     </div>
   );
