@@ -23,8 +23,7 @@ import {
   LINUX_INSTALLER_TEMPLATE_V3_ENVVARS,
   MACOS_INSTALLER_TEMPLATE_V3_ENVVARS
 } from '../_shared/installer-template-envvars.ts';
-import { AGENT_SCRIPT_MACOS_SH } from '../_shared/agent-script-macos-content.ts';
-import { AGENT_SCRIPT_LINUX_SH } from '../_shared/agent-script-linux-content.ts';
+// Linux/macOS scripts are now fetched from agent_releases database instead of placeholder files
 import { INSTALLER_VERSION, LAST_UPDATED, getVersionInfo } from '../_shared/installer-version.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -384,22 +383,59 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
       agentScriptContentForPlatform = agentScriptContent;
       agentScriptUrl = ''; // Windows embeds script in installer
       console.log('[' + requestId + '] Using Windows embedded template (' + agentScriptContentForPlatform.length + ' bytes)');
-    } else if (platform === 'macos') {
-      // macOS: use embedded template (no external download) or envvars mode
-      templateContent = mode === 'envvars' 
-        ? MACOS_INSTALLER_TEMPLATE_V3_ENVVARS 
-        : MACOS_INSTALLER_TEMPLATE_V3_EMBEDDED;
-      agentScriptContentForPlatform = AGENT_SCRIPT_MACOS_SH;
-      agentScriptUrl = ''; // macOS now embeds script in installer
-      console.log('[' + requestId + '] Using macOS embedded template (mode: ' + mode + ', script: ' + agentScriptContentForPlatform.length + ' bytes)');
-    } else { // linux
-      // Linux: use embedded template (no external download) or envvars mode
-      templateContent = mode === 'envvars'
-        ? LINUX_INSTALLER_TEMPLATE_V3_ENVVARS
-        : LINUX_INSTALLER_TEMPLATE_V3_EMBEDDED;
-      agentScriptContentForPlatform = AGENT_SCRIPT_LINUX_SH;
-      agentScriptUrl = ''; // Linux now embeds script in installer
-      console.log('[' + requestId + '] Using Linux embedded template (mode: ' + mode + ', script: ' + agentScriptContentForPlatform.length + ' bytes)');
+    } else if (platform === 'macos' || platform === 'linux') {
+      // macOS/Linux: fetch script from agent_releases database (not placeholder files)
+      const { data: releaseData, error: releaseError } = await supabaseClient
+        .from('agent_releases')
+        .select('script_content, version')
+        .eq('platform', platform)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (releaseError || !releaseData?.script_content) {
+        console.error(`[${requestId}] No active ${platform} agent release found:`, releaseError);
+        return new Response(
+          JSON.stringify({
+            error: `No active ${platform} agent release found`,
+            details: 'Please register an active agent release for this platform in Admin > Agent Releases',
+            requestId
+          }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      agentScriptContentForPlatform = releaseData.script_content;
+      agentScriptUrl = ''; // Embedded script in installer
+      
+      // Select template based on platform and mode
+      if (platform === 'macos') {
+        templateContent = mode === 'envvars' 
+          ? MACOS_INSTALLER_TEMPLATE_V3_ENVVARS 
+          : MACOS_INSTALLER_TEMPLATE_V3_EMBEDDED;
+      } else {
+        templateContent = mode === 'envvars'
+          ? LINUX_INSTALLER_TEMPLATE_V3_ENVVARS
+          : LINUX_INSTALLER_TEMPLATE_V3_EMBEDDED;
+      }
+      
+      console.log(`[${requestId}] Loaded ${platform} agent script from database`, {
+        version: releaseData.version,
+        size: agentScriptContentForPlatform.length,
+        mode: mode
+      });
+    } else {
+      // Fallback for unsupported platforms
+      console.error(`[${requestId}] Unsupported platform: ${platform}`);
+      return new Response(
+        JSON.stringify({
+          error: 'Unsupported platform',
+          details: `Platform "${platform}" is not supported. Use windows, linux, or macos.`,
+          requestId
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // FASE 2: Replace placeholders with validated credentials
