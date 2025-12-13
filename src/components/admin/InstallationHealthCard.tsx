@@ -112,20 +112,20 @@ export function InstallationHealthCard() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-              Status das Instalacoes
+              Status das Instalações
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
                     <AlertCircle className="h-4 w-4 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p className="text-xs">Taxa de sucesso de instalacoes por sistema operacional (ultimos 7 dias)</p>
+                    <p className="text-xs">Taxa de sucesso de instalações por sistema operacional (histórico completo)</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">
-              Ultimos 7 dias • Atualizado {lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              Histórico Completo • Atualizado {lastUpdate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </p>
           </div>
           
@@ -189,7 +189,7 @@ export function InstallationHealthCard() {
 
         {!loading && totalEvents === 0 && !error && (
           <div className="text-center py-6 text-muted-foreground text-sm">
-            Nenhuma instalacao registrada nos ultimos 7 dias
+            Nenhuma instalação registrada ainda. Instale seu primeiro agente para ver as métricas.
           </div>
         )}
       </CardContent>
