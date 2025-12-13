@@ -30,9 +30,9 @@ function transformToCard(state: AgentLifecycleState): DashboardAgentCard {
   const statusBadge = getStatusBadge(state);
   
   return {
-    agent_id: state.agent_id,
-    agent_name: state.agent_name,
-    lifecycle_stage: state.lifecycle_stage,
+    agent_id: state.agent_id ?? '',
+    agent_name: state.agent_name ?? 'Unknown',
+    lifecycle_stage: (state.lifecycle_stage as LifecycleStage) ?? 'unknown',
     status_badge: statusBadge,
     
     timeline: {
@@ -44,20 +44,20 @@ function transformToCard(state: AgentLifecycleState): DashboardAgentCard {
     },
     
     metrics: {
-      uptime_minutes: state.minutes_since_enrollment,
-      install_time_seconds: state.installation_time_seconds,
-      last_seen: state.last_heartbeat,
+      uptime_minutes: state.minutes_since_enrollment ?? null,
+      install_time_seconds: state.installation_time_seconds ?? null,
+      last_seen: state.last_heartbeat ?? null,
     },
     
     flags: {
-      is_stuck: state.is_stuck,
+      is_stuck: state.is_stuck ?? false,
       has_errors: !!state.last_error_message,
       is_offline: state.lifecycle_stage === 'installed_offline' || 
                   (state.minutes_since_heartbeat !== null && state.minutes_since_heartbeat > 5),
     },
     
     actions: {
-      can_retry_install: state.is_stuck || !!state.last_error_message,
+      can_retry_install: (state.is_stuck ?? false) || !!state.last_error_message,
       can_view_logs: !!state.installation_metadata,
       can_delete: true,
     },
@@ -76,7 +76,8 @@ function getStatusBadge(state: AgentLifecycleState): DashboardAgentCard['status_
   }
   
   // Based on lifecycle stage
-  switch (state.lifecycle_stage) {
+  const stage = state.lifecycle_stage ?? 'unknown';
+  switch (stage) {
     case 'active':
       return { label: 'Ativo', color: 'success' };
     case 'installed_offline':

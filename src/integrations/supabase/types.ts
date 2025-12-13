@@ -6004,28 +6004,85 @@ export type Database = {
         Row: {
           agent_id: string | null
           agent_name: string | null
+          agent_status: string | null
+          command_copied_at: string | null
+          downloaded_at: string | null
           enrolled_at: string | null
+          generated_at: string | null
+          hostname: string | null
+          installation_metadata: Json | null
+          installation_method: string | null
+          installation_success: boolean | null
+          installation_time_seconds: number | null
+          installed_at: string | null
+          is_stuck: boolean | null
+          last_error_at: string | null
+          last_error_message: string | null
           last_heartbeat: string | null
-          lifecycle_state: string | null
-          status: string | null
+          lifecycle_stage: string | null
+          minutes_between_copy_and_install: number | null
+          minutes_since_enrollment: number | null
+          minutes_since_heartbeat: number | null
+          network_connectivity: boolean | null
+          os_type: string | null
+          os_version: string | null
+          platform: string | null
           tenant_id: string | null
         }
         Insert: {
           agent_id?: string | null
           agent_name?: string | null
-          enrolled_at?: string | null
-          last_heartbeat?: string | null
-          lifecycle_state?: never
-          status?: string | null
+          agent_status?: string | null
+          command_copied_at?: never
+          downloaded_at?: never
+          enrolled_at?: never
+          generated_at?: never
+          hostname?: string | null
+          installation_metadata?: never
+          installation_method?: never
+          installation_success?: never
+          installation_time_seconds?: never
+          installed_at?: never
+          is_stuck?: never
+          last_error_at?: never
+          last_error_message?: never
+          last_heartbeat?: never
+          lifecycle_stage?: never
+          minutes_between_copy_and_install?: never
+          minutes_since_enrollment?: never
+          minutes_since_heartbeat?: never
+          network_connectivity?: never
+          os_type?: string | null
+          os_version?: string | null
+          platform?: never
           tenant_id?: string | null
         }
         Update: {
           agent_id?: string | null
           agent_name?: string | null
-          enrolled_at?: string | null
-          last_heartbeat?: string | null
-          lifecycle_state?: never
-          status?: string | null
+          agent_status?: string | null
+          command_copied_at?: never
+          downloaded_at?: never
+          enrolled_at?: never
+          generated_at?: never
+          hostname?: string | null
+          installation_metadata?: never
+          installation_method?: never
+          installation_success?: never
+          installation_time_seconds?: never
+          installed_at?: never
+          is_stuck?: never
+          last_error_at?: never
+          last_error_message?: never
+          last_heartbeat?: never
+          lifecycle_stage?: never
+          minutes_between_copy_and_install?: never
+          minutes_since_enrollment?: never
+          minutes_since_heartbeat?: never
+          network_connectivity?: never
+          os_type?: string | null
+          os_version?: string | null
+          platform?: never
           tenant_id?: string | null
         }
         Relationships: [
@@ -6049,35 +6106,18 @@ export type Database = {
         Row: {
           agent_name: string | null
           enrolled_at: string | null
+          has_active_token: boolean | null
           hostname: string | null
           id: string | null
           issue_type: string | null
           last_heartbeat: string | null
+          minutes_since_enrollment: number | null
           os_type: string | null
+          pending_jobs_count: number | null
           status: string | null
           tenant_id: string | null
-        }
-        Insert: {
-          agent_name?: string | null
-          enrolled_at?: string | null
-          hostname?: string | null
-          id?: string | null
-          issue_type?: never
-          last_heartbeat?: string | null
-          os_type?: string | null
-          status?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          agent_name?: string | null
-          enrolled_at?: string | null
-          hostname?: string | null
-          id?: string | null
-          issue_type?: never
-          last_heartbeat?: string | null
-          os_type?: string | null
-          status?: string | null
-          tenant_id?: string | null
+          tenant_name: string | null
+          token_count: number | null
         }
         Relationships: [
           {
