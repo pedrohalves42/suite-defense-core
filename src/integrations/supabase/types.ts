@@ -5423,46 +5423,43 @@ export type Database = {
       agents_health_view: {
         Row: {
           agent_name: string | null
-          completed_jobs: number | null
+          agent_version: string | null
           enrolled_at: string | null
           health_status: string | null
           hostname: string | null
           id: string | null
           last_heartbeat: string | null
-          minutes_since_heartbeat: number | null
           os_type: string | null
           os_version: string | null
-          pending_jobs: number | null
+          seconds_since_heartbeat: number | null
           status: string | null
           tenant_id: string | null
         }
         Insert: {
           agent_name?: string | null
-          completed_jobs?: never
+          agent_version?: string | null
           enrolled_at?: string | null
           health_status?: never
           hostname?: string | null
           id?: string | null
           last_heartbeat?: string | null
-          minutes_since_heartbeat?: never
           os_type?: string | null
           os_version?: string | null
-          pending_jobs?: never
+          seconds_since_heartbeat?: never
           status?: string | null
           tenant_id?: string | null
         }
         Update: {
           agent_name?: string | null
-          completed_jobs?: never
+          agent_version?: string | null
           enrolled_at?: string | null
           health_status?: never
           hostname?: string | null
           id?: string | null
           last_heartbeat?: string | null
-          minutes_since_heartbeat?: never
           os_type?: string | null
           os_version?: string | null
-          pending_jobs?: never
+          seconds_since_heartbeat?: never
           status?: string | null
           tenant_id?: string | null
         }
