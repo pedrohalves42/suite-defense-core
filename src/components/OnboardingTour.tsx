@@ -9,6 +9,7 @@ interface OnboardingTourProps {
   open: boolean;
   onClose: () => void;
   onComplete: () => void;
+  onDismiss7Days?: () => void;
 }
 
 interface TourStep {
@@ -50,7 +51,7 @@ const tourSteps: TourStep[] = [
   },
 ];
 
-export const OnboardingTour = ({ open, onClose, onComplete }: OnboardingTourProps) => {
+export const OnboardingTour = ({ open, onClose, onComplete, onDismiss7Days }: OnboardingTourProps) => {
   const [currentStep, setCurrentStep] = useState(0);
   const progress = ((currentStep + 1) / tourSteps.length) * 100;
 
@@ -75,6 +76,13 @@ export const OnboardingTour = ({ open, onClose, onComplete }: OnboardingTourProp
 
   const handleSkip = () => {
     onComplete();
+    onClose();
+  };
+
+  const handleDismiss7Days = () => {
+    if (onDismiss7Days) {
+      onDismiss7Days();
+    }
     onClose();
   };
 
@@ -136,7 +144,7 @@ export const OnboardingTour = ({ open, onClose, onComplete }: OnboardingTourProp
           </motion.div>
         </AnimatePresence>
 
-        <DialogFooter className="px-6 pb-6 flex-row gap-2 sm:gap-2">
+        <DialogFooter className="px-6 pb-6 flex-col gap-2">
           <div className="flex w-full gap-2">
             {currentStep > 0 && (
               <Button
@@ -176,6 +184,17 @@ export const OnboardingTour = ({ open, onClose, onComplete }: OnboardingTourProp
               )}
             </Button>
           </div>
+          
+          {/* Dismiss for 7 days option */}
+          {onDismiss7Days && (
+            <Button
+              variant="link"
+              onClick={handleDismiss7Days}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Não mostrar por 7 dias
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
