@@ -93,17 +93,22 @@ function getStatusBadge(state: AgentLifecycleState): DashboardAgentCard['status_
   }
 }
 
-export function usePipelineMetrics(tenantId: string | undefined, hoursBack: number = 24) {
+export function usePipelineMetrics(tenantId: string | undefined, hoursBack: number | null = null) {
   return useQuery({
     queryKey: ['pipeline-metrics', tenantId, hoursBack],
     queryFn: async () => {
       if (!tenantId) return null;
 
+      const body: Record<string, unknown> = { tenant_id: tenantId };
+      if (hoursBack !== null) {
+        body.hours_back = hoursBack;
+      }
+
       const { data, error } = await supabase.functions.invoke('get-installation-pipeline-metrics', {
-        body: { tenant_id: tenantId, hours_back: hoursBack }
+        body
       });
 
-      if (error) throw new Error(`Erro ao buscar metricas: ${error.message}`);
+      if (error) throw new Error(`Erro ao buscar métricas: ${error.message}`);
       if (!data?.success) throw new Error(data?.error || 'Erro desconhecido');
       
       return data.metrics;

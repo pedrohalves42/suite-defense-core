@@ -27,7 +27,9 @@ interface ProblematicAgent {
   os_type: string | null;
   issue_type: string | null;
   has_active_token: boolean | null;
-  failed_jobs_24h: number | null;
+  failed_jobs_24h?: number | null;
+  minutes_since_enrollment?: number | null;
+  token_count?: number | null;
 }
 
 export default function AgentDiagnosticsUnified() {

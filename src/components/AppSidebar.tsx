@@ -34,40 +34,38 @@ export const AppSidebar = () => {
 
   const adminItems = useMemo(() => [
     // === OVERVIEW ===
-    { icon: Home, label: 'Dashboard', to: '/admin/dashboard', end: true, section: 'overview' },
+    { icon: Home, label: 'Painel de Controle', to: '/admin/dashboard', end: true, section: 'overview' },
     
     // === MONITORAMENTO ===
-    { icon: Activity, label: 'Monitoramento RT', to: '/admin/monitoring-advanced', section: 'monitoring' },
-    { icon: Activity, label: 'Saude Agentes', to: '/admin/agent-health', section: 'monitoring' },
-    { icon: Activity, label: 'Diagnostico', to: '/admin/agent-diagnostics', section: 'monitoring' },
-    { icon: Terminal, label: 'Troubleshooting', to: '/admin/agent-troubleshooting', section: 'monitoring' },
-    { icon: AlertTriangle, label: 'Problematicos', to: '/admin/problematic-agents', section: 'monitoring' },
+    { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced', section: 'monitoring' },
+    { icon: Activity, label: 'Saúde dos Computadores', to: '/admin/agent-health', section: 'monitoring' },
+    { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics', section: 'monitoring' },
     
     // === SEGURANÇA ===
-    { icon: ShieldCheck, label: 'Politicas', to: '/admin/security-policies', section: 'security' },
-    { icon: Shield, label: 'Monitoramento Seg.', to: '/admin/security-monitoring', section: 'security' },
-    { icon: Package, label: 'Inventario Software', to: '/admin/software-inventory', section: 'security' },
+    { icon: ShieldCheck, label: 'Políticas', to: '/admin/security-policies', section: 'security' },
+    { icon: Shield, label: 'Monitoramento', to: '/admin/security-monitoring', section: 'security' },
+    { icon: Package, label: 'Programas Instalados', to: '/admin/software-inventory', section: 'security' },
     { icon: AlertTriangle, label: 'Vulnerabilidades', to: '/admin/vulnerabilities', section: 'security' },
-    { icon: Globe, label: 'Atividade Web', to: '/admin/web-activity', section: 'security' },
-    { icon: Clock, label: 'Timeline Agente', to: '/admin/agent-timeline', section: 'security' },
-    { icon: ScrollText, label: 'Relatorios', to: '/admin/reports', section: 'security' },
+    { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity', section: 'security' },
+    { icon: Clock, label: 'Histórico', to: '/admin/agent-timeline', section: 'security' },
+    { icon: ScrollText, label: 'Laudos', to: '/admin/reports', section: 'security' },
     
     // === INFRAESTRUTURA ===
-    { icon: Package, label: 'Instalacoes', to: '/admin/installations', section: 'infrastructure' },
-    { icon: Package, label: 'Agent Releases', to: '/admin/agent-releases', section: 'infrastructure' },
-    { icon: Gauge, label: 'Rate Limiting', to: '/admin/rate-limiting', section: 'infrastructure' },
-    { icon: Inbox, label: 'Fila de Pendentes', to: '/admin/dead-letter-queue', section: 'infrastructure' },
-    { icon: Code, label: 'API Docs', to: '/admin/api-docs', section: 'infrastructure' },
+    { icon: Package, label: 'Instalações', to: '/admin/installations', section: 'infrastructure' },
+    { icon: Package, label: 'Versões do Agente', to: '/admin/agent-releases', section: 'infrastructure' },
+    { icon: Gauge, label: 'Limites de Taxa', to: '/admin/rate-limiting', section: 'infrastructure' },
+    { icon: Inbox, label: 'Tarefas Pendentes', to: '/admin/dead-letter-queue', section: 'infrastructure' },
+    { icon: Code, label: 'API', to: '/admin/api-docs', section: 'infrastructure' },
     
     // === INTELIGÊNCIA ARTIFICIAL ===
-    { icon: Brain, label: 'IA Insights', to: '/admin/ai-insights', section: 'ai' },
-    { icon: CheckCircle, label: 'IA Acoes', to: '/admin/ai-actions', section: 'ai' },
-    { icon: BarChart3, label: 'IA Metricas', to: '/admin/ai-metrics', section: 'ai' },
+    { icon: Brain, label: 'Insights', to: '/admin/ai-insights', section: 'ai' },
+    { icon: CheckCircle, label: 'Ações', to: '/admin/ai-actions', section: 'ai' },
+    { icon: BarChart3, label: 'Métricas', to: '/admin/ai-metrics', section: 'ai' },
     
     // === GESTÃO ===
-    { icon: Users, label: 'Membros', to: '/admin/members', section: 'management' },
+    { icon: Users, label: 'Equipe', to: '/admin/members', section: 'management' },
     { icon: Mail, label: 'Convites', to: '/admin/invites', section: 'management' },
-    { icon: Settings, label: 'Tenant', to: '/admin/tenant', section: 'management' },
+    { icon: Settings, label: 'Configurações', to: '/admin/tenant', section: 'management' },
     { icon: Bell, label: 'Notificações', to: '/admin/notification-settings', section: 'management' },
     
     // === FINANCEIRO ===

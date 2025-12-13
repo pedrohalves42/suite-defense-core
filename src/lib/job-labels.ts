@@ -15,11 +15,11 @@ export const JOB_TYPE_LABELS: Record<string, string> = {
 };
 
 export const JOB_STATUS_LABELS: Record<string, string> = {
-  queued: '⏳ Aguardando',
+  queued: '⏳ Na Fila',
   delivered: '📤 Enviado',
   completed: '✅ Concluído',
   failed: '❌ Falhou',
-  pending: '⏸️ Pendente',
+  pending: '⏸️ Aguardando',
 };
 
 // Terminologia amigável para UI

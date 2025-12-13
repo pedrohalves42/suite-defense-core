@@ -50,13 +50,13 @@ serve(async (req) => {
     const tenantId = userRole.tenant_id;
 
     // Parse parameters from body OR URL (body takes precedence)
-    let hoursBack = 24;
+    let hoursBack: number | null = null;
     
     // Try to get from body first
     if (req.method === "POST") {
       try {
         const body = await req.json();
-        if (body.hours_back) {
+        if (body.hours_back !== undefined && body.hours_back !== null) {
           hoursBack = parseInt(body.hours_back);
         }
       } catch {
@@ -65,7 +65,7 @@ serve(async (req) => {
     }
     
     // Fallback to URL params
-    if (hoursBack === 24) {
+    if (hoursBack === null) {
       const url = new URL(req.url);
       const hoursBackRaw = url.searchParams.get("hours_back");
       if (hoursBackRaw) {
@@ -73,8 +73,8 @@ serve(async (req) => {
       }
     }
 
-    // Validate hours_back parameter
-    if (isNaN(hoursBack) || hoursBack < 1 || hoursBack > 720) {
+    // Validate hours_back parameter if provided
+    if (hoursBack !== null && (isNaN(hoursBack) || hoursBack < 1 || hoursBack > 720)) {
       console.error(`[${requestId}] Invalid hours_back: ${hoursBack}`);
       return new Response(
         JSON.stringify({
@@ -89,9 +89,9 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[${requestId}] Fetching metrics for tenant ${tenantId}, hours_back: ${hoursBack}`);
+    console.log(`[${requestId}] Fetching metrics for tenant ${tenantId}, hours_back: ${hoursBack ?? 'all time'}`);
 
-    // Call the SQL function to calculate metrics
+    // Call the SQL function to calculate metrics (null means all time)
     const { data: metrics, error: metricsError } = await supabaseClient
       .rpc("calculate_pipeline_metrics", {
         p_tenant_id: tenantId,
@@ -125,7 +125,7 @@ serve(async (req) => {
         metrics: result,
         request_id: requestId,
         tenant_id: tenantId,
-        hours_back: hoursBack
+        hours_back: hoursBack ?? 'all'
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
