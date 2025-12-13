@@ -5601,12 +5601,8 @@ export type Database = {
           created_by: string | null
           current_uses: number | null
           description: string | null
-          expiration_notified_at: string | null
           expires_at: string | null
           id: string | null
-          installer_generated_at: string | null
-          installer_sha256: string | null
-          installer_size_bytes: number | null
           is_active: boolean | null
           key_masked: string | null
           max_uses: number | null
@@ -5620,12 +5616,8 @@ export type Database = {
           created_by?: string | null
           current_uses?: number | null
           description?: string | null
-          expiration_notified_at?: string | null
           expires_at?: string | null
           id?: string | null
-          installer_generated_at?: string | null
-          installer_sha256?: string | null
-          installer_size_bytes?: number | null
           is_active?: boolean | null
           key_masked?: never
           max_uses?: number | null
@@ -5639,12 +5631,8 @@ export type Database = {
           created_by?: string | null
           current_uses?: number | null
           description?: string | null
-          expiration_notified_at?: string | null
           expires_at?: string | null
           id?: string | null
-          installer_generated_at?: string | null
-          installer_sha256?: string | null
-          installer_size_bytes?: number | null
           is_active?: boolean | null
           key_masked?: never
           max_uses?: number | null
@@ -5970,24 +5958,33 @@ export type Database = {
       v_agent_health_summary: {
         Row: {
           agent_name: string | null
-          agent_version: string | null
-          completed_jobs_24h: number | null
-          cpu_usage_percent: number | null
-          disk_usage_percent: number | null
-          failed_jobs_24h: number | null
-          failure_rate_pct: number | null
-          heartbeat_status: string | null
+          connection_status: string | null
           hostname: string | null
           id: string | null
           last_heartbeat: string | null
-          last_metrics_at: string | null
-          memory_usage_percent: number | null
           os_type: string | null
-          os_version: string | null
-          seconds_since_heartbeat: number | null
           status: string | null
           tenant_id: string | null
-          total_jobs_24h: number | null
+        }
+        Insert: {
+          agent_name?: string | null
+          connection_status?: never
+          hostname?: string | null
+          id?: string | null
+          last_heartbeat?: string | null
+          os_type?: string | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          agent_name?: string | null
+          connection_status?: never
+          hostname?: string | null
+          id?: string | null
+          last_heartbeat?: string | null
+          os_type?: string | null
+          status?: string | null
+          tenant_id?: string | null
         }
         Relationships: [
           {
@@ -6010,31 +6007,29 @@ export type Database = {
         Row: {
           agent_id: string | null
           agent_name: string | null
-          agent_status: string | null
-          agent_version: string | null
-          command_copied_at: string | null
-          downloaded_at: string | null
           enrolled_at: string | null
-          generated_at: string | null
-          hostname: string | null
-          installation_metadata: Json | null
-          installation_method: string | null
-          installation_success: boolean | null
-          installation_time_seconds: number | null
-          installed_at: string | null
-          is_stuck: boolean | null
-          last_error_at: string | null
-          last_error_message: string | null
           last_heartbeat: string | null
-          lifecycle_stage: string | null
-          minutes_between_copy_and_install: number | null
-          minutes_since_enrollment: number | null
-          minutes_since_heartbeat: number | null
-          network_connectivity: boolean | null
-          os_type: string | null
-          os_version: string | null
-          platform: string | null
+          lifecycle_state: string | null
+          status: string | null
           tenant_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name?: string | null
+          enrolled_at?: string | null
+          last_heartbeat?: string | null
+          lifecycle_state?: never
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string | null
+          enrolled_at?: string | null
+          last_heartbeat?: string | null
+          lifecycle_state?: never
+          status?: string | null
+          tenant_id?: string | null
         }
         Relationships: [
           {
@@ -6056,23 +6051,36 @@ export type Database = {
       v_problematic_agents: {
         Row: {
           agent_name: string | null
-          created_at: string | null
           enrolled_at: string | null
-          has_active_token: boolean | null
+          hostname: string | null
           id: string | null
-          installation_success: boolean | null
           issue_type: string | null
           last_heartbeat: string | null
-          metadata: Json | null
-          minutes_since_creation: number | null
-          minutes_since_enrollment: number | null
-          network_connectivity: boolean | null
-          pending_jobs_count: number | null
-          problem_type: string | null
+          os_type: string | null
           status: string | null
           tenant_id: string | null
-          tenant_name: string | null
-          token_count: number | null
+        }
+        Insert: {
+          agent_name?: string | null
+          enrolled_at?: string | null
+          hostname?: string | null
+          id?: string | null
+          issue_type?: never
+          last_heartbeat?: string | null
+          os_type?: string | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          agent_name?: string | null
+          enrolled_at?: string | null
+          hostname?: string | null
+          id?: string | null
+          issue_type?: never
+          last_heartbeat?: string | null
+          os_type?: string | null
+          status?: string | null
+          tenant_id?: string | null
         }
         Relationships: [
           {
