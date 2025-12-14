@@ -46,14 +46,31 @@ export default function Subscriptions() {
       return data;
     },
     onSuccess: (data) => {
+      // Handle different response types
       if (data.url) {
         window.open(data.url, '_blank');
+      } else if (data.trial) {
+        toast({
+          title: 'Período de Avaliação',
+          description: data.error || 'Você está em período de avaliação. O portal estará disponível após escolher um plano.',
+        });
+      } else if (data.free) {
+        toast({
+          title: 'Plano Gratuito',
+          description: 'Faça upgrade para um plano pago para acessar o portal de cobrança.',
+        });
+        navigate('/admin/plan-upgrade');
+      } else if (data.error) {
+        toast({
+          title: 'Aviso',
+          description: data.error,
+        });
       }
     },
     onError: (error: any) => {
       toast({
         title: 'Erro ao abrir portal',
-        description: error.message,
+        description: error.message || 'Tente novamente mais tarde.',
         variant: 'destructive',
       });
     },

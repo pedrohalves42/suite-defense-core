@@ -26,25 +26,84 @@ Deno.serve(async (req) => {
     if (userError || !userData.user) throw new Error("Unauthorized");
 
     // Get tenant subscription
-    const { data: subscription } = await supabaseClient
-      .from("tenant_subscriptions")
-      .select("stripe_customer_id, tenant_id")
-      .eq("tenant_id", await getTenantId(supabaseClient, userData.user.id))
-      .maybeSingle();
-
-    if (!subscription?.stripe_customer_id) {
-      throw new Error("No Stripe customer found");
+    const tenantId = await getTenantId(supabaseClient, userData.user.id);
+    
+    if (!tenantId) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Tenant não encontrado. Entre em contato com o suporte.',
+          code: 'TENANT_NOT_FOUND'
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
     }
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+    const { data: subscription } = await supabaseClient
+      .from("tenant_subscriptions")
+      .select("stripe_customer_id, status, plan_id")
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+
+    // Handle case where no Stripe customer exists (trial or free plan)
+    if (!subscription?.stripe_customer_id) {
+      // Check if user is on trial or free plan
+      const status = subscription?.status || 'unknown';
+      
+      if (status === 'trialing') {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Você está em período de avaliação gratuita. O portal de cobrança estará disponível após escolher um plano pago.',
+            code: 'TRIAL_USER',
+            trial: true
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+      
+      if (status === 'active' && !subscription?.stripe_customer_id) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Você está no plano gratuito. Faça upgrade para acessar o portal de cobrança.',
+            code: 'FREE_USER',
+            free: true
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          error: 'Nenhuma assinatura ativa encontrada. Entre em contato com o suporte se acredita que isso é um erro.',
+          code: 'NO_SUBSCRIPTION'
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      console.error("[CUSTOMER-PORTAL] STRIPE_SECRET_KEY not configured");
+      return new Response(
+        JSON.stringify({ 
+          error: 'Configuração de pagamento incompleta. Entre em contato com o suporte.',
+          code: 'STRIPE_NOT_CONFIGURED'
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
+
+    const stripe = new Stripe(stripeKey, {
       apiVersion: "2025-08-27.basil",
     });
 
-    const origin = req.headers.get("origin") || Deno.env.get("SUPABASE_URL");
+    const origin = req.headers.get("origin") || Deno.env.get("SITE_URL") || "https://suite-defense-core.lovable.app";
+    
     const session = await stripe.billingPortal.sessions.create({
       customer: subscription.stripe_customer_id,
       return_url: `${origin}/admin/subscriptions`,
     });
+
+    console.log(`[CUSTOMER-PORTAL] Portal session created for customer ${subscription.stripe_customer_id}`);
 
     return new Response(
       JSON.stringify({ url: session.url }),
@@ -52,8 +111,14 @@ Deno.serve(async (req) => {
     );
   } catch (error) {
     console.error("[CUSTOMER-PORTAL] Error:", error);
+    
+    const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+    
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ 
+        error: errorMessage,
+        code: 'INTERNAL_ERROR'
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
