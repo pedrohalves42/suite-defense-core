@@ -49,17 +49,21 @@ const Landing = () => {
       calculator: {
         label: "Quantos dispositivos sua empresa possui?"
       },
-      painQuestions: [
-        "Você conseguiria pagar R$ 200.000 amanhã se sua empresa fosse atacada?",
-        "Se todos os arquivos sumissem hoje, quanto tempo levaria para voltar a operar?",
-        "Sua empresa sobreviveria 27 dias parada?",
-        "Quem seria responsabilizado se houvesse vazamento de dados?"
-      ],
+      painQuestions: ["Você conseguiria pagar R$ 200.000 amanhã se sua empresa fosse atacada?", "Se todos os arquivos sumissem hoje, quanto tempo levaria para voltar a operar?", "Sua empresa sobreviveria 27 dias parada?", "Quem seria responsabilizado se houvesse vazamento de dados?"],
       painNote: "Essa é a realidade de quem não tem visibilidade.",
       howItWorks: {
-        step1: { title: "Instalamos o agente", description: "Instalação rápida em até 3 computadores para iniciar o diagnóstico." },
-        step2: { title: "Encontramos riscos invisíveis", description: "Softwares desatualizados, vulnerabilidades e comportamentos suspeitos." },
-        step3: { title: "Você recebe um laudo claro", description: "O que corrigir, o que priorizar — ou deixar a CyberShield monitorando." }
+        step1: {
+          title: "Instalamos o agente",
+          description: "Instalação rápida em até 3 computadores para iniciar o diagnóstico."
+        },
+        step2: {
+          title: "Encontramos riscos invisíveis",
+          description: "Softwares desatualizados, vulnerabilidades e comportamentos suspeitos."
+        },
+        step3: {
+          title: "Você recebe um laudo claro",
+          description: "O que corrigir, o que priorizar — ou deixar a CyberShield monitorando."
+        }
       }
     },
     home: {
@@ -96,41 +100,63 @@ const Landing = () => {
       calculator: {
         label: "Quantos computadores você tem em casa?"
       },
-      painQuestions: [
-        "E se você perdesse TODAS as fotos de família amanhã?",
-        "E se roubassem seus dados bancários enquanto você dorme?",
-        "Você sabe o que seus filhos acessam na internet?",
-        "Quem protege seus dados enquanto você não está olhando?"
-      ],
+      painQuestions: ["E se você perdesse TODAS as fotos de família amanhã?", "E se roubassem seus dados bancários enquanto você dorme?", "Você sabe o que seus filhos acessam na internet?", "Quem protege seus dados enquanto você não está olhando?"],
       painNote: "Famílias são alvos fáceis porque não têm proteção profissional.",
       howItWorks: {
-        step1: { title: "Instalamos o agente", description: "Instalamos o agente em até 3 computadores para começar o diagnóstico." },
-        step2: { title: "Encontramos riscos invisíveis", description: "Identificamos vírus ocultos, programas suspeitos e vulnerabilidades." },
-        step3: { title: "Você recebe um relatório claro", description: "Relatório simples com o que corrigir — ou deixa o CyberShield protegendo." }
+        step1: {
+          title: "Instalamos o agente",
+          description: "Instalamos o agente em até 3 computadores para começar o diagnóstico."
+        },
+        step2: {
+          title: "Encontramos riscos invisíveis",
+          description: "Identificamos vírus ocultos, programas suspeitos e vulnerabilidades."
+        },
+        step3: {
+          title: "Você recebe um relatório claro",
+          description: "Relatório simples com o que corrigir — ou deixa o CyberShield protegendo."
+        }
       }
     }
   };
   const currentContent = content[audience];
 
   // Cálculo baseado em tiers híbridos (base + adicional por dispositivo)
-  const calculateTier = (devices: number): { 
-    price: number; 
-    plan: string; 
+  const calculateTier = (devices: number): {
+    price: number;
+    plan: string;
     baseDevices: number;
-    maxDevices: number; 
+    maxDevices: number;
     basePrice: number;
     extraDevices: number;
     extraPrice: number;
     pricePerExtra: number;
-    isEnterprise: boolean 
+    isEnterprise: boolean;
   } => {
-    if (devices <= 0 || Number.isNaN(devices)) 
-      return { price: 0, plan: 'Free', baseDevices: 3, maxDevices: 3, basePrice: 0, extraDevices: 0, extraPrice: 0, pricePerExtra: 0, isEnterprise: false };
-    
+    if (devices <= 0 || Number.isNaN(devices)) return {
+      price: 0,
+      plan: 'Free',
+      baseDevices: 3,
+      maxDevices: 3,
+      basePrice: 0,
+      extraDevices: 0,
+      extraPrice: 0,
+      pricePerExtra: 0,
+      isEnterprise: false
+    };
+
     // Free: até 3 dispositivos
-    if (devices <= 3) 
-      return { price: 0, plan: 'Free', baseDevices: 3, maxDevices: 3, basePrice: 0, extraDevices: 0, extraPrice: 0, pricePerExtra: 0, isEnterprise: false };
-    
+    if (devices <= 3) return {
+      price: 0,
+      plan: 'Free',
+      baseDevices: 3,
+      maxDevices: 3,
+      basePrice: 0,
+      extraDevices: 0,
+      extraPrice: 0,
+      pricePerExtra: 0,
+      isEnterprise: false
+    };
+
     // Starter: R$ 150 base (5 disp) + R$ 20/adicional (máx 30)
     if (devices <= 30) {
       const basePrice = 150;
@@ -138,19 +164,19 @@ const Landing = () => {
       const pricePerExtra = 20;
       const extraDevices = Math.max(0, devices - baseDevices);
       const extraPrice = extraDevices * pricePerExtra;
-      return { 
-        price: basePrice + extraPrice, 
-        plan: 'Starter', 
-        baseDevices, 
-        maxDevices: 30, 
-        basePrice, 
-        extraDevices, 
+      return {
+        price: basePrice + extraPrice,
+        plan: 'Starter',
+        baseDevices,
+        maxDevices: 30,
+        basePrice,
+        extraDevices,
         extraPrice,
         pricePerExtra,
-        isEnterprise: false 
+        isEnterprise: false
       };
     }
-    
+
     // Business: R$ 450 base (25 disp) + R$ 18/adicional (máx 200)
     if (devices <= 200) {
       const basePrice = 450;
@@ -158,33 +184,32 @@ const Landing = () => {
       const pricePerExtra = 18;
       const extraDevices = Math.max(0, devices - baseDevices);
       const extraPrice = extraDevices * pricePerExtra;
-      return { 
-        price: basePrice + extraPrice, 
-        plan: 'Business', 
-        baseDevices, 
-        maxDevices: 200, 
-        basePrice, 
-        extraDevices, 
+      return {
+        price: basePrice + extraPrice,
+        plan: 'Business',
+        baseDevices,
+        maxDevices: 200,
+        basePrice,
+        extraDevices,
         extraPrice,
         pricePerExtra,
-        isEnterprise: false 
+        isEnterprise: false
       };
     }
-    
+
     // Enterprise: +200 dispositivos
-    return { 
-      price: 0, 
-      plan: 'Enterprise', 
-      baseDevices: 200, 
-      maxDevices: Infinity, 
-      basePrice: 0, 
-      extraDevices: 0, 
+    return {
+      price: 0,
+      plan: 'Enterprise',
+      baseDevices: 200,
+      maxDevices: Infinity,
+      basePrice: 0,
+      extraDevices: 0,
       extraPrice: 0,
       pricePerExtra: 0,
-      isEnterprise: true 
+      isEnterprise: true
     };
   };
-
   const tierResult = calculateTier(deviceCount);
   return <div className="min-h-screen bg-background">
       <Navbar />
@@ -272,11 +297,9 @@ const Landing = () => {
             
             {/* Pain Questions - Direct Impact */}
             <div className="space-y-4 mb-8">
-              {currentContent.painQuestions?.map((question, index) => (
-                <p key={index} className="text-lg md:text-xl font-bold text-foreground">
+              {currentContent.painQuestions?.map((question, index) => <p key={index} className="text-lg md:text-xl font-bold text-foreground">
                   {question}
-                </p>
-              ))}
+                </p>)}
             </div>
 
             <h2 className="text-2xl md:text-3xl font-bold mb-4 text-destructive">
@@ -285,8 +308,7 @@ const Landing = () => {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {audience === 'business' ? (
-              <>
+            {audience === 'business' ? <>
                 <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
                   <div className="text-3xl mb-3">💸</div>
                   <h3 className="font-bold text-lg mb-2 text-destructive">R$ 200.000</h3>
@@ -307,9 +329,7 @@ const Landing = () => {
                   <h3 className="font-bold text-lg mb-2 text-destructive">67% fecham</h3>
                   <p className="text-sm text-muted-foreground">PMEs atacadas em até 6 meses. Não é estatística. É sobrevivência.</p>
                 </div>
-              </>
-            ) : (
-              <>
+              </> : <>
                 <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
                   <div className="text-3xl mb-3">📸</div>
                   <h3 className="font-bold text-lg mb-2 text-destructive">Fotos Sequestradas</h3>
@@ -330,8 +350,7 @@ const Landing = () => {
                   <h3 className="font-bold text-lg mb-2 text-destructive">PC Travando</h3>
                   <p className="text-sm text-muted-foreground">Vírus escondidos deixam seu computador lento e inutilizável.</p>
                 </div>
-              </>
-            )}
+              </>}
           </div>
 
           <div className="text-center mt-10 space-y-4">
@@ -354,7 +373,7 @@ const Landing = () => {
               <p className="text-sm text-muted-foreground mt-1">Computadores analisados</p>
             </div>
             <div className="text-center">
-              <div className="text-2xl md:text-3xl font-bold text-primary">+100</div>
+              <div className="text-2xl md:text-3xl font-bold text-primary">+10000</div>
               <p className="text-sm text-muted-foreground mt-1">Riscos identificados</p>
             </div>
             <div className="text-center">
@@ -684,12 +703,10 @@ const Landing = () => {
                 <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? "R$ 150" : "R$ 15"}</span>
                 <span className="text-muted-foreground">/{audience === 'business' ? "mês" : "computador/mês"}</span>
               </div>
-              {audience === 'business' && (
-                <p className="relative text-xs text-muted-foreground mb-4">
-                  Base: 5 dispositivos • +R$ 20/dispositivo adicional<br/>
+              {audience === 'business' && <p className="relative text-xs text-muted-foreground mb-4">
+                  Base: 5 dispositivos • +R$ 20/dispositivo adicional<br />
                   <span className="font-medium text-primary">Até 30 dispositivos</span>
-                </p>
-              )}
+                </p>}
               <p className="relative text-sm text-muted-foreground mb-6">{audience === 'business' ? "Ideal para micro e pequenas empresas" : "Ideal para até 3 computadores em casa"}</p>
               <ul className="relative space-y-3 mb-8">
                 <li className="flex items-start gap-2">
@@ -735,12 +752,10 @@ const Landing = () => {
                 <span className="text-3xl font-bold">{audience === 'business' ? "R$ 450" : "R$ 30"}</span>
                 <span className="opacity-90">/{audience === 'business' ? "mês" : "computador/mês"}</span>
               </div>
-              {audience === 'business' && (
-                <p className="text-xs opacity-80 mb-4">
-                  Base: 25 dispositivos • +R$ 18/dispositivo adicional<br/>
+              {audience === 'business' && <p className="text-xs opacity-80 mb-4">
+                  Base: 25 dispositivos • +R$ 18/dispositivo adicional<br />
                   <span className="font-medium">Até 200 dispositivos</span>
-                </p>
-              )}
+                </p>}
               <p className="text-sm opacity-90 mb-6">{audience === 'business' ? "Para pequenas e médias empresas" : "Proteção completa para até 10 computadores"}</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-start gap-2">
@@ -1000,8 +1015,7 @@ const Landing = () => {
               </AccordionContent>
             </AccordionItem>
             
-            {audience === 'business' && (
-              <>
+            {audience === 'business' && <>
                 <AccordionItem value="q7">
                   <AccordionTrigger>Vocês emitem nota fiscal?</AccordionTrigger>
                   <AccordionContent>
@@ -1015,11 +1029,9 @@ const Landing = () => {
                     Sim! Nossos relatórios ajudam a demonstrar que sua empresa toma medidas de segurança, o que é exigido pela LGPD. Fornecemos documentação e logs de auditoria.
                   </AccordionContent>
                 </AccordionItem>
-              </>
-            )}
+              </>}
             
-            {audience === 'home' && (
-              <>
+            {audience === 'home' && <>
                 <AccordionItem value="q7">
                   <AccordionTrigger>Posso monitorar o computador dos meus filhos?</AccordionTrigger>
                   <AccordionContent>
@@ -1033,8 +1045,7 @@ const Landing = () => {
                     Não! O CyberShield foi desenvolvido para ser leve e não impactar a performance do seu computador. Você nem vai perceber que está rodando.
                   </AccordionContent>
                 </AccordionItem>
-              </>
-            )}
+              </>}
           </Accordion>
         </div>
       </section>
@@ -1049,20 +1060,11 @@ const Landing = () => {
             {currentContent.calculator.label}
           </p>
           <div className="flex flex-col items-center gap-6 justify-center">
-            <Input 
-              type="number" 
-              min={1} 
-              max={500} 
-              value={deviceCount} 
-              onChange={e => setDeviceCount(Math.max(1, Math.min(500, Number(e.target.value) || 1)))} 
-              className="max-w-xs text-center text-lg" 
-              aria-label={currentContent.calculator.label} 
-            />
+            <Input type="number" min={1} max={500} value={deviceCount} onChange={e => setDeviceCount(Math.max(1, Math.min(500, Number(e.target.value) || 1)))} className="max-w-xs text-center text-lg" aria-label={currentContent.calculator.label} />
             
             <Card className="w-full max-w-md border-primary/20 bg-card/50 backdrop-blur">
               <CardContent className="pt-6 text-center">
-                {tierResult.isEnterprise ? (
-                  <>
+                {tierResult.isEnterprise ? <>
                     <div className="text-sm text-muted-foreground mb-2">Plano Recomendado</div>
                     <div className="text-2xl font-bold text-primary mb-2">Enterprise</div>
                     <p className="text-muted-foreground mb-4">
@@ -1071,9 +1073,7 @@ const Landing = () => {
                     <Button asChild className="w-full">
                       <Link to="/pricing">Ver Planos Enterprise</Link>
                     </Button>
-                  </>
-                ) : (
-                  <>
+                  </> : <>
                     <div className="text-sm text-muted-foreground mb-2">Plano Recomendado</div>
                     <div className="text-2xl font-bold text-primary mb-1">{tierResult.plan}</div>
                     <div className="text-3xl font-bold mb-2">
@@ -1085,8 +1085,7 @@ const Landing = () => {
                     <Button asChild className="w-full">
                       <Link to="/pricing">Ver Detalhes do Plano</Link>
                     </Button>
-                  </>
-                )}
+                  </>}
               </CardContent>
             </Card>
           </div>
