@@ -2910,16 +2910,22 @@ export type Database = {
         Row: {
           agent_id: string | null
           agent_name: string | null
+          commercial_priority: string | null
+          commercial_summary: string | null
+          contacted_at: string | null
           created_at: string | null
           expires_at: string | null
           file_path: string | null
           file_url: string | null
+          follow_up_at: string | null
           id: string
           job_id: string | null
+          next_action: string | null
           report_data: Json | null
           report_type: string
           risk_level: string | null
           risk_score: number | null
+          sales_status: string | null
           statistics: Json | null
           status: string | null
           tenant_id: string
@@ -2929,16 +2935,22 @@ export type Database = {
         Insert: {
           agent_id?: string | null
           agent_name?: string | null
+          commercial_priority?: string | null
+          commercial_summary?: string | null
+          contacted_at?: string | null
           created_at?: string | null
           expires_at?: string | null
           file_path?: string | null
           file_url?: string | null
+          follow_up_at?: string | null
           id?: string
           job_id?: string | null
+          next_action?: string | null
           report_data?: Json | null
           report_type: string
           risk_level?: string | null
           risk_score?: number | null
+          sales_status?: string | null
           statistics?: Json | null
           status?: string | null
           tenant_id: string
@@ -2948,16 +2960,22 @@ export type Database = {
         Update: {
           agent_id?: string | null
           agent_name?: string | null
+          commercial_priority?: string | null
+          commercial_summary?: string | null
+          contacted_at?: string | null
           created_at?: string | null
           expires_at?: string | null
           file_path?: string | null
           file_url?: string | null
+          follow_up_at?: string | null
           id?: string
           job_id?: string | null
+          next_action?: string | null
           report_data?: Json | null
           report_type?: string
           risk_level?: string | null
           risk_score?: number | null
+          sales_status?: string | null
           statistics?: Json | null
           status?: string | null
           tenant_id?: string
