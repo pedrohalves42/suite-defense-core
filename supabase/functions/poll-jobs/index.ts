@@ -119,95 +119,103 @@ Deno.serve(async (req) => {
         .eq('token_hash', tokenHash)
     ])
 
-    logger.debug('Fetching jobs for agent', { agentName: agent.agent_name })
-    // Buscar jobs pendentes (max 3)
+    logger.info('Fetching jobs for agent', { agentName: agent.agent_name, agentId: token.agent_id })
+    
+    // Buscar jobs pendentes (max 3) - usando agent_name OU agent_id
     const { data: jobs, error: jobsError } = await supabase
       .from('jobs')
-      .select('*')
-      .eq('agent_name', agent.agent_name)
+      .select('id, type, payload, approved, agent_id, agent_name, status, created_at')
+      .or(`agent_name.eq.${agent.agent_name},agent_id.eq.${token.agent_id}`)
       .eq('status', 'queued')
       .order('created_at', { ascending: true })
       .limit(3)
 
     if (jobsError) {
-      logger.error('Error fetching jobs', { error: jobsError.message })
-      // Em caso de erro, retornar array vazio em vez de lancar excecao
+      logger.error('Error fetching jobs', { error: jobsError.message, agentName: agent.agent_name })
       return new Response(
         JSON.stringify([]),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
-    // FASE 1: LOG CRITICO - ver o que veio do banco ANTES do filtro
-    logger.debug('Raw jobs from database', { jobs: JSON.stringify(jobs), count: jobs?.length ?? 0 })
+    // LOG CRÍTICO: mostrar jobs encontrados antes de qualquer filtro
+    logger.info('Jobs found in database', { 
+      agentName: agent.agent_name,
+      jobCount: jobs?.length ?? 0,
+      jobIds: jobs?.map(j => j.id) ?? [],
+      jobTypes: jobs?.map(j => j.type) ?? []
+    })
 
-    // FASE 1: Filtro QUADRUPLO de seguranca (null, ID, type, payload)
+    // Filtro de validação (null, ID, type, payload)
     const validJobs = (jobs || []).filter(job => {
-      // Check 1: Nao e null/undefined
       if (!job) {
         logger.warn('NULL job detected, filtering out')
         return false
       }
-      
-      // Check 2: Tem ID valido
       if (!job.id || typeof job.id !== 'string') {
         logger.warn('Job without valid ID', { job })
         return false
       }
-      
-      // Check 3: Tem tipo valido
       if (!job.type || typeof job.type !== 'string') {
         logger.warn('Job without valid type', { jobId: job.id })
         return false
       }
-      
-      // Check 4: Tem payload (mesmo que seja {})
+      // Payload pode ser {} mas não null/undefined
       if (job.payload === undefined || job.payload === null) {
         logger.warn('Job without payload', { jobId: job.id })
         return false
       }
-      
       return true
     })
 
-    logger.debug('Valid jobs after filtering', { count: validJobs.length })
+    logger.info('Valid jobs after filtering', { 
+      count: validJobs.length,
+      validJobIds: validJobs.map(j => j.id)
+    })
 
-    // FASE 1: LOG DETALHADO - mostrar IDs dos jobs que estao sendo retornados
-    if (validJobs.length > 0) {
-      logger.info('Returning jobs', { jobIds: validJobs.map(j => j.id) })
-    } else {
-      logger.debug('No valid jobs to return')
+    // Se não há jobs válidos, retornar array vazio imediatamente
+    if (validJobs.length === 0) {
+      logger.debug('No valid jobs to return', { agentName: agent.agent_name })
+      return new Response(
+        JSON.stringify([]),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
     }
 
-    // Marcar jobs como entregues
-    if (validJobs.length > 0) {
-      const jobIds = validJobs.map(j => j.id)
-      
-      const { error: updateError } = await supabase
-        .from('jobs')
-        .update({ 
-          status: 'delivered',
-          delivered_at: new Date().toISOString()
-        })
-        .in('id', jobIds)
-
-      if (updateError) {
-        logger.error('Error updating job status', { error: updateError.message })
-        // Nao lancar erro, apenas logar - jobs ja foram buscados
-      } else {
-        logger.success('Jobs marked as delivered', { jobIds })
-      }
-    }
-
-    // FASE 1: Retornar jobs validos (array puro para consistencia)
+    // Preparar resposta ANTES de marcar como delivered
     const jobsResponse = validJobs.map(j => ({
       id: j.id,
       type: j.type,
-      payload: j.payload,
-      approved: j.approved,
-      agent_id: j.agent_id
+      payload: j.payload || {},
+      approved: j.approved ?? true,
+      agent_id: j.agent_id || token.agent_id
     }))
 
+    // LOG CRÍTICO: mostrar exatamente o que será retornado
+    logger.info('Jobs to return to agent', { 
+      agentName: agent.agent_name,
+      responseCount: jobsResponse.length,
+      response: JSON.stringify(jobsResponse)
+    })
+
+    // AGORA marcar jobs como entregues (apenas após preparar resposta)
+    const jobIds = validJobs.map(j => j.id)
+    const { error: updateError } = await supabase
+      .from('jobs')
+      .update({ 
+        status: 'delivered',
+        delivered_at: new Date().toISOString()
+      })
+      .in('id', jobIds)
+
+    if (updateError) {
+      logger.error('Error updating job status to delivered', { error: updateError.message, jobIds })
+      // Ainda retorna os jobs - agente deve processá-los
+    } else {
+      logger.success('Jobs marked as delivered', { jobIds, count: jobIds.length })
+    }
+
+    // Retornar jobs ao agente
     return new Response(
       JSON.stringify(jobsResponse),
       {
