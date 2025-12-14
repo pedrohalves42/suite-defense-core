@@ -50,22 +50,49 @@ export function useBlockedWebsites() {
 
       if (!userRole?.tenant_id) throw new Error('Tenant not found');
 
-      const { data, error } = await supabase
-        .from('blocked_websites')
-        .upsert({
-          tenant_id: userRole.tenant_id,
-          domain_pattern: domain_pattern.toLowerCase().trim(),
-          reason: reason || null,
-          blocked_by: userData.user.id,
-          is_active: true,
-        }, { 
-          onConflict: 'tenant_id,domain_pattern' 
-        })
-        .select()
-        .single();
+      const normalizedDomain = domain_pattern.toLowerCase().trim();
 
-      if (error) throw error;
-      return data;
+      // Check if already exists (active or inactive)
+      const { data: existing } = await supabase
+        .from('blocked_websites')
+        .select('id, is_active')
+        .eq('tenant_id', userRole.tenant_id)
+        .eq('domain_pattern', normalizedDomain)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing record
+        const { data, error } = await supabase
+          .from('blocked_websites')
+          .update({
+            is_active: true,
+            reason: reason || null,
+            blocked_by: userData.user.id,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      } else {
+        // Insert new record
+        const { data, error } = await supabase
+          .from('blocked_websites')
+          .insert({
+            tenant_id: userRole.tenant_id,
+            domain_pattern: normalizedDomain,
+            reason: reason || null,
+            blocked_by: userData.user.id,
+            is_active: true,
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return data;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['blocked-websites'] });
