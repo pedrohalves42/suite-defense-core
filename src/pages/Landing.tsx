@@ -20,58 +20,77 @@ const Landing = () => {
         badge: "Empresa Brasileira • Suporte 100% em Português",
         title1: "Pare de Se Preocupar",
         title2: "com Vírus e Hackers",
-        description: "Sua empresa protegida 24h por dia,",
-        descriptionBold: " sem você precisar entender de TI.",
-        stat2Label: "Dispositivos por plano",
-        ctaButton: "Proteger Minha Empresa Agora – Grátis",
-        reassurance: "✓ 14 dias grátis, sem cartão | ✓ Instalação em 5 minutos | ✓ Cancele quando quiser"
+        description: "Proteja os computadores e os dados da sua empresa 24h por dia",
+        descriptionBold: " — sem precisar entender de TI.",
+        stat1Label: "Diagnóstico gratuito",
+        stat1Value: "48h",
+        stat2Label: "Monitoramento contínuo",
+        ctaButton: "Quero meu diagnóstico gratuito",
+        reassurance: "Sem cartão de crédito • Cancelamento simples"
       },
       benefits: {
         card1: {
-          title: "Veja Tudo em Um Só Lugar",
-          description: "Chega de ligar para o TI toda hora. Veja o status de TODOS os computadores num único painel."
+          title: "Veja tudo que acontece",
+          description: "Veja tudo que acontece nos computadores da empresa em um único painel simples."
         },
         card2: {
-          title: "Reaja Antes do Problema Virar Crise",
-          description: "Ameaças detectadas e neutralizadas automaticamente, antes de causar dano."
+          title: "Reaja antes da crise",
+          description: "Reaja antes do problema virar crise. Alertas claros e ações sugeridas."
         },
         card3: {
-          title: "Economize Tempo e Dinheiro",
-          description: "Chega de pagar consultor de TI. Mantenha tudo seguro automaticamente."
+          title: "Menos interrupções",
+          description: "Menos interrupções, mais tranquilidade. Funciona mesmo sem equipe de TI."
+        },
+        card4: {
+          title: "Tecnologia simplificada",
+          description: "Tecnologia usada por grandes empresas, simplificada para PMEs."
         }
       },
       calculator: {
         label: "Quantos dispositivos sua empresa possui?"
       },
       painQuestions: [
-        "Você conseguiria pagar R$ 200.000 amanhã se fosse atacado?",
-        "O que aconteceria se você perdesse TODOS os arquivos hoje?",
-        "Sua empresa sobreviveria 27 dias parada?"
-      ]
+        "Você conseguiria pagar R$ 200.000 amanhã se sua empresa fosse atacada?",
+        "O que aconteceria se todos os arquivos sumissem hoje?",
+        "Sua empresa sobreviveria 27 dias parada?",
+        "Quem seria responsabilizado se houvesse vazamento de dados?"
+      ],
+      painNote: "PMEs são o principal alvo porque não têm time de segurança.",
+      howItWorks: {
+        step1: { title: "Instalamos o agente", description: "Instalamos o agente em até 3 computadores para começar o diagnóstico." },
+        step2: { title: "Encontramos riscos invisíveis", description: "Identificamos softwares desatualizados, comportamentos suspeitos e vulnerabilidades." },
+        step3: { title: "Você recebe um relatório claro", description: "Relatório com o que corrigir — ou deixa o CyberShield monitorando automaticamente." }
+      }
     },
     home: {
       hero: {
         badge: "Proteção Fácil • Suporte via WhatsApp",
         title1: "Suas Fotos e Dados",
         title2: "Protegidos de Hackers",
-        description: "Proteção automática para todos os computadores de casa,",
-        descriptionBold: " mesmo que você não entenda nada de tecnologia.",
+        description: "Proteção automática para todos os computadores de casa",
+        descriptionBold: " — mesmo que você não entenda nada de tecnologia.",
+        stat1Label: "Diagnóstico gratuito",
+        stat1Value: "48h",
         stat2Label: "Ideal para 1-10 PCs",
-        ctaButton: "Proteger Minha Família Agora – Grátis",
-        reassurance: "✓ 14 dias grátis | ✓ Instale você mesmo em 5min | ✓ Suporte via WhatsApp"
+        ctaButton: "Quero meu diagnóstico gratuito",
+        reassurance: "Sem cartão de crédito • Cancelamento simples"
       },
       benefits: {
         card1: {
-          title: "Veja Tudo em Um Só Lugar",
+          title: "Veja tudo que acontece",
           description: "Do seu home office ao computador dos filhos – tudo num único painel simples."
         },
         card2: {
-          title: "Proteção Automática 24 Horas",
+          title: "Proteção automática 24h",
           description: "Vírus e ameaças bloqueados automaticamente, sem você precisar fazer nada."
         },
         card3: {
-          title: "Chega de Chamar Técnico",
-          description: "Economize dinheiro com técnico. O CyberShield cuida de tudo pra você."
+          title: "Menos interrupções",
+          description: "Chega de chamar técnico. Menos interrupções, mais tranquilidade."
+        },
+        card4: {
+          title: "Tecnologia simplificada",
+          description: "Proteção de nível empresarial, simplificada para sua casa."
         }
       },
       calculator: {
@@ -80,8 +99,15 @@ const Landing = () => {
       painQuestions: [
         "E se você perdesse TODAS as fotos de família amanhã?",
         "E se roubassem seus dados bancários enquanto você dorme?",
-        "Você sabe o que seus filhos acessam na internet?"
-      ]
+        "Você sabe o que seus filhos acessam na internet?",
+        "Quem protege seus dados enquanto você não está olhando?"
+      ],
+      painNote: "Famílias são alvos fáceis porque não têm proteção profissional.",
+      howItWorks: {
+        step1: { title: "Instalamos o agente", description: "Instalamos o agente em até 3 computadores para começar o diagnóstico." },
+        step2: { title: "Encontramos riscos invisíveis", description: "Identificamos vírus ocultos, programas suspeitos e vulnerabilidades." },
+        step3: { title: "Você recebe um relatório claro", description: "Relatório simples com o que corrigir — ou deixa o CyberShield protegendo." }
+      }
     }
   };
   const currentContent = content[audience];
@@ -206,16 +232,16 @@ const Landing = () => {
 
             <div className="flex flex-wrap justify-center gap-8 pt-4">
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">14 dias</div>
-                <div className="text-sm text-muted-foreground">Trial grátis</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">até 48h</div>
+                <div className="text-sm text-muted-foreground">Diagnóstico gratuito</div>
               </div>
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{audience === 'business' ? 'até 200' : '1-10'}</div>
-                <div className="text-sm text-muted-foreground">{currentContent.hero.stat2Label}</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">24/7</div>
+                <div className="text-sm text-muted-foreground">Monitoramento contínuo</div>
               </div>
               <div className="text-center p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50 hover:border-primary/50 transition-all hover:scale-105">
-                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">5 min</div>
-                <div className="text-sm text-muted-foreground">Configure em minutos</div>
+                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Sem TI</div>
+                <div className="text-sm text-muted-foreground">Funciona sem equipe técnica</div>
               </div>
             </div>
 
@@ -243,14 +269,14 @@ const Landing = () => {
             {/* Pain Questions - Direct Impact */}
             <div className="space-y-4 mb-8">
               {currentContent.painQuestions?.map((question, index) => (
-                <p key={index} className="text-xl md:text-2xl font-bold text-foreground">
+                <p key={index} className="text-lg md:text-xl font-bold text-foreground">
                   {question}
                 </p>
               ))}
             </div>
 
             <h2 className="text-2xl md:text-3xl font-bold mb-4 text-destructive">
-              {audience === 'business' ? "A Realidade é Brutal" : "O Perigo é Real"}
+              A realidade de quem não tem visibilidade
             </h2>
           </div>
 
@@ -305,18 +331,15 @@ const Landing = () => {
           </div>
 
           <div className="text-center mt-10 space-y-4">
-            <p className="text-lg font-semibold text-foreground">
-              {audience === 'business' 
-                ? "Não espere ser atacado para agir." 
-                : "Proteja sua família antes que seja tarde."}
+            <p className="text-sm text-muted-foreground italic">
+              {currentContent.painNote}
             </p>
             <Button asChild size="lg" className="bg-gradient-to-r from-destructive to-destructive/80 hover:shadow-lg transition-all hover:scale-105 text-destructive-foreground">
               <Link to="/signup">
-                {audience === 'business' ? "Quero Proteger Minha Empresa Agora" : "Quero Proteger Minha Família Agora"}
+                Ver meu diagnóstico gratuito
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-            <p className="text-sm text-muted-foreground">14 dias grátis • Sem compromisso • Cancele quando quiser</p>
           </div>
         </div>
       </section>
@@ -325,50 +348,51 @@ const Landing = () => {
       <section className="py-12 bg-primary/5 border-y border-primary/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">Por Que Agir AGORA?</h2>
-            <p className="text-muted-foreground">Os números não mentem</p>
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">Por Que Agir Agora?</h2>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto mb-8">
             <div className="text-center p-4">
-              <div className="text-3xl md:text-4xl font-bold text-primary mb-2">300%</div>
-              <p className="text-sm text-muted-foreground">Aumento de ataques em 2024</p>
+              <p className="text-muted-foreground">Ataques a PMEs cresceram fortemente nos últimos anos</p>
             </div>
             <div className="text-center p-4">
-              <div className="text-3xl md:text-4xl font-bold text-primary mb-2">11s</div>
-              <p className="text-sm text-muted-foreground">Um ataque a cada 11 segundos no mundo</p>
+              <p className="text-muted-foreground">Multas da LGPD podem chegar a 2% do faturamento</p>
             </div>
             <div className="text-center p-4">
-              <div className="text-3xl md:text-4xl font-bold text-primary mb-2">R$50M</div>
-              <p className="text-sm text-muted-foreground">Multas LGPD já aplicadas</p>
+              <p className="text-muted-foreground">A maioria das empresas só age depois do primeiro incidente</p>
             </div>
-            <div className="text-center p-4">
-              <div className="text-3xl md:text-4xl font-bold text-primary mb-2">93%</div>
-              <p className="text-sm text-muted-foreground">das PMEs não têm proteção adequada</p>
-            </div>
+          </div>
+          
+          <div className="text-center">
+            <Button asChild size="lg" className="bg-gradient-to-r from-primary to-accent hover:shadow-glow-primary transition-all hover:scale-105">
+              <Link to="/signup">
+                Não espere o primeiro problema
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Social Proof - Trust Indicators */}
+      {/* Social Proof - Trust Indicators (Stats do Produto) */}
       <section className="py-12 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
             <div className="text-center">
+              <div className="text-2xl md:text-3xl font-bold text-primary">+50</div>
+              <p className="text-sm text-muted-foreground mt-1">Computadores analisados</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl md:text-3xl font-bold text-primary">+100</div>
+              <p className="text-sm text-muted-foreground mt-1">Riscos identificados</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl md:text-3xl font-bold text-primary">99,9%</div>
+              <p className="text-sm text-muted-foreground mt-1">De disponibilidade</p>
+            </div>
+            <div className="text-center">
               <div className="text-2xl md:text-3xl font-bold text-primary">🇧🇷</div>
               <p className="text-sm text-muted-foreground mt-1">Empresa 100% Brasileira</p>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl md:text-3xl font-bold text-primary">🔒</div>
-              <p className="text-sm text-muted-foreground mt-1">Dados Criptografados</p>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl md:text-3xl font-bold text-primary">💬</div>
-              <p className="text-sm text-muted-foreground mt-1">Suporte em Português</p>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl md:text-3xl font-bold text-primary">⚡</div>
-              <p className="text-sm text-muted-foreground mt-1">Tecnologia Microsoft & VirusTotal</p>
             </div>
           </div>
         </div>
@@ -498,7 +522,7 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* How It Works */}
+      {/* How It Works - V4 Reformulado */}
       <section className="py-20 relative overflow-hidden">
         <div className="absolute top-1/4 left-10 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse-slow" />
         <div className="absolute bottom-1/4 right-10 w-64 h-64 bg-accent/10 rounded-full blur-3xl animate-pulse-slow" style={{
@@ -507,10 +531,10 @@ const Landing = () => {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16 animate-fade-in">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              {audience === 'business' ? "Como Funciona" : "Como Funciona o CyberShield em Casa"}
+              Como Funciona
             </h2>
             <p className="text-xl text-muted-foreground">
-              {audience === 'business' ? "Três passos simples para proteção completa" : "Proteção fácil em três passos para sua família"}
+              Simples assim
             </p>
           </div>
 
@@ -521,9 +545,9 @@ const Landing = () => {
                 <div className="w-14 h-14 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
                   <span className="text-2xl font-bold text-primary-foreground">1</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Instalação em Minutos" : "Instale em Minutos"}</h3>
+                <h3 className="text-2xl font-bold mb-4">{currentContent.howItWorks.step1.title}</h3>
                 <p className="text-muted-foreground text-lg">
-                  {audience === 'business' ? "Instale o agente em cada dispositivo. Processo simplificado, sem necessidade de conhecimento técnico avançado." : "Instale o software facilmente em todos os computadores da sua casa."}
+                  {currentContent.howItWorks.step1.description}
                 </p>
               </div>
             </div>
@@ -536,9 +560,9 @@ const Landing = () => {
                 <div className="w-14 h-14 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
                   <span className="text-2xl font-bold text-primary-foreground">2</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Monitoramento Centralizado" : "Monitoramento Fácil"}</h3>
+                <h3 className="text-2xl font-bold mb-4">{currentContent.howItWorks.step2.title}</h3>
                 <p className="text-muted-foreground text-lg">
-                  {audience === 'business' ? "Dashboard unificado exibe status operacional, ameaças detectadas e anomalias em tempo real." : "Veja o status de todos os PCs da casa em um painel simples e intuitivo."}
+                  {currentContent.howItWorks.step2.description}
                 </p>
               </div>
             </div>
@@ -551,12 +575,21 @@ const Landing = () => {
                 <div className="w-14 h-14 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
                   <span className="text-2xl font-bold text-primary-foreground">3</span>
                 </div>
-                <h3 className="text-2xl font-bold mb-4">{audience === 'business' ? "Resposta Automatizada" : "Proteção Automatizada"}</h3>
+                <h3 className="text-2xl font-bold mb-4">{currentContent.howItWorks.step3.title}</h3>
                 <p className="text-muted-foreground text-lg">
-                  {audience === 'business' ? "Execute correções e atualizações remotamente através da interface centralizada." : "O CyberShield protege automaticamente contra ameaças sem que você precise se preocupar."}
+                  {currentContent.howItWorks.step3.description}
                 </p>
               </div>
             </div>
+          </div>
+          
+          <div className="text-center mt-12">
+            <Button asChild size="lg" className="bg-gradient-to-r from-primary to-accent hover:shadow-glow-primary transition-all hover:scale-105">
+              <Link to="/signup">
+                Ver meu diagnóstico gratuito
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
@@ -711,7 +744,7 @@ const Landing = () => {
               </ul>
               <Button variant="outline" className="relative w-full group-hover:bg-primary/10 transition-colors" asChild>
                 <Link to="/signup">
-                  Iniciar teste grátis – 14 dias
+                  Começar diagnóstico gratuito
                 </Link>
               </Button>
             </div>
@@ -762,7 +795,7 @@ const Landing = () => {
               </ul>
               <Button variant="outline" className="w-full bg-white/20 hover:bg-white/30 border-white/30" asChild>
                 <Link to="/signup">
-                  Iniciar teste grátis – 14 dias
+                  Começar diagnóstico gratuito
                 </Link>
               </Button>
             </div>
@@ -827,19 +860,35 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-3 gap-12 max-w-6xl mx-auto">
             {audience === 'business' ? <>
+                {/* Depoimento Simplificado V4 */}
                 <Card className="group relative bg-card/50 backdrop-blur-xl border-primary/20 transition-all duration-300 hover:scale-105 hover:shadow-glow-primary hover:border-primary/50">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardContent className="relative pt-6">
                     <div className="mb-4 text-primary/30 text-5xl font-serif leading-none">"</div>
-                    <p className="mb-6 text-muted-foreground leading-relaxed">"Antes eu gastava R$ 2.000/mês com consultoria de TI. Agora pago uma fração e tenho visibilidade de TUDO. <span className="font-semibold text-foreground">Economizei 40h por mês</span> só em chamados de suporte."</p>
+                    <p className="mb-6 text-muted-foreground leading-relaxed">"Achávamos que estava tudo certo. Em 2 dias vimos problemas que nunca tinham aparecido."</p>
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <span className="font-bold text-primary">RS</span>
+                      </div>
+                      <div>
+                        <p className="font-bold">Sócio</p>
+                        <p className="text-sm text-muted-foreground">Escritório Contábil (SP)</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="group relative bg-card/50 backdrop-blur-xl border-primary/20 transition-all duration-300 hover:scale-105 hover:shadow-glow-primary hover:border-primary/50">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <CardContent className="relative pt-6">
+                    <div className="mb-4 text-primary/30 text-5xl font-serif leading-none">"</div>
+                    <p className="mb-6 text-muted-foreground leading-relaxed">"Economizei 40h por mês só com chamados de suporte. Agora vejo tudo num painel simples."</p>
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                         <span className="font-bold text-primary">CS</span>
                       </div>
                       <div>
-                        <p className="font-bold">Carlos Silva</p>
-                        <p className="text-sm text-muted-foreground">Diretor de TI • Distribuidora ABC</p>
-                        <p className="text-xs text-primary">45 dispositivos protegidos</p>
+                        <p className="font-bold">Diretor de TI</p>
+                        <p className="text-sm text-muted-foreground">Distribuidora (RJ)</p>
                       </div>
                     </div>
                   </CardContent>
@@ -848,32 +897,14 @@ const Landing = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardContent className="relative pt-6">
                     <div className="mb-4 text-primary/30 text-5xl font-serif leading-none">"</div>
-                    <p className="mb-6 text-muted-foreground leading-relaxed">"Recebi alerta de ransomware e <span className="font-semibold text-foreground">o sistema bloqueou automaticamente</span> antes de infectar a rede. Isso teria custado pelo menos R$ 150.000 em resgate."</p>
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <span className="font-bold text-primary">AP</span>
-                      </div>
-                      <div>
-                        <p className="font-bold">Ana Pereira</p>
-                        <p className="text-sm text-muted-foreground">Gerente de Segurança • Contabilidade XYZ</p>
-                        <p className="text-xs text-primary">28 dispositivos protegidos</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="group relative bg-card/50 backdrop-blur-xl border-primary/20 transition-all duration-300 hover:scale-105 hover:shadow-glow-primary hover:border-primary/50">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <CardContent className="relative pt-6">
-                    <div className="mb-4 text-primary/30 text-5xl font-serif leading-none">"</div>
-                    <p className="mb-6 text-muted-foreground leading-relaxed">"Consegui provar compliance LGPD na auditoria graças aos relatórios detalhados. <span className="font-semibold text-foreground">Suporte respondeu em 10 minutos</span> quando precisei de ajuda."</p>
+                    <p className="mb-6 text-muted-foreground leading-relaxed">"O suporte respondeu em 10 minutos. Consegui provar compliance na auditoria graças aos relatórios."</p>
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                         <span className="font-bold text-primary">JC</span>
                       </div>
                       <div>
-                        <p className="font-bold">João Costa</p>
-                        <p className="text-sm text-muted-foreground">CEO • Startup Tech</p>
-                        <p className="text-xs text-primary">15 dispositivos protegidos</p>
+                        <p className="font-bold">CEO</p>
+                        <p className="text-sm text-muted-foreground">Startup Tech (SP)</p>
                       </div>
                     </div>
                   </CardContent>
@@ -952,7 +983,14 @@ const Landing = () => {
             <AccordionItem value="q1">
               <AccordionTrigger>Preciso instalar em todos os computadores?</AccordionTrigger>
               <AccordionContent>
-                Sim, para proteção completa recomendamos instalar em todos os dispositivos. Mas você pode começar com os mais importantes e adicionar outros depois. A instalação leva menos de 5 minutos por computador.
+                Não. O diagnóstico começa com até 3 máquinas. Depois você pode adicionar mais.
+              </AccordionContent>
+            </AccordionItem>
+            
+            <AccordionItem value="q0">
+              <AccordionTrigger>Funciona sem equipe de TI?</AccordionTrigger>
+              <AccordionContent>
+                Sim. O sistema foi feito para quem não é técnico. Alertas claros e ações sugeridas.
               </AccordionContent>
             </AccordionItem>
             
@@ -973,7 +1011,7 @@ const Landing = () => {
             <AccordionItem value="q4">
               <AccordionTrigger>Meus dados ficam seguros com vocês?</AccordionTrigger>
               <AccordionContent>
-                Absolutamente. Usamos criptografia de ponta a ponta (a mesma dos bancos) e nossos servidores estão protegidos pelas melhores práticas de segurança. Seus dados nunca são vendidos ou compartilhados.
+                Sim. Dados criptografados e acesso controlado.
               </AccordionContent>
             </AccordionItem>
             
@@ -1081,6 +1119,22 @@ const Landing = () => {
               </CardContent>
             </Card>
           </div>
+        </div>
+      </section>
+
+      {/* CTA Final Section - V4 */}
+      <section className="py-16 bg-gradient-to-r from-primary/10 to-accent/10 border-y border-primary/20">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold mb-6">
+            Veja como está a segurança da sua {audience === 'business' ? 'empresa' : 'casa'}
+          </h2>
+          <Button asChild size="lg" className="text-lg h-14 px-10 bg-gradient-to-r from-primary to-accent hover:shadow-glow-primary transition-all hover:scale-105">
+            <Link to="/signup">
+              Quero meu diagnóstico gratuito agora
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Link>
+          </Button>
+          <p className="text-sm text-muted-foreground mt-4">Sem cartão de crédito • Cancelamento simples</p>
         </div>
       </section>
 
