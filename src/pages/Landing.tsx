@@ -49,7 +49,7 @@ const Landing = () => {
       calculator: {
         label: "Quantos dispositivos sua empresa possui?"
       },
-      painQuestions: ["Você conseguiria pagar R$ 200.000 amanhã se sua empresa fosse atacada?", "Se todos os arquivos sumissem hoje, quanto tempo levaria para voltar a operar?", "Sua empresa sobreviveria 27 dias parada?", "Quem seria responsabilizado se houvesse vazamento de dados?"],
+      painQuestions: ["O que acontece se sua empresa parar amanhã?", "Você sabe quais riscos estão invisíveis agora?", "Quem responde se houver vazamento de dados?"],
       painNote: "Essa é a realidade de quem não tem visibilidade.",
       howItWorks: {
         step1: {
@@ -100,7 +100,7 @@ const Landing = () => {
       calculator: {
         label: "Quantos computadores você tem em casa?"
       },
-      painQuestions: ["E se você perdesse TODAS as fotos de família amanhã?", "E se roubassem seus dados bancários enquanto você dorme?", "Você sabe o que seus filhos acessam na internet?", "Quem protege seus dados enquanto você não está olhando?"],
+      painQuestions: ["Suas fotos e documentos estão realmente seguros?", "Você sabe o que acontece no seu computador quando não está olhando?", "Quem protege sua família online?"],
       painNote: "Famílias são alvos fáceis porque não têm proteção profissional.",
       howItWorks: {
         step1: {
