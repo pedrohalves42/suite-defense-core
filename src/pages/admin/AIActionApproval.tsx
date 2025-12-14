@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, Clock, AlertTriangle, Info, Loader2 } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CheckCircle, XCircle, Clock, AlertTriangle, Info, Loader2, Sparkles, Brain, RefreshCw } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface AIAction {
   id: string;
@@ -38,10 +39,22 @@ interface ActionConfig {
   max_executions_per_day: number;
 }
 
+interface AIInsight {
+  id: string;
+  title: string;
+  description: string;
+  severity: string;
+  recommendation: string | null;
+  confidence_score: number | null;
+  created_at: string;
+  acknowledged: boolean;
+}
+
 export default function AIActionApproval() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [executingActions, setExecutingActions] = useState<Set<string>>(new Set());
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Buscar acoes pendentes
   const { data: pendingActions, isLoading } = useQuery({
@@ -60,7 +73,26 @@ export default function AIActionApproval() {
       if (error) throw error;
       return data as AIAction[];
     },
-    refetchInterval: 10000, // Atualiza a cada 10s
+    refetchInterval: 10000,
+  });
+
+  // Buscar insights recentes (últimos 30 dias)
+  const { data: recentInsights } = useQuery({
+    queryKey: ['ai-insights-recent'],
+    queryFn: async () => {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 30);
+      
+      const { data, error } = await supabase
+        .from('ai_insights')
+        .select('id, title, description, severity, recommendation, confidence_score, created_at, acknowledged')
+        .gte('created_at', cutoff.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data as AIInsight[];
+    },
   });
 
   // Buscar configuracoes de acoes
@@ -177,6 +209,41 @@ export default function AIActionApproval() {
     return <Badge variant={variants[severity] || 'default'}>{severity}</Badge>;
   };
 
+  // Executar análise manual
+  const handleAnalyzeNow = async () => {
+    setIsAnalyzing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('ai-system-analyzer');
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Análise Concluída',
+        description: `${data.insightsGenerated || 0} insights gerados para ${data.tenantsAnalyzed || 0} tenant(s).`,
+      });
+      
+      // Refresh data
+      queryClient.invalidateQueries({ queryKey: ['ai-actions-pending'] });
+      queryClient.invalidateQueries({ queryKey: ['ai-insights-recent'] });
+    } catch (error) {
+      toast({
+        title: 'Erro na Análise',
+        description: error instanceof Error ? error.message : 'Erro desconhecido',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'text-red-500 bg-red-500/10';
+      case 'warning': return 'text-yellow-500 bg-yellow-500/10';
+      default: return 'text-blue-500 bg-blue-500/10';
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -187,20 +254,103 @@ export default function AIActionApproval() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Aprovacao de Acoes da IA</h1>
-        <p className="text-muted-foreground mt-2">
-          Revise e aprove acoes sugeridas pela IA de autoaprendizado
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Inteligência Artificial</h1>
+          <p className="text-muted-foreground mt-2">
+            Insights e ações sugeridas pela IA de autoaprendizado
+          </p>
+        </div>
+        <Button 
+          onClick={handleAnalyzeNow} 
+          disabled={isAnalyzing}
+          className="gap-2"
+        >
+          {isAnalyzing ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Analisando...
+            </>
+          ) : (
+            <>
+              <Brain className="h-4 w-4" />
+              Analisar Agora
+            </>
+          )}
+        </Button>
       </div>
 
-      {pendingActions && pendingActions.length === 0 && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            Nenhuma acao pendente de aprovacao no momento.
+      {/* Insights Recentes */}
+      {recentInsights && recentInsights.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Insights Recentes
+            </CardTitle>
+            <CardDescription>
+              Descobertas da IA nos últimos 30 dias
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {recentInsights.map((insight) => (
+                <div 
+                  key={insight.id} 
+                  className="flex items-start gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                >
+                  <div className={`p-2 rounded-full ${getSeverityColor(insight.severity)}`}>
+                    {insight.severity === 'critical' ? (
+                      <AlertTriangle className="h-4 w-4" />
+                    ) : insight.severity === 'warning' ? (
+                      <AlertTriangle className="h-4 w-4" />
+                    ) : (
+                      <Info className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{insight.title}</p>
+                      <Badge variant="outline" className="text-xs">
+                        {Math.round((insight.confidence_score || 0) * 100)}% confiança
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {insight.description}
+                    </p>
+                    {insight.recommendation && (
+                      <p className="text-xs text-primary mt-2">
+                        💡 {insight.recommendation}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatBrazilDateTime(insight.created_at)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Estado Vazio */}
+      {(!recentInsights || recentInsights.length === 0) && pendingActions?.length === 0 && (
+        <Alert className="border-dashed">
+          <Brain className="h-4 w-4" />
+          <AlertTitle>Nenhum insight gerado ainda</AlertTitle>
+          <AlertDescription className="mt-2">
+            A IA analisa seus dados automaticamente todos os dias às 09:00. 
+            Você também pode clicar em "Analisar Agora" para executar uma análise manual.
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Ações Pendentes */}
+      {pendingActions && pendingActions.length > 0 && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Ações Pendentes de Aprovação</h2>
+        </div>
       )}
 
       <div className="grid gap-4">
