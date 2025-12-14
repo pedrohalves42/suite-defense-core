@@ -412,3 +412,11 @@ verify_jwt = true
 # === Auto Report Generation ===
 [functions.auto-generate-report]
 verify_jwt = false
+
+# === Report Notifications & Scheduling ===
+[functions.send-report-notification]
+verify_jwt = false
+
+[functions.scheduled-report-generator]
+verify_jwt = false
+schedule = "0 3 * * *"
