@@ -40,6 +40,84 @@ function calculateRiskScore(stats: any): { score: number; level: string } {
   return { score, level }
 }
 
+// V4: Calculate commercial priority based on risk score
+function getCommercialPriority(riskScore: number): 'high' | 'medium' | 'low' {
+  if (riskScore >= 60) return 'high'    // Notify immediately
+  if (riskScore >= 30) return 'medium'  // Notify in next batch
+  return 'low'                          // Just store
+}
+
+// V4: Determine next action based on priority
+function getNextAction(priority: 'high' | 'medium' | 'low'): string {
+  if (priority === 'high') return 'send_whatsapp'
+  if (priority === 'medium') return 'schedule_call'
+  return 'await_client'
+}
+
+// V4: Generate commercial summary text ready for WhatsApp/Email
+function generateCommercialSummary(
+  stats: any, 
+  riskLevel: string, 
+  agentName: string,
+  tenantName?: string
+): string {
+  const issues: string[] = []
+  
+  if ((stats.critical_vulnerabilities || 0) > 0) {
+    issues.push(`${stats.critical_vulnerabilities} vulnerabilidade(s) crítica(s)`)
+  }
+  if ((stats.high_vulnerabilities || 0) > 0) {
+    issues.push(`${stats.high_vulnerabilities} vulnerabilidade(s) de alto risco`)
+  }
+  if ((stats.threats_found || 0) > 0) {
+    issues.push(`${stats.threats_found} ameaça(s) detectada(s) pelo antivírus`)
+  }
+  if ((stats.malicious_scans || 0) > 0) {
+    issues.push(`${stats.malicious_scans} acesso(s) suspeito(s) a sites maliciosos`)
+  }
+  if ((stats.blocked_sites || 0) > 0) {
+    issues.push(`${stats.blocked_sites} site(s) bloqueado(s) por política de segurança`)
+  }
+  if ((stats.outdated_software || 0) > 0) {
+    issues.push(`${stats.outdated_software} software(s) desatualizado(s)`)
+  }
+  
+  // No issues - positive message
+  if (issues.length === 0) {
+    return `✅ *Diagnóstico de Segurança Concluído*
+
+Computador: ${agentName}
+${tenantName ? `Empresa: ${tenantName}\n` : ''}
+Status: ✅ Ambiente Seguro
+
+Nenhum risco crítico identificado. Seu ambiente está protegido.
+
+_Relatório gerado automaticamente por CyberShield_`
+  }
+  
+  // Has issues - urgency-based message
+  const urgency = riskLevel === 'CRÍTICO' ? 'imediata' : 
+                  riskLevel === 'ALTO' ? 'em até 48 horas' : 'em até 7 dias'
+  
+  const emoji = riskLevel === 'CRÍTICO' ? '🔴' : 
+                riskLevel === 'ALTO' ? '🟠' : '🟡'
+  
+  return `${emoji} *Diagnóstico de Segurança - Atenção Necessária*
+
+Computador: ${agentName}
+${tenantName ? `Empresa: ${tenantName}\n` : ''}
+*Classificação: Risco ${riskLevel}*
+
+Identificamos:
+${issues.map(i => `• ${i}`).join('\n')}
+
+⏰ *Ação recomendada:* Correção ${urgency}
+
+Posso explicar em 10 minutos o que significa e como resolver?
+
+_Relatório gerado automaticamente por CyberShield_`
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -63,6 +141,15 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    // Get tenant name for commercial summary
+    const { data: tenantData } = await supabase
+      .from('tenants')
+      .select('name')
+      .eq('id', tenant_id)
+      .single()
+    
+    const tenantName = tenantData?.name
 
     // Determine report type based on job_type
     let reportType = 'full_security'
@@ -156,14 +243,22 @@ Deno.serve(async (req) => {
       const uniqueDomains = new Set(webActivity?.map((w: any) => w.domain) || [])
       statistics.unique_domains = uniqueDomains.size
       statistics.malicious_scans = webActivity?.filter((w: any) => w.is_blocked).length || 0
+      statistics.blocked_sites = webActivity?.filter((w: any) => w.is_blocked).length || 0
       reportData.web_activity = webActivity || []
     }
 
     // Calculate risk score
     const { score: riskScore, level: riskLevel } = calculateRiskScore(statistics)
+    
+    // V4: Calculate commercial priority and next action
+    const commercialPriority = getCommercialPriority(riskScore)
+    const nextAction = getNextAction(commercialPriority)
+    
+    // V4: Generate commercial summary
+    const agentLabel = agent_name || 'Todos os Agentes'
+    const commercialSummary = generateCommercialSummary(statistics, riskLevel, agentLabel, tenantName)
 
     // Generate title
-    const agentLabel = agent_name || 'Todos os Agentes'
     const reportTypeLabels: Record<string, string> = {
       'full_security': 'Relatório de Segurança Completo',
       'software_inventory': 'Inventário de Software',
@@ -173,7 +268,7 @@ Deno.serve(async (req) => {
     }
     const title = `${reportTypeLabels[reportType]} - ${agentLabel}`
 
-    // Insert report
+    // Insert report with V4 commercial fields
     const { data: report, error: insertError } = await supabase
       .from('generated_reports')
       .insert({
@@ -189,7 +284,12 @@ Deno.serve(async (req) => {
         status: 'generated',
         triggered_by,
         job_id,
-        expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString()
+        expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+        // V4 Commercial fields
+        sales_status: 'open',
+        commercial_priority: commercialPriority,
+        next_action: nextAction,
+        commercial_summary: commercialSummary
       })
       .select()
       .single()
@@ -203,7 +303,9 @@ Deno.serve(async (req) => {
       report_id: report.id,
       report_type: reportType,
       risk_score: riskScore,
-      risk_level: riskLevel
+      risk_level: riskLevel,
+      commercial_priority: commercialPriority,
+      next_action: nextAction
     })
 
     return new Response(
@@ -212,7 +314,10 @@ Deno.serve(async (req) => {
         report_id: report.id,
         report_type: reportType,
         risk_score: riskScore,
-        risk_level: riskLevel
+        risk_level: riskLevel,
+        commercial_priority: commercialPriority,
+        next_action: nextAction,
+        has_commercial_summary: !!commercialSummary
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
