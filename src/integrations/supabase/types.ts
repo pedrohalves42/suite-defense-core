@@ -2906,6 +2906,137 @@ export type Database = {
           },
         ]
       }
+      generated_reports: {
+        Row: {
+          agent_id: string | null
+          agent_name: string | null
+          created_at: string | null
+          expires_at: string | null
+          file_path: string | null
+          file_url: string | null
+          id: string
+          job_id: string | null
+          report_data: Json | null
+          report_type: string
+          risk_level: string | null
+          risk_score: number | null
+          statistics: Json | null
+          status: string | null
+          tenant_id: string
+          title: string
+          triggered_by: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          file_path?: string | null
+          file_url?: string | null
+          id?: string
+          job_id?: string | null
+          report_data?: Json | null
+          report_type: string
+          risk_level?: string | null
+          risk_score?: number | null
+          statistics?: Json | null
+          status?: string | null
+          tenant_id: string
+          title: string
+          triggered_by?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          file_path?: string | null
+          file_url?: string | null
+          id?: string
+          job_id?: string | null
+          report_data?: Json | null
+          report_type?: string
+          risk_level?: string | null
+          risk_score?: number | null
+          statistics?: Json | null
+          status?: string | null
+          tenant_id?: string
+          title?: string
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "generated_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_normalized"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hmac_signatures: {
         Row: {
           agent_name: string
