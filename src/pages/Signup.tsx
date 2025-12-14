@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Shield, Eye, EyeOff } from 'lucide-react';
 import { logger } from '@/lib/logger';
@@ -28,12 +29,14 @@ const signupSchema = z.object({
     .min(2, 'Nome deve ter pelo menos 2 caracteres')
     .max(100, 'Nome muito longo')
     .regex(/^[a-zA-Z\s]+$/, 'Nome deve conter apenas letras e espacos'),
+  deviceCount: z.string().optional(),
 });
 
 export default function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [deviceCount, setDeviceCount] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
@@ -44,7 +47,7 @@ export default function Signup() {
     setLoading(true);
 
     // Validate inputs
-    const validation = signupSchema.safeParse({ email, password, fullName });
+    const validation = signupSchema.safeParse({ email, password, fullName, deviceCount });
     if (!validation.success) {
       const firstError = validation.error.issues[0];
       toast({
@@ -65,6 +68,7 @@ export default function Signup() {
         emailRedirectTo: redirectUrl,
         data: {
           full_name: validation.data.fullName,
+          device_count: deviceCount || undefined,
         },
       },
     });
@@ -162,6 +166,21 @@ export default function Signup() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="deviceCount">Quantos computadores você quer proteger?</Label>
+              <Select value={deviceCount} onValueChange={setDeviceCount}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma opção" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1-3">1 a 3 computadores</SelectItem>
+                  <SelectItem value="4-10">4 a 10 computadores</SelectItem>
+                  <SelectItem value="11-30">11 a 30 computadores</SelectItem>
+                  <SelectItem value="31-100">31 a 100 computadores</SelectItem>
+                  <SelectItem value="100+">Mais de 100 computadores</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <div className="relative">
                 <Input
@@ -191,8 +210,11 @@ export default function Signup() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Criando conta...' : 'Criar Conta'}
+              {loading ? 'Criando conta...' : 'Ver riscos da minha empresa'}
             </Button>
+            <p className="text-xs text-center text-muted-foreground">
+              Planos a partir de R$ 150/mês após o diagnóstico.
+            </p>
             <div className="text-sm text-center text-muted-foreground">
               Ja tem uma conta?{' '}
               <Link to="/login" className="text-primary hover:underline">

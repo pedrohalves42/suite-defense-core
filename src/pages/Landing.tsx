@@ -18,15 +18,15 @@ const Landing = () => {
     business: {
       hero: {
         badge: "Empresa Brasileira • Suporte 100% em Português",
-        title1: "Pare de Se Preocupar",
-        title2: "com Vírus e Hackers",
-        description: "Proteja os computadores e os dados da sua empresa 24h por dia",
-        descriptionBold: " — sem precisar entender de TI.",
+        title1: "Pare de se preocupar com vírus e hackers",
+        title2: "Tenha visibilidade real dos riscos da sua empresa",
+        description: "Descubra vulnerabilidades invisíveis, softwares desatualizados e riscos críticos",
+        descriptionBold: " antes que virem prejuízo, multa ou paralisação.",
         stat1Label: "Diagnóstico gratuito",
         stat1Value: "48h",
         stat2Label: "Monitoramento contínuo",
-        ctaButton: "Quero meu diagnóstico gratuito",
-        reassurance: "Sem cartão de crédito • Cancelamento simples"
+        ctaButton: "Ver riscos reais da minha empresa (grátis)",
+        reassurance: "Planos a partir de R$ 150/mês após o diagnóstico. Sem cartão de crédito."
       },
       benefits: {
         card1: {
@@ -51,15 +51,15 @@ const Landing = () => {
       },
       painQuestions: [
         "Você conseguiria pagar R$ 200.000 amanhã se sua empresa fosse atacada?",
-        "O que aconteceria se todos os arquivos sumissem hoje?",
+        "Se todos os arquivos sumissem hoje, quanto tempo levaria para voltar a operar?",
         "Sua empresa sobreviveria 27 dias parada?",
         "Quem seria responsabilizado se houvesse vazamento de dados?"
       ],
-      painNote: "PMEs são o principal alvo porque não têm time de segurança.",
+      painNote: "Essa é a realidade de quem não tem visibilidade.",
       howItWorks: {
-        step1: { title: "Instalamos o agente", description: "Instalamos o agente em até 3 computadores para começar o diagnóstico." },
-        step2: { title: "Encontramos riscos invisíveis", description: "Identificamos softwares desatualizados, comportamentos suspeitos e vulnerabilidades." },
-        step3: { title: "Você recebe um relatório claro", description: "Relatório com o que corrigir — ou deixa o CyberShield monitorando automaticamente." }
+        step1: { title: "Instalamos o agente", description: "Instalação rápida em até 3 computadores para iniciar o diagnóstico." },
+        step2: { title: "Encontramos riscos invisíveis", description: "Softwares desatualizados, vulnerabilidades e comportamentos suspeitos." },
+        step3: { title: "Você recebe um laudo claro", description: "O que corrigir, o que priorizar — ou deixar a CyberShield monitorando." }
       }
     },
     home: {
@@ -246,8 +246,12 @@ const Landing = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-              <Button asChild size="lg" className="text-lg h-14 px-8 bg-gradient-to-r from-primary to-accent hover:shadow-glow-primary transition-all hover:scale-105"><Link to="/signup">{currentContent.hero.ctaButton}<ArrowRight className="ml-2 h-5 w-5" /></Link></Button>
-              <Button asChild size="lg" variant="outline" className="text-lg h-14 px-8 bg-green-600 hover:bg-green-700 text-white border-green-600 hover:shadow-lg transition-all hover:scale-105"><a href={whatsappLink} target="_blank" rel="noopener noreferrer"><MessageCircle className="mr-2 h-5 w-5" />Falar no WhatsApp</a></Button>
+              <Button asChild size="lg" className="text-lg h-14 px-8 bg-gradient-to-r from-primary to-accent hover:shadow-glow-primary transition-all hover:scale-105">
+                <Link to="/signup">
+                  {currentContent.hero.ctaButton}
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
             </div>
 
             <p className="text-sm text-muted-foreground">{currentContent.hero.reassurance}</p>
@@ -263,7 +267,7 @@ const Landing = () => {
           <div className="text-center mb-12 animate-fade-in">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-destructive/10 border border-destructive/30 backdrop-blur-sm mb-6">
               <AlertTriangle className="w-4 h-4 text-destructive animate-pulse" />
-              <span className="text-sm font-medium text-destructive">Pergunte a Si Mesmo</span>
+              <span className="text-sm font-medium text-destructive">Pergunte a si mesmo agora</span>
             </div>
             
             {/* Pain Questions - Direct Impact */}
@@ -276,7 +280,7 @@ const Landing = () => {
             </div>
 
             <h2 className="text-2xl md:text-3xl font-bold mb-4 text-destructive">
-              A realidade de quem não tem visibilidade
+              {currentContent.painNote}
             </h2>
           </div>
 
@@ -286,22 +290,22 @@ const Landing = () => {
                 <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
                   <div className="text-3xl mb-3">💸</div>
                   <h3 className="font-bold text-lg mb-2 text-destructive">R$ 200.000</h3>
-                  <p className="text-sm text-muted-foreground">Custo médio de um ataque. Você tem esse dinheiro sobrando?</p>
+                  <p className="text-sm text-muted-foreground">Custo médio de um ataque. Na sua empresa, isso quebraria o caixa?</p>
                 </div>
                 <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
                   <div className="text-3xl mb-3">⏱️</div>
                   <h3 className="font-bold text-lg mb-2 text-destructive">27 dias parado</h3>
-                  <p className="text-sm text-muted-foreground">Tempo médio para se recuperar. Seus clientes vão esperar?</p>
+                  <p className="text-sm text-muted-foreground">Tempo médio de recuperação. Seus clientes esperariam?</p>
                 </div>
                 <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
                   <div className="text-3xl mb-3">📋</div>
-                  <h3 className="font-bold text-lg mb-2 text-destructive">Multa de 2%</h3>
-                  <p className="text-sm text-muted-foreground">LGPD pode multar em 2% do faturamento. Você está preparado?</p>
+                  <h3 className="font-bold text-lg mb-2 text-destructive">Multa de até 2%</h3>
+                  <p className="text-sm text-muted-foreground">LGPD sobre o faturamento. Você está preparado?</p>
                 </div>
                 <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
                   <div className="text-3xl mb-3">☠️</div>
                   <h3 className="font-bold text-lg mb-2 text-destructive">67% fecham</h3>
-                  <p className="text-sm text-muted-foreground">das PMEs fecham em 6 meses após ataque. Não seja estatística.</p>
+                  <p className="text-sm text-muted-foreground">PMEs atacadas em até 6 meses. Não é estatística. É sobrevivência.</p>
                 </div>
               </>
             ) : (
@@ -331,12 +335,9 @@ const Landing = () => {
           </div>
 
           <div className="text-center mt-10 space-y-4">
-            <p className="text-sm text-muted-foreground italic">
-              {currentContent.painNote}
-            </p>
             <Button asChild size="lg" className="bg-gradient-to-r from-destructive to-destructive/80 hover:shadow-lg transition-all hover:scale-105 text-destructive-foreground">
               <Link to="/signup">
-                Ver meu diagnóstico gratuito
+                Ver riscos reais da minha empresa (grátis)
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
@@ -586,7 +587,7 @@ const Landing = () => {
           <div className="text-center mt-12">
             <Button asChild size="lg" className="bg-gradient-to-r from-primary to-accent hover:shadow-glow-primary transition-all hover:scale-105">
               <Link to="/signup">
-                Ver meu diagnóstico gratuito
+                Ver riscos reais da minha empresa (grátis)
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
@@ -860,12 +861,12 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-3 gap-12 max-w-6xl mx-auto">
             {audience === 'business' ? <>
-                {/* Depoimento Simplificado V4 */}
+                {/* Depoimentos V4 com fricção */}
                 <Card className="group relative bg-card/50 backdrop-blur-xl border-primary/20 transition-all duration-300 hover:scale-105 hover:shadow-glow-primary hover:border-primary/50">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardContent className="relative pt-6">
                     <div className="mb-4 text-primary/30 text-5xl font-serif leading-none">"</div>
-                    <p className="mb-6 text-muted-foreground leading-relaxed">"Achávamos que estava tudo certo. Em 2 dias vimos problemas que nunca tinham aparecido."</p>
+                    <p className="mb-6 text-muted-foreground leading-relaxed">"Achávamos que estava tudo certo. Em dois dias surgiram problemas que nunca tinham sido detectados. Não foi confortável de ver, mas evitamos algo muito pior."</p>
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                         <span className="font-bold text-primary">RS</span>
@@ -881,7 +882,7 @@ const Landing = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardContent className="relative pt-6">
                     <div className="mb-4 text-primary/30 text-5xl font-serif leading-none">"</div>
-                    <p className="mb-6 text-muted-foreground leading-relaxed">"Economizei 40h por mês só com chamados de suporte. Agora vejo tudo num painel simples."</p>
+                    <p className="mb-6 text-muted-foreground leading-relaxed">"O relatório mostrou riscos que passariam fácil numa auditoria comum. Ajustamos antes que virasse um problema sério."</p>
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                         <span className="font-bold text-primary">CS</span>
@@ -897,7 +898,7 @@ const Landing = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
                   <CardContent className="relative pt-6">
                     <div className="mb-4 text-primary/30 text-5xl font-serif leading-none">"</div>
-                    <p className="mb-6 text-muted-foreground leading-relaxed">"O suporte respondeu em 10 minutos. Consegui provar compliance na auditoria graças aos relatórios."</p>
+                    <p className="mb-6 text-muted-foreground leading-relaxed">"O suporte respondeu rápido, mas o principal foi a clareza do laudo. Finalmente entendemos onde estavam os riscos."</p>
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-accent/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                         <span className="font-bold text-primary">JC</span>
@@ -983,14 +984,14 @@ const Landing = () => {
             <AccordionItem value="q1">
               <AccordionTrigger>Preciso instalar em todos os computadores?</AccordionTrigger>
               <AccordionContent>
-                Não. O diagnóstico começa com até 3 máquinas. Depois você pode adicionar mais.
+                Não. O diagnóstico inicial funciona com poucos dispositivos para mapear riscos reais.
               </AccordionContent>
             </AccordionItem>
             
             <AccordionItem value="q0">
               <AccordionTrigger>Funciona sem equipe de TI?</AccordionTrigger>
               <AccordionContent>
-                Sim. O sistema foi feito para quem não é técnico. Alertas claros e ações sugeridas.
+                Sim. O laudo já vem com prioridades claras e ações recomendadas.
               </AccordionContent>
             </AccordionItem>
             
@@ -1130,11 +1131,11 @@ const Landing = () => {
           </h2>
           <Button asChild size="lg" className="text-lg h-14 px-10 bg-gradient-to-r from-primary to-accent hover:shadow-glow-primary transition-all hover:scale-105">
             <Link to="/signup">
-              Quero meu diagnóstico gratuito agora
+              Ver riscos reais da minha empresa (grátis)
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
-          <p className="text-sm text-muted-foreground mt-4">Sem cartão de crédito • Cancelamento simples</p>
+          <p className="text-sm text-muted-foreground mt-4">Planos a partir de R$ 150/mês após o diagnóstico. Sem cartão de crédito.</p>
         </div>
       </section>
 
