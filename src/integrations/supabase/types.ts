@@ -1612,6 +1612,7 @@ export type Database = {
         Row: {
           agent_name: string
           agent_version: string | null
+          display_name: string | null
           enrolled_at: string
           hmac_secret: string
           hostname: string | null
@@ -1626,6 +1627,7 @@ export type Database = {
         Insert: {
           agent_name: string
           agent_version?: string | null
+          display_name?: string | null
           enrolled_at?: string
           hmac_secret: string
           hostname?: string | null
@@ -1640,6 +1642,7 @@ export type Database = {
         Update: {
           agent_name?: string
           agent_version?: string | null
+          display_name?: string | null
           enrolled_at?: string
           hmac_secret?: string
           hostname?: string | null

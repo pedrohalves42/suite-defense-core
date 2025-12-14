@@ -4,29 +4,30 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTenant } from '@/hooks/useTenant';
-import { Activity, Shield, Users, Server, AlertTriangle, CheckCircle } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Activity, Shield, Server, AlertTriangle, CheckCircle, Wifi, WifiOff, Clock, HardDrive, Cpu, MemoryStick } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { formatBrazilDateTime, TIMEZONE_INDICATOR } from '@/lib/date-utils';
-import { RecentAuditActivity } from '@/components/admin/RecentAuditActivity';
-import { RecentJobsActivity } from '@/components/admin/RecentJobsActivity';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
+import { getAgentDisplayName, getAgentStatusInfo, formatRelativeTimePt } from '@/lib/agent-utils';
+import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface Stats {
-  totalAgents: number;
-  activeAgents: number;
-  offlineAgents: number;
-  totalScans: number;
-  maliciousFiles: number;
-  cleanFiles: number;
-  quarantinedFiles: number;
-  totalJobs: number;
-  completedJobs: number;
-  pendingJobs: number;
-  failedJobs: number;
+interface AgentWithMetrics {
+  id: string;
+  agent_name: string;
+  hostname: string | null;
+  display_name: string | null;
+  status: string;
+  last_heartbeat: string | null;
+  os_type: string | null;
+  agent_version: string | null;
+  cpu_usage?: number | null;
+  memory_usage?: number | null;
+  disk_usage?: number | null;
+  uptime_seconds?: number | null;
 }
 
 export default function Dashboard() {
@@ -34,118 +35,65 @@ export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Check for onboarding parameter
   useEffect(() => {
     const onboardingParam = searchParams.get('onboarding');
     if (onboardingParam === 'true') {
       setShowOnboarding(true);
-      // Remove parameter from URL
       searchParams.delete('onboarding');
       setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams, setSearchParams]);
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['tenant-stats', tenant?.id],
-    queryFn: async () => {
-      if (!tenant?.id) return null;
-
-      const [agents, scans, quarantine, jobs] = await Promise.all([
-        // Agents
-        supabase
-          .from('agents')
-          .select('status, last_heartbeat')
-          .eq('tenant_id', tenant.id),
-        
-        // Virus Scans
-        supabase
-          .from('virus_scans')
-          .select('is_malicious')
-          .eq('tenant_id', tenant.id),
-        
-        // Quarantined Files
-        supabase
-          .from('quarantined_files')
-          .select('status')
-          .eq('tenant_id', tenant.id),
-        
-        // Jobs - usar view normalizada para compatibilidade v1/v3
-        supabase
-          .from('jobs_normalized')
-          .select('normalized_status, is_v3, duration_seconds')
-          .eq('tenant_id', tenant.id)
-      ]);
-
-      const now = new Date();
-      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-
-      const activeAgents = agents.data?.filter(a => 
-        a.status === 'active' && 
-        a.last_heartbeat && 
-        new Date(a.last_heartbeat) > fiveMinutesAgo
-      ).length || 0;
-
-      const stats: Stats = {
-        totalAgents: agents.data?.length || 0,
-        activeAgents,
-        offlineAgents: (agents.data?.length || 0) - activeAgents,
-        totalScans: scans.data?.length || 0,
-        maliciousFiles: scans.data?.filter(s => s.is_malicious).length || 0,
-        cleanFiles: scans.data?.filter(s => !s.is_malicious).length || 0,
-        quarantinedFiles: quarantine.data?.filter(q => q.status === 'quarantined').length || 0,
-        totalJobs: jobs.data?.length || 0,
-        completedJobs: jobs.data?.filter(j => j.normalized_status === 'completed').length || 0,
-        pendingJobs: jobs.data?.filter(j => ['queued', 'running'].includes(j.normalized_status || '')).length || 0,
-        failedJobs: jobs.data?.filter(j => j.normalized_status === 'failed').length || 0,
-      };
-
-      return stats;
-    },
-    enabled: !!tenant?.id,
-  });
-
-  const { data: recentActivity, isLoading: activityLoading } = useQuery({
-    queryKey: ['recent-activity', tenant?.id],
+  // Fetch agents with their latest metrics
+  const { data: agentsWithMetrics, isLoading: agentsLoading } = useQuery({
+    queryKey: ['dashboard-agents-metrics', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
 
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select('*')
+      // Fetch agents
+      const { data: agents, error: agentsError } = await supabase
+        .from('agents')
+        .select('id, agent_name, hostname, display_name, status, last_heartbeat, os_type, agent_version')
         .eq('tenant_id', tenant.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .order('last_heartbeat', { ascending: false, nullsFirst: false });
 
-      if (error) throw error;
-      return data;
+      if (agentsError) throw agentsError;
+      if (!agents || agents.length === 0) return [];
+
+      // Fetch latest metrics for each agent from partitioned table
+      const agentIds = agents.map(a => a.id);
+      const { data: metrics } = await supabase
+        .from('agent_system_metrics_partitioned')
+        .select('agent_id, cpu_usage_percent, memory_usage_percent, disk_usage_percent, uptime_seconds')
+        .in('agent_id', agentIds)
+        .order('collected_at', { ascending: false });
+
+      // Create a map of latest metrics per agent
+      const metricsMap = new Map<string, any>();
+      metrics?.forEach(m => {
+        if (!metricsMap.has(m.agent_id)) {
+          metricsMap.set(m.agent_id, m);
+        }
+      });
+
+      // Merge agents with metrics
+      return agents.map(agent => ({
+        ...agent,
+        cpu_usage: metricsMap.get(agent.id)?.cpu_usage_percent,
+        memory_usage: metricsMap.get(agent.id)?.memory_usage_percent,
+        disk_usage: metricsMap.get(agent.id)?.disk_usage_percent,
+        uptime_seconds: metricsMap.get(agent.id)?.uptime_seconds,
+      })) as AgentWithMetrics[];
     },
     enabled: !!tenant?.id,
+    refetchInterval: 30000, // Refresh every 30s
   });
 
-  const { data: recentScans, isLoading: scansLoading } = useQuery({
-    queryKey: ['recent-scans', tenant?.id],
-    queryFn: async () => {
-      if (!tenant?.id) return [];
-
-      const { data, error } = await supabase
-        .from('virus_scans')
-        .select('*')
-        .eq('tenant_id', tenant.id)
-        .order('scanned_at', { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!tenant?.id,
-  });
-
-  // Query para alertas criticos
+  // Fetch critical alerts
   const { data: criticalAlerts } = useQuery({
     queryKey: ['critical-alerts', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-
       const { data, error } = await supabase
         .from('system_alerts')
         .select('*')
@@ -154,48 +102,71 @@ export default function Dashboard() {
         .eq('resolved', false)
         .order('created_at', { ascending: false })
         .limit(5);
-
       if (error) throw error;
       return data;
     },
     enabled: !!tenant?.id,
-    refetchInterval: 30000, // Atualizar a cada 30s
+    refetchInterval: 30000,
   });
 
-  if (statsLoading) {
+  // Fetch recent jobs
+  const { data: recentJobs } = useQuery({
+    queryKey: ['dashboard-recent-jobs', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return [];
+      const { data, error } = await supabase
+        .from('jobs_normalized')
+        .select('id, agent_name, type, normalized_status, created_at, completed_at')
+        .eq('tenant_id', tenant.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenant?.id,
+  });
+
+  // Calculate summary stats
+  const onlineAgents = agentsWithMetrics?.filter(a => {
+    const status = getAgentStatusInfo(a);
+    return status.isOnline;
+  }).length || 0;
+
+  const offlineAgents = (agentsWithMetrics?.length || 0) - onlineAgents;
+
+  const formatUptime = (seconds: number | null | undefined) => {
+    if (!seconds) return 'N/A';
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    if (days > 0) return `${days}d ${hours}h`;
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+  };
+
+  const getJobTypeName = (type: string) => {
+    const names: Record<string, string> = {
+      software_inventory_collect: 'Inventário',
+      light_vuln_scan: 'Vulnerabilidades',
+      collect_antivirus_status: 'Antivírus',
+      collect_web_activity: 'Web',
+      update_agent: 'Atualização',
+    };
+    return names[type] || type;
+  };
+
+  if (agentsLoading) {
     return (
       <div className="space-y-6">
-        {/* Header Skeleton */}
         <div className="space-y-2">
           <Skeleton className="h-9 w-80" />
           <Skeleton className="h-5 w-96" />
         </div>
-
-        {/* Stats Cards Skeleton */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: i * 0.1 }}
-            >
-              <Card className="p-6">
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-8 w-16" />
-                  <Skeleton className="h-3 w-32" />
-                </div>
-              </Card>
-            </motion.div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-32" />
           ))}
         </div>
-
-        {/* Grid Skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-96 w-full" />
-          <Skeleton className="h-96 w-full" />
-        </div>
+        <Skeleton className="h-96" />
       </div>
     );
   }
@@ -203,333 +174,252 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold">Dashboard de Estatisticas</h2>
+        <h2 className="text-3xl font-bold">Painel de Controle</h2>
         <p className="text-muted-foreground">
-          Visao geral do tenant {tenant?.name}
+          Visão geral dos seus computadores protegidos
         </p>
       </div>
 
-      {/* Alertas Criticos */}
+      {/* Critical Alerts */}
       {criticalAlerts && criticalAlerts.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Card className="border-l-4 border-red-500 bg-gradient-to-br from-red-50/50 to-transparent dark:from-red-950/30 dark:to-transparent shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-red-100 dark:bg-red-950/30">
-                  <AlertTriangle className="h-5 w-5 text-red-600 animate-pulse" />
-                </div>
-                Alertas Criticos ({criticalAlerts.length})
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="border-l-4 border-destructive bg-destructive/5">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Alertas Críticos ({criticalAlerts.length})
               </CardTitle>
-              <CardDescription>
-                Requerem atencao imediata
-              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {criticalAlerts.map((alert, idx) => (
-                <motion.div
-                  key={alert.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, delay: idx * 0.1 }}
-                  className="flex justify-between items-start p-3 bg-white dark:bg-gray-900 rounded-lg border hover:shadow-md transition-all duration-300"
-                >
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">{alert.title}</div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      {alert.message}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {formatBrazilDateTime(alert.created_at, 'datetime')}
-                    </div>
-                  </div>
-                  <Badge 
-                    variant={alert.severity === 'critical' ? 'destructive' : 'default'}
-                    className="ml-2"
-                  >
-                    {alert.severity}
-                  </Badge>
-                </motion.div>
+            <CardContent className="space-y-2">
+              {criticalAlerts.slice(0, 3).map(alert => (
+                <div key={alert.id} className="flex justify-between items-center p-2 bg-background rounded">
+                  <span className="text-sm">{alert.message}</span>
+                  <Badge variant="destructive">{alert.severity}</Badge>
+                </div>
               ))}
             </CardContent>
           </Card>
         </motion.div>
       )}
 
-      {/* Recent Activity & Jobs Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
-        <Card className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          <CardHeader className="border-b border-border/50">
-            <CardTitle className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Activity className="h-5 w-5 text-primary" />
-              </div>
-              Atividade Recente
-            </CardTitle>
-            <CardDescription>Principais acoes de seguranca no seu tenant</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RecentAuditActivity tenantId={tenant?.id} />
-          </CardContent>
-        </Card>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="border-l-4 border-green-500">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Wifi className="h-4 w-4 text-green-500" />
+                Computadores Online
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">{onlineAgents}</div>
+              <p className="text-xs text-muted-foreground">de {agentsWithMetrics?.length || 0} total</p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        {/* Recent Jobs */}
-        <Card className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          <CardHeader className="border-b border-border/50">
-            <CardTitle className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-accent/10">
-                <Activity className="h-5 w-5 text-accent" />
-              </div>
-              Ultimos Jobs Executados
-            </CardTitle>
-            <CardDescription>Jobs recentes processados pelos agentes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <RecentJobsActivity tenantId={tenant?.id} />
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card className="border-l-4 border-red-500">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <WifiOff className="h-4 w-4 text-red-500" />
+                Computadores Offline
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-red-600">{offlineAgents}</div>
+              <p className="text-xs text-muted-foreground">precisam de atenção</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Card className="border-l-4 border-blue-500">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Activity className="h-4 w-4 text-blue-500" />
+                Tarefas Recentes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600">{recentJobs?.length || 0}</div>
+              <p className="text-xs text-muted-foreground">últimas 24 horas</p>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          {
-            title: "Agentes",
-            icon: Server,
-            value: stats?.totalAgents || 0,
-            subtitle: `${stats?.activeAgents || 0} ativos, ${stats?.offlineAgents || 0} offline`,
-            borderColor: "border-blue-500",
-            gradient: "from-blue-50/50 dark:from-blue-950/30",
-            iconBg: "bg-blue-100 dark:bg-blue-950/30",
-            iconColor: "text-blue-500"
-          },
-          {
-            title: "Scans Realizados",
-            icon: Shield,
-            value: stats?.totalScans || 0,
-            subtitle: `${stats?.maliciousFiles || 0} maliciosos, ${stats?.cleanFiles || 0} limpos`,
-            borderColor: "border-green-500",
-            gradient: "from-green-50/50 dark:from-green-950/30",
-            iconBg: "bg-green-100 dark:bg-green-950/30",
-            iconColor: "text-green-500"
-          },
-          {
-            title: "Arquivos em Quarentena",
-            icon: AlertTriangle,
-            value: stats?.quarantinedFiles || 0,
-            subtitle: "Arquivos isolados",
-            borderColor: "border-yellow-500",
-            gradient: "from-yellow-50/50 dark:from-yellow-950/30",
-            iconBg: "bg-yellow-100 dark:bg-yellow-950/30",
-            iconColor: "text-yellow-500"
-          },
-          {
-            title: "Jobs",
-            icon: Activity,
-            value: stats?.totalJobs || 0,
-            subtitle: `${stats?.completedJobs || 0} concluidos, ${stats?.pendingJobs || 0} pendentes`,
-            borderColor: "border-purple-500",
-            gradient: "from-purple-50/50 dark:from-purple-950/30",
-            iconBg: "bg-purple-100 dark:bg-purple-950/30",
-            iconColor: "text-purple-500"
-          }
-        ].map((card, idx) => (
-          <motion.div
-            key={card.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: idx * 0.1 }}
-          >
-            <Card className={cn(
-              "border-l-4 bg-gradient-to-br to-transparent hover:shadow-xl transition-all duration-300 hover:-translate-y-1",
-              card.borderColor,
-              card.gradient
-            )}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                <div className={cn("p-2 rounded-lg", card.iconBg)}>
-                  <card.icon className={cn("h-5 w-5", card.iconColor)} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className={cn("text-3xl font-bold", card.iconColor)}>
-                  {card.value}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {card.subtitle}
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Scans */}
-        <Card className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          <CardHeader className="border-b border-border/50">
-            <CardTitle className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Shield className="h-5 w-5 text-primary" />
-              </div>
-              Scans Recentes
-            </CardTitle>
-            <CardDescription>Ultimos 5 scans de virus realizados</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {scansLoading ? (
-              <div className="text-center py-4">Carregando...</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Arquivo</TableHead>
-                    <TableHead>Resultado</TableHead>
-                    <TableHead>Data</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentScans?.map((scan) => (
-                    <TableRow key={scan.id}>
-                      <TableCell className="font-medium">
-                        {scan.file_path.split('/').pop()}
-                      </TableCell>
-                      <TableCell>
-                        {scan.is_malicious ? (
-                          <Badge variant="destructive">
-                            Malicioso ({scan.positives}/{scan.total_scans})
-                          </Badge>
-                        ) : (
-                          <Badge variant="default">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Limpo
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {formatBrazilDateTime(scan.scanned_at, 'short')}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {(!recentScans || recentScans.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground">
-                        Nenhum scan realizado ainda
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Recent Activity */}
-        <Card className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-          <CardHeader className="border-b border-border/50">
-            <CardTitle className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-accent/10">
-                <Activity className="h-5 w-5 text-accent" />
-              </div>
-              Atividades Recentes
-            </CardTitle>
-            <CardDescription>Ultimas 10 acoes no sistema</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {activityLoading ? (
-              <div className="text-center py-4">Carregando...</div>
-            ) : (
-              <div className="space-y-3">
-                {recentActivity?.map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3 pb-3 border-b last:border-0">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{activity.action}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {activity.resource_type} {activity.resource_id && `? ${activity.resource_id}`}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatBrazilDateTime(activity.created_at, 'datetime')}
-                      </p>
-                    </div>
-                    <Badge variant={activity.success ? 'default' : 'destructive'} className="shrink-0">
-                      {activity.success ? 'Sucesso' : 'Erro'}
-                    </Badge>
-                  </div>
-                ))}
-                {(!recentActivity || recentActivity.length === 0) && (
-                  <div className="text-center text-muted-foreground py-4">
-                    Nenhuma atividade registrada
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Health Status */}
-      <Card className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-        <CardHeader className="border-b border-border/50">
+      {/* Agents Grid - Individual Cards per Computer */}
+      <Card>
+        <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Activity className="h-5 w-5 text-primary" />
-            </div>
-            Status de Saude do Sistema
+            <Server className="h-5 w-5" />
+            Seus Computadores
           </CardTitle>
-          <CardDescription>Indicadores de saude do seu tenant</CardDescription>
+          <CardDescription>Status em tempo real de cada máquina protegida</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
-              {(stats?.activeAgents || 0) > 0 ? (
-                <CheckCircle className="h-8 w-8 text-green-500" />
-              ) : (
-                <AlertTriangle className="h-8 w-8 text-yellow-500" />
-              )}
-              <div>
-                <p className="font-medium">Agentes Ativos</p>
-                <p className="text-sm text-muted-foreground">
-                  {(stats?.activeAgents || 0) > 0 ? 'Sistema operacional' : 'Nenhum agente ativo'}
-                </p>
-              </div>
+          {!agentsWithMetrics || agentsWithMetrics.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Server className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhum computador cadastrado ainda.</p>
+              <p className="text-sm">Acesse "Chaves de Instalação" para adicionar seu primeiro computador.</p>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {agentsWithMetrics.map((agent, idx) => {
+                const statusInfo = getAgentStatusInfo(agent);
+                const displayName = getAgentDisplayName(agent);
+                
+                return (
+                  <motion.div
+                    key={agent.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <Card className={cn(
+                      "hover:shadow-md transition-all",
+                      statusInfo.isOnline ? "border-green-200 dark:border-green-900" : "border-red-200 dark:border-red-900"
+                    )}>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base font-medium truncate" title={displayName}>
+                            {displayName}
+                          </CardTitle>
+                          <Badge variant={statusInfo.variant} className="shrink-0">
+                            {statusInfo.isOnline ? <Wifi className="h-3 w-3 mr-1" /> : <WifiOff className="h-3 w-3 mr-1" />}
+                            {statusInfo.label}
+                          </Badge>
+                        </div>
+                        <CardDescription className="flex items-center gap-2 text-xs">
+                          <span>{agent.os_type || 'Windows'}</span>
+                          {agent.agent_version && (
+                            <>
+                              <span>•</span>
+                              <span>v{agent.agent_version.replace('v', '')}</span>
+                            </>
+                          )}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {/* Last seen */}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>Último sinal: {formatRelativeTimePt(agent.last_heartbeat)}</span>
+                        </div>
 
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
-              {(stats?.maliciousFiles || 0) === 0 ? (
-                <CheckCircle className="h-8 w-8 text-green-500" />
-              ) : (
-                <AlertTriangle className="h-8 w-8 text-red-500" />
-              )}
-              <div>
-                <p className="font-medium">Ameacas Detectadas</p>
-                <p className="text-sm text-muted-foreground">
-                  {(stats?.maliciousFiles || 0) === 0 ? 'Nenhuma ameaca' : `${stats?.maliciousFiles} ameacas`}
-                </p>
-              </div>
-            </div>
+                        {/* Metrics */}
+                        {statusInfo.isOnline && (
+                          <div className="space-y-2">
+                            {/* CPU */}
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span className="flex items-center gap-1">
+                                  <Cpu className="h-3 w-3" />
+                                  CPU
+                                </span>
+                                <span>{agent.cpu_usage != null ? `${Math.round(agent.cpu_usage)}%` : 'N/A'}</span>
+                              </div>
+                              {agent.cpu_usage != null && (
+                                <Progress value={agent.cpu_usage} className="h-1" />
+                              )}
+                            </div>
 
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
-              {(stats?.failedJobs || 0) === 0 ? (
-                <CheckCircle className="h-8 w-8 text-green-500" />
-              ) : (
-                <AlertTriangle className="h-8 w-8 text-yellow-500" />
-              )}
-              <div>
-                <p className="font-medium">Jobs Falhados</p>
-                <p className="text-sm text-muted-foreground">
-                  {(stats?.failedJobs || 0) === 0 ? 'Todos executados' : `${stats?.failedJobs} falharam`}
-                </p>
-              </div>
+                            {/* Memory */}
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span className="flex items-center gap-1">
+                                  <MemoryStick className="h-3 w-3" />
+                                  Memória
+                                </span>
+                                <span>{agent.memory_usage != null ? `${Math.round(agent.memory_usage)}%` : 'N/A'}</span>
+                              </div>
+                              {agent.memory_usage != null && (
+                                <Progress value={agent.memory_usage} className="h-1" />
+                              )}
+                            </div>
+
+                            {/* Disk */}
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span className="flex items-center gap-1">
+                                  <HardDrive className="h-3 w-3" />
+                                  Disco
+                                </span>
+                                <span>{agent.disk_usage != null ? `${Math.round(agent.disk_usage)}%` : 'N/A'}</span>
+                              </div>
+                              {agent.disk_usage != null && (
+                                <Progress value={agent.disk_usage} className="h-1" />
+                              )}
+                            </div>
+
+                            {/* Uptime */}
+                            <div className="text-xs text-muted-foreground pt-1">
+                              Ligado há: {formatUptime(agent.uptime_seconds)}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Onboarding Wizard */}
+      {/* Recent Jobs */}
+      {recentJobs && recentJobs.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Últimas Tarefas Executadas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-48">
+              <div className="space-y-2">
+                {recentJobs.map(job => {
+                  // Find agent display name
+                  const agent = agentsWithMetrics?.find(a => a.agent_name === job.agent_name);
+                  const agentDisplay = agent ? getAgentDisplayName(agent) : job.agent_name;
+                  
+                  return (
+                    <div key={job.id} className="flex items-center justify-between p-2 bg-muted/50 rounded">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <p className="text-sm font-medium">{getJobTypeName(job.type)}</p>
+                          <p className="text-xs text-muted-foreground">{agentDisplay}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={
+                          job.normalized_status === 'completed' ? 'default' :
+                          job.normalized_status === 'failed' ? 'destructive' :
+                          'secondary'
+                        }>
+                          {job.normalized_status === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                          {job.normalized_status === 'completed' ? 'Concluído' :
+                           job.normalized_status === 'failed' ? 'Falhou' :
+                           'Em andamento'}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {formatRelativeTimePt(job.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
       <OnboardingWizard 
         open={showOnboarding} 
         onComplete={() => setShowOnboarding(false)} 

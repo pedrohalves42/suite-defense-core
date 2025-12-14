@@ -149,21 +149,64 @@ Deno.serve(async (req) => {
 
     // Send email
     const inviteLink = `${Deno.env.get('SITE_URL') || 'https://suite-defense-core.lovable.app'}/accept-invite?token=${inviteToken}`;
+    
+    // Get tenant name for email
+    const { data: tenantData } = await supabaseAdmin
+      .from('tenants')
+      .select('name')
+      .eq('id', tenantId)
+      .maybeSingle();
+    
+    const tenantName = tenantData?.name || 'CyberShield';
 
     try {
+      // Use verified domain email or fallback to Resend test domain
+      const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') || 'CyberShield <onboarding@resend.dev>';
+      
       await resend.emails.send({
-        from: 'CyberShield <onboarding@resend.dev>',
+        from: fromEmail,
         to: [email],
-        subject: 'Voce foi convidado para o CyberShield',
+        subject: `Convite para ${tenantName} - CyberShield`,
         html: `
-          <h1>Bem-vindo ao CyberShield!</h1>
-          <p>Voce foi convidado para participar como <strong>${role}</strong>.</p>
-          <p>Clique no link abaixo para aceitar o convite e criar sua conta:</p>
-          <a href="${inviteLink}" style="display: inline-block; padding: 12px 24px; background: #0066ff; color: white; text-decoration: none; border-radius: 6px; margin: 16px 0;">
-            Aceitar Convite
-          </a>
-          <p>Este convite expira em 7 dias.</p>
-          <p>Se voce nao solicitou este convite, pode ignorar este email.</p>
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          </head>
+          <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">🛡️ CyberShield</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Proteção Digital Inteligente</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px;">
+              <h2 style="color: #333; margin-top: 0;">Você foi convidado!</h2>
+              
+              <p>Olá,</p>
+              
+              <p>Você foi convidado para fazer parte da equipe <strong>${tenantName}</strong> como <strong style="color: #0066ff;">${role === 'admin' ? 'Administrador' : role === 'operator' ? 'Operador' : 'Visualizador'}</strong>.</p>
+              
+              <p>O CyberShield é uma plataforma de segurança digital que protege seus computadores contra vírus, malwares e outras ameaças.</p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${inviteLink}" style="display: inline-block; padding: 16px 32px; background: linear-gradient(135deg, #0066ff 0%, #0052cc 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 12px rgba(0,102,255,0.3);">
+                  Aceitar Convite e Criar Conta
+                </a>
+              </div>
+              
+              <p style="color: #666; font-size: 14px;">
+                <strong>⏰ Importante:</strong> Este convite expira em 7 dias.
+              </p>
+              
+              <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+              
+              <p style="color: #999; font-size: 12px; margin-bottom: 0;">
+                Se você não solicitou este convite, pode ignorar este email com segurança.
+              </p>
+            </div>
+          </body>
+          </html>
         `,
       });
     } catch (emailError) {

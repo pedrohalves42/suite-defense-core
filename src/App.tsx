@@ -87,6 +87,7 @@ import SecurityMonitoring from "./pages/admin/SecurityMonitoring";
 import MassReinstall from "./pages/admin/MassReinstall";
 import AIMetrics from "./pages/admin/AIMetrics";
 import ApiDocumentation from "./pages/admin/ApiDocumentation";
+import MyAccount from "./pages/admin/MyAccount";
 
 const App = () => (
   <ErrorBoundary>
@@ -170,6 +171,7 @@ const App = () => (
                 <Route path="mass-reinstall" element={<MassReinstall />} />
                 <Route path="invites" element={<Invites />} />
                 <Route path="api-docs" element={<ApiDocumentation />} />
+                <Route path="my-account" element={<MyAccount />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}

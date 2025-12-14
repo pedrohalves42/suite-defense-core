@@ -121,7 +121,27 @@ Deno.serve(async (req) => {
       return handleValidationError(validation.error, requestId);
     }
     
-    const { agentName, type, payload, approved, scheduledAt, isRecurring, recurrencePattern } = validation.data;
+    const { agentName, type, payload: userPayload, approved, scheduledAt, isRecurring, recurrencePattern } = validation.data;
+
+    // Default payloads for each job type - ensures jobs always have valid payload
+    const defaultPayloads: Record<string, Record<string, unknown>> = {
+      software_inventory_collect: { include_32bit: true, include_updates: true },
+      light_vuln_scan: { scan_depth: 'standard', include_cve_check: true },
+      collect_antivirus_status: { check_definitions: true },
+      collect_web_activity: { browsers: ['chrome', 'firefox', 'edge'], days_back: 7 },
+      collect_network_info: { include_open_ports: true, include_active_connections: true },
+      fix_firewall: { enable_public: true, enable_private: true, enable_domain: true },
+      update_agent: { force: false },
+      restart_service: { service_name: 'CyberShieldAgent' },
+      scan_file: { deep_scan: false },
+      reinstall_agent: { clean_install: true },
+    };
+
+    // Merge user payload with defaults (user payload takes precedence)
+    const effectivePayload = {
+      ...defaultPayloads[type],
+      ...userPayload,
+    };
 
     // SEMPRE buscar o agente para obter agent_id e tenant_id
     const { data: agentData, error: agentError } = await supabaseAdmin
@@ -210,12 +230,12 @@ Deno.serve(async (req) => {
       nextRunAt = nextRunData;
     }
 
-    // Prepare job data - INCLUINDO agent_id
+    // Prepare job data - INCLUINDO agent_id e payload completo
     const jobData: any = {
       agent_id: agentData.id,  // CRITICO: incluir agent_id
       agent_name: agentName, 
       type, 
-      payload, 
+      payload: effectivePayload,  // Usar payload mesclado com defaults
       status: 'queued', 
       approved,
       tenant_id: effectiveTenantId,
@@ -224,6 +244,8 @@ Deno.serve(async (req) => {
       recurrence_pattern: recurrencePattern || null,
       next_run_at: nextRunAt
     };
+    
+    console.log(`[create-job] Creating job with payload:`, JSON.stringify(effectivePayload));
 
     const { data: job, error: insertError } = await supabaseAdmin
       .from('jobs')
