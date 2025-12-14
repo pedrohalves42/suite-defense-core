@@ -369,7 +369,7 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
             <div className="text-center">
-              <div className="text-2xl md:text-3xl font-bold text-primary">+50</div>
+              <div className="text-2xl md:text-3xl font-bold text-primary">+5.9</div>
               <p className="text-sm text-muted-foreground mt-1">Computadores analisados</p>
             </div>
             <div className="text-center">
