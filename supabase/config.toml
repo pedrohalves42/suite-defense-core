@@ -408,3 +408,7 @@ schedule = "0 */2 * * *"
 # === AI Quality & Governance (P2/P3) ===
 [functions.ai-quality-check]
 verify_jwt = true
+
+# === Auto Report Generation ===
+[functions.auto-generate-report]
+verify_jwt = false

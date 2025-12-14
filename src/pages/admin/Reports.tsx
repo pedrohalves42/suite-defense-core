@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, Loader2, Shield, AlertTriangle, Bug, Globe, FileWarning, FileSpreadsheet, Award } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileText, Download, Loader2, Shield, AlertTriangle, Bug, Globe, FileWarning, FileSpreadsheet, Award, History } from "lucide-react";
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tech-tooltip";
+import { GeneratedReportsList } from "@/components/admin/GeneratedReportsList";
 
 interface Agent {
   id: string;
@@ -1211,6 +1213,23 @@ export default function Reports() {
         </div>
       </div>
 
+      <Tabs defaultValue="generate" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="generate" className="flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            Gerar Relatório
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Laudos Gerados
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="history" className="space-y-4">
+          <GeneratedReportsList />
+        </TabsContent>
+
+        <TabsContent value="generate" className="space-y-4">
       {/* Controls */}
       <Card>
         <CardHeader>
@@ -1389,6 +1408,8 @@ export default function Reports() {
           </div>
         </div>
       )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

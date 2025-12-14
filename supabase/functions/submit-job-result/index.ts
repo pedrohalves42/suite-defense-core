@@ -203,7 +203,7 @@ Deno.serve(async (req) => {
     // Buscar o job
     const { data: job, error: fetchError } = await supabase
       .from('jobs')
-      .select('id, agent_name, tenant_id, status')
+      .select('id, agent_name, tenant_id, status, job_type, agent_id')
       .eq('id', job_id)
       .single()
 
@@ -349,6 +349,41 @@ Deno.serve(async (req) => {
       updated_record: updateResult ? JSON.stringify(updateResult[0]) : 'null',
       rows_affected: updateResult?.length || 0
     })
+
+    // Trigger automatic report generation for security collection jobs
+    const reportTriggerJobTypes = [
+      'software_inventory_collect',
+      'light_vuln_scan',
+      'collect_antivirus_status',
+      'collect_web_activity'
+    ]
+    
+    if (status === 'completed' && job.job_type && reportTriggerJobTypes.includes(job.job_type)) {
+      try {
+        console.log('[submit-job-result] Triggering auto-generate-report for job type:', job.job_type)
+        
+        const { error: reportError } = await supabase.functions.invoke('auto-generate-report', {
+          body: {
+            tenant_id: agent.tenant_id,
+            agent_id: job.agent_id,
+            agent_name: agent.agent_name,
+            job_id: job_id,
+            job_type: job.job_type,
+            triggered_by: 'job_completion'
+          }
+        })
+        
+        if (reportError) {
+          console.error('[submit-job-result] Failed to trigger auto-generate-report:', reportError)
+          // Don't fail the main request, just log the error
+        } else {
+          console.log('[submit-job-result] Auto-generate-report triggered successfully')
+        }
+      } catch (reportErr) {
+        console.error('[submit-job-result] Exception triggering auto-generate-report:', reportErr)
+        // Don't fail the main request
+      }
+    }
 
     return new Response(
       JSON.stringify({ 
