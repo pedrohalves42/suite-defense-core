@@ -345,36 +345,6 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Urgency Section - Why Now? */}
-      <section className="py-12 bg-primary/5 border-y border-primary/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">Por Que Agir Agora?</h2>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto mb-8">
-            <div className="text-center p-4">
-              <p className="text-muted-foreground">Ataques a PMEs cresceram fortemente nos últimos anos</p>
-            </div>
-            <div className="text-center p-4">
-              <p className="text-muted-foreground">Multas da LGPD podem chegar a 2% do faturamento</p>
-            </div>
-            <div className="text-center p-4">
-              <p className="text-muted-foreground">A maioria das empresas só age depois do primeiro incidente</p>
-            </div>
-          </div>
-          
-          <div className="text-center">
-            <Button asChild size="lg" className="bg-gradient-to-r from-primary to-accent hover:shadow-glow-primary transition-all hover:scale-105">
-              <Link to="/signup">
-                Não espere o primeiro problema
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
       {/* Social Proof - Trust Indicators (Stats do Produto) */}
       <section className="py-12 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
