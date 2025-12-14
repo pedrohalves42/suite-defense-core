@@ -899,6 +899,39 @@ else
     echo "[WARN] Service may not have started correctly. Check: journalctl -u cybershield-agent.service"
 fi
 
+# Send post_installation telemetry
+echo "[INFO] Sending installation telemetry..."
+TELEMETRY_BODY=$(cat <<TELEMETRY_EOF
+{
+  "agent_name": "$AGENT_NAME",
+  "event_type": "post_installation",
+  "platform": "linux",
+  "installation_method": "one_click",
+  "success": true,
+  "agent_version": "{{INSTALLER_VERSION}}",
+  "metadata": {
+    "installer_version": "{{INSTALLER_VERSION}}",
+    "script_size_bytes": $SCRIPT_SIZE
+  }
+}
+TELEMETRY_EOF
+)
+
+# Calculate HMAC signature
+TIMESTAMP=$(($(date +%s) * 1000))
+NONCE=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen 2>/dev/null || echo "nonce-$(date +%s)")
+PAYLOAD="$TIMESTAMP:$NONCE:$TELEMETRY_BODY"
+SIGNATURE=$(printf '%s' "$PAYLOAD" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:$HMAC_SECRET" 2>/dev/null | awk '{print $2}')
+
+curl -s -X POST "$SERVER_URL/functions/v1/track-installation-event" \
+  -H "Content-Type: application/json" \
+  -H "X-Agent-Token: $AGENT_TOKEN" \
+  -H "X-HMAC-Signature: $SIGNATURE" \
+  -H "X-Timestamp: $TIMESTAMP" \
+  -H "X-Nonce: $NONCE" \
+  -d "$TELEMETRY_BODY" \
+  --max-time 10 >/dev/null 2>&1 && echo "[OK] Installation telemetry sent" || echo "[WARN] Telemetry failed (non-critical)"
+
 echo ""
 echo "=========================================="
 echo " CyberShield Agent installed successfully!"
@@ -1042,6 +1075,25 @@ if sudo launchctl list | grep -q "com.cybershield.agent"; then
 else
     echo "[WARN] Service may not have started correctly. Check logs."
 fi
+
+# Send post_installation telemetry
+echo "[INFO] Sending installation telemetry..."
+TELEMETRY_BODY="{\"agent_name\": \"$AGENT_NAME\", \"event_type\": \"post_installation\", \"platform\": \"macos\", \"installation_method\": \"one_click\", \"success\": true, \"agent_version\": \"{{INSTALLER_VERSION}}\", \"metadata\": {\"installer_version\": \"{{INSTALLER_VERSION}}\", \"script_size_bytes\": $SCRIPT_SIZE}}"
+
+# Calculate HMAC signature
+TIMESTAMP=$(($(date +%s) * 1000))
+NONCE=$(uuidgen 2>/dev/null || echo "nonce-$(date +%s)")
+PAYLOAD="$TIMESTAMP:$NONCE:$TELEMETRY_BODY"
+SIGNATURE=$(printf '%s' "$PAYLOAD" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:$HMAC_SECRET" 2>/dev/null | awk '{print $2}')
+
+curl -s -X POST "$SERVER_URL/functions/v1/track-installation-event" \
+  -H "Content-Type: application/json" \
+  -H "X-Agent-Token: $AGENT_TOKEN" \
+  -H "X-HMAC-Signature: $SIGNATURE" \
+  -H "X-Timestamp: $TIMESTAMP" \
+  -H "X-Nonce: $NONCE" \
+  -d "$TELEMETRY_BODY" \
+  --max-time 10 >/dev/null 2>&1 && echo "[OK] Installation telemetry sent" || echo "[WARN] Telemetry failed (non-critical)"
 
 echo ""
 echo "=========================================="
