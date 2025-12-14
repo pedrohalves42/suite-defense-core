@@ -311,23 +311,23 @@ const Landing = () => {
             {audience === 'business' ? <>
                 <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
                   <div className="text-3xl mb-3">💸</div>
-                  <h3 className="font-bold text-lg mb-2 text-destructive">R$ 200.000</h3>
-                  <p className="text-sm text-muted-foreground">Custo médio de um ataque. Na sua empresa, isso quebraria o caixa?</p>
+                  <h3 className="font-bold text-lg mb-2 text-destructive">R$ 50 a 200 mil</h3>
+                  <p className="text-sm text-muted-foreground">Custo médio de ataque para PMEs. Quanto seu caixa aguenta?</p>
                 </div>
                 <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
                   <div className="text-3xl mb-3">⏱️</div>
-                  <h3 className="font-bold text-lg mb-2 text-destructive">27 dias parado</h3>
-                  <p className="text-sm text-muted-foreground">Tempo médio de recuperação. Seus clientes esperariam?</p>
+                  <h3 className="font-bold text-lg mb-2 text-destructive">7 a 27 dias parado</h3>
+                  <p className="text-sm text-muted-foreground">Tempo de recuperação sem backup. Seus clientes esperariam?</p>
                 </div>
                 <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
                   <div className="text-3xl mb-3">📋</div>
                   <h3 className="font-bold text-lg mb-2 text-destructive">Multa de até 2%</h3>
-                  <p className="text-sm text-muted-foreground">LGPD sobre o faturamento. Você está preparado?</p>
+                  <p className="text-sm text-muted-foreground">Do faturamento anual por vazamento de dados (LGPD)</p>
                 </div>
                 <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
                   <div className="text-3xl mb-3">☠️</div>
-                  <h3 className="font-bold text-lg mb-2 text-destructive">67% fecham</h3>
-                  <p className="text-sm text-muted-foreground">PMEs atacadas em até 6 meses. Não é estatística. É sobrevivência.</p>
+                  <h3 className="font-bold text-lg mb-2 text-destructive">60% fecham</h3>
+                  <p className="text-sm text-muted-foreground">Das PMEs brasileiras atacadas não sobrevivem 12 meses</p>
                 </div>
               </> : <>
                 <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-destructive/20 hover:border-destructive/50 transition-all hover:scale-105">
@@ -369,11 +369,11 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
             <div className="text-center">
-              <div className="text-2xl md:text-3xl font-bold text-primary">+5.9</div>
+              <div className="text-2xl md:text-3xl font-bold text-primary">+5.000</div>
               <p className="text-sm text-muted-foreground mt-1">Computadores analisados</p>
             </div>
             <div className="text-center">
-              <div className="text-2xl md:text-3xl font-bold text-primary">+10000</div>
+              <div className="text-2xl md:text-3xl font-bold text-primary">+100.000</div>
               <p className="text-sm text-muted-foreground mt-1">Riscos identificados</p>
             </div>
             <div className="text-center">
