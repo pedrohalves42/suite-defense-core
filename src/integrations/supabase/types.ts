@@ -3847,6 +3847,69 @@ export type Database = {
           },
         ]
       }
+      notification_queue: {
+        Row: {
+          channel: string
+          created_at: string | null
+          error_message: string | null
+          id: string
+          message_content: string | null
+          priority: string | null
+          recipient: string | null
+          report_id: string | null
+          retry_count: number | null
+          scheduled_for: string | null
+          sent_at: string | null
+          status: string | null
+          tenant_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_content?: string | null
+          priority?: string | null
+          recipient?: string | null
+          report_id?: string | null
+          retry_count?: number | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string | null
+          tenant_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_content?: string | null
+          priority?: string | null
+          recipient?: string | null
+          report_id?: string | null
+          retry_count?: number | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_queue_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "generated_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_queue_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       performance_metrics: {
         Row: {
           created_at: string
@@ -6597,6 +6660,10 @@ export type Database = {
           last_attempt: string
           signature: string
         }[]
+      }
+      get_report_frequency_days: {
+        Args: { p_plan_name: string }
+        Returns: number
       }
       has_role: {
         Args: {
