@@ -53,6 +53,7 @@ export const AppSidebar = () => {
     // === INFRAESTRUTURA ===
     { icon: Package, label: 'Instalações', to: '/admin/installations', section: 'infrastructure' },
     { icon: Package, label: 'Versões do Agente', to: '/admin/agent-releases', section: 'infrastructure' },
+    { icon: Target, label: 'SLO Dashboard', to: '/admin/slo-dashboard', section: 'infrastructure' },
     { icon: Gauge, label: 'Limites de Taxa', to: '/admin/rate-limiting', section: 'infrastructure' },
     { icon: Inbox, label: 'Tarefas Pendentes', to: '/admin/dead-letter-queue', section: 'infrastructure' },
     { icon: Code, label: 'API', to: '/admin/api-docs', section: 'infrastructure' },

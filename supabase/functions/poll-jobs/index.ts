@@ -122,11 +122,13 @@ Deno.serve(async (req) => {
     logger.info('Fetching jobs for agent', { agentName: agent.agent_name, agentId: token.agent_id })
     
     // Buscar jobs pendentes (max 3) - usando agent_name OU agent_id
+    // P1: Ordenar por prioridade (1=critical, 2=standard, 3=heavy) e depois por created_at
     const { data: jobs, error: jobsError } = await supabase
       .from('jobs')
-      .select('id, type, payload, approved, agent_id, agent_name, status, created_at')
+      .select('id, type, payload, approved, agent_id, agent_name, status, created_at, priority')
       .or(`agent_name.eq.${agent.agent_name},agent_id.eq.${token.agent_id}`)
       .eq('status', 'queued')
+      .order('priority', { ascending: true })
       .order('created_at', { ascending: true })
       .limit(3)
 

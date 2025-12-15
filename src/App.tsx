@@ -88,6 +88,7 @@ import MassReinstall from "./pages/admin/MassReinstall";
 import AIMetrics from "./pages/admin/AIMetrics";
 import ApiDocumentation from "./pages/admin/ApiDocumentation";
 import MyAccount from "./pages/admin/MyAccount";
+import SLODashboard from "./pages/admin/SLODashboard";
 
 const App = () => (
   <ErrorBoundary>
@@ -172,6 +173,7 @@ const App = () => (
                 <Route path="invites" element={<Invites />} />
                 <Route path="api-docs" element={<ApiDocumentation />} />
                 <Route path="my-account" element={<MyAccount />} />
+                <Route path="slo-dashboard" element={<SLODashboard />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
