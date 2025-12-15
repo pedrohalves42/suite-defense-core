@@ -103,11 +103,12 @@ Deno.serve(async (req) => {
     const processedCVEs = new Set<string>();
 
     // First, try to find matches in our CVE database cache
-    for (const keyword of Array.from(softwareKeywords).slice(0, 20)) { // Limit to 20 keywords
+    for (const keyword of Array.from(softwareKeywords).slice(0, 30)) { // Increased to 30 keywords
+      // FASE 3: Melhorar query de CVE matching com ILIKE mais flexível
       const { data: cves, error: cveError } = await supabase
         .from('cve_database')
         .select('*')
-        .or(`affected_products.cs.{${keyword}},description.ilike.%${keyword}%`)
+        .or(`affected_products.cs.{${keyword}},description.ilike.%${keyword}%,cpe_matches.cs.{${keyword}}`)
         .gte('cvss_score', 4.0) // Only medium+ severity
         .order('cvss_score', { ascending: false })
         .limit(50);
