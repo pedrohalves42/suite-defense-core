@@ -736,6 +736,90 @@ export default function Reports() {
         yPos += 15;
       }
 
+      // ==================== SECTION: O QUE ISSO SIGNIFICA PARA VOCÊ ====================
+      if (yPos > pageHeight - 100) { doc.addPage(); yPos = 25; }
+      
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(37, 99, 235);
+      doc.text('📋 O QUE ISSO SIGNIFICA PARA VOCÊ?', 14, yPos);
+      yPos += 10;
+      
+      // Box de explicação humanizada
+      doc.setFillColor(239, 246, 255); // blue-50
+      doc.roundedRect(14, yPos, pageWidth - 28, 70, 4, 4, 'F');
+      doc.setDrawColor(59, 130, 246);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(14, yPos, pageWidth - 28, 70, 4, 4, 'S');
+      
+      doc.setTextColor(30, 64, 175); // blue-800
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Em linguagem simples:', 20, yPos + 10);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(55, 65, 81); // gray-700
+      
+      // Gerar explicação baseada nos dados
+      let explanation = '';
+      if (riskScore >= 80) {
+        explanation = 'Seus computadores estão bem protegidos! Continue mantendo os programas atualizados e o antivírus ativo.';
+      } else if (riskScore >= 60) {
+        explanation = 'Sua proteção está boa, mas há alguns pontos de atenção. Recomendamos verificar as atualizações pendentes.';
+      } else if (riskScore >= 40) {
+        explanation = 'Há riscos moderados que precisam de atenção. Algumas falhas de segurança foram encontradas e devem ser corrigidas.';
+      } else {
+        explanation = 'ATENÇÃO: Foram encontrados riscos significativos. Recomendamos ação imediata para proteger seus dados e sistemas.';
+      }
+      
+      const explanationLines = doc.splitTextToSize(explanation, pageWidth - 48);
+      explanationLines.forEach((line: string, i: number) => {
+        doc.text(line, 20, yPos + 20 + (i * 5));
+      });
+      
+      // Principais pontos de atenção
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 64, 175);
+      doc.text('Principais pontos:', 20, yPos + 38);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(55, 65, 81);
+      
+      const bulletPoints = [];
+      if (stats.critical_vulnerabilities > 0) {
+        bulletPoints.push(`• ${stats.critical_vulnerabilities} problema(s) crítico(s) que podem permitir invasões`);
+      }
+      if (stats.threats_found > 0) {
+        bulletPoints.push(`• ${stats.threats_found} ameaça(s) de vírus detectada(s)`);
+      }
+      if (unprotected.no_antivirus > 0) {
+        bulletPoints.push(`• ${unprotected.no_antivirus} computador(es) sem proteção antivírus`);
+      }
+      if (unprotected.offline_agents > 0) {
+        bulletPoints.push(`• ${unprotected.offline_agents} computador(es) offline (não monitorados)`);
+      }
+      if (bulletPoints.length === 0) {
+        bulletPoints.push('• Nenhum problema crítico detectado no momento');
+      }
+      
+      bulletPoints.slice(0, 3).forEach((point, i) => {
+        doc.text(point.substring(0, 80), 20, yPos + 46 + (i * 5));
+      });
+      
+      // O que fazer agora
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(30, 64, 175);
+      doc.text('O que fazer agora:', 20, yPos + 62);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(55, 65, 81);
+      
+      let actionText = riskScore >= 60 
+        ? 'Continue monitorando. Agende uma revisão mensal.'
+        : 'Entre em contato conosco para resolver os problemas identificados.';
+      doc.text(actionText, 20, yPos + 68);
+      
+      yPos += 80;
+
       // ==================== SECTION 2: METHODOLOGY (EXPANDED) ====================
       if (yPos > pageHeight - 60) { doc.addPage(); yPos = 25; }
       

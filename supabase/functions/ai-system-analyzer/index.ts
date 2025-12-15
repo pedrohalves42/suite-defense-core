@@ -153,6 +153,19 @@ Deno.serve(async (req) => {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - 7);
 
+        // 0. Buscar agentes com hostnames amigáveis para usar em vez de agent_name técnico
+        const { data: agentsList } = await supabase
+          .from('agents')
+          .select('id, agent_name, hostname, display_name')
+          .eq('tenant_id', tenant.id);
+        
+        // Criar mapa de agent_id -> nome amigável (prioridade: display_name > hostname > agent_name)
+        const agentFriendlyNames = new Map<string, string>();
+        for (const agent of (agentsList || [])) {
+          const friendlyName = agent.display_name || agent.hostname || agent.agent_name;
+          agentFriendlyNames.set(agent.id, friendlyName);
+        }
+
         // 1. Jobs problematicos
         const { data: problematicJobs } = await supabase
           .from('v_problematic_jobs')
@@ -178,6 +191,12 @@ Deno.serve(async (req) => {
           .gte('collected_at', cutoffDate.toISOString())
           .order('collected_at', { ascending: false })
           .limit(500);
+        
+        // Enriquecer métricas com nomes amigáveis
+        const enrichedAgentMetrics = (agentMetrics || []).map(metric => ({
+          ...metric,
+          friendly_name: agentFriendlyNames.get(metric.agent_id) || metric.agent_name || metric.agent_id.slice(0, 8)
+        }));
 
         // 4. Alertas do sistema
         const { data: systemAlerts } = await supabase
@@ -199,7 +218,7 @@ Deno.serve(async (req) => {
         const analysisData: AnalysisData = {
           problematicJobs: problematicJobs || [],
           failurePatterns: installationStats?.filter(s => s.success === false) || [],
-          agentMetrics: agentMetrics || [],
+          agentMetrics: enrichedAgentMetrics || [],
           installationStats: installationStats || [],
           systemAlerts: systemAlerts || [],
         };
@@ -342,6 +361,8 @@ async function analyzeWithAI(
     const anonToOriginalMap = new Map<string, string>();
     
     const agentSummaries = Array.from(agentMetricsMap.entries()).map(([agentId, data]) => {
+      // Usar friendly_name se disponível, caso contrário agent_name
+      const displayName = (data as any).friendly_name || data.agent_name;
       const avgCpu = data.cpu.length > 0 ? data.cpu.reduce((a, b) => a + b, 0) / data.cpu.length : 0;
       const avgMemory = data.memory.length > 0 ? data.memory.reduce((a, b) => a + b, 0) / data.memory.length : 0;
       const avgDisk = data.disk.length > 0 ? data.disk.reduce((a, b) => a + b, 0) / data.disk.length : 0;

@@ -405,19 +405,19 @@ export default function WebActivity() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
+                <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Domínio</TableHead>
                         <TableHead>Categoria</TableHead>
-                        <TableHead>Acessos</TableHead>
+                        <TableHead className="text-center">Acessos</TableHead>
                         <TableHead>
                           <Clock className="h-4 w-4 inline mr-1" />
-                          Primeira Visita
+                          Primeira Visita (UTC-3)
                         </TableHead>
                         <TableHead>
                           <Clock className="h-4 w-4 inline mr-1" />
-                          Última Visita
+                          Última Visita (UTC-3)
                         </TableHead>
                         <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
@@ -441,8 +441,10 @@ export default function WebActivity() {
                               {item.category.icon} {item.category.name}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{item.hits}</Badge>
+                          <TableCell className="text-center">
+                            <Badge variant="secondary" className="font-mono">
+                              {item.hits.toLocaleString('pt-BR')}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {formatBrazilDateTime(item.first_seen_at, 'datetime')}
