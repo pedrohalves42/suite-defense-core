@@ -215,27 +215,40 @@ Deno.serve(async (req) => {
   }
 });
 
-// Extract searchable keywords from software name
+// Extract searchable keywords from software name with improved normalization
 function extractKeywords(name: string): string[] {
   const keywords: string[] = [];
-  const lowerName = name.toLowerCase();
+  let lowerName = name.toLowerCase();
+  
+  // FASE 3: Normalização melhorada para matching de CVE
+  // Remove version suffix (e.g., "Chrome 120.0.6099.129" → "chrome")
+  lowerName = lowerName.replace(/\s+\d+(\.\d+)*\s*$/, '');
+  // Remove architecture suffix
+  lowerName = lowerName.replace(/\s+(x64|x86|64-bit|32-bit|amd64|arm64)\s*$/i, '');
+  // Remove common prefixes
+  lowerName = lowerName.replace(/^(microsoft|adobe|google|mozilla|oracle|ibm|vmware|cisco|apple)\s+/i, '');
   
   // Common software patterns
   const knownProducts = [
-    'chrome', 'firefox', 'edge', 'safari', 'opera',
-    'office', 'word', 'excel', 'powerpoint', 'outlook', 'teams',
-    'adobe', 'acrobat', 'reader', 'photoshop', 'illustrator',
-    'java', 'python', 'nodejs', 'node.js', 'dotnet', '.net',
-    'windows', 'defender', 'security',
-    'zoom', 'slack', 'skype', 'discord',
-    'vlc', 'winrar', '7zip', '7-zip', 'notepad++',
-    'git', 'vscode', 'visual studio',
-    'mysql', 'postgresql', 'mongodb', 'redis', 'sql server',
-    'nginx', 'apache', 'iis', 'tomcat',
-    'docker', 'kubernetes', 'vmware', 'virtualbox',
-    'curl', 'openssl', 'openssh', 'putty',
-    'antivirus', 'kaspersky', 'norton', 'mcafee', 'avast', 'avg',
-    'cisco', 'fortinet', 'paloalto'
+    'chrome', 'firefox', 'edge', 'safari', 'opera', 'brave',
+    'office', 'word', 'excel', 'powerpoint', 'outlook', 'teams', 'onenote', 'access',
+    'acrobat', 'reader', 'photoshop', 'illustrator', 'premiere', 'after effects',
+    'java', 'jre', 'jdk', 'python', 'nodejs', 'node.js', 'dotnet', '.net', 'runtime',
+    'windows', 'defender', 'security', 'update',
+    'zoom', 'slack', 'skype', 'discord', 'webex',
+    'vlc', 'winrar', '7zip', '7-zip', 'notepad++', 'sublime',
+    'git', 'vscode', 'visual studio', 'intellij', 'eclipse', 'pycharm',
+    'mysql', 'postgresql', 'postgres', 'mongodb', 'redis', 'sql server', 'sqlite', 'mariadb',
+    'nginx', 'apache', 'httpd', 'iis', 'tomcat', 'jetty',
+    'docker', 'kubernetes', 'k8s', 'vmware', 'virtualbox', 'hyper-v',
+    'curl', 'openssl', 'openssh', 'putty', 'winscp', 'filezilla',
+    'antivirus', 'kaspersky', 'norton', 'mcafee', 'avast', 'avg', 'bitdefender', 'eset',
+    'cisco', 'fortinet', 'paloalto', 'fortigate', 'anyconnect',
+    'winzip', 'peazip', 'rar', 'zip', 'tar',
+    'pdf', 'foxit', 'sumatra',
+    'driver', 'nvidia', 'amd', 'intel', 'realtek',
+    'teamviewer', 'anydesk', 'rdp', 'vnc',
+    'onedrive', 'dropbox', 'google drive', 'box'
   ];
   
   for (const product of knownProducts) {
@@ -250,6 +263,12 @@ function extractKeywords(name: string): string[] {
     if (firstWord && firstWord.length >= 3) {
       keywords.push(firstWord);
     }
+  }
+  
+  // Also add normalized full name for broader matching
+  const normalizedFull = lowerName.split(/[\s\-_]/)[0];
+  if (normalizedFull && normalizedFull.length >= 3 && !keywords.includes(normalizedFull)) {
+    keywords.push(normalizedFull);
   }
   
   return keywords;

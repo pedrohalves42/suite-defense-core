@@ -269,6 +269,39 @@ Deno.serve(async (req) => {
       }
     }
 
+    // FASE 2: Auto-resolução de alertas quando métricas normalizam
+    const alertsToResolve: string[] = [];
+
+    // CPU normalizou (< 90%)?
+    if (metrics.cpu_usage_percent !== undefined && metrics.cpu_usage_percent < 90) {
+      alertsToResolve.push('high_cpu');
+    }
+
+    // Memory normalizou (< 80%)?
+    if (metrics.memory_usage_percent !== undefined && metrics.memory_usage_percent < 80) {
+      alertsToResolve.push('high_memory', 'memory_warning');
+    }
+
+    // Disk normalizou (< 90%)?
+    if (metrics.disk_usage_percent !== undefined && metrics.disk_usage_percent < 90) {
+      alertsToResolve.push('high_disk');
+    }
+
+    if (alertsToResolve.length > 0) {
+      const { error: resolveError, count: resolvedCount } = await supabase
+        .from('system_alerts')
+        .update({ resolved: true, resolved_at: new Date().toISOString() })
+        .eq('agent_id', agent.id)
+        .eq('resolved', false)
+        .in('alert_type', alertsToResolve);
+
+      if (resolveError) {
+        logger.error('Failed to auto-resolve alerts', resolveError);
+      } else if (resolvedCount && resolvedCount > 0) {
+        logger.info(`Auto-resolved ${resolvedCount} alerts for ${agent.agent_name}`);
+      }
+    }
+
     logger.success(`Metrics processed, ${alerts.length} alerts generated`);
 
     return new Response(
