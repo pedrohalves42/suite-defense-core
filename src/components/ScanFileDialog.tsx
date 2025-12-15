@@ -6,13 +6,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileSearch, Loader2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { FileSearch, Loader2, HardDrive } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 export function ScanFileDialog() {
   const [open, setOpen] = useState(false);
   const [agentName, setAgentName] = useState('');
   const [filePath, setFilePath] = useState('');
+  const [scanFullSystem, setScanFullSystem] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: agents, isLoading: agentsLoading } = useQuery({
@@ -34,13 +36,17 @@ export function ScanFileDialog() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Nao autenticado');
 
+      // Determinar tipo de job e payload
+      const jobType = scanFullSystem ? 'full_system_scan' : 'scan';
+      const payload = scanFullSystem 
+        ? { scanType: 'full_system' }
+        : { filePath: filePath };
+
       const { data, error } = await supabase.functions.invoke('create-job', {
         body: {
           agent_name: agentName,
-          job_type: 'scan',
-          payload: {
-            filePath: filePath
-          }
+          job_type: jobType,
+          payload
         }
       });
 
@@ -48,14 +54,19 @@ export function ScanFileDialog() {
       return data;
     },
     onSuccess: () => {
+      const message = scanFullSystem 
+        ? `O computador ${agentName} irá escanear todo o sistema em breve.`
+        : `O computador ${agentName} irá escanear o arquivo em breve.`;
+      
       toast({
-        title: 'Job de Scan Criado',
-        description: `O agente ${agentName} ira escanear o arquivo em breve.`,
+        title: scanFullSystem ? 'Scan Completo Iniciado' : 'Job de Scan Criado',
+        description: message,
       });
       queryClient.invalidateQueries({ queryKey: ['jobs'] });
       setOpen(false);
       setAgentName('');
       setFilePath('');
+      setScanFullSystem(false);
     },
     onError: (error: Error) => {
       toast({
@@ -86,34 +97,37 @@ export function ScanFileDialog() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const trimmedPath = filePath.trim();
-    
     if (!agentName) {
       toast({
-        title: 'Agente Obrigatório',
-        description: 'Selecione um agente ativo para executar o scan.',
+        title: 'Computador Obrigatório',
+        description: 'Selecione um computador ativo para executar o scan.',
         variant: 'destructive',
       });
       return;
     }
     
-    if (!trimmedPath) {
-      toast({
-        title: 'Caminho Obrigatório',
-        description: 'Informe o caminho completo do arquivo a ser escaneado.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    // Bloquear paths inválidos para SYSTEM
-    if (isInvalidPath(filePath)) {
-      toast({
-        title: 'Caminho Invalido',
-        description: 'O agente roda como SYSTEM e nao tem acesso a pastas de usuario. Use caminhos como C:\\Program Files\\...',
-        variant: 'destructive',
-      });
-      return;
+    // Se não for scan completo, validar o caminho
+    if (!scanFullSystem) {
+      const trimmedPath = filePath.trim();
+      
+      if (!trimmedPath) {
+        toast({
+          title: 'Caminho Obrigatório',
+          description: 'Informe o caminho completo do arquivo ou marque "Escanear Todo o Computador".',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Bloquear paths inválidos para SYSTEM
+      if (isInvalidPath(filePath)) {
+        toast({
+          title: 'Caminho Inválido',
+          description: 'O agente roda como SYSTEM e não tem acesso a pastas de usuário. Use caminhos como C:\\Program Files\\...',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
     
     createScanJob.mutate();
@@ -136,10 +150,10 @@ export function ScanFileDialog() {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="agent">Agente</Label>
+            <Label htmlFor="agent">Computador</Label>
             <Select value={agentName} onValueChange={setAgentName}>
               <SelectTrigger id="agent">
-                <SelectValue placeholder="Selecione um agente ativo" />
+                <SelectValue placeholder="Selecione um computador ativo" />
               </SelectTrigger>
               <SelectContent>
                 {agentsLoading ? (
@@ -154,50 +168,70 @@ export function ScanFileDialog() {
                   ))
                 ) : (
                   <div className="p-2 text-sm text-muted-foreground">
-                    Nenhum agente ativo disponivel
+                    Nenhum computador ativo disponível
                   </div>
                 )}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="filePath">Caminho do Arquivo</Label>
-            <Input
-              id="filePath"
-              type="text"
-              placeholder="C:\Program Files\app\file.exe"
-              value={filePath}
-              onChange={(e) => setFilePath(e.target.value)}
-              required
+          {/* Opção Scan Completo */}
+          <div className="flex items-center space-x-3 p-3 rounded-md border bg-muted/30">
+            <Checkbox 
+              id="scanFullSystem" 
+              checked={scanFullSystem}
+              onCheckedChange={(checked) => setScanFullSystem(checked as boolean)}
             />
-            <div className="rounded-md bg-muted/50 p-2 text-xs">
-              <p className="font-medium mb-1">Caminhos recomendados (conta SYSTEM):</p>
-              <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
-                <li><code>C:\Windows\System32\...</code></li>
-                <li><code>C:\Program Files\...</code></li>
-                <li><code>C:\ProgramData\...</code></li>
-                <li><code>C:\Temp\...</code></li>
-              </ul>
+            <div className="flex-1">
+              <Label htmlFor="scanFullSystem" className="flex items-center gap-2 cursor-pointer font-medium">
+                <HardDrive className="h-4 w-4 text-primary" />
+                Escanear Todo o Computador
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Verifica todas as unidades e diretórios do sistema
+              </p>
             </div>
-            {(filePath.includes('%USERPROFILE%') || 
-              filePath.includes('%APPDATA%') || 
-              filePath.includes('%TEMP%') ||
-              filePath.toLowerCase().includes('\\users\\') ||
-              filePath.toLowerCase().includes('downloads') ||
-              filePath.toLowerCase().includes('documents') ||
-              filePath.toLowerCase().includes('desktop')) && (
-              <div className="rounded-md bg-destructive/20 border border-destructive/30 p-3 text-xs text-destructive">
-                <p className="font-semibold">⚠️ Caminho Invalido para SYSTEM</p>
-                <p className="mt-1">
-                  O agente roda como conta SYSTEM e <strong>nao tem acesso</strong> a pastas de usuario como Downloads, Documents ou Desktop.
-                </p>
-                <p className="mt-1">
-                  Use caminhos absolutos como <code>C:\Program Files\...</code> ou <code>C:\Windows\...</code>
-                </p>
-              </div>
-            )}
           </div>
+
+          {/* Campo de caminho (apenas se não for scan completo) */}
+          {!scanFullSystem && (
+            <div className="space-y-2">
+              <Label htmlFor="filePath">Caminho do Arquivo</Label>
+              <Input
+                id="filePath"
+                type="text"
+                placeholder="C:\Program Files\app\file.exe"
+                value={filePath}
+                onChange={(e) => setFilePath(e.target.value)}
+              />
+              <div className="rounded-md bg-muted/50 p-2 text-xs">
+                <p className="font-medium mb-1">Caminhos recomendados (conta SYSTEM):</p>
+                <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+                  <li><code>C:\Windows\System32\...</code></li>
+                  <li><code>C:\Program Files\...</code></li>
+                  <li><code>C:\ProgramData\...</code></li>
+                  <li><code>C:\Temp\...</code></li>
+                </ul>
+              </div>
+              {(filePath.includes('%USERPROFILE%') || 
+                filePath.includes('%APPDATA%') || 
+                filePath.includes('%TEMP%') ||
+                filePath.toLowerCase().includes('\\users\\') ||
+                filePath.toLowerCase().includes('downloads') ||
+                filePath.toLowerCase().includes('documents') ||
+                filePath.toLowerCase().includes('desktop')) && (
+                <div className="rounded-md bg-destructive/20 border border-destructive/30 p-3 text-xs text-destructive">
+                  <p className="font-semibold">⚠️ Caminho Inválido para SYSTEM</p>
+                  <p className="mt-1">
+                    O agente roda como conta SYSTEM e <strong>não tem acesso</strong> a pastas de usuário como Downloads, Documents ou Desktop.
+                  </p>
+                  <p className="mt-1">
+                    Use caminhos absolutos como <code>C:\Program Files\...</code> ou <code>C:\Windows\...</code>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
@@ -208,6 +242,11 @@ export function ScanFileDialog() {
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Criando...
+                </>
+              ) : scanFullSystem ? (
+                <>
+                  <HardDrive className="mr-2 h-4 w-4" />
+                  Escanear Sistema
                 </>
               ) : (
                 'Criar Job de Scan'

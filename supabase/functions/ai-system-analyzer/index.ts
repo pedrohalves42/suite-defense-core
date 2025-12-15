@@ -333,21 +333,24 @@ async function analyzeWithAI(
       : 0;
 
     // MELHORADO: Análise POR AGENTE em vez de médias globais
+    // Usar nomes amigáveis (display_name > hostname > agent_name) diretamente
     const agentMetricsMap = new Map<string, { 
       cpu: number[]; 
       memory: number[]; 
       disk: number[];
-      agent_name: string;
+      friendly_name: string;
     }>();
     
     for (const metric of data.agentMetrics) {
       const agentId = metric.agent_id;
       if (!agentMetricsMap.has(agentId)) {
+        // Usar o friendly_name já enriquecido anteriormente
+        const friendlyName = metric.friendly_name || metric.agent_name || agentId.slice(0, 8);
         agentMetricsMap.set(agentId, { 
           cpu: [], 
           memory: [], 
           disk: [],
-          agent_name: metric.agent_name || agentId.slice(0, 8)
+          friendly_name: friendlyName
         });
       }
       const agentData = agentMetricsMap.get(agentId)!;
@@ -356,13 +359,9 @@ async function analyzeWithAI(
       if (metric.disk_usage_percent != null) agentData.disk.push(metric.disk_usage_percent);
     }
 
-    // Calcular médias e identificar outliers por agente (com anonimização)
-    // Criar mapa de anonimizado -> original para tradução reversa
-    const anonToOriginalMap = new Map<string, string>();
-    
+    // Calcular médias e identificar outliers por agente
+    // CORREÇÃO: Usar nomes amigáveis diretamente em vez de anonimizar
     const agentSummaries = Array.from(agentMetricsMap.entries()).map(([agentId, data]) => {
-      // Usar friendly_name se disponível, caso contrário agent_name
-      const displayName = (data as any).friendly_name || data.agent_name;
       const avgCpu = data.cpu.length > 0 ? data.cpu.reduce((a, b) => a + b, 0) / data.cpu.length : 0;
       const avgMemory = data.memory.length > 0 ? data.memory.reduce((a, b) => a + b, 0) / data.memory.length : 0;
       const avgDisk = data.disk.length > 0 ? data.disk.reduce((a, b) => a + b, 0) / data.disk.length : 0;
@@ -370,16 +369,10 @@ async function analyzeWithAI(
       const maxMemory = data.memory.length > 0 ? Math.max(...data.memory) : 0;
       const maxDisk = data.disk.length > 0 ? Math.max(...data.disk) : 0;
       
-      // Anonimizar nome do agente antes de enviar à IA
-      const anonName = anonymizeAgentName(data.agent_name);
-      
-      // Guardar mapeamento para tradução reversa
-      anonToOriginalMap.set(anonName, data.agent_name);
-      
       return {
         agent_id: agentId,
-        agent_name: anonName,
-        original_name: data.agent_name, // Manter original para correlação interna
+        // Usar nome amigável diretamente (não anonimizado)
+        agent_name: data.friendly_name,
         samples: data.cpu.length,
         avg_cpu: avgCpu,
         avg_memory: avgMemory,
@@ -397,17 +390,16 @@ async function analyzeWithAI(
     // Identificar agentes problemáticos
     const problematicAgents = agentSummaries.filter(a => a.high_cpu || a.high_memory || a.critical_disk);
 
-    // Correlacionar alertas com agentes específicos (anonimizado)
+    // Correlacionar alertas com agentes específicos usando nomes amigáveis
     const alertsByAgent = new Map<string, number>();
     for (const alert of data.systemAlerts) {
       if (alert.agent_id) {
-        // Encontrar o nome anonimizado no mapa ou criar novo
-        const agentName = data.agentMetrics.find(m => m.agent_id === alert.agent_id)?.agent_name || alert.agent_id.slice(0, 8);
-        const anonName = anonymizeAgentName(agentName);
-        anonToOriginalMap.set(anonName, agentName);
-        alertsByAgent.set(anonName, (alertsByAgent.get(anonName) || 0) + 1);
+        // Usar nome amigável do mapa de métricas ou fallback
+        const agentData = agentMetricsMap.get(alert.agent_id);
+        const friendlyName = agentData?.friendly_name || alert.agent_id.slice(0, 8);
+        alertsByAgent.set(friendlyName, (alertsByAgent.get(friendlyName) || 0) + 1);
       } else {
-        alertsByAgent.set('system', (alertsByAgent.get('system') || 0) + 1);
+        alertsByAgent.set('sistema', (alertsByAgent.get('sistema') || 0) + 1);
       }
     }
 
@@ -424,14 +416,14 @@ async function analyzeWithAI(
       ? agentSummaries.reduce((sum, a) => sum + a.avg_memory, 0) / agentSummaries.length
       : 0;
 
-    // Anonimizar nome do tenant para o prompt
-    const anonTenantName = anonymizeAgentName(tenantName);
+    // Usar nome do tenant diretamente (não anonimizado)
+    const displayTenantName = tenantName || 'Empresa';
 
-    const rawPrompt = `Voce e um especialista em analise de sistemas de monitoramento de agentes. Analise os dados abaixo e identifique problemas, anomalias, e oportunidades de otimizacao.
+    const rawPrompt = `Voce e um especialista em analise de sistemas de monitoramento de computadores. Analise os dados abaixo e identifique problemas, anomalias, e oportunidades de otimizacao.
 
-**IMPORTANTE:** Analise CADA AGENTE individualmente. Nao se deixe enganar por medias globais baixas - pode haver agentes especificos com problemas criticos.
+**IMPORTANTE:** Analise CADA COMPUTADOR individualmente. Nao se deixe enganar por medias globais baixas - pode haver computadores especificos com problemas criticos.
 
-**Dados do Tenant: ${anonTenantName}**
+**Dados da Empresa: ${displayTenantName}**
 
 **Resumo Global (use apenas como contexto):**
 - CPU media global: ${avgCpuUsage.toFixed(1)}%
@@ -584,24 +576,14 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
       return [];
     }
 
-    // Função para traduzir nomes anonimizados de volta para originais
-    const translateToOriginal = (text: string): string => {
-      let translated = text;
-      for (const [anonName, originalName] of anonToOriginalMap.entries()) {
-        // Substituir todas as ocorrências do nome anonimizado pelo original
-        translated = translated.replace(new RegExp(anonName, 'gi'), originalName);
-      }
-      return translated;
-    };
-
     // Mapear para formato do banco de dados
+    // CORREÇÃO: Não precisa traduzir pois usamos nomes amigáveis diretamente
     return parsedInsights.map((insight: any) => ({
       tenant_id: tenantId,
       insight_type: insight.insight_type,
       severity: insight.severity,
-      // Traduzir nomes anonimizados de volta para originais
-      title: translateToOriginal(insight.title || ''),
-      description: translateToOriginal(insight.description || ''),
+      title: insight.title || '',
+      description: insight.description || '',
       evidence: {
         failureRate,
         avgCpuUsage,
@@ -610,7 +592,7 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
         systemAlertsCount: data.systemAlerts.length,
         analysisDate: new Date().toISOString(),
       },
-      recommendation: translateToOriginal(insight.recommendation || ''),
+      recommendation: insight.recommendation || '',
       confidence_score: insight.confidence_score,
     }));
 

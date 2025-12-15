@@ -216,14 +216,13 @@ function buildContextSummary(agent: Agent, context: AgentContext): string {
   const failedJobs = context.recentJobs.filter(j => j.status === 'failed').length;
   const totalJobs = context.recentJobs.length;
   
-  // Anonimizar dados sensíveis antes de enviar à IA
-  const anonAgentName = anonymizeAgentName(agent.agent_name);
-  const anonHostname = anonymizeAgentName(agent.hostname || 'unknown');
+  // CORREÇÃO: Usar nomes amigáveis diretamente (hostname > agent_name)
+  const displayName = agent.hostname || agent.agent_name || 'Computador';
   
   return `
-Agente: ${anonAgentName}
+Computador: ${displayName}
 Sistema Operacional: ${agent.os_type}
-Hostname: ${anonHostname}
+Hostname: ${agent.hostname || 'Não definido'}
 
 METRICAS DE SISTEMA:
 - CPU: ${metrics?.cpu_usage_percent ?? 'N/A'}%
