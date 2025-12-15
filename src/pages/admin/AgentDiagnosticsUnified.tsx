@@ -460,6 +460,75 @@ export default function AgentDiagnosticsUnified() {
                     </ol>
                   </AccordionContent>
                 </AccordionItem>
+
+                <AccordionItem value="item-5">
+                  <AccordionTrigger>
+                    <span className="flex items-center gap-2">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                      Agente removido após reinício/atualização
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-3">
+                    <Alert variant="destructive" className="mb-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Causa mais comum: Antivírus</AlertTitle>
+                      <AlertDescription>
+                        O Windows Defender ou outro antivírus pode ter removido a pasta C:\CyberShield 
+                        ou a Scheduled Task durante o boot.
+                      </AlertDescription>
+                    </Alert>
+                    
+                    <p className="font-semibold">Sintomas:</p>
+                    <ul className="list-disc pl-6 space-y-1">
+                      <li>Pasta C:\CyberShield não existe mais</li>
+                      <li>Scheduled Task "CyberShieldAgent" sumiu</li>
+                      <li>Computador ficou offline após reiniciar</li>
+                    </ul>
+                    
+                    <p className="font-semibold mt-4">Diagnóstico no computador:</p>
+                    <div className="bg-muted p-3 rounded-lg space-y-2">
+                      <code className="block text-xs">
+                        # 1. Verificar se pasta existe{"\n"}
+                        Test-Path "C:\CyberShield"{"\n\n"}
+                        # 2. Verificar Scheduled Task{"\n"}
+                        Get-ScheduledTask -TaskName "CyberShieldAgent*"{"\n\n"}
+                        # 3. Verificar histórico do Windows Defender{"\n"}
+                        Get-MpThreatDetection | Where-Object {"{"} $_.Resources -like "*CyberShield*" {"}"} | Format-List
+                      </code>
+                    </div>
+                    
+                    <p className="font-semibold mt-4">Solução:</p>
+                    <ol className="list-decimal pl-6 space-y-2">
+                      <li>
+                        <strong>Adicione exclusão no Windows Defender manualmente:</strong>
+                        <div className="bg-muted p-2 rounded mt-1">
+                          <code className="text-xs">Add-MpPreference -ExclusionPath "C:\CyberShield"</code>
+                        </div>
+                      </li>
+                      <li>
+                        <strong>Gere uma nova chave de instalação</strong> neste dashboard
+                      </li>
+                      <li>
+                        <strong>Execute a reinstalação</strong> usando o comando gerado
+                      </li>
+                      <li>
+                        <strong>Verifique se a exclusão está ativa:</strong>
+                        <div className="bg-muted p-2 rounded mt-1">
+                          <code className="text-xs">(Get-MpPreference).ExclusionPath</code>
+                        </div>
+                      </li>
+                    </ol>
+                    
+                    <Alert className="mt-4">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <AlertTitle>Prevenção automática ativada</AlertTitle>
+                      <AlertDescription>
+                        Instaladores gerados a partir de agora incluem configuração automática de exclusão 
+                        do Windows Defender. Computadores recém-instalados não devem ter esse problema.
+                      </AlertDescription>
+                    </Alert>
+                  </AccordionContent>
+                </AccordionItem>
               </Accordion>
             </CardContent>
           </Card>
