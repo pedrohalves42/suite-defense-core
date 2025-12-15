@@ -4416,6 +4416,7 @@ export type Database = {
           alert_threshold_offline_agents: number | null
           alert_threshold_virus_positive: number | null
           alert_webhook_url: string | null
+          business_hours: Json | null
           created_at: string
           enable_auto_quarantine: boolean | null
           enable_email_alerts: boolean | null
@@ -4432,6 +4433,7 @@ export type Database = {
           alert_threshold_offline_agents?: number | null
           alert_threshold_virus_positive?: number | null
           alert_webhook_url?: string | null
+          business_hours?: Json | null
           created_at?: string
           enable_auto_quarantine?: boolean | null
           enable_email_alerts?: boolean | null
@@ -4448,6 +4450,7 @@ export type Database = {
           alert_threshold_offline_agents?: number | null
           alert_threshold_virus_positive?: number | null
           alert_webhook_url?: string | null
+          business_hours?: Json | null
           created_at?: string
           enable_auto_quarantine?: boolean | null
           enable_email_alerts?: boolean | null
