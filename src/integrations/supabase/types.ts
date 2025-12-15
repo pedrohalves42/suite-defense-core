@@ -4215,8 +4215,11 @@ export type Database = {
       }
       subscription_plans: {
         Row: {
+          billing_period: string | null
           created_at: string
+          discount_pct: number | null
           id: string
+          is_active: boolean | null
           max_agents: number | null
           max_devices: number | null
           max_scans_per_month: number | null
@@ -4228,8 +4231,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_period?: string | null
           created_at?: string
+          discount_pct?: number | null
           id?: string
+          is_active?: boolean | null
           max_agents?: number | null
           max_devices?: number | null
           max_scans_per_month?: number | null
@@ -4241,8 +4247,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_period?: string | null
           created_at?: string
+          discount_pct?: number | null
           id?: string
+          is_active?: boolean | null
           max_agents?: number | null
           max_devices?: number | null
           max_scans_per_month?: number | null

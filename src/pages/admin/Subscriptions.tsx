@@ -201,21 +201,47 @@ export default function Subscriptions() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!isOnFreePlan && subscription?.device_quantity && (
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Dispositivos na Assinatura</p>
-              <p className="text-3xl font-bold">{subscription.device_quantity}</p>
-            </div>
-          )}
-          
-          {subscription?.current_period_end && (
-            <div>
-              <p className="text-sm text-muted-foreground">Proxima Renovacao</p>
-              <p className="text-lg font-medium">
-                {new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}
-              </p>
-            </div>
-          )}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {!isOnFreePlan && subscription?.device_quantity && (
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Dispositivos</p>
+                <p className="text-2xl font-bold">{subscription.device_quantity}</p>
+              </div>
+            )}
+            
+            {subscription?.current_period_end && (
+              <div>
+                <p className="text-sm text-muted-foreground">Próxima Renovação</p>
+                <p className="text-lg font-medium">
+                  {new Date(subscription.current_period_end).toLocaleDateString('pt-BR')}
+                </p>
+              </div>
+            )}
+
+            {/* Billing Period Display */}
+            {(subscription as any)?.billing_period && (subscription as any)?.billing_period !== 'monthly' && (
+              <div>
+                <p className="text-sm text-muted-foreground">Período</p>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-sm">
+                    {(subscription as any).billing_period === '6m' && '6 meses'}
+                    {(subscription as any).billing_period === '12m' && '12 meses'}
+                    {(subscription as any).billing_period === '24m' && '24 meses'}
+                  </Badge>
+                </div>
+              </div>
+            )}
+
+            {/* Discount Applied */}
+            {(subscription as any)?.discount_pct > 0 && (
+              <div>
+                <p className="text-sm text-muted-foreground">Desconto Aplicado</p>
+                <Badge variant="outline" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                  -{(subscription as any).discount_pct}%
+                </Badge>
+              </div>
+            )}
+          </div>
 
           {isOnFreePlan && (
             <Button

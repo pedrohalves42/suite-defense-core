@@ -39,12 +39,18 @@ Deno.serve(async (req) => {
     if (userError || !userData.user?.email) throw new Error("User not authenticated");
     logStep("User authenticated", { userId: userData.user.id, email: userData.user.email });
 
-    // Get request body - V4: only planName required (fixed pricing per plan)
-    const { planName } = await req.json();
+    // Get request body - V4: planName + optional billingPeriod for package discounts
+    const { planName, billingPeriod = 'monthly' } = await req.json();
     if (!planName) {
       throw new Error("planName is required");
     }
-    logStep("Request parameters", { planName });
+    logStep("Request parameters", { planName, billingPeriod });
+
+    // Validate billing period
+    const validPeriods = ['monthly', '6m', '12m', '24m'];
+    if (!validPeriods.includes(billingPeriod)) {
+      throw new Error("billingPeriod must be one of: monthly, 6m, 12m, 24m");
+    }
 
     // Get tenant_id using helper (handles multiple roles)
     const tenantId = await getTenantIdForUser(supabaseClient, userData.user.id);
@@ -66,17 +72,52 @@ Deno.serve(async (req) => {
       throw new Error("Você já possui uma assinatura ativa. Use o portal do cliente para gerenciar.");
     }
 
-    // Get plan details
-    const { data: plan } = await supabaseClient
+    // Build plan name with billing period suffix
+    const fullPlanName = billingPeriod === 'monthly' ? planName : `${planName}_${billingPeriod}`;
+    logStep("Looking for plan", { fullPlanName });
+
+    // Get plan details with billing period
+    const { data: plan, error: planError } = await supabaseClient
       .from("subscription_plans")
-      .select("stripe_price_id, max_devices, price_per_device, trial_days")
-      .eq("name", planName)
-      .order('created_at', { ascending: false })
+      .select("stripe_price_id, max_devices, price_per_device, trial_days, billing_period, discount_pct")
+      .eq("name", fullPlanName)
+      .eq("is_active", true)
       .limit(1)
       .maybeSingle();
 
-    if (!plan?.stripe_price_id) throw new Error("Plan not found or not configured");
-    logStep("Plan validated", { priceId: plan.stripe_price_id, maxDevices: plan.max_devices });
+    if (planError) {
+      logStep("Plan query error", { error: planError.message });
+      throw new Error(`Erro ao buscar plano: ${planError.message}`);
+    }
+
+    if (!plan) {
+      // Fallback to monthly plan if period variant doesn't exist
+      const { data: monthlyPlan } = await supabaseClient
+        .from("subscription_plans")
+        .select("stripe_price_id, max_devices, price_per_device, trial_days, billing_period, discount_pct")
+        .eq("name", planName)
+        .eq("billing_period", "monthly")
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      
+      if (!monthlyPlan?.stripe_price_id) {
+        throw new Error("Plano não encontrado ou não configurado no Stripe");
+      }
+      logStep("Using monthly fallback", { planName });
+    }
+
+    const selectedPlan = plan || null;
+    if (!selectedPlan?.stripe_price_id) {
+      throw new Error("Plano não configurado no Stripe. Configure os produtos primeiro.");
+    }
+
+    logStep("Plan validated", { 
+      priceId: selectedPlan.stripe_price_id, 
+      maxDevices: selectedPlan.max_devices,
+      billingPeriod: selectedPlan.billing_period,
+      discountPct: selectedPlan.discount_pct
+    });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
@@ -93,15 +134,19 @@ Deno.serve(async (req) => {
       logStep("New customer created", { customerId });
     }
 
-    // Create checkout session - V4: Fixed price (quantity: 1), 14 days trial
+    // Create checkout session - V4: Fixed price with package discounts
     const origin = req.headers.get("origin") || "http://localhost:8080";
-    const trialDays = plan.trial_days || 14;
+    const trialDays = selectedPlan.trial_days || 14;
+
+    // Calculate months for metadata
+    const monthsMap: Record<string, number> = { 'monthly': 1, '6m': 6, '12m': 12, '24m': 24 };
+    const months = monthsMap[billingPeriod] || 1;
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
         {
-          price: plan.stripe_price_id,
+          price: selectedPlan.stripe_price_id,
           quantity: 1, // V4: Fixed price per plan, not per device
         },
       ],
@@ -113,17 +158,28 @@ Deno.serve(async (req) => {
         metadata: {
           tenant_id: tenantId,
           plan_name: planName,
-          max_devices: plan.max_devices.toString(),
+          billing_period: billingPeriod,
+          discount_pct: (selectedPlan.discount_pct || 0).toString(),
+          max_devices: selectedPlan.max_devices.toString(),
+          contract_months: months.toString(),
         },
       },
       metadata: {
         tenant_id: tenantId,
         plan_name: planName,
-        max_devices: plan.max_devices.toString(),
+        billing_period: billingPeriod,
+        discount_pct: (selectedPlan.discount_pct || 0).toString(),
+        max_devices: selectedPlan.max_devices.toString(),
       },
     });
 
-    logStep("Checkout session created", { sessionId: session.id, url: session.url, trialDays });
+    logStep("Checkout session created", { 
+      sessionId: session.id, 
+      url: session.url, 
+      trialDays,
+      billingPeriod,
+      discountApplied: selectedPlan.discount_pct 
+    });
 
     return new Response(
       JSON.stringify({ url: session.url }),
