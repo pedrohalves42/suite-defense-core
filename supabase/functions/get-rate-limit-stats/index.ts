@@ -35,74 +35,117 @@ Deno.serve(async (req) => {
       hoursBack = parseInt(url.searchParams.get('hours_back') || '24');
     }
 
-    // Get summary by endpoint
-    const { data: summary, error: summaryError } = await supabase
-      .rpc('get_rate_limit_summary', { p_hours_back: hoursBack });
+    const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
+    console.log(`[${ctx.requestId}] Fetching rate limit stats for last ${hoursBack} hours, cutoff: ${cutoffTime}`);
 
-    if (summaryError) {
-      console.error(`[${ctx.requestId}] Error fetching summary:`, summaryError);
+    // Get all rate limit records from the period
+    const { data: rateLimits, error: rateLimitsError } = await supabase
+      .from('rate_limits')
+      .select('*')
+      .gte('window_start', cutoffTime)
+      .order('window_start', { ascending: false });
+
+    if (rateLimitsError) {
+      console.error(`[${ctx.requestId}] Error fetching rate limits:`, rateLimitsError);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch rate limit summary', requestId: ctx.requestId }),
+        JSON.stringify({ error: 'Failed to fetch rate limits', requestId: ctx.requestId }),
         { status: 500, headers: mergeHeaders(corsHeaders, ctx) }
       );
     }
 
-    // Get top blocked identifiers
-    const { data: topBlocked, error: blockedError } = await supabase
-      .from('rate_limits')
-      .select('identifier, endpoint, request_count, blocked_until')
-      .not('blocked_until', 'is', null)
-      .gt('blocked_until', new Date().toISOString())
-      .order('request_count', { ascending: false })
-      .limit(10);
+    console.log(`[${ctx.requestId}] Found ${rateLimits?.length || 0} rate limit records`);
 
-    if (blockedError) {
-      console.error(`[${ctx.requestId}] Error fetching blocked:`, blockedError);
+    // Aggregate by endpoint
+    const endpointStats = new Map<string, {
+      endpoint: string;
+      total_requests: number;
+      unique_identifiers: Set<string>;
+      blocked_count: number;
+    }>();
+
+    const currentlyBlocked: Array<{
+      identifier: string;
+      endpoint: string;
+      request_count: number;
+      blocked_until: string;
+    }> = [];
+
+    const now = new Date();
+
+    for (const record of (rateLimits || [])) {
+      const endpoint = record.endpoint || 'unknown';
+      
+      if (!endpointStats.has(endpoint)) {
+        endpointStats.set(endpoint, {
+          endpoint,
+          total_requests: 0,
+          unique_identifiers: new Set(),
+          blocked_count: 0,
+        });
+      }
+
+      const stats = endpointStats.get(endpoint)!;
+      stats.total_requests += record.request_count || 0;
+      stats.unique_identifiers.add(record.identifier);
+
+      // Check if currently blocked
+      if (record.blocked_until && new Date(record.blocked_until) > now) {
+        stats.blocked_count++;
+        currentlyBlocked.push({
+          identifier: record.identifier,
+          endpoint: record.endpoint,
+          request_count: record.request_count,
+          blocked_until: record.blocked_until,
+        });
+      }
     }
 
-    // Get hourly breakdown
-    const { data: hourlyData, error: hourlyError } = await supabase
-      .from('rate_limits')
-      .select('endpoint, request_count, window_start')
-      .gte('window_start', new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString())
-      .order('window_start', { ascending: true });
+    // Convert to array format
+    const summary = Array.from(endpointStats.values()).map(stats => ({
+      endpoint: stats.endpoint,
+      total_requests: stats.total_requests,
+      unique_identifiers: stats.unique_identifiers.size,
+      blocked_count: stats.blocked_count,
+      avg_requests_per_identifier: stats.unique_identifiers.size > 0 
+        ? Math.round(stats.total_requests / stats.unique_identifiers.size) 
+        : 0,
+    })).sort((a, b) => b.total_requests - a.total_requests);
 
-    if (hourlyError) {
-      console.error(`[${ctx.requestId}] Error fetching hourly:`, hourlyError);
-    }
-
-    // Aggregate hourly data
+    // Hourly breakdown
     const hourlyBreakdown: Record<string, { hour: string; requests: number }[]> = {};
-    (hourlyData || []).forEach((row: any) => {
-      const hour = new Date(row.window_start).toISOString().slice(0, 13) + ':00:00Z';
-      if (!hourlyBreakdown[row.endpoint]) {
-        hourlyBreakdown[row.endpoint] = [];
+    for (const record of (rateLimits || [])) {
+      const hour = new Date(record.window_start).toISOString().slice(0, 13) + ':00:00Z';
+      const endpoint = record.endpoint || 'unknown';
+      
+      if (!hourlyBreakdown[endpoint]) {
+        hourlyBreakdown[endpoint] = [];
       }
-      const existing = hourlyBreakdown[row.endpoint].find(h => h.hour === hour);
+      
+      const existing = hourlyBreakdown[endpoint].find(h => h.hour === hour);
       if (existing) {
-        existing.requests += row.request_count;
+        existing.requests += record.request_count || 0;
       } else {
-        hourlyBreakdown[row.endpoint].push({ hour, requests: row.request_count });
+        hourlyBreakdown[endpoint].push({ hour, requests: record.request_count || 0 });
       }
-    });
+    }
 
     // Calculate totals
     const totals = {
-      total_requests: (summary || []).reduce((acc: number, s: any) => acc + Number(s.total_requests || 0), 0),
-      total_blocked: (summary || []).reduce((acc: number, s: any) => acc + Number(s.blocked_count || 0), 0),
-      unique_endpoints: (summary || []).length,
-      currently_blocked: (topBlocked || []).length,
+      total_requests: summary.reduce((acc, s) => acc + s.total_requests, 0),
+      total_blocked: summary.reduce((acc, s) => acc + s.blocked_count, 0),
+      unique_endpoints: summary.length,
+      currently_blocked: currentlyBlocked.length,
     };
 
-    console.log(`[${ctx.requestId}] Rate limit stats fetched successfully`);
+    console.log(`[${ctx.requestId}] Rate limit stats: ${totals.total_requests} requests, ${totals.unique_endpoints} endpoints, ${totals.currently_blocked} blocked`);
 
     return new Response(
       JSON.stringify({
         success: true,
         requestId: ctx.requestId,
         data: {
-          summary: summary || [],
-          top_blocked: topBlocked || [],
+          summary,
+          top_blocked: currentlyBlocked.slice(0, 10),
           hourly_breakdown: hourlyBreakdown,
           totals,
           period_hours: hoursBack,

@@ -106,11 +106,11 @@ export default function RateLimitingStats() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1">Last 1 hour</SelectItem>
-              <SelectItem value="6">Last 6 hours</SelectItem>
-              <SelectItem value="12">Last 12 hours</SelectItem>
-              <SelectItem value="24">Last 24 hours</SelectItem>
-              <SelectItem value="48">Last 48 hours</SelectItem>
+              <SelectItem value="1">Última 1 hora</SelectItem>
+              <SelectItem value="6">Últimas 6 horas</SelectItem>
+              <SelectItem value="12">Últimas 12 horas</SelectItem>
+              <SelectItem value="24">Últimas 24 horas</SelectItem>
+              <SelectItem value="48">Últimas 48 horas</SelectItem>
             </SelectContent>
           </Select>
           
@@ -133,10 +133,10 @@ export default function RateLimitingStats() {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
+          <Card className="border-l-4 border-l-blue-500">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
-              <Activity className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Total de Requisições</CardTitle>
+              <Activity className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -147,9 +147,9 @@ export default function RateLimitingStats() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-red-500">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Blocked Requests</CardTitle>
+              <CardTitle className="text-sm font-medium">Requisições Bloqueadas</CardTitle>
               <Ban className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
@@ -161,10 +161,10 @@ export default function RateLimitingStats() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-green-500">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Endpoints</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Endpoints Ativos</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -175,16 +175,16 @@ export default function RateLimitingStats() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-l-4 border-l-amber-500">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Currently Blocked</CardTitle>
-              <Shield className="h-4 w-4 text-warning" />
+              <CardTitle className="text-sm font-medium">Bloqueados Agora</CardTitle>
+              <Shield className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <Skeleton className="h-8 w-24" />
               ) : (
-                <div className="text-2xl font-bold text-warning">{data?.totals.currently_blocked}</div>
+                <div className="text-2xl font-bold">{data?.totals.currently_blocked}</div>
               )}
             </CardContent>
           </Card>
@@ -193,12 +193,17 @@ export default function RateLimitingStats() {
         {/* Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Requests by Endpoint</CardTitle>
-            <CardDescription>Top endpoints by request volume</CardDescription>
+            <CardTitle>Requisições por Endpoint</CardTitle>
+            <CardDescription>Top endpoints por volume de requisições</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <Skeleton className="h-64 w-full" />
+            ) : chartData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Activity className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground">Nenhum dado para exibir no gráfico</p>
+              </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData}>
@@ -208,12 +213,17 @@ export default function RateLimitingStats() {
                   <Tooltip 
                     contentStyle={{ 
                       backgroundColor: 'hsl(var(--card))', 
-                      border: '1px solid hsl(var(--border))' 
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
                     }}
+                    formatter={(value: number, name: string) => [
+                      value.toLocaleString(),
+                      name === 'requests' ? 'Requisições' : 'Bloqueadas'
+                    ]}
                   />
-                  <Legend />
-                  <Bar dataKey="requests" fill="hsl(var(--primary))" name="Requests" />
-                  <Bar dataKey="blocked" fill="hsl(var(--destructive))" name="Blocked" />
+                  <Legend formatter={(value) => value === 'requests' ? 'Requisições' : 'Bloqueadas'} />
+                  <Bar dataKey="requests" fill="hsl(221, 83%, 53%)" name="Requisições" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="blocked" fill="hsl(0, 72%, 51%)" name="Bloqueadas" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -224,21 +234,26 @@ export default function RateLimitingStats() {
           {/* Endpoint Summary */}
           <Card>
             <CardHeader>
-              <CardTitle>Endpoint Summary</CardTitle>
-              <CardDescription>Request statistics by endpoint</CardDescription>
+              <CardTitle>Resumo por Endpoint</CardTitle>
+              <CardDescription>Estatísticas de requisições por endpoint</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                 </div>
+              ) : data?.summary.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Activity className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Nenhum endpoint com atividade</p>
+                </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Endpoint</TableHead>
-                      <TableHead className="text-right">Requests</TableHead>
-                      <TableHead className="text-right">Blocked</TableHead>
+                      <TableHead className="text-right">Requisições</TableHead>
+                      <TableHead className="text-right">Bloqueadas</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -266,8 +281,8 @@ export default function RateLimitingStats() {
           {/* Currently Blocked */}
           <Card>
             <CardHeader>
-              <CardTitle>Currently Blocked</CardTitle>
-              <CardDescription>Identifiers currently rate-limited</CardDescription>
+              <CardTitle>Bloqueados Atualmente</CardTitle>
+              <CardDescription>Identificadores atualmente limitados</CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
@@ -277,15 +292,16 @@ export default function RateLimitingStats() {
               ) : data?.top_blocked.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Shield className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>No identifiers currently blocked</p>
+                  <p>Nenhum identificador bloqueado</p>
+                  <p className="text-sm mt-1">Isso é bom! Nenhum abuso detectado.</p>
                 </div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Identifier</TableHead>
+                      <TableHead>Identificador</TableHead>
                       <TableHead>Endpoint</TableHead>
-                      <TableHead className="text-right">Until</TableHead>
+                      <TableHead className="text-right">Até</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

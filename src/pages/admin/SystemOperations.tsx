@@ -14,11 +14,9 @@ import {
   RefreshCw,
   Zap,
   Database,
-  TrendingUp,
   BarChart3
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatBrazilDateTime, formatRelativeTime } from "@/lib/date-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -131,13 +129,16 @@ export default function SystemOperations() {
       if (error) throw error;
       return data;
     },
+    onMutate: () => {
+      toast.loading('Limpando jobs travados...', { id: 'cleanup-stuck' });
+    },
     onSuccess: (data) => {
-      toast.success(`${data?.cleaned_count || 0} jobs travados limpos`);
+      toast.success(`${data?.cleaned_count || 0} jobs travados limpos`, { id: 'cleanup-stuck' });
       queryClient.invalidateQueries({ queryKey: ['stuck-jobs-report'] });
       queryClient.invalidateQueries({ queryKey: ['system-operations-summary'] });
     },
     onError: (error) => {
-      toast.error('Erro ao limpar jobs travados');
+      toast.error('Erro ao limpar jobs travados', { id: 'cleanup-stuck', description: error.message });
       console.error(error);
     }
   });
@@ -149,18 +150,34 @@ export default function SystemOperations() {
       if (error) throw error;
       return data;
     },
+    onMutate: () => {
+      toast.loading('Executando limpeza do sistema...', { id: 'run-cleanup' });
+    },
     onSuccess: (data) => {
       const result = data as Record<string, number | string>;
       toast.success('Limpeza executada com sucesso', {
-        description: `HMAC: ${result.hmac_deleted}, Rate Limits: ${result.rate_limits_deleted}, Logins: ${result.failed_logins_deleted}`
+        id: 'run-cleanup',
+        description: `HMAC: ${result.hmac_deleted || 0}, Rate Limits: ${result.rate_limits_deleted || 0}, Logins: ${result.failed_logins_deleted || 0}`
       });
       queryClient.invalidateQueries({ queryKey: ['system-operations-summary'] });
     },
     onError: (error) => {
-      toast.error('Erro na limpeza');
+      toast.error('Erro na limpeza', { id: 'run-cleanup', description: error.message });
       console.error(error);
     }
   });
+
+  // Manual refresh
+  const handleRefresh = () => {
+    toast.loading('Atualizando dados...', { id: 'refresh-ops' });
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['system-operations-summary'] }),
+      queryClient.invalidateQueries({ queryKey: ['stuck-jobs-report'] }),
+      queryClient.invalidateQueries({ queryKey: ['edge-function-stats'] }),
+    ]).then(() => {
+      toast.success('Dados atualizados', { id: 'refresh-ops' });
+    });
+  };
 
   const isLoading = loadingSummary || loadingStuck || loadingEF;
 
@@ -199,17 +216,13 @@ export default function SystemOperations() {
             onClick={() => runCleanupMutation.mutate()}
             disabled={runCleanupMutation.isPending}
           >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Executar Limpeza
+            <Trash2 className={cn("h-4 w-4 mr-2", runCleanupMutation.isPending && "animate-pulse")} />
+            {runCleanupMutation.isPending ? 'Limpando...' : 'Executar Limpeza'}
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ['system-operations-summary'] });
-              queryClient.invalidateQueries({ queryKey: ['stuck-jobs-report'] });
-              queryClient.invalidateQueries({ queryKey: ['edge-function-stats'] });
-            }}
+            onClick={handleRefresh}
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             Atualizar
@@ -415,8 +428,8 @@ export default function SystemOperations() {
                 onClick={() => cleanupMutation.mutate()}
                 disabled={cleanupMutation.isPending}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Limpar Todos
+                <Trash2 className={cn("h-4 w-4 mr-2", cleanupMutation.isPending && "animate-pulse")} />
+                {cleanupMutation.isPending ? 'Limpando...' : 'Limpar Todos'}
               </Button>
             </div>
           </CardHeader>
