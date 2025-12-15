@@ -10,6 +10,8 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { HelpTooltip } from '@/components/ui/tech-tooltip';
+import { motion } from 'framer-motion';
 
 interface SecurityLog {
   id: string;
@@ -146,14 +148,14 @@ export default function SecurityDashboard() {
 
   const getAttackTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
-      sql_injection: 'SQL Injection',
-      xss: 'XSS',
-      path_traversal: 'Path Traversal',
-      rate_limit: 'Rate Limit',
-      invalid_input: 'Entrada Invalida',
-      brute_force: 'Forca Bruta',
-      unauthorized: 'Nao Autorizado',
-      control_characters: 'Caracteres de Controle',
+      sql_injection: 'Injeção SQL',
+      xss: 'Script Malicioso (XSS)',
+      path_traversal: 'Acesso a Arquivos',
+      rate_limit: 'Excesso de Requisições',
+      invalid_input: 'Entrada Inválida',
+      brute_force: 'Força Bruta',
+      unauthorized: 'Acesso Não Autorizado',
+      control_characters: 'Caracteres Suspeitos',
     };
     return labels[type] || type;
   };
@@ -161,69 +163,82 @@ export default function SecurityDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard de Seguranca</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Monitoramento de Segurança</h1>
         <p className="text-muted-foreground">
-          Monitoramento em tempo real de tentativas de ataque e validacoes de seguranca
+          Acompanhamento em tempo real de tentativas de ataque e proteção do sistema
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Eventos</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.total || 0}</div>
-            <p className="text-xs text-muted-foreground">Ultimas 24 horas</p>
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card className="border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                Total de Eventos
+                <HelpTooltip term="evento de segurança" />
+              </CardTitle>
+              <Activity className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.total || 0}</div>
+              <p className="text-xs text-muted-foreground">nas últimas 24 horas</p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ataques Criticos</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{stats?.critical || 0}</div>
-            <p className="text-xs text-muted-foreground">Requerem atencao imediata</p>
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="border-l-4 border-l-destructive hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Ataques Críticos</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">{stats?.critical || 0}</div>
+              <p className="text-xs text-muted-foreground">requerem atenção imediata</p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bloqueados</CardTitle>
-            <Ban className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.blocked || 0}</div>
-            <p className="text-xs text-muted-foreground">Tentativas bloqueadas</p>
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card className="border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Bloqueados</CardTitle>
+              <Ban className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats?.blocked || 0}</div>
+              <p className="text-xs text-muted-foreground">tentativas impedidas</p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">IPs Unicos</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.uniqueIps || 0}</div>
-            <p className="text-xs text-muted-foreground">Enderecos diferentes</p>
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Card className="border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">IPs Únicos</CardTitle>
+              <Shield className="h-4 w-4 text-purple-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.uniqueIps || 0}</div>
+              <p className="text-xs text-muted-foreground">origens diferentes</p>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Critical Events Alert */}
       {logs && logs.filter(l => l.severity === 'critical').length > 0 && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Atencao: Eventos Criticos Detectados</AlertTitle>
-          <AlertDescription>
-            {logs.filter(l => l.severity === 'critical').length} evento(s) critico(s) detectado(s) recentemente.
-            Revise imediatamente as tabelas abaixo.
-          </AlertDescription>
-        </Alert>
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Atenção: Eventos Críticos Detectados</AlertTitle>
+            <AlertDescription>
+              {logs.filter(l => l.severity === 'critical').length} evento(s) crítico(s) detectado(s) recentemente.
+              Revise os registros abaixo para tomar as ações necessárias.
+            </AlertDescription>
+          </Alert>
+        </motion.div>
       )}
 
       {/* Tabs for different views */}
@@ -231,7 +246,7 @@ export default function SecurityDashboard() {
         <TabsList>
           <TabsTrigger value="logs">
             <Shield className="h-4 w-4 mr-2" />
-            Logs de Seguranca
+            Registros de Segurança
           </TabsTrigger>
           {isSuperAdmin && (
             <>
@@ -241,7 +256,7 @@ export default function SecurityDashboard() {
               </TabsTrigger>
               <TabsTrigger value="attempts">
                 <User className="h-4 w-4 mr-2" />
-                Tentativas Falhadas ({failedAttempts?.length || 0})
+                Logins Falhados ({failedAttempts?.length || 0})
               </TabsTrigger>
             </>
           )}
@@ -251,9 +266,12 @@ export default function SecurityDashboard() {
         <TabsContent value="logs">
           <Card>
             <CardHeader>
-              <CardTitle>Logs de Seguranca</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Registros de Segurança
+              </CardTitle>
               <CardDescription>
-                Tentativas de ataque e validacoes falhadas (atualiza a cada 10 segundos)
+                Tentativas de ataque e validações falhadas (atualiza automaticamente a cada 10 segundos)
               </CardDescription>
             </CardHeader>
             <CardContent>
