@@ -14,10 +14,13 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { useMutation } from "@tanstack/react-query";
 import { getJobTypeLabel, getJobStatusLabel, JOB_TYPE_LABELS } from "@/lib/job-labels";
+import { getAgentDisplayName } from "@/lib/agent-utils";
 
 interface Agent {
   id: string;
   agent_name: string;
+  hostname: string | null;
+  display_name: string | null;
   status: string;
   last_heartbeat: string | null;
 }
@@ -57,8 +60,8 @@ const JobCreator = () => {
   const loadAgents = useCallback(async () => {
     try {
       const { data, error } = await supabase
-        .from("agents_safe")
-        .select("*")
+        .from("agents")
+        .select("id, agent_name, hostname, display_name, status, last_heartbeat")
         .order("agent_name", { ascending: true });
 
       if (error) throw error;
@@ -422,11 +425,12 @@ const JobCreator = () => {
                         ) : (
                           agents.map((agent) => {
                             const isOnline = activeAgents.some(a => a.id === agent.id);
+                            const displayName = getAgentDisplayName(agent);
                             return (
                               <SelectItem key={agent.id} value={agent.agent_name}>
                                 <div className="flex items-center gap-2">
                                   <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-success' : 'bg-muted'}`} />
-                                  {agent.agent_name}
+                                  {displayName}
                                 </div>
                               </SelectItem>
                             );
@@ -603,7 +607,12 @@ const JobCreator = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentJobs.map((job) => (
+                {recentJobs.map((job) => {
+                  // Find agent to get display name
+                  const agent = agents.find(a => a.agent_name === job.agent_name);
+                  const agentDisplayName = agent ? getAgentDisplayName(agent) : job.agent_name;
+                  
+                  return (
                     <div
                       key={job.id}
                       className="p-4 bg-secondary/30 rounded-lg border border-border hover:border-primary/30 transition-colors"
@@ -612,7 +621,7 @@ const JobCreator = () => {
                         <div className="flex-1 space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="font-mono">
-                              {job.agent_name}
+                              {agentDisplayName}
                             </Badge>
                             <Badge variant="secondary">{job.type}</Badge>
                             {getStatusBadge(job.status)}
@@ -657,7 +666,8 @@ const JobCreator = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
                 </div>
               )}
             </CardContent>

@@ -22,7 +22,8 @@ import {
   Filter,
   Clock,
   Eye,
-  Shield
+  Shield,
+  RefreshCw
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatBrazilDateTime } from '@/lib/date-utils';
@@ -37,6 +38,9 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { supabase } from '@/integrations/supabase/client';
+import { useMutation } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export default function WebActivity() {
   const [selectedAgent, setSelectedAgent] = useState<string>('');
@@ -132,6 +136,23 @@ export default function WebActivity() {
     });
     setBlockDialogOpen(false);
   };
+
+  // Mutation to sync blocked websites with agents
+  const syncBlockedWebsitesMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('sync-blocked-websites', {
+        body: {}
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || 'Sincronização agendada com sucesso');
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao sincronizar: ${error.message}`);
+    }
+  });
 
   return (
     <AdminPageLayout
@@ -340,11 +361,25 @@ export default function WebActivity() {
             {blockedWebsites && blockedWebsites.length > 0 && (
               <Card className="border-l-4 border-l-destructive">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ShieldAlert className="h-5 w-5" />
-                    Sites Bloqueados ({blockedWebsites.length})
-                  </CardTitle>
-                  <CardDescription>Sites que serão bloqueados via arquivo hosts nos agentes</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <ShieldAlert className="h-5 w-5" />
+                        Sites Bloqueados ({blockedWebsites.length})
+                      </CardTitle>
+                      <CardDescription>Sites que serão bloqueados via arquivo hosts nos agentes</CardDescription>
+                    </div>
+                    <Button
+                      onClick={() => syncBlockedWebsitesMutation.mutate()}
+                      disabled={syncBlockedWebsitesMutation.isPending}
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${syncBlockedWebsitesMutation.isPending ? 'animate-spin' : ''}`} />
+                      {syncBlockedWebsitesMutation.isPending ? "Sincronizando..." : "Sincronizar com Agentes"}
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
