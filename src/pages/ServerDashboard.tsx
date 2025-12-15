@@ -303,9 +303,9 @@ const ServerDashboard = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Dashboard Principal
+              Painel Principal
             </h1>
-            <p className="text-sm text-muted-foreground">Visao geral do sistema</p>
+            <p className="text-sm text-muted-foreground">Visão geral do sistema</p>
           </div>
         </div>
 
@@ -315,13 +315,13 @@ const ServerDashboard = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Users className="h-4 w-4 text-primary" />
-                Agentes Totais
+                Total de Computadores
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">{agents.length}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {Object.keys(agentsByTenant).length} tenant(s)
+                {Object.keys(agentsByTenant).length} empresa(s)
               </p>
             </CardContent>
           </Card>
@@ -330,13 +330,13 @@ const ServerDashboard = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Activity className="h-4 w-4 text-accent" />
-                Agentes Ativos
+                Computadores Online
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">{activeAgents.length}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {((activeAgents.length / Math.max(agents.length, 1)) * 100).toFixed(0)}% online
+                {((activeAgents.length / Math.max(agents.length, 1)) * 100).toFixed(0)}% conectados
               </p>
             </CardContent>
           </Card>
@@ -345,13 +345,13 @@ const ServerDashboard = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-warning" />
-                Jobs Pendentes
+                Tarefas Pendentes
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">{pendingJobs}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {recentJobs} nas ultimas 24h
+                {recentJobs} nas últimas 24h
               </p>
             </CardContent>
           </Card>
@@ -360,13 +360,13 @@ const ServerDashboard = () => {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <FileText className="h-4 w-4 text-success" />
-                Relatorios
+                Relatórios
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-foreground">{reports.length}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {completedJobs} jobs concluidos
+                {completedJobs} tarefas concluídas
               </p>
             </CardContent>
           </Card>
@@ -378,7 +378,7 @@ const ServerDashboard = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
                 <Network className="h-3 w-3" />
-                Taxa de Conexao
+                Taxa de Conexão
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -404,7 +404,7 @@ const ServerDashboard = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
                 <Zap className="h-3 w-3" />
-                Jobs Falhados
+                Tarefas com Erro
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -430,7 +430,7 @@ const ServerDashboard = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
                 <Server className="h-3 w-3" />
-                Tenants
+                Empresas
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -441,25 +441,25 @@ const ServerDashboard = () => {
           </Card>
         </div>
 
-        {/* Visao Geral por Tenant */}
+        {/* Visão Geral por Empresa */}
         {Object.keys(agentsByTenant).length > 0 && (
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Network className="h-5 w-5 text-primary" />
-                Distribuicao por Tenant
+                Distribuição por Empresa
               </CardTitle>
-              <CardDescription>Agentes agrupados por ambiente</CardDescription>
+              <CardDescription>Computadores agrupados por ambiente</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {Object.entries(agentsByTenant).map(([tenant, count]) => (
                   <div key={tenant} className="p-3 bg-secondary/30 rounded-lg border border-border">
-                    <p className="text-xs text-muted-foreground">Tenant</p>
+                    <p className="text-xs text-muted-foreground">Empresa</p>
                     <p className="font-semibold text-foreground">
                       {tenantNames[tenant] || `${tenant.slice(0, 8)}...`}
                     </p>
-                    <p className="text-sm text-muted-foreground mt-1">{count} agente(s)</p>
+                    <p className="text-sm text-muted-foreground mt-1">{count} computador(es)</p>
                   </div>
                 ))}
               </div>
@@ -469,14 +469,14 @@ const ServerDashboard = () => {
 
         {/* Graficos e Visualizacoes */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Tendencia de Jobs */}
+          {/* Tendência de Tarefas */}
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LineChart className="h-5 w-5 text-primary" />
-                Tendencia de Jobs (7 dias)
+                Tendência de Tarefas (7 dias)
               </CardTitle>
-              <CardDescription>Volume de jobs criados por dia</CardDescription>
+              <CardDescription>Volume de tarefas criadas por dia</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -492,22 +492,22 @@ const ServerDashboard = () => {
                     <Tooltip contentStyle={{ backgroundColor: 'hsl(222 47% 11%)', border: '1px solid hsl(215 20% 25%)', borderRadius: '6px' }} />
                     <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Line type="monotone" dataKey="total" stroke="hsl(195 100% 50%)" strokeWidth={2} name="Total" dot={{ fill: 'hsl(195 100% 50%)' }} />
-                    <Line type="monotone" dataKey="completed" stroke="hsl(142 76% 45%)" strokeWidth={2} name="Concluidos" dot={{ fill: 'hsl(142 76% 45%)' }} />
-                    <Line type="monotone" dataKey="failed" stroke="hsl(0 70% 55%)" strokeWidth={2} name="Falhados" dot={{ fill: 'hsl(0 70% 55%)' }} />
+                    <Line type="monotone" dataKey="completed" stroke="hsl(142 76% 45%)" strokeWidth={2} name="Concluídas" dot={{ fill: 'hsl(142 76% 45%)' }} />
+                    <Line type="monotone" dataKey="failed" stroke="hsl(0 70% 55%)" strokeWidth={2} name="Com Erro" dot={{ fill: 'hsl(0 70% 55%)' }} />
                   </RechartsLineChart>
                 </ResponsiveContainer>
               )}
             </CardContent>
           </Card>
 
-          {/* Tendencia de Scans de Virus */}
+          {/* Tendência de Verificações de Vírus */}
           <Card className="bg-gradient-card border-accent/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-accent" />
-                Scans de Virus (7 dias)
+                Verificações de Vírus (7 dias)
               </CardTitle>
-              <CardDescription>Arquivos escaneados por dia</CardDescription>
+              <CardDescription>Arquivos verificados por dia</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -531,14 +531,14 @@ const ServerDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Distribuicao por Tipo de Job */}
+          {/* Distribuição por Tipo de Tarefa */}
           <Card className="bg-gradient-card border-warning/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PieChart className="h-5 w-5 text-warning" />
-                Tipos de Jobs
+                Tipos de Tarefas
               </CardTitle>
-              <CardDescription>Distribuicao por categoria</CardDescription>
+              <CardDescription>Distribuição por categoria</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -569,14 +569,14 @@ const ServerDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Jobs por Agente */}
+          {/* Tarefas por Computador */}
           <Card className="bg-gradient-card border-success/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-success" />
-                Jobs por Agente (Top 10)
+                Tarefas por Computador (Top 10)
               </CardTitle>
-              <CardDescription>Agentes mais ativos</CardDescription>
+              <CardDescription>Computadores mais ativos</CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -598,14 +598,14 @@ const ServerDashboard = () => {
           </Card>
         </div>
 
-        {/* Timeline de Eventos de Seguranca */}
+        {/* Timeline de Eventos de Segurança */}
         <Card className="bg-gradient-card border-destructive/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-destructive" />
-              Timeline de Eventos de Seguranca
+              Linha do Tempo de Segurança
             </CardTitle>
-            <CardDescription>Ultimas acoes registradas no sistema</CardDescription>
+            <CardDescription>Últimas ações registradas no sistema</CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -625,7 +625,7 @@ const ServerDashboard = () => {
                     </div>
                     <div className="text-right">
                       <Badge variant={event.status === 'success' ? 'default' : 'destructive'} className="text-xs">
-                        {event.status}
+                        {event.status === 'success' ? 'Sucesso' : 'Erro'}
                       </Badge>
                       <p className="text-xs text-muted-foreground mt-1">{event.time}</p>
                     </div>
@@ -639,16 +639,16 @@ const ServerDashboard = () => {
         {/* Tabs */}
         <Tabs defaultValue="agents" className="w-full">
           <TabsList className="grid w-full grid-cols-4 bg-secondary">
-            <TabsTrigger value="agents">Agentes</TabsTrigger>
-            <TabsTrigger value="jobs">Jobs</TabsTrigger>
-            <TabsTrigger value="reports">Relatorios</TabsTrigger>
-            <TabsTrigger value="security">Seguranca</TabsTrigger>
+            <TabsTrigger value="agents">Computadores</TabsTrigger>
+            <TabsTrigger value="jobs">Tarefas</TabsTrigger>
+            <TabsTrigger value="reports">Relatórios</TabsTrigger>
+            <TabsTrigger value="security">Segurança</TabsTrigger>
           </TabsList>
 
           <TabsContent value="agents" className="mt-4">
             <Card className="bg-gradient-card border-primary/20">
               <CardHeader>
-                <CardTitle>Agentes Registrados</CardTitle>
+                <CardTitle>Computadores Registrados</CardTitle>
                 <CardDescription>Lista completa com status em tempo real</CardDescription>
               </CardHeader>
               <CardContent>
@@ -657,7 +657,7 @@ const ServerDashboard = () => {
                 ) : agents.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>Nenhum agente registrado</p>
+                    <p>Nenhum computador registrado</p>
                     <Button onClick={() => navigate("/installer")} variant="outline" className="mt-4">
                       Criar Instalador
                     </Button>
@@ -695,11 +695,11 @@ const ServerDashboard = () => {
                                 
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                                   <div>
-                                    <p className="text-muted-foreground">Jobs Executados</p>
+                                    <p className="text-muted-foreground">Tarefas Executadas</p>
                                     <p className="font-semibold text-foreground">{agentJobs.length}</p>
                                   </div>
                                   <div>
-                                    <p className="text-muted-foreground">Relatorios</p>
+                                    <p className="text-muted-foreground">Relatórios</p>
                                     <p className="font-semibold text-foreground">{agentReports.length}</p>
                                   </div>
                                   <div>
@@ -709,7 +709,7 @@ const ServerDashboard = () => {
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="text-muted-foreground">Ultimo Heartbeat</p>
+                                    <p className="text-muted-foreground">Último Sinal</p>
                                     <p className="font-semibold text-foreground">
                                       {agent.last_heartbeat 
                                         ? new Date(agent.last_heartbeat).toLocaleTimeString()
@@ -720,7 +720,7 @@ const ServerDashboard = () => {
 
                                 {lastJob && (
                                   <div className="pt-2 border-t border-border">
-                                    <p className="text-xs text-muted-foreground mb-1">Ultimo Job:</p>
+                                    <p className="text-xs text-muted-foreground mb-1">Última Tarefa:</p>
                                     <div className="flex items-center gap-2">
                                       <Badge variant="outline" className="text-xs font-mono">
                                         {lastJob.type}
@@ -753,14 +753,14 @@ const ServerDashboard = () => {
           <TabsContent value="jobs" className="mt-4">
             <Card className="bg-gradient-card border-primary/20">
               <CardHeader>
-                <CardTitle>Jobs do Sistema</CardTitle>
-                <CardDescription>Historico e status dos jobs executados</CardDescription>
+                <CardTitle>Tarefas do Sistema</CardTitle>
+                <CardDescription>Histórico e status das tarefas executadas</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
                   <p className="text-center text-muted-foreground py-8">Carregando...</p>
                 ) : jobs.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">Nenhum job encontrado</p>
+                  <p className="text-center text-muted-foreground py-8">Nenhuma tarefa encontrada</p>
                 ) : (
                   <div className="space-y-2 max-h-[600px] overflow-y-auto">
                     {jobs.map((job) => (
@@ -791,7 +791,7 @@ const ServerDashboard = () => {
                           </Badge>
                           {job.completed_at && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              Concluido: {new Date(job.completed_at).toLocaleString()}
+                              Concluído: {new Date(job.completed_at).toLocaleString()}
                             </p>
                           )}
                         </div>
