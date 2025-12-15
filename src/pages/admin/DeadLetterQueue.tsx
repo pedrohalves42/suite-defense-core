@@ -86,7 +86,7 @@ export default function DeadLetterQueue() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Entry marked as resolved');
+      toast.success('Tarefa marcada como resolvida');
       queryClient.invalidateQueries({ queryKey: ['dlq-entries'] });
       setShowResolveDialog(false);
       setResolveNotes('');
@@ -119,11 +119,11 @@ export default function DeadLetterQueue() {
       if (dlqError) throw dlqError;
     },
     onSuccess: () => {
-      toast.success('Job queued for retry');
+      toast.success('Tarefa reenviada para execução');
       queryClient.invalidateQueries({ queryKey: ['dlq-entries'] });
     },
     onError: (error) => {
-      toast.error(`Failed to retry: ${error.message}`);
+      toast.error(`Falha ao reenviar: ${error.message}`);
     },
   });
 
@@ -136,11 +136,11 @@ export default function DeadLetterQueue() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Entry deleted');
+      toast.success('Entrada removida');
       queryClient.invalidateQueries({ queryKey: ['dlq-entries'] });
     },
     onError: (error) => {
-      toast.error(`Failed to delete: ${error.message}`);
+      toast.error(`Falha ao remover: ${error.message}`);
     },
   });
 
@@ -312,18 +312,18 @@ export default function DeadLetterQueue() {
             ) : entries?.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Inbox className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No failed jobs in the queue</p>
+                <p>Nenhuma tarefa com falha na fila</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Agent</TableHead>
-                    <TableHead>Job Type</TableHead>
+                    <TableHead>Computador</TableHead>
+                    <TableHead>Tipo de Tarefa</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Retries</TableHead>
-                    <TableHead>Last Failure</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Tentativas</TableHead>
+                    <TableHead>Última Falha</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -406,30 +406,30 @@ export default function DeadLetterQueue() {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Job Details</DialogTitle>
+            <DialogTitle>Detalhes da Tarefa</DialogTitle>
             <DialogDescription>
-              Failed job information and error details
+              Informações sobre a falha e erro ocorrido
             </DialogDescription>
           </DialogHeader>
           {selectedEntry && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium">Agent</label>
+                  <label className="text-sm font-medium">Computador</label>
                   <p className="text-sm text-muted-foreground">{selectedEntry.agent_name}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Tipo de Job</label>
+                  <label className="text-sm font-medium">Tipo de Tarefa</label>
                   <p className="text-sm text-muted-foreground">{getJobTypeLabel(selectedEntry.job_type)}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">First Failure</label>
+                  <label className="text-sm font-medium">Primeira Falha</label>
                   <p className="text-sm text-muted-foreground">
-                    {new Date(selectedEntry.first_failure_at).toLocaleString()}
+                    {formatRelativeTime(selectedEntry.first_failure_at)}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Error Count</label>
+                  <label className="text-sm font-medium">Total de Erros</label>
                   <p className="text-sm text-muted-foreground">{selectedEntry.error_count}</p>
                 </div>
               </div>

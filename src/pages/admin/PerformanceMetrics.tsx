@@ -5,6 +5,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Activity, AlertTriangle, Clock, TrendingUp } from 'lucide-react';
 import { logger } from '@/lib/logger';
+import { HelpTooltip } from '@/components/ui/tech-tooltip';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface PerformanceMetric {
   id: string;
@@ -73,12 +75,17 @@ export default function PerformanceMetrics() {
   const displayStats = metrics ? calculateStats(metrics) : null;
 
   const getOperationBadge = (type: string) => {
+    const labels: Record<string, string> = {
+      edge_function: 'Função do Sistema',
+      database_query: 'Consulta ao Banco',
+      external_api: 'API Externa',
+    };
     const variants: Record<string, 'default' | 'secondary' | 'outline'> = {
       edge_function: 'default',
       database_query: 'secondary',
       external_api: 'outline',
     };
-    return <Badge variant={variants[type] || 'outline'}>{type}</Badge>;
+    return <Badge variant={variants[type] || 'outline'}>{labels[type] || type}</Badge>;
   };
 
   const getDurationBadge = (duration: number) => {
@@ -95,8 +102,8 @@ export default function PerformanceMetrics() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Performance Metrics</h1>
-          <p className="text-muted-foreground">Monitor application performance and response times</p>
+          <h1 className="text-3xl font-bold tracking-tight">Métricas de Desempenho</h1>
+          <p className="text-muted-foreground">Acompanhe a velocidade e saúde do sistema</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -119,48 +126,54 @@ export default function PerformanceMetrics() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Performance Metrics</h1>
-        <p className="text-muted-foreground">Monitor application performance and response times</p>
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          Métricas de Desempenho
+          <HelpTooltip term="performance metrics" />
+        </h1>
+        <p className="text-muted-foreground">Acompanhe a velocidade e saúde do sistema</p>
       </div>
 
       {displayStats && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                Tempo de Resposta Médio
+                <HelpTooltip term="response time" />
+              </CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{displayStats.avg_duration}ms</div>
-              <p className="text-xs text-muted-foreground">Average across all calls</p>
+              <p className="text-xs text-muted-foreground">Média de todas as operações</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Max Response Time</CardTitle>
+              <CardTitle className="text-sm font-medium">Tempo Máximo</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{displayStats.max_duration}ms</div>
-              <p className="text-xs text-muted-foreground">Slowest operation recorded</p>
+              <p className="text-xs text-muted-foreground">Operação mais lenta</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Calls</CardTitle>
+              <CardTitle className="text-sm font-medium">Total de Chamadas</CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{displayStats.total_calls}</div>
-              <p className="text-xs text-muted-foreground">Last 100 operations</p>
+              <p className="text-xs text-muted-foreground">Últimas 100 operações</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Slow Operations</CardTitle>
+              <CardTitle className="text-sm font-medium">Operações Lentas</CardTitle>
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -172,7 +185,7 @@ export default function PerformanceMetrics() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">Operations &gt;2s</p>
+              <p className="text-xs text-muted-foreground">Acima de 2 segundos</p>
             </CardContent>
           </Card>
         </div>
@@ -180,8 +193,8 @@ export default function PerformanceMetrics() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Operations</CardTitle>
-          <CardDescription>Latest 100 performance metrics</CardDescription>
+          <CardTitle>Operações Recentes</CardTitle>
+          <CardDescription>Últimas 100 métricas de desempenho</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -196,14 +209,14 @@ export default function PerformanceMetrics() {
                       <span className="font-medium">{metric.function_name}</span>
                       {getOperationBadge(metric.operation_type)}
                       {metric.error_message && (
-                        <Badge variant="destructive">Error</Badge>
+                        <Badge variant="destructive">Erro</Badge>
                       )}
                     </div>
                     {metric.error_message && (
                       <p className="text-xs text-destructive">{metric.error_message}</p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      {new Date(metric.created_at).toLocaleString()}
+                      {formatBrazilDateTime(metric.created_at)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -220,7 +233,7 @@ export default function PerformanceMetrics() {
               ))
             ) : (
               <p className="text-center text-muted-foreground py-8">
-                No performance metrics available yet
+                Nenhuma métrica disponível ainda
               </p>
             )}
           </div>
