@@ -110,14 +110,17 @@ Deno.serve(async (req) => {
       .eq('action', 'block')
       .eq('is_enabled', true);
 
-    // Combine blocked sites from both sources
-    const allBlockedDomains: string[] = [];
+    // Build blocked_websites array with domain_pattern (format expected by agent)
+    const blockedWebsites: Array<{ domain_pattern: string; reason: string | null }> = [];
     
     // From blocked_websites table
     if (blockedSites) {
       for (const site of blockedSites) {
         if (site.domain_pattern) {
-          allBlockedDomains.push(site.domain_pattern);
+          blockedWebsites.push({
+            domain_pattern: site.domain_pattern,
+            reason: site.reason
+          });
         }
       }
     }
@@ -127,21 +130,33 @@ Deno.serve(async (req) => {
       for (const rule of policyRules) {
         const policy = rule.security_policies as any;
         if (policy?.tenant_id === agent.tenant_id && policy?.is_active && rule.target) {
-          allBlockedDomains.push(rule.target);
+          blockedWebsites.push({
+            domain_pattern: rule.target,
+            reason: 'Security policy rule'
+          });
         }
       }
     }
 
-    // Deduplicate
-    const uniqueBlockedDomains = [...new Set(allBlockedDomains)];
+    // Deduplicate by domain_pattern
+    const seen = new Set<string>();
+    const uniqueBlockedWebsites = blockedWebsites.filter(site => {
+      if (seen.has(site.domain_pattern)) return false;
+      seen.add(site.domain_pattern);
+      return true;
+    });
 
-    logger.info(`Returning ${uniqueBlockedDomains.length} blocked domains for agent ${agent.agent_name}`);
+    // Also provide simple array for backward compatibility
+    const blockedDomains = uniqueBlockedWebsites.map(site => site.domain_pattern);
+
+    logger.info(`Returning ${uniqueBlockedWebsites.length} blocked domains for agent ${agent.agent_name}`);
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        blocked_domains: uniqueBlockedDomains,
-        count: uniqueBlockedDomains.length,
+        blocked_websites: uniqueBlockedWebsites,  // Array of { domain_pattern, reason } - expected by agent
+        blocked_domains: blockedDomains,           // Simple array for backward compatibility
+        count: uniqueBlockedWebsites.length,
         synced_at: new Date().toISOString()
       }), 
       {

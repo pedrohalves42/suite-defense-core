@@ -1479,8 +1479,14 @@ function Invoke-SyncBlockedWebsitesJob {
         $data = $result.Body | ConvertFrom-Json
         $blockedDomains = @()
         
-        if ($null -ne $data.blocked_websites) {
+        # Suportar ambos os formatos: blocked_websites (objetos) e blocked_domains (array simples)
+        if ($null -ne $data.blocked_websites -and $data.blocked_websites.Count -gt 0) {
             $blockedDomains = @($data.blocked_websites | ForEach-Object { $_.domain_pattern })
+            Write-Log "[BLOCKED-SITES] Usando formato blocked_websites (objetos)" "DEBUG"
+        }
+        elseif ($null -ne $data.blocked_domains -and $data.blocked_domains.Count -gt 0) {
+            $blockedDomains = @($data.blocked_domains)
+            Write-Log "[BLOCKED-SITES] Usando formato blocked_domains (array simples)" "DEBUG"
         }
         
         Write-Log "[BLOCKED-SITES] Recebidos $($blockedDomains.Count) dominios bloqueados" "INFO"
