@@ -38,7 +38,7 @@ export const AppSidebar = () => {
     
     // === MONITORAMENTO ===
     { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced', section: 'monitoring' },
-    { icon: Activity, label: 'Saúde dos Computadores', to: '/admin/agent-health', section: 'monitoring' },
+    { icon: Activity, label: 'Status dos Computadores', to: '/admin/agent-health', section: 'monitoring' },
     { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics', section: 'monitoring' },
     
     // === SEGURANÇA ===
@@ -92,7 +92,7 @@ export const AppSidebar = () => {
     { icon: Users, label: 'Todos Usuarios', to: '/super-admin/users' },
     { icon: Shield, label: 'Features', to: '/super-admin/features' },
     { icon: Key, label: 'Chaves API', to: '/super-admin/api-keys' },
-    { icon: Key, label: 'Enrollment Keys', to: '/super-admin/enrollment-keys' },
+    { icon: Key, label: 'Chaves de Instalação', to: '/super-admin/enrollment-keys' },
     { icon: Mail, label: 'Convites', to: '/super-admin/invites' },
     { icon: AlertTriangle, label: 'Seguranca', to: '/super-admin/security' },
     { icon: ScrollText, label: 'Logs Auditoria', to: '/super-admin/audit-logs' },
