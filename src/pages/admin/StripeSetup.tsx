@@ -27,6 +27,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { StripeExtendedPricesSetup } from '@/components/admin/StripeExtendedPricesSetup';
 
 interface HealthCheckResponse {
   overall_status: 'healthy' | 'degraded' | 'down';
@@ -553,6 +554,9 @@ export default function StripeSetup() {
           </Accordion>
         </CardContent>
       </Card>
+
+      {/* Extended Prices Setup for 6m/12m/24m */}
+      <StripeExtendedPricesSetup />
     </div>
   );
 }
