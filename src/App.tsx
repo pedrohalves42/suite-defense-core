@@ -90,6 +90,7 @@ import AIGovernance from "./pages/admin/AIGovernance";
 import ApiDocumentation from "./pages/admin/ApiDocumentation";
 import MyAccount from "./pages/admin/MyAccount";
 import SLODashboard from "./pages/admin/SLODashboard";
+import SystemOperations from "./pages/admin/SystemOperations";
 import VerificarLaudo from "./pages/VerificarLaudo";
 
 const App = () => (
