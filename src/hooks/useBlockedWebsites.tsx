@@ -16,6 +16,24 @@ export interface BlockedWebsite {
 interface BlockWebsiteParams {
   domain_pattern: string;
   reason?: string;
+  autoSync?: boolean; // Auto-sync with online agents after blocking
+}
+
+// Helper to sync blocked websites with agents
+async function syncWithAgents(): Promise<{ jobsCreated: number; agentNames: string[] }> {
+  const { data, error } = await supabase.functions.invoke('sync-blocked-websites', {
+    method: 'POST',
+  });
+  
+  if (error) {
+    console.error('Failed to sync blocked websites:', error);
+    throw error;
+  }
+  
+  return {
+    jobsCreated: data?.jobs_created || 0,
+    agentNames: data?.agent_names || [],
+  };
 }
 
 export function useBlockedWebsites() {
@@ -37,7 +55,7 @@ export function useBlockedWebsites() {
   });
 
   const blockWebsite = useMutation({
-    mutationFn: async ({ domain_pattern, reason }: BlockWebsiteParams) => {
+    mutationFn: async ({ domain_pattern, reason, autoSync = true }: BlockWebsiteParams) => {
       // Get current user's tenant_id
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user?.id) throw new Error('User not authenticated');
@@ -60,6 +78,7 @@ export function useBlockedWebsites() {
         .eq('domain_pattern', normalizedDomain)
         .maybeSingle();
 
+      let result;
       if (existing) {
         // Update existing record
         const { data, error } = await supabase
@@ -75,7 +94,7 @@ export function useBlockedWebsites() {
           .single();
 
         if (error) throw error;
-        return data;
+        result = data;
       } else {
         // Insert new record
         const { data, error } = await supabase
@@ -91,15 +110,37 @@ export function useBlockedWebsites() {
           .single();
 
         if (error) throw error;
-        return data;
+        result = data;
       }
+
+      // Auto-sync with online agents if enabled
+      if (autoSync) {
+        try {
+          const syncResult = await syncWithAgents();
+          return { ...result, syncResult };
+        } catch (syncError) {
+          console.warn('Auto-sync failed, site blocked but agents not synced:', syncError);
+          return { ...result, syncResult: null };
+        }
+      }
+
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['blocked-websites'] });
-      toast({
-        title: 'Site bloqueado',
-        description: 'O domínio foi adicionado à lista de bloqueio.',
-      });
+      
+      const syncInfo = data?.syncResult;
+      if (syncInfo && syncInfo.jobsCreated > 0) {
+        toast({
+          title: 'Site bloqueado e sincronizado',
+          description: `Domínio bloqueado e enviado para ${syncInfo.jobsCreated} computador(es) online.`,
+        });
+      } else {
+        toast({
+          title: 'Site bloqueado',
+          description: 'Domínio adicionado à lista. Clique em "Sincronizar" para enviar aos computadores.',
+        });
+      }
     },
     onError: (error) => {
       toast({
