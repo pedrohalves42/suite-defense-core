@@ -324,14 +324,14 @@ export default function SuperAdminTenants() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Agentes</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Computadores</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               {totalStats?.totalAgents || 0}
             </div>
-            <p className="text-xs text-muted-foreground">Agentes monitorando servidores</p>
+            <p className="text-xs text-muted-foreground">Computadores protegidos</p>
           </CardContent>
         </Card>
       </div>
@@ -349,7 +349,7 @@ export default function SuperAdminTenants() {
                 <TableHead>Slug</TableHead>
                 <TableHead>Plano Atual</TableHead>
                 <TableHead>Usuarios</TableHead>
-                <TableHead>Agentes</TableHead>
+                <TableHead>Computadores</TableHead>
                 <TableHead>Criado em</TableHead>
                 <TableHead>Alterar Plano</TableHead>
               </TableRow>

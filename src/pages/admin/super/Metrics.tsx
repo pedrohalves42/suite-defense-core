@@ -107,18 +107,18 @@ export default function SuperAdminMetrics() {
   });
 
   const scanChartData = [
-    { name: 'Clean', value: scanStats?.clean || 0, color: 'hsl(var(--primary))' },
-    { name: 'Malicious', value: scanStats?.malicious || 0, color: 'hsl(var(--destructive))' },
+    { name: 'Limpos', value: scanStats?.clean || 0, color: 'hsl(var(--primary))' },
+    { name: 'Maliciosos', value: scanStats?.malicious || 0, color: 'hsl(var(--destructive))' },
   ];
 
   const agentChartData = [
-    { name: 'Active', value: agentStats?.active || 0 },
-    { name: 'Inactive', value: agentStats?.inactive || 0 },
+    { name: 'Ativos', value: agentStats?.active || 0 },
+    { name: 'Inativos', value: agentStats?.inactive || 0 },
     { name: 'Offline', value: agentStats?.offline || 0 },
   ];
 
   const planChartData = [
-    { name: 'Free', value: tenantStats?.free || 0, color: 'hsl(var(--secondary))' },
+    { name: 'Gratuito', value: tenantStats?.free || 0, color: 'hsl(var(--secondary))' },
     { name: 'Starter', value: tenantStats?.starter || 0, color: 'hsl(var(--muted))' },
     { name: 'Business', value: tenantStats?.pro || 0, color: 'hsl(var(--primary))' },
     { name: 'Scale', value: tenantStats?.scale || 0, color: 'hsl(var(--accent))' },
@@ -128,21 +128,21 @@ export default function SuperAdminMetrics() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Global Metrics</h1>
-        <p className="text-muted-foreground">System-wide statistics and analytics</p>
+        <h1 className="text-3xl font-bold mb-2">Métricas Globais</h1>
+        <p className="text-muted-foreground">Estatísticas e análises de todo o sistema</p>
       </div>
 
       {/* Overview Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tenants</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Empresas</CardTitle>
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{tenantStats?.total || 0}</div>
             <div className="flex gap-2 mt-2 flex-wrap">
-              <Badge variant="secondary">Free: {tenantStats?.free || 0}</Badge>
+              <Badge variant="secondary">Gratuito: {tenantStats?.free || 0}</Badge>
               <Badge variant="outline">Starter: {tenantStats?.starter || 0}</Badge>
               <Badge>Business: {tenantStats?.pro || 0}</Badge>
               <Badge variant="default">Scale: {tenantStats?.scale || 0}</Badge>
@@ -152,41 +152,41 @@ export default function SuperAdminMetrics() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{userStats?.total || 0}</div>
             <p className="text-xs text-muted-foreground mt-2">
-              Admins: {userStats?.admins || 0} | Operators: {userStats?.operators || 0}
+              Administradores: {userStats?.admins || 0} | Operadores: {userStats?.operators || 0}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Agents</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Computadores</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{agentStats?.total || 0}</div>
             <div className="flex items-center gap-1 mt-2 text-xs">
               <CheckCircle2 className="h-3 w-3 text-green-500" />
-              <span>{agentStats?.active || 0} Active</span>
+              <span>{agentStats?.active || 0} Ativos</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Virus Scans</CardTitle>
+            <CardTitle className="text-sm font-medium">Verificações de Vírus</CardTitle>
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{scanStats?.total || 0}</div>
             <div className="flex items-center gap-1 mt-2 text-xs">
               <AlertCircle className="h-3 w-3 text-destructive" />
-              <span>{scanStats?.malicious || 0} Threats Detected</span>
+              <span>{scanStats?.malicious || 0} Ameaças Detectadas</span>
             </div>
           </CardContent>
         </Card>
@@ -196,8 +196,8 @@ export default function SuperAdminMetrics() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Virus Scan Results</CardTitle>
-            <CardDescription>Distribution of clean vs malicious files</CardDescription>
+            <CardTitle>Resultados das Verificações</CardTitle>
+            <CardDescription>Distribuição de arquivos limpos vs maliciosos</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -224,8 +224,8 @@ export default function SuperAdminMetrics() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Agent Status Distribution</CardTitle>
-            <CardDescription>Current status of all registered agents</CardDescription>
+            <CardTitle>Status dos Computadores</CardTitle>
+            <CardDescription>Status atual de todos os computadores registrados</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -242,8 +242,8 @@ export default function SuperAdminMetrics() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Subscription Plans</CardTitle>
-            <CardDescription>Distribution of tenants by plan type</CardDescription>
+            <CardTitle>Distribuição de Planos</CardTitle>
+            <CardDescription>Empresas por tipo de plano de assinatura</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -270,21 +270,21 @@ export default function SuperAdminMetrics() {
 
         <Card>
           <CardHeader>
-            <CardTitle>User Roles</CardTitle>
-            <CardDescription>Distribution of users by role</CardDescription>
+            <CardTitle>Funções dos Usuários</CardTitle>
+            <CardDescription>Distribuição de usuários por função</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Admins</span>
+                <span className="text-sm font-medium">Administradores</span>
                 <Badge>{userStats?.admins || 0}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Operators</span>
+                <span className="text-sm font-medium">Operadores</span>
                 <Badge variant="secondary">{userStats?.operators || 0}</Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Viewers</span>
+                <span className="text-sm font-medium">Visualizadores</span>
                 <Badge variant="outline">{userStats?.viewers || 0}</Badge>
               </div>
               <div className="flex items-center justify-between">
