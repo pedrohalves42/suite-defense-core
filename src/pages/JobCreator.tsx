@@ -228,6 +228,12 @@ const JobCreator = () => {
       return;
     }
 
+    // Validação específica para jobs tipo "scan": filePath é obrigatório
+    if (jobType === "scan" && (!parsedPayload.filePath || parsedPayload.filePath.trim() === "")) {
+      toast.error("O campo 'filePath' é obrigatório para jobs de scan. Informe o caminho completo do arquivo.");
+      return;
+    }
+
     setLoading(true);
     try {
       const requestBody: any = {
