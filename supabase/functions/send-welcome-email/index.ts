@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
     
     try {
       await resend.emails.send({
-        from: 'CyberShield <onboarding@resend.dev>',
+        from: 'CyberShield <boas-vindas@cybershield.com.br>',
         to: [email],
         subject: `Bem-vindo ao CyberShield, ${firstName}!`,
         html: `

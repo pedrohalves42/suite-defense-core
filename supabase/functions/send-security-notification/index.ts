@@ -234,7 +234,7 @@ async function sendEmailNotification(
 
     const resend = new Resend(resendApiKey);
     const emailResponse = await resend.emails.send({
-      from: 'CyberShield Security <onboarding@resend.dev>',
+      from: 'CyberShield Security <seguranca@cybershield.com.br>',
       to: adminEmails,
       subject: `[${payload.severity.toUpperCase()}] ${payload.alertType} - CyberShield`,
       html: emailHtml,

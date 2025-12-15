@@ -90,6 +90,7 @@ import AIGovernance from "./pages/admin/AIGovernance";
 import ApiDocumentation from "./pages/admin/ApiDocumentation";
 import MyAccount from "./pages/admin/MyAccount";
 import SLODashboard from "./pages/admin/SLODashboard";
+import VerificarLaudo from "./pages/VerificarLaudo";
 
 const App = () => (
   <ErrorBoundary>
@@ -116,6 +117,7 @@ const App = () => (
             <Route path="/checkout/cancel" element={<CheckoutCancel />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/verificar/:laudoId" element={<VerificarLaudo />} />
             
             {/* Documentation Routes */}
             <Route path="/docs/exe-build" element={<ExeBuild />} />

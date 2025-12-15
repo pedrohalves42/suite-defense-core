@@ -150,7 +150,7 @@ async function sendEmailAlert(
   }
 
   return await resend.emails.send({
-    from: 'CyberShield Alertas <alerts@resend.dev>',
+    from: 'CyberShield Alertas <alertas@cybershield.com.br>',
     to: [email],
     subject: `[${severityLabel}] ${eventLabel}${agentName ? ` - ${agentName}` : ''}`,
     html: `
