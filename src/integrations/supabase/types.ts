@@ -2696,6 +2696,7 @@ export type Database = {
           output: Json | null
           parent_job_id: string | null
           payload: Json | null
+          priority: number | null
           recurrence_pattern: string | null
           scheduled_at: string | null
           started_at: string | null
@@ -2720,6 +2721,7 @@ export type Database = {
           output?: Json | null
           parent_job_id?: string | null
           payload?: Json | null
+          priority?: number | null
           recurrence_pattern?: string | null
           scheduled_at?: string | null
           started_at?: string | null
@@ -2744,6 +2746,7 @@ export type Database = {
           output?: Json | null
           parent_job_id?: string | null
           payload?: Json | null
+          priority?: number | null
           recurrence_pattern?: string | null
           scheduled_at?: string | null
           started_at?: string | null
