@@ -10,6 +10,7 @@ import { useTenant } from '@/hooks/useTenant';
 import { CONTACT } from '@/constants/config';
 import { useEffect, useState } from 'react';
 import { logger } from '@/lib/logger';
+import { BillingPeriodSelector, type BillingPeriod, calculateSavings, PERIOD_CONFIG } from '@/components/admin/BillingPeriodSelector';
 
 interface Plan {
   id: string;
@@ -30,6 +31,7 @@ export default function PlanUpgradeNew() {
   const { subscription, isLoading: subscriptionLoading, refetch: refetchSubscription } = useSubscription();
   const { tenant, loading: tenantLoading } = useTenant();
   const [loadingTimedOut, setLoadingTimedOut] = useState(false);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('12m'); // Default to popular annual
 
   // Debug logging for loading states
   useEffect(() => {
@@ -78,11 +80,11 @@ export default function PlanUpgradeNew() {
     },
   });
 
-  // Create checkout session - V4: no device quantity needed
+  // Create checkout session - V4: planName + billingPeriod for package discounts
   const createCheckout = useMutation({
-    mutationFn: async ({ planName }: { planName: string }) => {
+    mutationFn: async ({ planName, period }: { planName: string; period: BillingPeriod }) => {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { planName },
+        body: { planName, billingPeriod: period },
       });
 
       if (error) throw error;
@@ -90,9 +92,10 @@ export default function PlanUpgradeNew() {
     },
     onSuccess: (data) => {
       if (data.url) {
+        const periodLabel = PERIOD_CONFIG[billingPeriod].label;
         toast({
           title: 'Redirecionando para o checkout',
-          description: 'Você será redirecionado para completar o pagamento.',
+          description: `Plano ${periodLabel} selecionado. Você será redirecionado para completar o pagamento.`,
         });
         window.location.href = data.url;
       }
@@ -352,12 +355,24 @@ export default function PlanUpgradeNew() {
         </Card>
       )}
 
-      <div>
+      <div className="space-y-2">
         <h1 className="text-3xl font-bold">Planos e Preços</h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-muted-foreground">
           Escolha o plano ideal para sua equipe • Todos com 14 dias de trial grátis
         </p>
       </div>
+
+      {/* Billing Period Selector */}
+      <Card className="p-4">
+        <div className="space-y-2">
+          <h3 className="text-sm font-medium text-center">Escolha o período de pagamento</h3>
+          <BillingPeriodSelector 
+            value={billingPeriod} 
+            onChange={setBillingPeriod} 
+            basePrice={15000} // Using starter plan as reference
+          />
+        </div>
+      </Card>
 
       {isSubscribed && subscription && (
         <Card className="border-primary">
@@ -440,15 +455,24 @@ export default function PlanUpgradeNew() {
                 </ul>
                 
                 {isPaidPlan && !isCurrent ? (
-                  <Button
-                    className="w-full"
-                    variant={isPopular ? 'default' : 'secondary'}
-                    onClick={() => createCheckout.mutate({ planName: plan.name })}
-                    disabled={createCheckout.isPending || !plan.stripe_price_id}
-                  >
-                    {createCheckout.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                    {!plan.stripe_price_id ? 'Configurar Stripe' : 'Começar Trial Grátis'}
-                  </Button>
+                  <div className="space-y-2">
+                    {billingPeriod !== 'monthly' && (
+                      <div className="text-center">
+                        <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                          💰 -{PERIOD_CONFIG[billingPeriod].discountPct}% aplicado
+                        </span>
+                      </div>
+                    )}
+                    <Button
+                      className="w-full"
+                      variant={isPopular ? 'default' : 'secondary'}
+                      onClick={() => createCheckout.mutate({ planName: plan.name, period: billingPeriod })}
+                      disabled={createCheckout.isPending || !plan.stripe_price_id}
+                    >
+                      {createCheckout.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                      {!plan.stripe_price_id ? 'Configurar Stripe' : 'Começar Trial Grátis'}
+                    </Button>
+                  </div>
                 ) : isEnterprise ? (
                   <Button
                     className="w-full"
@@ -468,12 +492,18 @@ export default function PlanUpgradeNew() {
         })}
       </div>
 
-      {/* Annual discount info */}
-      <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+      {/* Package discount info */}
+      <Card className="bg-gradient-to-r from-green-500/5 to-green-500/10 border-green-500/20">
         <CardHeader>
-          <CardTitle className="text-lg">💰 Economize com pagamento anual</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2">
+            💰 Economize com pacotes pré-pagos
+          </CardTitle>
           <CardDescription>
-            Ganhe 2 meses grátis ao escolher o plano anual — equivale a 16% de desconto!
+            <ul className="space-y-1 mt-2 text-sm">
+              <li>• <strong>6 meses:</strong> 4% de desconto</li>
+              <li>• <strong>12 meses:</strong> 8% de desconto ⭐ Mais popular</li>
+              <li>• <strong>24 meses:</strong> 16% de desconto 💎 Melhor valor</li>
+            </ul>
           </CardDescription>
         </CardHeader>
       </Card>
