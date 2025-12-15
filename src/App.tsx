@@ -179,6 +179,7 @@ const App = () => (
                 <Route path="api-docs" element={<ApiDocumentation />} />
                 <Route path="my-account" element={<MyAccount />} />
                 <Route path="slo-dashboard" element={<SLODashboard />} />
+                <Route path="system-operations" element={<SystemOperations />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
