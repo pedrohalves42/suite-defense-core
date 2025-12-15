@@ -23,13 +23,13 @@ export const AppSidebar = () => {
   const menuItems = useMemo(() => [
     { icon: Home, label: 'Dashboard', to: '/dashboard', end: true },
     { icon: Server, label: 'Monitoramento', to: '/monitoring' },
-    { icon: Server, label: 'Gerenciar Agentes', to: '/agents' },
+    { icon: Server, label: 'Meus Computadores', to: '/agents' },
     { icon: Zap, label: 'Tarefas', to: '/jobs' },
-    { icon: Shield, label: 'Scans de Virus', to: '/virus-scans' },
+    { icon: Shield, label: 'Verificações de Vírus', to: '/virus-scans' },
     { icon: Shield, label: 'Quarentena', to: '/quarantine' },
     { icon: Package, label: 'Instalador', to: '/installer' },
     { icon: FileDown, label: 'Exportar Dados', to: '/export' },
-    { icon: TestTube, label: 'Teste de Agentes', to: '/agent-test' },
+    { icon: TestTube, label: 'Testar Computadores', to: '/agent-test' },
   ], []);
 
   const adminItems = useMemo(() => [
@@ -52,7 +52,7 @@ export const AppSidebar = () => {
     
     // === INFRAESTRUTURA ===
     { icon: Package, label: 'Instalações', to: '/admin/installations', section: 'infrastructure' },
-    { icon: Package, label: 'Versões do Agente', to: '/admin/agent-releases', section: 'infrastructure' },
+    { icon: Package, label: 'Versões do Software', to: '/admin/agent-releases', section: 'infrastructure' },
     { icon: Heart, label: 'Saúde do Sistema', to: '/admin/slo-dashboard', section: 'infrastructure' },
     { icon: Gauge, label: 'Limites de Taxa', to: '/admin/rate-limiting', section: 'infrastructure' },
     { icon: Inbox, label: 'Tarefas Pendentes', to: '/admin/dead-letter-queue', section: 'infrastructure' },
@@ -76,28 +76,28 @@ export const AppSidebar = () => {
   ], []);
 
   const superAdminItems = useMemo(() => [
-    { icon: Home, label: 'Meu Tenant (Admin)', to: '/admin/dashboard', end: false },
-    { icon: Package, label: 'Gerenciar Tenants', to: '/super-admin/tenants', end: true },
-    { icon: Package, label: 'Agent Releases', to: '/admin/agent-releases', end: false },
-    { icon: BarChart3, label: 'Metricas Globais', to: '/super-admin/metrics' },
-    { icon: BarChart3, label: 'Analytics Subs', to: '/super-admin/subscription-analytics' },
+    { icon: Home, label: 'Minha Empresa', to: '/admin/dashboard', end: false },
+    { icon: Package, label: 'Empresas', to: '/super-admin/tenants', end: true },
+    { icon: Package, label: 'Versões do Software', to: '/admin/agent-releases', end: false },
+    { icon: BarChart3, label: 'Métricas Globais', to: '/super-admin/metrics' },
+    { icon: BarChart3, label: 'Análise de Assinaturas', to: '/super-admin/subscription-analytics' },
     // === FINANCEIRO ===
-    { icon: DollarSign, label: 'Unit Economics', to: '/super-admin/unit-economics' },
-    { icon: PieChart, label: 'Cohort Analysis', to: '/super-admin/cohort-analysis' },
-    { icon: TrendingUp, label: 'Projecoes Receita', to: '/super-admin/revenue-projections' },
-    { icon: Target, label: 'Pipeline Vendas', to: '/super-admin/sales-pipeline' },
-    { icon: Presentation, label: 'Pitch Deck', to: '/super-admin/pitch-deck' },
-    { icon: Scale, label: 'Analise de Riscos', to: '/super-admin/risk-analysis' },
-    { icon: CreditCard, label: 'Config Stripe', to: '/super-admin/stripe-setup' },
-    { icon: Users, label: 'Todos Usuarios', to: '/super-admin/users' },
-    { icon: Shield, label: 'Features', to: '/super-admin/features' },
-    { icon: Key, label: 'Chaves API', to: '/super-admin/api-keys' },
+    { icon: DollarSign, label: 'Indicadores Financeiros', to: '/super-admin/unit-economics' },
+    { icon: PieChart, label: 'Análise de Retenção', to: '/super-admin/cohort-analysis' },
+    { icon: TrendingUp, label: 'Projeções de Receita', to: '/super-admin/revenue-projections' },
+    { icon: Target, label: 'Pipeline de Vendas', to: '/super-admin/sales-pipeline' },
+    { icon: Presentation, label: 'Apresentação', to: '/super-admin/pitch-deck' },
+    { icon: Scale, label: 'Análise de Riscos', to: '/super-admin/risk-analysis' },
+    { icon: CreditCard, label: 'Pagamentos', to: '/super-admin/stripe-setup' },
+    { icon: Users, label: 'Todos os Usuários', to: '/super-admin/users' },
+    { icon: Shield, label: 'Funcionalidades', to: '/super-admin/features' },
+    { icon: Key, label: 'Chaves de API', to: '/super-admin/api-keys' },
     { icon: Key, label: 'Chaves de Instalação', to: '/super-admin/enrollment-keys' },
     { icon: Mail, label: 'Convites', to: '/super-admin/invites' },
-    { icon: AlertTriangle, label: 'Seguranca', to: '/super-admin/security' },
-    { icon: ScrollText, label: 'Logs Auditoria', to: '/super-admin/audit-logs' },
-    { icon: Activity, label: 'Logs Sistema', to: '/super-admin/system-logs' },
-    { icon: Settings, label: 'Configuracoes', to: '/super-admin/settings' },
+    { icon: AlertTriangle, label: 'Segurança', to: '/super-admin/security' },
+    { icon: ScrollText, label: 'Registros de Auditoria', to: '/super-admin/audit-logs' },
+    { icon: Activity, label: 'Registros do Sistema', to: '/super-admin/system-logs' },
+    { icon: Settings, label: 'Configurações', to: '/super-admin/settings' },
   ], []);
 
   return (
@@ -267,7 +267,7 @@ export const AppSidebar = () => {
               
               {/* Security Section */}
               {!collapsed && <div className="h-px bg-border my-3" />}
-              {!collapsed && <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">Seguranca</p>}
+              {!collapsed && <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">Segurança</p>}
               {adminItems.filter(item => item.section === 'security').map((item, idx) => {
                 const Icon = item.icon;
                 return (
