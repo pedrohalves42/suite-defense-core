@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DollarSign, TrendingUp, Users, Clock, Target, Percent } from "lucide-react";
+import { HelpTooltip } from "@/components/ui/tech-tooltip";
 
 interface UnitEconomicsData {
   mrr: number;
@@ -71,6 +72,7 @@ export default function UnitEconomics() {
   const metrics = [
     {
       title: "MRR",
+      tooltip: "mrr",
       value: `R$ ${data?.mrr?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) || "0,00"}`,
       subtitle: "Receita Mensal Recorrente",
       icon: DollarSign,
@@ -78,6 +80,7 @@ export default function UnitEconomics() {
     },
     {
       title: "ARR",
+      tooltip: "arr",
       value: `R$ ${data?.arr?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) || "0,00"}`,
       subtitle: "Receita Anual Recorrente",
       icon: TrendingUp,
@@ -85,6 +88,7 @@ export default function UnitEconomics() {
     },
     {
       title: "ARPA",
+      tooltip: "arpa",
       value: `R$ ${data?.arpa?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) || "0,00"}`,
       subtitle: "Receita Média por Cliente",
       icon: Users,
@@ -92,20 +96,23 @@ export default function UnitEconomics() {
     },
     {
       title: "CAC",
+      tooltip: "cac",
       value: `R$ ${data?.cac?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) || "0,00"}`,
-      subtitle: "Custo de Aquisição",
+      subtitle: "Custo de Aquisição de Cliente",
       icon: Target,
       color: "text-orange-500",
     },
     {
       title: "LTV",
+      tooltip: "ltv",
       value: `R$ ${data?.ltv?.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) || "0,00"}`,
-      subtitle: "Valor Vitalício do Cliente",
+      subtitle: "Valor do Cliente ao Longo do Tempo",
       icon: TrendingUp,
       color: "text-cyan-500",
     },
     {
       title: "LTV / CAC",
+      tooltip: "ltv/cac",
       value: data?.ltv_cac_ratio?.toFixed(2) || "0.00",
       subtitle: data?.ltv_cac_ratio && data.ltv_cac_ratio >= 3 ? "✅ Saudável (≥3x)" : "⚠️ Meta: ≥3x",
       icon: Percent,
@@ -113,13 +120,15 @@ export default function UnitEconomics() {
     },
     {
       title: "Payback",
+      tooltip: "payback",
       value: `${data?.payback_months?.toFixed(1) || "0"} meses`,
-      subtitle: "Tempo para Recuperar CAC",
+      subtitle: "Meses para Recuperar Investimento",
       icon: Clock,
       color: "text-indigo-500",
     },
     {
-      title: "Churn Rate",
+      title: "Churn",
+      tooltip: "churn",
       value: `${data?.churn_rate?.toFixed(1) || "0"}%`,
       subtitle: "Taxa de Cancelamento Mensal",
       icon: Percent,
@@ -137,9 +146,9 @@ export default function UnitEconomics() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Unit Economics</h1>
+        <h1 className="text-2xl font-bold">Indicadores Financeiros</h1>
         <p className="text-muted-foreground">
-          Métricas financeiras fundamentais do SaaS
+          Métricas essenciais do negócio SaaS
         </p>
       </div>
 
@@ -147,8 +156,9 @@ export default function UnitEconomics() {
         {metrics.map((metric) => (
           <Card key={metric.title}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                 {metric.title}
+                {metric.tooltip && <HelpTooltip term={metric.tooltip} />}
               </CardTitle>
               <metric.icon className={`h-4 w-4 ${metric.color}`} />
             </CardHeader>

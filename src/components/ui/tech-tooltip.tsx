@@ -10,77 +10,124 @@ interface TechTooltipProps {
 
 // Dicionário de termos técnicos com explicações amigáveis
 const techTerms: Record<string, string> = {
-  // Termos de computadores/agentes
-  'computador': 'Máquina física ou virtual onde o software de proteção está instalado.',
-  'computadores': 'Máquinas físicas ou virtuais protegidas pelo sistema.',
-  'computador inativo': 'Computador que não envia sinal de vida há mais de 24 horas.',
-  'empresa': 'Organização ou conta que agrupa os computadores monitorados.',
-  'versão do agente': 'Número da versão do software de proteção instalado no computador.',
+  // Computadores/Agentes
+  "computador": "Um dispositivo protegido pelo CyberShield que envia informações de segurança para o painel.",
+  "computadores": "Dispositivos protegidos pelo sistema.",
+  "sinal de vida": "Verificação periódica que confirma que o computador está online e funcionando corretamente.",
+  "tempo online": "Período desde a última reinicialização do computador.",
+  "versão do agente": "Versão do software de proteção instalado no computador.",
+  "versão do software": "Versão do software de proteção instalado no computador.",
+  "computador inativo": "Computador que não envia sinais de vida há mais de 24 horas.",
+  "empresa": "Organização ou conta que agrupa computadores e usuários.",
   
   // Status e Comunicação
-  "heartbeat": "O computador envia sinais periódicos para confirmar que está funcionando. Se não recebemos sinal por mais de 5 minutos, consideramos offline.",
-  "sinal de vida": "O computador envia sinais periódicos para confirmar que está funcionando. Se não recebemos sinal por mais de 5 minutos, consideramos offline.",
-  "status": "Estado atual do computador: ativo (funcionando normalmente), offline (sem comunicação) ou desativado (pausado manualmente).",
-  "online": "O computador está conectado e enviando dados normalmente.",
-  "offline": "O computador não está enviando dados. Pode estar desligado, sem internet ou com problema no agente.",
+  "heartbeat": "Sinal de vida - verificação periódica que confirma que o computador está online.",
+  "online": "Computador ativo e enviando dados normalmente.",
+  "offline": "Computador desconectado ou desligado.",
+  "inativo": "Computador que não se comunica há algum tempo.",
+  "status": "Estado atual do computador: ativo, offline ou desativado.",
   
   // Segurança
-  "vulnerabilidade": "Falha de segurança conhecida que pode ser explorada por atacantes para invadir o sistema.",
-  "cve": "Identificador único de vulnerabilidades públicas no banco de dados mundial (Common Vulnerabilities and Exposures).",
-  "score de risco": "Pontuação de 0 a 100 que indica o nível de segurança do ambiente. 100 significa mais seguro, 0 significa risco crítico.",
-  "severidade": "Nível de gravidade de uma vulnerabilidade: Crítica (urgente), Alta (importante), Média (atenção) ou Baixa (informativo).",
-  "ameaça": "Software malicioso ou atividade suspeita detectada pelo antivírus ou sistema de monitoramento.",
-  "antivírus atualizado": "Proteção com definições de vírus recentes (menos de 7 dias). Definições antigas podem não detectar novas ameaças.",
+  "cve": "Identificador único de vulnerabilidades de segurança conhecidas mundialmente.",
+  "score de risco": "Pontuação de 0 a 100 que indica o nível de risco do computador.",
+  "vulnerabilidade": "Falha de segurança que pode ser explorada por atacantes.",
+  "ameaça": "Software malicioso ou atividade suspeita detectada.",
+  "malware": "Software malicioso projetado para danificar ou acessar sistemas sem autorização.",
+  "ransomware": "Tipo de malware que bloqueia arquivos e exige pagamento para liberá-los.",
+  "phishing": "Tentativa de roubar informações através de sites ou emails falsos.",
+  "severidade": "Nível de gravidade: Crítica (urgente), Alta (importante), Média (atenção) ou Baixa.",
+  "antivírus atualizado": "Proteção com definições de vírus recentes (menos de 7 dias).",
   
   // Infraestrutura
-  "endpoint": "Computador ou dispositivo protegido pelo CyberShield.",
-  "agente": "Programa instalado no computador que coleta dados de segurança e envia para o painel.",
-  "agent": "Programa instalado no computador que coleta dados de segurança e envia para o painel.",
-  "tokens de acesso": "Chaves de autenticação que permitem o agente se comunicar de forma segura com o sistema.",
-  "credenciais": "Informações de autenticação (tokens) que permitem o agente se identificar no sistema.",
+  "endpoint": "Dispositivo final como computador, notebook ou servidor que precisa de proteção.",
+  "agente": "Programa instalado no computador que coleta dados de segurança.",
+  "agent": "Programa instalado no computador que coleta dados de segurança.",
+  "tokens de acesso": "Chaves de autenticação usadas para verificar identidade de forma segura.",
+  "chave de registro": "Código único usado para conectar um novo computador ao sistema.",
   "chave de instalação": "Código único necessário para cadastrar um novo computador no sistema.",
   "enrollment key": "Código único necessário para cadastrar um novo computador no sistema.",
+  "api": "Interface que permite a comunicação entre diferentes sistemas.",
+  "credenciais": "Informações de autenticação que permitem o agente se identificar.",
   
   // Métricas de Performance
-  "cpu": "Processador do computador. Uso alto (acima de 90%) pode indicar problema ou programa consumindo muitos recursos.",
-  "ram": "Memória do computador. Uso alto (acima de 85%) pode causar lentidão.",
-  "disco": "Armazenamento do computador. Pouco espaço livre (menos de 10%) pode causar problemas.",
-  "uptime": "Tempo desde a última reinicialização do computador.",
-  "tempo online": "Porcentagem de tempo que seus computadores ficaram conectados e funcionando.",
-  "response time": "Tempo que o sistema leva para responder a uma solicitação. Quanto menor, mais rápido.",
-  "performance metrics": "Medições de velocidade e eficiência do sistema. Ajudam a identificar lentidão ou problemas.",
-  "latency": "Tempo que o sistema leva para responder a uma solicitação.",
+  "cpu": "Processador - o cérebro do computador que executa programas.",
+  "ram": "Memória de acesso rápido para programas em execução.",
+  "memória": "RAM - armazenamento temporário para programas em execução.",
+  "disco": "Espaço de armazenamento permanente para arquivos.",
+  "uso de cpu": "Percentual do processador sendo utilizado no momento.",
+  "uso de memória": "Percentual da memória RAM sendo utilizada.",
+  "uso de disco": "Percentual do espaço de armazenamento ocupado.",
+  "uptime": "Tempo online - período desde a última reinicialização.",
+  "response time": "Tempo que o sistema leva para responder a uma solicitação.",
+  "latency": "Tempo de resposta do sistema.",
   
   // Jobs e Tarefas
-  "tarefa": "Comando enviado para o computador executar, como coletar dados ou verificar vulnerabilidades.",
-  "job": "Comando enviado para o computador executar, como coletar dados ou verificar vulnerabilidades.",
-  "fila de tarefas": "Lista de comandos aguardando para serem executados nos computadores.",
+  "tarefa": "Ação programada executada pelo sistema de proteção.",
+  "tarefas": "Ações programadas executadas pelo sistema de proteção.",
+  "job": "Tarefa agendada - ação programada executada pelo sistema.",
+  "jobs": "Tarefas agendadas - ações programadas executadas pelo sistema.",
+  "fila": "Lista de tarefas aguardando execução.",
+  "fila de tarefas": "Lista de comandos aguardando para serem executados.",
+  "pendente": "Tarefa aguardando para ser executada.",
+  "em execução": "Tarefa sendo processada no momento.",
+  "concluído": "Tarefa finalizada com sucesso.",
+  "falhou": "Tarefa que não foi concluída devido a um erro.",
   "taxa de sucesso": "Porcentagem de tarefas que foram concluídas sem erros.",
-  "dlq": "Fila de tarefas que falharam após várias tentativas e precisam de atenção manual.",
-  "dead letter queue": "Fila de tarefas que falharam após várias tentativas e precisam de atenção manual.",
+  "dlq": "Fila de tarefas que falharam e precisam de atenção manual.",
   
   // Atividade Web
-  "atividade web": "Histórico de sites acessados pelo computador, coletado do cache DNS e navegadores.",
-  "dns cache": "Lista de sites recentemente acessados armazenada pelo sistema operacional.",
-  "domínio": "Endereço de um site na internet (exemplo: google.com).",
+  "atividade web": "Registro de sites e domínios acessados pelo computador.",
+  "domínio": "Endereço principal de um site (ex: google.com).",
+  "dns": "Sistema que traduz nomes de sites para endereços de rede.",
+  "dns cache": "Histórico local de sites acessados recentemente.",
+  "cache dns": "Histórico local de sites acessados recentemente.",
   
   // Relatórios
-  "laudo": "Documento oficial de análise de segurança com recomendações e certificado de verificação.",
-  "inventário de software": "Lista de todos os programas instalados nos computadores monitorados.",
+  "relatório": "Documento com análise detalhada da situação de segurança.",
+  "laudo": "Documento oficial de análise de segurança com recomendações.",
+  "diagnóstico": "Análise completa para identificar problemas de segurança.",
+  "auditoria": "Verificação sistemática de conformidade e segurança.",
+  "inventário de software": "Lista de todos os programas instalados nos computadores.",
   
-  // Saúde do Sistema (SLO humanizado)
-  "margem de falha": "Quanto do limite de problemas permitidos já foi usado este mês. Acima de 80% indica que o sistema está próximo do limite aceitável.",
-  "error budget": "Quanto do limite de problemas permitidos já foi usado este mês. Acima de 80% indica que o sistema está próximo do limite aceitável.",
-  "meta de disponibilidade": "Porcentagem mínima de tempo que o sistema deve funcionar corretamente. Ex: 99.9% significa no máximo 43 minutos de problema por mês.",
+  // Saúde do Sistema
+  "saúde": "Estado geral de funcionamento do computador.",
+  "alerta": "Aviso sobre situação que requer atenção.",
+  "crítico": "Problema grave que requer ação imediata.",
+  "aviso": "Situação que pode se tornar problemática.",
+  "normal": "Funcionamento dentro dos parâmetros esperados.",
+  "margem de falha": "Quanto do limite de problemas permitidos já foi usado.",
+  "error budget": "Limite de problemas permitidos no período.",
+  "meta de disponibilidade": "Porcentagem mínima de tempo que o sistema deve funcionar.",
+
+  // Termos de Infraestrutura
+  "tenant": "Empresa ou organização que utiliza o sistema.",
+  "scan": "Verificação de segurança que analisa arquivos em busca de ameaças.",
+  "scans": "Verificações de segurança.",
+  "threat": "Ameaça de segurança detectada.",
+  "threats": "Ameaças de segurança detectadas.",
+  "hash": "Código único que identifica um arquivo de forma segura.",
+  "hmac": "Método de verificação que garante a autenticidade das comunicações.",
   
-  // Termos de backend
-  "edge function": "Código que roda no servidor para processar dados de forma segura.",
-  "api": "Conexão que permite que diferentes sistemas conversem entre si.",
+  // Métricas Financeiras SaaS
+  "mrr": "Receita Mensal Recorrente - quanto a empresa ganha por mês com assinaturas.",
+  "arr": "Receita Anual Recorrente - MRR multiplicado por 12 meses.",
+  "arpa": "Receita Média Por Cliente - quanto cada cliente paga em média por mês.",
+  "cac": "Custo de Aquisição de Cliente - quanto custa para conquistar um novo cliente.",
+  "ltv": "Valor do Cliente ao Longo do Tempo - quanto um cliente gera de receita total.",
+  "ltv/cac": "Razão LTV/CAC - indica quantas vezes o cliente paga o custo de aquisição. Meta: ≥3x.",
+  "payback": "Tempo em meses para recuperar o investimento feito para adquirir um cliente.",
+  "churn": "Taxa de Cancelamento - percentual de clientes que cancelam por mês.",
+  "churn rate": "Taxa de Cancelamento - percentual de clientes que cancelam por mês.",
+  "gross margin": "Margem Bruta - percentual da receita que sobra após custos diretos.",
+  "margem bruta": "Percentual da receita que sobra após custos diretos de operação.",
+  
+  // Termos de Backend
+  "edge function": "Função que processa dados de forma rápida e segura na nuvem.",
   "webhook": "Notificação automática enviada quando algo acontece no sistema.",
-  
-  // IA
-  "circuit breaker": "Proteção que desliga temporariamente um serviço com problemas para evitar cascata de falhas.",
+  "circuit breaker": "Proteção que desliga temporariamente um serviço com problemas.",
   "fallback": "Plano alternativo usado quando o sistema principal falha.",
+  "rls": "Controle de acesso que protege dados sensíveis.",
+  "policy": "Regra de segurança aplicada ao sistema.",
 };
 
 export function TechTooltip({ term, children, side = "top" }: TechTooltipProps) {
