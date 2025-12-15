@@ -36,6 +36,7 @@ const techTerms: Record<string, string> = {
   "ram": "Memória do computador. Uso alto (acima de 85%) pode causar lentidão.",
   "disco": "Armazenamento do computador. Pouco espaço livre (menos de 10%) pode causar problemas.",
   "uptime": "Tempo desde a última reinicialização do computador.",
+  "tempo online": "Porcentagem de tempo que seus computadores ficaram conectados e funcionando.",
   
   // Jobs e Tarefas
   "tarefa": "Comando enviado para o computador executar, como coletar dados ou verificar vulnerabilidades.",
@@ -51,6 +52,11 @@ const techTerms: Record<string, string> = {
   // Relatórios
   "laudo": "Documento oficial de análise de segurança com recomendações e certificado de verificação.",
   "inventário de software": "Lista de todos os programas instalados nos computadores monitorados.",
+  
+  // Saúde do Sistema (SLO humanizado)
+  "margem de falha": "Quanto do limite de problemas permitidos já foi usado este mês. Acima de 80% indica que o sistema está próximo do limite aceitável.",
+  "error budget": "Quanto do limite de problemas permitidos já foi usado este mês. Acima de 80% indica que o sistema está próximo do limite aceitável.",
+  "meta de disponibilidade": "Porcentagem mínima de tempo que o sistema deve funcionar corretamente. Ex: 99.9% significa no máximo 43 minutos de problema por mês.",
 };
 
 export function TechTooltip({ term, children, side = "top" }: TechTooltipProps) {

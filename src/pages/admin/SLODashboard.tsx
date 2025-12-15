@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { formatBrazilDateTime } from "@/lib/date-utils";
+import { HelpTooltip } from "@/components/ui/tech-tooltip";
 import { 
   Activity, 
   CheckCircle, 
@@ -14,9 +15,11 @@ import {
   Clock, 
   Server,
   Zap,
-  Target,
+  Heart,
   TrendingUp,
-  Shield
+  Shield,
+  RefreshCw,
+  Info
 } from "lucide-react";
 
 interface SLOMetrics {
@@ -68,7 +71,7 @@ export default function SLODashboard() {
   useEffect(() => {
     if (tenantId) {
       loadMetrics();
-      const interval = setInterval(loadMetrics, 60000); // Refresh every minute
+      const interval = setInterval(loadMetrics, 60000);
       return () => clearInterval(interval);
     }
   }, [tenantId]);
@@ -78,7 +81,6 @@ export default function SLODashboard() {
     
     setLoading(true);
     try {
-      // Fetch agent stats
       const { data: agents } = await supabase
         .from('agents')
         .select('id, status, last_heartbeat')
@@ -104,7 +106,6 @@ export default function SLODashboard() {
         healthyRate: agentData.length > 0 ? (online / agentData.length) * 100 : 100
       });
 
-      // Fetch job stats (last 24 hours)
       const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
       const { data: jobs } = await supabase
         .from('jobs')
@@ -129,7 +130,6 @@ export default function SLODashboard() {
         successRate: isNaN(jobSuccessRate) ? 100 : jobSuccessRate
       });
 
-      // Calculate SLO metrics
       const heartbeatSLO = 99.9;
       const jobSLO = 99.5;
       const uptimeSLO = 99.0;
@@ -138,7 +138,6 @@ export default function SLODashboard() {
       const currentJobSuccess = jobSuccessRate;
       const currentUptime = agentData.length > 0 ? ((online + pending) / agentData.length) * 100 : 100;
 
-      // Calculate error budget (how much of allowed failures we've used)
       const heartbeatErrorBudget = Math.min(100, Math.max(0, 
         ((100 - currentHeartbeat) / (100 - heartbeatSLO)) * 100
       ));
@@ -172,25 +171,51 @@ export default function SLODashboard() {
 
       setLastUpdated(new Date());
     } catch (error) {
-      console.error('Error loading SLO metrics:', error);
+      console.error('Error loading metrics:', error);
     } finally {
       setLoading(false);
     }
   }
 
-  function getStatusColor(status: 'healthy' | 'warning' | 'critical') {
+  function getOverallStatus(): 'healthy' | 'warning' | 'critical' {
+    if (!metrics) return 'healthy';
+    const statuses = [metrics.heartbeat.status, metrics.jobExecution.status, metrics.agentUptime.status];
+    if (statuses.includes('critical')) return 'critical';
+    if (statuses.includes('warning')) return 'warning';
+    return 'healthy';
+  }
+
+  function getStatusMessage(status: 'healthy' | 'warning' | 'critical'): { icon: React.ReactNode; text: string; description: string; color: string } {
     switch (status) {
-      case 'healthy': return 'text-green-500';
-      case 'warning': return 'text-yellow-500';
-      case 'critical': return 'text-red-500';
+      case 'healthy':
+        return {
+          icon: <CheckCircle className="h-8 w-8 text-green-500" />,
+          text: "Tudo funcionando",
+          description: "Seus computadores estão operando normalmente",
+          color: "bg-green-500/10 border-green-500/20"
+        };
+      case 'warning':
+        return {
+          icon: <AlertTriangle className="h-8 w-8 text-yellow-500" />,
+          text: "Fique de olho",
+          description: "Alguns indicadores precisam de atenção",
+          color: "bg-yellow-500/10 border-yellow-500/20"
+        };
+      case 'critical':
+        return {
+          icon: <XCircle className="h-8 w-8 text-red-500" />,
+          text: "Precisa de ação",
+          description: "Existem problemas que precisam ser resolvidos",
+          color: "bg-red-500/10 border-red-500/20"
+        };
     }
   }
 
   function getStatusBadge(status: 'healthy' | 'warning' | 'critical') {
     switch (status) {
-      case 'healthy': return <Badge variant="default" className="bg-green-500">Saudável</Badge>;
-      case 'warning': return <Badge variant="secondary" className="bg-yellow-500 text-black">Atenção</Badge>;
-      case 'critical': return <Badge variant="destructive">Crítico</Badge>;
+      case 'healthy': return <Badge className="bg-green-500/20 text-green-600 border-green-500/30">OK</Badge>;
+      case 'warning': return <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30">Atenção</Badge>;
+      case 'critical': return <Badge className="bg-red-500/20 text-red-600 border-red-500/30">Problema</Badge>;
     }
   }
 
@@ -200,13 +225,20 @@ export default function SLODashboard() {
     return 'bg-green-500';
   }
 
+  function getErrorBudgetMessage(used: number): string {
+    if (used <= 20) return "Ótimo! Margem de segurança ampla";
+    if (used <= 50) return "Bom, ainda há margem confortável";
+    if (used <= 80) return "Atenção, margem diminuindo";
+    return "Crítico! Limite quase atingido";
+  }
+
   if (loading && !metrics) {
     return (
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Dashboard SLO</h1>
-            <p className="text-muted-foreground">Carregando métricas...</p>
+            <h1 className="text-3xl font-bold">Saúde do Sistema</h1>
+            <p className="text-muted-foreground">Carregando informações...</p>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
@@ -225,203 +257,253 @@ export default function SLODashboard() {
     );
   }
 
+  const overallStatus = getOverallStatus();
+  const statusInfo = getStatusMessage(overallStatus);
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Target className="h-8 w-8 text-primary" />
-            Dashboard SLO
+            <Heart className="h-8 w-8 text-primary" />
+            Saúde do Sistema
           </h1>
           <p className="text-muted-foreground">
-            Service Level Objectives - Última atualização: {formatBrazilDateTime(lastUpdated)}
+            Acompanhe se seus computadores estão funcionando corretamente
           </p>
         </div>
-        <Badge variant="outline" className="flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          Auto-refresh: 1min
-        </Badge>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <RefreshCw className="h-4 w-4" />
+          Atualiza automaticamente
+        </div>
       </div>
 
-      {/* SLO Cards */}
+      {/* Status Geral */}
+      <Card className={`border-2 ${statusInfo.color}`}>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-4">
+            {statusInfo.icon}
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold">{statusInfo.text}</h2>
+              <p className="text-muted-foreground">{statusInfo.description}</p>
+            </div>
+            <div className="text-right text-sm text-muted-foreground">
+              <p>Última verificação</p>
+              <p className="font-medium">{formatBrazilDateTime(lastUpdated)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cards de Métricas Simplificados */}
       <div className="grid gap-4 md:grid-cols-3">
-        {/* Heartbeat SLO */}
+        {/* Sinal de Vida */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between text-base">
               <span className="flex items-center gap-2">
                 <Activity className="h-5 w-5 text-blue-500" />
-                Heartbeat
+                Sinal de Vida
+                <HelpTooltip term="sinal de vida" />
               </span>
               {metrics && getStatusBadge(metrics.heartbeat.status)}
             </CardTitle>
             <CardDescription>
-              Target: {metrics?.heartbeat.target}% | Atual: {metrics?.heartbeat.current.toFixed(1)}%
+              Computadores respondendo normalmente
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-4xl font-bold text-center">
-              <span className={getStatusColor(metrics?.heartbeat.status || 'healthy')}>
-                {metrics?.heartbeat.current.toFixed(1)}%
-              </span>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-green-500">
+                {metrics?.heartbeat.current.toFixed(0)}%
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Meta: {metrics?.heartbeat.target}%
+              </p>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Error Budget Usado</span>
-                <span>{metrics?.heartbeat.errorBudgetUsed.toFixed(1)}%</span>
+                <span className="flex items-center gap-1">
+                  Margem de falha usada
+                  <HelpTooltip term="margem de falha" />
+                </span>
+                <span>{metrics?.heartbeat.errorBudgetUsed.toFixed(0)}%</span>
               </div>
               <Progress 
                 value={metrics?.heartbeat.errorBudgetUsed || 0} 
-                className={`h-2 ${getProgressColor(metrics?.heartbeat.errorBudgetUsed || 0)}`}
+                className="h-2"
               />
+              <p className="text-xs text-muted-foreground">
+                {getErrorBudgetMessage(metrics?.heartbeat.errorBudgetUsed || 0)}
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Job Execution SLO */}
+        {/* Tarefas */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between text-base">
               <span className="flex items-center gap-2">
                 <Zap className="h-5 w-5 text-yellow-500" />
-                Execução de Jobs
+                Tarefas
+                <HelpTooltip term="tarefa" />
               </span>
               {metrics && getStatusBadge(metrics.jobExecution.status)}
             </CardTitle>
             <CardDescription>
-              Target: {metrics?.jobExecution.target}% | Atual: {metrics?.jobExecution.current.toFixed(1)}%
+              Comandos executados com sucesso
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-4xl font-bold text-center">
-              <span className={getStatusColor(metrics?.jobExecution.status || 'healthy')}>
-                {metrics?.jobExecution.current.toFixed(1)}%
-              </span>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-green-500">
+                {metrics?.jobExecution.current.toFixed(0)}%
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Meta: {metrics?.jobExecution.target}%
+              </p>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Error Budget Usado</span>
-                <span>{metrics?.jobExecution.errorBudgetUsed.toFixed(1)}%</span>
+                <span className="flex items-center gap-1">
+                  Margem de falha usada
+                  <HelpTooltip term="margem de falha" />
+                </span>
+                <span>{metrics?.jobExecution.errorBudgetUsed.toFixed(0)}%</span>
               </div>
               <Progress 
                 value={metrics?.jobExecution.errorBudgetUsed || 0} 
-                className={`h-2 ${getProgressColor(metrics?.jobExecution.errorBudgetUsed || 0)}`}
+                className="h-2"
               />
+              <p className="text-xs text-muted-foreground">
+                {getErrorBudgetMessage(metrics?.jobExecution.errorBudgetUsed || 0)}
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Agent Uptime SLO */}
+        {/* Tempo Online */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between text-base">
               <span className="flex items-center gap-2">
                 <Server className="h-5 w-5 text-green-500" />
-                Uptime de Agentes
+                Tempo Online
+                <HelpTooltip term="tempo online" />
               </span>
               {metrics && getStatusBadge(metrics.agentUptime.status)}
             </CardTitle>
             <CardDescription>
-              Target: {metrics?.agentUptime.target}% | Atual: {metrics?.agentUptime.current.toFixed(1)}%
+              Computadores conectados ao sistema
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-4xl font-bold text-center">
-              <span className={getStatusColor(metrics?.agentUptime.status || 'healthy')}>
-                {metrics?.agentUptime.current.toFixed(1)}%
-              </span>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-green-500">
+                {metrics?.agentUptime.current.toFixed(0)}%
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Meta: {metrics?.agentUptime.target}%
+              </p>
             </div>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Error Budget Usado</span>
-                <span>{metrics?.agentUptime.errorBudgetUsed.toFixed(1)}%</span>
+                <span className="flex items-center gap-1">
+                  Margem de falha usada
+                  <HelpTooltip term="margem de falha" />
+                </span>
+                <span>{metrics?.agentUptime.errorBudgetUsed.toFixed(0)}%</span>
               </div>
               <Progress 
                 value={metrics?.agentUptime.errorBudgetUsed || 0} 
-                className={`h-2 ${getProgressColor(metrics?.agentUptime.errorBudgetUsed || 0)}`}
+                className="h-2"
               />
+              <p className="text-xs text-muted-foreground">
+                {getErrorBudgetMessage(metrics?.agentUptime.errorBudgetUsed || 0)}
+              </p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Detailed Stats */}
+      {/* Estatísticas Detalhadas */}
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Agent Stats */}
+        {/* Computadores */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <Shield className="h-5 w-5" />
-              Status dos Agentes
+              Seus Computadores
             </CardTitle>
-            <CardDescription>Distribuição atual dos agentes</CardDescription>
+            <CardDescription>Status atual de todos os computadores monitorados</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-4 gap-4 text-center">
-              <div>
+              <div className="p-3 rounded-lg bg-muted/50">
                 <div className="text-2xl font-bold">{agentStats?.total || 0}</div>
                 <div className="text-xs text-muted-foreground">Total</div>
               </div>
-              <div>
+              <div className="p-3 rounded-lg bg-green-500/10">
                 <div className="text-2xl font-bold text-green-500">{agentStats?.online || 0}</div>
                 <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                   <CheckCircle className="h-3 w-3" />
-                  Online
+                  Conectados
                 </div>
               </div>
-              <div>
+              <div className="p-3 rounded-lg bg-red-500/10">
                 <div className="text-2xl font-bold text-red-500">{agentStats?.offline || 0}</div>
                 <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                   <XCircle className="h-3 w-3" />
-                  Offline
+                  Desconectados
                 </div>
               </div>
-              <div>
+              <div className="p-3 rounded-lg bg-yellow-500/10">
                 <div className="text-2xl font-bold text-yellow-500">{agentStats?.pending || 0}</div>
                 <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
-                  <AlertTriangle className="h-3 w-3" />
-                  Pendente
+                  <Clock className="h-3 w-3" />
+                  Aguardando
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Job Stats */}
+        {/* Tarefas */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-base">
               <TrendingUp className="h-5 w-5" />
-              Jobs (Últimas 24h)
+              Tarefas (Últimas 24h)
             </CardTitle>
-            <CardDescription>Performance de execução de jobs</CardDescription>
+            <CardDescription>Comandos enviados para seus computadores</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-4 gap-4 text-center">
-              <div>
+              <div className="p-3 rounded-lg bg-muted/50">
                 <div className="text-2xl font-bold">{jobStats?.total || 0}</div>
                 <div className="text-xs text-muted-foreground">Total</div>
               </div>
-              <div>
+              <div className="p-3 rounded-lg bg-green-500/10">
                 <div className="text-2xl font-bold text-green-500">{jobStats?.completed || 0}</div>
                 <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                   <CheckCircle className="h-3 w-3" />
                   Sucesso
                 </div>
               </div>
-              <div>
+              <div className="p-3 rounded-lg bg-red-500/10">
                 <div className="text-2xl font-bold text-red-500">{jobStats?.failed || 0}</div>
                 <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                   <XCircle className="h-3 w-3" />
                   Falha
                 </div>
               </div>
-              <div>
+              <div className="p-3 rounded-lg bg-yellow-500/10">
                 <div className="text-2xl font-bold text-yellow-500">{jobStats?.pending || 0}</div>
                 <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                   <Clock className="h-3 w-3" />
-                  Pendente
+                  Pendentes
                 </div>
               </div>
             </div>
@@ -429,53 +511,46 @@ export default function SLODashboard() {
         </Card>
       </div>
 
-      {/* SLO Definitions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Definições de SLO</CardTitle>
-          <CardDescription>Objetivos de nível de serviço configurados</CardDescription>
+      {/* Seção de Ajuda */}
+      <Card className="bg-muted/30">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Info className="h-5 w-5 text-blue-500" />
+            Entenda as métricas
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2">Métrica</th>
-                  <th className="text-left py-2">Target</th>
-                  <th className="text-left py-2">Error Budget (30d)</th>
-                  <th className="text-left py-2">Descrição</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="py-2 flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-blue-500" />
-                    Heartbeat
-                  </td>
-                  <td className="py-2">99.9%</td>
-                  <td className="py-2">~43 min/mês</td>
-                  <td className="py-2 text-muted-foreground">Agentes devem enviar heartbeat a cada 60s</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-yellow-500" />
-                    Execução de Jobs
-                  </td>
-                  <td className="py-2">99.5%</td>
-                  <td className="py-2">~3.6 horas/mês</td>
-                  <td className="py-2 text-muted-foreground">Jobs devem completar com sucesso</td>
-                </tr>
-                <tr>
-                  <td className="py-2 flex items-center gap-2">
-                    <Server className="h-4 w-4 text-green-500" />
-                    Uptime de Agentes
-                  </td>
-                  <td className="py-2">99.0%</td>
-                  <td className="py-2">~7.2 horas/mês</td>
-                  <td className="py-2 text-muted-foreground">Agentes devem estar online ou em provisão</td>
-                </tr>
-              </tbody>
-            </table>
+          <div className="grid gap-4 md:grid-cols-3 text-sm">
+            <div className="space-y-1">
+              <p className="font-medium flex items-center gap-2">
+                <Activity className="h-4 w-4 text-blue-500" />
+                Sinal de Vida
+              </p>
+              <p className="text-muted-foreground">
+                Indica se os computadores estão respondendo. O sistema verifica a cada 60 segundos. 
+                Meta de 99.9% significa que toleramos no máximo 43 minutos de problema por mês.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="font-medium flex items-center gap-2">
+                <Zap className="h-4 w-4 text-yellow-500" />
+                Tarefas
+              </p>
+              <p className="text-muted-foreground">
+                Comandos como coleta de dados, verificação de segurança e atualizações. 
+                Meta de 99.5% permite até 3.6 horas de falhas por mês.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="font-medium flex items-center gap-2">
+                <Server className="h-4 w-4 text-green-500" />
+                Tempo Online
+              </p>
+              <p className="text-muted-foreground">
+                Porcentagem de computadores conectados e funcionando. 
+                Meta de 99% permite até 7.2 horas offline por mês.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
