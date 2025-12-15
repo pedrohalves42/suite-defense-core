@@ -227,6 +227,68 @@ export type Database = {
           },
         ]
       }
+      agent_metrics_daily: {
+        Row: {
+          agent_id: string
+          avg_cpu_percent: number | null
+          avg_disk_percent: number | null
+          avg_memory_percent: number | null
+          created_at: string
+          id: string
+          max_cpu_percent: number | null
+          max_disk_percent: number | null
+          max_memory_percent: number | null
+          max_uptime_seconds: number | null
+          metric_date: string
+          min_cpu_percent: number | null
+          min_memory_percent: number | null
+          sample_count: number | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          avg_cpu_percent?: number | null
+          avg_disk_percent?: number | null
+          avg_memory_percent?: number | null
+          created_at?: string
+          id?: string
+          max_cpu_percent?: number | null
+          max_disk_percent?: number | null
+          max_memory_percent?: number | null
+          max_uptime_seconds?: number | null
+          metric_date: string
+          min_cpu_percent?: number | null
+          min_memory_percent?: number | null
+          sample_count?: number | null
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          avg_cpu_percent?: number | null
+          avg_disk_percent?: number | null
+          avg_memory_percent?: number | null
+          created_at?: string
+          id?: string
+          max_cpu_percent?: number | null
+          max_disk_percent?: number | null
+          max_memory_percent?: number | null
+          max_uptime_seconds?: number | null
+          metric_date?: string
+          min_cpu_percent?: number | null
+          min_memory_percent?: number | null
+          sample_count?: number | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_metrics_daily_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_network_info: {
         Row: {
           active_connections: Json | null
@@ -5703,9 +5765,26 @@ export type Database = {
           },
         ]
       }
+      v_security_definer_inventory: {
+        Row: {
+          category: string | null
+          definition: string | null
+          documentation: string | null
+          function_name: unknown
+          schema_name: unknown
+        }
+        Relationships: []
+      }
     }
     Functions: {
       acknowledge_all_alerts: { Args: { p_tenant_id: string }; Returns: Json }
+      aggregate_daily_metrics: {
+        Args: { p_date?: string }
+        Returns: {
+          agents_processed: number
+          rows_inserted: number
+        }[]
+      }
       calculate_next_run: {
         Args: { from_time?: string; pattern: string }
         Returns: string
@@ -5763,6 +5842,13 @@ export type Database = {
       cleanup_old_failed_attempts: { Args: never; Returns: undefined }
       cleanup_old_hmac_signatures: { Args: never; Returns: number }
       cleanup_old_metrics: { Args: never; Returns: undefined }
+      cleanup_old_metrics_90days: {
+        Args: never
+        Returns: {
+          deleted_count: number
+          table_name: string
+        }[]
+      }
       cleanup_old_metrics_aggressive: {
         Args: never
         Returns: {
