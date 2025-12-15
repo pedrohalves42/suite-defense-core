@@ -5226,6 +5226,15 @@ export type Database = {
           },
         ]
       }
+      hmac_signatures: {
+        Row: {
+          agent_name: string | null
+          id: string | null
+          signature: string | null
+          used_at: string | null
+        }
+        Relationships: []
+      }
       installation_error_summary: {
         Row: {
           error_count: number | null
