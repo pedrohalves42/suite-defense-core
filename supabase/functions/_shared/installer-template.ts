@@ -191,6 +191,44 @@ try {
 
 Write-InstallerLog "FASE 1: Cleanup concluido" "SUCCESS"
 
+# ============= FASE 1.2: Windows Defender Exclusions =============
+Write-InstallerLog "FASE 1.2: Configurando exclusoes do Windows Defender..." "INFO"
+
+try {
+    # Verificar se cmdlets do Windows Defender estao disponiveis
+    $defenderModule = Get-Command -Name Add-MpPreference -ErrorAction SilentlyContinue
+    
+    if ($defenderModule) {
+        # Adicionar exclusao de pasta
+        Add-MpPreference -ExclusionPath "C:\\CyberShield" -ErrorAction Stop
+        Write-InstallerLog "Exclusao de pasta adicionada: C:\\CyberShield" "SUCCESS"
+        
+        # Adicionar exclusao do processo do agente
+        $agentProcessPath = "C:\\CyberShield\\*.ps1"
+        Add-MpPreference -ExclusionPath $agentProcessPath -ErrorAction SilentlyContinue
+        Write-InstallerLog "Exclusao de scripts adicionada: $agentProcessPath" "SUCCESS"
+        
+        # Adicionar exclusao do processo PowerShell que executa o agente
+        Add-MpPreference -ExclusionProcess "powershell.exe" -ErrorAction SilentlyContinue
+        Write-InstallerLog "Exclusao de processo adicionada: powershell.exe" "INFO"
+        
+        # Verificar se as exclusoes foram aplicadas
+        $currentExclusions = Get-MpPreference
+        if ($currentExclusions.ExclusionPath -contains "C:\\CyberShield") {
+            Write-InstallerLog "[OK]  Windows Defender exclusoes configuradas com sucesso" "SUCCESS"
+        } else {
+            Write-InstallerLog "[WARN] Exclusao pode nao ter sido aplicada. Verifique manualmente." "WARN"
+        }
+    } else {
+        Write-InstallerLog "Windows Defender cmdlets nao disponiveis (servidor sem Defender ou versao antiga)" "INFO"
+    }
+} catch {
+    Write-InstallerLog "Aviso: Nao foi possivel configurar exclusoes do Windows Defender: $($_.Exception.Message)" "WARN"
+    Write-InstallerLog "Recomendacao: Configure manualmente a exclusao da pasta C:\\CyberShield" "INFO"
+}
+
+Write-InstallerLog "FASE 1.2: Configuracao de exclusoes concluida" "INFO"
+
 # ============= FASE 1.5: Diagnostico de Seguranca =============
 Write-InstallerLog "=== Diagnostico de Restricoes de Seguranca ===" "INFO"
 
