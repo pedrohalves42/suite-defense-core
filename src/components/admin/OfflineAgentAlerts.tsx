@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Clock, CheckCircle2, Server, Bell, BellOff } from 'lucide-react';
+import { AlertTriangle, Clock, CheckCircle2, Server, Bell, BellOff, Coffee } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/date-utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,9 +20,28 @@ interface OfflineAgent {
   os_type: string | null;
 }
 
-type SeverityLevel = 'warning' | 'danger' | 'critical';
+interface BusinessHours {
+  enabled: boolean;
+  timezone: string;
+  days: number[]; // 0=Sun, 1=Mon, ..., 6=Sat
+  start: string; // "08:00"
+  end: string; // "18:00"
+}
 
-const getSeverity = (hours: number): SeverityLevel => {
+const DEFAULT_BUSINESS_HOURS: BusinessHours = {
+  enabled: true,
+  timezone: 'America/Sao_Paulo',
+  days: [1, 2, 3, 4, 5], // Mon-Fri
+  start: '08:00',
+  end: '18:00',
+};
+
+type SeverityLevel = 'warning' | 'danger' | 'critical' | 'info';
+
+const getSeverity = (hours: number, isBusinessHours: boolean): SeverityLevel => {
+  // Fora do expediente, severidade é sempre info
+  if (!isBusinessHours) return 'info';
+  
   if (hours >= 8) return 'critical';
   if (hours >= 4) return 'danger';
   return 'warning';
@@ -50,13 +69,99 @@ const severityConfig = {
     badge: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
     icon: 'text-red-500',
   },
+  info: {
+    bg: 'bg-slate-50 dark:bg-slate-950/30',
+    border: 'border-slate-200 dark:border-slate-700',
+    text: 'text-slate-600 dark:text-slate-400',
+    badge: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+    icon: 'text-slate-400',
+  },
 };
+
+/**
+ * Verifica se o horário atual está dentro do horário de expediente configurado
+ */
+function isWithinBusinessHours(businessHours: BusinessHours): boolean {
+  if (!businessHours.enabled) return true; // Se desabilitado, considera sempre como expediente
+  
+  try {
+    // Obter data/hora atual no timezone configurado
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: businessHours.timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      weekday: 'short',
+    });
+    
+    const parts = formatter.formatToParts(now);
+    const weekdayPart = parts.find(p => p.type === 'weekday')?.value || '';
+    const hourPart = parts.find(p => p.type === 'hour')?.value || '00';
+    const minutePart = parts.find(p => p.type === 'minute')?.value || '00';
+    
+    // Mapear dia da semana
+    const weekdayMap: Record<string, number> = {
+      'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6,
+    };
+    const currentDay = weekdayMap[weekdayPart] ?? new Date().getDay();
+    
+    // Verificar se é dia de expediente
+    if (!businessHours.days.includes(currentDay)) {
+      return false;
+    }
+    
+    // Verificar horário
+    const currentMinutes = parseInt(hourPart) * 60 + parseInt(minutePart);
+    const [startHour, startMin] = businessHours.start.split(':').map(Number);
+    const [endHour, endMin] = businessHours.end.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    const endMinutes = endHour * 60 + endMin;
+    
+    return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+  } catch (error) {
+    console.error('Error checking business hours:', error);
+    return true; // Em caso de erro, considera como expediente
+  }
+}
 
 export function OfflineAgentAlerts() {
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [acknowledgedAgents, setAcknowledgedAgents] = useState<Set<string>>(new Set());
   const [showAcknowledged, setShowAcknowledged] = useState(false);
+
+  // Fetch business hours configuration
+  const { data: businessHours = DEFAULT_BUSINESS_HOURS } = useQuery({
+    queryKey: ['tenant-business-hours', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id) return DEFAULT_BUSINESS_HOURS;
+      
+      const { data, error } = await supabase
+        .from('tenant_settings')
+        .select('business_hours')
+        .eq('tenant_id', tenant.id)
+        .maybeSingle();
+      
+      if (error || !data?.business_hours) {
+        return DEFAULT_BUSINESS_HOURS;
+      }
+      
+      // Safe type assertion with validation
+      const bh = data.business_hours as unknown as BusinessHours;
+      if (bh && typeof bh.enabled === 'boolean' && Array.isArray(bh.days)) {
+        return bh;
+      }
+      return DEFAULT_BUSINESS_HOURS;
+    },
+    enabled: !!tenant?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Check if currently within business hours
+  const isBusinessHoursActive = useMemo(() => {
+    return isWithinBusinessHours(businessHours);
+  }, [businessHours]);
 
   // Fetch agents offline for more than 1 hour
   const { data: offlineAgents = [], isLoading } = useQuery({
@@ -161,6 +266,39 @@ export function OfflineAgentAlerts() {
     return null;
   }
 
+  // Render simplified version outside business hours
+  if (!isBusinessHoursActive && offlineAgents.length > 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className="border-l-4 border-l-slate-400 bg-gradient-to-br from-slate-50/50 to-slate-100/30 dark:from-slate-950/20 dark:to-slate-900/10">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800">
+                <Coffee className="h-5 w-5 text-slate-500" />
+              </div>
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                  Fora do Horário de Expediente
+                  <Badge variant="secondary" className="bg-slate-200 dark:bg-slate-700">
+                    {offlineAgents.length} offline
+                  </Badge>
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {offlineAgents.length} agente(s) offline — comportamento esperado fora do expediente
+                  ({businessHours.start} - {businessHours.end})
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -184,7 +322,7 @@ export function OfflineAgentAlerts() {
                   )}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Agentes sem comunicação há mais de 1 hora
+                  Agentes sem comunicação há mais de 1 hora (horário de expediente)
                 </CardDescription>
               </div>
             </div>
@@ -228,7 +366,7 @@ export function OfflineAgentAlerts() {
             <div className="space-y-2">
               <AnimatePresence mode="popLayout">
                 {displayedAgents.map((agent) => {
-                  const severity = getSeverity(agent.offline_hours);
+                  const severity = getSeverity(agent.offline_hours, isBusinessHoursActive);
                   const config = severityConfig[severity];
                   const isAcknowledged = acknowledgedAgents.has(agent.agent_id);
 
@@ -263,6 +401,7 @@ export function OfflineAgentAlerts() {
                           {severity === 'critical' && '🔴 CRÍTICO'}
                           {severity === 'danger' && '🟠 ALERTA'}
                           {severity === 'warning' && '🟡 ATENÇÃO'}
+                          {severity === 'info' && '⚪ INFO'}
                           <span className="ml-1">({Math.round(agent.offline_hours)}h)</span>
                         </Badge>
 
