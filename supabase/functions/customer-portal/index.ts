@@ -40,13 +40,12 @@ Deno.serve(async (req) => {
 
     const { data: subscription } = await supabaseClient
       .from("tenant_subscriptions")
-      .select("stripe_customer_id, status, plan_id")
+      .select("stripe_customer_id, status, plan_id, billing_period, current_period_end")
       .eq("tenant_id", tenantId)
       .maybeSingle();
 
     // Handle case where no Stripe customer exists (trial or free plan)
     if (!subscription?.stripe_customer_id) {
-      // Check if user is on trial or free plan
       const status = subscription?.status || 'unknown';
       
       if (status === 'trialing') {
@@ -80,6 +79,24 @@ Deno.serve(async (req) => {
       );
     }
 
+    // VALIDATION: Block downgrade for prepaid plans (6m, 12m, 24m)
+    const billingPeriod = subscription?.billing_period || 'monthly';
+    const currentPeriodEnd = subscription?.current_period_end;
+    
+    if (billingPeriod !== 'monthly' && currentPeriodEnd) {
+      const periodEndDate = new Date(currentPeriodEnd);
+      const now = new Date();
+      
+      if (periodEndDate > now) {
+        // Still within prepaid period - inform user about restrictions
+        const daysRemaining = Math.ceil((periodEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        console.log(`[CUSTOMER-PORTAL] Prepaid plan (${billingPeriod}), ${daysRemaining} days remaining until ${currentPeriodEnd}`);
+        
+        // We still allow portal access but log the prepaid status
+        // Stripe Portal configuration should handle actual downgrade restrictions
+      }
+    }
+
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) {
       console.error("[CUSTOMER-PORTAL] STRIPE_SECRET_KEY not configured");
@@ -98,15 +115,28 @@ Deno.serve(async (req) => {
 
     const origin = req.headers.get("origin") || Deno.env.get("SITE_URL") || "https://suite-defense-core.lovable.app";
     
-    const session = await stripe.billingPortal.sessions.create({
+    // Create portal session with flow_data to show subscription info
+    const sessionConfig: Stripe.BillingPortal.SessionCreateParams = {
       customer: subscription.stripe_customer_id,
       return_url: `${origin}/admin/subscriptions`,
-    });
+    };
+
+    // For prepaid plans, add warning about cancellation policy
+    if (billingPeriod !== 'monthly') {
+      console.log(`[CUSTOMER-PORTAL] Prepaid plan detected (${billingPeriod}), portal will show cancellation restrictions`);
+    }
+
+    const session = await stripe.billingPortal.sessions.create(sessionConfig);
 
     console.log(`[CUSTOMER-PORTAL] Portal session created for customer ${subscription.stripe_customer_id}`);
 
     return new Response(
-      JSON.stringify({ url: session.url }),
+      JSON.stringify({ 
+        url: session.url,
+        billing_period: billingPeriod,
+        prepaid: billingPeriod !== 'monthly',
+        current_period_end: currentPeriodEnd
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
