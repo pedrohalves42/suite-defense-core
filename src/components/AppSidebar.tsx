@@ -1,4 +1,4 @@
-import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, Code } from 'lucide-react';
+import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronLeft, ChevronRight, Zap, TestTube, Server, FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, Code, Heart } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
@@ -53,7 +53,7 @@ export const AppSidebar = () => {
     // === INFRAESTRUTURA ===
     { icon: Package, label: 'Instalações', to: '/admin/installations', section: 'infrastructure' },
     { icon: Package, label: 'Versões do Agente', to: '/admin/agent-releases', section: 'infrastructure' },
-    { icon: Target, label: 'SLO Dashboard', to: '/admin/slo-dashboard', section: 'infrastructure' },
+    { icon: Heart, label: 'Saúde do Sistema', to: '/admin/slo-dashboard', section: 'infrastructure' },
     { icon: Gauge, label: 'Limites de Taxa', to: '/admin/rate-limiting', section: 'infrastructure' },
     { icon: Inbox, label: 'Tarefas Pendentes', to: '/admin/dead-letter-queue', section: 'infrastructure' },
     { icon: Code, label: 'API', to: '/admin/api-docs', section: 'infrastructure' },
