@@ -1984,6 +1984,7 @@ export type Database = {
           installer_size_bytes: number | null
           is_active: boolean
           key: string
+          key_hash: string | null
           max_uses: number
           tenant_id: string
           used_at: string | null
@@ -2003,6 +2004,7 @@ export type Database = {
           installer_size_bytes?: number | null
           is_active?: boolean
           key: string
+          key_hash?: string | null
           max_uses?: number
           tenant_id: string
           used_at?: string | null
@@ -2022,6 +2024,7 @@ export type Database = {
           installer_size_bytes?: number | null
           is_active?: boolean
           key?: string
+          key_hash?: string | null
           max_uses?: number
           tenant_id?: string
           used_at?: string | null
@@ -6033,6 +6036,7 @@ export type Database = {
         Returns: boolean
       }
       hash_agent_token: { Args: { p_token: string }; Returns: string }
+      hash_enrollment_key: { Args: { p_key: string }; Returns: string }
       installation_health_summary: {
         Args: never
         Returns: {
