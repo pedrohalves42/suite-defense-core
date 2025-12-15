@@ -9,12 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Package, Search, RefreshCw } from 'lucide-react';
+import { AlertCircle, Package, Search, RefreshCw, ShieldCheck, ShieldAlert, ShieldX, Shield } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { HelpTooltip } from '@/components/ui/tech-tooltip';
 
 const getRiskVariant = (risk: string): "default" | "secondary" | "destructive" | "warning" | "success" => {
   switch (risk.toLowerCase()) {
@@ -23,6 +24,26 @@ const getRiskVariant = (risk: string): "default" | "secondary" | "destructive" |
     case 'medium': return 'warning';
     case 'low': return 'success';
     default: return 'secondary';
+  }
+};
+
+const getRiskLabel = (risk: string): string => {
+  switch (risk.toLowerCase()) {
+    case 'critical': return 'Crítico';
+    case 'high': return 'Alto';
+    case 'medium': return 'Médio';
+    case 'low': return 'Baixo';
+    default: return 'Desconhecido';
+  }
+};
+
+const getRiskIcon = (risk: string) => {
+  switch (risk.toLowerCase()) {
+    case 'critical': return <ShieldX className="h-4 w-4" />;
+    case 'high': return <ShieldAlert className="h-4 w-4" />;
+    case 'medium': return <Shield className="h-4 w-4" />;
+    case 'low': return <ShieldCheck className="h-4 w-4" />;
+    default: return <Shield className="h-4 w-4" />;
   }
 };
 
@@ -35,7 +56,7 @@ export default function SoftwareInventory() {
 
   const createJobMutation = useMutation({
     mutationFn: async (agentName: string) => {
-      if (!tenant) throw new Error('Tenant nao encontrado');
+      if (!tenant) throw new Error('Empresa não encontrada');
       
       const { error } = await supabase.from('jobs').insert({
         agent_name: agentName,
@@ -48,10 +69,10 @@ export default function SoftwareInventory() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Job de coleta criado com sucesso');
+      toast.success('Coleta de programas iniciada! Aguarde alguns minutos.');
     },
     onError: (error) => {
-      toast.error(`Erro ao criar job: ${error.message}`);
+      toast.error(`Erro ao iniciar coleta: ${error.message}`);
     },
   });
 
@@ -68,8 +89,8 @@ export default function SoftwareInventory() {
 
   return (
     <AdminPageLayout
-      title="Inventario de Software"
-      description="Visualize software instalado nos agentes"
+      title="Programas Instalados"
+      description="Veja todos os programas instalados nos seus computadores protegidos"
     >
       <div className="space-y-6">
         {/* Agent Selector */}
@@ -79,18 +100,22 @@ export default function SoftwareInventory() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  Selecionar Agente
+                  Selecionar Computador
                 </CardTitle>
-                <CardDescription>Escolha um agente para visualizar o inventario</CardDescription>
+                <CardDescription className="flex items-center gap-1">
+                  Escolha um computador para ver os programas instalados
+                  <HelpTooltip term="inventário de software" />
+                </CardDescription>
               </div>
               {selectedAgent && (
                 <Button
                   onClick={() => createJobMutation.mutate(selectedAgent)}
                   disabled={createJobMutation.isPending}
                   size="sm"
+                  className="gap-2"
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${createJobMutation.isPending ? 'animate-spin' : ''}`} />
-                  Coletar Dados
+                  <RefreshCw className={`h-4 w-4 ${createJobMutation.isPending ? 'animate-spin' : ''}`} />
+                  Atualizar Lista
                 </Button>
               )}
             </div>
@@ -105,29 +130,42 @@ export default function SoftwareInventory() {
             {/* Summary Cards */}
             <div className="grid gap-4 md:grid-cols-5">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                <Card className="border-l-4 border-l-primary">
+                <Card className="border-l-4 border-l-primary hover:shadow-md transition-shadow">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">Total</CardTitle>
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Total de Programas
+                    </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{software?.length || 0}</div>
+                    <p className="text-xs text-muted-foreground">instalados</p>
                   </CardContent>
                 </Card>
               </motion.div>
 
-              {['critical', 'high', 'medium', 'low'].map((risk, idx) => (
+              {[
+                { key: 'critical', label: 'Crítico', color: 'border-l-destructive', bgColor: 'bg-destructive/5' },
+                { key: 'high', label: 'Alto', color: 'border-l-orange-500', bgColor: 'bg-orange-50 dark:bg-orange-950/20' },
+                { key: 'medium', label: 'Médio', color: 'border-l-yellow-500', bgColor: 'bg-yellow-50 dark:bg-yellow-950/20' },
+                { key: 'low', label: 'Baixo', color: 'border-l-green-500', bgColor: 'bg-green-50 dark:bg-green-950/20' },
+              ].map((risk, idx) => (
                 <motion.div
-                  key={risk}
+                  key={risk.key}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.1 }}
+                  transition={{ delay: (idx + 1) * 0.1 }}
                 >
-                  <Card className={`border-l-4 border-l-${getRiskVariant(risk)}`}>
+                  <Card className={`${risk.color} ${risk.bgColor} hover:shadow-md transition-shadow`}>
                     <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium capitalize">{risk}</CardTitle>
+                      <CardTitle className="text-sm font-medium flex items-center gap-2">
+                        {getRiskIcon(risk.key)}
+                        Risco {risk.label}
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-bold">{riskCounts[risk] || 0}</div>
+                      <div className="text-2xl font-bold">{riskCounts[risk.key] || 0}</div>
+                      <p className="text-xs text-muted-foreground">programas</p>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -136,23 +174,40 @@ export default function SoftwareInventory() {
 
             {/* Search */}
             <Card>
-              <CardContent className="pt-6">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Search className="h-4 w-4" />
+                  Buscar Programa
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar software..."
+                    placeholder="Digite o nome do programa ou fabricante..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8"
+                    className="pl-10"
                   />
                 </div>
+                {searchTerm && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {filteredSoftware.length} programa(s) encontrado(s)
+                  </p>
+                )}
               </CardContent>
             </Card>
 
             {/* Software Table */}
             {isLoading ? (
               <Card>
-                <CardContent className="pt-6 space-y-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5 animate-pulse" />
+                    Carregando programas...
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
                   {[...Array(5)].map((_, i) => (
                     <Skeleton key={i} className="h-12 w-full" />
                   ))}
@@ -169,34 +224,51 @@ export default function SoftwareInventory() {
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  {searchTerm ? 'Nenhum software encontrado com esse termo de busca.' : 'Nenhum software encontrado para este agente.'}
+                  {searchTerm 
+                    ? `Nenhum programa encontrado para "${searchTerm}". Tente outro termo.` 
+                    : 'Nenhum programa encontrado. Clique em "Atualizar Lista" para coletar os dados.'}
                 </AlertDescription>
               </Alert>
             ) : (
               <Card>
-                <CardContent className="pt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Lista de Programas
+                  </CardTitle>
+                  <CardDescription>
+                    {filteredSoftware.length} programa(s) instalado(s) neste computador
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Versao</TableHead>
+                        <TableHead>Nome do Programa</TableHead>
+                        <TableHead>Versão</TableHead>
                         <TableHead>Fabricante</TableHead>
-                        <TableHead>Local</TableHead>
-                        <TableHead>Risco</TableHead>
+                        <TableHead className="hidden lg:table-cell">Local de Instalação</TableHead>
+                        <TableHead>
+                          <span className="flex items-center gap-1">
+                            Nível de Risco
+                            <HelpTooltip term="score de risco" />
+                          </span>
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredSoftware.map((item) => (
-                        <TableRow key={item.id}>
+                        <TableRow key={item.id} className="hover:bg-muted/50">
                           <TableCell className="font-medium">{item.name}</TableCell>
-                          <TableCell>{item.version || 'N/A'}</TableCell>
-                          <TableCell>{item.vendor || 'N/A'}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground max-w-md truncate">
-                            {item.install_location || 'N/A'}
+                          <TableCell className="font-mono text-sm">{item.version || 'N/A'}</TableCell>
+                          <TableCell>{item.vendor || 'Desconhecido'}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground max-w-md truncate hidden lg:table-cell" title={item.install_location || ''}>
+                            {item.install_location || '-'}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={getRiskVariant(item.risk_level)}>
-                              {item.risk_level}
+                            <Badge variant={getRiskVariant(item.risk_level)} className="flex items-center gap-1 w-fit">
+                              {getRiskIcon(item.risk_level)}
+                              {getRiskLabel(item.risk_level)}
                             </Badge>
                           </TableCell>
                         </TableRow>

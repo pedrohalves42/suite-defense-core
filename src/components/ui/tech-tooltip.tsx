@@ -108,6 +108,14 @@ const techTerms: Record<string, string> = {
   "hash": "Código único que identifica um arquivo de forma segura.",
   "hmac": "Método de verificação que garante a autenticidade das comunicações.",
   
+  // Tipos de Ataque
+  "sql injection": "Ataque que tenta acessar dados inserindo comandos maliciosos.",
+  "xss": "Ataque que insere scripts maliciosos em páginas web.",
+  "path traversal": "Tentativa de acessar arquivos restritos do sistema.",
+  "rate limit": "Limite de requisições excedido - proteção contra abuso.",
+  "força bruta": "Tentativa repetida de adivinhar senhas.",
+  "brute force": "Tentativa repetida de adivinhar senhas ou credenciais.",
+  
   // Métricas Financeiras SaaS
   "mrr": "Receita Mensal Recorrente - quanto a empresa ganha por mês com assinaturas.",
   "arr": "Receita Anual Recorrente - MRR multiplicado por 12 meses.",
@@ -128,6 +136,12 @@ const techTerms: Record<string, string> = {
   "fallback": "Plano alternativo usado quando o sistema principal falha.",
   "rls": "Controle de acesso que protege dados sensíveis.",
   "policy": "Regra de segurança aplicada ao sistema.",
+  
+  // Novos termos de monitoramento
+  "ip bloqueado": "Endereço de rede temporariamente impedido de acessar o sistema.",
+  "tentativa falhada": "Acesso que não foi autorizado por credenciais incorretas.",
+  "evento de segurança": "Ocorrência registrada relacionada à proteção do sistema.",
+  "logs": "Registros detalhados de atividades do sistema.",
 };
 
 export function TechTooltip({ term, children, side = "top" }: TechTooltipProps) {
