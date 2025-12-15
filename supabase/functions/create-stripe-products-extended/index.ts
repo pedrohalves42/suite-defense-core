@@ -136,12 +136,12 @@ Deno.serve(async (req) => {
           }
         });
 
-        // Update database with price ID
+        // Update database with price ID - use full plan name (e.g., starter_6m)
+        const fullPlanName = `${plan.name}_${period.code}`;
         const { error: updateError } = await supabaseClient
           .from("subscription_plans")
           .update({ stripe_price_id: price.id })
-          .eq("name", plan.name)
-          .eq("billing_period", period.code);
+          .eq("name", fullPlanName);
 
         if (updateError) {
           console.error(`[CREATE-STRIPE-PRODUCTS-EXTENDED] Failed to update ${plan.name} ${period.code}: ${updateError.message}`);
