@@ -187,6 +187,16 @@ schedule = "*/5 * * * *"
 [functions.monitor-thresholds]
 verify_jwt = false
 
+# P1-01: Stuck Jobs Alert (every 15 minutes)
+[functions.check-stuck-jobs]
+verify_jwt = false
+schedule = "*/15 * * * *"
+
+# P1-01: Cleanup stuck jobs (every 30 minutes)  
+[functions.cleanup-stuck-jobs]
+verify_jwt = false
+schedule = "*/30 * * * *"
+
 [functions.analyze-network-anomalies]
 verify_jwt = true
 
