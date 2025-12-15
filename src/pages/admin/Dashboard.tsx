@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTenant } from '@/hooks/useTenant';
-import { Activity, Shield, Server, AlertTriangle, CheckCircle, Wifi, WifiOff, Clock, HardDrive, Cpu, MemoryStick } from 'lucide-react';
+import { Activity, Shield, Server, AlertTriangle, CheckCircle, Wifi, WifiOff, Clock, HardDrive, Cpu, MemoryStick, CheckCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { motion } from 'framer-motion';
@@ -14,6 +15,7 @@ import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { getAgentDisplayName, getAgentStatusInfo, formatRelativeTimePt } from '@/lib/agent-utils';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
 
 interface AgentWithMetrics {
   id: string;
@@ -32,6 +34,7 @@ interface AgentWithMetrics {
 
 export default function Dashboard() {
   const { tenant } = useTenant();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -126,6 +129,26 @@ export default function Dashboard() {
     enabled: !!tenant?.id,
   });
 
+  // Mutation for acknowledging all alerts
+  const acknowledgeAllMutation = useMutation({
+    mutationFn: async () => {
+      if (!tenant?.id) throw new Error('Tenant não encontrado');
+      const { data, error } = await supabase.rpc('acknowledge_all_alerts', {
+        p_tenant_id: tenant.id
+      });
+      if (error) throw error;
+      return data as { success: boolean; acknowledged_count: number } | null;
+    },
+    onSuccess: (data) => {
+      const count = (data as any)?.acknowledged_count || 0;
+      toast.success(`${count} alerta(s) reconhecido(s) com sucesso`);
+      queryClient.invalidateQueries({ queryKey: ['critical-alerts'] });
+    },
+    onError: (error: any) => {
+      toast.error(`Erro ao reconhecer alertas: ${error.message}`);
+    }
+  });
+
   // Calculate summary stats
   const onlineAgents = agentsWithMetrics?.filter(a => {
     const status = getAgentStatusInfo(a);
@@ -185,10 +208,22 @@ export default function Dashboard() {
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="border-l-4 border-destructive bg-destructive/5">
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                Alertas Críticos ({criticalAlerts.length})
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Alertas Críticos ({criticalAlerts.length})
+                </CardTitle>
+                <Button 
+                  onClick={() => acknowledgeAllMutation.mutate()}
+                  disabled={acknowledgeAllMutation.isPending}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1"
+                >
+                  <CheckCheck className="h-4 w-4" />
+                  {acknowledgeAllMutation.isPending ? "Reconhecendo..." : "Reconhecer Todos"}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-2">
               {criticalAlerts.slice(0, 3).map(alert => (
