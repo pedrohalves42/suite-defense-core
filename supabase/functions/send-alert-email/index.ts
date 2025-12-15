@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: 'CyberShield <onboarding@resend.dev>',
+      from: 'CyberShield <alertas@cybershield.com.br>',
       to: emails,
       subject: `[CyberShield] ${alertType} - ${new Date().toLocaleString('pt-BR')}`,
       html: emailHtml,

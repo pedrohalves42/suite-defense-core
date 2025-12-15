@@ -161,7 +161,7 @@ serve(async (req: Request) => {
     `;
 
     const { data, error } = await resend.emails.send({
-      from: 'CyberShield <alerts@resend.dev>',
+      from: 'CyberShield <alertas@cybershield.com.br>',
       to: [payload.recipient],
       subject: `[${severityLabel}] ${payload.alert.title}`,
       html: htmlContent,
