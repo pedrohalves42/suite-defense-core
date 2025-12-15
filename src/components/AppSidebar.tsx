@@ -62,6 +62,7 @@ export const AppSidebar = () => {
     { icon: Brain, label: 'Insights', to: '/admin/ai-insights', section: 'ai' },
     { icon: CheckCircle, label: 'Ações', to: '/admin/ai-actions', section: 'ai' },
     { icon: BarChart3, label: 'Métricas', to: '/admin/ai-metrics', section: 'ai' },
+    { icon: Shield, label: 'Governança', to: '/admin/ai-governance', section: 'ai' },
     
     // === GESTÃO ===
     { icon: Users, label: 'Equipe', to: '/admin/members', section: 'management' },

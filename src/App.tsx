@@ -86,6 +86,7 @@ import NotificationSettings from "./pages/admin/NotificationSettings";
 import SecurityMonitoring from "./pages/admin/SecurityMonitoring";
 import MassReinstall from "./pages/admin/MassReinstall";
 import AIMetrics from "./pages/admin/AIMetrics";
+import AIGovernance from "./pages/admin/AIGovernance";
 import ApiDocumentation from "./pages/admin/ApiDocumentation";
 import MyAccount from "./pages/admin/MyAccount";
 import SLODashboard from "./pages/admin/SLODashboard";
@@ -152,6 +153,7 @@ const App = () => (
                 <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="ai-actions" element={<AIActionApproval />} />
                 <Route path="ai-metrics" element={<AIMetrics />} />
+                <Route path="ai-governance" element={<AIGovernance />} />
                 <Route path="system-logs" element={<SystemLogs />} />
                 <Route path="tenant" element={<Tenant />} />
                 <Route path="jobs-v3-migration" element={<JobsV3Migration />} />
