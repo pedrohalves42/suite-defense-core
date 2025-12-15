@@ -52,7 +52,7 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Nenhum agente encontrado. Instale um agente primeiro.
+          Nenhum computador encontrado. Instale o software de proteção primeiro.
         </AlertDescription>
       </Alert>
     );
@@ -61,7 +61,7 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger className="w-full">
-        <SelectValue placeholder="Selecione um agente..." />
+        <SelectValue placeholder="Selecione um computador..." />
       </SelectTrigger>
       <SelectContent>
         {agents.map((agent) => (

@@ -133,12 +133,12 @@ export default function AgentManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success('Agente excluido com sucesso');
+      toast.success('Computador excluído com sucesso');
       setAgentToDelete(null);
     },
     onError: (error: unknown) => {
       logger.error('Error deleting agent', error);
-      toast.error('Erro ao excluir agente');
+      toast.error('Erro ao excluir computador');
     },
   });
 
@@ -160,7 +160,7 @@ export default function AgentManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success('Agente e dados excluidos');
+      toast.success('Computador e dados excluídos');
       setAgentToForceDelete(null);
     },
     onError: (error: unknown) => {
@@ -221,14 +221,14 @@ export default function AgentManagement() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       if (result.count > 0) {
-        toast.success(`${result.count} agente(s) fantasma removido(s)`);
+        toast.success(`${result.count} computador(es) inativo(s) removido(s)`);
       } else {
-        toast.info('Nenhum agente fantasma encontrado');
+        toast.info('Nenhum computador inativo encontrado');
       }
     },
     onError: (error: unknown) => {
       logger.error('Error cleaning ghost agents', error);
-      toast.error('Erro ao limpar agentes fantasmas');
+      toast.error('Erro ao limpar computadores inativos');
     },
   });
 
@@ -254,12 +254,12 @@ export default function AgentManagement() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success(variables.disable ? 'Agente desativado com sucesso' : 'Agente reativado com sucesso');
+      toast.success(variables.disable ? 'Computador desativado com sucesso' : 'Computador reativado com sucesso');
       setAgentToDisable(null);
     },
     onError: (error) => {
       logger.error('Error updating agent', error);
-      toast.error('Erro ao atualizar agente');
+      toast.error('Erro ao atualizar computador');
     },
   });
 
@@ -344,9 +344,9 @@ export default function AgentManagement() {
             <Server className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h2 className="text-3xl font-bold">Gerenciamento de Agentes</h2>
+            <h2 className="text-3xl font-bold">Meus Computadores</h2>
             <p className="text-muted-foreground">
-              Controle e gerencie os agentes do tenant {tenant?.name}
+              Controle e gerencie os computadores protegidos
             </p>
           </div>
         </div>
@@ -361,7 +361,7 @@ export default function AgentManagement() {
           ) : (
             <Trash className="h-4 w-4 mr-2" />
           )}
-          Limpar Agentes Fantasmas
+          Limpar Computadores Inativos
         </Button>
       </div>
 
@@ -369,18 +369,18 @@ export default function AgentManagement() {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Agentes</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Computadores</CardTitle>
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{agents?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Todos os agentes</p>
+            <p className="text-xs text-muted-foreground">Todos os computadores</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Agentes Ativos</CardTitle>
+            <CardTitle className="text-sm font-medium">Computadores Ativos</CardTitle>
             <Activity className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -397,20 +397,20 @@ export default function AgentManagement() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aguardando Instalacao</CardTitle>
+            <CardTitle className="text-sm font-medium">Aguardando Instalação</CardTitle>
             <AlertTriangle className="h-4 w-4 text-orange-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-500">
               {agents?.filter(a => !a.last_heartbeat && a.status !== 'disabled').length || 0}
             </div>
-            <p className="text-xs text-muted-foreground">Sem heartbeat</p>
+            <p className="text-xs text-muted-foreground">Sem sinal de vida</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Agentes Offline</CardTitle>
+            <CardTitle className="text-sm font-medium">Computadores Offline</CardTitle>
             <XCircle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
@@ -421,7 +421,7 @@ export default function AgentManagement() {
                 return diffMins >= 5;
               }).length || 0}
             </div>
-            <p className="text-xs text-muted-foreground">Sem heartbeat</p>
+            <p className="text-xs text-muted-foreground">Sem sinal de vida</p>
           </CardContent>
         </Card>
 
@@ -442,9 +442,9 @@ export default function AgentManagement() {
       {/* Agents Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Agentes</CardTitle>
+          <CardTitle>Lista de Computadores</CardTitle>
           <CardDescription>
-            Gerencie os agentes instalados em seus endpoints
+            Gerencie os computadores protegidos da sua empresa
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -453,7 +453,7 @@ export default function AgentManagement() {
               <TableRow>
                 <TableHead>Nome do Computador</TableHead>
                 <TableHead>Sistema Operacional</TableHead>
-                <TableHead>Versão do Agente <HelpTooltip term="agente" /></TableHead>
+                <TableHead>Versão do Software <HelpTooltip term="versão do agente" /></TableHead>
                 <TableHead>Status <HelpTooltip term="status" /></TableHead>
                 <TableHead>Último Sinal de Vida <HelpTooltip term="heartbeat" /></TableHead>
                 <TableHead>Registrado em</TableHead>
@@ -531,7 +531,7 @@ export default function AgentManagement() {
               {(!agents || agents.length === 0) && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    Nenhum agente registrado ainda
+                    Nenhum computador registrado ainda
                   </TableCell>
                 </TableRow>
               )}
@@ -544,12 +544,12 @@ export default function AgentManagement() {
       <AlertDialog open={!!agentToDelete} onOpenChange={() => setAgentToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza que deseja excluir este agente?</AlertDialogTitle>
+            <AlertDialogTitle>Tem certeza que deseja excluir este computador?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acao nao pode ser desfeita. O agente <strong>{agentToDelete?.agent_name}</strong> sera permanentemente
-              removido do sistema, incluindo todos os seus tokens de acesso.
+              Esta ação não pode ser desfeita. O computador <strong>{agentToDelete?.agent_name}</strong> será permanentemente
+              removido do sistema, incluindo todos os seus dados de acesso.
               <br /><br />
-              <strong>Aviso:</strong> O agente instalado no endpoint continuara tentando se conectar ate ser desinstalado manualmente.
+              <strong>Aviso:</strong> O software instalado no computador continuará tentando se conectar até ser desinstalado manualmente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -568,18 +568,18 @@ export default function AgentManagement() {
       <AlertDialog open={!!agentToDisable} onOpenChange={() => setAgentToDisable(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Desativar Agente</AlertDialogTitle>
+            <AlertDialogTitle>Desativar Computador</AlertDialogTitle>
             <AlertDialogDescription>
-              Voce esta prestes a desativar o agente <strong>{agentToDisable?.agent_name}</strong>.
+              Você está prestes a desativar o computador <strong>{agentToDisable?.agent_name}</strong>.
               <br /><br />
-              Isso ira:
+              Isso irá:
               <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Desativar todos os tokens de acesso deste agente</li>
-                <li>Impedir que o agente envie heartbeats ou execute jobs</li>
-                <li>Manter o historico e dados do agente no sistema</li>
+                <li>Desativar todos os acessos deste computador</li>
+                <li>Impedir que o computador envie sinais de vida ou execute tarefas</li>
+                <li>Manter o histórico e dados do computador no sistema</li>
               </ul>
               <br />
-              Voce pode reativar o agente a qualquer momento.
+              Você pode reativar o computador a qualquer momento.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -587,7 +587,7 @@ export default function AgentManagement() {
             <AlertDialogAction
               onClick={() => agentToDisable && disableAgentMutation.mutate({ agentId: agentToDisable.id, disable: true })}
             >
-              Desativar Agente
+              Desativar Computador
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

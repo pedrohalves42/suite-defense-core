@@ -10,6 +10,13 @@ interface TechTooltipProps {
 
 // Dicionário de termos técnicos com explicações amigáveis
 const techTerms: Record<string, string> = {
+  // Termos de computadores/agentes
+  'computador': 'Máquina física ou virtual onde o software de proteção está instalado.',
+  'computadores': 'Máquinas físicas ou virtuais protegidas pelo sistema.',
+  'computador inativo': 'Computador que não envia sinal de vida há mais de 24 horas.',
+  'empresa': 'Organização ou conta que agrupa os computadores monitorados.',
+  'versão do agente': 'Número da versão do software de proteção instalado no computador.',
+  
   // Status e Comunicação
   "heartbeat": "O computador envia sinais periódicos para confirmar que está funcionando. Se não recebemos sinal por mais de 5 minutos, consideramos offline.",
   "sinal de vida": "O computador envia sinais periódicos para confirmar que está funcionando. Se não recebemos sinal por mais de 5 minutos, consideramos offline.",

@@ -32,6 +32,11 @@ export const UI_TERMINOLOGY = {
   pendingJobs: 'Tarefas Pendentes',
   jobHistory: 'Histórico de Tarefas',
   clearPendingJobs: 'Limpar Pendentes',
+  agent: 'Computador',
+  agents: 'Computadores',
+  heartbeat: 'Sinal de Vida',
+  uptime: 'Tempo Online',
+  tenant: 'Empresa',
 };
 
 // Funções helper

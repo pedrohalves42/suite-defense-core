@@ -204,7 +204,7 @@ const AgentMonitoring = () => {
       return (
         <Badge className="bg-yellow-500 gap-1">
           <AlertTriangle className="h-3 w-3" />
-          Warning
+          Atenção
         </Badge>
       );
     } else {
@@ -311,7 +311,7 @@ const AgentMonitoring = () => {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Monitoramento em Tempo Real
           </h1>
-          <p className="text-sm text-muted-foreground">Acompanhe status e performance dos agentes</p>
+          <p className="text-sm text-muted-foreground">Acompanhe status e performance dos computadores</p>
         </div>
       </div>
 
@@ -319,7 +319,7 @@ const AgentMonitoring = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Agentes</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Computadores</CardTitle>
             <Wifi className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -332,7 +332,7 @@ const AgentMonitoring = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Agentes Online</CardTitle>
+            <CardTitle className="text-sm font-medium">Computadores Online</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -345,13 +345,13 @@ const AgentMonitoring = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Agentes Offline</CardTitle>
+            <CardTitle className="text-sm font-medium">Computadores Offline</CardTitle>
             <AlertTriangle className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-500">{offlineAgents}</div>
             <p className="text-xs text-muted-foreground">
-              Requerem atencao imediata
+              Requerem atenção imediata
             </p>
           </CardContent>
         </Card>
@@ -364,7 +364,7 @@ const AgentMonitoring = () => {
           <CardContent>
             <div className="text-2xl font-bold">{successRate}%</div>
             <p className="text-xs text-muted-foreground">
-              Ultimos 10 jobs
+              Últimas 10 tarefas
             </p>
           </CardContent>
         </Card>
@@ -412,9 +412,9 @@ const AgentMonitoring = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" />
-              Tendencia de Jobs (7 dias)
+              Tendência de Tarefas (7 dias)
             </CardTitle>
-            <CardDescription>Execucao de jobs ao longo do tempo</CardDescription>
+            <CardDescription>Execução de tarefas ao longo do tempo</CardDescription>
           </CardHeader>
           <CardContent>
             {jobsTrendData.every(d => d.total === 0) ? (
@@ -448,13 +448,13 @@ const AgentMonitoring = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wifi className="h-5 w-5 text-primary" />
-            Uptime dos Agentes
+            Tempo Online dos Computadores
           </CardTitle>
-          <CardDescription>Status de conectividade atual de cada agente</CardDescription>
+          <CardDescription>Status de conectividade atual de cada computador</CardDescription>
         </CardHeader>
         <CardContent>
           {uptimeChartData.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Nenhum agente cadastrado</p>
+            <p className="text-center text-muted-foreground py-8">Nenhum computador cadastrado</p>
           ) : (
             <ResponsiveContainer width="100%" height={Math.max(200, uptimeChartData.length * 40)}>
               <BarChart data={uptimeChartData} layout="vertical">
@@ -481,14 +481,14 @@ const AgentMonitoring = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-primary" />
-            Status dos Agentes
+            Status dos Computadores
           </CardTitle>
-          <CardDescription>Atualizacao em tempo real via WebSocket</CardDescription>
+          <CardDescription>Atualização em tempo real</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {agents.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Nenhum agente cadastrado</p>
+              <p className="text-center text-muted-foreground py-8">Nenhum computador cadastrado</p>
             ) : (
               agents.map((agent) => (
                 <div
@@ -507,7 +507,7 @@ const AgentMonitoring = () => {
                       <p className="font-medium">{agent.agent_name}</p>
                       <p className="text-sm text-muted-foreground flex items-center gap-2">
                         <Clock className="w-3 h-3" />
-                        Ultimo heartbeat: {getTimeSince(agent.last_heartbeat)}
+                        Último sinal de vida: {getTimeSince(agent.last_heartbeat)}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         Registrado: {formatBrazilDateTime(agent.enrolled_at, 'datetime')}
@@ -532,14 +532,14 @@ const AgentMonitoring = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
-            Jobs Recentes
+            Tarefas Recentes
           </CardTitle>
-          <CardDescription>Ultimos 10 jobs executados</CardDescription>
+          <CardDescription>Últimas 10 tarefas executadas</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {recentJobs.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Nenhum job executado ainda</p>
+              <p className="text-center text-muted-foreground py-8">Nenhuma tarefa executada ainda</p>
             ) : (
               recentJobs.map((job) => (
                 <div
@@ -549,7 +549,7 @@ const AgentMonitoring = () => {
                   <div>
                     <p className="font-medium text-sm">{job.type}</p>
                     <p className="text-xs text-muted-foreground">
-                      Agente: {job.agent_name} ? {formatBrazilDateTime(job.created_at, 'short')}
+                      Computador: {job.agent_name} • {formatBrazilDateTime(job.created_at, 'short')}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
