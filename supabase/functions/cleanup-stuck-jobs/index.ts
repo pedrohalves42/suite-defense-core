@@ -1,10 +1,29 @@
 // FASE 2: Funcao de cleanup de jobs travados
+// P1-03 FIX: Adicionada validação de autenticação
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
 import { corsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
+  }
+
+  const requestId = crypto.randomUUID()
+
+  // P1-03 FIX: Validate internal secret or scheduled execution
+  const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET')
+  const providedSecret = req.headers.get('X-Internal-Secret')
+  
+  // Allow scheduled execution (no auth) or internal secret
+  const isScheduled = !providedSecret && req.headers.get('authorization') === null
+  const isInternal = INTERNAL_SECRET && providedSecret === INTERNAL_SECRET
+  
+  if (!isScheduled && !isInternal) {
+    console.warn(`[${requestId}] Unauthorized access attempt to cleanup-stuck-jobs`)
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
 
   try {
