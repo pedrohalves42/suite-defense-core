@@ -84,17 +84,37 @@ async function checkTenantAIEligibility(
   return { eligible: true };
 }
 
-// Helper: Incrementar uso de quota
+// Helper: Incrementar uso de quota (safe from SQL injection)
 async function incrementAIQuotaUsage(
   supabase: any,
   tenantId: string,
   insightsCount: number
 ): Promise<void> {
   try {
-    // Update direto com SQL increment
+    // Validate insightsCount to ensure it's a safe integer
+    if (!Number.isInteger(insightsCount) || insightsCount < 0 || insightsCount > 1000) {
+      console.log(`[ai-system-analyzer] Invalid insightsCount: ${insightsCount}`);
+      return;
+    }
+    
+    // Safe approach: SELECT current value, then UPDATE with calculated value
+    const { data: current, error: selectError } = await supabase
+      .from('tenant_features')
+      .select('quota_used')
+      .eq('tenant_id', tenantId)
+      .eq('feature_key', 'ai_insights')
+      .single();
+
+    if (selectError || !current) {
+      console.log(`[ai-system-analyzer] Could not fetch quota for tenant ${tenantId}:`, selectError);
+      return;
+    }
+
+    const newQuotaUsed = (current.quota_used || 0) + insightsCount;
+    
     await supabase
       .from('tenant_features')
-      .update({ quota_used: supabase.raw(`quota_used + ${insightsCount}`) })
+      .update({ quota_used: newQuotaUsed })
       .eq('tenant_id', tenantId)
       .eq('feature_key', 'ai_insights');
   } catch (error) {

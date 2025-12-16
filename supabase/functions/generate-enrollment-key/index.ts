@@ -70,11 +70,19 @@ Deno.serve(async (req) => {
     const validatedData = GenerateKeySchema.parse(body);
     const { expiresInHours, maxUses, description } = validatedData;
 
-    // Gerar chave no formato XXXX-XXXX-XXXX-XXXX
+    // Gerar chave no formato XXXX-XXXX-XXXX-XXXX (cryptographically secure)
     const generateKey = () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       const segments = [];
+      
       for (let i = 0; i < 4; i++) {
-        const segment = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const randomBytes = new Uint8Array(4);
+        crypto.getRandomValues(randomBytes);
+        
+        let segment = '';
+        for (let j = 0; j < 4; j++) {
+          segment += chars[randomBytes[j] % chars.length];
+        }
         segments.push(segment);
       }
       return segments.join('-');
