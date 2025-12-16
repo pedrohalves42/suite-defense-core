@@ -298,16 +298,20 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
     const { agentName, platform } = validation.data;
     logger.info(`[${requestId}] Valid agent name`, { agentName, platform });
 
-    // Generate enrollment key
+    // Generate enrollment key (cryptographically secure)
     const generateKey = () => {
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       const segments = 4;
       const segmentLength = 4;
       const parts = [];
+      
       for (let i = 0; i < segments; i++) {
+        const randomBytes = new Uint8Array(segmentLength);
+        crypto.getRandomValues(randomBytes);
+        
         let segment = '';
         for (let j = 0; j < segmentLength; j++) {
-          segment += chars[Math.floor(Math.random() * chars.length)];
+          segment += chars[randomBytes[j] % chars.length];
         }
         parts.push(segment);
       }
