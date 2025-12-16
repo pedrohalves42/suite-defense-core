@@ -413,6 +413,130 @@ Deno.serve(async (req) => {
       }
     }
 
+    // FASE 3 - EVIDÊNCIA AUDITÁVEL: Detectar tentativas de acesso a sites bloqueados via DNS cache
+    if (status === 'completed' && job.type === 'collect_web_activity' && output) {
+      try {
+        console.log('[submit-job-result] Analyzing web activity for blocked access attempts...')
+        
+        // Extrair domínios do DNS cache e browser history
+        const outputData = typeof output === 'object' ? output : {}
+        const dnsCache = outputData.dns_cache || []
+        const browserHistory = outputData.browser_history || []
+        
+        // Coletar todos os domínios acessados
+        const accessedDomains = new Set<string>()
+        
+        // De DNS cache
+        if (Array.isArray(dnsCache)) {
+          for (const entry of dnsCache) {
+            if (entry.domain || entry.Name || entry.RecordName) {
+              const domain = (entry.domain || entry.Name || entry.RecordName || '').toLowerCase().trim()
+              if (domain && domain.length > 0) {
+                accessedDomains.add(domain)
+              }
+            }
+          }
+        }
+        
+        // De browser history
+        if (Array.isArray(browserHistory)) {
+          for (const entry of browserHistory) {
+            if (entry.domain || entry.url) {
+              let domain = entry.domain
+              if (!domain && entry.url) {
+                try {
+                  const url = new URL(entry.url)
+                  domain = url.hostname
+                } catch { /* ignore invalid URLs */ }
+              }
+              if (domain) {
+                accessedDomains.add(domain.toLowerCase().trim())
+              }
+            }
+          }
+        }
+        
+        if (accessedDomains.size === 0) {
+          console.log('[submit-job-result] No domains found in web activity data')
+        } else {
+          console.log(`[submit-job-result] Found ${accessedDomains.size} unique domains to check against blocked list`)
+          
+          // Buscar lista de sites bloqueados do tenant
+          const { data: blockedSites, error: blockedError } = await supabase
+            .from('blocked_websites')
+            .select('id, domain_pattern')
+            .eq('tenant_id', agent.tenant_id)
+            .eq('is_active', true)
+          
+          if (blockedError) {
+            console.error('[submit-job-result] Error fetching blocked websites:', blockedError)
+          } else if (blockedSites && blockedSites.length > 0) {
+            console.log(`[submit-job-result] Checking against ${blockedSites.length} blocked patterns`)
+            
+            const blockedAttempts: Array<{
+              domain: string
+              policy_id: string
+            }> = []
+            
+            // Verificar cada domínio acessado contra padrões bloqueados
+            for (const domain of accessedDomains) {
+              for (const site of blockedSites) {
+                const pattern = site.domain_pattern.toLowerCase()
+                let matches = false
+                
+                // Suporte a wildcards (*.example.com)
+                if (pattern.startsWith('*.')) {
+                  const baseDomain = pattern.slice(2)
+                  matches = domain === baseDomain || domain.endsWith('.' + baseDomain)
+                } else {
+                  // Match exato ou subdomínio
+                  matches = domain === pattern || domain.endsWith('.' + pattern)
+                }
+                
+                if (matches) {
+                  blockedAttempts.push({
+                    domain,
+                    policy_id: site.id
+                  })
+                  break // Evitar duplicatas para o mesmo domínio
+                }
+              }
+            }
+            
+            if (blockedAttempts.length > 0) {
+              console.log(`[submit-job-result] Found ${blockedAttempts.length} blocked access attempts`)
+              
+              // Inserir tentativas bloqueadas
+              const attemptsToInsert = blockedAttempts.map(attempt => ({
+                tenant_id: agent.tenant_id,
+                agent_id: job.agent_id,
+                agent_name: agent.agent_name,
+                domain: attempt.domain,
+                policy_id: attempt.policy_id,
+                attempted_at: new Date().toISOString(),
+                blocked_by: 'dns_monitoring',
+                source: 'collect_web_activity'
+              }))
+              
+              const { error: insertError } = await supabase
+                .from('blocked_access_attempts')
+                .insert(attemptsToInsert)
+              
+              if (insertError) {
+                console.error('[submit-job-result] Error inserting blocked attempts:', insertError)
+              } else {
+                console.log(`[submit-job-result] Successfully recorded ${blockedAttempts.length} blocked access attempts`)
+              }
+            } else {
+              console.log('[submit-job-result] No blocked access attempts detected')
+            }
+          }
+        }
+      } catch (blockedErr) {
+        console.error('[submit-job-result] Error analyzing blocked attempts:', blockedErr)
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,
