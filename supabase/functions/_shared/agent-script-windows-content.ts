@@ -3,7 +3,7 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.37-NO-EXIT-EVER
+ * Versao: v3.10.40-DNS-FILTER
  */
 
 export function getAgentScriptWindows(): string {
@@ -12,7 +12,7 @@ export function getAgentScriptWindows(): string {
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.37-NO-EXIT-EVER
+    CyberShield Agent - Windows v3.10.40-DNS-FILTER
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -51,7 +51,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.37-NO-EXIT-EVER"
+    [string]\$AgentVersion = "v3.10.40-DNS-FILTER"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -1585,6 +1585,438 @@ function Invoke-SyncBlockedWebsitesJob {
 }
 
 # ============================================
+#  DNS FILTER - SETUP JOB
+# ============================================
+function Invoke-SetupDnsFilterJob {
+    param(
+        [Parameter(Mandatory = \$true)]
+        [object]\$Job
+    )
+    
+    try {
+        Write-Log "[DNS-FILTER] Iniciando setup do filtro DNS local..." "INFO"
+        
+        \$installDir = "C:\\CyberShield"
+        \$dnsFilterPath = Join-Path \$installDir "cybershield-dns.exe"
+        \$configPath = Join-Path \$installDir "dns-config.json"
+        \$policyPath = Join-Path \$installDir "blocked_websites.json"
+        \$originalDnsPath = Join-Path \$installDir "original_dns.json"
+        \$serviceName = "CyberShield-DNS"
+        
+        # 1. Buscar binario do servidor
+        Write-Log "[DNS-FILTER] Buscando binario do servidor..." "INFO"
+        
+        \$downloadResult = Invoke-SecureRequest \`
+            -Path "/functions/v1/serve-dns-filter" \`
+            -Method "GET" \`
+            -TimeoutSec 60
+        
+        if (-not \$downloadResult.Success) {
+            throw "Falha ao buscar DNS filter (HTTP \$(\$downloadResult.StatusCode))"
+        }
+        
+        \$data = \$downloadResult.Body | ConvertFrom-Json
+        
+        if (-not \$data.download_url -or -not \$data.sha256) {
+            throw "Resposta do servidor incompleta (falta download_url ou sha256)"
+        }
+        
+        # 2. Download do binario
+        Write-Log "[DNS-FILTER] Baixando binario de \$(\$data.download_url)..." "INFO"
+        
+        \$tempBinary = Join-Path \$env:TEMP "cybershield-dns-temp.exe"
+        
+        try {
+            Invoke-WebRequest -Uri \$data.download_url -OutFile \$tempBinary -UseBasicParsing -TimeoutSec 120
+        } catch {
+            throw "Falha no download do binario: \$(\$_.Exception.Message)"
+        }
+        
+        # 3. Validar SHA256
+        \$actualHash = (Get-FileHash -Path \$tempBinary -Algorithm SHA256).Hash.ToLower()
+        if (\$actualHash -ne \$data.sha256.ToLower()) {
+            Remove-Item \$tempBinary -Force -ErrorAction SilentlyContinue
+            throw "SHA256 mismatch! Esperado: \$(\$data.sha256), Obtido: \$actualHash"
+        }
+        
+        Write-Log "[DNS-FILTER] SHA256 validado: \$actualHash" "SUCCESS"
+        
+        # 4. Salvar configuracoes DNS originais (para reversao)
+        Write-Log "[DNS-FILTER] Salvando configuracoes DNS originais..." "INFO"
+        
+        \$originalDns = @{
+            saved_at = [DateTime]::UtcNow.ToString("o")
+            interfaces = @()
+        }
+        
+        try {
+            \$networkAdapters = Get-NetAdapter -Physical -ErrorAction Stop | Where-Object { \$_.Status -eq "Up" }
+            foreach (\$adapter in \$networkAdapters) {
+                \$dnsServers = (Get-DnsClientServerAddress -InterfaceIndex \$adapter.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).ServerAddresses
+                \$originalDns.interfaces += @{
+                    name = \$adapter.Name
+                    interfaceIndex = \$adapter.InterfaceIndex
+                    dnsServers = \$dnsServers
+                }
+            }
+        } catch {
+            Write-Log "[DNS-FILTER] Aviso: Nao foi possivel salvar DNS original via Get-NetAdapter: \$(\$_.Exception.Message)" "WARN"
+            # Fallback usando netsh
+            try {
+                \$netshOutput = netsh interface ipv4 show dnsservers 2>&1
+                \$originalDns.netsh_output = \$netshOutput | Out-String
+            } catch { }
+        }
+        
+        \$originalDnsJson = \$originalDns | ConvertTo-Json -Depth 10
+        [System.IO.File]::WriteAllText(\$originalDnsPath, \$originalDnsJson, [System.Text.UTF8Encoding]::new(\$false))
+        
+        Write-Log "[DNS-FILTER] DNS original salvo em \$originalDnsPath" "SUCCESS"
+        
+        # 5. Parar servico existente se houver
+        \$existingService = Get-Service -Name \$serviceName -ErrorAction SilentlyContinue
+        if (\$existingService) {
+            Write-Log "[DNS-FILTER] Parando servico existente..." "INFO"
+            Stop-Service -Name \$serviceName -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+        }
+        
+        # 6. Mover binario para local final
+        Move-Item -Path \$tempBinary -Destination \$dnsFilterPath -Force
+        
+        Write-Log "[DNS-FILTER] Binario instalado em \$dnsFilterPath" "SUCCESS"
+        
+        # 7. Criar arquivo de configuracao
+        \$config = @{
+            listen_addr = "127.0.0.1:53"
+            upstream_dns = "1.1.1.1:53"
+            fallback_dns = "8.8.8.8:53"
+            policy_path = \$policyPath
+            log_path = "C:\\CyberShield\\logs\\dns_blocked_events.log"
+            log_level = "info"
+        }
+        
+        \$configJson = \$config | ConvertTo-Json -Compress
+        [System.IO.File]::WriteAllText(\$configPath, \$configJson, [System.Text.UTF8Encoding]::new(\$false))
+        
+        Write-Log "[DNS-FILTER] Config salvo em \$configPath" "SUCCESS"
+        
+        # 8. Instalar como servico Windows
+        Write-Log "[DNS-FILTER] Instalando servico Windows..." "INFO"
+        
+        try {
+            \$installOutput = & \$dnsFilterPath -install 2>&1
+            Write-Log "[DNS-FILTER] Instalacao: \$installOutput" "INFO"
+        } catch {
+            Write-Log "[DNS-FILTER] Erro na instalacao do servico: \$(\$_.Exception.Message)" "WARN"
+        }
+        
+        # 9. Configurar recovery do servico
+        try {
+            sc.exe failure \$serviceName reset=86400 actions=restart/5000/restart/10000/restart/30000 | Out-Null
+            Write-Log "[DNS-FILTER] Recovery configurado para servico" "INFO"
+        } catch { }
+        
+        # 10. Configurar DNS do sistema para usar 127.0.0.1 com fallback
+        Write-Log "[DNS-FILTER] Configurando DNS do sistema..." "INFO"
+        
+        \$dnsConfigured = \$false
+        try {
+            \$networkAdapters = Get-NetAdapter -Physical -ErrorAction Stop | Where-Object { \$_.Status -eq "Up" }
+            foreach (\$adapter in \$networkAdapters) {
+                # Configurar DNS primario (127.0.0.1) e secundario (1.1.1.1 como failsafe)
+                Set-DnsClientServerAddress -InterfaceIndex \$adapter.InterfaceIndex -ServerAddresses @("127.0.0.1", "1.1.1.1") -ErrorAction Stop
+                Write-Log "[DNS-FILTER] DNS configurado em \$(\$adapter.Name)" "INFO"
+                \$dnsConfigured = \$true
+            }
+        } catch {
+            Write-Log "[DNS-FILTER] Erro ao configurar DNS via PowerShell: \$(\$_.Exception.Message)" "WARN"
+            # Fallback via netsh
+            try {
+                netsh interface ipv4 set dnsservers "Ethernet" static 127.0.0.1 primary | Out-Null
+                netsh interface ipv4 add dnsservers "Ethernet" 1.1.1.1 index=2 | Out-Null
+                \$dnsConfigured = \$true
+            } catch {
+                Write-Log "[DNS-FILTER] Fallback netsh tambem falhou" "WARN"
+            }
+        }
+        
+        # 11. Iniciar servico
+        Write-Log "[DNS-FILTER] Iniciando servico \$serviceName..." "INFO"
+        
+        try {
+            Start-Service -Name \$serviceName -ErrorAction Stop
+            Start-Sleep -Seconds 3
+            
+            \$svcStatus = (Get-Service -Name \$serviceName).Status
+            if (\$svcStatus -eq "Running") {
+                Write-Log "[DNS-FILTER] Servico iniciado com sucesso" "SUCCESS"
+            } else {
+                Write-Log "[DNS-FILTER] Servico em estado: \$svcStatus" "WARN"
+            }
+        } catch {
+            Write-Log "[DNS-FILTER] Erro ao iniciar servico: \$(\$_.Exception.Message)" "ERROR"
+        }
+        
+        # 12. Flush DNS cache
+        ipconfig /flushdns | Out-Null
+        
+        return @{
+            success = \$true
+            output = @{
+                message = "DNS Filter instalado e configurado com sucesso"
+                binary_path = \$dnsFilterPath
+                binary_sha256 = \$actualHash
+                config_path = \$configPath
+                service_name = \$serviceName
+                dns_configured = \$dnsConfigured
+                original_dns_saved = \$originalDnsPath
+                setup_at = [DateTime]::UtcNow.ToString("o")
+            }
+        }
+    }
+    catch {
+        \$errorMsg = "Erro em Invoke-SetupDnsFilterJob: \$(\$_.Exception.Message)"
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            error = \$errorMsg
+        }
+    }
+}
+
+# ============================================
+#  DNS FILTER - COLLECT BLOCKS JOB
+# ============================================
+function Invoke-CollectDnsBlocksJob {
+    param(
+        [Parameter(Mandatory = \$true)]
+        [object]\$Job
+    )
+    
+    try {
+        Write-Log "[DNS-BLOCKS] Coletando eventos de bloqueio DNS..." "INFO"
+        
+        \$logPath = "C:\\CyberShield\\logs\\dns_blocked_events.log"
+        \$events = @()
+        
+        if (-not (Test-Path \$logPath)) {
+            Write-Log "[DNS-BLOCKS] Arquivo de log nao encontrado: \$logPath" "WARN"
+            return @{
+                success = \$true
+                output = @{
+                    message = "Nenhum evento de bloqueio DNS encontrado"
+                    events_count = 0
+                    blocked_events = @()
+                    collected_at = [DateTime]::UtcNow.ToString("o")
+                }
+            }
+        }
+        
+        # Ler arquivo JSON Lines
+        \$logLines = Get-Content \$logPath -ErrorAction Stop
+        
+        foreach (\$line in \$logLines) {
+            if ([string]::IsNullOrWhiteSpace(\$line)) { continue }
+            
+            try {
+                \$event = \$line | ConvertFrom-Json
+                
+                # Filtrar apenas eventos de bloqueio
+                if (\$event.action -eq "blocked") {
+                    \$events += @{
+                        ts = \$event.ts
+                        domain = \$event.domain
+                        query_type = \$event.query_type
+                        pattern = \$event.pattern
+                        source = "dns_query"
+                    }
+                }
+            } catch {
+                Write-Log "[DNS-BLOCKS] Erro ao parsear linha: \$line" "WARN"
+            }
+        }
+        
+        Write-Log "[DNS-BLOCKS] Encontrados \$(\$events.Count) eventos de bloqueio" "INFO"
+        
+        # Limpar log apos coleta (append mode - manter ultimas linhas ou truncar)
+        if (\$events.Count -gt 0) {
+            try {
+                # Manter backup e limpar
+                \$backupPath = "\$logPath.collected.\$(Get-Date -Format 'yyyyMMddHHmmss')"
+                Copy-Item \$logPath \$backupPath -Force -ErrorAction SilentlyContinue
+                Clear-Content \$logPath -Force -ErrorAction SilentlyContinue
+                Write-Log "[DNS-BLOCKS] Log limpo apos coleta (backup: \$backupPath)" "INFO"
+            } catch {
+                Write-Log "[DNS-BLOCKS] Aviso: nao foi possivel limpar log: \$(\$_.Exception.Message)" "WARN"
+            }
+        }
+        
+        return @{
+            success = \$true
+            output = @{
+                message = "Eventos de bloqueio DNS coletados"
+                events_count = \$events.Count
+                blocked_events = \$events
+                collected_at = [DateTime]::UtcNow.ToString("o")
+            }
+        }
+    }
+    catch {
+        \$errorMsg = "Erro em Invoke-CollectDnsBlocksJob: \$(\$_.Exception.Message)"
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            error = \$errorMsg
+        }
+    }
+}
+
+# ============================================
+#  DNS FILTER - REMOVE JOB
+# ============================================
+function Invoke-RemoveDnsFilterJob {
+    param(
+        [Parameter(Mandatory = \$true)]
+        [object]\$Job
+    )
+    
+    try {
+        Write-Log "[DNS-FILTER] Iniciando remocao do filtro DNS..." "INFO"
+        
+        \$installDir = "C:\\CyberShield"
+        \$dnsFilterPath = Join-Path \$installDir "cybershield-dns.exe"
+        \$originalDnsPath = Join-Path \$installDir "original_dns.json"
+        \$serviceName = "CyberShield-DNS"
+        
+        \$serviceRemoved = \$false
+        \$dnsRestored = \$false
+        \$binaryRemoved = \$false
+        
+        # 1. Parar servico
+        Write-Log "[DNS-FILTER] Parando servico \$serviceName..." "INFO"
+        
+        try {
+            \$svc = Get-Service -Name \$serviceName -ErrorAction SilentlyContinue
+            if (\$svc) {
+                Stop-Service -Name \$serviceName -Force -ErrorAction Stop
+                Start-Sleep -Seconds 2
+                Write-Log "[DNS-FILTER] Servico parado" "SUCCESS"
+            }
+        } catch {
+            Write-Log "[DNS-FILTER] Aviso ao parar servico: \$(\$_.Exception.Message)" "WARN"
+        }
+        
+        # 2. Remover servico Windows
+        Write-Log "[DNS-FILTER] Removendo servico Windows..." "INFO"
+        
+        try {
+            if (Test-Path \$dnsFilterPath) {
+                \$uninstallOutput = & \$dnsFilterPath -uninstall 2>&1
+                Write-Log "[DNS-FILTER] Uninstall: \$uninstallOutput" "INFO"
+                \$serviceRemoved = \$true
+            } else {
+                # Fallback: remover via sc.exe
+                sc.exe delete \$serviceName 2>&1 | Out-Null
+                \$serviceRemoved = \$true
+            }
+        } catch {
+            Write-Log "[DNS-FILTER] Erro ao remover servico: \$(\$_.Exception.Message)" "WARN"
+        }
+        
+        # 3. Restaurar DNS original
+        Write-Log "[DNS-FILTER] Restaurando DNS original..." "INFO"
+        
+        if (Test-Path \$originalDnsPath) {
+            try {
+                \$originalDns = Get-Content \$originalDnsPath -Raw | ConvertFrom-Json
+                
+                foreach (\$iface in \$originalDns.interfaces) {
+                    if (\$iface.dnsServers -and \$iface.dnsServers.Count -gt 0) {
+                        try {
+                            Set-DnsClientServerAddress -InterfaceIndex \$iface.interfaceIndex -ServerAddresses \$iface.dnsServers -ErrorAction Stop
+                            Write-Log "[DNS-FILTER] DNS restaurado em interface \$(\$iface.name)" "INFO"
+                            \$dnsRestored = \$true
+                        } catch {
+                            Write-Log "[DNS-FILTER] Erro ao restaurar DNS em \$(\$iface.name): \$(\$_.Exception.Message)" "WARN"
+                        }
+                    } else {
+                        # Se nao tinha DNS configurado, resetar para DHCP
+                        try {
+                            Set-DnsClientServerAddress -InterfaceIndex \$iface.interfaceIndex -ResetServerAddresses -ErrorAction Stop
+                            Write-Log "[DNS-FILTER] DNS resetado para DHCP em \$(\$iface.name)" "INFO"
+                            \$dnsRestored = \$true
+                        } catch {
+                            Write-Log "[DNS-FILTER] Erro ao resetar DNS em \$(\$iface.name)" "WARN"
+                        }
+                    }
+                }
+            } catch {
+                Write-Log "[DNS-FILTER] Erro ao ler configuracoes originais: \$(\$_.Exception.Message)" "WARN"
+            }
+        } else {
+            Write-Log "[DNS-FILTER] Arquivo de DNS original nao encontrado, resetando para DHCP..." "WARN"
+            try {
+                \$networkAdapters = Get-NetAdapter -Physical -ErrorAction Stop | Where-Object { \$_.Status -eq "Up" }
+                foreach (\$adapter in \$networkAdapters) {
+                    Set-DnsClientServerAddress -InterfaceIndex \$adapter.InterfaceIndex -ResetServerAddresses -ErrorAction SilentlyContinue
+                }
+                \$dnsRestored = \$true
+            } catch {
+                # Fallback netsh
+                netsh interface ipv4 set dnsservers "Ethernet" dhcp 2>&1 | Out-Null
+                \$dnsRestored = \$true
+            }
+        }
+        
+        # 4. Remover binario (opcional - manter para reinstalacao rapida)
+        \$payload = \$null
+        if (\$null -ne \$Job.payload) {
+            \$payload = \$Job.payload
+        }
+        
+        \$removeBinary = \$false
+        if (\$null -ne \$payload -and \$null -ne \$payload.remove_binary) {
+            \$removeBinary = [bool]\$payload.remove_binary
+        }
+        
+        if (\$removeBinary -and (Test-Path \$dnsFilterPath)) {
+            try {
+                Remove-Item \$dnsFilterPath -Force -ErrorAction Stop
+                Write-Log "[DNS-FILTER] Binario removido: \$dnsFilterPath" "INFO"
+                \$binaryRemoved = \$true
+            } catch {
+                Write-Log "[DNS-FILTER] Erro ao remover binario: \$(\$_.Exception.Message)" "WARN"
+            }
+        }
+        
+        # 5. Flush DNS cache
+        ipconfig /flushdns | Out-Null
+        
+        Write-Log "[DNS-FILTER] Remocao concluida" "SUCCESS"
+        
+        return @{
+            success = \$true
+            output = @{
+                message = "DNS Filter removido com sucesso"
+                service_removed = \$serviceRemoved
+                dns_restored = \$dnsRestored
+                binary_removed = \$binaryRemoved
+                removed_at = [DateTime]::UtcNow.ToString("o")
+            }
+        }
+    }
+    catch {
+        \$errorMsg = "Erro em Invoke-RemoveDnsFilterJob: \$(\$_.Exception.Message)"
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            error = \$errorMsg
+        }
+    }
+}
+
+# ============================================
 #  POST INSTALLATION
 # ============================================
 function Send-PostInstallationEvent {
@@ -2286,6 +2718,30 @@ function Execute-Job {
             }
             "sync_blocked_websites" {
                 \$result = Invoke-SyncBlockedWebsitesJob -Job \$job
+                if (\$result.success) {
+                    \$output = \$result.output
+                } else {
+                    throw \$result.error
+                }
+            }
+            "setup_dns_filter" {
+                \$result = Invoke-SetupDnsFilterJob -Job \$job
+                if (\$result.success) {
+                    \$output = \$result.output
+                } else {
+                    throw \$result.error
+                }
+            }
+            "collect_dns_blocks" {
+                \$result = Invoke-CollectDnsBlocksJob -Job \$job
+                if (\$result.success) {
+                    \$output = \$result.output
+                } else {
+                    throw \$result.error
+                }
+            }
+            "remove_dns_filter" {
+                \$result = Invoke-RemoveDnsFilterJob -Job \$job
                 if (\$result.success) {
                     \$output = \$result.output
                 } else {
