@@ -144,7 +144,6 @@ Deno.serve(async (req) => {
 
     // Verificar se script_content e placeholder (< 1000 bytes = placeholder)
     let finalScriptContent = release.script_content;
-    let finalSha256 = release.sha256;
     
     if (!release.script_content || release.script_content.length < 1000) {
       logger.warn('[serve-agent-update] Script no banco e placeholder, usando embedded', { 
@@ -156,29 +155,46 @@ Deno.serve(async (req) => {
       // Usar script embedded como fallback
       if (platform === 'windows' && AGENT_SCRIPT_WINDOWS_CONTENT) {
         finalScriptContent = AGENT_SCRIPT_WINDOWS_CONTENT;
-        
-        // Calcular SHA256 do script embedded
-        const encoder = new TextEncoder();
-        const data = encoder.encode(AGENT_SCRIPT_WINDOWS_CONTENT);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        finalSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
       }
     }
 
-    logger.info('[serve-agent-update] Retornando atualizacao', { 
+    // ============================================================
+    // CRITICAL: Normalizar line endings para Windows (CRLF)
+    // e calcular SHA256 do conteúdo EXATAMENTE como será salvo no disco
+    // ============================================================
+    const normalizeForWindows = (content: string): string => {
+      // Primeiro converte todos os line endings para LF, depois para CRLF
+      return content
+        .replace(/\r\n/g, '\n')   // Remove CRLF existentes
+        .replace(/\r/g, '\n')      // Remove CR soltos
+        .replace(/\n/g, '\r\n');   // Converte todos para CRLF
+    };
+
+    // Normalizar script para Windows
+    const normalizedScript = normalizeForWindows(finalScriptContent);
+
+    // Calcular SHA256 do script NORMALIZADO (verdade absoluta)
+    const encoder = new TextEncoder();
+    const data = encoder.encode(normalizedScript);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    logger.info('[serve-agent-update] Script normalizado e SHA256 calculado', { 
       requestId, 
       agentName: agent.agent_name,
       fromVersion: agent.agent_version,
       toVersion: release.version,
-      scriptSize: finalScriptContent.length
+      originalSize: finalScriptContent.length,
+      normalizedSize: normalizedScript.length,
+      sha256: calculatedSha256.substring(0, 16) + '...'
     });
 
     return new Response(
       JSON.stringify({
         version: release.version,
-        script_content: finalScriptContent,
-        sha256: finalSha256,
+        script_content: normalizedScript,   // ← Script normalizado para Windows
+        sha256: calculatedSha256,           // ← SHA256 calculado do script normalizado
         release_notes: release.release_notes,
         platform: platform,
         current_version: agent.agent_version
