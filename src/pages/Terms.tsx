@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Shield } from 'lucide-react';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 export default function Terms() {
   return (
@@ -23,7 +24,7 @@ export default function Terms() {
               <div>
                 <CardTitle className="text-3xl">Termos de Servico</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Ultima atualizacao: {new Date().toLocaleDateString('pt-BR')}
+                  Ultima atualizacao: {formatBrazilDateTime(new Date(), 'date')}
                 </p>
               </div>
             </div>

@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, AlertTriangle, Info, CheckCircle, XCircle, Ligh
 import { translateAlert, getSeverityColor, getSeverityLabel, type TranslatedAlert } from '@/lib/alert-translator';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface HumanizedAlertCardProps {
   alertType: string;
@@ -163,7 +164,7 @@ export function HumanizedAlertCard({
               {agentName && (
                 <CardDescription>
                   Computador: {agentName}
-                  {timestamp && ` • ${new Date(timestamp).toLocaleString('pt-BR')}`}
+                  {timestamp && ` • ${formatBrazilDateTime(timestamp, 'datetime')}`}
                 </CardDescription>
               )}
             </div>

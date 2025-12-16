@@ -10,6 +10,7 @@ import { FileText, Download, Loader2, Shield, AlertTriangle, Bug, Globe, FileWar
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tech-tooltip";
 import { GeneratedReportsList } from "@/components/admin/GeneratedReportsList";
+import { formatBrazilDateTime } from "@/lib/date-utils";
 
 interface Agent {
   id: string;
@@ -213,7 +214,7 @@ export default function Reports() {
       doc.text('Relatório de Segurança', pageWidth / 2, 28, { align: 'center' });
       
       doc.setFontSize(10);
-      const dateStr = new Date(reportData.generated_at).toLocaleString('pt-BR');
+      const dateStr = formatBrazilDateTime(reportData.generated_at, 'full');
       doc.text(`Gerado em: ${dateStr}`, pageWidth / 2, 38, { align: 'center' });
       
       yPos = 55;

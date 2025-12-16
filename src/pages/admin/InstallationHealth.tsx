@@ -10,6 +10,7 @@ import { InstallationHealthCard } from "@/components/admin/InstallationHealthCar
 import { InstallationTrendChart } from "@/components/admin/InstallationTrendChart";
 import { AgentQuickActions } from "@/components/admin/AgentQuickActions";
 import { getJobTypeLabel } from "@/lib/job-labels";
+import { formatBrazilDateTime } from "@/lib/date-utils";
 
 type ProblematicAgent = {
   id: string;
@@ -144,7 +145,7 @@ export default function InstallationHealth() {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            Ultima atualizacao: {lastUpdate.toLocaleTimeString('pt-BR')}
+            Ultima atualizacao: {formatBrazilDateTime(lastUpdate, 'time')}
           </span>
           <Button
             variant="outline"
@@ -309,7 +310,7 @@ export default function InstallationHealth() {
                             <span className="font-medium text-foreground">{error.agent_name}</span>
                             <Badge variant="outline">{error.platform}</Badge>
                             <span className="text-xs text-muted-foreground">
-                              {new Date(error.created_at).toLocaleString('pt-BR')}
+                              {formatBrazilDateTime(error.created_at, 'datetime')}
                             </span>
                           </div>
                           <div className="text-sm text-muted-foreground mt-2 break-words">
