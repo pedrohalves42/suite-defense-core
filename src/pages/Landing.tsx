@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Shield, CheckCircle, Zap, Lock, BarChart, Users, ArrowRight, Mail, MessageCircle, MapPin, Crown, Activity, TrendingUp, Calculator, Home, Briefcase, Laptop, Baby, Building2, ShieldCheck, HeadphonesIcon, AlertTriangle } from "lucide-react";
+import { Shield, CheckCircle, Zap, Lock, BarChart, Users, ArrowRight, Mail, MessageCircle, MapPin, Crown, Activity, TrendingUp, Calculator, Home, Briefcase, Laptop, Baby, Building2, ShieldCheck, HeadphonesIcon, AlertTriangle, RefreshCw, FileCheck, Undo2, Server } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ContactForm } from "@/components/ContactForm";
 import { Navbar } from "@/components/Navbar";
@@ -437,6 +437,102 @@ const Landing = () => {
           </div>
         </div>
       </section>
+
+      {/* Technology Differentials Section - Enterprise Grade */}
+      {audience === 'business' && (
+        <section className="py-20 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/5 to-background" />
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16 animate-fade-in">
+              <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 border border-primary/30 backdrop-blur-sm mb-6">
+                <Server className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium text-foreground">Tecnologia de Nível Empresarial</span>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">
+                Atualização Segura Sem Downtime
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+                Mantenha todos os seus computadores protegidos e atualizados automaticamente, sem interrupções
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-4 gap-6 max-w-5xl mx-auto">
+              <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-primary/20 hover:border-primary/50 transition-all hover:scale-105 text-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
+                  <RefreshCw className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="font-bold text-lg mb-2">Zero Interrupção</h3>
+                <p className="text-sm text-muted-foreground">
+                  Updates em background, ativados no próximo boot natural
+                </p>
+              </div>
+
+              <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-primary/20 hover:border-primary/50 transition-all hover:scale-105 text-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
+                  <FileCheck className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="font-bold text-lg mb-2">Validação SHA256</h3>
+                <p className="text-sm text-muted-foreground">
+                  Integridade verificada criptograficamente antes de aplicar
+                </p>
+              </div>
+
+              <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-primary/20 hover:border-primary/50 transition-all hover:scale-105 text-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
+                  <Undo2 className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="font-bold text-lg mb-2">Rollback Automático</h3>
+                <p className="text-sm text-muted-foreground">
+                  Se algo der errado, versão anterior é preservada
+                </p>
+              </div>
+
+              <div className="group p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-primary/20 hover:border-primary/50 transition-all hover:scale-105 text-center">
+                <div className="w-14 h-14 bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl flex items-center justify-center mb-4 mx-auto group-hover:scale-110 transition-transform">
+                  <Server className="w-7 h-7 text-primary" />
+                </div>
+                <h3 className="font-bold text-lg mb-2">Escala Empresarial</h3>
+                <p className="text-sm text-muted-foreground">
+                  Funciona com 3 ou 3.000 computadores simultaneamente
+                </p>
+              </div>
+            </div>
+
+            {/* Comparison Table */}
+            <div className="mt-12 max-w-3xl mx-auto">
+              <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 overflow-hidden">
+                <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 border-b border-border/50 font-semibold text-sm">
+                  <div>Recurso</div>
+                  <div className="text-center text-primary">CyberShield</div>
+                  <div className="text-center text-muted-foreground">Concorrentes</div>
+                </div>
+                <div className="divide-y divide-border/50">
+                  <div className="grid grid-cols-3 gap-4 p-4 text-sm">
+                    <div>Update sem restart forçado</div>
+                    <div className="text-center text-primary font-bold">✓</div>
+                    <div className="text-center text-muted-foreground">✗</div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 p-4 text-sm">
+                    <div>Validação criptográfica</div>
+                    <div className="text-center text-primary font-bold">✓</div>
+                    <div className="text-center text-muted-foreground">✗</div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 p-4 text-sm">
+                    <div>Rollback automático</div>
+                    <div className="text-center text-primary font-bold">✓</div>
+                    <div className="text-center text-muted-foreground">✗</div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 p-4 text-sm">
+                    <div>Anti-corrupção de dados</div>
+                    <div className="text-center text-primary font-bold">✓</div>
+                    <div className="text-center text-muted-foreground">✗</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Use Cases Section */}
       <section className="py-20 relative">
