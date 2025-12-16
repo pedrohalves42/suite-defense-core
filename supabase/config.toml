@@ -433,3 +433,8 @@ verify_jwt = false
 [functions.scheduled-report-generator]
 verify_jwt = false
 schedule = "0 3 * * *"
+
+# === Blocked Access Detection ===
+[functions.detect-blocked-attempts]
+verify_jwt = false
+schedule = "*/5 * * * *"
