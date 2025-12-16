@@ -4972,6 +4972,7 @@ export type Database = {
           alert_webhook_url: string | null
           business_hours: Json | null
           created_at: string
+          dns_local_filter_enabled: boolean | null
           enable_auto_quarantine: boolean | null
           enable_email_alerts: boolean | null
           enable_webhook_alerts: boolean | null
@@ -4989,6 +4990,7 @@ export type Database = {
           alert_webhook_url?: string | null
           business_hours?: Json | null
           created_at?: string
+          dns_local_filter_enabled?: boolean | null
           enable_auto_quarantine?: boolean | null
           enable_email_alerts?: boolean | null
           enable_webhook_alerts?: boolean | null
@@ -5006,6 +5008,7 @@ export type Database = {
           alert_webhook_url?: string | null
           business_hours?: Json | null
           created_at?: string
+          dns_local_filter_enabled?: boolean | null
           enable_auto_quarantine?: boolean | null
           enable_email_alerts?: boolean | null
           enable_webhook_alerts?: boolean | null
