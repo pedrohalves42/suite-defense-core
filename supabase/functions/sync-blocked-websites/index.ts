@@ -123,6 +123,8 @@ serve(async (req) => {
       payload: {
         blocked_domains: blockedDomains,
         action: 'sync',
+        apply_to_hosts: true,  // CRITICAL: Enable actual hosts file blocking
+        flush_dns: true,       // Ensure DNS cache is cleared after blocking
         timestamp: new Date().toISOString()
       }
     }));
