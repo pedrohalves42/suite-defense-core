@@ -326,6 +326,26 @@ Deno.serve(async (req) => {
       updateData.execution_time_seconds = execution_time_seconds
     }
 
+    // GOVERNANÇA: Validar contrato de sucesso para sync_blocked_websites
+    if (job.type === 'sync_blocked_websites' && status === 'completed' && output) {
+      const outputData = typeof output === 'object' ? output : {}
+      const applyToHosts = outputData.apply_to_hosts === true
+      const hostsModified = outputData.hosts_modified || 0
+      const blockedDomainsCount = outputData.blocked_domains_count || 0
+      
+      // Se apply_to_hosts foi solicitado mas nenhum host foi modificado = warning
+      if (applyToHosts && hostsModified === 0 && blockedDomainsCount > 0) {
+        updateData.status = 'completed_with_warning'
+        updateData.error_message = `Bloqueio solicitado mas hosts_modified=0. ${blockedDomainsCount} domínios não foram aplicados ao arquivo hosts.`
+        console.warn('[submit-job-result] GOVERNANCE WARNING: sync_blocked_websites completed but hosts not modified', {
+          job_id,
+          agent: agent.agent_name,
+          blocked_domains_count: blockedDomainsCount,
+          hosts_modified: hostsModified
+        })
+      }
+    }
+
     console.log('[submit-job-result] Updating job with data:', {
       job_id,
       updateData: JSON.stringify(updateData, null, 2),
