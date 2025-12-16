@@ -1902,6 +1902,112 @@ export type Database = {
           },
         ]
       }
+      blocked_access_attempts: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          attempted_at: string
+          blocked_by: string
+          created_at: string
+          domain: string
+          id: string
+          policy_id: string | null
+          source: string | null
+          tenant_id: string
+          user_name: string | null
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          attempted_at?: string
+          blocked_by?: string
+          created_at?: string
+          domain: string
+          id?: string
+          policy_id?: string | null
+          source?: string | null
+          tenant_id: string
+          user_name?: string | null
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          attempted_at?: string
+          blocked_by?: string
+          created_at?: string
+          domain?: string
+          id?: string
+          policy_id?: string | null
+          source?: string | null
+          tenant_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "blocked_access_attempts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_access_attempts_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "blocked_websites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_access_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_access_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       blocked_websites: {
         Row: {
           blocked_by: string | null
