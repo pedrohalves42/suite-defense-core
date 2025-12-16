@@ -81,6 +81,7 @@ const techTerms: Record<string, string> = {
   "dns": "Sistema que traduz nomes de sites para endereços de rede.",
   "dns cache": "Histórico local de sites acessados recentemente.",
   "cache dns": "Histórico local de sites acessados recentemente.",
+  "filtro dns": "Resolver DNS local que bloqueia sites antes de chegarem ao navegador, funcionando offline e cobrindo todos os aplicativos.",
   
   // Relatórios
   "relatório": "Documento com análise detalhada da situação de segurança.",

@@ -9,7 +9,8 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useTenant } from "@/hooks/useTenant";
-import { Settings, Save, Bell, Shield, Database } from "lucide-react";
+import { Settings, Save, Bell, Shield, Database, Globe } from "lucide-react";
+import { HelpTooltip } from "@/components/ui/tech-tooltip";
 
 export default function TenantSettings() {
   const { toast } = useToast();
@@ -288,6 +289,54 @@ export default function TenantSettings() {
               disabled
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            <CardTitle>Filtro DNS Local</CardTitle>
+          </div>
+          <CardDescription>
+            Bloqueio de sites a nivel de DNS nos endpoints
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <Label>Ativar Filtro DNS</Label>
+                <HelpTooltip term="Filtro DNS" />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Instala um resolver DNS local nos computadores para bloquear sites 
+                antes mesmo de chegarem ao navegador. Funciona offline e cobre 
+                todos os aplicativos, nao apenas o browser.
+              </p>
+            </div>
+            <Switch
+              checked={settings?.dns_local_filter_enabled ?? false}
+              onCheckedChange={(checked) =>
+                updateSettings.mutate({ ...settings, dns_local_filter_enabled: checked })
+              }
+            />
+          </div>
+          <Separator />
+          <div className="p-3 rounded-lg bg-muted/50 border">
+            <p className="text-sm">
+              <span className="font-medium">Como funciona:</span> Ao ativar, um resolver DNS 
+              sera instalado automaticamente nos computadores. Sites bloqueados 
+              receberao resposta NXDOMAIN (dominio inexistente), impedindo qualquer acesso.
+            </p>
+          </div>
+          {settings?.dns_local_filter_enabled && (
+            <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+              <p className="text-sm text-primary font-medium">
+                ✓ Filtro DNS ativo - Os computadores usarao o resolver local para bloqueio
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
