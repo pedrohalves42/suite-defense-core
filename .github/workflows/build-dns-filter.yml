@@ -1,0 +1,107 @@
+name: Build DNS Filter
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dns-filter/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'DNS Filter version (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: dns-filter/go.sum
+
+      - name: Build Windows binary
+        shell: powershell
+        run: |
+          cd dns-filter
+          go mod download
+          go build -ldflags="-s -w" -o bin/cybershield-dns.exe .
+          $size = (Get-Item "bin/cybershield-dns.exe").Length
+          Write-Host "✅ Built cybershield-dns.exe ($size bytes)"
+
+      - name: Calculate SHA256
+        id: hash
+        shell: powershell
+        run: |
+          $hash = (Get-FileHash -Path "dns-filter/bin/cybershield-dns.exe" -Algorithm SHA256).Hash
+          echo "sha256=$hash" >> $env:GITHUB_OUTPUT
+          $size = (Get-Item "dns-filter/bin/cybershield-dns.exe").Length
+          echo "size=$size" >> $env:GITHUB_OUTPUT
+          Write-Host "SHA256: $hash"
+          Write-Host "Size: $size bytes"
+
+      - name: Upload to Supabase Storage
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VERSION: ${{ github.event.inputs.version || '1.0.0' }}
+        shell: powershell
+        run: |
+          $version = $env:VERSION
+          $bucket = "agent-installers"
+          
+          $headers = @{
+            "Authorization" = "Bearer $env:SUPABASE_SERVICE_ROLE_KEY"
+            "apikey" = "$env:SUPABASE_SERVICE_ROLE_KEY"
+            "Content-Type" = "application/octet-stream"
+          }
+          
+          # Upload binary
+          $binaryPath = "dns-filter/cybershield-dns-$version.exe"
+          $binaryBytes = [System.IO.File]::ReadAllBytes("dns-filter/bin/cybershield-dns.exe")
+          
+          try {
+            Invoke-RestMethod -Uri "$env:SUPABASE_URL/storage/v1/object/$bucket/$binaryPath" `
+              -Method POST -Headers $headers -Body $binaryBytes
+            Write-Host "✅ Uploaded: $binaryPath"
+          } catch {
+            # If file exists, try upsert
+            $headers["x-upsert"] = "true"
+            Invoke-RestMethod -Uri "$env:SUPABASE_URL/storage/v1/object/$bucket/$binaryPath" `
+              -Method POST -Headers $headers -Body $binaryBytes
+            Write-Host "✅ Updated: $binaryPath"
+          }
+          
+          # Upload SHA256
+          $sha256Path = "dns-filter/cybershield-dns-$version.exe.sha256"
+          $sha256Content = "${{ steps.hash.outputs.sha256 }}"
+          $sha256Bytes = [System.Text.Encoding]::UTF8.GetBytes($sha256Content)
+          $headers["Content-Type"] = "text/plain"
+          
+          try {
+            Invoke-RestMethod -Uri "$env:SUPABASE_URL/storage/v1/object/$bucket/$sha256Path" `
+              -Method POST -Headers $headers -Body $sha256Bytes
+            Write-Host "✅ Uploaded: $sha256Path"
+          } catch {
+            $headers["x-upsert"] = "true"
+            Invoke-RestMethod -Uri "$env:SUPABASE_URL/storage/v1/object/$bucket/$sha256Path" `
+              -Method POST -Headers $headers -Body $sha256Bytes
+            Write-Host "✅ Updated: $sha256Path"
+          }
+          
+          Write-Host ""
+          Write-Host "📦 DNS Filter v$version deployed to Storage"
+          Write-Host "   Binary: $binaryPath"
+          Write-Host "   SHA256: $sha256Content"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cybershield-dns-windows-${{ github.event.inputs.version || '1.0.0' }}
+          path: dns-filter/bin/cybershield-dns.exe
+          retention-days: 90
