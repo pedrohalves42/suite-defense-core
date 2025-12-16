@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { encodeBase64 } from 'https://deno.land/std@0.208.0/encoding/base64.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
@@ -181,20 +182,10 @@ Deno.serve(async (req) => {
     const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
     // ============================================================
-    // BASE64 ENCODING - Garante preservação 100% dos bytes
-    // Transmissão imune a transformações JSON/PowerShell
-    // Usa chunks de 32KB para evitar RangeError (stack overflow)
+    // BASE64 ENCODING - Industrial-grade usando Deno std lib
+    // Zero stack usage, O(n) memória, funciona com Uint8Array de qualquer tamanho
     // ============================================================
-    const bytesToBase64 = (bytes: Uint8Array): string => {
-      let binary = '';
-      const chunkSize = 0x8000; // 32KB chunks - seguro para call stack
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        const chunk = bytes.subarray(i, i + chunkSize);
-        binary += String.fromCharCode.apply(null, Array.from(chunk));
-      }
-      return btoa(binary);
-    };
-    const base64Script = bytesToBase64(scriptBytes);
+    const base64Script = encodeBase64(scriptBytes);
 
     logger.info('[serve-agent-update] Script normalizado, SHA256 calculado e Base64 gerado', { 
       requestId, 

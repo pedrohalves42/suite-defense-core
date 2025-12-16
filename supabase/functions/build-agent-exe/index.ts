@@ -5,6 +5,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { encodeBase64 } from 'https://deno.land/std@0.208.0/encoding/base64.ts';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
 import { WINDOWS_INSTALLER_TEMPLATE } from '../_shared/installer-template.ts';
@@ -645,14 +646,14 @@ try {
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'GitHub API unreachable', 500, requestId);
     }
 
-    // [OK]  FASE 3.2: Converter PS1 para Base64 (Deno-safe UTF-8)
+    // [OK]  FASE 3.2: Converter PS1 para Base64 (Deno std lib - industrial-grade)
     telemetry?.startStep('encode_installer', {
       installer_size_bytes: installerContent.length
     });
     
     const ps1Encoder = new TextEncoder();
     const ps1Bytes = ps1Encoder.encode(installerContent);
-    const ps1Base64 = btoa(String.fromCharCode.apply(null, Array.from(ps1Bytes)));
+    const ps1Base64 = encodeBase64(ps1Bytes);
     
     telemetry?.completeStep('encode_installer', {
       base64_size_bytes: ps1Base64.length,
