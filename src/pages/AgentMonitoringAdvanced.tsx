@@ -8,6 +8,7 @@ import { Activity, AlertCircle, CheckCircle, Clock, Cpu, HardDrive, MemoryStick,
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getOsDisplayName, getOsIcon } from '@/lib/os-utils';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 interface AgentMetrics {
   id: string;
@@ -295,7 +296,7 @@ export default function AgentMonitoringAdvanced() {
                     <p className="text-sm text-muted-foreground">{alert.message}</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       <Clock className="w-3 h-3 inline mr-1" />
-                      {new Date(alert.created_at).toLocaleString('pt-BR')}
+                      {formatBrazilDateTime(alert.created_at, 'datetime')}
                     </p>
                   </div>
                   <Button 
@@ -420,7 +421,7 @@ export default function AgentMonitoringAdvanced() {
                       {agent.uptime_hours !== null ? `${agent.uptime_hours}h` : 'N/A'}
                     </td>
                     <td className="p-2 text-sm text-muted-foreground">
-                      {new Date(agent.last_heartbeat).toLocaleString('pt-BR')}
+                      {formatBrazilDateTime(agent.last_heartbeat, 'datetime')}
                     </td>
                   </tr>
                 ))}

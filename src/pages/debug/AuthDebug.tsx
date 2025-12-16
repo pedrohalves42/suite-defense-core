@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Shield, Database, Users, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 export default function AuthDebug() {
   const { user } = useAuth();
@@ -127,7 +128,7 @@ export default function AuthDebug() {
               <p className="text-sm font-medium text-muted-foreground">Ultimo Login</p>
               <p className="text-sm">
                 {user?.last_sign_in_at 
-                  ? new Date(user.last_sign_in_at).toLocaleString('pt-BR')
+                  ? formatBrazilDateTime(user.last_sign_in_at, 'datetime')
                   : 'N/A'}
               </p>
             </div>

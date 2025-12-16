@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { logger } from '@/lib/logger';
 import { MFAVerificationDialog } from '@/components/mfa/MFAVerificationDialog';
+import { formatBrazilDateTime } from '@/lib/date-utils';
 
 const loginSchema = z.object({
   email: z.string()
@@ -50,7 +51,7 @@ export default function Login() {
           toast({
             variant: 'destructive',
             title: '? Acesso Bloqueado - Protecao Anti-Brute-Force',
-            description: `Seu IP foi bloqueado ate ${new Date(data.blockedUntil).toLocaleString('pt-BR')} (${data.attemptCount || 5}+ tentativas em 15 minutos). Contate o suporte se isso for um erro.`,
+            description: `Seu IP foi bloqueado ate ${formatBrazilDateTime(data.blockedUntil, 'datetime')} (${data.attemptCount || 5}+ tentativas em 15 minutos). Contate o suporte se isso for um erro.`,
             duration: 15000,
           });
           setLoading(true); // Desabilitar interface
