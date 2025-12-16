@@ -52,7 +52,6 @@ jobs:
           VERSION: ${{ github.event.inputs.version || '1.0.0' }}
         shell: powershell
         run: |
-          $version = $env:VERSION
           $bucket = "agent-installers"
           
           $headers = @{
@@ -61,8 +60,8 @@ jobs:
             "Content-Type" = "application/octet-stream"
           }
           
-          # Upload binary
-          $binaryPath = "dns-filter/cybershield-dns-$version.exe"
+          # Upload binary (without version in path - matches serve-dns-filter expectation)
+          $binaryPath = "dns-filter/cybershield-dns.exe"
           $binaryBytes = [System.IO.File]::ReadAllBytes("dns-filter/bin/cybershield-dns.exe")
           
           try {
@@ -77,8 +76,8 @@ jobs:
             Write-Host "✅ Updated: $binaryPath"
           }
           
-          # Upload SHA256
-          $sha256Path = "dns-filter/cybershield-dns-$version.exe.sha256"
+          # Upload SHA256 (without version in path)
+          $sha256Path = "dns-filter/cybershield-dns.exe.sha256"
           $sha256Content = "${{ steps.hash.outputs.sha256 }}"
           $sha256Bytes = [System.Text.Encoding]::UTF8.GetBytes($sha256Content)
           $headers["Content-Type"] = "text/plain"
