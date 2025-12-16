@@ -7,12 +7,18 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.39-BASE64-SAFE-UPDATE';
+export const INSTALLER_VERSION = 'v3.10.40-DNS-FILTER';
 export const INSTALLER_VERSION_LINUX = 'v3.10.39-BASE64-SAFE-UPDATE';
 export const INSTALLER_VERSION_MACOS = 'v3.10.39-BASE64-SAFE-UPDATE';
-export const LAST_UPDATED = '2025-12-16T18:00:00Z'; // All platforms synchronized to v3.10.39-BASE64-SAFE-UPDATE
+export const LAST_UPDATED = '2025-12-16T20:00:00Z'; // Windows updated to v3.10.40-DNS-FILTER
 
 export const CHANGES = [
+  '[v3.10.40-DNS-FILTER] FEATURE: Novo handler setup_dns_filter - instala e configura filtro DNS local',
+  '[v3.10.40-DNS-FILTER] FEATURE: Novo handler collect_dns_blocks - coleta eventos de bloqueio DNS',
+  '[v3.10.40-DNS-FILTER] FEATURE: Novo handler remove_dns_filter - remove filtro DNS e restaura DNS original',
+  '[v3.10.40-DNS-FILTER] FEATURE: Salva configuracoes DNS originais para reversao segura',
+  '[v3.10.40-DNS-FILTER] FEATURE: Suporta failsafe com DNS secundario (1.1.1.1)',
+  '[v3.10.40-DNS-FILTER] FEATURE: Configura recovery automatico do servico Windows',
   '[v3.10.39-BASE64-SAFE-UPDATE] CRITICAL FIX: Auto-update agora usa Base64 para transmissao de script (100% byte-safe)',
   '[v3.10.39-BASE64-SAFE-UPDATE] CRITICAL FIX: SHA256 calculado dos bytes REAIS antes de Base64 encoding',
   '[v3.10.39-BASE64-SAFE-UPDATE] CRITICAL FIX: Agente usa WriteAllBytes para salvar script sem transformacao',

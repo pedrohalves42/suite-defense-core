@@ -12,6 +12,9 @@ export const JOB_TYPE_LABELS: Record<string, string> = {
   fix_firewall: '🔥 Correção de Firewall',
   restart_service: '🔃 Reiniciar Serviço',
   sync_blocked_websites: '🚫 Sincronização de Sites Bloqueados',
+  setup_dns_filter: '🛡️ Setup DNS Filter',
+  collect_dns_blocks: '📊 Coletar Bloqueios DNS',
+  remove_dns_filter: '🗑️ Remover DNS Filter',
 };
 
 export const JOB_STATUS_LABELS: Record<string, string> = {
@@ -60,6 +63,9 @@ export const JOB_TYPE_LABELS_NO_EMOJI: Record<string, string> = {
   fix_firewall: 'Correção de Firewall',
   restart_service: 'Reiniciar Serviço',
   sync_blocked_websites: 'Sincronização de Sites Bloqueados',
+  setup_dns_filter: 'Setup DNS Filter',
+  collect_dns_blocks: 'Coletar Bloqueios DNS',
+  remove_dns_filter: 'Remover DNS Filter',
 };
 
 export const getJobTypeLabelNoEmoji = (type: string): string => 
