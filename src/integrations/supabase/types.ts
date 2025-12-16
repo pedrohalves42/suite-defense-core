@@ -6830,6 +6830,12 @@ export type Database = {
       }
       create_metrics_partition_if_needed: { Args: never; Returns: undefined }
       current_user_tenant_id: { Args: never; Returns: string }
+      detect_blocked_access_attempts: {
+        Args: never
+        Returns: {
+          inserted_count: number
+        }[]
+      }
       diagnose_agent: { Args: { p_agent_name: string }; Returns: Json }
       diagnose_agent_issues: {
         Args: { p_agent_name: string; p_tenant_id: string }
