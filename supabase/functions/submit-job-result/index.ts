@@ -537,6 +537,105 @@ Deno.serve(async (req) => {
       }
     }
 
+    // FASE 4 - DNS LOCAL: Processar eventos de bloqueio do DNS Filter local
+    if (status === 'completed' && job.type === 'collect_dns_blocks' && output) {
+      try {
+        console.log('[submit-job-result] Processing DNS filter blocked events...')
+        
+        const outputData = typeof output === 'object' ? output : {}
+        const blockedEvents = outputData.blocked_events || []
+        
+        if (!Array.isArray(blockedEvents) || blockedEvents.length === 0) {
+          console.log('[submit-job-result] No DNS blocked events to process')
+        } else {
+          console.log(`[submit-job-result] Processing ${blockedEvents.length} DNS blocked events`)
+          
+          // Buscar políticas ativas para correlação
+          const { data: blockedSites, error: sitesError } = await supabase
+            .from('blocked_websites')
+            .select('id, domain_pattern')
+            .eq('tenant_id', agent.tenant_id)
+            .eq('is_active', true)
+          
+          if (sitesError) {
+            console.error('[submit-job-result] Error fetching blocked websites for DNS correlation:', sitesError)
+          }
+          
+          const attemptsToInsert: Array<{
+            tenant_id: string
+            agent_id: string
+            agent_name: string
+            domain: string
+            policy_id: string | null
+            attempted_at: string
+            blocked_by: string
+            source: string
+          }> = []
+          
+          for (const event of blockedEvents) {
+            const domain = (event.domain || '').toLowerCase().trim()
+            if (!domain) continue
+            
+            // Correlacionar com política
+            let policyId: string | null = null
+            if (blockedSites && blockedSites.length > 0) {
+              for (const site of blockedSites) {
+                const pattern = site.domain_pattern.toLowerCase()
+                let matches = false
+                
+                if (pattern.startsWith('*.')) {
+                  const baseDomain = pattern.slice(2)
+                  matches = domain === baseDomain || domain.endsWith('.' + baseDomain)
+                } else {
+                  matches = domain === pattern || domain.endsWith('.' + pattern)
+                }
+                
+                if (matches) {
+                  policyId = site.id
+                  break
+                }
+              }
+            }
+            
+            attemptsToInsert.push({
+              tenant_id: agent.tenant_id,
+              agent_id: job.agent_id || agent.id,
+              agent_name: agent.agent_name,
+              domain: domain,
+              policy_id: policyId,
+              attempted_at: event.ts || new Date().toISOString(),
+              blocked_by: 'dns',
+              source: 'collect_dns_blocks'
+            })
+          }
+          
+          if (attemptsToInsert.length > 0) {
+            // Batch insert de 100 registros
+            const batchSize = 100
+            let insertedCount = 0
+            
+            for (let i = 0; i < attemptsToInsert.length; i += batchSize) {
+              const batch = attemptsToInsert.slice(i, i + batchSize)
+              
+              const { error: insertError } = await supabase
+                .from('blocked_access_attempts')
+                .insert(batch)
+              
+              if (insertError) {
+                console.error(`[submit-job-result] Error inserting DNS blocked batch ${i}-${i + batch.length}:`, insertError)
+              } else {
+                insertedCount += batch.length
+              }
+            }
+            
+            console.log(`[submit-job-result] Successfully recorded ${insertedCount}/${attemptsToInsert.length} DNS blocked events`)
+          }
+        }
+      } catch (dnsErr) {
+        console.error('[submit-job-result] Error processing DNS blocked events:', dnsErr)
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,
