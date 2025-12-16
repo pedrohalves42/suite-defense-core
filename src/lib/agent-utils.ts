@@ -9,23 +9,14 @@ export function getAgentDisplayName(agent: {
   hostname?: string | null;
   agent_name?: string;
 }): string {
+  // SEMPRE retornar agent_name exatamente como definido na instalação
+  if (agent.agent_name) {
+    return agent.agent_name;
+  }
+  
+  // Fallbacks apenas se agent_name não existir
   if (agent.display_name) {
     return agent.display_name;
-  }
-  
-  if (agent.hostname) {
-    return agent.hostname;
-  }
-  
-  if (agent.agent_name) {
-    // Clean up technical names
-    return agent.agent_name
-      .replace(/^cybershield-/i, '')
-      .replace(/-agent$/i, '')
-      .replace(/-/g, ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(' ');
   }
   
   return 'Computador Desconhecido';
