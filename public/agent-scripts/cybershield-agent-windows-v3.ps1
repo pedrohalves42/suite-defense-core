@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.38-WEB-ACTIVITY-REAL-TIME
+    CyberShield Agent - Windows v3.10.39-BASE64-SAFE-UPDATE
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -15,6 +15,7 @@
     - Atividade web com TIMESTAMPS REAIS e VISIT_COUNT (collect_web_activity v2)
     - Auto-remediacao basica (fix_firewall, restart_service)
     - Rotacao automatica de logs (7 dias / 10MB max)
+    - AUTO-UPDATE BASE64-SAFE (preservacao 100% de bytes)
     
     Uso:
     powershell.exe -ExecutionPolicy Bypass -File .\cybershield-agent-windows-v3.ps1 `
@@ -38,7 +39,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.38-WEB-ACTIVITY-REAL-TIME"
+    [string]$AgentVersion = "v3.10.39-BASE64-SAFE-UPDATE"
 )
 
 $ErrorActionPreference = "Stop"
@@ -2210,7 +2211,7 @@ function Execute-Job {
             }
             "update_agent" {
                 try {
-                    Write-Log "[INFO] Job 'update_agent' recebido - NO-EXIT-EVER v3.10.37" "INFO"
+                    Write-Log "[INFO] Job 'update_agent' recebido - BASE64-SAFE-UPDATE v3.10.39" "INFO"
 
                     # Chama serve-agent-update
                     $updateResult = Invoke-SecureRequest `
@@ -2232,7 +2233,6 @@ function Execute-Job {
                     }
 
                     $newVersion   = $data.version
-                    $scriptText   = $data.script_content
                     $expectedHash = $data.sha256
 
                     Write-Log "[UPDATE] Atualizando agente para versao $newVersion" "INFO"
@@ -2269,10 +2269,23 @@ function Execute-Job {
                     
                     $tempScript = Join-Path $env:TEMP "cybershield-agent-update-$newVersion.ps1"
 
-                    # Salvar script novo (UTF8 sem BOM para compatibilidade SHA256)
-                    [System.IO.File]::WriteAllText($tempScript, $scriptText, [System.Text.UTF8Encoding]::new($false))
+                    # ============================================================
+                    # CRITICAL: BASE64 DECODE - Preserva 100% dos bytes
+                    # Imune a transformacoes JSON/PowerShell
+                    # ============================================================
+                    if ($data.script_content_base64) {
+                        Write-Log "[UPDATE] Usando Base64 decode (safe mode)" "INFO"
+                        $bytes = [System.Convert]::FromBase64String($data.script_content_base64)
+                        [System.IO.File]::WriteAllBytes($tempScript, $bytes)
+                        Write-Log "[UPDATE] Script salvo via WriteAllBytes ($($bytes.Length) bytes)" "INFO"
+                    } else {
+                        # Fallback para agentes antigos (menos seguro)
+                        Write-Log "[UPDATE] Fallback para script_content (string mode)" "WARN"
+                        $scriptText = $data.script_content
+                        [System.IO.File]::WriteAllText($tempScript, $scriptText, [System.Text.UTF8Encoding]::new($false))
+                    }
 
-                    # Validar SHA256
+                    # Validar SHA256 do arquivo ESCRITO no disco
                     $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
                     if ($actualHash -ne $expectedHash.ToLower()) {
                         Remove-Item $tempScript -Force
@@ -2299,10 +2312,8 @@ function Execute-Job {
                     Remove-Item $tempScript -Force
                     Write-Log "[SUCCESS] Script instalado: $targetScript" "SUCCESS"
                     
-                    # v3.10.37-NO-EXIT-EVER: NAO tenta reiniciar task nem fazer exit
+                    # v3.10.39-BASE64-SAFE-UPDATE: NAO tenta reiniciar task nem fazer exit
                     # Script salvo em disco sera carregado automaticamente no proximo boot do Windows
-                    # v3.10.37-NO-EXIT-EVER: NUNCA fazer exit 0
-                    # Nova versao sera carregada automaticamente no proximo boot do Windows
                     Write-Log "[SUCCESS] Script v$newVersion instalado em $targetScript" "SUCCESS"
                     Write-Log "[INFO] Nova versao sera carregada no proximo boot do sistema" "INFO"
                     Write-Log "[INFO] Agente continua operando normalmente com versao $($Global:AgentVersion)" "INFO"
@@ -2313,6 +2324,7 @@ function Execute-Job {
                         currentVersion = $Global:AgentVersion
                         targetPath  = $targetScript
                         sha256      = $actualHash
+                        base64Mode  = [bool]$data.script_content_base64
                         requiresReboot = $true
                         savedAt     = (Get-Date).ToUniversalTime().ToString("o")
                     }
@@ -2337,7 +2349,7 @@ function Execute-Job {
             }
             "reinstall_agent" {
                 try {
-                    Write-Log "[REINSTALL] Iniciando reinstalacao completa..." "INFO"
+                    Write-Log "[REINSTALL] Iniciando reinstalacao completa (BASE64-SAFE)..." "INFO"
                     
                     # Busca script mais recente do servidor
                     $updateResult = Invoke-SecureRequest `
@@ -2350,7 +2362,6 @@ function Execute-Job {
                     }
                     
                     $data = $updateResult.Body | ConvertFrom-Json
-                    $scriptText = $data.script_content
                     $expectedHash = $data.sha256
                     $newVersion = $data.version
                     
@@ -2358,8 +2369,22 @@ function Execute-Job {
                     $targetScript = Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"
                     $tempScript = Join-Path $env:TEMP "cybershield-reinstall-$newVersion.ps1"
                     
-                    # Salvar e validar SHA256
-                    [System.IO.File]::WriteAllText($tempScript, $scriptText, [System.Text.UTF8Encoding]::new($false))
+                    # ============================================================
+                    # CRITICAL: BASE64 DECODE - Preserva 100% dos bytes
+                    # ============================================================
+                    if ($data.script_content_base64) {
+                        Write-Log "[REINSTALL] Usando Base64 decode (safe mode)" "INFO"
+                        $bytes = [System.Convert]::FromBase64String($data.script_content_base64)
+                        [System.IO.File]::WriteAllBytes($tempScript, $bytes)
+                        Write-Log "[REINSTALL] Script salvo via WriteAllBytes ($($bytes.Length) bytes)" "INFO"
+                    } else {
+                        # Fallback para agentes antigos
+                        Write-Log "[REINSTALL] Fallback para script_content (string mode)" "WARN"
+                        $scriptText = $data.script_content
+                        [System.IO.File]::WriteAllText($tempScript, $scriptText, [System.Text.UTF8Encoding]::new($false))
+                    }
+                    
+                    # Validar SHA256
                     $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
                     
                     if ($actualHash -ne $expectedHash.ToLower()) {
@@ -2405,6 +2430,7 @@ function Execute-Job {
                         newVersion = $newVersion
                         targetPath = $targetScript
                         sha256 = $actualHash
+                        base64Mode = [bool]$data.script_content_base64
                         reinstalledAt = (Get-Date).ToUniversalTime().ToString("o")
                     }
                     
