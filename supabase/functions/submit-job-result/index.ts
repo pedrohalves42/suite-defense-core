@@ -543,12 +543,44 @@ Deno.serve(async (req) => {
         console.log('[submit-job-result] Processing DNS filter blocked events...')
         
         const outputData = typeof output === 'object' ? output : {}
-        const blockedEvents = outputData.blocked_events || []
+        const rawBlockedEvents = outputData.blocked_events || []
         
-        if (!Array.isArray(blockedEvents) || blockedEvents.length === 0) {
+        if (!Array.isArray(rawBlockedEvents) || rawBlockedEvents.length === 0) {
           console.log('[submit-job-result] No DNS blocked events to process')
         } else {
-          console.log(`[submit-job-result] Processing ${blockedEvents.length} DNS blocked events`)
+          console.log(`[submit-job-result] Processing ${rawBlockedEvents.length} DNS blocked events`)
+          
+          // P1 QUAL-01: Validação Zod para eventos DNS bloqueados
+          const validQueryTypes = ['A', 'AAAA', 'HTTPS', 'MX', 'TXT', 'CNAME', 'PTR', 'SRV', 'NS', 'SOA']
+          const blockedEvents = rawBlockedEvents.filter((event: unknown) => {
+            if (!event || typeof event !== 'object') {
+              console.warn('[submit-job-result] Invalid blocked event (not an object):', event)
+              return false
+            }
+            const e = event as Record<string, unknown>
+            
+            // domain é obrigatório e deve ser string não vazia
+            if (typeof e.domain !== 'string' || e.domain.trim().length === 0) {
+              console.warn('[submit-job-result] Invalid blocked event (missing/empty domain):', e)
+              return false
+            }
+            
+            // ts deve ser string ISO se presente
+            if (e.ts !== undefined && (typeof e.ts !== 'string' || isNaN(Date.parse(e.ts)))) {
+              console.warn('[submit-job-result] Invalid blocked event (invalid ts):', e)
+              return false
+            }
+            
+            // query_type deve estar na lista permitida se presente
+            if (e.query_type !== undefined && !validQueryTypes.includes(String(e.query_type))) {
+              console.warn('[submit-job-result] Invalid blocked event (unknown query_type):', e)
+              return false
+            }
+            
+            return true
+          })
+          
+          console.log(`[submit-job-result] Validated ${blockedEvents.length}/${rawBlockedEvents.length} DNS blocked events`)
           
           // Buscar políticas ativas para correlação
           const { data: blockedSites, error: sitesError } = await supabase

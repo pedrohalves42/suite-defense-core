@@ -94,7 +94,7 @@ jobs:
           }
           
           Write-Host ""
-          Write-Host "📦 DNS Filter v$version deployed to Storage"
+          Write-Host "📦 DNS Filter v$env:VERSION deployed to Storage"
           Write-Host "   Binary: $binaryPath"
           Write-Host "   SHA256: $sha256Content"
 
