@@ -183,8 +183,18 @@ Deno.serve(async (req) => {
     // ============================================================
     // BASE64 ENCODING - Garante preservação 100% dos bytes
     // Transmissão imune a transformações JSON/PowerShell
+    // Usa chunks de 32KB para evitar RangeError (stack overflow)
     // ============================================================
-    const base64Script = btoa(String.fromCharCode(...scriptBytes));
+    const bytesToBase64 = (bytes: Uint8Array): string => {
+      let binary = '';
+      const chunkSize = 0x8000; // 32KB chunks - seguro para call stack
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      return btoa(binary);
+    };
+    const base64Script = bytesToBase64(scriptBytes);
 
     logger.info('[serve-agent-update] Script normalizado, SHA256 calculado e Base64 gerado', { 
       requestId, 
