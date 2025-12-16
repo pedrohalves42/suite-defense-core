@@ -3,6 +3,7 @@ import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { AgentSelector } from '@/components/AgentSelector';
 import { useWebActivity } from '@/hooks/useWebActivity';
 import { useBlockedWebsites } from '@/hooks/useBlockedWebsites';
+import { useBlockedAttempts } from '@/hooks/useBlockedAttempts';
 import ThreatIntelligenceLookup from '@/components/admin/ThreatIntelligenceLookup';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +24,8 @@ import {
   Clock,
   Eye,
   Shield,
-  RefreshCw
+  RefreshCw,
+  ShieldX
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatBrazilDateTime } from '@/lib/date-utils';
@@ -54,6 +56,9 @@ export default function WebActivity() {
   
   const { data: activity, isLoading, error } = useWebActivity(selectedAgent, !!selectedAgent);
   const { blockedWebsites, blockWebsite, unblockWebsite, isBlocked } = useBlockedWebsites();
+  const { attempts: blockedAttempts, todayStats: blockedStats, isLoading: attemptsLoading } = useBlockedAttempts({ 
+    agentId: selectedAgent || undefined 
+  });
 
   // Enrich activity with categories
   const enrichedActivity = useMemo(() => {
@@ -226,7 +231,37 @@ export default function WebActivity() {
                   </CardContent>
                 </Card>
               </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                <Card className="border-l-4 border-l-warning bg-warning/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-1">
+                      <ShieldX className="h-4 w-4 text-warning" />
+                      Tentativas Bloqueadas Hoje
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-warning">{blockedStats.totalAttempts}</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {blockedStats.uniqueDomains} domínios • {blockedStats.uniqueAgents} computadores
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
+
+            {/* Blocked Attempts Alert Banner */}
+            {blockedStats.totalAttempts > 0 && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+                <Alert className="border-warning bg-warning/10">
+                  <ShieldX className="h-4 w-4 text-warning" />
+                  <AlertDescription className="text-warning-foreground">
+                    <strong>{blockedStats.totalAttempts} tentativa(s) de acesso bloqueada(s) hoje.</strong> Os sites 
+                    bloqueados foram impedidos via arquivo hosts nos computadores monitorados.
+                  </AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
 
             {/* Filters */}
             <Card>
@@ -401,6 +436,65 @@ export default function WebActivity() {
                       </Badge>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Blocked Access Attempts Table */}
+            {blockedAttempts.length > 0 && (
+              <Card className="border-l-4 border-l-warning">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShieldX className="h-5 w-5 text-warning" />
+                    Tentativas de Acesso Bloqueadas ({blockedAttempts.length})
+                  </CardTitle>
+                  <CardDescription>
+                    Registro de tentativas de acesso a sites bloqueados - evidência para compliance
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Domínio</TableHead>
+                        <TableHead>Computador</TableHead>
+                        <TableHead>Usuário</TableHead>
+                        <TableHead>Bloqueado Por</TableHead>
+                        <TableHead>Data/Hora (UTC-3)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {blockedAttempts.slice(0, 10).map((attempt) => (
+                        <TableRow key={attempt.id} className="bg-warning/5">
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <Ban className="h-4 w-4 text-destructive" />
+                              {attempt.domain}
+                            </div>
+                          </TableCell>
+                          <TableCell>{attempt.agent_name}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {attempt.user_name || '-'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {attempt.blocked_by === 'hosts_file' ? 'Arquivo Hosts' : 
+                               attempt.blocked_by === 'firewall' ? 'Firewall' : 
+                               attempt.blocked_by === 'dns' ? 'DNS' : attempt.blocked_by}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {formatBrazilDateTime(attempt.attempted_at, 'datetime')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {blockedAttempts.length > 10 && (
+                    <p className="text-sm text-muted-foreground mt-3 text-center">
+                      Exibindo 10 de {blockedAttempts.length} tentativas
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             )}
