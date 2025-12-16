@@ -14,9 +14,9 @@ import { useState } from "react";
 
 // Versões específicas por plataforma
 const CURRENT_VERSIONS = {
-  windows: 'v3.10.39-BASE64-SAFE-UPDATE',
-  linux: 'v3.10.39-BASE64-SAFE-UPDATE',
-  macos: 'v3.10.39-BASE64-SAFE-UPDATE'
+  windows: 'v3.10.40-DNS-FILTER',
+  linux: 'v3.10.40-DNS-FILTER',
+  macos: 'v3.10.40-DNS-FILTER'
 } as const;
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
@@ -28,6 +28,50 @@ export default function AgentReleases() {
   const [isProcessingUpdates, setIsProcessingUpdates] = useState(false);
   const [isForceReregistering, setIsForceReregistering] = useState(false);
   const [fetchingScript, setFetchingScript] = useState(false);
+  const [validatingHash, setValidatingHash] = useState<string | null>(null);
+
+  // Validate SHA256 of a release against the public script
+  const handleValidateSHA256 = async (platform: 'windows' | 'linux' | 'macos', releaseId: string, dbSha256: string) => {
+    const scriptFileName = platform === 'windows' 
+      ? 'cybershield-agent-windows-v3.ps1'
+      : platform === 'linux'
+        ? 'cybershield-agent-linux-v3.sh'
+        : 'cybershield-agent-macos-v3.sh';
+    
+    try {
+      setValidatingHash(releaseId);
+      
+      // Fetch script from public folder
+      const response = await fetch(`/agent-scripts/${scriptFileName}`);
+      if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
+      
+      const scriptContent = await response.text();
+      
+      // Calculate SHA256
+      const encoder = new TextEncoder();
+      const data = encoder.encode(scriptContent);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      // Compare
+      const match = calculatedSha256 === dbSha256;
+      
+      if (match) {
+        toast.success(`SHA256 válido para ${platform}`, {
+          description: `Hash: ${calculatedSha256.substring(0, 16)}...`
+        });
+      } else {
+        toast.error(`SHA256 INVÁLIDO para ${platform}`, {
+          description: `DB: ${dbSha256.substring(0, 16)}...\nCalculado: ${calculatedSha256.substring(0, 16)}...`
+        });
+      }
+    } catch (error) {
+      toast.error(`Erro ao validar ${platform}: ${error instanceof Error ? error.message : 'Unknown'}`);
+    } finally {
+      setValidatingHash(null);
+    }
+  };
 
   const handleForceUpdateCheck = async () => {
     try {
@@ -345,10 +389,25 @@ export default function AgentReleases() {
                       </div>
                     </div>
                     {isValid ? (
-                      <Badge variant="outline" className="bg-green-50 dark:bg-green-950/30 border-green-500">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        {sizeKB}KB
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleValidateSHA256(
+                            release.platform as 'windows' | 'linux' | 'macos',
+                            release.id,
+                            release.sha256
+                          )}
+                          disabled={validatingHash === release.id}
+                          className="text-xs"
+                        >
+                          {validatingHash === release.id ? 'Validando...' : 'Validar SHA256'}
+                        </Button>
+                        <Badge variant="outline" className="bg-green-50 dark:bg-green-950/30 border-green-500">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          {sizeKB}KB
+                        </Badge>
+                      </div>
                     ) : (
                       <Badge variant="outline" className="bg-red-50 dark:bg-red-950/30 border-red-500">
                         <AlertCircle className="h-3 w-3 mr-1" />
