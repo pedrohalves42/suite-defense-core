@@ -175,26 +175,34 @@ Deno.serve(async (req) => {
 
     // Calcular SHA256 do script NORMALIZADO (verdade absoluta)
     const encoder = new TextEncoder();
-    const data = encoder.encode(normalizedScript);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const scriptBytes = encoder.encode(normalizedScript);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-    logger.info('[serve-agent-update] Script normalizado e SHA256 calculado', { 
+    // ============================================================
+    // BASE64 ENCODING - Garante preservação 100% dos bytes
+    // Transmissão imune a transformações JSON/PowerShell
+    // ============================================================
+    const base64Script = btoa(String.fromCharCode(...scriptBytes));
+
+    logger.info('[serve-agent-update] Script normalizado, SHA256 calculado e Base64 gerado', { 
       requestId, 
       agentName: agent.agent_name,
       fromVersion: agent.agent_version,
       toVersion: release.version,
       originalSize: finalScriptContent.length,
       normalizedSize: normalizedScript.length,
+      base64Size: base64Script.length,
       sha256: calculatedSha256.substring(0, 16) + '...'
     });
 
     return new Response(
       JSON.stringify({
         version: release.version,
-        script_content: normalizedScript,   // ← Script normalizado para Windows
-        sha256: calculatedSha256,           // ← SHA256 calculado do script normalizado
+        script_content: normalizedScript,        // ← Fallback para agentes antigos
+        script_content_base64: base64Script,     // ← NOVO: Base64 para agentes v3.10.39+
+        sha256: calculatedSha256,                // ← SHA256 dos bytes reais
         release_notes: release.release_notes,
         platform: platform,
         current_version: agent.agent_version

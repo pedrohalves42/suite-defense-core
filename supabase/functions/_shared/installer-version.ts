@@ -7,12 +7,17 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.38-WEB-ACTIVITY-REAL-TIME';
-export const INSTALLER_VERSION_LINUX = 'v3.10.38-WEB-ACTIVITY-REAL-TIME';
-export const INSTALLER_VERSION_MACOS = 'v3.10.38-WEB-ACTIVITY-REAL-TIME';
-export const LAST_UPDATED = '2025-12-16T14:00:00Z'; // All platforms synchronized to v3.10.38-WEB-ACTIVITY-REAL-TIME
+export const INSTALLER_VERSION = 'v3.10.39-BASE64-SAFE-UPDATE';
+export const INSTALLER_VERSION_LINUX = 'v3.10.39-BASE64-SAFE-UPDATE';
+export const INSTALLER_VERSION_MACOS = 'v3.10.39-BASE64-SAFE-UPDATE';
+export const LAST_UPDATED = '2025-12-16T18:00:00Z'; // All platforms synchronized to v3.10.39-BASE64-SAFE-UPDATE
 
 export const CHANGES = [
+  '[v3.10.39-BASE64-SAFE-UPDATE] CRITICAL FIX: Auto-update agora usa Base64 para transmissao de script (100% byte-safe)',
+  '[v3.10.39-BASE64-SAFE-UPDATE] CRITICAL FIX: SHA256 calculado dos bytes REAIS antes de Base64 encoding',
+  '[v3.10.39-BASE64-SAFE-UPDATE] CRITICAL FIX: Agente usa WriteAllBytes para salvar script sem transformacao',
+  '[v3.10.39-BASE64-SAFE-UPDATE] CRITICAL FIX: Elimina mismatch SHA256 causado por JSON serialization',
+  '[v3.10.39-BASE64-SAFE-UPDATE] FALLBACK: script_content ainda enviado para compatibilidade com agentes antigos',
   '[v3.10.38-WEB-ACTIVITY-REAL-TIME] FEATURE: Web activity agora usa timestamps REAIS do historico do navegador',
   '[v3.10.38-WEB-ACTIVITY-REAL-TIME] FEATURE: visit_count real extraido do SQLite do navegador',
   '[v3.10.38-WEB-ACTIVITY-REAL-TIME] FEATURE: Feature flag web_activity_version=v2 no payload para rollback',
