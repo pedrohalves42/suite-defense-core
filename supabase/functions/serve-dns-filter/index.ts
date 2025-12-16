@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { verifyHmacSignature } from '../_shared/hmac.ts';
+import { hashToken } from '../_shared/token-hash.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,13 +40,16 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Lookup agent by token
+    // Hash token for secure lookup (consistent with other Edge Functions)
+    const tokenHash = await hashToken(agentToken);
+
+    // Lookup agent by token_hash (not plaintext token)
     const { data: tokenData, error: tokenError } = await supabase
       .from('agent_tokens')
       .select('agent_id, agents!inner(id, agent_name, tenant_id, hmac_secret)')
-      .eq('token', agentToken)
+      .eq('token_hash', tokenHash)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     if (tokenError || !tokenData) {
       console.warn(`[${requestId}] Invalid agent token`);
