@@ -7,12 +7,21 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.37-NO-EXIT-EVER';
-export const INSTALLER_VERSION_LINUX = 'v3.10.37-NO-EXIT-EVER';
-export const INSTALLER_VERSION_MACOS = 'v3.10.37-NO-EXIT-EVER';
-export const LAST_UPDATED = '2025-12-12T22:00:00Z'; // All platforms synchronized to v3.10.37-NO-EXIT-EVER
+export const INSTALLER_VERSION = 'v3.10.38-WEB-ACTIVITY-REAL-TIME';
+export const INSTALLER_VERSION_LINUX = 'v3.10.38-WEB-ACTIVITY-REAL-TIME';
+export const INSTALLER_VERSION_MACOS = 'v3.10.38-WEB-ACTIVITY-REAL-TIME';
+export const LAST_UPDATED = '2025-12-16T14:00:00Z'; // All platforms synchronized to v3.10.38-WEB-ACTIVITY-REAL-TIME
 
 export const CHANGES = [
+  '[v3.10.38-WEB-ACTIVITY-REAL-TIME] FEATURE: Web activity agora usa timestamps REAIS do historico do navegador',
+  '[v3.10.38-WEB-ACTIVITY-REAL-TIME] FEATURE: visit_count real extraido do SQLite do navegador',
+  '[v3.10.38-WEB-ACTIVITY-REAL-TIME] FEATURE: Feature flag web_activity_version=v2 no payload para rollback',
+  '[v3.10.38-WEB-ACTIVITY-REAL-TIME] FEATURE: Agregacao por dominio com soma de visit_count e ultimo visited_at',
+  '[v3.10.38-WEB-ACTIVITY-REAL-TIME] GUARD: Performance guard 200MB para arquivos de historico grandes',
+  '[v3.10.38-WEB-ACTIVITY-REAL-TIME] GUARD: Timeout SQLite de 2s para evitar travamentos',
+  '[v3.10.38-WEB-ACTIVITY-REAL-TIME] FALLBACK: Regex como fallback se SQLite indisponivel',
+  '[v3.10.38-WEB-ACTIVITY-REAL-TIME] FIX: ConvertFrom-WebKitTimestamp para Chrome/Edge (microseconds since 1601)',
+  '[v3.10.38-WEB-ACTIVITY-REAL-TIME] FIX: ConvertFrom-PRTime para Firefox (microseconds since 1970)',
   '[v3.10.37-NO-EXIT-EVER] CRITICAL FIX: Handler update_agent NUNCA faz exit 0 - elimina mortes de agente definitivamente',
   '[v3.10.37-NO-EXIT-EVER] CRITICAL FIX: Nova versao salva em disco, sera carregada no proximo boot do Windows',
   '[v3.10.37-NO-EXIT-EVER] CRITICAL FIX: Agente continua operando 24/7 sem interrupcao durante auto-updates',

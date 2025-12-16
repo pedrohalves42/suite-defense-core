@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.37-NO-EXIT-EVER
+    CyberShield Agent - Windows v3.10.38-WEB-ACTIVITY-REAL-TIME
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -12,7 +12,7 @@
     - Inventario de software (software_inventory_collect)
     - Scanner de vulnerabilidades leve (light_vuln_scan)
     - Coleta de status de antivirus (collect_antivirus_status)
-    - Atividade web de TODOS OS PERFIS DE USUARIO (collect_web_activity)
+    - Atividade web com TIMESTAMPS REAIS e VISIT_COUNT (collect_web_activity v2)
     - Auto-remediacao basica (fix_firewall, restart_service)
     - Rotacao automatica de logs (7 dias / 10MB max)
     
@@ -38,7 +38,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.37-NO-EXIT-EVER"
+    [string]$AgentVersion = "v3.10.38-WEB-ACTIVITY-REAL-TIME"
 )
 
 $ErrorActionPreference = "Stop"
@@ -806,14 +806,119 @@ function Invoke-CollectAntivirusStatusJob {
 }
 
 # ============================================
-#  WEB ACTIVITY JOB (SITES ACESSADOS)
+#  WEB ACTIVITY JOB (SITES ACESSADOS) v2
+#  - Timestamps reais do navegador
+#  - Visit count real do historico
+#  - Feature flag web_activity_version: v2
 # ============================================
+
+# Converter WebKit timestamp (Chrome/Edge) para DateTime
+# WebKit: microseconds since 1601-01-01
+function ConvertFrom-WebKitTimestamp {
+    param([Nullable[Int64]]$timestamp)
+    if (-not $timestamp -or $timestamp -le 0) { return $null }
+    try {
+        $origin = [DateTime]::new(1601, 1, 1, 0, 0, 0, [DateTimeKind]::Utc)
+        return $origin.AddTicks($timestamp * 10)
+    } catch {
+        return $null
+    }
+}
+
+# Converter Firefox PRTime para DateTime
+# PRTime: microseconds since 1970-01-01
+function ConvertFrom-PRTime {
+    param([Nullable[Int64]]$timestamp)
+    if (-not $timestamp -or $timestamp -le 0) { return $null }
+    try {
+        return [DateTimeOffset]::FromUnixTimeMilliseconds(
+            [math]::Floor($timestamp / 1000)
+        ).UtcDateTime
+    } catch {
+        return $null
+    }
+}
+
+# Extrair dominio de URL
+function Extract-DomainFromUrl {
+    param([string]$url)
+    if ([string]::IsNullOrWhiteSpace($url)) { return $null }
+    try {
+        $match = [regex]::Match($url, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+        if ($match.Success) {
+            return $match.Groups[1].Value
+        }
+    } catch {}
+    return $null
+}
+
+# Coleta SQLite segura com timeout
+function Get-BrowserHistorySQLite {
+    param(
+        [string]$DbPath,
+        [string]$Query,
+        [string]$BrowserName,
+        [string]$UserName
+    )
+    
+    $results = New-Object System.Collections.ArrayList
+    
+    try {
+        # Guard de performance: arquivos > 200MB sao ignorados
+        $fileInfo = Get-Item $DbPath -ErrorAction Stop
+        $maxSize = 200 * 1024 * 1024  # 200MB
+        if ($fileInfo.Length -gt $maxSize) {
+            Write-Log "[WEB-ACTIVITY] $BrowserName ($UserName): arquivo muito grande ($('{0:N0}' -f ($fileInfo.Length / 1MB))MB), pulando SQLite" "WARN"
+            return $null
+        }
+        
+        # Tentar carregar assembly SQLite (disponivel no .NET)
+        $assembly = $null
+        try {
+            $assembly = [System.Reflection.Assembly]::LoadWithPartialName("System.Data.SQLite")
+        } catch {}
+        
+        if (-not $assembly) {
+            # Fallback: usar ADO.NET com provider ODBC ou Jet
+            # Na maioria dos casos Windows nao tem SQLite provider nativo
+            # Retorna $null para usar fallback regex
+            return $null
+        }
+        
+        $connectionString = "Data Source=$DbPath;Version=3;Read Only=True;Journal Mode=Off;"
+        $connection = New-Object System.Data.SQLite.SQLiteConnection($connectionString)
+        $connection.Open()
+        
+        $command = $connection.CreateCommand()
+        $command.CommandText = $Query
+        $command.CommandTimeout = 2  # Timeout de 2 segundos
+        
+        $reader = $command.ExecuteReader()
+        while ($reader.Read()) {
+            [void]$results.Add(@{
+                url = $reader["url"]
+                last_visit_time = $reader["last_visit_time"]
+                visit_count = $reader["visit_count"]
+            })
+        }
+        
+        $reader.Close()
+        $connection.Close()
+        
+        return $results
+        
+    } catch {
+        Write-Log "[WEB-ACTIVITY] SQLite falhou para $BrowserName ($UserName): $($_.Exception.Message)" "DEBUG"
+        return $null
+    }
+}
+
 function Invoke-WebActivityJob {
     param(
         $Job
     )
 
-    Write-Log "[WEB-ACTIVITY] Iniciando coleta de atividade web..." "INFO"
+    Write-Log "[WEB-ACTIVITY-V2] Iniciando coleta de atividade web com timestamps reais..." "INFO"
 
     try {
         $payload = $null
@@ -821,7 +926,7 @@ function Invoke-WebActivityJob {
             try {
                 $payload = $Job.payload | ConvertFrom-Json
             } catch {
-                Write-Log "[WEB-ACTIVITY] Payload invalido, usando defaults" "WARN"
+                Write-Log "[WEB-ACTIVITY-V2] Payload invalido, usando defaults" "WARN"
             }
         }
 
@@ -831,11 +936,11 @@ function Invoke-WebActivityJob {
         }
 
         $nowUtc = [DateTime]::UtcNow
-        # OTIMIZACAO: Usar ArrayList em vez de += para melhor performance O(n) vs O(n?)
+        # Usar ArrayList para performance O(n)
         $items = New-Object System.Collections.ArrayList
 
-        # 1. Coletar DNS Cache
-        Write-Log "[WEB-ACTIVITY] Coletando cache DNS..." "INFO"
+        # 1. Coletar DNS Cache (sem timestamps reais - usa hora atual)
+        Write-Log "[WEB-ACTIVITY-V2] Coletando cache DNS..." "INFO"
         try {
             $dnsEntries = Get-DnsClientCache -ErrorAction SilentlyContinue
             if ($dnsEntries) {
@@ -846,100 +951,129 @@ function Invoke-WebActivityJob {
 
                 foreach ($entry in $dnsEntries) {
                     $domain = $entry.Name
-                    if ([string]::IsNullOrWhiteSpace($domain)) {
-                        continue
-                    }
-
-                    if ($domain -like "localhost*" -or
-                        $domain -like "*.local" -or
-                        $domain -like "local") {
-                        continue
-                    }
+                    if ([string]::IsNullOrWhiteSpace($domain)) { continue }
+                    if ($domain -like "localhost*" -or $domain -like "*.local" -or $domain -like "local") { continue }
 
                     [void]$items.Add(@{
                         domain = $domain
                         source = "dns_cache"
                         visited_at = $nowUtc.ToString("o")
+                        visit_count = 1  # DNS nao tem contagem real
                     })
                 }
-                Write-Log "[WEB-ACTIVITY] Cache DNS: $($dnsEntries.Count) dominios coletados" "INFO"
+                Write-Log "[WEB-ACTIVITY-V2] Cache DNS: $($dnsEntries.Count) dominios" "INFO"
             }
         } catch {
-            Write-Log "[WEB-ACTIVITY] Erro ao ler cache DNS: $($_.Exception.Message)" "WARN"
+            Write-Log "[WEB-ACTIVITY-V2] Erro ao ler cache DNS: $($_.Exception.Message)" "WARN"
         }
 
         # 2. Coletar historico de TODOS OS PERFIS DE USUARIO
-        # O agente roda como SYSTEM, entao precisamos iterar C:\Users\*
-        Write-Log "[WEB-ACTIVITY] Coletando historico de todos os perfis de usuario..." "INFO"
+        Write-Log "[WEB-ACTIVITY-V2] Coletando historico de todos os perfis de usuario..." "INFO"
         
         $userProfiles = @()
         try {
             $userProfiles = Get-ChildItem -Path "C:\Users" -Directory -ErrorAction SilentlyContinue | 
                 Where-Object { $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
-            Write-Log "[WEB-ACTIVITY] Encontrados $($userProfiles.Count) perfis de usuario" "INFO"
+            Write-Log "[WEB-ACTIVITY-V2] Encontrados $($userProfiles.Count) perfis de usuario" "INFO"
         } catch {
-            Write-Log "[WEB-ACTIVITY] Erro ao listar perfis de usuario: $($_.Exception.Message)" "WARN"
+            Write-Log "[WEB-ACTIVITY-V2] Erro ao listar perfis de usuario: $($_.Exception.Message)" "WARN"
         }
         
         foreach ($userProfile in $userProfiles) {
             $userName = $userProfile.Name
             $userPath = $userProfile.FullName
             
-            Write-Log "[WEB-ACTIVITY] Processando perfil: $userName" "INFO"
+            Write-Log "[WEB-ACTIVITY-V2] Processando perfil: $userName" "INFO"
             
-            # 2a. Chrome History para este usuario
+            # 2a. Chrome History - SQLITE COM TIMESTAMPS REAIS
             try {
                 $chromeHistoryPath = Join-Path $userPath "AppData\Local\Google\Chrome\User Data\Default\History"
                 if (Test-Path $chromeHistoryPath) {
+                    # Guard de performance: verificar tamanho antes de copiar
+                    $fileInfo = Get-Item $chromeHistoryPath -ErrorAction SilentlyContinue
+                    if ($fileInfo -and $fileInfo.Length -gt (200 * 1024 * 1024)) {
+                        Write-Log "[WEB-ACTIVITY-V2] Chrome ($userName): arquivo muito grande, usando fallback regex" "WARN"
+                    }
+                    
                     $tempHistoryPath = "$env:TEMP\chrome_history_temp_$(Get-Random).db"
                     Copy-Item -Path $chromeHistoryPath -Destination $tempHistoryPath -Force -ErrorAction SilentlyContinue
                     
                     if (Test-Path $tempHistoryPath) {
+                        $sqliteResults = $null
+                        
+                        # Tentar SQLite primeiro para dados reais
                         try {
-                            # OTIMIZACAO: Limitar leitura a 5MB para evitar picos de memoria
-                            $maxBytes = 5 * 1024 * 1024  # 5MB
-                            $fileInfo = Get-Item $tempHistoryPath
-                            $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
-                            
-                            $fileStream = [System.IO.File]::OpenRead($tempHistoryPath)
-                            $buffer = New-Object byte[] $bytesToRead
-                            [void]$fileStream.Read($buffer, 0, $bytesToRead)
-                            $fileStream.Close()
-                            $fileStream.Dispose()
-                            
-                            if ($buffer) {
-                                $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
-                                $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
-                                
-                                $chromeDomains = $urlMatches | 
-                                    ForEach-Object { $_.Groups[1].Value } | 
-                                    Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*google*" } |
-                                    Select-Object -Unique -First 50
-                                
-                                foreach ($domain in $chromeDomains) {
-                                    [void]$items.Add(@{
-                                        domain = $domain
-                                        source = "chrome_history_$userName"
-                                        visited_at = $nowUtc.ToString("o")
-                                    })
-                                }
-                                Write-Log "[WEB-ACTIVITY] Chrome ($userName): $($chromeDomains.Count) dominios" "INFO"
-                                
-                                # Liberar memoria explicitamente
-                                $buffer = $null
-                                $dataString = $null
-                            }
+                            $sqliteResults = Get-BrowserHistorySQLite `
+                                -DbPath $tempHistoryPath `
+                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" `
+                                -BrowserName "Chrome" `
+                                -UserName $userName
                         } catch {
-                            Write-Log "[WEB-ACTIVITY] Erro ao ler Chrome ($userName): $($_.Exception.Message)" "WARN"
+                            Write-Log "[WEB-ACTIVITY-V2] Chrome SQLite falhou ($userName): $($_.Exception.Message)" "DEBUG"
+                        }
+                        
+                        if ($sqliteResults -and $sqliteResults.Count -gt 0) {
+                            # SUCESSO: Dados reais do SQLite
+                            foreach ($row in $sqliteResults) {
+                                $domain = Extract-DomainFromUrl $row.url
+                                if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local" -or $domain -like "*google*") { continue }
+                                
+                                $visitedAt = ConvertFrom-WebKitTimestamp $row.last_visit_time
+                                [void]$items.Add(@{
+                                    domain = $domain
+                                    source = "chrome_history_$userName"
+                                    visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
+                                    visit_count = [int]$row.visit_count
+                                })
+                            }
+                            Write-Log "[WEB-ACTIVITY-V2] Chrome ($userName): $($sqliteResults.Count) registros via SQLite (timestamps reais)" "INFO"
+                        } else {
+                            # FALLBACK: Regex para compatibilidade
+                            try {
+                                $maxBytes = 5 * 1024 * 1024
+                                $fileInfo = Get-Item $tempHistoryPath
+                                $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
+                                
+                                $fileStream = [System.IO.File]::OpenRead($tempHistoryPath)
+                                $buffer = New-Object byte[] $bytesToRead
+                                [void]$fileStream.Read($buffer, 0, $bytesToRead)
+                                $fileStream.Close()
+                                $fileStream.Dispose()
+                                
+                                if ($buffer) {
+                                    $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
+                                    $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+                                    
+                                    $chromeDomains = $urlMatches | 
+                                        ForEach-Object { $_.Groups[1].Value } | 
+                                        Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*google*" } |
+                                        Select-Object -Unique -First 50
+                                    
+                                    foreach ($domain in $chromeDomains) {
+                                        [void]$items.Add(@{
+                                            domain = $domain
+                                            source = "chrome_history_$userName"
+                                            visited_at = $nowUtc.ToString("o")
+                                            visit_count = 1  # Fallback: sem contagem real
+                                        })
+                                    }
+                                    Write-Log "[WEB-ACTIVITY-V2] Chrome ($userName): $($chromeDomains.Count) dominios via regex (fallback)" "INFO"
+                                    
+                                    $buffer = $null
+                                    $dataString = $null
+                                }
+                            } catch {
+                                Write-Log "[WEB-ACTIVITY-V2] Chrome regex falhou ($userName): $($_.Exception.Message)" "WARN"
+                            }
                         }
                         Remove-Item $tempHistoryPath -Force -ErrorAction SilentlyContinue
                     }
                 }
             } catch {
-                Write-Log "[WEB-ACTIVITY] Erro ao acessar Chrome ($userName): $($_.Exception.Message)" "WARN"
+                Write-Log "[WEB-ACTIVITY-V2] Erro ao acessar Chrome ($userName): $($_.Exception.Message)" "WARN"
             }
             
-            # 2b. Firefox History para este usuario
+            # 2b. Firefox History - SQLITE COM TIMESTAMPS REAIS
             try {
                 $firefoxProfilesPath = Join-Path $userPath "AppData\Roaming\Mozilla\Firefox\Profiles"
                 if (Test-Path $firefoxProfilesPath) {
@@ -951,41 +1085,71 @@ function Invoke-WebActivityJob {
                             Copy-Item -Path $placesPath -Destination $tempPlacesPath -Force -ErrorAction SilentlyContinue
                             
                             if (Test-Path $tempPlacesPath) {
+                                $sqliteResults = $null
+                                
+                                # Tentar SQLite primeiro
                                 try {
-                                    # OTIMIZACAO: Limitar leitura a 5MB
-                                    $maxBytes = 5 * 1024 * 1024
-                                    $fileInfo = Get-Item $tempPlacesPath
-                                    $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
-                                    
-                                    $fileStream = [System.IO.File]::OpenRead($tempPlacesPath)
-                                    $buffer = New-Object byte[] $bytesToRead
-                                    [void]$fileStream.Read($buffer, 0, $bytesToRead)
-                                    $fileStream.Close()
-                                    $fileStream.Dispose()
-                                    
-                                    if ($buffer) {
-                                        $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
-                                        $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
-                                        
-                                        $firefoxDomains = $urlMatches | 
-                                            ForEach-Object { $_.Groups[1].Value } | 
-                                            Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*mozilla*" } |
-                                            Select-Object -Unique -First 50
-                                        
-                                        foreach ($domain in $firefoxDomains) {
-                                            [void]$items.Add(@{
-                                                domain = $domain
-                                                source = "firefox_history_$userName"
-                                                visited_at = $nowUtc.ToString("o")
-                                            })
-                                        }
-                                        Write-Log "[WEB-ACTIVITY] Firefox ($userName): $($firefoxDomains.Count) dominios" "INFO"
-                                        
-                                        $buffer = $null
-                                        $dataString = $null
-                                    }
+                                    $sqliteResults = Get-BrowserHistorySQLite `
+                                        -DbPath $tempPlacesPath `
+                                        -Query "SELECT url, last_visit_date, visit_count FROM moz_places WHERE visit_count > 0 ORDER BY last_visit_date DESC LIMIT 200" `
+                                        -BrowserName "Firefox" `
+                                        -UserName $userName
                                 } catch {
-                                    Write-Log "[WEB-ACTIVITY] Erro ao ler Firefox ($userName): $($_.Exception.Message)" "WARN"
+                                    Write-Log "[WEB-ACTIVITY-V2] Firefox SQLite falhou ($userName): $($_.Exception.Message)" "DEBUG"
+                                }
+                                
+                                if ($sqliteResults -and $sqliteResults.Count -gt 0) {
+                                    foreach ($row in $sqliteResults) {
+                                        $domain = Extract-DomainFromUrl $row.url
+                                        if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local" -or $domain -like "*mozilla*") { continue }
+                                        
+                                        $visitedAt = ConvertFrom-PRTime $row.last_visit_time
+                                        [void]$items.Add(@{
+                                            domain = $domain
+                                            source = "firefox_history_$userName"
+                                            visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
+                                            visit_count = [int]$row.visit_count
+                                        })
+                                    }
+                                    Write-Log "[WEB-ACTIVITY-V2] Firefox ($userName): $($sqliteResults.Count) registros via SQLite" "INFO"
+                                } else {
+                                    # Fallback regex
+                                    try {
+                                        $maxBytes = 5 * 1024 * 1024
+                                        $fileInfo = Get-Item $tempPlacesPath
+                                        $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
+                                        
+                                        $fileStream = [System.IO.File]::OpenRead($tempPlacesPath)
+                                        $buffer = New-Object byte[] $bytesToRead
+                                        [void]$fileStream.Read($buffer, 0, $bytesToRead)
+                                        $fileStream.Close()
+                                        $fileStream.Dispose()
+                                        
+                                        if ($buffer) {
+                                            $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
+                                            $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+                                            
+                                            $firefoxDomains = $urlMatches | 
+                                                ForEach-Object { $_.Groups[1].Value } | 
+                                                Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*mozilla*" } |
+                                                Select-Object -Unique -First 50
+                                            
+                                            foreach ($domain in $firefoxDomains) {
+                                                [void]$items.Add(@{
+                                                    domain = $domain
+                                                    source = "firefox_history_$userName"
+                                                    visited_at = $nowUtc.ToString("o")
+                                                    visit_count = 1
+                                                })
+                                            }
+                                            Write-Log "[WEB-ACTIVITY-V2] Firefox ($userName): $($firefoxDomains.Count) dominios via regex" "INFO"
+                                            
+                                            $buffer = $null
+                                            $dataString = $null
+                                        }
+                                    } catch {
+                                        Write-Log "[WEB-ACTIVITY-V2] Firefox regex falhou ($userName): $($_.Exception.Message)" "WARN"
+                                    }
                                 }
                                 Remove-Item $tempPlacesPath -Force -ErrorAction SilentlyContinue
                             }
@@ -994,10 +1158,10 @@ function Invoke-WebActivityJob {
                     }
                 }
             } catch {
-                Write-Log "[WEB-ACTIVITY] Erro ao acessar Firefox ($userName): $($_.Exception.Message)" "WARN"
+                Write-Log "[WEB-ACTIVITY-V2] Erro ao acessar Firefox ($userName): $($_.Exception.Message)" "WARN"
             }
             
-            # 2c. Edge History para este usuario
+            # 2c. Edge History - SQLITE COM TIMESTAMPS REAIS
             try {
                 $edgeHistoryPath = Join-Path $userPath "AppData\Local\Microsoft\Edge\User Data\Default\History"
                 if (Test-Path $edgeHistoryPath) {
@@ -1005,77 +1169,120 @@ function Invoke-WebActivityJob {
                     Copy-Item -Path $edgeHistoryPath -Destination $tempHistoryPath -Force -ErrorAction SilentlyContinue
                     
                     if (Test-Path $tempHistoryPath) {
+                        $sqliteResults = $null
+                        
                         try {
-                            # OTIMIZACAO: Limitar leitura a 5MB
-                            $maxBytes = 5 * 1024 * 1024
-                            $fileInfo = Get-Item $tempHistoryPath
-                            $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
-                            
-                            $fileStream = [System.IO.File]::OpenRead($tempHistoryPath)
-                            $buffer = New-Object byte[] $bytesToRead
-                            [void]$fileStream.Read($buffer, 0, $bytesToRead)
-                            $fileStream.Close()
-                            $fileStream.Dispose()
-                            
-                            if ($buffer) {
-                                $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
-                                $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
-                                
-                                $edgeDomains = $urlMatches | 
-                                    ForEach-Object { $_.Groups[1].Value } | 
-                                    Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*microsoft*" -and $_ -notlike "*bing*" } |
-                                    Select-Object -Unique -First 50
-                                
-                                foreach ($domain in $edgeDomains) {
-                                    [void]$items.Add(@{
-                                        domain = $domain
-                                        source = "edge_history_$userName"
-                                        visited_at = $nowUtc.ToString("o")
-                                    })
-                                }
-                                Write-Log "[WEB-ACTIVITY] Edge ($userName): $($edgeDomains.Count) dominios" "INFO"
-                                
-                                $buffer = $null
-                                $dataString = $null
-                            }
+                            $sqliteResults = Get-BrowserHistorySQLite `
+                                -DbPath $tempHistoryPath `
+                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" `
+                                -BrowserName "Edge" `
+                                -UserName $userName
                         } catch {
-                            Write-Log "[WEB-ACTIVITY] Erro ao ler Edge ($userName): $($_.Exception.Message)" "WARN"
+                            Write-Log "[WEB-ACTIVITY-V2] Edge SQLite falhou ($userName): $($_.Exception.Message)" "DEBUG"
+                        }
+                        
+                        if ($sqliteResults -and $sqliteResults.Count -gt 0) {
+                            foreach ($row in $sqliteResults) {
+                                $domain = Extract-DomainFromUrl $row.url
+                                if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local" -or $domain -like "*microsoft*" -or $domain -like "*bing*") { continue }
+                                
+                                $visitedAt = ConvertFrom-WebKitTimestamp $row.last_visit_time
+                                [void]$items.Add(@{
+                                    domain = $domain
+                                    source = "edge_history_$userName"
+                                    visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
+                                    visit_count = [int]$row.visit_count
+                                })
+                            }
+                            Write-Log "[WEB-ACTIVITY-V2] Edge ($userName): $($sqliteResults.Count) registros via SQLite" "INFO"
+                        } else {
+                            # Fallback regex
+                            try {
+                                $maxBytes = 5 * 1024 * 1024
+                                $fileInfo = Get-Item $tempHistoryPath
+                                $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
+                                
+                                $fileStream = [System.IO.File]::OpenRead($tempHistoryPath)
+                                $buffer = New-Object byte[] $bytesToRead
+                                [void]$fileStream.Read($buffer, 0, $bytesToRead)
+                                $fileStream.Close()
+                                $fileStream.Dispose()
+                                
+                                if ($buffer) {
+                                    $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
+                                    $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+                                    
+                                    $edgeDomains = $urlMatches | 
+                                        ForEach-Object { $_.Groups[1].Value } | 
+                                        Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*microsoft*" -and $_ -notlike "*bing*" } |
+                                        Select-Object -Unique -First 50
+                                    
+                                    foreach ($domain in $edgeDomains) {
+                                        [void]$items.Add(@{
+                                            domain = $domain
+                                            source = "edge_history_$userName"
+                                            visited_at = $nowUtc.ToString("o")
+                                            visit_count = 1
+                                        })
+                                    }
+                                    Write-Log "[WEB-ACTIVITY-V2] Edge ($userName): $($edgeDomains.Count) dominios via regex" "INFO"
+                                    
+                                    $buffer = $null
+                                    $dataString = $null
+                                }
+                            } catch {
+                                Write-Log "[WEB-ACTIVITY-V2] Edge regex falhou ($userName): $($_.Exception.Message)" "WARN"
+                            }
                         }
                         Remove-Item $tempHistoryPath -Force -ErrorAction SilentlyContinue
                     }
                 }
             } catch {
-                Write-Log "[WEB-ACTIVITY] Erro ao acessar Edge ($userName): $($_.Exception.Message)" "WARN"
+                Write-Log "[WEB-ACTIVITY-V2] Erro ao acessar Edge ($userName): $($_.Exception.Message)" "WARN"
             }
         }
 
-        # FIX v3.10.28: Deduplicacao robusta usando hashtable (Sort-Object -Unique nao funciona com hashtables)
-        # Usa domain como chave para garantir unicidade real
-        $dedupMap = @{}
+        # AGREGACAO POR DOMINIO: soma visit_count, usa ultimo visited_at
+        Write-Log "[WEB-ACTIVITY-V2] Agregando por dominio..." "INFO"
+        $aggregated = @{}
         foreach ($item in $items) {
             $key = $item.domain
-            if (-not $dedupMap.ContainsKey($key)) {
-                $dedupMap[$key] = $item
+            if ($aggregated.ContainsKey($key)) {
+                $aggregated[$key].visit_count += $item.visit_count
+                # Manter o timestamp mais recente
+                if ($item.visited_at -gt $aggregated[$key].visited_at) {
+                    $aggregated[$key].visited_at = $item.visited_at
+                    $aggregated[$key].source = $item.source
+                }
+            } else {
+                $aggregated[$key] = @{
+                    domain = $item.domain
+                    source = $item.source
+                    visited_at = $item.visited_at
+                    visit_count = $item.visit_count
+                }
             }
         }
-        $uniqueItems = @($dedupMap.Values) | Select-Object -First $maxDomains
         
-        Write-Log "[WEB-ACTIVITY] Deduplicacao: $($items.Count) items -> $($uniqueItems.Count) unicos" "INFO"
+        $uniqueItems = @($aggregated.Values) | Select-Object -First $maxDomains
+        
+        Write-Log "[WEB-ACTIVITY-V2] Agregacao: $($items.Count) items -> $($uniqueItems.Count) dominios unicos" "INFO"
 
         if (-not $uniqueItems.Count) {
-            Write-Log "[WEB-ACTIVITY] Nenhum dominio encontrado em nenhuma fonte" "INFO"
-
+            Write-Log "[WEB-ACTIVITY-V2] Nenhum dominio encontrado em nenhuma fonte" "INFO"
             return @{
                 success = $true
                 output  = "Nenhum dominio encontrado"
             }
         }
 
-        Write-Log "[WEB-ACTIVITY] Total de dominios unicos coletados: $($uniqueItems.Count)" "INFO"
+        Write-Log "[WEB-ACTIVITY-V2] Total de dominios unicos: $($uniqueItems.Count)" "INFO"
 
+        # FEATURE FLAG: web_activity_version v2 para rastreabilidade e rollback
         $body = @{
             agent_id = $Job.agent_id
-            items    = $uniqueItems  # FIX v3.10.22: Usar lista deduplicada ao inves de $items
+            items    = $uniqueItems
+            web_activity_version = "v2"  # Feature flag para identificar dados novos
         }
 
         $result = Invoke-SecureRequest `
@@ -1088,11 +1295,11 @@ function Invoke-WebActivityJob {
             throw "Falha ao enviar atividade web (HTTP $($result.StatusCode))"
         }
 
-        Write-Log "[WEB-ACTIVITY] Atividade enviada. Dominios unicos: $($uniqueItems.Count)" "SUCCESS"
+        Write-Log "[WEB-ACTIVITY-V2] Atividade enviada com sucesso. Dominios: $($uniqueItems.Count)" "SUCCESS"
 
         return @{
             success = $true
-            output  = "Atividade web enviada. Dominios unicos: $($uniqueItems.Count)"
+            output  = "Atividade web v2 enviada. Dominios: $($uniqueItems.Count)"
         }
     }
     catch {
