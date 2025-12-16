@@ -160,50 +160,61 @@ Deno.serve(async (req) => {
     }
 
     // ============================================================
-    // CRITICAL: Normalizar line endings para Windows (CRLF)
-    // e calcular SHA256 do conteúdo EXATAMENTE como será salvo no disco
+    // BACKWARD COMPATIBLE: Usa SHA256 do banco calculado no momento do registro
+    // O SHA256 no banco deve ser calculado da MESMA forma que o agente v3.10.37 salva:
+    // - UTF-8 sem BOM
+    // - WriteAllText
+    // Isso evita problemas de transformação JSON e normalização runtime
     // ============================================================
+    
+    // Usa SHA256 do banco - calculado no momento do registro da release
+    // Isso garante compatibilidade com agentes antigos (v3.10.37 e anteriores)
+    const storedSha256 = release.sha256;
+    
+    // Para agentes novos (v3.10.39+) que usam Base64, precisamos:
+    // 1. Normalizar para CRLF (Windows)
+    // 2. Calcular SHA256 dos bytes normalizados
+    // 3. Enviar Base64 dos bytes normalizados
     const normalizeForWindows = (content: string): string => {
-      // Primeiro converte todos os line endings para LF, depois para CRLF
       return content
-        .replace(/\r\n/g, '\n')   // Remove CRLF existentes
-        .replace(/\r/g, '\n')      // Remove CR soltos
-        .replace(/\n/g, '\r\n');   // Converte todos para CRLF
+        .replace(/\r\n/g, '\n')   
+        .replace(/\r/g, '\n')     
+        .replace(/\n/g, '\r\n');  
     };
-
-    // Normalizar script para Windows
+    
     const normalizedScript = normalizeForWindows(finalScriptContent);
-
-    // Calcular SHA256 do script NORMALIZADO (verdade absoluta)
     const encoder = new TextEncoder();
     const scriptBytes = encoder.encode(normalizedScript);
+    
+    // SHA256 dos bytes normalizados (para agentes v3.10.39+ que usam Base64)
     const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-    // ============================================================
-    // BASE64 ENCODING - Industrial-grade usando Deno std lib
-    // Zero stack usage, O(n) memória, funciona com Uint8Array de qualquer tamanho
-    // ============================================================
+    const base64Sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    // Base64 dos bytes normalizados
     const base64Script = encodeBase64(scriptBytes);
 
-    logger.info('[serve-agent-update] Script normalizado, SHA256 calculado e Base64 gerado', { 
+    logger.info('[serve-agent-update] Script preparado para update', { 
       requestId, 
       agentName: agent.agent_name,
       fromVersion: agent.agent_version,
       toVersion: release.version,
       originalSize: finalScriptContent.length,
-      normalizedSize: normalizedScript.length,
-      base64Size: base64Script.length,
-      sha256: calculatedSha256.substring(0, 16) + '...'
+      storedSha256: storedSha256.substring(0, 16) + '...',
+      base64Sha256: base64Sha256.substring(0, 16) + '...',
+      base64Size: base64Script.length
     });
 
     return new Response(
       JSON.stringify({
         version: release.version,
-        script_content: normalizedScript,        // ← Fallback para agentes antigos
-        script_content_base64: base64Script,     // ← NOVO: Base64 para agentes v3.10.39+
-        sha256: calculatedSha256,                // ← SHA256 dos bytes reais
+        // BACKWARD COMPATIBLE: script_content como string + SHA256 do banco
+        // Agentes v3.10.37 e anteriores usam isso
+        script_content: finalScriptContent,      // ← Script original (sem normalização runtime)
+        sha256: storedSha256,                    // ← SHA256 do banco (calculado no registro)
+        // NOVO: Para agentes v3.10.39+ que suportam Base64
+        script_content_base64: base64Script,     // ← Base64 dos bytes CRLF-normalizados
+        sha256_base64: base64Sha256,             // ← SHA256 dos bytes Base64
         release_notes: release.release_notes,
         platform: platform,
         current_version: agent.agent_version
