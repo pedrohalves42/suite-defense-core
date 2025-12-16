@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # CyberShield Agent - Linux
-# Version: v3.10.37-NO-EXIT-EVER
+# Version: v3.10.40-DNS-FILTER
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ SERVER_URL="${SERVER_URL:-${CYBERSHIELD_SERVER_URL:-}}"
 AGENT_TOKEN="${AGENT_TOKEN:-${CYBERSHIELD_AGENT_TOKEN:-}}"
 HMAC_SECRET="${HMAC_SECRET:-${CYBERSHIELD_HMAC_SECRET:-}}"
 AGENT_NAME="${AGENT_NAME:-${CYBERSHIELD_AGENT_NAME:-$(hostname -s)}}"
-AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-v3.10.37-NO-EXIT-EVER}}"
+AGENT_VERSION="${AGENT_VERSION:-${CYBERSHIELD_AGENT_VERSION:-v3.10.40-DNS-FILTER}}"
 
 # Parse argumentos (sobrescreve env vars)
 while [[ $# -gt 0 ]]; do
