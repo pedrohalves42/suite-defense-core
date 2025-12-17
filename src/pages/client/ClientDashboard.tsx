@@ -251,6 +251,57 @@ export const ClientDashboard = () => {
         </p>
       </div>
 
+      {/* Contextual Welcome Message */}
+      {(stats?.healthScore || 0) >= 80 && (stats?.unresolvedAlerts || 0) === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className="bg-green-500/5 border-green-500/20">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-green-500/10">
+                  <CheckCircle2 className="h-6 w-6 text-green-500" />
+                </div>
+                <div>
+                  <p className="font-medium text-green-700 dark:text-green-400">
+                    🎉 Parabéns! Seus computadores estão protegidos!
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Continue monitorando para manter a segurança em dia.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {(stats?.criticalAlerts || 0) > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className="bg-red-500/10 border-red-500/30 animate-pulse">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-red-500/10">
+                  <AlertTriangle className="h-6 w-6 text-red-500" />
+                </div>
+                <div>
+                  <p className="font-medium text-red-700 dark:text-red-400">
+                    ⚠️ Atenção! Existem {stats?.criticalAlerts} alerta(s) crítico(s)
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Revise os alertas abaixo e tome as ações necessárias.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Health Score + Next Steps Row */}
       <div className="grid gap-4 md:grid-cols-3">
         {/* Health Score Card */}

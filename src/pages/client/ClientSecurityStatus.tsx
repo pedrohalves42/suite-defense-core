@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -12,7 +13,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   HelpCircle,
-  Info
+  Info,
+  ExternalLink,
+  RefreshCw
 } from 'lucide-react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -288,7 +291,7 @@ export const ClientSecurityStatus = () => {
                             <span className="font-medium">{vuln.cve_id}</span>
                           </HelpTooltip>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2">
                           <Badge className={getSeverityColor(vuln.severity)}>
                             {vuln.severity}
                           </Badge>
@@ -299,6 +302,23 @@ export const ClientSecurityStatus = () => {
                               </Badge>
                             </HelpTooltip>
                           )}
+                          {vuln.cve_id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              asChild
+                            >
+                              <a 
+                                href={`https://nvd.nist.gov/vuln/detail/${vuln.cve_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Detalhes
+                              </a>
+                            </Button>
+                          )}
                         </div>
                       </div>
                       <p className="text-sm text-muted-foreground">
@@ -308,6 +328,13 @@ export const ClientSecurityStatus = () => {
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                           {vuln.description}
                         </p>
+                      )}
+                      {vuln.severity?.toLowerCase() === 'critical' && (
+                        <div className="mt-2 pt-2 border-t border-red-500/20">
+                          <p className="text-xs text-red-600 font-medium">
+                            💡 Ação recomendada: Atualize {vuln.software_name} para a versão mais recente
+                          </p>
+                        </div>
                       )}
                     </motion.div>
                   ))}
@@ -361,9 +388,20 @@ export const ClientSecurityStatus = () => {
                         </Badge>
                       </div>
                       {av.status !== 'enabled' && (
-                        <p className="text-sm text-red-500 mb-2">
-                          ⚠️ Ative o antivírus para manter seu computador protegido!
-                        </p>
+                        <div className="mb-3 p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+                          <p className="text-sm text-red-600 font-medium mb-2">
+                            ⚠️ Seu antivírus está desativado!
+                          </p>
+                          <p className="text-xs text-muted-foreground mb-2">
+                            Isso deixa seu computador vulnerável a vírus e malware.
+                          </p>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="destructive" className="text-xs h-7">
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                              Como ativar?
+                            </Button>
+                          </div>
+                        </div>
                       )}
                       <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                         {av.last_scan_at && (
