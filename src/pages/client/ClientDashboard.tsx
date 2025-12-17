@@ -4,15 +4,77 @@ import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { 
   Monitor, 
   ShieldCheck, 
   AlertTriangle, 
   Activity,
   CheckCircle2,
-  XCircle
+  XCircle,
+  ArrowRight,
+  Lightbulb,
+  TrendingUp,
+  TrendingDown
 } from 'lucide-react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+
+// Health Score Gauge Component
+const HealthGauge = ({ score }: { score: number }) => {
+  const getColor = () => {
+    if (score >= 80) return 'text-green-500';
+    if (score >= 50) return 'text-yellow-500';
+    return 'text-red-500';
+  };
+
+  const getLabel = () => {
+    if (score >= 80) return 'Excelente';
+    if (score >= 50) return 'Atenção';
+    return 'Crítico';
+  };
+
+  const circumference = 2 * Math.PI * 40;
+  const strokeDashoffset = circumference - (score / 100) * circumference;
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="relative w-28 h-28">
+        <svg className="w-28 h-28 transform -rotate-90" viewBox="0 0 100 100">
+          <circle
+            cx="50"
+            cy="50"
+            r="40"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="8"
+            className="text-muted/30"
+          />
+          <motion.circle
+            cx="50"
+            cy="50"
+            r="40"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="8"
+            strokeLinecap="round"
+            className={getColor()}
+            strokeDasharray={circumference}
+            initial={{ strokeDashoffset: circumference }}
+            animate={{ strokeDashoffset }}
+            transition={{ duration: 1, ease: "easeOut" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className={`text-2xl font-bold ${getColor()}`}>{score}</span>
+          <span className="text-xs text-muted-foreground">pontos</span>
+        </div>
+      </div>
+      <span className={`mt-2 text-sm font-medium ${getColor()}`}>{getLabel()}</span>
+    </div>
+  );
+};
 
 export const ClientDashboard = () => {
   const { tenant } = useTenant();
@@ -51,6 +113,12 @@ export const ClientDashboard = () => {
         .select('id', { count: 'exact', head: true })
         .eq('tenant_id', tenant.id);
 
+      // Fetch antivirus status
+      const { data: avStatus } = await supabase
+        .from('antivirus_status')
+        .select('status, threats_found')
+        .eq('tenant_id', tenant.id);
+
       const now = new Date();
       const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
       
@@ -60,19 +128,104 @@ export const ClientDashboard = () => {
 
       const offlineAgents = (agents?.length || 0) - onlineAgents;
 
+      // Calculate health score (0-100)
+      let healthScore = 100;
+      
+      // Deduct points for critical alerts
+      const criticalAlerts = alerts?.filter(a => a.severity === 'critical').length || 0;
+      healthScore -= criticalAlerts * 15;
+      
+      // Deduct for other alerts
+      healthScore -= ((alerts?.length || 0) - criticalAlerts) * 5;
+      
+      // Deduct for vulnerabilities
+      healthScore -= Math.min((vulnCount || 0) * 2, 20);
+      
+      // Deduct for offline agents
+      const totalAgents = agents?.length || 0;
+      if (totalAgents > 0) {
+        healthScore -= Math.round((offlineAgents / totalAgents) * 20);
+      }
+      
+      // Deduct for AV issues
+      const avDisabled = avStatus?.filter(a => a.status !== 'enabled').length || 0;
+      const avThreats = avStatus?.reduce((sum, a) => sum + (a.threats_found || 0), 0) || 0;
+      healthScore -= avDisabled * 10;
+      healthScore -= avThreats * 5;
+      
+      // Clamp to 0-100
+      healthScore = Math.max(0, Math.min(100, healthScore));
+
       return {
         totalAgents: agents?.length || 0,
         onlineAgents,
         offlineAgents,
         unresolvedAlerts: alerts?.length || 0,
-        criticalAlerts: alerts?.filter(a => a.severity === 'critical').length || 0,
+        criticalAlerts,
         recentReports: reports || [],
-        vulnerabilities: vulnCount || 0
+        vulnerabilities: vulnCount || 0,
+        healthScore,
+        hasAvIssues: avDisabled > 0 || avThreats > 0
       };
     },
     enabled: !!tenant?.id,
     refetchInterval: 30000
   });
+
+  // Generate next steps based on current status
+  const getNextSteps = () => {
+    const steps: { icon: React.ReactNode; text: string; link: string; priority: 'high' | 'medium' | 'low' }[] = [];
+
+    if ((stats?.criticalAlerts || 0) > 0) {
+      steps.push({
+        icon: <AlertTriangle className="h-4 w-4 text-red-500" />,
+        text: `Revise ${stats?.criticalAlerts} alerta(s) crítico(s)`,
+        link: '/client/dashboard',
+        priority: 'high'
+      });
+    }
+
+    if ((stats?.offlineAgents || 0) > 0) {
+      steps.push({
+        icon: <XCircle className="h-4 w-4 text-yellow-500" />,
+        text: `Verifique ${stats?.offlineAgents} computador(es) offline`,
+        link: '/client/computers',
+        priority: 'medium'
+      });
+    }
+
+    if ((stats?.vulnerabilities || 0) > 0) {
+      steps.push({
+        icon: <ShieldCheck className="h-4 w-4 text-orange-500" />,
+        text: `Confira ${stats?.vulnerabilities} vulnerabilidade(s) detectada(s)`,
+        link: '/client/security',
+        priority: 'medium'
+      });
+    }
+
+    if (stats?.hasAvIssues) {
+      steps.push({
+        icon: <ShieldCheck className="h-4 w-4 text-red-500" />,
+        text: 'Verifique o status do antivírus',
+        link: '/client/security',
+        priority: 'high'
+      });
+    }
+
+    if (steps.length === 0) {
+      steps.push({
+        icon: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+        text: 'Tudo em dia! Continue monitorando.',
+        link: '/client/computers',
+        priority: 'low'
+      });
+    }
+
+    return steps.sort((a, b) => {
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    });
+  };
 
   if (isLoading) {
     return (
@@ -87,6 +240,8 @@ export const ClientDashboard = () => {
     );
   }
 
+  const nextSteps = getNextSteps();
+
   return (
     <div className="space-y-6">
       <div>
@@ -94,6 +249,58 @@ export const ClientDashboard = () => {
         <p className="text-muted-foreground">
           Veja o status de segurança dos seus computadores
         </p>
+      </div>
+
+      {/* Health Score + Next Steps Row */}
+      <div className="grid gap-4 md:grid-cols-3">
+        {/* Health Score Card */}
+        <Card className="md:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Saúde da Segurança
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex justify-center py-4">
+            <HealthGauge score={stats?.healthScore || 0} />
+          </CardContent>
+        </Card>
+
+        {/* Next Steps Card */}
+        <Card className="md:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Lightbulb className="h-4 w-4" />
+              Próximos Passos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {nextSteps.slice(0, 4).map((step, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Link to={step.link}>
+                    <div className={`flex items-center justify-between p-3 rounded-lg transition-colors hover:bg-muted/80 ${
+                      step.priority === 'high' ? 'bg-red-500/5 border border-red-500/20' :
+                      step.priority === 'medium' ? 'bg-yellow-500/5 border border-yellow-500/20' :
+                      'bg-muted/50'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        {step.icon}
+                        <span className="text-sm font-medium">{step.text}</span>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Stats Cards */}
