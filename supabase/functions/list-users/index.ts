@@ -31,15 +31,18 @@ Deno.serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     
-    console.log(`[${requestId}] Checking admin role for user:`, user.id);
+    console.log(`[${requestId}] Checking admin/super_admin role for user:`, user.id);
     
-    // Check if user is admin
-    const { data: hasAdminRole, error: roleError } = await supabaseAdmin.rpc('has_role', { 
-      _user_id: user.id, 
-      _role: 'admin' 
-    });
+    // Check if user is admin or super_admin
+    const [adminCheck, superAdminCheck] = await Promise.all([
+      supabaseAdmin.rpc('has_role', { _user_id: user.id, _role: 'admin' }),
+      supabaseAdmin.rpc('has_role', { _user_id: user.id, _role: 'super_admin' })
+    ]);
 
-    console.log(`[${requestId}] Admin check result:`, { hasAdminRole, roleError });
+    const hasAdminRole = adminCheck.data || superAdminCheck.data;
+    const roleError = adminCheck.error || superAdminCheck.error;
+
+    console.log(`[${requestId}] Role check result:`, { hasAdminRole, isAdmin: adminCheck.data, isSuperAdmin: superAdminCheck.data, roleError });
 
     if (roleError) {
       console.error(`[${requestId}] Role check error:`, roleError);
@@ -52,7 +55,7 @@ Deno.serve(async (req) => {
     }
 
     if (!hasAdminRole) {
-      console.warn(`[${requestId}] User ${user.id} is not admin`);
+      console.warn(`[${requestId}] User ${user.id} is not admin or super_admin`);
       return createErrorResponse(ErrorCode.FORBIDDEN, 'Acesso negado', 403, requestId);
     }
 
