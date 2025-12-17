@@ -194,16 +194,19 @@ Deno.serve(async (req) => {
     // ============================================================
     const currentAgentVersion = agent.agent_version || '';
     let base64Sha256 = calculatedSha256;
+    let legacySha256 = storedSha256;  // ← NOVO: variável separada para campo legado
     
     // v3.10.39 agents have a specific SHA256 calculation that differs from server
-    // Use the hash that we know works for these agents
+    // CRITICAL: Override BOTH sha256 and sha256_base64 fields for v3.10.39 agents
     if (currentAgentVersion.includes('3.10.39')) {
       // SHA256 that v3.10.39 agents expect (known working value)
-      base64Sha256 = 'b41322a6cd77770b4cad5149693a599f7ef2275476789344f758340742fb88ab';
-      logger.info('[serve-agent-update] Using v3.10.39-compatible SHA256 override', { 
+      const v3_10_39_sha256 = 'b41322a6cd77770b4cad5149693a599f7ef2275476789344f758340742fb88ab';
+      base64Sha256 = v3_10_39_sha256;
+      legacySha256 = v3_10_39_sha256;  // ← CORRIGIDO: Override em AMBOS os campos
+      logger.info('[serve-agent-update] Using v3.10.39-compatible SHA256 override (BOTH fields)', { 
         requestId, 
         agentVersion: currentAgentVersion,
-        overrideSha256: base64Sha256.substring(0, 16) + '...'
+        overrideSha256: v3_10_39_sha256.substring(0, 16) + '...'
       });
     }
     
@@ -217,6 +220,7 @@ Deno.serve(async (req) => {
       toVersion: release.version,
       originalSize: finalScriptContent.length,
       storedSha256: storedSha256.substring(0, 16) + '...',
+      legacySha256: legacySha256.substring(0, 16) + '...',
       base64Sha256: base64Sha256.substring(0, 16) + '...',
       base64Size: base64Script.length
     });
@@ -227,7 +231,7 @@ Deno.serve(async (req) => {
         // BACKWARD COMPATIBLE: script_content como string + SHA256 do banco
         // Agentes v3.10.37 e anteriores usam isso
         script_content: finalScriptContent,      // ← Script original (sem normalização runtime)
-        sha256: storedSha256,                    // ← SHA256 do banco (calculado no registro)
+        sha256: legacySha256,                    // ← SHA256 com override para v3.10.39
         // NOVO: Para agentes v3.10.39+ que suportam Base64
         script_content_base64: base64Script,     // ← Base64 dos bytes CRLF-normalizados
         sha256_base64: base64Sha256,             // ← SHA256 dos bytes Base64
