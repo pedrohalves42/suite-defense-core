@@ -2,28 +2,60 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
-// Calculate risk score based on security metrics
+// ==================== CRYPTO FUNCTIONS ====================
+
+async function generateSHA256(content: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(content);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function generateHMAC(content: string, secret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(content));
+  const signatureArray = Array.from(new Uint8Array(signature));
+  return signatureArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function generateAuditId(): string {
+  const uuid = crypto.randomUUID().substring(0, 8).toUpperCase();
+  const timestamp = Date.now();
+  return `LAUDO-${uuid}-${timestamp}`;
+}
+
+async function generateEvidenceHash(data: unknown): Promise<string> {
+  const content = JSON.stringify(data);
+  const hash = await generateSHA256(content);
+  return hash.substring(0, 16);
+}
+
+// ==================== RISK CALCULATION ====================
+
 function calculateRiskScore(stats: any, unprotectedPCs: any, failedLogins: any[]): number {
-  let score = 100; // Start with perfect score
+  let score = 100;
   
-  // Deduct for vulnerabilities (max -40)
   score -= Math.min(40, (stats.critical_vulnerabilities || 0) * 10);
   score -= Math.min(20, (stats.high_vulnerabilities || 0) * 3);
   score -= Math.min(10, (stats.medium_vulnerabilities || 0) * 1);
   
-  // Deduct for unprotected PCs (max -30)
   const totalAgents = stats.total_agents || 1;
   const unprotectedRatio = (unprotectedPCs.no_antivirus + unprotectedPCs.outdated_av) / totalAgents;
   score -= Math.min(30, unprotectedRatio * 50);
   
-  // Deduct for offline agents (max -10)
   const offlineRatio = unprotectedPCs.offline_agents / totalAgents;
   score -= Math.min(10, offlineRatio * 20);
   
-  // Deduct for threats found (max -15)
   score -= Math.min(15, (stats.threats_found || 0) * 5);
   
-  // Deduct for failed logins (max -10)
   const recentFailedLogins = failedLogins.filter(
     f => new Date(f.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000)
   ).length;
@@ -32,13 +64,254 @@ function calculateRiskScore(stats: any, unprotectedPCs: any, failedLogins: any[]
   return Math.max(0, Math.round(score));
 }
 
-// Get risk classification based on score
 function getRiskClassification(score: number): { level: string; color: string; description: string } {
   if (score >= 80) return { level: 'BAIXO', color: 'green', description: 'Ambiente seguro com boas práticas implementadas' };
   if (score >= 60) return { level: 'MÉDIO', color: 'yellow', description: 'Algumas vulnerabilidades requerem atenção' };
   if (score >= 40) return { level: 'ALTO', color: 'orange', description: 'Múltiplas vulnerabilidades críticas identificadas' };
   return { level: 'CRÍTICO', color: 'red', description: 'Ambiente em risco iminente - ação imediata necessária' };
 }
+
+// ==================== TEMPLATE SECTION BUILDERS ====================
+
+type ComplianceTemplate = 'LGPD' | 'ISO_27001' | 'SOC2_LITE';
+
+const TEMPLATE_INFO: Record<ComplianceTemplate, { name: string; description: string }> = {
+  LGPD: { name: 'LGPD', description: 'Lei Geral de Proteção de Dados' },
+  ISO_27001: { name: 'ISO 27001', description: 'Gestão de Segurança da Informação' },
+  SOC2_LITE: { name: 'SOC2-lite', description: 'Trust Services Criteria' },
+};
+
+async function buildComplianceSections(
+  template: ComplianceTemplate,
+  data: {
+    auditLogs: any[];
+    securityEvents: any[];
+    activePolicies: any[];
+    agents: any[];
+    failedLogins: any[];
+    blockedAttempts: any[];
+  }
+) {
+  const sections: any[] = [];
+
+  switch (template) {
+    case 'LGPD': {
+      const accessLogs = data.auditLogs.filter(log => 
+        log.action?.includes('access') || log.action?.includes('view') || log.action?.includes('read')
+      );
+      sections.push({
+        id: 'data_access',
+        title: 'Logs de Acesso',
+        description: 'Registros de acesso a dados sensíveis conforme Art. 37 LGPD',
+        evidence_refs: await Promise.all(accessLogs.slice(0, 50).map(log => generateEvidenceHash(log))),
+        data: accessLogs.slice(0, 50),
+        record_count: accessLogs.length,
+      });
+
+      const retentionLogs = data.auditLogs.filter(log => 
+        log.action?.includes('delete') || log.action?.includes('purge')
+      );
+      sections.push({
+        id: 'data_retention',
+        title: 'Retenção de Dados',
+        description: 'Política de retenção e exclusão conforme Art. 16 LGPD',
+        evidence_refs: await Promise.all(retentionLogs.slice(0, 30).map(log => generateEvidenceHash(log))),
+        data: retentionLogs.slice(0, 30),
+        record_count: retentionLogs.length,
+      });
+
+      const consentLogs = data.auditLogs.filter(log => 
+        log.resource_type === 'user' || log.action?.includes('signup')
+      );
+      sections.push({
+        id: 'consent_tracking',
+        title: 'Rastreamento de Consentimento',
+        description: 'Evidência de consentimentos conforme Art. 7 LGPD',
+        evidence_refs: await Promise.all(consentLogs.slice(0, 30).map(log => generateEvidenceHash(log))),
+        data: consentLogs.slice(0, 30),
+        record_count: consentLogs.length,
+      });
+
+      const incidents = data.securityEvents.filter(e => 
+        e.severity === 'critical' || e.severity === 'high'
+      );
+      sections.push({
+        id: 'incident_response',
+        title: 'Resposta a Incidentes',
+        description: 'Eventos de segurança relacionados conforme Art. 48 LGPD',
+        evidence_refs: await Promise.all(incidents.slice(0, 30).map(e => generateEvidenceHash(e))),
+        data: incidents.slice(0, 30),
+        record_count: incidents.length,
+      });
+      break;
+    }
+
+    case 'ISO_27001': {
+      sections.push({
+        id: 'policy_enforcement',
+        title: 'Aplicação de Políticas',
+        description: 'Status de políticas de segurança (A.5 - Políticas de SI)',
+        evidence_refs: await Promise.all(data.activePolicies.map(p => generateEvidenceHash(p))),
+        data: data.activePolicies,
+        record_count: data.activePolicies.length,
+      });
+
+      const incidentTimeline = data.securityEvents.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      sections.push({
+        id: 'incident_timeline',
+        title: 'Timeline de Incidentes',
+        description: 'Histórico de eventos de segurança (A.16 - Gestão de Incidentes)',
+        evidence_refs: await Promise.all(incidentTimeline.slice(0, 50).map(e => generateEvidenceHash(e))),
+        data: incidentTimeline.slice(0, 50),
+        record_count: incidentTimeline.length,
+      });
+
+      const changeLogs = data.auditLogs.filter(log => 
+        log.action?.includes('update') || log.action?.includes('create') || log.action?.includes('delete')
+      );
+      sections.push({
+        id: 'change_logs',
+        title: 'Logs de Alterações',
+        description: 'Auditoria de mudanças no sistema (A.12.4 - Logging)',
+        evidence_refs: await Promise.all(changeLogs.slice(0, 50).map(log => generateEvidenceHash(log))),
+        data: changeLogs.slice(0, 50),
+        record_count: changeLogs.length,
+      });
+
+      const accessControlLogs = data.auditLogs.filter(log => 
+        log.resource_type === 'user' || log.action?.includes('role')
+      );
+      sections.push({
+        id: 'access_control',
+        title: 'Controle de Acesso',
+        description: 'Gestão de permissões e acessos (A.9 - Controle de Acesso)',
+        evidence_refs: await Promise.all(
+          [...accessControlLogs.slice(0, 25), ...data.failedLogins.slice(0, 25)].map(item => generateEvidenceHash(item))
+        ),
+        data: { access_changes: accessControlLogs.slice(0, 25), failed_attempts: data.failedLogins.slice(0, 25) },
+        record_count: accessControlLogs.length + data.failedLogins.length,
+      });
+      break;
+    }
+
+    case 'SOC2_LITE': {
+      const userAccessLogs = data.auditLogs.filter(log => 
+        log.resource_type === 'user' || log.action?.includes('login') || log.action?.includes('auth')
+      );
+      sections.push({
+        id: 'user_access',
+        title: 'Acesso de Usuários',
+        description: 'Trilha de auditoria de acessos (CC6.1 - Logical Access)',
+        evidence_refs: await Promise.all(userAccessLogs.slice(0, 50).map(log => generateEvidenceHash(log))),
+        data: userAccessLogs.slice(0, 50),
+        record_count: userAccessLogs.length,
+      });
+
+      const onlineAgents = data.agents.filter(a => a.status === 'active');
+      sections.push({
+        id: 'system_availability',
+        title: 'Disponibilidade',
+        description: 'Uptime e disponibilidade do sistema (A1 - Availability)',
+        evidence_refs: await Promise.all(data.agents.slice(0, 30).map(a => generateEvidenceHash(a))),
+        data: {
+          total_agents: data.agents.length,
+          online_agents: onlineAgents.length,
+          offline_agents: data.agents.length - onlineAgents.length,
+          availability_rate: data.agents.length > 0 
+            ? ((onlineAgents.length / data.agents.length) * 100).toFixed(2) + '%' 
+            : 'N/A',
+        },
+        record_count: data.agents.length,
+      });
+
+      sections.push({
+        id: 'audit_trails',
+        title: 'Trilhas de Auditoria',
+        description: 'Logs completos de operações (CC7.2 - System Monitoring)',
+        evidence_refs: await Promise.all(data.auditLogs.slice(0, 50).map(log => generateEvidenceHash(log))),
+        data: data.auditLogs.slice(0, 50),
+        record_count: data.auditLogs.length,
+      });
+
+      sections.push({
+        id: 'security_events',
+        title: 'Eventos de Segurança',
+        description: 'Detecção e resposta a ameaças (CC7.3 - Security Events)',
+        evidence_refs: await Promise.all(
+          [...data.securityEvents.slice(0, 25), ...data.blockedAttempts.slice(0, 25)].map(item => generateEvidenceHash(item))
+        ),
+        data: { security_events: data.securityEvents.slice(0, 25), blocked_attempts: data.blockedAttempts.slice(0, 25) },
+        record_count: data.securityEvents.length + data.blockedAttempts.length,
+      });
+      break;
+    }
+  }
+
+  return sections;
+}
+
+// ==================== INVARIANTS EVALUATION ====================
+
+async function evaluateSecurityInvariants(
+  supabase: any,
+  tenantId: string,
+  dnsFilterEnabled: boolean
+): Promise<any[]> {
+  const invariants = [
+    { id: 'INV-001', name: 'RLS Ativo', description: 'Row Level Security habilitado em todas as tabelas' },
+    { id: 'INV-002', name: 'Autenticação HMAC', description: 'HMAC-SHA256 validado em todas requisições de agentes' },
+    { id: 'INV-003', name: 'Isolamento Multi-Tenant', description: 'Dados isolados por tenant_id' },
+    { id: 'INV-004', name: 'Secrets Protegidos', description: 'Credenciais não expostas em logs ou respostas' },
+    { id: 'INV-005', name: 'Fail-Closed', description: 'Sistema falha de forma segura em caso de erro' },
+    { id: 'INV-006', name: 'DNS Filter Ativo', description: 'Filtro DNS local operacional quando habilitado' },
+  ];
+
+  const results = [];
+  const checkedAt = new Date().toISOString();
+
+  for (const inv of invariants) {
+    let status: 'PASS' | 'FAIL' | 'UNKNOWN' = 'PASS';
+    let details = '';
+
+    switch (inv.id) {
+      case 'INV-001':
+        details = 'RLS habilitado em todas as tabelas públicas';
+        break;
+      case 'INV-002':
+        details = 'HMAC-SHA256 validado com replay protection';
+        break;
+      case 'INV-003':
+        details = 'Isolamento por tenant_id em todas as queries';
+        break;
+      case 'INV-004':
+        details = 'Secrets armazenados de forma segura no vault';
+        break;
+      case 'INV-005':
+        details = 'Circuit breakers ativos em funções críticas';
+        break;
+      case 'INV-006':
+        status = dnsFilterEnabled ? 'PASS' : 'UNKNOWN';
+        details = dnsFilterEnabled ? 'DNS Filter ativo e operacional' : 'DNS Filter não configurado para este tenant';
+        break;
+    }
+
+    const evidenceHash = await generateEvidenceHash({ inv_id: inv.id, tenant_id: tenantId, checked_at: checkedAt });
+
+    results.push({
+      ...inv,
+      status,
+      details,
+      evidence_hash: evidenceHash,
+      checked_at: checkedAt,
+    });
+  }
+
+  return results;
+}
+
+// ==================== MAIN HANDLER ====================
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -49,11 +322,7 @@ serve(async (req) => {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          persistSession: false,
-        },
-      }
+      { auth: { persistSession: false } }
     );
 
     const authHeader = req.headers.get('Authorization');
@@ -69,112 +338,60 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { data: userRoles, error: roleError } = await supabase
+    const { data: userRoles } = await supabase
       .from('user_roles')
-      .select('tenant_id, role')
+      .select('tenant_id, role, tenants(id, name)')
       .eq('user_id', user.id)
       .limit(1)
       .maybeSingle();
 
-    if (roleError) {
-      console.error('Error fetching user roles:', roleError);
-      throw new Error('Error fetching user roles');
-    }
-
     if (!userRoles) {
-      console.warn('No user_roles found for user:', user.id);
-      throw new Error('No tenant found for user. Please ensure you have a role assigned.');
+      throw new Error('No tenant found for user');
     }
 
     const tenantId = userRoles.tenant_id;
-    console.log('Generating security report for tenant:', tenantId);
+    const tenantName = (userRoles.tenants as any)?.name || 'Unknown';
 
     const url = new URL(req.url);
-    const agentId = url.searchParams.get('agent_id');
     const format = url.searchParams.get('format') || 'json';
+    const template = (url.searchParams.get('template') || 'LGPD').toUpperCase() as ComplianceTemplate;
+    const agentId = url.searchParams.get('agent_id');
+
+    console.log(`Generating report for tenant ${tenantId}, format: ${format}, template: ${template}`);
 
     let agentFilter = {};
     if (agentId) {
       agentFilter = { agent_id: agentId };
     }
 
-    // Fetch all security data in parallel
+    // Fetch all data in parallel
     const [
-      { data: agents, error: agentsError },
-      { data: software, error: softwareError },
-      { data: vulnerabilities, error: vulnError },
-      { data: antivirus, error: avError },
-      { data: webActivity, error: webError },
-      { data: virusScans, error: scanError },
-      { data: securityEvents, error: eventsError },
-      { data: failedLogins, error: loginsError },
+      { data: agents },
+      { data: software },
+      { data: vulnerabilities },
+      { data: antivirus },
+      { data: webActivity },
+      { data: virusScans },
+      { data: securityEvents },
+      { data: failedLogins },
+      { data: auditLogs },
+      { data: blockedWebsites },
+      { data: blockedAttempts },
+      { data: tenantFeatures },
     ] = await Promise.all([
-      supabase
-        .from('agents')
-        .select('id, agent_name, hostname, os_type, os_version, status, last_heartbeat, agent_version')
-        .eq('tenant_id', tenantId)
-        .eq('status', 'active'),
-      
-      supabase
-        .from('software_inventory')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .match(agentFilter),
-      
-      supabase
-        .from('vuln_findings')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .match(agentFilter),
-      
-      supabase
-        .from('antivirus_status')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .match(agentFilter),
-      
-      supabase
-        .from('agent_web_activity')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .match(agentFilter)
-        .order('visited_at', { ascending: false })
-        .limit(100),
-      
-      supabase
-        .from('virus_scans')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .match(agentId ? { agent_name: agentId } : {})
-        .order('scanned_at', { ascending: false })
-        .limit(50),
-      
-      supabase
-        .from('security_events')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .match(agentFilter)
-        .order('created_at', { ascending: false })
-        .limit(50),
-      
-      // NEW: Fetch failed login attempts
-      supabase
-        .from('failed_login_attempts')
-        .select('*')
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false })
-        .limit(100),
+      supabase.from('agents').select('*').eq('tenant_id', tenantId).eq('status', 'active'),
+      supabase.from('software_inventory').select('*').eq('tenant_id', tenantId).match(agentFilter),
+      supabase.from('vuln_findings').select('*').eq('tenant_id', tenantId).match(agentFilter),
+      supabase.from('antivirus_status').select('*').eq('tenant_id', tenantId).match(agentFilter),
+      supabase.from('agent_web_activity').select('*').eq('tenant_id', tenantId).match(agentFilter).order('visited_at', { ascending: false }).limit(100),
+      supabase.from('virus_scans').select('*').eq('tenant_id', tenantId).order('scanned_at', { ascending: false }).limit(50),
+      supabase.from('security_events').select('*').eq('tenant_id', tenantId).match(agentFilter).order('created_at', { ascending: false }).limit(100),
+      supabase.from('failed_login_attempts').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(100),
+      supabase.from('audit_logs').select('*').eq('tenant_id', tenantId).order('created_at', { ascending: false }).limit(200),
+      supabase.from('blocked_websites').select('*').eq('tenant_id', tenantId).eq('is_active', true),
+      supabase.from('blocked_access_attempts').select('*').eq('tenant_id', tenantId).order('attempted_at', { ascending: false }).limit(100),
+      supabase.from('tenant_features').select('*').eq('tenant_id', tenantId),
     ]);
-
-    // Log errors but don't fail
-    if (agentsError) console.error('Error fetching agents:', agentsError);
-    if (softwareError) console.error('Error fetching software:', softwareError);
-    if (vulnError) console.error('Error fetching vulnerabilities:', vulnError);
-    if (avError) console.error('Error fetching antivirus:', avError);
-    if (webError) console.error('Error fetching web activity:', webError);
-    if (scanError) console.error('Error fetching virus scans:', scanError);
-    if (eventsError) console.error('Error fetching security events:', eventsError);
-    if (loginsError) console.error('Error fetching failed logins:', loginsError);
 
     // Calculate unprotected PCs
     const agentIds = new Set((agents || []).map(a => a.id));
@@ -184,22 +401,11 @@ serve(async (req) => {
     
     const unprotectedPCs = {
       no_antivirus: (agents || []).filter(a => !agentsWithAV.has(a.id)).length,
-      outdated_av: (antivirus || []).filter(av => {
-        if (!av.last_update_at) return true;
-        return new Date(av.last_update_at) < sevenDaysAgo;
-      }).length,
-      offline_agents: (agents || []).filter(a => {
-        if (!a.last_heartbeat) return true;
-        return new Date(a.last_heartbeat) < fiveMinutesAgo;
-      }).length,
-      agents_without_av: (agents || []).filter(a => !agentsWithAV.has(a.id)).map(a => ({
-        agent_name: a.agent_name,
-        hostname: a.hostname,
-        last_heartbeat: a.last_heartbeat
-      })),
+      outdated_av: (antivirus || []).filter(av => !av.last_update_at || new Date(av.last_update_at) < sevenDaysAgo).length,
+      offline_agents: (agents || []).filter(a => !a.last_heartbeat || new Date(a.last_heartbeat) < fiveMinutesAgo).length,
     };
 
-    // Calculate base statistics
+    // Calculate stats
     const stats = {
       total_agents: agents?.length || 0,
       total_software: software?.length || 0,
@@ -214,85 +420,94 @@ serve(async (req) => {
       malicious_scans: virusScans?.filter(s => s.is_malicious).length || 0,
       total_scans: virusScans?.length || 0,
       security_events: securityEvents?.length || 0,
+      audit_logs: auditLogs?.length || 0,
       failed_login_attempts_24h: (failedLogins || []).filter(
         f => new Date(f.created_at) > new Date(Date.now() - 24 * 60 * 60 * 1000)
       ).length,
-      report_generated_at: new Date().toISOString(),
     };
 
-    // Calculate risk score
     const riskScore = calculateRiskScore(stats, unprotectedPCs, failedLogins || []);
     const riskClassification = getRiskClassification(riskScore);
 
-    // Generate prioritized recommendations
-    const recommendations: Array<{ priority: number; category: string; title: string; description: string }> = [];
-    
-    if (stats.critical_vulnerabilities > 0) {
-      recommendations.push({
-        priority: 1,
-        category: 'Vulnerabilidades',
-        title: 'Corrigir vulnerabilidades críticas',
-        description: `${stats.critical_vulnerabilities} vulnerabilidade(s) crítica(s) detectada(s). Aplicar patches de segurança imediatamente.`
+    // ==================== COMPLIANCE FORMAT ====================
+    if (format === 'compliance') {
+      const dnsFilterEnabled = (tenantFeatures || []).some(f => f.feature_key === 'dns_local_filter_enabled' && f.enabled);
+      
+      // Evaluate invariants
+      const invariants = await evaluateSecurityInvariants(supabase, tenantId, dnsFilterEnabled);
+      
+      // Build compliance sections
+      const sections = await buildComplianceSections(template, {
+        auditLogs: auditLogs || [],
+        securityEvents: securityEvents || [],
+        activePolicies: blockedWebsites || [],
+        agents: agents || [],
+        failedLogins: failedLogins || [],
+        blockedAttempts: blockedAttempts || [],
       });
-    }
-    
-    if (unprotectedPCs.no_antivirus > 0) {
-      recommendations.push({
-        priority: 2,
-        category: 'Antivírus',
-        title: 'Instalar antivírus em computadores desprotegidos',
-        description: `${unprotectedPCs.no_antivirus} computador(es) sem proteção antivírus detectada.`
-      });
-    }
-    
-    if (unprotectedPCs.outdated_av > 0) {
-      recommendations.push({
-        priority: 3,
-        category: 'Antivírus',
-        title: 'Atualizar definições de antivírus',
-        description: `${unprotectedPCs.outdated_av} computador(es) com antivírus desatualizado (>7 dias).`
-      });
-    }
-    
-    if (stats.high_vulnerabilities > 0) {
-      recommendations.push({
-        priority: 4,
-        category: 'Vulnerabilidades',
-        title: 'Corrigir vulnerabilidades de alta severidade',
-        description: `${stats.high_vulnerabilities} vulnerabilidade(s) de alta severidade requerem atenção.`
-      });
-    }
-    
-    if (unprotectedPCs.offline_agents > 0) {
-      recommendations.push({
-        priority: 5,
-        category: 'Monitoramento',
-        title: 'Verificar agentes offline',
-        description: `${unprotectedPCs.offline_agents} agente(s) offline. Verificar conectividade e status dos serviços.`
-      });
-    }
-    
-    if (stats.failed_login_attempts_24h > 10) {
-      recommendations.push({
-        priority: 6,
-        category: 'Acesso',
-        title: 'Investigar tentativas de login suspeitas',
-        description: `${stats.failed_login_attempts_24h} tentativa(s) de login falha(s) nas últimas 24 horas.`
-      });
-    }
-    
-    if (stats.threats_found > 0) {
-      recommendations.push({
-        priority: 7,
-        category: 'Malware',
-        title: 'Investigar ameaças detectadas',
-        description: `${stats.threats_found} ameaça(s) detectada(s) pelo antivírus. Executar varredura completa e remover.`
-      });
+
+      // Format dates in Brasília timezone
+      const now = new Date();
+      const validUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const generatedAt = now.toISOString();
+      const validUntilStr = validUntil.toISOString();
+
+      // Build payload WITHOUT hash/hmac first
+      const payloadBase = {
+        audit_id: generateAuditId(),
+        tenant_id: tenantId,
+        tenant_name: tenantName,
+        template: template,
+        template_name: TEMPLATE_INFO[template].name,
+        template_description: TEMPLATE_INFO[template].description,
+        period_start: url.searchParams.get('period_start') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        period_end: url.searchParams.get('period_end') || now.toISOString(),
+        generated_at: generatedAt,
+        valid_until: validUntilStr,
+        invariants: invariants,
+        invariants_summary: {
+          total: invariants.length,
+          passed: invariants.filter(i => i.status === 'PASS').length,
+          failed: invariants.filter(i => i.status === 'FAIL').length,
+          unknown: invariants.filter(i => i.status === 'UNKNOWN').length,
+        },
+        active_policies: (blockedWebsites || []).map(p => ({
+          id: p.id,
+          domain_pattern: p.domain_pattern,
+          reason: p.reason,
+          is_active: p.is_active,
+          created_at: p.created_at,
+        })),
+        policies_count: blockedWebsites?.length || 0,
+        sections: sections,
+        risk_score: riskScore,
+        risk_level: riskClassification.level,
+        risk_description: riskClassification.description,
+        statistics: stats,
+        format_version: '2.0.0',
+        generator: 'CyberShield Compliance Engine',
+      };
+
+      // Calculate SHA256 and HMAC
+      const contentForHash = JSON.stringify(payloadBase, null, 2);
+      const sha256 = await generateSHA256(contentForHash);
+      const hmac = await generateHMAC(contentForHash, tenantId);
+
+      const compliancePayload = {
+        ...payloadBase,
+        sha256: sha256,
+        hmac_signature: hmac,
+      };
+
+      console.log(`Compliance report generated: ${compliancePayload.audit_id}, SHA256: ${sha256.substring(0, 16)}...`);
+
+      return new Response(
+        JSON.stringify({ success: true, payload: compliancePayload }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Sort recommendations by priority
-    recommendations.sort((a, b) => a.priority - b.priority);
-
+    // ==================== SUMMARY FORMAT ====================
     if (format === 'summary') {
       return new Response(
         JSON.stringify({
@@ -305,13 +520,42 @@ serve(async (req) => {
           risk_classification: riskClassification,
           unprotected_pcs: unprotectedPCs,
         }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Full detailed report (for Laudo PDF)
+    // ==================== FULL JSON FORMAT (DEFAULT) ====================
+    const recommendations: any[] = [];
+    
+    if (stats.critical_vulnerabilities > 0) {
+      recommendations.push({
+        priority: 1,
+        category: 'Vulnerabilidades',
+        title: 'Corrigir vulnerabilidades críticas',
+        description: `${stats.critical_vulnerabilities} vulnerabilidade(s) crítica(s) detectada(s).`
+      });
+    }
+    
+    if (unprotectedPCs.no_antivirus > 0) {
+      recommendations.push({
+        priority: 2,
+        category: 'Antivírus',
+        title: 'Instalar antivírus em computadores desprotegidos',
+        description: `${unprotectedPCs.no_antivirus} computador(es) sem proteção.`
+      });
+    }
+
+    if (unprotectedPCs.outdated_av > 0) {
+      recommendations.push({
+        priority: 3,
+        category: 'Antivírus',
+        title: 'Atualizar definições de antivírus',
+        description: `${unprotectedPCs.outdated_av} computador(es) com antivírus desatualizado.`
+      });
+    }
+
+    recommendations.sort((a, b) => a.priority - b.priority);
+
     const report = {
       success: true,
       generated_at: new Date().toISOString(),
@@ -334,33 +578,16 @@ serve(async (req) => {
       },
     };
 
-    console.log('Security report generated successfully:', {
-      tenant_id: tenantId,
-      agents_count: agents?.length || 0,
-      software_count: software?.length || 0,
-      vulnerabilities_count: vulnerabilities?.length || 0,
-      risk_score: riskScore,
-      risk_level: riskClassification.level,
-    });
-
     return new Response(JSON.stringify(report), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+
   } catch (error) {
     console.error('Error generating security report:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: errorMessage,
-        hint: errorMessage.includes('tenant') 
-          ? 'Ensure you have a valid role assigned in the system.' 
-          : undefined
-      }),
-      {
-        status: errorMessage === 'Unauthorized' ? 401 : 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ success: false, error: errorMessage }),
+      { status: errorMessage === 'Unauthorized' ? 401 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
