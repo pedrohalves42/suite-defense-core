@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { logger } from '@/lib/logger';
 import {
   AlertDialog,
@@ -20,11 +19,15 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
-import { formatBrazilDateTime, formatRelativeTime } from '@/lib/date-utils';
-import { Server, Trash2, Power, PowerOff, CheckCircle, XCircle, Clock, Activity, Edit, FileText, AlertTriangle, RefreshCw, Loader2, Trash } from 'lucide-react';
+import { formatBrazilDateTime } from '@/lib/date-utils';
+import { 
+  Server, Trash2, Power, PowerOff, XCircle, Clock, Activity, 
+  AlertTriangle, Loader2, Trash, Search, Monitor, Cpu, HardDrive,
+  RefreshCw, Shield, ShieldAlert, ShieldCheck, ArrowUpCircle, Filter
+} from 'lucide-react';
 import AgentInstallationGuide from '@/components/AgentInstallationGuide';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Agent {
   id: string;
@@ -39,58 +42,47 @@ interface Agent {
   agent_version: string | null;
 }
 
+// Latest versions by platform
+const LATEST_VERSIONS: Record<string, string> = {
+  windows: 'v3.10.39-BASE64-SAFE-UPDATE',
+  linux: 'v3.10.40-DNS-FILTER',
+  macos: 'v3.10.40-DNS-FILTER',
+};
+
+type StatusFilter = 'all' | 'online' | 'offline' | 'pending' | 'disabled';
+type VersionFilter = 'all' | 'outdated' | 'current';
+
 export default function AgentManagement() {
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
   const [agentToDisable, setAgentToDisable] = useState<Agent | null>(null);
-  const [agentToEdit, setAgentToEdit] = useState<Agent | null>(null);
-  const [editedName, setEditedName] = useState('');
   const [agentToForceDelete, setAgentToForceDelete] = useState<Agent | null>(null);
-  const [selectedAgentLogs, setSelectedAgentLogs] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [versionFilter, setVersionFilter] = useState<VersionFilter>('all');
+  const [checkingHealthFor, setCheckingHealthFor] = useState<string | null>(null);
 
-  const { data: agents, isLoading } = useQuery<Agent[]>({
-    queryKey: ['agents', tenant?.id, statusFilter],
+  const { data: agents, isLoading, refetch } = useQuery<Agent[]>({
+    queryKey: ['agents', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-
-      let query = supabase.from('agents').select('id, agent_name, status, enrolled_at, last_heartbeat, tenant_id, os_type, os_version, hostname, agent_version').eq('tenant_id', tenant.id);
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
-      }
-
-      const result = await query.order('enrolled_at', { ascending: false });
+      const result = await supabase
+        .from('agents')
+        .select('id, agent_name, status, enrolled_at, last_heartbeat, tenant_id, os_type, os_version, hostname, agent_version')
+        .eq('tenant_id', tenant.id)
+        .order('enrolled_at', { ascending: false });
       if (result.error) throw result.error;
       return (result.data || []) as Agent[];
     },
     enabled: !!tenant?.id,
+    refetchInterval: 30000,
   });
 
-  const { data: installationLogs, isLoading: isLoadingLogs } = useQuery<any[] | null>({
-    queryKey: ['installation-logs', selectedAgentLogs],
-    queryFn: async () => {
-      if (!selectedAgentLogs) return null;
-      
-      const result = await supabase
-        .from('installation_analytics')
-        .select('*')
-        .eq('agent_id', selectedAgentLogs)
-        .order('created_at', { ascending: false })
-        .limit(20);
-      
-      if (result.error) throw result.error;
-      return result.data;
-    },
-    enabled: !!selectedAgentLogs,
-  });
-
-  // Query to check post_installation events for all agents
   const { data: installationStatus } = useQuery<Record<string, boolean>>({
     queryKey: ['installation-status', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id || !agents) return {};
-      
       const agentIds = agents.map(a => a.id);
       if (agentIds.length === 0) return {};
       
@@ -100,98 +92,113 @@ export default function AgentManagement() {
         .in('agent_id', agentIds)
         .eq('event_type', 'post_installation');
       
-      if (error) {
-        console.error('Error fetching installation status:', error);
-        return {};
-      }
-      
+      if (error) return {};
       const statusMap: Record<string, boolean> = {};
-      data?.forEach(event => {
-        statusMap[event.agent_id] = true;
-      });
-      
+      data?.forEach(event => { statusMap[event.agent_id] = true; });
       return statusMap;
     },
     enabled: !!tenant?.id && !!agents && agents.length > 0,
   });
 
+  // Helper functions
+  const getAgentStatus = (agent: Agent): 'online' | 'offline' | 'pending' | 'disabled' => {
+    if (agent.status === 'disabled') return 'disabled';
+    if (!agent.last_heartbeat) return 'pending';
+    const diffMins = (new Date().getTime() - new Date(agent.last_heartbeat).getTime()) / (1000 * 60);
+    return diffMins < 5 ? 'online' : 'offline';
+  };
+
+  const isVersionOutdated = (agent: Agent): boolean => {
+    if (!agent.agent_version || !agent.os_type) return false;
+    const platform = agent.os_type.toLowerCase().includes('windows') ? 'windows' 
+      : agent.os_type.toLowerCase().includes('linux') ? 'linux' : 'macos';
+    const latestVersion = LATEST_VERSIONS[platform];
+    return agent.agent_version !== latestVersion;
+  };
+
+  const getTimeSince = (date: string | null): string => {
+    if (!date) return 'Nunca';
+    const diffMs = new Date().getTime() - new Date(date).getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    if (diffMins < 1) return 'Agora';
+    if (diffMins < 60) return `${diffMins}min`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d`;
+  };
+
+  // Filter agents
+  const filteredAgents = useMemo(() => {
+    if (!agents) return [];
+    return agents.filter(agent => {
+      // Search filter
+      if (searchTerm && !agent.agent_name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          !agent.hostname?.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
+      }
+      // Status filter
+      if (statusFilter !== 'all') {
+        const status = getAgentStatus(agent);
+        if (status !== statusFilter) return false;
+      }
+      // Version filter
+      if (versionFilter === 'outdated' && !isVersionOutdated(agent)) return false;
+      if (versionFilter === 'current' && isVersionOutdated(agent)) return false;
+      return true;
+    });
+  }, [agents, searchTerm, statusFilter, versionFilter]);
+
+  // Stats
+  const stats = useMemo(() => {
+    if (!agents) return { total: 0, online: 0, offline: 0, pending: 0, disabled: 0, outdated: 0 };
+    return {
+      total: agents.length,
+      online: agents.filter(a => getAgentStatus(a) === 'online').length,
+      offline: agents.filter(a => getAgentStatus(a) === 'offline').length,
+      pending: agents.filter(a => getAgentStatus(a) === 'pending').length,
+      disabled: agents.filter(a => getAgentStatus(a) === 'disabled').length,
+      outdated: agents.filter(a => isVersionOutdated(a)).length,
+    };
+  }, [agents]);
+
+  // Mutations
   const deleteAgentMutation = useMutation({
     mutationFn: async (agentId: string) => {
-      const { error: tokenError } = await supabase
-        .from('agent_tokens')
-        .delete()
-        .eq('agent_id', agentId);
-
-      if (tokenError) throw tokenError;
-
-      const { error } = await supabase
-        .from('agents')
-        .delete()
-        .eq('id', agentId);
-
+      await supabase.from('agent_tokens').delete().eq('agent_id', agentId);
+      const { error } = await supabase.from('agents').delete().eq('id', agentId);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success('Computador excluído com sucesso');
+      toast.success('Computador excluído');
       setAgentToDelete(null);
     },
-    onError: (error: unknown) => {
-      logger.error('Error deleting agent', error);
-      toast.error('Erro ao excluir computador');
-    },
+    onError: () => toast.error('Erro ao excluir'),
   });
 
-  const forceDeleteAgentMutation = useMutation({
-    mutationFn: async (agentId: string) => {
-      try {
-        await supabase.from('jobs').delete().match({ agent_id: agentId });
-        await supabase.from('agent_system_metrics').delete().match({ agent_id: agentId });
-        await supabase.from('agent_system_metrics_partitioned').delete().match({ agent_id: agentId });
-        await supabase.from('installation_analytics').delete().match({ agent_id: agentId });
-        await supabase.from('agent_tokens').delete().match({ agent_id: agentId });
-        await supabase.from('enrollment_keys').delete().match({ agent_id: agentId });
-      } catch (err) {
-        logger.warn('Erro ao deletar dados relacionados (continuando)', err);
+  const disableAgentMutation = useMutation({
+    mutationFn: async ({ agentId, disable }: { agentId: string; disable: boolean }) => {
+      const { error: agentError } = await supabase
+        .from('agents')
+        .update({ status: disable ? 'disabled' : 'active' })
+        .eq('id', agentId);
+      if (agentError) throw agentError;
+      if (disable) {
+        await supabase.from('agent_tokens').update({ is_active: false }).eq('agent_id', agentId);
       }
-      
-      const { error } = await supabase.from('agents').delete().match({ id: agentId });
-      if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success('Computador e dados excluídos');
-      setAgentToForceDelete(null);
+      toast.success(variables.disable ? 'Desativado' : 'Reativado');
+      setAgentToDisable(null);
     },
-    onError: (error: unknown) => {
-      logger.error('Force delete error', error);
-      toast.error('Erro ao excluir');
-    },
-  });
-
-  const editAgentMutation = useMutation({
-    mutationFn: async ({ agentId, newName }: { agentId: string; newName: string }) => {
-      if (!newName || newName.trim().length < 3) throw new Error('Nome invalido');
-      const { error } = await supabase.from('agents').update({ agent_name: newName.trim() }).eq('id', agentId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success('Nome atualizado');
-      setAgentToEdit(null);
-      setEditedName('');
-    },
-    onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : 'Erro desconhecido';
-      toast.error(`Erro: ${message}`);
-    },
+    onError: () => toast.error('Erro ao atualizar'),
   });
 
   const cleanupGhostAgentsMutation = useMutation({
     mutationFn: async () => {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      
-      // Find agents to delete
       const { data: agentsToDelete, error: findError } = await supabase
         .from('agents')
         .select('id, agent_name')
@@ -200,145 +207,58 @@ export default function AgentManagement() {
         .lt('enrolled_at', twentyFourHoursAgo);
       
       if (findError) throw findError;
-      if (!agentsToDelete || agentsToDelete.length === 0) {
-        return { count: 0, agents: [] };
-      }
+      if (!agentsToDelete || agentsToDelete.length === 0) return { count: 0 };
       
-      // Delete tokens first
       const agentIds = agentsToDelete.map(a => a.id);
       await supabase.from('agent_tokens').delete().in('agent_id', agentIds);
-      
-      // Delete agents
-      const { error: deleteError } = await supabase
-        .from('agents')
-        .delete()
-        .in('id', agentIds);
-      
+      const { error: deleteError } = await supabase.from('agents').delete().in('id', agentIds);
       if (deleteError) throw deleteError;
-      
-      return { count: agentsToDelete.length, agents: agentsToDelete };
+      return { count: agentsToDelete.length };
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['agents'] });
-      if (result.count > 0) {
-        toast.success(`${result.count} computador(es) inativo(s) removido(s)`);
-      } else {
-        toast.info('Nenhum computador inativo encontrado');
-      }
+      toast.success(result.count > 0 ? `${result.count} removido(s)` : 'Nenhum inativo');
     },
-    onError: (error: unknown) => {
-      logger.error('Error cleaning ghost agents', error);
-      toast.error('Erro ao limpar computadores inativos');
+    onError: () => toast.error('Erro ao limpar'),
+  });
+
+  const checkHealthMutation = useMutation({
+    mutationFn: async (agent: Agent) => {
+      setCheckingHealthFor(agent.id);
+      // Wait a bit and then refetch to simulate health check
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      await refetch();
+    },
+    onSuccess: () => {
+      toast.success('Status atualizado');
+      setCheckingHealthFor(null);
+    },
+    onError: () => {
+      toast.error('Erro ao verificar');
+      setCheckingHealthFor(null);
     },
   });
 
-  const disableAgentMutation = useMutation({
-    mutationFn: async ({ agentId, disable }: { agentId: string; disable: boolean }) => {
-      // Update agent status
-      const { error: agentError } = await supabase
-        .from('agents')
-        .update({ status: disable ? 'disabled' : 'active' })
-        .eq('id', agentId);
-
-      if (agentError) throw agentError;
-
-      // Deactivate all tokens if disabling
-      if (disable) {
-        const { error: tokenError } = await supabase
-          .from('agent_tokens')
-          .update({ is_active: false })
-          .eq('agent_id', agentId);
-
-        if (tokenError) throw tokenError;
-      }
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['agents'] });
-      toast.success(variables.disable ? 'Computador desativado com sucesso' : 'Computador reativado com sucesso');
-      setAgentToDisable(null);
-    },
-    onError: (error) => {
-      logger.error('Error updating agent', error);
-      toast.error('Erro ao atualizar computador');
-    },
-  });
-
-  const getStatusBadge = (agent: Agent) => {
-    const hasPostInstall = installationStatus?.[agent.id] || false;
-    const hasHeartbeat = !!agent.last_heartbeat;
-    
-    if (agent.status === 'disabled') {
-      return <Badge variant="secondary"><PowerOff className="w-3 h-3 mr-1" />Desativado</Badge>;
-    }
-    
-    // Agent is fully active with heartbeat
-    if (hasHeartbeat) {
-      const lastHeartbeat = new Date(agent.last_heartbeat);
-      const now = new Date();
-      const diffMinutes = (now.getTime() - lastHeartbeat.getTime()) / (1000 * 60);
-      
-      if (diffMinutes < 5) {
-        return (
-          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-            <Activity className="h-3 w-3 mr-1 animate-pulse" />
-            Ativo
-          </Badge>
-        );
-      } else {
-        return (
-          <Badge variant="destructive">
-            <XCircle className="h-3 w-3 mr-1" />
-            Offline ({Math.floor(diffMinutes)}min)
-          </Badge>
-        );
-      }
-    }
-    
-    // Agent has post_installation but no heartbeat yet
-    if (hasPostInstall) {
-      return (
-        <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
-          <Clock className="h-3 w-3 mr-1" />
-          Aguardando Heartbeat
-        </Badge>
-      );
-    }
-    
-    // Agent was generated but not executed
-    return (
-      <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100">
-        <AlertTriangle className="h-3 w-3 mr-1" />
-        Instalador Nao Executado
-      </Badge>
-    );
-  };
-
-  const getTimeSince = (date: string | null) => {
-    if (!date) return 'Nunca';
-    const now = new Date();
-    const past = new Date(date);
-    const diffMs = now.getTime() - past.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-
-    if (diffMins < 1) return 'Agora mesmo';
-    if (diffMins < 60) return `${diffMins}min atras`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h atras`;
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d atras`;
+  const getOsIcon = (osType: string | null) => {
+    if (!osType) return <Monitor className="h-5 w-5" />;
+    const os = osType.toLowerCase();
+    if (os.includes('windows')) return <Monitor className="h-5 w-5" />;
+    if (os.includes('linux')) return <Cpu className="h-5 w-5" />;
+    return <HardDrive className="h-5 w-5" />;
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20">
             <Server className="h-8 w-8 text-primary" />
@@ -350,146 +270,279 @@ export default function AgentManagement() {
             </p>
           </div>
         </div>
-        <Button
-          variant="destructive"
-          size="sm"
-          onClick={() => cleanupGhostAgentsMutation.mutate()}
-          disabled={cleanupGhostAgentsMutation.isPending}
-        >
-          {cleanupGhostAgentsMutation.isPending ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Trash className="h-4 w-4 mr-2" />
-          )}
-          Limpar Computadores Inativos
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => cleanupGhostAgentsMutation.mutate()}
+            disabled={cleanupGhostAgentsMutation.isPending}
+          >
+            {cleanupGhostAgentsMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Trash className="h-4 w-4 mr-2" />
+            )}
+            Limpar Inativos
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Computadores</CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{agents?.length || 0}</div>
-            <p className="text-xs text-muted-foreground">Todos os computadores</p>
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <Card className="cursor-pointer hover:border-primary/50 transition-colors" onClick={() => setStatusFilter('all')}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <Server className="h-5 w-5 text-muted-foreground" />
+              <span className="text-2xl font-bold">{stats.total}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Total</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Computadores Ativos</CardTitle>
-            <Activity className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">
-              {agents?.filter(a => {
-                if (!a.last_heartbeat) return false;
-                const diffMins = (new Date().getTime() - new Date(a.last_heartbeat).getTime()) / (1000 * 60);
-                return diffMins < 5 && a.status !== 'disabled';
-              }).length || 0}
+        <Card className={`cursor-pointer hover:border-green-500/50 transition-colors ${statusFilter === 'online' ? 'border-green-500' : ''}`} onClick={() => setStatusFilter('online')}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <Activity className="h-5 w-5 text-green-500" />
+              <span className="text-2xl font-bold text-green-500">{stats.online}</span>
             </div>
-            <p className="text-xs text-muted-foreground">Online agora</p>
+            <p className="text-xs text-muted-foreground mt-1">Online</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aguardando Instalação</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-500">
-              {agents?.filter(a => !a.last_heartbeat && a.status !== 'disabled').length || 0}
+        <Card className={`cursor-pointer hover:border-red-500/50 transition-colors ${statusFilter === 'offline' ? 'border-red-500' : ''}`} onClick={() => setStatusFilter('offline')}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <XCircle className="h-5 w-5 text-red-500" />
+              <span className="text-2xl font-bold text-red-500">{stats.offline}</span>
             </div>
-            <p className="text-xs text-muted-foreground">Sem sinal de vida</p>
+            <p className="text-xs text-muted-foreground mt-1">Offline</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Computadores Offline</CardTitle>
-            <XCircle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">
-              {agents?.filter(a => {
-                if (!a.last_heartbeat || a.status === 'disabled') return false;
-                const diffMins = (new Date().getTime() - new Date(a.last_heartbeat).getTime()) / (1000 * 60);
-                return diffMins >= 5;
-              }).length || 0}
+        <Card className={`cursor-pointer hover:border-orange-500/50 transition-colors ${statusFilter === 'pending' ? 'border-orange-500' : ''}`} onClick={() => setStatusFilter('pending')}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <Clock className="h-5 w-5 text-orange-500" />
+              <span className="text-2xl font-bold text-orange-500">{stats.pending}</span>
             </div>
-            <p className="text-xs text-muted-foreground">Sem sinal de vida</p>
+            <p className="text-xs text-muted-foreground mt-1">Pendente</p>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Desativados</CardTitle>
-            <PowerOff className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {agents?.filter(a => a.status === 'disabled').length || 0}
+        <Card className={`cursor-pointer hover:border-muted-foreground/50 transition-colors ${statusFilter === 'disabled' ? 'border-muted-foreground' : ''}`} onClick={() => setStatusFilter('disabled')}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <PowerOff className="h-5 w-5 text-muted-foreground" />
+              <span className="text-2xl font-bold">{stats.disabled}</span>
             </div>
-            <p className="text-xs text-muted-foreground">Manualmente desativados</p>
+            <p className="text-xs text-muted-foreground mt-1">Desativado</p>
+          </CardContent>
+        </Card>
+        <Card className={`cursor-pointer hover:border-amber-500/50 transition-colors ${versionFilter === 'outdated' ? 'border-amber-500' : ''}`} onClick={() => setVersionFilter(versionFilter === 'outdated' ? 'all' : 'outdated')}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <ArrowUpCircle className="h-5 w-5 text-amber-500" />
+              <span className="text-2xl font-bold text-amber-500">{stats.outdated}</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Desatualizado</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Agents Table */}
+      {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Lista de Computadores</CardTitle>
-          <CardDescription>
-            Gerencie os computadores protegidos da sua empresa
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome do Computador</TableHead>
-                <TableHead>Sistema Operacional</TableHead>
-                <TableHead>Versão do Software <HelpTooltip term="versão do agente" /></TableHead>
-                <TableHead>Status <HelpTooltip term="status" /></TableHead>
-                <TableHead>Último Sinal de Vida <HelpTooltip term="heartbeat" /></TableHead>
-                <TableHead>Registrado em</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {agents?.map((agent) => (
-                <React.Fragment key={agent.id}>
-                  <TableRow>
-                    <TableCell className="font-medium">{agent.agent_name}</TableCell>
-                    <TableCell>
-                      {agent.os_type ? (
-                        <div className="flex flex-col">
-                          <span className="font-medium">{agent.os_type}</span>
-                          <span className="text-xs text-muted-foreground">{agent.os_version || 'N/A'}</span>
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou hostname..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Status</SelectItem>
+                <SelectItem value="online">Online</SelectItem>
+                <SelectItem value="offline">Offline</SelectItem>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="disabled">Desativado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={versionFilter} onValueChange={(v) => setVersionFilter(v as VersionFilter)}>
+              <SelectTrigger className="w-full md:w-[180px]">
+                <Shield className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Versão" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas Versões</SelectItem>
+                <SelectItem value="outdated">Desatualizados</SelectItem>
+                <SelectItem value="current">Atualizados</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Agent Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <AnimatePresence mode="popLayout">
+          {filteredAgents.map((agent) => {
+            const status = getAgentStatus(agent);
+            const outdated = isVersionOutdated(agent);
+            const platform = agent.os_type?.toLowerCase().includes('windows') ? 'windows' 
+              : agent.os_type?.toLowerCase().includes('linux') ? 'linux' : 'macos';
+            
+            return (
+              <motion.div
+                key={agent.id}
+                layout
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Card className={`relative overflow-hidden ${
+                  status === 'online' ? 'border-green-500/30' :
+                  status === 'offline' ? 'border-red-500/30' :
+                  status === 'pending' ? 'border-orange-500/30' : 'border-muted'
+                }`}>
+                  {/* Status indicator bar */}
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${
+                    status === 'online' ? 'bg-green-500' :
+                    status === 'offline' ? 'bg-red-500' :
+                    status === 'pending' ? 'bg-orange-500' : 'bg-muted'
+                  }`} />
+                  
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${
+                          status === 'online' ? 'bg-green-500/10' :
+                          status === 'offline' ? 'bg-red-500/10' :
+                          status === 'pending' ? 'bg-orange-500/10' : 'bg-muted'
+                        }`}>
+                          {getOsIcon(agent.os_type)}
                         </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-mono text-xs">
-                        {agent.agent_version || 'N/A'}
+                        <div>
+                          <CardTitle className="text-base">{agent.agent_name}</CardTitle>
+                          <CardDescription className="text-xs">
+                            {agent.hostname || agent.os_type || 'Sistema desconhecido'}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      {/* Status Badge */}
+                      <Badge variant={
+                        status === 'online' ? 'default' :
+                        status === 'offline' ? 'destructive' :
+                        status === 'pending' ? 'secondary' : 'outline'
+                      } className={status === 'online' ? 'bg-green-500' : ''}>
+                        {status === 'online' && <Activity className="h-3 w-3 mr-1 animate-pulse" />}
+                        {status === 'offline' && <XCircle className="h-3 w-3 mr-1" />}
+                        {status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                        {status === 'disabled' && <PowerOff className="h-3 w-3 mr-1" />}
+                        {status === 'online' ? 'Online' :
+                         status === 'offline' ? 'Offline' :
+                         status === 'pending' ? 'Pendente' : 'Desativado'}
                       </Badge>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(agent)}</TableCell>
-                    <TableCell>{getTimeSince(agent.last_heartbeat)}</TableCell>
-                    <TableCell>
-                      {formatBrazilDateTime(agent.enrolled_at, 'datetime')}
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      {agent.status === 'disabled' ? (
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-3">
+                    {/* Version with outdated warning */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <HelpTooltip term="versão do agente" />
+                        Versão:
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={`font-mono text-xs ${outdated ? 'border-amber-500 text-amber-500' : ''}`}>
+                          {agent.agent_version || 'N/A'}
+                        </Badge>
+                        {outdated && (
+                          <Badge className="bg-amber-500/10 text-amber-500 text-xs">
+                            <ArrowUpCircle className="h-3 w-3 mr-1" />
+                            Atualização disponível
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Last heartbeat */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <HelpTooltip term="heartbeat" />
+                        Último sinal:
+                      </span>
+                      <span className={status === 'offline' ? 'text-red-500' : ''}>
+                        {getTimeSince(agent.last_heartbeat)}
+                      </span>
+                    </div>
+                    
+                    {/* Registration date */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Registrado:</span>
+                      <span>{formatBrazilDateTime(agent.enrolled_at, 'date')}</span>
+                    </div>
+
+                    {/* Protection status */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Proteção:</span>
+                      {status === 'online' && !outdated ? (
+                        <span className="flex items-center gap-1 text-green-500">
+                          <ShieldCheck className="h-4 w-4" />
+                          Protegido
+                        </span>
+                      ) : status === 'online' && outdated ? (
+                        <span className="flex items-center gap-1 text-amber-500">
+                          <ShieldAlert className="h-4 w-4" />
+                          Parcial
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Shield className="h-4 w-4" />
+                          Inativo
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Installation guide for pending agents */}
+                    {status === 'pending' && (
+                      <div className="pt-2 border-t">
+                        <AgentInstallationGuide
+                          agent={agent}
+                          hasPostInstallation={installationStatus?.[agent.id] || false}
+                        />
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2 pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => checkHealthMutation.mutate(agent)}
+                        disabled={checkingHealthFor === agent.id || status === 'disabled'}
+                      >
+                        {checkingHealthFor === agent.id ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 mr-1" />
+                        )}
+                        Verificar
+                      </Button>
+                      {status === 'disabled' ? (
                         <Button
                           variant="outline"
                           size="sm"
+                          className="flex-1"
                           onClick={() => disableAgentMutation.mutate({ agentId: agent.id, disable: false })}
                         >
                           <Power className="h-4 w-4 mr-1" />
@@ -499,6 +552,7 @@ export default function AgentManagement() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="flex-1"
                           onClick={() => setAgentToDisable(agent)}
                         >
                           <PowerOff className="h-4 w-4 mr-1" />
@@ -510,46 +564,51 @@ export default function AgentManagement() {
                         size="sm"
                         onClick={() => setAgentToDelete(agent)}
                       >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Excluir
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                  {/* Show installation guide for agents without heartbeat */}
-                  {!agent.last_heartbeat && agent.status !== 'disabled' && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="bg-muted/30">
-                        <AgentInstallationGuide
-                          agent={agent}
-                          hasPostInstallation={installationStatus?.[agent.id] || false}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </React.Fragment>
-              ))}
-              {(!agents || agents.length === 0) && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    Nenhum computador registrado ainda
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
+
+      {/* Empty state */}
+      {filteredAgents.length === 0 && (
+        <Card className="p-12">
+          <div className="text-center space-y-4">
+            <Server className="h-16 w-16 mx-auto text-muted-foreground/50" />
+            <div>
+              <h3 className="text-lg font-medium">Nenhum computador encontrado</h3>
+              <p className="text-muted-foreground">
+                {searchTerm || statusFilter !== 'all' || versionFilter !== 'all' 
+                  ? 'Tente ajustar os filtros de busca'
+                  : 'Adicione computadores usando as chaves de instalação'}
+              </p>
+            </div>
+            {(searchTerm || statusFilter !== 'all' || versionFilter !== 'all') && (
+              <Button variant="outline" onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('all');
+                setVersionFilter('all');
+              }}>
+                Limpar Filtros
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!agentToDelete} onOpenChange={() => setAgentToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Tem certeza que deseja excluir este computador?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir Computador?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O computador <strong>{agentToDelete?.agent_name}</strong> será permanentemente
-              removido do sistema, incluindo todos os seus dados de acesso.
-              <br /><br />
-              <strong>Aviso:</strong> O software instalado no computador continuará tentando se conectar até ser desinstalado manualmente.
+              O computador <strong>{agentToDelete?.agent_name}</strong> será permanentemente removido.
+              O software instalado continuará tentando se conectar até ser desinstalado.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -558,7 +617,7 @@ export default function AgentManagement() {
               onClick={() => agentToDelete && deleteAgentMutation.mutate(agentToDelete.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Excluir Permanentemente
+              Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -568,18 +627,11 @@ export default function AgentManagement() {
       <AlertDialog open={!!agentToDisable} onOpenChange={() => setAgentToDisable(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Desativar Computador</AlertDialogTitle>
+            <AlertDialogTitle>Desativar Computador?</AlertDialogTitle>
             <AlertDialogDescription>
-              Você está prestes a desativar o computador <strong>{agentToDisable?.agent_name}</strong>.
-              <br /><br />
-              Isso irá:
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Desativar todos os acessos deste computador</li>
-                <li>Impedir que o computador envie sinais de vida ou execute tarefas</li>
-                <li>Manter o histórico e dados do computador no sistema</li>
-              </ul>
-              <br />
-              Você pode reativar o computador a qualquer momento.
+              O computador <strong>{agentToDisable?.agent_name}</strong> será desativado.
+              Todos os acessos serão suspensos, mas os dados serão mantidos.
+              Você pode reativar a qualquer momento.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -587,7 +639,7 @@ export default function AgentManagement() {
             <AlertDialogAction
               onClick={() => agentToDisable && disableAgentMutation.mutate({ agentId: agentToDisable.id, disable: true })}
             >
-              Desativar Computador
+              Desativar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
