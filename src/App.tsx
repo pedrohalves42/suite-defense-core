@@ -98,7 +98,8 @@ import {
   ClientComputers, 
   ClientSecurityStatus, 
   ClientReports, 
-  ClientActivity 
+  ClientActivity,
+  MyProtection 
 } from "./pages/client";
 
 const App = () => (
@@ -219,7 +220,8 @@ const App = () => (
 
               {/* Client Routes (Viewers/Operators) */}
               <Route path="/client" element={<ClientLayout />}>
-                <Route index element={<ClientDashboard />} />
+                <Route index element={<MyProtection />} />
+                <Route path="protection" element={<MyProtection />} />
                 <Route path="dashboard" element={<ClientDashboard />} />
                 <Route path="computers" element={<ClientComputers />} />
                 <Route path="security" element={<ClientSecurityStatus />} />
