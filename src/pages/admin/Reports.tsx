@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, Download, Loader2, Shield, AlertTriangle, Bug, Globe, FileWarning, FileSpreadsheet, Award, History } from "lucide-react";
+import { FileText, Download, Loader2, Shield, AlertTriangle, Bug, Globe, FileWarning, FileSpreadsheet, Award, History, Scale } from "lucide-react";
 import { toast } from "sonner";
 import { HelpTooltip } from "@/components/ui/tech-tooltip";
 import { GeneratedReportsList } from "@/components/admin/GeneratedReportsList";
+import { ComplianceReportGenerator } from "@/components/admin/ComplianceReportGenerator";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 
 interface Agent {
@@ -1304,11 +1305,19 @@ export default function Reports() {
             <FileText className="h-4 w-4" />
             Gerar Relatório
           </TabsTrigger>
+          <TabsTrigger value="compliance" className="flex items-center gap-2">
+            <Scale className="h-4 w-4" />
+            Compliance
+          </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2">
             <History className="h-4 w-4" />
             Laudos Gerados
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="compliance" className="space-y-4">
+          <ComplianceReportGenerator />
+        </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
           <GeneratedReportsList />
