@@ -220,8 +220,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Disk: Threshold 95% (increased from 90%)
-    if (metrics.disk_usage_percent && metrics.disk_usage_percent > 95) {
+    // Disk: Threshold 97% (increased from 95% to reduce false positives)
+    if (metrics.disk_usage_percent && metrics.disk_usage_percent > 97) {
       if (!hasRecentAlert('high_disk')) {
         logger.info('High disk usage detected');
         alerts.push({
@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
           alert_type: 'high_disk',
           severity: 'critical',
           title: `Disco Critico: ${agent.agent_name}`,
-          message: `Uso de disco em ${metrics.disk_usage_percent.toFixed(1)}% (limite: 95%)`,
+          message: `Uso de disco em ${metrics.disk_usage_percent.toFixed(1)}% (limite: 97%)`,
           details: { disk_usage: metrics.disk_usage_percent },
         });
       }
@@ -282,8 +282,8 @@ Deno.serve(async (req) => {
       alertsToResolve.push('high_memory', 'memory_warning');
     }
 
-    // Disk normalizou (< 90%)?
-    if (metrics.disk_usage_percent !== undefined && metrics.disk_usage_percent < 90) {
+    // Disk normalizou (<= 95%)? Auto-resolve when below trigger threshold
+    if (metrics.disk_usage_percent !== undefined && metrics.disk_usage_percent <= 95) {
       alertsToResolve.push('high_disk');
     }
 
