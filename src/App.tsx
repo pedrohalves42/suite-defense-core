@@ -7,6 +7,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminLayout } from "./components/AdminLayout";
 import { SuperAdminLayout } from "./components/SuperAdminLayout";
 import { AppLayout } from "./components/AppLayout";
+import { ClientLayout } from "./components/client/ClientLayout";
 import { CookieConsent } from "./components/CookieConsent";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import Landing from "./pages/Landing";
@@ -92,6 +93,13 @@ import MyAccount from "./pages/admin/MyAccount";
 import SLODashboard from "./pages/admin/SLODashboard";
 import SystemOperations from "./pages/admin/SystemOperations";
 import VerificarLaudo from "./pages/VerificarLaudo";
+import { 
+  ClientDashboard, 
+  ClientComputers, 
+  ClientSecurityStatus, 
+  ClientReports, 
+  ClientActivity 
+} from "./pages/client";
 
 const App = () => (
   <ErrorBoundary>
@@ -207,6 +215,16 @@ const App = () => (
                 <Route path="sales-pipeline" element={<SalesPipeline />} />
                 <Route path="pitch-deck" element={<PitchDeck />} />
                 <Route path="risk-analysis" element={<RiskAnalysis />} />
+              </Route>
+
+              {/* Client Routes (Viewers/Operators) */}
+              <Route path="/client" element={<ClientLayout />}>
+                <Route index element={<ClientDashboard />} />
+                <Route path="dashboard" element={<ClientDashboard />} />
+                <Route path="computers" element={<ClientComputers />} />
+                <Route path="security" element={<ClientSecurityStatus />} />
+                <Route path="reports" element={<ClientReports />} />
+                <Route path="activity" element={<ClientActivity />} />
               </Route>
             </Route>
             

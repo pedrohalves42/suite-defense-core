@@ -3665,6 +3665,60 @@ export type Database = {
           },
         ]
       }
+      onboarding_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_step: number | null
+          id: string
+          skipped: boolean | null
+          started_at: string | null
+          steps_completed: Json | null
+          tenant_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          id?: string
+          skipped?: boolean | null
+          started_at?: string | null
+          steps_completed?: Json | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_step?: number | null
+          id?: string
+          skipped?: boolean | null
+          started_at?: string | null
+          steps_completed?: Json | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_progress_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_progress_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       performance_metrics: {
         Row: {
           created_at: string
@@ -4645,6 +4699,174 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "security_policies"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      slo_alerts: {
+        Row: {
+          acknowledged: boolean | null
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          created_at: string | null
+          id: string
+          measurement_id: string | null
+          message: string | null
+          severity: string | null
+          slo_id: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string | null
+          id?: string
+          measurement_id?: string | null
+          message?: string | null
+          severity?: string | null
+          slo_id?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string | null
+          id?: string
+          measurement_id?: string | null
+          message?: string | null
+          severity?: string | null
+          slo_id?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slo_alerts_measurement_id_fkey"
+            columns: ["measurement_id"]
+            isOneToOne: false
+            referencedRelation: "slo_measurements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slo_alerts_slo_id_fkey"
+            columns: ["slo_id"]
+            isOneToOne: false
+            referencedRelation: "slo_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slo_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slo_alerts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      slo_definitions: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean | null
+          measurement_window: string | null
+          name: string
+          target_percent: number
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean | null
+          measurement_window?: string | null
+          name: string
+          target_percent: number
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean | null
+          measurement_window?: string | null
+          name?: string
+          target_percent?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      slo_measurements: {
+        Row: {
+          created_at: string | null
+          current_value: number | null
+          error_budget_used: number | null
+          id: string
+          is_breached: boolean | null
+          measured_at: string | null
+          sample_size: number | null
+          slo_id: string | null
+          target_value: number | null
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_value?: number | null
+          error_budget_used?: number | null
+          id?: string
+          is_breached?: boolean | null
+          measured_at?: string | null
+          sample_size?: number | null
+          slo_id?: string | null
+          target_value?: number | null
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_value?: number | null
+          error_budget_used?: number | null
+          id?: string
+          is_breached?: boolean | null
+          measured_at?: string | null
+          sample_size?: number | null
+          slo_id?: string | null
+          target_value?: number | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slo_measurements_slo_id_fkey"
+            columns: ["slo_id"]
+            isOneToOne: false
+            referencedRelation: "slo_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slo_measurements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slo_measurements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
           },
         ]
       }
