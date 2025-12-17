@@ -11,7 +11,7 @@ import { ErrorState } from "@/components/ErrorState";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
-
+import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
 // Versões específicas por plataforma
 const CURRENT_VERSIONS = {
   windows: 'v3.10.40-DNS-FILTER',
@@ -311,6 +311,9 @@ export default function AgentReleases() {
           </Button>
         </div>
       </div>
+
+      {/* Agent Version Sync */}
+      <AgentVersionSync latestVersions={CURRENT_VERSIONS} />
 
       {/* Action Card */}
       {needsRegistration && (
