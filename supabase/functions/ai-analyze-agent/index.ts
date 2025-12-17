@@ -4,13 +4,15 @@ import { sanitizeForAI, sanitizeObjectForAI, anonymizeAgentName, validateAIRespo
 import { withCircuitBreaker, executeWithTimeout } from "../_shared/ai-circuit-breaker.ts";
 import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from "../_shared/ai-metrics.ts";
 import { persistAIMetrics } from "../_shared/ai-metrics-persistence.ts";
+import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from "../_shared/ai-evidence-types.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 const AI_MODEL = 'google/gemini-2.5-flash';
-const AI_TIMEOUT_MS = 10000; // 10 seconds
+const AI_TIMEOUT_MS = 10000;
 const metricsLogger = createMetricsLogger('ai-analyze-agent', AI_MODEL);
 
 interface AgentContext {
@@ -44,6 +46,11 @@ interface AIAnalysis {
   suggestions: AISuggestion[];
   insights: string[];
   riskFactors: string[];
+  // Evidence Pack - TOP 5% Global
+  evidence: AIEvidence[];
+  data_sources: string[];
+  reasoning_summary: string;
+  confidence: number;
 }
 
 serve(async (req) => {
@@ -61,11 +68,81 @@ serve(async (req) => {
       );
     }
 
+    // Build evidence from context data
+    const evidence: AIEvidence[] = [];
+    
+    // Add metrics evidence
+    if (context.metrics) {
+      if (context.metrics.cpu_usage_percent !== null) {
+        evidence.push(buildEvidence(
+          'Uso de CPU',
+          'agent_system_metrics_partitioned',
+          context.metrics.cpu_usage_percent,
+          agent.id,
+          context.metrics.cpu_usage_percent > 80 ? 'critical' : context.metrics.cpu_usage_percent > 60 ? 'warning' : 'info'
+        ));
+      }
+      if (context.metrics.memory_usage_percent !== null) {
+        evidence.push(buildEvidence(
+          'Uso de Memória',
+          'agent_system_metrics_partitioned',
+          context.metrics.memory_usage_percent,
+          agent.id,
+          context.metrics.memory_usage_percent > 85 ? 'critical' : context.metrics.memory_usage_percent > 70 ? 'warning' : 'info'
+        ));
+      }
+      if (context.metrics.disk_usage_percent !== null) {
+        evidence.push(buildEvidence(
+          'Uso de Disco',
+          'agent_system_metrics_partitioned',
+          context.metrics.disk_usage_percent,
+          agent.id,
+          context.metrics.disk_usage_percent > 90 ? 'critical' : context.metrics.disk_usage_percent > 80 ? 'warning' : 'info'
+        ));
+      }
+    }
+
+    // Add vulnerabilities evidence
+    const criticalVulns = context.vulnerabilities.filter(v => v.severity === 'critical' || v.severity === 'high');
+    if (criticalVulns.length > 0) {
+      evidence.push(buildEvidence(
+        'Vulnerabilidades Críticas/Altas',
+        'vulnerabilities',
+        criticalVulns.length,
+        agent.id,
+        'critical'
+      ));
+    }
+
+    // Add software inventory evidence
+    if (context.software.length > 0) {
+      evidence.push(buildEvidence(
+        'Softwares Instalados',
+        'software_inventory',
+        context.software.length,
+        agent.id,
+        'info'
+      ));
+    }
+
+    // Add job failure evidence
+    const failedJobs = context.recentJobs.filter(j => j.status === 'failed');
+    if (failedJobs.length > 0) {
+      evidence.push(buildEvidence(
+        'Jobs com Falha',
+        'jobs',
+        failedJobs.length,
+        agent.id,
+        failedJobs.length > 3 ? 'critical' : 'warning'
+      ));
+    }
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       console.error('LOVABLE_API_KEY not configured');
+      const basicAnalysis = generateBasicAnalysis(context, evidence);
       return new Response(
-        JSON.stringify(generateBasicAnalysis(context)),
+        JSON.stringify(basicAnalysis),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -143,8 +220,9 @@ Responda APENAS com JSON valido no formato:
     if (!aiResult.success || !aiResult.data) {
       metricsLogger.logFailure(startTime, aiResult.error || 'Unknown error', undefined, aiResult.usedFallback);
       console.warn('[ai-analyze-agent] AI call failed, using basic analysis:', aiResult.error);
+      const basicAnalysis = generateBasicAnalysis(context, evidence);
       return new Response(
-        JSON.stringify(generateBasicAnalysis(context)),
+        JSON.stringify(basicAnalysis),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -170,33 +248,51 @@ Responda APENAS com JSON valido no formato:
     await persistAIMetrics(successMetrics);
 
     if (!content) {
+      const basicAnalysis = generateBasicAnalysis(context, evidence);
       return new Response(
-        JSON.stringify(generateBasicAnalysis(context)),
+        JSON.stringify(basicAnalysis),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Parse AI response
-    let analysis: AIAnalysis;
+    let analysis: Partial<AIAnalysis>;
     try {
       const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
       analysis = JSON.parse(jsonStr);
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError);
-      analysis = generateBasicAnalysis(context);
+      const basicAnalysis = generateBasicAnalysis(context, evidence);
+      return new Response(
+        JSON.stringify(basicAnalysis),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Validate and sanitize response
-    analysis = {
+    // Build complete response with Evidence Pack
+    const data_sources = extractDataSources(evidence);
+    const confidence = calculateConfidence(evidence, true);
+    const reasoning_summary = generateReasoningSummary(
+      evidence,
+      `análise do agente ${agent.hostname || agent.agent_name}`,
+      'Análise de IA aplicada para avaliação de saúde e recomendações de segurança.'
+    );
+
+    const completeAnalysis: AIAnalysis = {
       healthScore: Math.min(100, Math.max(0, analysis.healthScore || 50)),
       suggestions: (analysis.suggestions || []).slice(0, 5),
       insights: (analysis.insights || []).slice(0, 5),
       riskFactors: (analysis.riskFactors || []).slice(0, 5),
+      // Evidence Pack
+      evidence,
+      data_sources,
+      reasoning_summary,
+      confidence,
     };
 
     return new Response(
-      JSON.stringify(analysis),
+      JSON.stringify(completeAnalysis),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -216,7 +312,6 @@ function buildContextSummary(agent: Agent, context: AgentContext): string {
   const failedJobs = context.recentJobs.filter(j => j.status === 'failed').length;
   const totalJobs = context.recentJobs.length;
   
-  // CORREÇÃO: Usar nomes amigáveis diretamente (hostname > agent_name)
   const displayName = agent.hostname || agent.agent_name || 'Computador';
   
   return `
@@ -247,7 +342,7 @@ Analise este agente e sugira validacoes especificas baseadas no contexto.
 `;
 }
 
-function generateBasicAnalysis(context: AgentContext): AIAnalysis {
+function generateBasicAnalysis(context: AgentContext, evidence: AIEvidence[]): AIAnalysis {
   const suggestions: AISuggestion[] = [];
   const insights: string[] = [];
   const riskFactors: string[] = [];
@@ -334,10 +429,24 @@ function generateBasicAnalysis(context: AgentContext): AIAnalysis {
     insights.push('Sistema operando dentro dos parametros normais');
   }
 
+  // Evidence Pack for basic analysis
+  const data_sources = extractDataSources(evidence);
+  const confidence = calculateConfidence(evidence, false);
+  const reasoning_summary = generateReasoningSummary(
+    evidence,
+    'análise básica de métricas do sistema',
+    undefined
+  );
+
   return {
     healthScore: Math.max(0, healthScore),
     suggestions,
     insights,
     riskFactors,
+    // Evidence Pack
+    evidence,
+    data_sources,
+    reasoning_summary,
+    confidence,
   };
 }
