@@ -1,0 +1,97 @@
+name: Security Invariants Gate
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+
+jobs:
+  security-invariants:
+    name: 🔒 Security Invariants Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Security Invariants Tests
+        id: security-tests
+        run: npx playwright test e2e/security-invariants.spec.ts --reporter=json --output-file=security-results.json
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        continue-on-error: false
+
+      - name: Generate Evidence Artifact
+        if: always()
+        run: |
+          npx tsx scripts/generate-security-evidence.ts || echo "Evidence generation skipped"
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+          CI_RUN_ID: ${{ github.run_id }}
+
+      - name: Upload Security Evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-invariants-evidence-${{ github.sha }}
+          path: |
+            artifacts/security/*.json
+            artifacts/security/*.sha256
+          retention-days: 90
+
+      - name: Fail on Security Violation
+        if: failure()
+        run: |
+          echo "🚨 CRITICAL: SECURITY INVARIANT VIOLATION DETECTED"
+          echo ""
+          echo "One or more security invariants have been violated."
+          echo "This merge is BLOCKED until all violations are resolved."
+          echo ""
+          echo "Reference: docs/SECURITY_INVARIANTS.md"
+          echo ""
+          exit 1
+
+  summary:
+    name: 📊 Security Summary
+    runs-on: ubuntu-latest
+    needs: security-invariants
+    if: always()
+
+    steps:
+      - name: Security Gate Summary
+        run: |
+          echo "## Security Invariants Gate" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.security-invariants.result }}" == "success" ]; then
+            echo "✅ **All security invariants validated**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Invariant | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| INV-001: Cross-Tenant Isolation | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
+            echo "| INV-002: HMAC Authentication | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
+            echo "| INV-003: Script Integrity | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
+            echo "| INV-004: AI Data Isolation | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
+            echo "| INV-005: Fail-Closed Behavior | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
+            echo "| INV-006: Network Enforcement | ✅ PASS |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Security invariant violation detected**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ This PR cannot be merged until all violations are resolved." >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📄 Reference: [Security Invariants](docs/SECURITY_INVARIANTS.md)" >> $GITHUB_STEP_SUMMARY

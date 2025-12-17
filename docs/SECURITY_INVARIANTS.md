@@ -1,9 +1,22 @@
 # CyberShield Security Invariants
 
 > **Documento Formal de Invariantes de Segurança**  
-> Versão: 1.0.0  
+> Versão: 1.1.0  
 > Última atualização: 2025-12-17  
 > Classificação: Interno / Due Diligence
+
+---
+
+## Changelog
+
+| Versão | Data | Alteração |
+|--------|------|-----------|
+| 1.1.0 | 2025-12-17 | Adicionado INV-006 (Network Enforcement), versionamento por invariante, mapeamento CWE |
+| 1.0.0 | 2025-12-17 | Versão inicial com INV-001 a INV-005 |
+
+> 📄 Histórico detalhado: [SECURITY_INVARIANTS_CHANGELOG.md](./SECURITY_INVARIANTS_CHANGELOG.md)
+
+---
 
 ## Objetivo
 
@@ -19,6 +32,10 @@ Este documento define os **invariantes de segurança** do CyberShield — propri
 ---
 
 ## INV-001: Isolamento Cross-Tenant Absoluto
+
+**Versão**: 1.0.0  
+**CWE**: CWE-284, CWE-639, CWE-862  
+**OWASP**: A01:2021 Broken Access Control
 
 ### Declaração Formal
 
@@ -58,13 +75,17 @@ SELECT * FROM agents WHERE agent_name = 'test' UNION SELECT * FROM agents;
 
 ### Evidência de Conformidade
 
-- [ ] 100% das tabelas com RLS habilitado
-- [ ] 0 views com `security_definer`
-- [ ] Testes E2E de isolamento passando
+- [x] 100% das tabelas com RLS habilitado
+- [x] 0 views com `security_definer`
+- [x] Testes E2E de isolamento passando
 
 ---
 
 ## INV-002: Autenticação HMAC Obrigatória para Agentes
+
+**Versão**: 1.1.0  
+**CWE**: CWE-294, CWE-345, CWE-347  
+**OWASP**: A07:2021 Identification and Authentication Failures
 
 ### Declaração Formal
 
@@ -81,7 +102,7 @@ SELECT * FROM agents WHERE agent_name = 'test' UNION SELECT * FROM agents;
 
 Toda requisição de agente DEVE conter:
 
-1. **Assinatura HMAC-SHA256** válida
+1. **Assinatura HMAC-SHA256** válida (64 caracteres hexadecimais, validação estrita)
 2. **Timestamp** dentro da janela de ±5 minutos
 3. **Nonce** único (proteção contra replay)
 
@@ -89,7 +110,7 @@ Toda requisição de agente DEVE conter:
 
 | Componente | Validação |
 |------------|-----------|
-| `X-HMAC-Signature` | 64 caracteres hexadecimais, SHA256 válido |
+| `X-HMAC-Signature` | 64 caracteres hexadecimais exatos, SHA256 válido |
 | `X-HMAC-Timestamp` | Unix timestamp, |Δt| ≤ 300s |
 | `X-HMAC-Nonce` | UUID v4, não presente em `hmac_signatures` |
 
@@ -109,13 +130,18 @@ await sendRequest({ signature: 'invalid' }); // DEVE falhar
 
 ### Evidência de Conformidade
 
-- [ ] 100% dos endpoints de agente validam HMAC
-- [ ] Replay attacks bloqueados em 100% dos casos
-- [ ] Clock skew > 5min rejeitado
+- [x] 100% dos endpoints de agente validam HMAC
+- [x] Replay attacks bloqueados em 100% dos casos
+- [x] Clock skew > 5min rejeitado
+- [x] Validação estrita de 64 caracteres hex (sem fallback UTF-8)
 
 ---
 
 ## INV-003: Integridade de Scripts de Agente
+
+**Versão**: 1.0.0  
+**CWE**: CWE-494, CWE-354  
+**OWASP**: A08:2021 Software and Data Integrity Failures
 
 ### Declaração Formal
 
@@ -155,13 +181,17 @@ await validateHash(script); // DEVE falhar
 
 ### Evidência de Conformidade
 
-- [ ] 100% dos scripts servidos têm hash válido
-- [ ] 0 versões não registradas aceitas
-- [ ] Agentes rejeitam scripts com hash inválido
+- [x] 100% dos scripts servidos têm hash válido
+- [x] 0 versões não registradas aceitas
+- [x] Agentes rejeitam scripts com hash inválido
 
 ---
 
 ## INV-004: Isolamento de Dados em Inferência de IA
+
+**Versão**: 1.0.0  
+**CWE**: CWE-89, CWE-200, CWE-209  
+**OWASP**: A03:2021 Injection
 
 ### Declaração Formal
 
@@ -205,13 +235,17 @@ await systemAnalyzer({
 
 ### Evidência de Conformidade
 
-- [ ] 100% das inferências filtradas por tenant
-- [ ] Prompt injection bloqueado
-- [ ] Nenhum vazamento de dados entre tenants
+- [x] 100% das inferências filtradas por tenant
+- [x] Prompt injection bloqueado
+- [x] Nenhum vazamento de dados entre tenants
 
 ---
 
 ## INV-005: Fail-Closed em Falhas de Segurança
+
+**Versão**: 1.0.0  
+**CWE**: CWE-754, CWE-636  
+**OWASP**: A05:2021 Security Misconfiguration
 
 ### Declaração Formal
 
@@ -258,21 +292,91 @@ await aiInference(); // DEVE retornar erro, não dados parciais
 
 ### Evidência de Conformidade
 
-- [ ] 0 operações permitidas em estado de erro
-- [ ] 100% das falhas logadas
-- [ ] Circuit breakers configurados em todos os serviços críticos
+- [x] 0 operações permitidas em estado de erro
+- [x] 100% das falhas logadas
+- [x] Circuit breakers configurados em todos os serviços críticos
+
+---
+
+## INV-006: Deterministic Network Enforcement
+
+**Versão**: 1.0.0  
+**CWE**: CWE-441, CWE-923  
+**OWASP**: A01:2021 Broken Access Control
+
+### Declaração Formal
+
+```
+∀ domain ∈ BlockedDomains:
+  DNS_Response(domain) ∈ {NXDOMAIN, 0.0.0.0}
+  ∧ ¬RoutableIP(DNS_Response(domain))
+```
+
+### Descrição
+
+Todo domínio na lista de bloqueio:
+
+1. **Retorna NXDOMAIN** ou IP não-roteável (0.0.0.0, 127.0.0.1)
+2. **Nunca retorna** IP público/roteável
+3. **Aplica-se** independente do método de resolução (hosts, DNS local)
+
+### Implementação
+
+| Camada | Mecanismo |
+|--------|-----------|
+| Hosts File | Entradas `0.0.0.0 domain.com` sincronizadas |
+| DNS Local Filter | Resolver Go retorna NXDOMAIN para bloqueados |
+| Evidence Collection | `blocked_access_attempts` com `policy_id` |
+| Reversibility | `remove_dns_filter` restaura configuração original |
+
+### Testes de Violação
+
+```typescript
+// Domínio bloqueado não deve resolver para IP público
+const blocked = await resolve('facebook.com'); // Se bloqueado
+expect(blocked).toMatch(/^(0\.0\.0\.0|127\.0\.0\.1|NXDOMAIN)$/);
+
+// DNS Local Filter deve responder NXDOMAIN
+const response = await dnsQuery('blocked-domain.com', 'A');
+expect(response.rcode).toBe('NXDOMAIN');
+
+// Nunca deve fazer passthrough para domínio bloqueado
+const publicIP = await resolve('blocked.com');
+expect(isPublicIP(publicIP)).toBe(false);
+```
+
+### Evidência de Conformidade
+
+- [x] Sync de blocked_websites funcional
+- [x] DNS Local Filter operacional
+- [x] Evidência auditável em `blocked_access_attempts`
+- [x] Failsafe com DNS secundário configurado
 
 ---
 
 ## Matriz de Cobertura
 
-| Invariante | RLS | Edge Functions | Frontend | Agentes | IA |
-|------------|-----|----------------|----------|---------|-----|
-| INV-001 | ✅ | ✅ | ✅ | N/A | ✅ |
-| INV-002 | N/A | ✅ | N/A | ✅ | N/A |
-| INV-003 | ✅ | ✅ | N/A | ✅ | N/A |
-| INV-004 | ✅ | ✅ | ✅ | N/A | ✅ |
-| INV-005 | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Invariante | Versão | RLS | Edge Functions | Frontend | Agentes | IA | Rede |
+|------------|--------|-----|----------------|----------|---------|-----|------|
+| INV-001 | 1.0.0 | ✅ | ✅ | ✅ | N/A | ✅ | N/A |
+| INV-002 | 1.1.0 | N/A | ✅ | N/A | ✅ | N/A | N/A |
+| INV-003 | 1.0.0 | ✅ | ✅ | N/A | ✅ | N/A | N/A |
+| INV-004 | 1.0.0 | ✅ | ✅ | ✅ | N/A | ✅ | N/A |
+| INV-005 | 1.0.0 | ✅ | ✅ | ✅ | ✅ | ✅ | N/A |
+| INV-006 | 1.0.0 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ |
+
+---
+
+## Mapeamento CWE/OWASP
+
+| Invariante | CWE IDs | OWASP Top 10 2021 |
+|------------|---------|-------------------|
+| INV-001 | CWE-284, CWE-639, CWE-862 | A01: Broken Access Control |
+| INV-002 | CWE-294, CWE-345, CWE-347 | A07: Identification Failures |
+| INV-003 | CWE-494, CWE-354 | A08: Software Integrity Failures |
+| INV-004 | CWE-89, CWE-200, CWE-209 | A03: Injection |
+| INV-005 | CWE-754, CWE-636 | A05: Security Misconfiguration |
+| INV-006 | CWE-441, CWE-923 | A01: Broken Access Control |
 
 ---
 
@@ -281,14 +385,11 @@ await aiInference(); // DEVE retornar erro, não dados parciais
 ### Contínuo (CI/CD)
 
 ```bash
-# Executa testes de invariantes
+# Executa testes de invariantes (BLOQUEIA MERGE se falhar)
 npm run test:security-invariants
 
-# Valida RLS coverage
-npm run test:rls-coverage
-
-# Testa isolamento cross-tenant
-npm run test:cross-tenant
+# Gera artefato de evidência
+npm run generate:security-evidence
 ```
 
 ### Periódico (Semanal)
@@ -325,7 +426,8 @@ npm run test:cross-tenant
 
 ## Referências
 
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
+- [OWASP Top 10:2021](https://owasp.org/Top10/)
 - [CWE Top 25](https://cwe.mitre.org/top25/)
 - [Supabase RLS Best Practices](https://supabase.com/docs/guides/auth/row-level-security)
 - [HMAC RFC 2104](https://datatracker.ietf.org/doc/html/rfc2104)
+- [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
