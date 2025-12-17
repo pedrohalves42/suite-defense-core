@@ -69,6 +69,50 @@ Deno.serve(async (req) => {
       );
     }
 
+    // CRITICAL: Platform validation to prevent wrong script type registration
+    const scriptTrimmed = script_content.trim();
+    const isWindowsScript = scriptTrimmed.startsWith('<#') || scriptTrimmed.startsWith('param(');
+    const isUnixScript = scriptTrimmed.startsWith('#!/');
+
+    if (platform === 'windows' && !isWindowsScript) {
+      logger.error('[register-agent-release] Platform mismatch: Windows requires PowerShell script', {
+        requestId,
+        platform,
+        version,
+        scriptStart: scriptTrimmed.substring(0, 50)
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Platform mismatch: Windows scripts must start with <# or param()',
+          detected: isUnixScript ? 'Unix/macOS bash script' : 'Unknown script type'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if ((platform === 'linux' || platform === 'macos') && !isUnixScript) {
+      logger.error('[register-agent-release] Platform mismatch: Linux/macOS requires bash script', {
+        requestId,
+        platform,
+        version,
+        scriptStart: scriptTrimmed.substring(0, 50)
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Platform mismatch: Linux/macOS scripts must start with #!/',
+          detected: isWindowsScript ? 'Windows PowerShell script' : 'Unknown script type'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    logger.info('[register-agent-release] Platform validation passed', {
+      requestId,
+      platform,
+      isWindowsScript,
+      isUnixScript
+    });
+
     // Use manual SHA256 if provided (for BOM compatibility with old agents)
     // Otherwise calculate SHA256 normally
     let sha256: string;
