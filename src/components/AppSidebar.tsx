@@ -32,6 +32,14 @@ export const AppSidebar = () => {
     { icon: TestTube, label: 'Testar Computadores', to: '/agent-test' },
   ], []);
 
+  // Itens destacados com badge visual (UX-02)
+  const highlightedRoutes = useMemo(() => new Set([
+    '/admin/dashboard',
+    '/admin/ai-insights',
+    '/admin/security-monitoring',
+    '/admin/vulnerabilities',
+  ]), []);
+
   const adminItems = useMemo(() => [
     // === OVERVIEW ===
     { icon: Home, label: 'Painel de Controle', to: '/admin/dashboard', end: true, section: 'overview' },
@@ -221,6 +229,7 @@ export const AppSidebar = () => {
               {/* Overview Section */}
               {adminItems.filter(item => item.section === 'overview').map((item, idx) => {
                 const Icon = item.icon;
+                const isHighlighted = highlightedRoutes.has(item.to);
                 return (
                   <motion.div
                     key={item.to}
@@ -231,11 +240,19 @@ export const AppSidebar = () => {
                     <NavLink
                       to={item.to}
                       end={item.end}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md"
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md",
+                        isHighlighted && "ring-1 ring-primary/30 bg-primary/5"
+                      )}
                       activeClassName="bg-gradient-to-r from-accent to-accent/70 text-accent-foreground font-medium shadow-lg border-l-2 border-primary"
                     >
-                      <Icon className="h-5 w-5 shrink-0" />
-                      {!collapsed && <span className="text-sm">{item.label}</span>}
+                      <Icon className={cn("h-5 w-5 shrink-0", isHighlighted && "text-primary")} />
+                      {!collapsed && (
+                        <span className="text-sm flex items-center gap-2">
+                          {item.label}
+                          {isHighlighted && <span className="text-primary text-xs">★</span>}
+                        </span>
+                      )}
                     </NavLink>
                   </motion.div>
                 );
@@ -270,6 +287,7 @@ export const AppSidebar = () => {
               {!collapsed && <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">Segurança</p>}
               {adminItems.filter(item => item.section === 'security').map((item, idx) => {
                 const Icon = item.icon;
+                const isHighlighted = highlightedRoutes.has(item.to);
                 return (
                   <motion.div
                     key={item.to}
@@ -279,11 +297,19 @@ export const AppSidebar = () => {
                   >
                     <NavLink
                       to={item.to}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md"
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md",
+                        isHighlighted && "ring-1 ring-primary/30 bg-primary/5"
+                      )}
                       activeClassName="bg-gradient-to-r from-accent to-accent/70 text-accent-foreground font-medium shadow-lg border-l-2 border-primary"
                     >
-                      <Icon className="h-5 w-5 shrink-0" />
-                      {!collapsed && <span className="text-sm">{item.label}</span>}
+                      <Icon className={cn("h-5 w-5 shrink-0", isHighlighted && "text-primary")} />
+                      {!collapsed && (
+                        <span className="text-sm flex items-center gap-2">
+                          {item.label}
+                          {isHighlighted && <span className="text-primary text-xs">★</span>}
+                        </span>
+                      )}
                     </NavLink>
                   </motion.div>
                 );
@@ -318,6 +344,7 @@ export const AppSidebar = () => {
               {!collapsed && <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">IA</p>}
               {adminItems.filter(item => item.section === 'ai').map((item, idx) => {
                 const Icon = item.icon;
+                const isHighlighted = highlightedRoutes.has(item.to);
                 return (
                   <motion.div
                     key={item.to}
@@ -327,11 +354,19 @@ export const AppSidebar = () => {
                   >
                     <NavLink
                       to={item.to}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md"
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md",
+                        isHighlighted && "ring-1 ring-primary/30 bg-primary/5"
+                      )}
                       activeClassName="bg-gradient-to-r from-accent to-accent/70 text-accent-foreground font-medium shadow-lg border-l-2 border-primary"
                     >
-                      <Icon className="h-5 w-5 shrink-0" />
-                      {!collapsed && <span className="text-sm">{item.label}</span>}
+                      <Icon className={cn("h-5 w-5 shrink-0", isHighlighted && "text-primary")} />
+                      {!collapsed && (
+                        <span className="text-sm flex items-center gap-2">
+                          {item.label}
+                          {isHighlighted && <span className="text-primary text-xs">★</span>}
+                        </span>
+                      )}
                     </NavLink>
                   </motion.div>
                 );
