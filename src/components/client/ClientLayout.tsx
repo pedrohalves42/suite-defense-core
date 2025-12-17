@@ -6,7 +6,8 @@ import {
   FileText, 
   Globe,
   LogOut,
-  Menu
+  Menu,
+  ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { useClientAccess } from '@/hooks/useClientAccess';
 import { useState } from 'react';
 
 const menuItems = [
+  { icon: ShieldCheck, label: 'Minha Proteção', path: '/client/protection' },
   { icon: LayoutDashboard, label: 'Visão Geral', path: '/client/dashboard' },
   { icon: Monitor, label: 'Meus Computadores', path: '/client/computers' },
   { icon: Shield, label: 'Status de Segurança', path: '/client/security' },

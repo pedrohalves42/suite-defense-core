@@ -89,7 +89,7 @@ export const ClientComputers = () => {
       if (agentIds.length === 0) return [];
 
       const { data: metricsData } = await supabase
-        .from('agent_system_metrics')
+        .from('agent_system_metrics_partitioned')
         .select('agent_id, cpu_usage_percent, memory_usage_percent, disk_usage_percent, collected_at')
         .in('agent_id', agentIds)
         .order('collected_at', { ascending: false });
