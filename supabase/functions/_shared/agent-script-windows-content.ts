@@ -51,7 +51,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v3.10.40-DNS-FILTER"
+    [string]\$AgentVersion = "v3.10.41-SHA256-BASE64-FIX"
 )
 
 \$ErrorActionPreference = "Stop"
