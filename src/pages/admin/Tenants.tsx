@@ -155,8 +155,8 @@ export default function Tenants() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold">Gerenciamento de Tenants</h2>
-          <p className="text-muted-foreground">Gerencie organizacoes e mova usuarios entre tenants</p>
+          <h2 className="text-3xl font-bold">Empresas Cadastradas</h2>
+          <p className="text-muted-foreground">Gerencie organizações e mova usuários entre empresas</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={openMove} onOpenChange={setOpenMove}>
@@ -168,14 +168,14 @@ export default function Tenants() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Mover Usuario entre Tenants</DialogTitle>
+                <DialogTitle>Mover Usuário entre Empresas</DialogTitle>
                 <DialogDescription>
-                  Selecione um usuario e o tenant de destino
+                  Selecione um usuário e a empresa de destino
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>Usuario</Label>
+                  <Label>Usuário</Label>
                   <Select 
                     value={selectedUser?.user_id} 
                     onValueChange={(value) => {
@@ -184,7 +184,7 @@ export default function Tenants() {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione um usuario" />
+                      <SelectValue placeholder="Selecione um usuário" />
                     </SelectTrigger>
                     <SelectContent>
                       {users?.map((user) => (
@@ -196,10 +196,10 @@ export default function Tenants() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Tenant de Destino</Label>
+                  <Label>Empresa de Destino</Label>
                   <Select value={targetTenantId} onValueChange={setTargetTenantId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione um tenant" />
+                      <SelectValue placeholder="Selecione uma empresa" />
                     </SelectTrigger>
                     <SelectContent>
                       {tenants?.filter((t) => t.id !== selectedUser?.tenant_id).map((tenant) => (
@@ -210,12 +210,12 @@ export default function Tenants() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button 
+                <Button
                   onClick={() => moveUser.mutate()} 
                   disabled={moveUser.isPending || !selectedUser || !targetTenantId}
                   className="w-full"
                 >
-                  Mover Usuario
+                  Mover Usuário
                 </Button>
               </div>
             </DialogContent>
@@ -225,21 +225,21 @@ export default function Tenants() {
             <DialogTrigger asChild>
               <Button>
                 <Plus className="h-4 w-4 mr-2" />
-                Novo Tenant
+                Nova Empresa
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Criar Novo Tenant</DialogTitle>
+                <DialogTitle>Criar Nova Empresa</DialogTitle>
                 <DialogDescription>
-                  Crie uma nova organizacao/tenant no sistema
+                  Cadastre uma nova organização no sistema
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>Nome do Tenant</Label>
+                  <Label>Nome da Empresa</Label>
                   <Input 
-                    placeholder="Minha Organizacao"
+                    placeholder="Nome da Empresa"
                     value={newTenantName}
                     onChange={(e) => setNewTenantName(e.target.value)}
                   />
@@ -250,7 +250,7 @@ export default function Tenants() {
                   className="w-full"
                 >
                   <Building2 className="h-4 w-4 mr-2" />
-                  Criar Tenant
+                  Criar Empresa
                 </Button>
               </div>
             </DialogContent>
@@ -260,8 +260,8 @@ export default function Tenants() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Tenants Existentes</CardTitle>
-          <CardDescription>Lista de todos os tenants do sistema</CardDescription>
+          <CardTitle>Empresas</CardTitle>
+          <CardDescription>Lista de todas as empresas cadastradas</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingTenants ? (
@@ -271,9 +271,9 @@ export default function Tenants() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead>Usuarios</TableHead>
-                  <TableHead>Criado em</TableHead>
+                  <TableHead>Identificador</TableHead>
+                  <TableHead>Usuários</TableHead>
+                  <TableHead>Cadastrado em</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -298,8 +298,8 @@ export default function Tenants() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Usuarios por Tenant</CardTitle>
-          <CardDescription>Visualizacao detalhada de usuarios e seus tenants</CardDescription>
+          <CardTitle>Usuários por Empresa</CardTitle>
+          <CardDescription>Visualização detalhada dos usuários e suas empresas</CardDescription>
         </CardHeader>
         <CardContent>
           {loadingUsers ? (
@@ -310,8 +310,8 @@ export default function Tenants() {
                 <TableRow>
                   <TableHead>Email</TableHead>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Tenant</TableHead>
+                  <TableHead>Permissão</TableHead>
+                  <TableHead>Empresa</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

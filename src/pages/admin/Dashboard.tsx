@@ -113,15 +113,17 @@ export default function Dashboard() {
     refetchInterval: 30000,
   });
 
-  // Fetch recent jobs
+  // Fetch recent jobs (last 24 hours)
   const { data: recentJobs } = useQuery({
     queryKey: ['dashboard-recent-jobs', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('jobs_normalized')
         .select('id, agent_name, type, normalized_status, created_at, completed_at')
         .eq('tenant_id', tenant.id)
+        .gte('created_at', oneDayAgo)
         .order('created_at', { ascending: false })
         .limit(10);
       if (error) throw error;
@@ -275,7 +277,7 @@ export default function Dashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Activity className="h-4 w-4 text-blue-500" />
-                Tarefas Recentes
+                Tarefas de Hoje
               </CardTitle>
             </CardHeader>
             <CardContent>

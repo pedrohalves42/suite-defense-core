@@ -19,10 +19,21 @@ export const JOB_TYPE_LABELS: Record<string, string> = {
 
 export const JOB_STATUS_LABELS: Record<string, string> = {
   queued: '⏳ Na Fila',
-  delivered: '📤 Enviado',
+  delivered: '📤 Aguardando Resposta',
   completed: '✅ Concluído',
   failed: '❌ Falhou',
   pending: '⏸️ Aguardando',
+  running: '⚙️ Executando',
+};
+
+// Descriptions for tooltips
+export const JOB_STATUS_DESCRIPTIONS: Record<string, string> = {
+  queued: 'Tarefa aguardando o computador buscar',
+  delivered: 'Enviado ao computador, aguardando confirmação de execução',
+  completed: 'Tarefa finalizada com sucesso',
+  failed: 'Ocorreu um erro durante a execução',
+  pending: 'Tarefa criada, será processada em breve',
+  running: 'Tarefa sendo executada no computador',
 };
 
 // Terminologia amigável para UI
