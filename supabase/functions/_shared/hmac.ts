@@ -128,18 +128,11 @@ export async function verifyHmacSignature(
     .join('');
 
   if (signature !== expectedSignature) {
-    // DEBUG LOGGING: Capture HMAC mismatch details
-    console.error('[HMAC] Signature mismatch detected:', {
+    // Production logging: minimal info to prevent signature analysis attacks
+    console.error('[HMAC] Signature verification failed', {
       agent: agentName,
-      timestamp,
-      nonce,
-      received_signature: signature.substring(0, 16) + '...',
-      expected_signature: expectedSignature.substring(0, 16) + '...',
-      signatures_match: signature === expectedSignature,
-      body_length: body.length,
-      body_preview: body.substring(0, 200),
-      payload_length: payload.length,
-      payload_preview: payload.substring(0, 200)
+      error_code: 'AUTH_INVALID_SIGNATURE',
+      timestamp: timestamp
     });
     
     return { 
