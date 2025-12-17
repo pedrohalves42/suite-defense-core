@@ -68,7 +68,10 @@ export const ClientActivity = () => {
         return date >= yesterday && date < yesterdayEnd;
       }) || [];
 
-      const activityChange = yesterdayActivity.length > 0 
+      // Smart comparison logic
+      const hasYesterdayData = yesterdayActivity.length > 0;
+      const hasTodayData = todayActivity.length > 0;
+      const activityChange = hasYesterdayData 
         ? Math.round(((todayActivity.length - yesterdayActivity.length) / yesterdayActivity.length) * 100)
         : 0;
 
@@ -79,7 +82,10 @@ export const ClientActivity = () => {
         todayStats: {
           sites: todayActivity.length,
           blocked: todayBlocked.length,
-          change: activityChange
+          change: activityChange,
+          hasYesterdayData,
+          hasTodayData,
+          isFirstDay: !hasYesterdayData && hasTodayData
         }
       };
     },
@@ -149,20 +155,28 @@ export const ClientActivity = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">vs. Ontem</p>
-                <div className="flex items-center gap-2">
-                  <p className={`text-2xl font-bold ${
-                    (data?.todayStats.change || 0) > 0 ? 'text-green-500' : 
-                    (data?.todayStats.change || 0) < 0 ? 'text-red-500' : ''
-                  }`}>
-                    {(data?.todayStats.change || 0) > 0 ? '+' : ''}{data?.todayStats.change || 0}%
-                  </p>
-                  {(data?.todayStats.change || 0) > 0 ? (
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                  ) : (data?.todayStats.change || 0) < 0 ? (
-                    <TrendingDown className="h-4 w-4 text-red-500" />
-                  ) : null}
-                </div>
-                <p className="text-xs text-muted-foreground">variação</p>
+                {data?.todayStats.hasYesterdayData ? (
+                  <div className="flex items-center gap-2">
+                    <p className={`text-2xl font-bold ${
+                      (data?.todayStats.change || 0) > 0 ? 'text-green-500' : 
+                      (data?.todayStats.change || 0) < 0 ? 'text-red-500' : ''
+                    }`}>
+                      {(data?.todayStats.change || 0) > 0 ? '+' : ''}{data?.todayStats.change || 0}%
+                    </p>
+                    {(data?.todayStats.change || 0) > 0 ? (
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                    ) : (data?.todayStats.change || 0) < 0 ? (
+                      <TrendingDown className="h-4 w-4 text-red-500" />
+                    ) : null}
+                  </div>
+                ) : data?.todayStats.isFirstDay ? (
+                  <p className="text-lg font-medium text-blue-500">🎉 Primeiro dia!</p>
+                ) : (
+                  <p className="text-lg font-medium text-muted-foreground">Sem dados</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {data?.todayStats.hasYesterdayData ? 'variação' : 'aguardando histórico'}
+                </p>
               </div>
               <BarChart3 className="h-8 w-8 text-muted-foreground" />
             </div>

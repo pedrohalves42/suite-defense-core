@@ -97,7 +97,7 @@ export const ClientReports = () => {
       </div>
 
       {/* Evolution Chart */}
-      {chartData.length > 1 && (
+      {chartData.length > 1 ? (
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -152,6 +152,18 @@ export const ClientReports = () => {
             </div>
             <p className="text-xs text-muted-foreground text-center mt-2">
               Quanto menor o score, melhor a segurança
+            </p>
+          </CardContent>
+        </Card>
+      ) : reports && reports.length > 0 && (
+        <Card className="bg-muted/30">
+          <CardContent className="flex flex-col items-center justify-center py-8">
+            <TrendingUp className="h-10 w-10 text-muted-foreground mb-3" />
+            <p className="text-sm text-muted-foreground text-center">
+              📊 O gráfico de evolução aparecerá após o segundo relatório
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Continue monitorando para acompanhar a tendência
             </p>
           </CardContent>
         </Card>

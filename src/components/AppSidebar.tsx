@@ -2,7 +2,9 @@ import { Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, ChevronL
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { useSidebarCounts } from '@/hooks/useSidebarCounts';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
@@ -10,6 +12,7 @@ import { motion } from 'framer-motion';
 export const AppSidebar = () => {
   const { isAdmin } = useIsAdmin();
   const { isSuperAdmin } = useSuperAdmin();
+  const { alertsCount, vulnCount, deadLetterCount } = useSidebarCounts();
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved === 'true';
@@ -19,6 +22,13 @@ export const AppSidebar = () => {
     localStorage.setItem('sidebar-collapsed', collapsed.toString());
     window.dispatchEvent(new Event('sidebar-toggle'));
   }, [collapsed]);
+
+  // Badge counts for menu items
+  const badgeCounts: Record<string, number> = useMemo(() => ({
+    '/admin/vulnerabilities': vulnCount,
+    '/admin/security-monitoring': alertsCount,
+    '/admin/dead-letter-queue': deadLetterCount
+  }), [vulnCount, alertsCount, deadLetterCount]);
 
   const menuItems = useMemo(() => [
     { icon: Home, label: 'Dashboard', to: '/dashboard', end: true },
@@ -288,6 +298,7 @@ export const AppSidebar = () => {
               {adminItems.filter(item => item.section === 'security').map((item, idx) => {
                 const Icon = item.icon;
                 const isHighlighted = highlightedRoutes.has(item.to);
+                const badgeCount = badgeCounts[item.to] || 0;
                 return (
                   <motion.div
                     key={item.to}
@@ -298,17 +309,24 @@ export const AppSidebar = () => {
                     <NavLink
                       to={item.to}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md",
+                        "flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md",
                         isHighlighted && "ring-1 ring-primary/30 bg-primary/5"
                       )}
                       activeClassName="bg-gradient-to-r from-accent to-accent/70 text-accent-foreground font-medium shadow-lg border-l-2 border-primary"
                     >
-                      <Icon className={cn("h-5 w-5 shrink-0", isHighlighted && "text-primary")} />
-                      {!collapsed && (
-                        <span className="text-sm flex items-center gap-2">
-                          {item.label}
-                          {isHighlighted && <span className="text-primary text-xs">★</span>}
-                        </span>
+                      <div className="flex items-center gap-3">
+                        <Icon className={cn("h-5 w-5 shrink-0", isHighlighted && "text-primary")} />
+                        {!collapsed && (
+                          <span className="text-sm flex items-center gap-2">
+                            {item.label}
+                            {isHighlighted && <span className="text-primary text-xs">★</span>}
+                          </span>
+                        )}
+                      </div>
+                      {!collapsed && badgeCount > 0 && (
+                        <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
+                          {badgeCount > 99 ? '99+' : badgeCount}
+                        </Badge>
                       )}
                     </NavLink>
                   </motion.div>
@@ -320,6 +338,7 @@ export const AppSidebar = () => {
               {!collapsed && <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase">Infraestrutura</p>}
               {adminItems.filter(item => item.section === 'infrastructure').map((item, idx) => {
                 const Icon = item.icon;
+                const badgeCount = badgeCounts[item.to] || 0;
                 return (
                   <motion.div
                     key={item.to}
@@ -329,11 +348,18 @@ export const AppSidebar = () => {
                   >
                     <NavLink
                       to={item.to}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md"
+                      className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-gradient-to-r hover:from-accent/50 hover:to-accent/30 hover:text-accent-foreground transition-all duration-300 hover:translate-x-1 hover:shadow-md"
                       activeClassName="bg-gradient-to-r from-accent to-accent/70 text-accent-foreground font-medium shadow-lg border-l-2 border-primary"
                     >
-                      <Icon className="h-5 w-5 shrink-0" />
-                      {!collapsed && <span className="text-sm">{item.label}</span>}
+                      <div className="flex items-center gap-3">
+                        <Icon className="h-5 w-5 shrink-0" />
+                        {!collapsed && <span className="text-sm">{item.label}</span>}
+                      </div>
+                      {!collapsed && badgeCount > 0 && (
+                        <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-xs bg-yellow-500/10 text-yellow-600">
+                          {badgeCount > 99 ? '99+' : badgeCount}
+                        </Badge>
+                      )}
                     </NavLink>
                   </motion.div>
                 );
