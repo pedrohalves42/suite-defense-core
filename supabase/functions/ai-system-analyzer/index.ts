@@ -4,6 +4,7 @@ import { sanitizeForAI, anonymizeAgentName } from '../_shared/ai-sanitizer.ts';
 import { withCircuitBreaker, executeWithTimeout } from '../_shared/ai-circuit-breaker.ts';
 import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from '../_shared/ai-metrics.ts';
 import { persistAIMetrics } from '../_shared/ai-metrics-persistence.ts';
+import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from '../_shared/ai-evidence-types.ts';
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -596,8 +597,87 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
       return [];
     }
 
-    // Mapear para formato do banco de dados
-    // CORREÇÃO: Não precisa traduzir pois usamos nomes amigáveis diretamente
+    // Build evidence array from analysis data
+    const evidenceArray: AIEvidence[] = [];
+    
+    // Add failure rate evidence
+    if (failureRate > 0) {
+      evidenceArray.push(buildEvidence(
+        'Taxa de Falha de Instalação',
+        'installation_analytics',
+        failureRate,
+        undefined,
+        failureRate > 10 ? 'critical' : failureRate > 5 ? 'warning' : 'info'
+      ));
+    }
+    
+    // Add CPU evidence
+    if (avgCpuUsage > 0) {
+      evidenceArray.push(buildEvidence(
+        'Uso Médio de CPU',
+        'agent_system_metrics_partitioned',
+        avgCpuUsage,
+        undefined,
+        avgCpuUsage > 80 ? 'critical' : avgCpuUsage > 60 ? 'warning' : 'info'
+      ));
+    }
+    
+    // Add memory evidence
+    if (avgMemoryUsage > 0) {
+      evidenceArray.push(buildEvidence(
+        'Uso Médio de Memória',
+        'agent_system_metrics_partitioned',
+        avgMemoryUsage,
+        undefined,
+        avgMemoryUsage > 85 ? 'critical' : avgMemoryUsage > 70 ? 'warning' : 'info'
+      ));
+    }
+    
+    // Add problematic jobs evidence
+    if (data.problematicJobs.length > 0) {
+      evidenceArray.push(buildEvidence(
+        'Jobs Problemáticos',
+        'v_problematic_jobs',
+        data.problematicJobs.length,
+        undefined,
+        data.problematicJobs.length > 10 ? 'critical' : 'warning'
+      ));
+    }
+    
+    // Add system alerts evidence
+    const criticalAlerts = data.systemAlerts.filter(a => a.severity === 'critical').length;
+    if (criticalAlerts > 0) {
+      evidenceArray.push(buildEvidence(
+        'Alertas Críticos',
+        'system_alerts',
+        criticalAlerts,
+        undefined,
+        'critical'
+      ));
+    }
+    
+    // Add problematic agents evidence
+    if (problematicAgents.length > 0) {
+      for (const agent of problematicAgents.slice(0, 3)) {
+        evidenceArray.push(buildEvidence(
+          `Agente com Problema: ${agent.agent_name}`,
+          'agent_system_metrics_partitioned',
+          { cpu: agent.max_cpu, memory: agent.max_memory, disk: agent.max_disk },
+          undefined,
+          agent.critical_disk ? 'critical' : 'warning'
+        ));
+      }
+    }
+
+    const data_sources = extractDataSources(evidenceArray);
+    const confidence = calculateConfidence(evidenceArray, true);
+    const reasoning_summary = generateReasoningSummary(
+      evidenceArray,
+      `análise do tenant ${tenantName}`,
+      'Correlação automática de métricas, jobs e alertas realizada pela IA.'
+    );
+
+    // Mapear para formato do banco de dados com Evidence Pack
     return parsedInsights.map((insight: any) => ({
       tenant_id: tenantId,
       insight_type: insight.insight_type,
@@ -605,15 +685,20 @@ Responda APENAS com um array JSON valido de insights. Exemplo:
       title: insight.title || '',
       description: insight.description || '',
       evidence: {
+        // Legacy format for backward compatibility
         failureRate,
         avgCpuUsage,
         avgMemoryUsage,
         problematicJobsCount: data.problematicJobs.length,
         systemAlertsCount: data.systemAlerts.length,
         analysisDate: new Date().toISOString(),
+        // Evidence Pack - TOP 5% Global
+        evidence_pack: evidenceArray,
+        data_sources,
+        reasoning_summary,
       },
       recommendation: insight.recommendation || '',
-      confidence_score: insight.confidence_score,
+      confidence_score: insight.confidence_score || confidence,
     }));
 
   } catch (error) {

@@ -4,6 +4,8 @@ import { sanitizeForAI, sanitizeObjectForAI, anonymizeAgentName } from "../_shar
 import { withCircuitBreaker, executeWithTimeout } from "../_shared/ai-circuit-breaker.ts";
 import { createMetricsLogger, extractTokenUsage, AIInferenceMetrics } from "../_shared/ai-metrics.ts";
 import { persistAIMetrics } from "../_shared/ai-metrics-persistence.ts";
+import { AIEvidence, buildEvidence, calculateConfidence, generateReasoningSummary, extractDataSources } from "../_shared/ai-evidence-types.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -11,7 +13,7 @@ const corsHeaders = {
 
 const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 const AI_MODEL = 'openai/gpt-5-mini';
-const AI_TIMEOUT_MS = 15000; // 15 seconds for network analysis
+const AI_TIMEOUT_MS = 15000;
 const metricsLogger = createMetricsLogger('analyze-network-anomalies', AI_MODEL);
 
 interface AnalysisRequest {
@@ -263,12 +265,74 @@ Seja especifico e tecnico, focando em seguranca cibernetica.`;
 
     console.log('[analyze-network-anomalies] Analysis completed successfully');
 
+    // Build evidence array from analysis context
+    const evidenceArray: AIEvidence[] = [];
+    
+    // Add agents evidence
+    if (agents && agents.length > 0) {
+      evidenceArray.push(buildEvidence(
+        'Total de Agentes Analisados',
+        'agents',
+        agents.length,
+        undefined,
+        'info'
+      ));
+      
+      const onlineAgents = agents.filter(a => a.status === 'online').length;
+      const offlineAgents = agents.length - onlineAgents;
+      
+      if (offlineAgents > 0) {
+        evidenceArray.push(buildEvidence(
+          'Agentes Offline',
+          'agents',
+          offlineAgents,
+          undefined,
+          offlineAgents > agents.length * 0.3 ? 'critical' : 'warning'
+        ));
+      }
+    }
+    
+    // Add jobs evidence
+    if (jobs && jobs.length > 0) {
+      const failedJobs = jobs.filter(j => j.status === 'failed').length;
+      if (failedJobs > 0) {
+        evidenceArray.push(buildEvidence(
+          'Jobs com Falha',
+          'jobs',
+          failedJobs,
+          undefined,
+          failedJobs > 10 ? 'critical' : 'warning'
+        ));
+      }
+      
+      evidenceArray.push(buildEvidence(
+        'Total de Jobs Analisados',
+        'jobs',
+        jobs.length,
+        undefined,
+        'info'
+      ));
+    }
+
+    const data_sources = extractDataSources(evidenceArray);
+    const confidence = calculateConfidence(evidenceArray, true);
+    const reasoning_summary = generateReasoningSummary(
+      evidenceArray,
+      `análise de rede das últimas ${timeRangeHours} horas`,
+      'Análise de comportamento de rede e detecção de anomalias realizada pela IA.'
+    );
+
     return new Response(
       JSON.stringify({
         success: true,
         analysis: analysis,
         rawData: analysisContext,
         timestamp: new Date().toISOString(),
+        // Evidence Pack - TOP 5% Global
+        evidence: evidenceArray,
+        data_sources,
+        reasoning_summary,
+        confidence,
       }),
       {
         status: 200,

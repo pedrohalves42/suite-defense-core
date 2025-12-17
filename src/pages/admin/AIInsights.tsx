@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Brain, AlertTriangle, Info, CheckCircle, TrendingUp, Clock, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { AIInsightExplainer } from "@/components/admin/AIInsightExplainer";
 
 interface AIInsight {
   id: string;
@@ -382,9 +383,18 @@ export default function AIInsights() {
                   {/* Metadata and Actions */}
                   <div className="flex items-center justify-between pt-2 border-t flex-wrap gap-2">
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>Confianca: {(insight.confidence_score * 100).toFixed(0)}%</span>
+                      <span>Confiança: {(insight.confidence_score * 100).toFixed(0)}%</span>
                       <span>•</span>
                       <span>{formatDate(insight.created_at)}</span>
+                      <AIInsightExplainer
+                        insightId={insight.id}
+                        title={insight.title}
+                        description={insight.description}
+                        evidence={insight.evidence}
+                        confidence={insight.confidence_score}
+                        insightType={insight.insight_type}
+                        severity={insight.severity}
+                      />
                     </div>
                     <div className="flex items-center gap-2">
                       {/* Auto-solution buttons based on insight type */}
