@@ -23,11 +23,13 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 import { 
   Server, Trash2, Power, PowerOff, XCircle, Clock, Activity, 
   AlertTriangle, Loader2, Trash, Search, Monitor, Cpu, HardDrive,
-  RefreshCw, Shield, ShieldAlert, ShieldCheck, ArrowUpCircle, Filter
+  RefreshCw, Shield, ShieldAlert, ShieldCheck, ArrowUpCircle, Filter,
+  MemoryStick
 } from 'lucide-react';
 import AgentInstallationGuide from '@/components/AgentInstallationGuide';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Progress } from '@/components/ui/progress';
 
 interface Agent {
   id: string;
@@ -98,6 +100,52 @@ export default function AgentManagement() {
       return statusMap;
     },
     enabled: !!tenant?.id && !!agents && agents.length > 0,
+  });
+
+  // Fetch latest metrics for all agents
+  interface AgentMetrics {
+    agent_id: string;
+    cpu_usage_percent: number | null;
+    memory_usage_percent: number | null;
+    disk_usage_percent: number | null;
+  }
+  
+  const { data: agentMetrics } = useQuery<Record<string, AgentMetrics>>({
+    queryKey: ['agent-metrics', tenant?.id],
+    queryFn: async () => {
+      if (!tenant?.id || !agents) return {};
+      const agentIds = agents.map(a => a.id);
+      if (agentIds.length === 0) return {};
+      
+      // Get latest metric for each agent using agent_system_metrics_partitioned
+      const { data, error } = await supabase
+        .from('agent_system_metrics_partitioned')
+        .select('agent_id, cpu_usage_percent, memory_usage_percent, disk_usage_percent, collected_at')
+        .eq('tenant_id', tenant.id)
+        .in('agent_id', agentIds)
+        .order('collected_at', { ascending: false });
+      
+      if (error) {
+        logger.error('Error fetching agent metrics', { error });
+        return {};
+      }
+      
+      // Get the latest metric for each agent
+      const metricsMap: Record<string, AgentMetrics> = {};
+      data?.forEach(metric => {
+        if (!metricsMap[metric.agent_id]) {
+          metricsMap[metric.agent_id] = {
+            agent_id: metric.agent_id,
+            cpu_usage_percent: metric.cpu_usage_percent,
+            memory_usage_percent: metric.memory_usage_percent,
+            disk_usage_percent: metric.disk_usage_percent,
+          };
+        }
+      });
+      return metricsMap;
+    },
+    enabled: !!tenant?.id && !!agents && agents.length > 0,
+    refetchInterval: 60000, // Refresh every minute
   });
 
   // Helper functions
@@ -511,6 +559,75 @@ export default function AgentManagement() {
                         </span>
                       )}
                     </div>
+
+                    {/* System Metrics (CPU, Memory, Disk) */}
+                    {agentMetrics?.[agent.id] && status !== 'pending' && (
+                      <div className="space-y-2 pt-2 border-t">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Cpu className="h-3 w-3" /> CPU
+                          </span>
+                          <span className={`font-medium ${
+                            (agentMetrics[agent.id].cpu_usage_percent ?? 0) > 80 ? 'text-red-500' :
+                            (agentMetrics[agent.id].cpu_usage_percent ?? 0) > 60 ? 'text-amber-500' : 'text-green-500'
+                          }`}>
+                            {agentMetrics[agent.id].cpu_usage_percent?.toFixed(0) ?? 'N/A'}%
+                          </span>
+                        </div>
+                        <Progress 
+                          value={agentMetrics[agent.id].cpu_usage_percent ?? 0} 
+                          className={`h-1.5 ${
+                            (agentMetrics[agent.id].cpu_usage_percent ?? 0) > 80 ? '[&>div]:bg-red-500' :
+                            (agentMetrics[agent.id].cpu_usage_percent ?? 0) > 60 ? '[&>div]:bg-amber-500' : '[&>div]:bg-green-500'
+                          }`}
+                        />
+                        
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <MemoryStick className="h-3 w-3" /> Memória
+                          </span>
+                          <span className={`font-medium ${
+                            (agentMetrics[agent.id].memory_usage_percent ?? 0) > 80 ? 'text-red-500' :
+                            (agentMetrics[agent.id].memory_usage_percent ?? 0) > 60 ? 'text-amber-500' : 'text-green-500'
+                          }`}>
+                            {agentMetrics[agent.id].memory_usage_percent?.toFixed(0) ?? 'N/A'}%
+                          </span>
+                        </div>
+                        <Progress 
+                          value={agentMetrics[agent.id].memory_usage_percent ?? 0} 
+                          className={`h-1.5 ${
+                            (agentMetrics[agent.id].memory_usage_percent ?? 0) > 80 ? '[&>div]:bg-red-500' :
+                            (agentMetrics[agent.id].memory_usage_percent ?? 0) > 60 ? '[&>div]:bg-amber-500' : '[&>div]:bg-green-500'
+                          }`}
+                        />
+                        
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <HardDrive className="h-3 w-3" /> Disco
+                          </span>
+                          <span className={`font-medium ${
+                            (agentMetrics[agent.id].disk_usage_percent ?? 0) > 90 ? 'text-red-500' :
+                            (agentMetrics[agent.id].disk_usage_percent ?? 0) > 75 ? 'text-amber-500' : 'text-green-500'
+                          }`}>
+                            {agentMetrics[agent.id].disk_usage_percent?.toFixed(0) ?? 'N/A'}%
+                          </span>
+                        </div>
+                        <Progress 
+                          value={agentMetrics[agent.id].disk_usage_percent ?? 0} 
+                          className={`h-1.5 ${
+                            (agentMetrics[agent.id].disk_usage_percent ?? 0) > 90 ? '[&>div]:bg-red-500' :
+                            (agentMetrics[agent.id].disk_usage_percent ?? 0) > 75 ? '[&>div]:bg-amber-500' : '[&>div]:bg-green-500'
+                          }`}
+                        />
+                      </div>
+                    )}
+
+                    {/* No metrics message for online agents */}
+                    {!agentMetrics?.[agent.id] && status === 'online' && (
+                      <div className="text-xs text-muted-foreground text-center py-2 border-t">
+                        Aguardando métricas...
+                      </div>
+                    )}
 
                     {/* Installation guide for pending agents */}
                     {status === 'pending' && (

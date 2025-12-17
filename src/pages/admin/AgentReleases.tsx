@@ -12,11 +12,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
-// Versões específicas por plataforma
+// Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
 const CURRENT_VERSIONS = {
-  windows: 'v3.10.41-SHA256-BASE64-FIX',
-  linux: 'v3.10.41-SHA256-BASE64-FIX',
-  macos: 'v3.10.41-SHA256-BASE64-FIX'
+  windows: 'v3.10.39-BASE64-SAFE-UPDATE',
+  linux: 'v3.10.40-DNS-FILTER',
+  macos: 'v3.10.40-DNS-FILTER'
 } as const;
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
