@@ -16,6 +16,7 @@ import { getAgentDisplayName, getAgentStatusInfo, formatRelativeTimePt } from '@
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import { AIInsightsSummary } from '@/components/admin/AIInsightsSummary';
 
 interface AgentWithMetrics {
   id: string;
@@ -284,6 +285,9 @@ export default function Dashboard() {
           </Card>
         </motion.div>
       </div>
+
+      {/* AI Insights Summary Widget */}
+      <AIInsightsSummary />
 
       {/* Agents Grid - Individual Cards per Computer */}
       <Card>
