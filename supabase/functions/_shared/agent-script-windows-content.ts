@@ -2464,9 +2464,7 @@ function Execute-Job {
                     }
 
                     \$newVersion   = \$data.version
-                    \$scriptText   = \$data.script_content
-                    \$expectedHash = \$data.sha256
-
+                    
                     Write-Log "[UPDATE] Atualizando agente para versao \$newVersion" "INFO"
 
                     # SMART PATH DETECTION - Tenta multiplas estrategias para encontrar script atual
@@ -2501,10 +2499,22 @@ function Execute-Job {
                     
                     \$tempScript = Join-Path \$env:TEMP "cybershield-agent-update-\$newVersion.ps1"
 
-                    # Salvar script novo (UTF8 sem BOM para compatibilidade SHA256)
-                    [System.IO.File]::WriteAllText(\$tempScript, \$scriptText, [System.Text.UTF8Encoding]::new(\$false))
+                    # v3.10.41-SHA256-BASE64-FIX: Usar campos Base64 quando disponiveis (preservacao de bytes)
+                    \$expectedHash = \$null
+                    if (\$data.script_content_base64 -and \$data.sha256_base64) {
+                        Write-Log "[UPDATE] Usando metodo Base64 (industrial-grade byte preservation)" "INFO"
+                        \$scriptBytes = [Convert]::FromBase64String(\$data.script_content_base64)
+                        \$expectedHash = \$data.sha256_base64
+                        [System.IO.File]::WriteAllBytes(\$tempScript, \$scriptBytes)
+                    } else {
+                        # Fallback para agentes antigos ou quando Base64 nao disponivel
+                        Write-Log "[UPDATE] Usando metodo string (fallback)" "INFO"
+                        \$scriptText = \$data.script_content
+                        \$expectedHash = \$data.sha256
+                        [System.IO.File]::WriteAllText(\$tempScript, \$scriptText, [System.Text.UTF8Encoding]::new(\$false))
+                    }
 
-                    # Validar SHA256
+                    # Validar SHA256 do arquivo escrito em disco
                     \$actualHash = (Get-FileHash -Path \$tempScript -Algorithm SHA256).Hash.ToLower()
                     if (\$actualHash -ne \$expectedHash.ToLower()) {
                         Remove-Item \$tempScript -Force
