@@ -3,7 +3,7 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
- * Versao: v3.10.40-DNS-FILTER
+ * Versao: v3.10.41-SHA256-BASE64-FIX
  */
 
 export function getAgentScriptWindows(): string {
@@ -12,7 +12,7 @@ export function getAgentScriptWindows(): string {
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `
 <#
-    CyberShield Agent - Windows v3.10.40-DNS-FILTER
+    CyberShield Agent - Windows v3.10.41-SHA256-BASE64-FIX
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
