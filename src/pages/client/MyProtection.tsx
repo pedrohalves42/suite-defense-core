@@ -67,6 +67,18 @@ export const MyProtection = () => {
       const avIssues = avRes.data?.length || 0;
 
       const latestReport = reportsRes.data?.[0] || null;
+      
+      // Calculate next check time (daily at 16:00 Brasília)
+      const now = new Date();
+      const nextCheckDate = new Date();
+      nextCheckDate.setHours(19, 0, 0, 0); // 19:00 UTC = 16:00 Brasília
+      if (now > nextCheckDate) {
+        nextCheckDate.setDate(nextCheckDate.getDate() + 1);
+      }
+      const isToday = nextCheckDate.toDateString() === now.toDateString();
+      const nextCheck = isToday 
+        ? 'Hoje às 16:00' 
+        : format(nextCheckDate, "d 'de' MMM 'às' 16:00", { locale: ptBR });
 
       // Calculate overall protection score (0-100)
       let score = 100;
@@ -82,16 +94,28 @@ export const MyProtection = () => {
       else if (score >= 50) protectionStatus = 'attention';
       else protectionStatus = 'critical';
 
-      // Build issues list
-      const issues: Array<{ text: string; severity: 'critical' | 'warning' | 'info' }> = [];
+      // Build issues list with friendly messages
+      const issues: Array<{ text: string; severity: 'critical' | 'warning' | 'info'; action?: string }> = [];
       if (criticalAlerts > 0) {
-        issues.push({ text: `${criticalAlerts} alerta(s) crítico(s) precisam de atenção`, severity: 'critical' });
+        issues.push({ 
+          text: `${criticalAlerts} problema(s) grave(s) encontrado(s)`, 
+          severity: 'critical',
+          action: 'Verifique a aba de segurança'
+        });
       }
       if (avIssues > 0) {
-        issues.push({ text: `${avIssues} computador(es) com problema no antivírus`, severity: 'warning' });
+        issues.push({ 
+          text: `${avIssues} computador(es) com antivírus desativado`, 
+          severity: 'warning',
+          action: 'Ative o Windows Defender'
+        });
       }
       if (offlineAgents.length > 0) {
-        issues.push({ text: `${offlineAgents.length} computador(es) desligado(s)`, severity: 'info' });
+        issues.push({ 
+          text: `${offlineAgents.length} computador(es) não está conectando`, 
+          severity: 'info',
+          action: 'Verifique se está ligado'
+        });
       }
 
       return {
@@ -104,7 +128,7 @@ export const MyProtection = () => {
         criticalAlerts,
         issues,
         latestReport,
-        nextCheck: 'Hoje às 16:00'
+        nextCheck
       };
     },
     enabled: !!tenant?.id,
@@ -264,19 +288,26 @@ export const MyProtection = () => {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`flex items-center gap-3 p-3 rounded-lg ${
+                className={`flex items-center justify-between gap-3 p-3 rounded-lg ${
                   issue.severity === 'critical' ? 'bg-red-500/10' : 
                   issue.severity === 'warning' ? 'bg-yellow-500/10' : 'bg-muted'
                 }`}
               >
-                {issue.severity === 'critical' ? (
-                  <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-                ) : issue.severity === 'warning' ? (
-                  <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0" />
-                ) : (
-                  <Monitor className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                )}
-                <span className="text-sm">{issue.text}</span>
+                <div className="flex items-center gap-3">
+                  {issue.severity === 'critical' ? (
+                    <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                  ) : issue.severity === 'warning' ? (
+                    <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0" />
+                  ) : (
+                    <Monitor className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  )}
+                  <div>
+                    <span className="text-sm font-medium">{issue.text}</span>
+                    {issue.action && (
+                      <p className="text-xs text-muted-foreground">{issue.action}</p>
+                    )}
+                  </div>
+                </div>
               </motion.div>
             ))}
           </CardContent>

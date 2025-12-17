@@ -416,7 +416,21 @@ export default function AgentHealthMonitor() {
               <p className="text-sm text-muted-foreground mb-3">
                 <span className="font-semibold text-red-600">{jobStats.failed} com falha</span>
                 {' • '}
-                <span className="font-semibold text-yellow-600">{jobStats.delivered} travadas</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="font-semibold text-yellow-600 cursor-help underline decoration-dotted">
+                        {jobStats.delivered} aguardando resposta
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs text-sm">
+                        Tarefas enviadas aos computadores que ainda não confirmaram execução. 
+                        Isso é normal - o computador pode estar processando ou temporariamente offline.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 {' • '}
                 <span className="font-semibold">{jobStats.total} total</span>
               </p>
@@ -436,7 +450,7 @@ export default function AgentHealthMonitor() {
                   disabled={isCleaningJobs || jobStats.delivered === 0}
                   className="border-yellow-600 text-yellow-700 hover:bg-yellow-50"
                 >
-                  Limpar Travadas ({jobStats.delivered})
+                  Limpar Aguardando ({jobStats.delivered})
                 </Button>
                 <Button 
                   variant="ghost" 
