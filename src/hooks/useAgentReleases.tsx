@@ -37,20 +37,33 @@ export const useAgentReleases = () => {
       channel?: string;
       manual_sha256?: string;
     }) => {
+      // Normalize script content for Windows (same logic as serve-agent-update)
+      // This ensures SHA256 in database matches what agents receive
+      const normalizeForWindows = (content: string): string => {
+        return content
+          .replace(/\r\n/g, '\n')   // Normalize all to LF first
+          .replace(/\r/g, '\n')     // Handle standalone CR
+          .replace(/\n/g, '\r\n');  // Convert to Windows CRLF
+      };
+
       // Use manual SHA256 if provided (for backwards compatibility)
-      // Otherwise calculate SHA256 WITHOUT BOM (standard for v3.10.12+ agents)
+      // Otherwise calculate SHA256 from NORMALIZED content (standard for v3.10.12+ agents)
       let sha256: string;
       if (manual_sha256) {
         sha256 = manual_sha256;
         console.log('[useAgentReleases] Using manual SHA256:', sha256.substring(0, 16) + '...');
       } else {
-        // Calculate SHA256 WITHOUT BOM (v3.10.12+ uses WriteAllText without BOM)
+        // Normalize content for Windows platform before calculating SHA256
+        const normalizedContent = platform === 'windows' 
+          ? normalizeForWindows(script_content) 
+          : script_content;
+        
         const encoder = new TextEncoder();
-        const contentBytes = encoder.encode(script_content);
+        const contentBytes = encoder.encode(normalizedContent);
         const hashBuffer = await crypto.subtle.digest('SHA-256', contentBytes);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         sha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        console.log('[useAgentReleases] Calculated SHA256 WITHOUT BOM:', sha256.substring(0, 16) + '...');
+        console.log('[useAgentReleases] Calculated SHA256 from normalized content:', sha256.substring(0, 16) + '...');
       }
 
       // Call register-agent-release Edge Function
