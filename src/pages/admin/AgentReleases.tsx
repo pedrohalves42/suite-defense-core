@@ -14,9 +14,9 @@ import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
 // Versões específicas por plataforma
 const CURRENT_VERSIONS = {
-  windows: 'v3.10.40-DNS-FILTER',
-  linux: 'v3.10.40-DNS-FILTER',
-  macos: 'v3.10.40-DNS-FILTER'
+  windows: 'v3.10.41-SHA256-BASE64-FIX',
+  linux: 'v3.10.41-SHA256-BASE64-FIX',
+  macos: 'v3.10.41-SHA256-BASE64-FIX'
 } as const;
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
