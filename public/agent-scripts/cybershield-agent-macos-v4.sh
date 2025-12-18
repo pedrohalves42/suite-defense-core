@@ -28,7 +28,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTES E VARIAVEIS GLOBAIS
 # ============================================
-AGENT_VERSION="v4.0.1-DNS-POLICY"
+AGENT_VERSION="v4.0.7"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -664,7 +664,7 @@ EOF
     log "INFO" "[HEARTBEAT] Sending heartbeat (state: $(get_state))..."
     
     local result
-    result=$(invoke_secure_request "POST" "/functions/v1/agent-heartbeat" "$body" 15)
+    result=$(invoke_secure_request "POST" "/functions/v1/heartbeat" "$body" 15)
     
     if [[ $? -eq 0 ]]; then
         log "SUCCESS" "[HEARTBEAT] OK (200)"
