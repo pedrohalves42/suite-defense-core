@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-SOURCE="public/agent-scripts/cybershield-agent-windows-v3.ps1"
+SOURCE="public/agent-scripts/cybershield-agent-windows-v4.ps1"
 TARGET="supabase/functions/_shared/agent-script-windows-content.ts"
 
 if [ ! -f "$SOURCE" ]; then
@@ -25,7 +25,7 @@ cat > "$TARGET" <<EOF
 /**
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
- * Fonte: public/agent-scripts/cybershield-agent-windows-v3.ps1
+ * Fonte: public/agent-scripts/cybershield-agent-windows-v4.ps1
  * Versao: $VERSION
  */
 
