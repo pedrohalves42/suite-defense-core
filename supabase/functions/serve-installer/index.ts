@@ -217,10 +217,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch enrollment key
+    // Fetch enrollment key with agent_token
     const { data: enrollmentData, error: enrollmentError } = await supabaseClient
       .from('enrollment_keys')
-      .select('agent_id, is_active, expires_at, tenant_id')
+      .select('agent_id, is_active, expires_at, tenant_id, agent_token')
       .eq('key', enrollmentKey)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -250,25 +250,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FASE 1 CORRECAO CRITICA: Fetch token from agent_tokens
-    const { data: tokenData, error: tokenError } = await supabaseClient
-      .from('agent_tokens')
-      .select('token')
-      .eq('agent_id', enrollmentData.agent_id)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (tokenError || !tokenData) {
-      console.log(`[${requestId}] Agent token not found: ${tokenError?.message}`);
-      return new Response('Agent token not found', { 
+    // Get token from enrollment_keys (stored during auto-generate-enrollment)
+    if (!enrollmentData.agent_token) {
+      console.error(`[${requestId}] Agent token not found in enrollment_keys - please regenerate enrollment key`);
+      return new Response('Agent token not available. Please generate a new enrollment key.', { 
         status: 404,
         headers: corsHeaders
       });
     }
 
-    // FASE 1 CORRECAO CRITICA: Fetch agent info AND hmac_secret from agents table
+    // Fetch agent info AND hmac_secret from agents table
     const { data: agentData, error: agentError } = await supabaseClient
       .from('agents')
       .select('agent_name, os_type, hmac_secret')
@@ -338,8 +329,8 @@ const { validateAgentScriptContent, calculateScriptHash } = await import('../_sh
     });
 
 
-    // FASE 3: Enhanced credential validation
-    const agentToken = tokenData.token;
+    // Get credentials from enrollment_keys and agents table
+    const agentToken = enrollmentData.agent_token;
     const hmacSecret = agentData.hmac_secret;
     
     // Validate token is a valid UUID format

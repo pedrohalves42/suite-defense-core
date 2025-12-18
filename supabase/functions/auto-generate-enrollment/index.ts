@@ -579,13 +579,14 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       throw new Error(`Failed to create agent token: ${tokenError.message}`);
     }
 
-    // Link enrollment key to agent (trigger will handle the rest)
+    // Link enrollment key to agent and store token for installer generation
     const { error: linkError } = await supabase
       .from('enrollment_keys')
       .update({ 
         agent_id: agentId,
         used_by_agent: agentName,
-        used_at: new Date().toISOString()
+        used_at: new Date().toISOString(),
+        agent_token: agentToken  // Store plaintext token for serve-installer
       })
       .eq('key', enrollmentKey);
       
