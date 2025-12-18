@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { hashToken } from "../_shared/token-hash.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,11 +50,12 @@ serve(async (req) => {
       );
     }
 
-    // Validate agent token
+    // Validate agent token using hash
+    const tokenHash = await hashToken(agentToken);
     const { data: tokenData, error: tokenError } = await supabase
       .from("agent_tokens")
       .select("agent_id, agents!inner(id, tenant_id, agent_name)")
-      .eq("token", agentToken)
+      .eq("token_hash", tokenHash)
       .eq("is_active", true)
       .single();
 
