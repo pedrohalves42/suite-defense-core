@@ -380,6 +380,45 @@ Deno.serve(async (req) => {
       rows_affected: updateResult?.length || 0
     })
 
+    // ============================================================
+    // HARDENING: Validação de versão após update_agent
+    // Se o job é update_agent e o agente ainda está em versão legada,
+    // o update não foi aplicado de fato - registrar warning
+    // ============================================================
+    if (job.type === 'update_agent' && status === 'completed') {
+      const payload_data = typeof output === 'object' ? output : {}
+      const targetVersion = payload_data?.target_version || payload_data?.version
+      
+      // Buscar versão atual do agente para verificar se update realmente funcionou
+      const { data: currentAgent } = await supabase
+        .from('agents')
+        .select('agent_version')
+        .eq('id', agent.id)
+        .single()
+      
+      const legacyVersions = ['3.10.37', '3.10.39', '3.10.14']
+      const currentVersion = currentAgent?.agent_version || ''
+      const isStillLegacy = legacyVersions.some(v => currentVersion.includes(v))
+      
+      if (isStillLegacy && targetVersion) {
+        console.warn('[submit-job-result] HARDENING WARNING: update_agent completed but agent still on legacy version', {
+          job_id,
+          agent: agent.agent_name,
+          current_version: currentVersion,
+          target_version: targetVersion,
+          note: 'Update saved to disk but requires Windows reboot to apply'
+        })
+        
+        // Adicionar warning ao job sem mudar status
+        await supabase
+          .from('jobs')
+          .update({
+            error_message: `Update entregue mas agente ainda em ${currentVersion}. Script salvo em disco - reinício do Windows necessário.`
+          })
+          .eq('id', job_id)
+      }
+    }
+
     // Trigger automatic report generation for security collection jobs - CORRIGIDO: usar job.type
     const reportTriggerJobTypes = [
       'software_inventory_collect',
