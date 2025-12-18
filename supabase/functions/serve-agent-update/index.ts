@@ -125,22 +125,42 @@ Deno.serve(async (req) => {
     const currentVersionNorm = normalizeVersion(agent.agent_version);
     const releaseVersionNorm = normalizeVersion(release.version);
 
-    // Verificar se ja esta na ultima versao
-    if (releaseVersionNorm === currentVersionNorm) {
-      logger.info('[serve-agent-update] Agente ja esta atualizado', { 
+    // ============================================================
+    // KILL-SWITCH: Detectar agentes legados (v3.10.37, v3.10.39)
+    // Estes agentes têm path hardcoded que impede auto-update real.
+    // Forçar envio do script v3.10.40 para que seja salvo em disco
+    // e carregado após reboot do Windows.
+    // ============================================================
+    const legacyVersions = ['3.10.37', '3.10.39', '3.10.14'];
+    const isLegacyAgent = legacyVersions.some(v => currentVersionNorm.includes(v));
+    
+    if (isLegacyAgent) {
+      logger.warn('[serve-agent-update] KILL-SWITCH: Legacy agent detected, forcing update delivery', { 
         requestId, 
         agentName: agent.agent_name,
-        version: agent.agent_version,
-        releaseVersion: release.version,
-        normalized: { current: currentVersionNorm, release: releaseVersionNorm }
+        currentVersion: agent.agent_version,
+        targetVersion: release.version,
+        note: 'Script will be saved to disk and loaded after Windows reboot'
       });
-      return new Response(
-        JSON.stringify({ 
-          message: 'Already up to date',
-          current_version: agent.agent_version 
-        }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // Continua o fluxo para enviar script mesmo se versões parecerem iguais
+    } else {
+      // Verificar se ja esta na ultima versao (apenas para agentes não-legados)
+      if (releaseVersionNorm === currentVersionNorm) {
+        logger.info('[serve-agent-update] Agente ja esta atualizado', { 
+          requestId, 
+          agentName: agent.agent_name,
+          version: agent.agent_version,
+          releaseVersion: release.version,
+          normalized: { current: currentVersionNorm, release: releaseVersionNorm }
+        });
+        return new Response(
+          JSON.stringify({ 
+            message: 'Already up to date',
+            current_version: agent.agent_version 
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Verificar se script_content e placeholder (< 1000 bytes = placeholder)
@@ -237,7 +257,10 @@ Deno.serve(async (req) => {
         sha256_base64: base64Sha256,             // ← SHA256 dos bytes Base64
         release_notes: release.release_notes,
         platform: platform,
-        current_version: agent.agent_version
+        current_version: agent.agent_version,
+        // KILL-SWITCH: Flag para indicar agente legado
+        legacy_agent_detected: isLegacyAgent,
+        self_healing_note: isLegacyAgent ? 'Script saved to disk. New version active after Windows reboot.' : null
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
