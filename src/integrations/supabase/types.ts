@@ -906,7 +906,6 @@ export type Database = {
           id: string
           is_active: boolean
           last_used_at: string | null
-          token: string
           token_hash: string
           token_prefix: string
         }
@@ -917,7 +916,6 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_used_at?: string | null
-          token: string
           token_hash: string
           token_prefix: string
         }
@@ -928,7 +926,6 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_used_at?: string | null
-          token?: string
           token_hash?: string
           token_prefix?: string
         }
