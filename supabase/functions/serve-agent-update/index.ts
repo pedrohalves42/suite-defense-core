@@ -94,6 +94,53 @@ Deno.serve(async (req) => {
     // Determinar plataforma
     const platform = agent.os_type?.toLowerCase() || 'windows';
 
+    // ============================================================
+    // ROLLOUT GRADUAL: Verificar policy antes de enviar update
+    // ============================================================
+    const { data: rolloutPolicy } = await supabase
+      .from('agent_update_policies')
+      .select('*')
+      .eq('platform', platform)
+      .eq('enabled', true)
+      .single();
+
+    if (rolloutPolicy) {
+      // Calcular bucket determinístico via SHA256(agent_id)
+      const agentIdHash = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(agent.id)
+      );
+      const hashArray = Array.from(new Uint8Array(agentIdHash));
+      // Usar primeiros 2 bytes para bucket (0-255) mod 100
+      const bucket = ((hashArray[0] << 8) | hashArray[1]) % 100;
+      
+      if (bucket >= rolloutPolicy.rollout_percentage) {
+        logger.info('[serve-agent-update] Agente fora do rollout', { 
+          requestId, 
+          agentName: agent.agent_name,
+          bucket,
+          rolloutPercentage: rolloutPolicy.rollout_percentage,
+          targetVersion: rolloutPolicy.target_version
+        });
+        return new Response(
+          JSON.stringify({ 
+            message: 'No update available (outside rollout)',
+            current_version: agent.agent_version,
+            rollout_bucket: bucket,
+            rollout_percentage: rolloutPolicy.rollout_percentage
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      logger.info('[serve-agent-update] Agente dentro do rollout', { 
+        requestId, 
+        agentName: agent.agent_name,
+        bucket,
+        rolloutPercentage: rolloutPolicy.rollout_percentage
+      });
+    }
+
     // Buscar ultima release ativa
     const { data: release, error: releaseError } = await supabase
       .from('agent_releases')

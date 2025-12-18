@@ -974,6 +974,42 @@ export type Database = {
           },
         ]
       }
+      agent_update_policies: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          enabled: boolean
+          id: string
+          notes: string | null
+          platform: string
+          rollout_percentage: number
+          target_version: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          notes?: string | null
+          platform: string
+          rollout_percentage?: number
+          target_version: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          enabled?: boolean
+          id?: string
+          notes?: string | null
+          platform?: string
+          rollout_percentage?: number
+          target_version?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       agent_versions: {
         Row: {
           created_at: string | null

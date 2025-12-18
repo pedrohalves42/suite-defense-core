@@ -5,7 +5,7 @@ import {
   Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, 
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Code, Heart, Search, Monitor, AppWindow, ListTodo, Receipt, GitBranch,
-  Download, Star, Building2, FileText, Cpu, Network
+  Download, Star, Building2, FileText, Cpu, Network, Percent
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -146,6 +146,7 @@ export const AppSidebar = () => {
     { icon: Building2, label: 'Minha Empresa', to: '/admin/dashboard', end: false },
     { icon: Server, label: 'Empresas', to: '/super-admin/tenants', end: true },
     { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases', end: false },
+    { icon: Percent, label: 'Rollout', to: '/super-admin/rollout-policies', end: false },
     { icon: BarChart3, label: 'Métricas Globais', to: '/super-admin/metrics' },
     { icon: PieChart, label: 'Assinaturas', to: '/super-admin/subscription-analytics' },
     { icon: DollarSign, label: 'Indicadores', to: '/super-admin/unit-economics' },
