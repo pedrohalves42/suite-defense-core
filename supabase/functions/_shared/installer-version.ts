@@ -7,12 +7,17 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v4.0.1-DNS-POLICY';
+export const INSTALLER_VERSION = 'v4.0.5-ED25519-VERIFY';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
-export const LAST_UPDATED = '2025-12-18T15:17:00Z'; // RECOVERY: Rollback to last valid Windows release
+export const LAST_UPDATED = '2025-12-18T16:30:00Z';
 
 export const CHANGES = [
+  '[v4.0.5-ED25519-VERIFY] FEATURE: Ed25519 signature verification infrastructure for updates',
+  '[v4.0.5-ED25519-VERIFY] FEATURE: Rollout gradual telemetry (agent_update_decisions table)',
+  '[v4.0.5-ED25519-VERIFY] FEATURE: Signature verification in Invoke-UpdateAgentJob (backward compatible)',
+  '[v4.0.5-ED25519-VERIFY] FEATURE: register-agent-release accepts signature_base64 parameter',
+  '[v4.0.5-ED25519-VERIFY] FEATURE: serve-agent-update sends signature to agents',
   '[v4.0.4-BACKWARD-COMPAT] CRITICAL FIX: Update handler usa "error" ao inves de "update_failed" para compatibilidade retroativa',
   '[v4.0.4-BACKWARD-COMPAT] CRITICAL FIX: Resolve chicken-and-egg onde agentes antigos nao tem "update_failed" no ValidateSet',
   '[v4.0.4-BACKWARD-COMPAT] CRITICAL FIX: Agora agentes v3.10.x e v4.0.x podem atualizar sem erro de ValidateSet',
