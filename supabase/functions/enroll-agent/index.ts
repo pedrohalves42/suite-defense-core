@@ -256,7 +256,6 @@ Deno.serve(async (req) => {
 
     await supabase.from('agent_tokens').insert({
       agent_id: agentId,
-      token: agentToken,         // Manter temporariamente para rollback
       token_hash: tokenHash,
       token_prefix: tokenPrefix,
       expires_at: expiresAt.toISOString(),
