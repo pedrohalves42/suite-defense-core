@@ -110,12 +110,12 @@ Deno.serve(async (req) => {
 
     logger.info('Build EXE request received', { requestId, agent_name, user_id: user.id });
 
-    // 4. Validate enrollment key
+    // 4. Validate enrollment key and get agent_token
     const serviceRoleClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
     const { data: enrollmentData, error: enrollmentError } = await serviceRoleClient
       .from('enrollment_keys')
-      .select('id, agent_id, tenant_id, is_active, expires_at')
+      .select('id, agent_id, tenant_id, is_active, expires_at, agent_token')
       .eq('key', enrollment_key)
       .maybeSingle();
 
@@ -123,25 +123,23 @@ Deno.serve(async (req) => {
       return createErrorResponse(ErrorCode.BAD_REQUEST, 'Invalid or expired enrollment key', 400, requestId);
     }
 
-    // 5. Fetch agent credentials
-    const { data: tokenData } = await serviceRoleClient
-      .from('agent_tokens')
-      .select('token')
-      .eq('agent_id', enrollmentData.agent_id)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    // Get token from enrollment_keys (stored during auto-generate-enrollment)
+    if (!enrollmentData.agent_token) {
+      return createErrorResponse(ErrorCode.BAD_REQUEST, 'Agent token not available. Please generate a new enrollment key.', 400, requestId);
+    }
 
+    // 5. Fetch agent credentials (hmac_secret from agents table)
     const { data: agentData } = await serviceRoleClient
       .from('agents')
       .select('agent_name, hmac_secret')
       .eq('id', enrollmentData.agent_id)
       .maybeSingle();
 
-    if (!tokenData || !agentData) {
+    if (!agentData) {
       return createErrorResponse(ErrorCode.INTERNAL_ERROR, 'Agent credentials incomplete', 500, requestId);
     }
+    
+    const agentToken = enrollmentData.agent_token;
 
     // FASE 1 CRITICO: Use inline agent script (always available)
     logger.info('Using inline agent script', { requestId });
@@ -555,7 +553,7 @@ try {
     
     // [OK]  FASE 1.7: Replace placeholders including agent script content
     const installerContent = WINDOWS_INSTALLER_TEMPLATE
-      .replace(/\{\{AGENT_TOKEN\}\}/g, tokenData.token)
+      .replace(/\{\{AGENT_TOKEN\}\}/g, agentToken)
       .replace(/\{\{HMAC_SECRET\}\}/g, agentData.hmac_secret)
       .replace(/\{\{SERVER_URL\}\}/g, SUPABASE_URL)
       .replace(/\{\{AGENT_SCRIPT_CONTENT\}\}/g, agentScriptContent)

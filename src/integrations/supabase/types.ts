@@ -2375,6 +2375,7 @@ export type Database = {
       enrollment_keys: {
         Row: {
           agent_id: string | null
+          agent_token: string | null
           created_at: string
           created_by: string | null
           current_uses: number
@@ -2395,6 +2396,7 @@ export type Database = {
         }
         Insert: {
           agent_id?: string | null
+          agent_token?: string | null
           created_at?: string
           created_by?: string | null
           current_uses?: number
@@ -2415,6 +2417,7 @@ export type Database = {
         }
         Update: {
           agent_id?: string | null
+          agent_token?: string | null
           created_at?: string
           created_by?: string | null
           current_uses?: number
