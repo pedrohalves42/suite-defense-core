@@ -158,7 +158,9 @@ Deno.serve(async (req) => {
     }
     
     if (osInfo.os_type || osInfo.platform) {
-      updateData.os_type = osInfo.os_type || osInfo.platform
+      // Normalize os_type to lowercase (Windows -> windows, Linux -> linux, macOS -> macos)
+      const rawOsType = osInfo.os_type || osInfo.platform || ''
+      updateData.os_type = rawOsType.toLowerCase()
     }
     if (osInfo.os_version) {
       updateData.os_version = osInfo.os_version
