@@ -438,3 +438,7 @@ schedule = "0 3 * * *"
 [functions.detect-blocked-attempts]
 verify_jwt = false
 schedule = "*/5 * * * *"
+
+# === V4.0 Software Risk Engine ===
+[functions.evaluate-software-risk]
+verify_jwt = true

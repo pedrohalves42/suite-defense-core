@@ -4966,6 +4966,54 @@ export type Database = {
           },
         ]
       }
+      software_vulnerability_baseline: {
+        Row: {
+          action: string
+          created_at: string | null
+          cve_refs: string[] | null
+          id: string
+          impact: string
+          is_active: boolean | null
+          min_safe_version: string
+          remediation: string
+          severity: string
+          software_name: string
+          software_name_patterns: string[] | null
+          updated_at: string | null
+          vendor: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          cve_refs?: string[] | null
+          id?: string
+          impact: string
+          is_active?: boolean | null
+          min_safe_version: string
+          remediation: string
+          severity: string
+          software_name: string
+          software_name_patterns?: string[] | null
+          updated_at?: string | null
+          vendor?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          cve_refs?: string[] | null
+          id?: string
+          impact?: string
+          is_active?: boolean | null
+          min_safe_version?: string
+          remediation?: string
+          severity?: string
+          software_name?: string
+          software_name_patterns?: string[] | null
+          updated_at?: string | null
+          vendor?: string | null
+        }
+        Relationships: []
+      }
       subscription_plans: {
         Row: {
           billing_period: string | null
