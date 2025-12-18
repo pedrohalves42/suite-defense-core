@@ -14,9 +14,9 @@ import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
 const CURRENT_VERSIONS = {
-  windows: 'v3.10.40-DNS-FILTER',
-  linux: 'v3.10.40-DNS-FILTER',
-  macos: 'v3.10.40-DNS-FILTER'
+  windows: 'v4.0.1-DNS-POLICY',
+  linux: 'v4.0.1-DNS-POLICY',
+  macos: 'v4.0.1-DNS-POLICY'
 } as const;
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
@@ -33,10 +33,10 @@ export default function AgentReleases() {
   // Validate SHA256 of a release against the public script
   const handleValidateSHA256 = async (platform: 'windows' | 'linux' | 'macos', releaseId: string, dbSha256: string) => {
     const scriptFileName = platform === 'windows' 
-      ? 'cybershield-agent-windows-v3.ps1'
+      ? 'cybershield-agent-windows-v4.ps1'
       : platform === 'linux'
-        ? 'cybershield-agent-linux-v3.sh'
-        : 'cybershield-agent-macos-v3.sh';
+        ? 'cybershield-agent-linux-v4.sh'
+        : 'cybershield-agent-macos-v4.sh';
     
     try {
       setValidatingHash(releaseId);
@@ -116,10 +116,10 @@ export default function AgentReleases() {
     const platformLabel = platform === 'windows' ? 'Windows' : platform === 'linux' ? 'Linux' : 'macOS';
     const version = CURRENT_VERSIONS[platform];
     const scriptFileName = platform === 'windows' 
-      ? 'cybershield-agent-windows-v3.ps1'
+      ? 'cybershield-agent-windows-v4.ps1'
       : platform === 'linux'
-        ? 'cybershield-agent-linux-v3.sh'
-        : 'cybershield-agent-macos-v3.sh';
+        ? 'cybershield-agent-linux-v4.sh'
+        : 'cybershield-agent-macos-v4.sh';
     
     if (!confirm(`Registrar ${version} (${platformLabel}) com script completo?\n\nIsso irá:\n1. Carregar o script de /agent-scripts/${scriptFileName}\n2. Calcular SHA256\n3. Registrar no banco de dados\n\nContinuar?`)) {
       return;

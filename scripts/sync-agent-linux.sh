@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-SOURCE="public/agent-scripts/cybershield-agent-linux-v3.sh"
+SOURCE="public/agent-scripts/cybershield-agent-linux-v4.sh"
 TARGET="supabase/functions/_shared/agent-script-linux-content.ts"
 
 if [ ! -f "$SOURCE" ]; then

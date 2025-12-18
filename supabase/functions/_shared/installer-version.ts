@@ -7,17 +7,18 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v4.0.0-STATE-MACHINE';
-export const INSTALLER_VERSION_LINUX = 'v4.0.0-STATE-MACHINE';
-export const INSTALLER_VERSION_MACOS = 'v4.0.0-STATE-MACHINE';
-export const LAST_UPDATED = '2025-12-18T12:00:00Z'; // All platforms updated to v4.0.0
+export const INSTALLER_VERSION = 'v4.0.1-DNS-POLICY';
+export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
+export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
+export const LAST_UPDATED = '2025-12-18T15:00:00Z'; // All platforms updated to v4.0.1-DNS-POLICY
 
 export const CHANGES = [
-  '[v4.0.0-STATE-MACHINE] ARCHITECTURE: State Machine formal com 6 estados (INITIALIZING, RUNNING, DEGRADED, RECOVERING, MAINTENANCE, TERMINATED)',
-  '[v4.0.0-STATE-MACHINE] ARCHITECTURE: Evidence Journal local com flush periodico para compliance',
-  '[v4.0.0-STATE-MACHINE] ARCHITECTURE: Policy Contract com validacao e enforcement automatico',
-  '[v4.0.0-STATE-MACHINE] ARCHITECTURE: Auto-recovery com exponential backoff (30s base, max 15min)',
-  '[v4.0.0-STATE-MACHINE] FEATURE: DNS Filter integration com health check automatico',
+  '[v4.0.1-DNS-POLICY] ARCHITECTURE: State Machine formal com 6 estados (BOOTSTRAP, SYNCING, ENFORCING, DEGRADED, ERROR, RECOVERY)',
+  '[v4.0.1-DNS-POLICY] ARCHITECTURE: Evidence Journal local estruturado (JSON Lines) com flush periodico',
+  '[v4.0.1-DNS-POLICY] ARCHITECTURE: Policy Contract com deteccao de drift e enforcement automatico',
+  '[v4.0.1-DNS-POLICY] ARCHITECTURE: Auto-recovery com exponential backoff (5s base, 3 tentativas)',
+  '[v4.0.1-DNS-POLICY] FEATURE: DNS Filter como Windows Service com health check automatico',
+  '[v4.0.1-DNS-POLICY] FEATURE: Job Engine idempotente com execution_id unico por execucao',
   '[v3.10.40-DNS-FILTER] FEATURE: Configura recovery automatico do servico Windows',
   '[v3.10.39-BASE64-SAFE-UPDATE] CRITICAL FIX: Auto-update agora usa Base64 para transmissao de script (100% byte-safe)',
   '[v3.10.39-BASE64-SAFE-UPDATE] CRITICAL FIX: SHA256 calculado dos bytes REAIS antes de Base64 encoding',
