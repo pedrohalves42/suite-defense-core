@@ -170,10 +170,10 @@ export default function AgentReleases() {
     const platformLabel = platform === 'windows' ? 'Windows' : platform === 'linux' ? 'Linux' : 'macOS';
     const currentVersion = CURRENT_VERSIONS[platform];
     const scriptFileName = platform === 'windows' 
-      ? 'cybershield-agent-windows-v3.ps1'
+      ? 'cybershield-agent-windows-v4.ps1'
       : platform === 'linux'
-        ? 'cybershield-agent-linux-v3.sh'
-        : 'cybershield-agent-macos-v3.sh';
+        ? 'cybershield-agent-linux-v4.sh'
+        : 'cybershield-agent-macos-v4.sh';
     
     if (!confirm(`FORÇAR RE-REGISTRO de ${currentVersion} (${platformLabel})?\n\nIsso irá:\n1. Deletar a entrada atual do banco\n2. Carregar script de /agent-scripts/${scriptFileName}\n3. Re-registrar a versão\n\nContinuar?`)) {
       return;
@@ -358,7 +358,8 @@ export default function AgentReleases() {
       <div className="grid gap-4">
         {releases.map((release, idx) => {
           const sizeKB = Math.round(release.script_content.length / 1024);
-          const isValid = sizeKB > 35;
+          const minSizeKB = release.platform === 'windows' ? 40 : 20;
+          const isValid = sizeKB > minSizeKB;
 
           return (
             <motion.div
