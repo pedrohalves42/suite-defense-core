@@ -75,15 +75,25 @@ const JobCreator = () => {
 
   const loadJobs = useCallback(async () => {
     try {
-      // Buscar tenant do usuário
-      const { data: userRoles } = await supabase
+      // Buscar user_id autenticado
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user?.id) {
+        logger.warn("Usuário não autenticado");
+        setRecentJobs([]);
+        return;
+      }
+
+      // Buscar tenant do usuário usando user_id explícito
+      const { data: userRoles, error: roleError } = await supabase
         .from("user_roles")
         .select("tenant_id")
+        .eq('user_id', user.id)
         .limit(1)
         .single();
 
-      if (!userRoles?.tenant_id) {
-        logger.warn("Tenant não encontrado para usuário");
+      if (roleError || !userRoles?.tenant_id) {
+        logger.warn("Tenant não encontrado para usuário", { userId: user.id, error: roleError });
         setRecentJobs([]);
         return;
       }
@@ -97,7 +107,7 @@ const JobCreator = () => {
 
       if (error) throw error;
       
-      logger.info('[JobCreator] Jobs carregados', { count: data?.length || 0 });
+      logger.info('[JobCreator] Jobs carregados', { count: data?.length || 0, tenantId: userRoles.tenant_id });
       setRecentJobs(data || []);
     } catch (error) {
       logger.error("Erro ao carregar jobs", error);
