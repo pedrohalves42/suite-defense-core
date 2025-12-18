@@ -3,9 +3,9 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v4.ps1
- * Versao: v4.0.3-EVIDENCE-FIX
+ * Versao: v4.0.4-BACKWARD-COMPAT
  * SHA256: auto-calculated-on-deploy
- * Gerado em: 2025-12-18T15:30:00.000Z
+ * Gerado em: 2025-12-18T23:00:00.000Z
  */
 
 export function getAgentScriptWindows(): string {
@@ -13,7 +13,7 @@ export function getAgentScriptWindows(): string {
 }
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
-    CyberShield Agent - Windows v4.0.3-EVIDENCE-FIX
+    CyberShield Agent - Windows v4.0.4-BACKWARD-COMPAT
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
@@ -28,7 +28,7 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.3:
+    Funcionalidades v4.0.4:
     - State Machine formal com transicoes validadas
     - Evidence Journal local estruturado (JSON Lines)
     - Job Engine idempotente com execution_id
@@ -60,7 +60,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v4.0.3-EVIDENCE-FIX"
+    [string]\$AgentVersion = "v4.0.4-BACKWARD-COMPAT"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -1749,7 +1749,10 @@ function Invoke-UpdateAgentJob {
         return @{ success = \$true; output = (\$output | ConvertTo-Json -Compress) }
     }
     catch {
-        Add-EvidenceEntry -Type "update_failed" -Data @{
+        # CRITICAL: Use "error" instead of "update_failed" for backward compatibility
+        # Old agents don't have "update_failed" in ValidateSet, causing update chicken-and-egg problem
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "update_failed"
             error = \$_.Exception.Message
             current_version = \$Global:AgentVersion
         } -Severity "error"

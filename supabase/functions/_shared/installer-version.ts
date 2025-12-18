@@ -7,12 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v4.0.3-EVIDENCE-FIX';
+export const INSTALLER_VERSION = 'v4.0.4-BACKWARD-COMPAT';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
-export const LAST_UPDATED = '2025-12-18T22:00:00Z'; // Windows updated to v4.0.3-EVIDENCE-FIX
+export const LAST_UPDATED = '2025-12-18T23:00:00Z'; // Windows updated to v4.0.4-BACKWARD-COMPAT
 
 export const CHANGES = [
+  '[v4.0.4-BACKWARD-COMPAT] CRITICAL FIX: Update handler usa "error" ao inves de "update_failed" para compatibilidade retroativa',
+  '[v4.0.4-BACKWARD-COMPAT] CRITICAL FIX: Resolve chicken-and-egg onde agentes antigos nao tem "update_failed" no ValidateSet',
+  '[v4.0.4-BACKWARD-COMPAT] CRITICAL FIX: Agora agentes v3.10.x e v4.0.x podem atualizar sem erro de ValidateSet',
   '[v4.0.3-EVIDENCE-FIX] CRITICAL FIX: ValidateSet do Evidence Journal agora inclui "update_failed"',
   '[v4.0.3-EVIDENCE-FIX] CRITICAL FIX: Resolve erro ParameterArgumentValidationError quando auto-update falha',
   '[v4.0.2-UPDATE-FIX] CRITICAL FIX: Invoke-UpdateAgentJob agora implementado REAL (nao mais stub)',

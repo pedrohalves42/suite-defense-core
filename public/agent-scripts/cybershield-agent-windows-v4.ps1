@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v4.0.2-UPDATE-FIX
+    CyberShield Agent - Windows v4.0.4-BACKWARD-COMPAT
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
@@ -46,7 +46,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.0.2-UPDATE-FIX"
+    [string]$AgentVersion = "v4.0.4-BACKWARD-COMPAT"
 )
 
 $ErrorActionPreference = "Stop"
@@ -1735,7 +1735,10 @@ function Invoke-UpdateAgentJob {
         return @{ success = $true; output = ($output | ConvertTo-Json -Compress) }
     }
     catch {
-        Add-EvidenceEntry -Type "update_failed" -Data @{
+        # CRITICAL: Use "error" instead of "update_failed" for backward compatibility
+        # Old agents don't have "update_failed" in ValidateSet, causing update chicken-and-egg problem
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "update_failed"
             error = $_.Exception.Message
             current_version = $Global:AgentVersion
         } -Severity "error"
