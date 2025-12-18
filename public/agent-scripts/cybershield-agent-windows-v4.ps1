@@ -1,8 +1,10 @@
 <#
-    CyberShield Agent - Windows v4.0.0-STATE-MACHINE
+    CyberShield Agent - Windows v4.0.1-DNS-POLICY
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
+    FASE 2.4: DNS Filter Go como Windows Service
+    FASE 2.5: Policy Contract (Desired vs Actual + Drift Detection)
     
     Estados:
     - BOOTSTRAP: Inicializacao do agente
@@ -12,11 +14,13 @@
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0:
+    Funcionalidades v4.0.1:
     - State Machine formal com transicoes validadas
     - Evidence Journal local estruturado (JSON Lines)
     - Job Engine idempotente com execution_id
     - Auto-recovery com 3 tentativas + backoff exponencial
+    - DNS Filter integrado como Windows Service
+    - Policy Contract com deteccao de drift
     - Todas as funcionalidades v3.x mantidas
     
     Uso:
@@ -41,7 +45,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.0.0-STATE-MACHINE"
+    [string]$AgentVersion = "v4.0.1-DNS-POLICY"
 )
 
 $ErrorActionPreference = "Stop"
@@ -400,6 +404,11 @@ function Invoke-AutoRecovery {
                 $recovered = $true
             } catch { }
         }
+        "dns_filter" {
+            try {
+                $recovered = Invoke-DNSFilterRecovery
+            } catch { }
+        }
         "network" {
             try {
                 # Testar conectividade basica
@@ -434,6 +443,507 @@ function Invoke-AutoRecovery {
     Set-AgentState -NewState "DEGRADED" -Reason "Recovery attempt $attempt failed: $FailedComponent"
     
     return $false
+}
+
+# ============================================
+#  FASE 2.4: DNS FILTER GO COMO WINDOWS SERVICE
+# ============================================
+$Global:DNSFilterConfig = @{
+    ServiceName = "CyberShield-DNS"
+    ExePath = "C:\CyberShield\dns-filter\cybershield-dns.exe"
+    ConfigPath = "C:\CyberShield\dns-filter\config.json"
+    LogPath = "C:\CyberShield\dns-filter\dns.log"
+    ListenAddress = "127.0.0.1:53"
+    UpstreamDNS = @("8.8.8.8:53", "1.1.1.1:53")
+    Enabled = $true
+    LastHealthCheck = $null
+    ConsecutiveFailures = 0
+}
+
+function Test-DNSFilterInstalled {
+    try {
+        $svc = Get-Service -Name $Global:DNSFilterConfig.ServiceName -ErrorAction SilentlyContinue
+        return ($null -ne $svc)
+    }
+    catch {
+        return $false
+    }
+}
+
+function Get-DNSFilterStatus {
+    try {
+        $result = @{
+            installed = $false
+            running = $false
+            status = "unknown"
+            exe_exists = (Test-Path $Global:DNSFilterConfig.ExePath)
+        }
+        
+        $svc = Get-Service -Name $Global:DNSFilterConfig.ServiceName -ErrorAction SilentlyContinue
+        if ($svc) {
+            $result.installed = $true
+            $result.status = $svc.Status.ToString()
+            $result.running = ($svc.Status -eq "Running")
+        }
+        
+        return $result
+    }
+    catch {
+        return @{
+            installed = $false
+            running = $false
+            status = "error"
+            error = $_.Exception.Message
+        }
+    }
+}
+
+function Install-DNSFilterService {
+    try {
+        $exePath = $Global:DNSFilterConfig.ExePath
+        
+        if (-not (Test-Path $exePath)) {
+            Write-Log "[DNS] EXE not found at $exePath - skipping install" "WARN"
+            return $false
+        }
+        
+        # Verificar se ja instalado
+        if (Test-DNSFilterInstalled) {
+            Write-Log "[DNS] Service already installed" "INFO"
+            return $true
+        }
+        
+        Write-Log "[DNS] Installing DNS Filter service..." "INFO"
+        
+        # Instalar servico
+        $installResult = & $exePath -install 2>&1
+        Start-Sleep -Seconds 2
+        
+        if (Test-DNSFilterInstalled) {
+            Write-Log "[DNS] Service installed successfully" "SUCCESS"
+            
+            Add-EvidenceEntry -Type "dns_block" -Data @{
+                action = "service_installed"
+                service = $Global:DNSFilterConfig.ServiceName
+            } -Severity "info"
+            
+            return $true
+        }
+        else {
+            Write-Log "[DNS] Service installation failed: $installResult" "ERROR"
+            return $false
+        }
+    }
+    catch {
+        Write-Log "[DNS] Install error: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
+function Start-DNSFilterService {
+    try {
+        $status = Get-DNSFilterStatus
+        
+        if (-not $status.installed) {
+            $installed = Install-DNSFilterService
+            if (-not $installed) {
+                return $false
+            }
+        }
+        
+        if ($status.running) {
+            Write-Log "[DNS] Service already running" "DEBUG"
+            return $true
+        }
+        
+        Write-Log "[DNS] Starting DNS Filter service..." "INFO"
+        Start-Service -Name $Global:DNSFilterConfig.ServiceName -ErrorAction Stop
+        Start-Sleep -Seconds 2
+        
+        $newStatus = Get-DNSFilterStatus
+        if ($newStatus.running) {
+            Write-Log "[DNS] Service started successfully" "SUCCESS"
+            $Global:DNSFilterConfig.ConsecutiveFailures = 0
+            
+            Add-EvidenceEntry -Type "dns_block" -Data @{
+                action = "service_started"
+                service = $Global:DNSFilterConfig.ServiceName
+            } -Severity "info"
+            
+            return $true
+        }
+        else {
+            Write-Log "[DNS] Service failed to start" "ERROR"
+            return $false
+        }
+    }
+    catch {
+        Write-Log "[DNS] Start error: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
+function Stop-DNSFilterService {
+    try {
+        if (-not (Test-DNSFilterInstalled)) {
+            return $true
+        }
+        
+        $status = Get-DNSFilterStatus
+        if (-not $status.running) {
+            Write-Log "[DNS] Service already stopped" "DEBUG"
+            return $true
+        }
+        
+        Write-Log "[DNS] Stopping DNS Filter service..." "INFO"
+        Stop-Service -Name $Global:DNSFilterConfig.ServiceName -Force -ErrorAction Stop
+        Start-Sleep -Seconds 2
+        
+        Add-EvidenceEntry -Type "dns_block" -Data @{
+            action = "service_stopped"
+            service = $Global:DNSFilterConfig.ServiceName
+        } -Severity "info"
+        
+        return $true
+    }
+    catch {
+        Write-Log "[DNS] Stop error: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
+function Test-DNSFilterHealth {
+    try {
+        $status = Get-DNSFilterStatus
+        
+        if (-not $status.running) {
+            $Global:DNSFilterConfig.ConsecutiveFailures++
+            return @{
+                healthy = $false
+                reason = "Service not running"
+                consecutive_failures = $Global:DNSFilterConfig.ConsecutiveFailures
+            }
+        }
+        
+        # Testar resolucao DNS local
+        try {
+            $testResult = Resolve-DnsName -Name "google.com" -Server "127.0.0.1" -Type A -DnsOnly -ErrorAction Stop
+            if ($testResult) {
+                $Global:DNSFilterConfig.ConsecutiveFailures = 0
+                $Global:DNSFilterConfig.LastHealthCheck = Get-Date
+                return @{
+                    healthy = $true
+                    reason = "DNS resolution OK"
+                    consecutive_failures = 0
+                }
+            }
+        }
+        catch {
+            $Global:DNSFilterConfig.ConsecutiveFailures++
+            return @{
+                healthy = $false
+                reason = "DNS resolution failed: $($_.Exception.Message)"
+                consecutive_failures = $Global:DNSFilterConfig.ConsecutiveFailures
+            }
+        }
+        
+        return @{
+            healthy = $false
+            reason = "Unknown"
+            consecutive_failures = $Global:DNSFilterConfig.ConsecutiveFailures
+        }
+    }
+    catch {
+        return @{
+            healthy = $false
+            reason = $_.Exception.Message
+            consecutive_failures = $Global:DNSFilterConfig.ConsecutiveFailures
+        }
+    }
+}
+
+function Invoke-DNSFilterRecovery {
+    Write-Log "[DNS] Attempting DNS Filter recovery..." "WARN"
+    
+    Add-EvidenceEntry -Type "auto_recovery" -Data @{
+        component = "dns_filter"
+        consecutive_failures = $Global:DNSFilterConfig.ConsecutiveFailures
+    } -Severity "warning"
+    
+    # Tentar reiniciar servico
+    Stop-DNSFilterService | Out-Null
+    Start-Sleep -Seconds 2
+    
+    $started = Start-DNSFilterService
+    if ($started) {
+        $health = Test-DNSFilterHealth
+        if ($health.healthy) {
+            Write-Log "[DNS] Recovery successful" "SUCCESS"
+            
+            Add-EvidenceEntry -Type "auto_recovery" -Data @{
+                component = "dns_filter"
+                success = $true
+            } -Severity "info"
+            
+            return $true
+        }
+    }
+    
+    Write-Log "[DNS] Recovery failed" "ERROR"
+    
+    Add-EvidenceEntry -Type "auto_recovery" -Data @{
+        component = "dns_filter"
+        success = $false
+    } -Severity "error"
+    
+    return $false
+}
+
+# ============================================
+#  FASE 2.5: POLICY CONTRACT (DESIRED VS ACTUAL)
+# ============================================
+$Global:PolicyContract = @{
+    version = "2025-01"
+    last_sync = $null
+    expected = @{
+        dns_enabled = $true
+        dns_service_running = $true
+        agent_min_version = "v4.0.0"
+        blocked_domains_synced = $true
+        heartbeat_interval_max = 120
+        job_execution_enabled = $true
+    }
+    actual = @{}
+    drift = @()
+}
+
+function Get-CurrentPolicyState {
+    try {
+        $dnsStatus = Get-DNSFilterStatus
+        $agentState = Get-AgentState
+        
+        return @{
+            dns_enabled = $Global:DNSFilterConfig.Enabled
+            dns_service_running = $dnsStatus.running
+            dns_installed = $dnsStatus.installed
+            agent_version = $Global:AgentVersion
+            agent_state = $agentState
+            job_execution_enabled = (Test-CanExecuteJob)
+            heartbeat_interval = $Global:PollIntervalSeconds
+            blocked_domains_synced = (Test-Path "$Global:BaseDir\blocked_websites.json")
+            timestamp = (Get-Date).ToUniversalTime().ToString("o")
+        }
+    }
+    catch {
+        return @{
+            error = $_.Exception.Message
+            timestamp = (Get-Date).ToUniversalTime().ToString("o")
+        }
+    }
+}
+
+function Compare-PolicyState {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Expected,
+        
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Actual
+    )
+    
+    $drift = [System.Collections.ArrayList]::new()
+    
+    foreach ($key in $Expected.Keys) {
+        if ($Actual.ContainsKey($key)) {
+            $expectedVal = $Expected[$key]
+            $actualVal = $Actual[$key]
+            
+            # Comparacao especial para versoes
+            if ($key -eq "agent_min_version") {
+                # Extrair numero da versao
+                $expectedNum = [version]($expectedVal -replace '^v', '' -replace '-.*$', '')
+                $actualNum = [version]($actualVal -replace '^v', '' -replace '-.*$', '')
+                
+                if ($actualNum -lt $expectedNum) {
+                    [void]$drift.Add(@{
+                        field = $key
+                        expected = $expectedVal
+                        actual = $actualVal
+                        type = "version_mismatch"
+                    })
+                }
+            }
+            elseif ($key -eq "heartbeat_interval_max") {
+                if ($Actual["heartbeat_interval"] -gt $expectedVal) {
+                    [void]$drift.Add(@{
+                        field = $key
+                        expected = $expectedVal
+                        actual = $Actual["heartbeat_interval"]
+                        type = "interval_exceeded"
+                    })
+                }
+            }
+            elseif ($expectedVal -ne $actualVal) {
+                [void]$drift.Add(@{
+                    field = $key
+                    expected = $expectedVal
+                    actual = $actualVal
+                    type = "value_mismatch"
+                })
+            }
+        }
+        else {
+            [void]$drift.Add(@{
+                field = $key
+                expected = $Expected[$key]
+                actual = $null
+                type = "missing_field"
+            })
+        }
+    }
+    
+    return $drift
+}
+
+function Check-PolicyCompliance {
+    try {
+        $current = Get-CurrentPolicyState
+        $Global:PolicyContract.actual = $current
+        
+        $drift = Compare-PolicyState -Expected $Global:PolicyContract.expected -Actual $current
+        $Global:PolicyContract.drift = $drift
+        
+        if ($drift.Count -gt 0) {
+            Write-Log "[POLICY] Drift detected: $($drift.Count) issue(s)" "WARN"
+            
+            foreach ($d in $drift) {
+                Write-Log "[POLICY] - $($d.field): expected=$($d.expected), actual=$($d.actual)" "WARN"
+            }
+            
+            Add-EvidenceEntry -Type "policy_drift" -Data @{
+                drift_count = $drift.Count
+                drift_items = $drift
+                expected = $Global:PolicyContract.expected
+                actual = $current
+            } -Severity "warning"
+            
+            return @{
+                compliant = $false
+                drift = $drift
+                drift_count = $drift.Count
+            }
+        }
+        
+        Write-Log "[POLICY] Compliance check passed" "DEBUG"
+        return @{
+            compliant = $true
+            drift = @()
+            drift_count = 0
+        }
+    }
+    catch {
+        Write-Log "[POLICY] Compliance check error: $($_.Exception.Message)" "ERROR"
+        return @{
+            compliant = $false
+            error = $_.Exception.Message
+        }
+    }
+}
+
+function Invoke-PolicyEnforcement {
+    $compliance = Check-PolicyCompliance
+    
+    if ($compliance.compliant) {
+        return $true
+    }
+    
+    Write-Log "[POLICY] Attempting to enforce policy..." "INFO"
+    $enforced = $true
+    
+    foreach ($d in $compliance.drift) {
+        switch ($d.field) {
+            "dns_service_running" {
+                if ($d.expected -eq $true -and $d.actual -eq $false) {
+                    Write-Log "[POLICY] Enforcing: Starting DNS service" "INFO"
+                    $started = Start-DNSFilterService
+                    if (-not $started) { $enforced = $false }
+                }
+            }
+            "dns_enabled" {
+                if ($d.expected -eq $true -and $d.actual -eq $false) {
+                    Write-Log "[POLICY] Enforcing: Enabling DNS" "INFO"
+                    $Global:DNSFilterConfig.Enabled = $true
+                }
+            }
+            "agent_min_version" {
+                Write-Log "[POLICY] Agent version below minimum - update required" "WARN"
+                # Nao podemos forcar update, apenas registrar
+            }
+            default {
+                Write-Log "[POLICY] Cannot auto-enforce: $($d.field)" "WARN"
+            }
+        }
+    }
+    
+    if ($enforced) {
+        Add-EvidenceEntry -Type "policy_sync" -Data @{
+            action = "enforcement_complete"
+            drift_resolved = $compliance.drift_count
+        } -Severity "info"
+    }
+    
+    return $enforced
+}
+
+function Sync-PolicyFromServer {
+    try {
+        Write-Log "[POLICY] Syncing policy from server..." "INFO"
+        
+        $body = @{
+            agent_name = $Global:AgentName
+            agent_version = $Global:AgentVersion
+        }
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/get-agent-policy" `
+            -Method "POST" `
+            -Body $body `
+            -TimeoutSec 15 `
+            -MaxRetries 2
+        
+        if ($result.Success -and $result.StatusCode -eq 200 -and $result.Body) {
+            $serverPolicy = $result.Body | ConvertFrom-Json
+            
+            if ($serverPolicy.expected) {
+                $Global:PolicyContract.expected = @{
+                    dns_enabled = [bool]$serverPolicy.expected.dns_enabled
+                    dns_service_running = [bool]$serverPolicy.expected.dns_service_running
+                    agent_min_version = $serverPolicy.expected.agent_min_version
+                    blocked_domains_synced = [bool]$serverPolicy.expected.blocked_domains_synced
+                    heartbeat_interval_max = [int]$serverPolicy.expected.heartbeat_interval_max
+                    job_execution_enabled = [bool]$serverPolicy.expected.job_execution_enabled
+                }
+                $Global:PolicyContract.version = $serverPolicy.version
+                $Global:PolicyContract.last_sync = Get-Date
+                
+                Write-Log "[POLICY] Policy synced from server (version: $($serverPolicy.version))" "SUCCESS"
+                
+                Add-EvidenceEntry -Type "policy_sync" -Data @{
+                    action = "synced_from_server"
+                    version = $serverPolicy.version
+                } -Severity "info"
+                
+                return $true
+            }
+        }
+        
+        Write-Log "[POLICY] Server policy not available, using defaults" "WARN"
+        return $false
+    }
+    catch {
+        Write-Log "[POLICY] Sync error: $($_.Exception.Message)" "WARN"
+        return $false
+    }
 }
 
 # ============================================
@@ -1147,10 +1657,10 @@ function Poll-Jobs {
 }
 
 # ============================================
-#  LOOP PRINCIPAL v4.0
+#  LOOP PRINCIPAL v4.0.1
 # ============================================
 Write-Log "============================================" "INFO"
-Write-Log "[START] CyberShield Agent v4.0 - State Machine" "INFO"
+Write-Log "[START] CyberShield Agent v4.0.1 - DNS + Policy" "INFO"
 Write-Log "[INFO] ServerUrl: $Global:ServerUrl" "DEBUG"
 Write-Log "[INFO] AgentName: $Global:AgentName" "DEBUG"
 Write-Log "============================================" "INFO"
@@ -1160,6 +1670,7 @@ Add-EvidenceEntry -Type "state_change" -Data @{
     event = "agent_started"
     version = $Global:AgentVersion
     hostname = $env:COMPUTERNAME
+    features = @("state_machine", "evidence_journal", "dns_filter", "policy_contract")
 } -StateBefore $null -StateAfter "BOOTSTRAP" -Severity "info"
 
 try {
@@ -1167,6 +1678,21 @@ try {
     
     # Transicao: BOOTSTRAP -> SYNCING
     Set-AgentState -NewState "SYNCING" -Reason "Starting initial sync"
+
+    # Sincronizar policy do servidor
+    Write-Log "[BOOTSTRAP] Syncing policy from server..." "INFO"
+    Sync-PolicyFromServer | Out-Null
+
+    # Iniciar DNS Filter se habilitado
+    if ($Global:DNSFilterConfig.Enabled) {
+        Write-Log "[BOOTSTRAP] Initializing DNS Filter..." "INFO"
+        $dnsStatus = Get-DNSFilterStatus
+        if ($dnsStatus.exe_exists) {
+            Start-DNSFilterService | Out-Null
+        } else {
+            Write-Log "[BOOTSTRAP] DNS Filter EXE not found, skipping" "WARN"
+        }
+    }
 
     # Primeiro heartbeat
     $heartbeatSuccess = Send-Heartbeat
@@ -1179,6 +1705,13 @@ try {
         Set-AgentState -NewState "DEGRADED" -Reason "Initial heartbeat failed"
     }
 
+    # Verificar compliance inicial
+    $compliance = Check-PolicyCompliance
+    if (-not $compliance.compliant) {
+        Write-Log "[BOOTSTRAP] Policy drift detected - enforcing..." "WARN"
+        Invoke-PolicyEnforcement | Out-Null
+    }
+
     $bootstrapElapsed = [int]((Get-Date) - $bootstrapStart).TotalSeconds
     Write-Log "[SUCCESS] Bootstrap concluido em ${bootstrapElapsed}s (state: $(Get-AgentState))" "SUCCESS"
 
@@ -1187,6 +1720,9 @@ try {
     $lastMetrics = Get-Date
     $lastEvidenceFlush = Get-Date
     $lastRotation = Get-Date
+    $lastDNSHealthCheck = Get-Date
+    $lastPolicyCheck = Get-Date
+    $lastPolicySync = Get-Date
 
     while ($true) {
         $now = Get-Date
@@ -1214,6 +1750,40 @@ try {
                     Poll-Jobs
                 }
                 $lastPoll = Get-Date
+            }
+
+            # DNS Health Check a cada 2 minutos
+            if ($Global:DNSFilterConfig.Enabled -and (($now - $lastDNSHealthCheck).TotalSeconds) -ge 120) {
+                $dnsHealth = Test-DNSFilterHealth
+                
+                if (-not $dnsHealth.healthy) {
+                    Write-Log "[DNS] Health check failed: $($dnsHealth.reason)" "WARN"
+                    
+                    # Auto-recovery apos 3 falhas consecutivas
+                    if ($dnsHealth.consecutive_failures -ge 3) {
+                        Invoke-AutoRecovery -FailedComponent "dns_filter" -ErrorMessage $dnsHealth.reason
+                    }
+                }
+                
+                $lastDNSHealthCheck = Get-Date
+            }
+
+            # Policy Compliance Check a cada 5 minutos
+            if ((($now - $lastPolicyCheck).TotalSeconds) -ge 300) {
+                $compliance = Check-PolicyCompliance
+                
+                if (-not $compliance.compliant) {
+                    Write-Log "[POLICY] Drift detected, attempting enforcement..." "WARN"
+                    Invoke-PolicyEnforcement | Out-Null
+                }
+                
+                $lastPolicyCheck = Get-Date
+            }
+
+            # Policy Sync do servidor a cada 30 minutos
+            if ((($now - $lastPolicySync).TotalSeconds) -ge 1800) {
+                Sync-PolicyFromServer | Out-Null
+                $lastPolicySync = Get-Date
             }
 
             # Flush evidence a cada 5 minutos
