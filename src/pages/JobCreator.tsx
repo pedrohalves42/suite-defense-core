@@ -457,19 +457,31 @@ const JobCreator = () => {
                     </Select>
                   </div>
 
-                  {/* Payload */}
+                  {/* Payload - Hidden by default with toggle */}
                   <div className="space-y-2">
-                    <Label htmlFor="payload">Payload (JSON)</Label>
-                    <Textarea
-                      id="payload"
-                      value={payload}
-                      onChange={(e) => setPayload(e.target.value)}
-                      placeholder='{"key": "value"}'
-                      className="font-mono text-sm min-h-[200px]"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Dados adicionais para o job em formato JSON
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="payload">Configurações da Tarefa</Label>
+                      <Badge variant="outline" className="text-xs">
+                        Preenchimento automático
+                      </Badge>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg border text-sm">
+                      <p className="text-muted-foreground">
+                        As configurações são preenchidas automaticamente com base no tipo de tarefa selecionado.
+                      </p>
+                    </div>
+                    <details className="group">
+                      <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+                        ▶ Modo avançado (editar JSON manualmente)
+                      </summary>
+                      <Textarea
+                        id="payload"
+                        value={payload}
+                        onChange={(e) => setPayload(e.target.value)}
+                        placeholder='{"key": "value"}'
+                        className="font-mono text-sm min-h-[150px] mt-2"
+                      />
+                    </details>
                   </div>
 
                   {/* Schedule Switch */}

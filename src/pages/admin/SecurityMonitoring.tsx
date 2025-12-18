@@ -396,9 +396,14 @@ export default function SecurityMonitoring() {
                       </TableRow>
                     ) : recentEvents?.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground">
-                          <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          Nenhum evento no período
+                        <TableCell colSpan={4} className="text-center py-8">
+                          <div className="flex flex-col items-center gap-2">
+                            <Shield className="h-10 w-10 text-success/50" />
+                            <p className="font-medium text-success">🎉 Nenhuma ameaça detectada!</p>
+                            <p className="text-sm text-muted-foreground">
+                              Seu sistema está seguro no período selecionado.
+                            </p>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (
