@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings, BarChart3, PieChart, LineChart } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings, BarChart3, PieChart, LineChart, CheckCircle2, XCircle, Info } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Line, LineChart as RechartsLineChart, Bar, BarChart as RechartsBarChart, Pie, PieChart as RechartsPieChart, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip } from "recharts";
 import { logger } from "@/lib/logger";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { cn } from "@/lib/utils";
 
 interface Agent {
   id: string;
@@ -84,6 +85,24 @@ interface AuditLog {
   success: boolean;
   user_id: string | null;
 }
+
+// Helper: Humanizar ações do sistema
+const humanizeAction = (action: string, resource: string): { icon: string; text: string } => {
+  const map: Record<string, { icon: string; text: string }> = {
+    'agent.enroll': { icon: '✓', text: 'Novo computador registrado' },
+    'agent.heartbeat': { icon: '💓', text: 'Computador se comunicou' },
+    'job.create': { icon: '⚙️', text: 'Nova tarefa criada' },
+    'job.complete': { icon: '✓', text: 'Tarefa concluída com sucesso' },
+    'job.fail': { icon: '⚠️', text: 'Tarefa falhou' },
+    'scan.complete': { icon: '🛡️', text: 'Verificação de vírus realizada' },
+    'login.success': { icon: '🔐', text: 'Login realizado' },
+    'login.fail': { icon: '⚠️', text: 'Tentativa de login falhou' },
+    'report.create': { icon: '📄', text: 'Novo relatório gerado' },
+    'alert.create': { icon: '🚨', text: 'Novo alerta detectado' },
+    'alert.resolve': { icon: '✓', text: 'Alerta resolvido' },
+  };
+  return map[action] || { icon: '•', text: `${action} (${resource})` };
+};
 
 const ServerDashboard = () => {
   const navigate = useNavigate();
@@ -200,11 +219,6 @@ const ServerDashboard = () => {
       const now = new Date();
       const diffMs = now.getTime() - lastHeartbeat.getTime();
       
-      // Debug opcional (remover depois se necessário)
-      if (diffMs >= 0 && diffMs < FIVE_MINUTES_MS) {
-        console.debug(`[ONLINE] ${a.agent_name}: ${Math.round(diffMs/1000)}s ago`);
-      }
-      
       return diffMs >= 0 && diffMs < FIVE_MINUTES_MS;
     } catch (err) {
       console.error(`[ERROR] Failed to parse last_heartbeat for ${a.agent_name}:`, err);
@@ -212,15 +226,83 @@ const ServerDashboard = () => {
     }
   });
 
+  const offlineCount = agents.length - activeAgents.length;
   const pendingJobs = jobs.filter(j => j.status === "queued").length;
   const completedJobs = jobs.filter(j => j.status === "completed").length;
   const failedJobs = jobs.filter(j => j.status === "failed").length;
+  const successRate = completedJobs + failedJobs > 0 
+    ? ((completedJobs / (completedJobs + failedJobs)) * 100).toFixed(0)
+    : '100';
   
   // Agrupar agentes por tenant
   const agentsByTenant = agents.reduce((acc, agent) => {
     acc[agent.tenant_id] = (acc[agent.tenant_id] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
+
+  // Calcular empresas com pendências (offline ou falhas)
+  const tenantStats = useMemo(() => {
+    const stats: Record<string, { 
+      name: string;
+      agentCount: number; 
+      offlineCount: number; 
+      failedJobsCount: number;
+    }> = {};
+    
+    // Contar agentes por tenant
+    agents.forEach(agent => {
+      if (!stats[agent.tenant_id]) {
+        stats[agent.tenant_id] = {
+          name: tenantNames[agent.tenant_id] || agent.tenant_id.slice(0, 8) + '...',
+          agentCount: 0,
+          offlineCount: 0,
+          failedJobsCount: 0
+        };
+      }
+      stats[agent.tenant_id].agentCount++;
+      
+      // Verificar se está offline
+      const isOffline = !agent.last_heartbeat || 
+        (new Date().getTime() - new Date(agent.last_heartbeat).getTime()) > FIVE_MINUTES_MS;
+      if (isOffline) {
+        stats[agent.tenant_id].offlineCount++;
+      }
+    });
+    
+    // Contar falhas de jobs nas últimas 24h por tenant
+    const now = new Date();
+    const last24h = 24 * 60 * 60 * 1000;
+    jobs.forEach(job => {
+      if (job.status === 'failed' && job.created_at) {
+        const createdAt = new Date(job.created_at);
+        if (now.getTime() - createdAt.getTime() < last24h) {
+          const agent = agents.find(a => a.agent_name === job.agent_name);
+          if (agent && stats[agent.tenant_id]) {
+            stats[agent.tenant_id].failedJobsCount++;
+          }
+        }
+      }
+    });
+    
+    return stats;
+  }, [agents, jobs, tenantNames]);
+
+  // Ordenar tenants por gravidade
+  const sortedTenantsByGravity = useMemo(() => {
+    return Object.entries(tenantStats)
+      .map(([tenantId, data]) => ({
+        tenantId,
+        ...data,
+        severity: data.offlineCount > 2 || data.failedJobsCount > 3 ? 'critical' :
+                  data.offlineCount > 0 || data.failedJobsCount > 0 ? 'warning' : 'healthy'
+      }))
+      .sort((a, b) => {
+        const severityOrder = { critical: 0, warning: 1, healthy: 2 };
+        return severityOrder[a.severity] - severityOrder[b.severity];
+      });
+  }, [tenantStats]);
+
+  const tenantsWithIssues = sortedTenantsByGravity.filter(t => t.severity !== 'healthy').length;
 
   // Jobs completados nas ultimas 24h
   const recentJobs = jobs.filter(j => {
@@ -283,15 +365,32 @@ const ServerDashboard = () => {
     .slice(0, 10)
     .map(([agent, count]) => ({ agent, jobs: count }));
 
-  // Timeline de eventos de seguranca
-  const securityEvents = auditLogs.slice(0, 10).map(log => ({
-    time: new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    action: log.action,
-    resource: log.resource_type,
-    status: log.success ? 'success' : 'failed',
-  }));
+  // Timeline de eventos de seguranca - humanizada
+  const securityEvents = auditLogs.slice(0, 10).map(log => {
+    const { icon, text } = humanizeAction(log.action, log.resource_type);
+    return {
+      time: new Date(log.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      date: new Date(log.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+      icon,
+      text,
+      action: log.action,
+      resource: log.resource_type,
+      status: log.success ? 'success' : 'failed',
+    };
+  });
 
   const COLORS = ['hsl(195 100% 50%)', 'hsl(160 100% 45%)', 'hsl(35 100% 55%)', 'hsl(142 76% 45%)', 'hsl(0 70% 55%)'];
+
+  // Determinar estado global do sistema
+  const systemState = useMemo(() => {
+    if (alerts === 0 && failedJobs === 0) return 'healthy';
+    if (alerts > 2 || failedJobs > 5) return 'critical';
+    return 'warning';
+  }, [alerts, failedJobs]);
+
+  const onlinePercentage = agents.length > 0 
+    ? ((activeAgents.length / agents.length) * 100).toFixed(0)
+    : '0';
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -305,143 +404,216 @@ const ServerDashboard = () => {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Painel Principal
             </h1>
-            <p className="text-sm text-muted-foreground">Visão geral do sistema</p>
+            <p className="text-sm text-muted-foreground">Visão global do sistema</p>
           </div>
         </div>
 
-        {/* Stats Cards - Linha 1 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* ═══════════════════════════════════════════════════════════════════
+            CAMADA 1 — ESTADO GLOBAL (Executivo)
+            Responde: "Está tudo bem?" em 3 segundos
+        ═══════════════════════════════════════════════════════════════════ */}
+        <Card className={cn(
+          "border-2 transition-all",
+          systemState === 'healthy' ? "bg-success/5 border-success/30" :
+          systemState === 'critical' ? "bg-destructive/5 border-destructive/30" :
+          "bg-warning/5 border-warning/30"
+        )}>
+          <CardContent className="py-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-4 mb-3">
+                  <span className="text-5xl">
+                    {systemState === 'healthy' ? '🟢' : 
+                     systemState === 'critical' ? '🔴' : '🟡'}
+                  </span>
+                  <div>
+                    <h2 className="text-2xl font-bold text-foreground">
+                      {systemState === 'healthy' ? 'Sistema Operando Dentro do Esperado' : 
+                       systemState === 'critical' ? 'Atenção Sistêmica Detectada' : 
+                       'Pequenos Ajustes Recomendados'}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Última atualização: {new Date().toLocaleTimeString('pt-BR')}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Detalhes contextuais */}
+                <div className="space-y-1 text-sm ml-16">
+                  {systemState === 'healthy' ? (
+                    <>
+                      <p className="text-muted-foreground flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-success" />
+                        {onlinePercentage}% dos computadores estão online
+                      </p>
+                      <p className="text-muted-foreground flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-success" />
+                        Nenhum incidente crítico ativo
+                      </p>
+                      <p className="text-muted-foreground flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-success" />
+                        Sistema estável nas últimas 24h
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      {offlineCount > 0 && (
+                        <p className="text-warning flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" />
+                          {offlineCount} computador(es) offline precisam de verificação
+                        </p>
+                      )}
+                      {failedJobs > 0 && (
+                        <p className="text-warning flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" />
+                          {failedJobs} tarefa(s) falharam nas últimas 24h
+                        </p>
+                      )}
+                      {tenantsWithIssues > 0 && (
+                        <p className="text-warning flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4" />
+                          {tenantsWithIssues} empresa(s) com pendências
+                        </p>
+                      )}
+                      <p className="text-muted-foreground text-xs mt-2 italic">
+                        Esses problemas podem impactar operações se persistirem
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {/* Contador de monitoramento */}
+              <div className="text-center md:text-right bg-secondary/30 rounded-xl p-6 border border-border">
+                <p className="text-4xl font-bold text-foreground">{agents.length}</p>
+                <p className="text-sm text-muted-foreground">
+                  computadores monitorados
+                </p>
+                <p className="text-xs text-primary mt-1">
+                  em {Object.keys(agentsByTenant).length} empresa(s)
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            CAMADA 2 — INDICADORES SISTÊMICOS (Operacional)
+            Cada card responde UMA pergunta clara
+        ═══════════════════════════════════════════════════════════════════ */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {/* Card 1: Base Monitorada */}
           <Card className="bg-gradient-card border-primary/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
                 <Users className="h-4 w-4 text-primary" />
-                Total de Computadores
+                Base Monitorada
               </CardTitle>
+              <CardDescription className="text-[10px]">O tamanho do sistema mudou?</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{agents.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <div className="text-2xl font-bold text-foreground">{agents.length} ativos</div>
+              <p className="text-xs text-muted-foreground">
                 {Object.keys(agentsByTenant).length} empresa(s)
               </p>
             </CardContent>
           </Card>
 
+          {/* Card 2: Conectividade */}
+          <Card className={cn(
+            "bg-gradient-card",
+            offlineCount > 0 ? "border-warning/30" : "border-success/20"
+          )}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
+                <Network className="h-4 w-4" />
+                Conectividade
+              </CardTitle>
+              <CardDescription className="text-[10px]">Existe risco silencioso agora?</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">{onlinePercentage}% online</div>
+              <p className={cn(
+                "text-xs",
+                offlineCount > 0 ? "text-warning" : "text-success"
+              )}>
+                {offlineCount > 0 ? `${offlineCount} offline` : 'Todos conectados'}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Card 3: Alertas Reais */}
+          <Card className={cn(
+            "bg-gradient-card",
+            alerts > 0 ? "border-destructive/30" : "border-success/20"
+          )}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
+                <AlertCircle className="h-4 w-4" />
+                Alertas
+              </CardTitle>
+              <CardDescription className="text-[10px]">Algo exige ação humana agora?</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className={cn(
+                "text-2xl font-bold",
+                alerts > 0 ? "text-destructive" : "text-success"
+              )}>
+                {alerts > 0 ? `${alerts} ativo(s)` : 'Nenhum'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {alerts > 0 ? 'Precisam de atenção' : 'Nenhum alerta crítico'}
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Card 4: Execução */}
           <Card className="bg-gradient-card border-accent/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Activity className="h-4 w-4 text-accent" />
-                Computadores Online
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
+                <TrendingUp className="h-4 w-4" />
+                Execução
               </CardTitle>
+              <CardDescription className="text-[10px]">O sistema está entregando?</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-foreground">{activeAgents.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {((activeAgents.length / Math.max(agents.length, 1)) * 100).toFixed(0)}% conectados
+              <div className="text-2xl font-bold text-foreground">{successRate}% sucesso</div>
+              <p className={cn(
+                "text-xs",
+                failedJobs > 0 ? "text-warning" : "text-muted-foreground"
+              )}>
+                {failedJobs > 0 ? `${failedJobs} falha(s) nas 24h` : 'Tudo funcionando'}
               </p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-card border-warning/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-warning" />
-                Tarefas Pendentes
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{pendingJobs}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {recentJobs} nas últimas 24h
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-card border-success/20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <FileText className="h-4 w-4 text-success" />
-                Relatórios
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{reports.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {completedJobs} tarefas concluídas
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Stats Cards - Linha 2 - Metricas Adicionais */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Card className="bg-gradient-card border-primary/10">
+          {/* Card 5: Empresas */}
+          <Card className="bg-gradient-card border-primary/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                <Network className="h-3 w-3" />
-                Taxa de Conexão
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {((activeAgents.length / Math.max(agents.length, 1)) * 100).toFixed(1)}%
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-card border-destructive/10">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                <AlertCircle className="h-3 w-3" />
-                Alertas Ativos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">{alerts}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-card border-warning/10">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                <Zap className="h-3 w-3" />
-                Tarefas com Erro
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-warning">{failedJobs}</div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-card border-success/10">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                <TrendingUp className="h-3 w-3" />
-                Taxa de Sucesso
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-success">
-                {((completedJobs / Math.max(completedJobs + failedJobs, 1)) * 100).toFixed(0)}%
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-card border-accent/10">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                <Server className="h-3 w-3" />
+                <Briefcase className="h-4 w-4" />
                 Empresas
               </CardTitle>
+              <CardDescription className="text-[10px]">O risco está concentrado?</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">
-                {Object.keys(agentsByTenant).length}
+                {Object.keys(agentsByTenant).length} monitoradas
               </div>
+              <p className={cn(
+                "text-xs",
+                tenantsWithIssues > 0 ? "text-warning" : "text-success"
+              )}>
+                {tenantsWithIssues > 0 ? `${tenantsWithIssues} com pendências` : 'Todas saudáveis'}
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Visão Geral por Empresa */}
+        {/* ═══════════════════════════════════════════════════════════════════
+            CAMADA 3 — DISTRIBUIÇÃO DO RISCO (Diagnóstico)
+            Ordenado por gravidade — olhe primeiro os vermelhos
+        ═══════════════════════════════════════════════════════════════════ */}
         {Object.keys(agentsByTenant).length > 0 && (
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader>
@@ -449,17 +621,62 @@ const ServerDashboard = () => {
                 <Network className="h-5 w-5 text-primary" />
                 Distribuição por Empresa
               </CardTitle>
-              <CardDescription>Computadores agrupados por ambiente</CardDescription>
+              <CardDescription>
+                Ordenado por gravidade — olhe primeiro os vermelhos
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {Object.entries(agentsByTenant).map(([tenant, count]) => (
-                  <div key={tenant} className="p-3 bg-secondary/30 rounded-lg border border-border">
-                    <p className="text-xs text-muted-foreground">Empresa</p>
-                    <p className="font-semibold text-foreground">
-                      {tenantNames[tenant] || `${tenant.slice(0, 8)}...`}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">{count} computador(es)</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sortedTenantsByGravity.map(({ tenantId, name, agentCount, offlineCount, failedJobsCount, severity }) => (
+                  <div 
+                    key={tenantId} 
+                    className={cn(
+                      "p-4 rounded-lg border transition-all hover:shadow-md",
+                      severity === 'critical' ? "bg-destructive/10 border-destructive/30" :
+                      severity === 'warning' ? "bg-warning/10 border-warning/30" :
+                      "bg-success/10 border-success/30"
+                    )}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-semibold text-foreground truncate">{name}</p>
+                      <Badge 
+                        variant={severity === 'critical' ? 'destructive' : 
+                                severity === 'warning' ? 'outline' : 'default'}
+                        className={cn(
+                          "text-xs",
+                          severity === 'healthy' && "bg-success text-success-foreground"
+                        )}
+                      >
+                        {severity === 'critical' ? '🔴 Atenção' :
+                         severity === 'warning' ? '🟡 Atenção leve' : '🟢 Saudável'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{agentCount} computador(es)</p>
+                    
+                    {/* Detalhes dos problemas */}
+                    {(offlineCount > 0 || failedJobsCount > 0) && (
+                      <div className="mt-3 pt-3 border-t border-border space-y-1">
+                        {offlineCount > 0 && (
+                          <p className="text-xs text-warning flex items-center gap-1">
+                            <XCircle className="h-3 w-3" />
+                            {offlineCount} computador(es) offline
+                          </p>
+                        )}
+                        {failedJobsCount > 0 && (
+                          <p className="text-xs text-orange-500 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            {failedJobsCount} tarefa(s) com erro
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {severity === 'healthy' && (
+                      <p className="mt-3 text-xs text-success flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Tudo funcionando normalmente
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -476,13 +693,25 @@ const ServerDashboard = () => {
                 <LineChart className="h-5 w-5 text-primary" />
                 Tendência de Tarefas (7 dias)
               </CardTitle>
-              <CardDescription>Volume de tarefas criadas por dia</CardDescription>
+              <CardDescription>
+                Volume de tarefas criadas por dia
+                <span className="block text-[10px] text-muted-foreground/70 mt-1">
+                  📊 Subindo = demanda aumentando • Estável = sistema saudável • Descendo = menos atividade
+                </span>
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <p className="text-center text-muted-foreground py-8">Carregando...</p>
               ) : jobsTrendData.every(d => d.total === 0) ? (
-                <p className="text-center text-muted-foreground py-8">Sem dados para exibir</p>
+                <div className="text-center py-8">
+                  <Activity className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+                  <p className="text-muted-foreground">Nenhuma tarefa registrada nos últimos 7 dias</p>
+                  <p className="text-xs text-success mt-2 flex items-center justify-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Isso pode indicar estabilidade operacional
+                  </p>
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height={250}>
                   <RechartsLineChart data={jobsTrendData}>
@@ -507,13 +736,24 @@ const ServerDashboard = () => {
                 <Shield className="h-5 w-5 text-accent" />
                 Verificações de Vírus (7 dias)
               </CardTitle>
-              <CardDescription>Arquivos verificados por dia</CardDescription>
+              <CardDescription>
+                Arquivos verificados por dia
+                <span className="block text-[10px] text-muted-foreground/70 mt-1">
+                  🛡️ Vermelho = ameaças detectadas • Verde = arquivos limpos
+                </span>
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <p className="text-center text-muted-foreground py-8">Carregando...</p>
               ) : scansTrendData.every(d => d.total === 0) ? (
-                <p className="text-center text-muted-foreground py-8">Sem dados para exibir</p>
+                <div className="text-center py-8">
+                  <Shield className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+                  <p className="text-muted-foreground">Nenhuma verificação nos últimos 7 dias</p>
+                  <p className="text-xs text-muted-foreground/70 mt-2">
+                    As verificações aparecerão quando forem executadas
+                  </p>
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height={250}>
                   <RechartsLineChart data={scansTrendData}>
@@ -538,13 +778,24 @@ const ServerDashboard = () => {
                 <PieChart className="h-5 w-5 text-warning" />
                 Tipos de Tarefas
               </CardTitle>
-              <CardDescription>Distribuição por categoria</CardDescription>
+              <CardDescription>
+                Distribuição por categoria
+                <span className="block text-[10px] text-muted-foreground/70 mt-1">
+                  Mostra quais operações são mais frequentes no sistema
+                </span>
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <p className="text-center text-muted-foreground py-8">Carregando...</p>
               ) : jobTypeData.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Sem dados para exibir</p>
+                <div className="text-center py-8">
+                  <PieChart className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+                  <p className="text-muted-foreground">Sem dados para exibir</p>
+                  <p className="text-xs text-muted-foreground/70 mt-2">
+                    O gráfico aparecerá quando houver tarefas
+                  </p>
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height={250}>
                   <RechartsPieChart>
@@ -576,13 +827,24 @@ const ServerDashboard = () => {
                 <BarChart3 className="h-5 w-5 text-success" />
                 Tarefas por Computador (Top 10)
               </CardTitle>
-              <CardDescription>Computadores mais ativos</CardDescription>
+              <CardDescription>
+                Computadores mais ativos
+                <span className="block text-[10px] text-muted-foreground/70 mt-1">
+                  Concentração alta pode indicar problemas recorrentes
+                </span>
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <p className="text-center text-muted-foreground py-8">Carregando...</p>
               ) : jobsByAgentData.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Sem dados para exibir</p>
+                <div className="text-center py-8">
+                  <BarChart3 className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+                  <p className="text-muted-foreground">Sem dados para exibir</p>
+                  <p className="text-xs text-muted-foreground/70 mt-2">
+                    O gráfico aparecerá quando houver tarefas por agente
+                  </p>
+                </div>
               ) : (
                 <ResponsiveContainer width="100%" height={250}>
                   <RechartsBarChart data={jobsByAgentData} layout="vertical">
@@ -598,28 +860,41 @@ const ServerDashboard = () => {
           </Card>
         </div>
 
-        {/* Timeline de Eventos de Segurança */}
-        <Card className="bg-gradient-card border-destructive/20">
+        {/* Timeline de Eventos de Segurança - HUMANIZADA */}
+        <Card className="bg-gradient-card border-primary/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-destructive" />
+              <Clock className="h-5 w-5 text-primary" />
               Linha do Tempo de Segurança
             </CardTitle>
-            <CardDescription>Últimas ações registradas no sistema</CardDescription>
+            <CardDescription>
+              História recente do sistema — o que aconteceu
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
               <p className="text-center text-muted-foreground py-4">Carregando...</p>
             ) : securityEvents.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">Nenhum evento registrado</p>
+              <div className="text-center py-8">
+                <Clock className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+                <p className="text-muted-foreground">Nenhum evento registrado</p>
+                <p className="text-xs text-muted-foreground/70 mt-2">
+                  Os eventos aparecerão conforme ações forem realizadas
+                </p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {securityEvents.map((event, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg border border-border">
+                  <div key={idx} className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg border border-border hover:bg-secondary/50 transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full ${event.status === 'success' ? 'bg-success' : 'bg-destructive'}`} />
+                      <div className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center text-lg",
+                        event.status === 'success' ? 'bg-success/20' : 'bg-destructive/20'
+                      )}>
+                        {event.icon}
+                      </div>
                       <div>
-                        <p className="text-sm font-semibold text-foreground">{event.action}</p>
+                        <p className="text-sm font-medium text-foreground">{event.text}</p>
                         <p className="text-xs text-muted-foreground">{event.resource}</p>
                       </div>
                     </div>
@@ -627,7 +902,7 @@ const ServerDashboard = () => {
                       <Badge variant={event.status === 'success' ? 'default' : 'destructive'} className="text-xs">
                         {event.status === 'success' ? 'Sucesso' : 'Erro'}
                       </Badge>
-                      <p className="text-xs text-muted-foreground mt-1">{event.time}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{event.date} às {event.time}</p>
                     </div>
                   </div>
                 ))}
@@ -636,7 +911,7 @@ const ServerDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Tabs */}
+        {/* Tabs - Detalhes */}
         <Tabs defaultValue="agents" className="w-full">
           <TabsList className="grid w-full grid-cols-4 bg-secondary">
             <TabsTrigger value="agents">Computadores</TabsTrigger>
@@ -685,10 +960,10 @@ const ServerDashboard = () => {
                                   <p className="font-mono font-bold text-lg text-foreground">{agent.agent_name}</p>
                                   <div className="flex items-center gap-2 mt-1">
                                     <Badge variant="outline" className="text-xs">
-                                      {agent.tenant_id}
+                                      {tenantNames[agent.tenant_id] || agent.tenant_id.slice(0, 8) + '...'}
                                     </Badge>
                                     <Badge variant={isActive ? "default" : "secondary"} className="text-xs">
-                                      {agent.status}
+                                      {isActive ? 'Online' : 'Offline'}
                                     </Badge>
                                   </div>
                                 </div>
@@ -730,7 +1005,9 @@ const ServerDashboard = () => {
                                         lastJob.status === "queued" ? "secondary" :
                                         "destructive"
                                       } className="text-xs">
-                                        {lastJob.status}
+                                        {lastJob.status === "completed" ? "Concluída" :
+                                         lastJob.status === "queued" ? "Aguardando" :
+                                         "Com erro"}
                                       </Badge>
                                       <span className="text-xs text-muted-foreground">
                                         {new Date(lastJob.created_at).toLocaleString()}
@@ -784,10 +1061,15 @@ const ServerDashboard = () => {
                             variant={
                               job.status === "completed" ? "default" :
                               job.status === "delivered" ? "secondary" :
+                              job.status === "failed" ? "destructive" :
                               "outline"
                             }
                           >
-                            {job.status}
+                            {job.status === "completed" ? "Concluída" :
+                             job.status === "delivered" ? "Entregue" :
+                             job.status === "failed" ? "Com erro" :
+                             job.status === "queued" ? "Aguardando" :
+                             job.status}
                           </Badge>
                           {job.completed_at && (
                             <p className="text-xs text-muted-foreground mt-1">
@@ -806,14 +1088,14 @@ const ServerDashboard = () => {
           <TabsContent value="reports" className="mt-4">
             <Card className="bg-gradient-card border-primary/20">
               <CardHeader>
-                <CardTitle>Relatorios Recebidos</CardTitle>
-                <CardDescription>Relatorios de seguranca enviados pelos agentes</CardDescription>
+                <CardTitle>Relatórios Recebidos</CardTitle>
+                <CardDescription>Relatórios de segurança enviados pelos agentes</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
                   <p className="text-center text-muted-foreground py-8">Carregando...</p>
                 ) : reports.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">Nenhum relatorio encontrado</p>
+                  <p className="text-center text-muted-foreground py-8">Nenhum relatório encontrado</p>
                 ) : (
                   <div className="space-y-2 max-h-[600px] overflow-y-auto">
                     {reports.map((report) => (
@@ -930,7 +1212,7 @@ const ServerDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5 text-primary" />
-                  Ultimos Heartbeats
+                  Últimos Heartbeats
                 </CardTitle>
                 <CardDescription>Atividade recente dos agentes</CardDescription>
               </CardHeader>
@@ -961,14 +1243,16 @@ const ServerDashboard = () => {
                               <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-success animate-pulse' : 'bg-muted'}`} />
                               <div>
                                 <p className="font-mono font-semibold text-sm text-foreground">{agent.agent_name}</p>
-                                <p className="text-xs text-muted-foreground">{agent.tenant_id}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {tenantNames[agent.tenant_id] || agent.tenant_id.slice(0, 8) + '...'}
+                                </p>
                               </div>
                             </div>
                             <div className="text-right">
                               <p className="text-xs text-muted-foreground">
-                                {timeSince < 60 ? `${timeSince}s atras` : 
-                                 timeSince < 3600 ? `${Math.floor(timeSince / 60)}m atras` :
-                                 `${Math.floor(timeSince / 3600)}h atras`}
+                                {timeSince < 60 ? `${timeSince}s atrás` : 
+                                 timeSince < 3600 ? `${Math.floor(timeSince / 60)}m atrás` :
+                                 `${Math.floor(timeSince / 3600)}h atrás`}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {new Date(agent.last_heartbeat!).toLocaleTimeString()}
@@ -989,7 +1273,7 @@ const ServerDashboard = () => {
                   <Key className="h-5 w-5 text-warning" />
                   Tokens Expirados e Inativos
                 </CardTitle>
-                <CardDescription>Tokens que precisam de atencao</CardDescription>
+                <CardDescription>Tokens que precisam de atenção</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -1001,8 +1285,8 @@ const ServerDashboard = () => {
                   
                   return expiredOrInactive.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <Key className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>Todos os tokens estao ativos e validos</p>
+                      <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-success/50" />
+                      <p>Todos os tokens estão ativos e válidos</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -1032,7 +1316,7 @@ const ServerDashboard = () => {
                               )}
                               {token.last_used_at && (
                                 <p className="text-xs text-muted-foreground">
-                                  Ultimo uso: {new Date(token.last_used_at).toLocaleDateString()}
+                                  Último uso: {new Date(token.last_used_at).toLocaleDateString()}
                                 </p>
                               )}
                             </div>
@@ -1050,16 +1334,16 @@ const ServerDashboard = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ShieldAlert className="h-5 w-5 text-destructive" />
-                  Estatisticas de Rate Limiting
+                  Estatísticas de Rate Limiting
                 </CardTitle>
-                <CardDescription>Protecao contra abuso de recursos</CardDescription>
+                <CardDescription>Proteção contra abuso de recursos</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
                   <p className="text-center text-muted-foreground py-4">Carregando...</p>
                 ) : rateLimits.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <ShieldAlert className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-success/50" />
                     <p>Nenhuma atividade de rate limiting registrada</p>
                   </div>
                 ) : (
@@ -1087,7 +1371,7 @@ const ServerDashboard = () => {
                             <div>
                               <p className="font-mono font-semibold text-sm text-foreground">{endpoint}</p>
                               <p className="text-xs text-muted-foreground mt-1">
-                                {stats.count} requests ? {stats.blocked} bloqueados
+                                {stats.count} requests • {stats.blocked} bloqueados
                               </p>
                             </div>
                             <Badge variant={stats.blocked > 0 ? "destructive" : "default"} className="text-xs">
@@ -1122,7 +1406,7 @@ const ServerDashboard = () => {
                                     Bloqueado
                                   </Badge>
                                   <p className="text-xs text-muted-foreground">
-                                    Ate: {new Date(limit.blocked_until!).toLocaleTimeString()}
+                                    Até: {new Date(limit.blocked_until!).toLocaleTimeString()}
                                   </p>
                                 </div>
                               </div>
@@ -1137,13 +1421,27 @@ const ServerDashboard = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            FRASE ÂNCORA — Confiança Operacional
+        ═══════════════════════════════════════════════════════════════════ */}
+        <Card className="bg-muted/20 border-dashed border-muted-foreground/20">
+          <CardContent className="py-4 text-center">
+            <p className="text-sm text-muted-foreground flex items-center justify-center gap-2">
+              <Info className="h-4 w-4" />
+              Este painel monitora a saúde global do sistema em tempo real (atualiza a cada 10s).
+            </p>
+            <p className="text-sm text-primary mt-1">
+              Se algo crítico surgir, você será alertado automaticamente.
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       <OnboardingTour
         open={showOnboarding}
         onClose={() => {}}
         onComplete={completeOnboarding}
-        onDismiss7Days={dismissFor7Days}
       />
     </div>
   );
