@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Activity, AlertCircle, CheckCircle, Clock, Cpu, HardDrive, MemoryStick, Monitor, Search, XCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, Clock, Cpu, HardDrive, MemoryStick, Monitor, Search, XCircle, RefreshCw, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getOsDisplayName, getOsIcon } from '@/lib/os-utils';
@@ -49,6 +49,17 @@ interface SystemAlert {
   created_at: string;
   acknowledged: boolean;
   agent_id: string | null;
+  details?: {
+    disk_usage?: number;
+    memory_usage?: number;
+    cpu_usage?: number;
+    [key: string]: any;
+  };
+}
+
+interface GroupedAlert extends SystemAlert {
+  count: number;
+  latestValue: number | null;
 }
 
 export default function AgentMonitoringAdvanced() {
@@ -159,6 +170,90 @@ export default function AgentMonitoringAdvanced() {
       });
     }
   };
+
+  // Agrupar alertas semanticamente por tipo + agente + faixa de métrica
+  const groupedAlerts = useMemo((): GroupedAlert[] => {
+    const groups: Record<string, GroupedAlert> = {};
+    
+    alerts.forEach(alert => {
+      // Extrair valor da métrica do details
+      const metricValue = alert.details?.disk_usage || 
+                         alert.details?.memory_usage || 
+                         alert.details?.cpu_usage || null;
+      
+      // Chave semântica: tipo + título (contém agente) + faixa de 5%
+      const metricRange = metricValue ? Math.floor(metricValue / 5) * 5 : 'unknown';
+      const key = `${alert.alert_type}-${alert.title}-${metricRange}`;
+      
+      if (!groups[key]) {
+        groups[key] = { ...alert, count: 1, latestValue: metricValue };
+      } else {
+        groups[key].count++;
+        // Manter o mais recente
+        if (new Date(alert.created_at) > new Date(groups[key].created_at)) {
+          groups[key].created_at = alert.created_at;
+          groups[key].latestValue = metricValue;
+        }
+      }
+    });
+    
+    return Object.values(groups).sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+  }, [alerts]);
+
+  // Resolver grupo de alertas
+  const resolveAlertGroup = async (alertType: string, title: string) => {
+    try {
+      const { error } = await supabase
+        .from('system_alerts')
+        .update({ 
+          resolved: true, 
+          resolved_at: new Date().toISOString(),
+        })
+        .eq('alert_type', alertType)
+        .ilike('title', title)
+        .eq('resolved', false);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Alertas Resolvidos',
+        description: 'Todos os alertas do grupo foram marcados como resolvidos',
+      });
+      
+      fetchDashboardData();
+    } catch (error) {
+      logger.error('Error resolving alert group', error);
+      toast({
+        title: 'Erro',
+        description: 'Falha ao resolver alertas',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Problemas silenciosos (computadores offline há muito tempo)
+  const silentProblems = useMemo(() => {
+    const problems = [];
+    
+    const longOffline = agents.filter(a => {
+      if (!a.last_heartbeat) return true;
+      const lastHB = new Date(a.last_heartbeat);
+      return (Date.now() - lastHB.getTime()) > 48 * 60 * 60 * 1000;
+    });
+    
+    if (longOffline.length > 0) {
+      problems.push({
+        icon: '📴',
+        text: `${longOffline.length} computador(es) offline há mais de 48h`,
+        severity: 'high',
+        agents: longOffline.map(a => a.name)
+      });
+    }
+    
+    return problems;
+  }, [agents]);
 
   const filteredAgents = agents.filter((agent) => {
     const matchesSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -280,39 +375,89 @@ export default function AgentMonitoringAdvanced() {
         </Card>
       </div>
 
-      {/* Alerts Section */}
-      {alerts.length > 0 && (
+      {/* Problemas Silenciosos */}
+      {silentProblems.length > 0 && (
+        <Card className="border-warning/50 bg-warning/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-warning">
+              <AlertTriangle className="w-5 h-5" />
+              Problemas Silenciosos
+            </CardTitle>
+            <CardDescription>
+              Situações que precisam de atenção mas não geram alarmes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {silentProblems.map((problem, i) => (
+                <div key={i} className="flex items-center justify-between p-3 bg-card border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{problem.icon}</span>
+                    <div>
+                      <span className="font-medium">{problem.text}</span>
+                      {problem.agents.length <= 3 && (
+                        <p className="text-xs text-muted-foreground">
+                          {problem.agents.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Badge variant={problem.severity === 'high' ? 'destructive' : 'secondary'}>
+                    {problem.severity === 'high' ? 'Urgente' : 'Atenção'}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Alerts Section - Agrupados Semanticamente */}
+      {groupedAlerts.length > 0 && (
         <Card className="border-destructive/50 bg-destructive/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
               <AlertCircle className="w-5 h-5" />
-              Alertas Pendentes ({alerts.length})
+              Alertas Pendentes ({alerts.length} alertas em {groupedAlerts.length} grupos)
             </CardTitle>
+            <CardDescription>
+              Alertas similares foram agrupados para facilitar a gestão
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {alerts.slice(0, 5).map((alert) => (
-                <div key={alert.id} className="flex items-center justify-between p-4 bg-card border rounded-lg">
+              {groupedAlerts.slice(0, 5).map((alert) => (
+                <div key={`${alert.alert_type}-${alert.title}`} className="flex items-center justify-between p-4 bg-card border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}>
-                        {alert.severity === 'critical' ? 'Crítico' : alert.severity === 'high' ? 'Alto' : 'Médio'}
+                        {alert.severity === 'critical' ? '🔴 Crítico' : alert.severity === 'high' ? '🟠 Alto' : '🟡 Médio'}
                       </Badge>
                       <span className="font-semibold">{alert.title}</span>
+                      {alert.count > 1 && (
+                        <Badge variant="outline" className="ml-2">
+                          {alert.count} ocorrências
+                        </Badge>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground">{alert.message}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {alert.message}
+                      {alert.latestValue && (
+                        <span className="font-mono ml-2 text-destructive">({alert.latestValue.toFixed(1)}%)</span>
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {formatBrazilDateTime(alert.created_at, 'datetime')}
+                      Último: {formatBrazilDateTime(alert.created_at, 'datetime')}
                     </p>
                   </div>
                   <Button 
-                    onClick={() => acknowledgeAlert(alert.id)} 
+                    onClick={() => resolveAlertGroup(alert.alert_type, alert.title)} 
                     variant="outline" 
                     size="sm"
                   >
                     <CheckCircle className="w-4 h-4 mr-1" />
-                    Resolver
+                    {alert.count > 1 ? 'Resolver Todos' : 'Resolver'}
                   </Button>
                 </div>
               ))}
