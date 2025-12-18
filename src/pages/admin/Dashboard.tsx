@@ -231,8 +231,8 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Painel de Controle</h1>
-        <p className="text-muted-foreground text-sm">Visão geral da segurança da sua empresa</p>
+        <h1 className="text-2xl font-bold text-foreground">Painel Principal</h1>
+        <p className="text-muted-foreground text-sm">Como está a proteção dos seus computadores</p>
       </div>
 
       {/* Contextual Message */}
@@ -280,7 +280,7 @@ export default function Dashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Shield className="h-4 w-4" />
-                Score de Segurança
+                Nível de Proteção
               </CardTitle>
             </CardHeader>
             <CardContent className="flex flex-col items-center justify-center py-6">
@@ -311,11 +311,11 @@ export default function Dashboard() {
                   <span className={cn("text-4xl font-bold", getScoreColor(securityScore))}>
                     {securityScore}
                   </span>
-                  <span className="text-xs text-muted-foreground">pontos</span>
+                  <span className="text-xs text-muted-foreground">de 100</span>
                 </div>
               </div>
               <p className={cn("mt-4 font-medium", getScoreColor(securityScore))}>
-                {getScoreLabel(securityScore)}
+                {securityScore >= 80 ? '✓ Bem protegido' : securityScore >= 60 ? '⚠️ Atenção necessária' : '🚨 Ação urgente'}
               </p>
             </CardContent>
           </Card>
@@ -332,15 +332,15 @@ export default function Dashboard() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
-                Próximas Ações
+                O que fazer agora
               </CardTitle>
             </CardHeader>
             <CardContent>
               {nextActions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <CheckCircle className="h-12 w-12 text-green-500 mb-3" />
-                  <p className="font-medium text-foreground">Nenhuma ação pendente</p>
-                  <p className="text-sm text-muted-foreground">Tudo está funcionando normalmente</p>
+                  <p className="font-medium text-foreground">🎉 Nada para fazer!</p>
+                  <p className="text-sm text-muted-foreground">Seus computadores estão bem protegidos</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -364,7 +364,9 @@ export default function Dashboard() {
                           )} />
                           <span className="text-sm">{action.label}</span>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        <Button variant="ghost" size="sm">
+                          Ver <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
                       </Link>
                     );
                   })}
