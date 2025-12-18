@@ -1,0 +1,482 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { 
+  Monitor, 
+  Apple, 
+  Terminal, 
+  Percent, 
+  Power, 
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  Save
+} from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface RolloutPolicy {
+  id: string;
+  platform: string;
+  target_version: string;
+  rollout_percentage: number;
+  enabled: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+const PLATFORMS = [
+  { id: 'windows', label: 'Windows', icon: Monitor },
+  { id: 'linux', label: 'Linux', icon: Terminal },
+  { id: 'macos', label: 'macOS', icon: Apple },
+];
+
+export default function RolloutPolicies() {
+  const queryClient = useQueryClient();
+  const [editingPolicy, setEditingPolicy] = useState<string | null>(null);
+  const [formData, setFormData] = useState<Partial<RolloutPolicy>>({});
+
+  // Buscar políticas existentes
+  const { data: policies, isLoading } = useQuery({
+    queryKey: ['rollout-policies'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('agent_update_policies')
+        .select('*')
+        .order('platform');
+      
+      if (error) throw error;
+      return data as RolloutPolicy[];
+    }
+  });
+
+  // Buscar releases disponíveis
+  const { data: releases } = useQuery({
+    queryKey: ['agent-releases-active'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('agent_releases')
+        .select('version, platform')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Criar/atualizar policy
+  const saveMutation = useMutation({
+    mutationFn: async (data: Partial<RolloutPolicy> & { platform: string }) => {
+      const existing = policies?.find(p => p.platform === data.platform);
+      
+      if (existing) {
+        const { error } = await supabase
+          .from('agent_update_policies')
+          .update({
+            target_version: data.target_version,
+            rollout_percentage: data.rollout_percentage,
+            enabled: data.enabled,
+            notes: data.notes,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+        
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('agent_update_policies')
+          .insert({
+            platform: data.platform,
+            target_version: data.target_version || '',
+            rollout_percentage: data.rollout_percentage || 0,
+            enabled: data.enabled || false,
+            notes: data.notes
+          });
+        
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rollout-policies'] });
+      toast.success('Política de rollout salva');
+      setEditingPolicy(null);
+      setFormData({});
+    },
+    onError: (error) => {
+      toast.error(`Erro ao salvar: ${error.message}`);
+    }
+  });
+
+  // Toggle enabled
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
+      const { error } = await supabase
+        .from('agent_update_policies')
+        .update({ enabled, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['rollout-policies'] });
+      toast.success(variables.enabled ? 'Rollout ativado' : 'Rollout desativado (Kill Switch)');
+    },
+    onError: (error) => {
+      toast.error(`Erro: ${error.message}`);
+    }
+  });
+
+  const getPolicyForPlatform = (platform: string) => {
+    return policies?.find(p => p.platform === platform);
+  };
+
+  const getLatestVersionForPlatform = (platform: string) => {
+    return releases?.find(r => r.platform === platform)?.version || 'N/A';
+  };
+
+  const startEditing = (platform: string) => {
+    const existing = getPolicyForPlatform(platform);
+    setEditingPolicy(platform);
+    setFormData(existing || { platform, rollout_percentage: 0, enabled: false });
+  };
+
+  const handleSave = (platform: string) => {
+    saveMutation.mutate({
+      ...formData,
+      platform
+    } as RolloutPolicy);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Políticas de Rollout</h1>
+          <p className="text-muted-foreground">
+            Controle gradual de deploy de updates para agentes
+          </p>
+        </div>
+        <Badge variant="outline" className="text-sm">
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          Super Admin Only
+        </Badge>
+      </div>
+
+      {/* Explicação */}
+      <Card className="bg-muted/50 border-dashed">
+        <CardContent className="pt-6">
+          <div className="flex gap-4">
+            <div className="flex-shrink-0">
+              <Percent className="h-8 w-8 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-semibold">Como funciona o Rollout Gradual</h3>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• <strong>Percentual:</strong> Define quantos % dos agentes receberão o update</li>
+                <li>• <strong>Determinístico:</strong> O mesmo agente sempre cai no mesmo bucket (SHA256 do ID)</li>
+                <li>• <strong>Kill Switch:</strong> Desligar &quot;enabled&quot; para TODOS pararem de atualizar imediatamente</li>
+                <li>• <strong>Gradual:</strong> Aumente de 5% → 25% → 50% → 100% conforme valida</li>
+              </ul>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cards por plataforma */}
+      <div className="grid gap-6 md:grid-cols-3">
+        {PLATFORMS.map((platform) => {
+          const policy = getPolicyForPlatform(platform.id);
+          const latestVersion = getLatestVersionForPlatform(platform.id);
+          const Icon = platform.icon;
+          const isEditing = editingPolicy === platform.id;
+
+          return (
+            <Card key={platform.id} className={policy?.enabled ? 'border-green-500/50' : ''}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-5 w-5" />
+                    <CardTitle>{platform.label}</CardTitle>
+                  </div>
+                  {policy && (
+                    <Switch
+                      checked={policy.enabled}
+                      onCheckedChange={(checked) => 
+                        toggleMutation.mutate({ id: policy.id, enabled: checked })
+                      }
+                    />
+                  )}
+                </div>
+                <CardDescription>
+                  Última release: <code className="bg-muted px-1 rounded">{latestVersion}</code>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!policy && !isEditing ? (
+                  <div className="text-center py-4">
+                    <XCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground mb-3">Nenhuma política configurada</p>
+                    <Button variant="outline" size="sm" onClick={() => startEditing(platform.id)}>
+                      Configurar
+                    </Button>
+                  </div>
+                ) : isEditing ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Versão Alvo</Label>
+                      <Input
+                        value={formData.target_version || ''}
+                        onChange={(e) => setFormData({ ...formData, target_version: e.target.value })}
+                        placeholder={latestVersion}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label>Rollout %</Label>
+                        <span className="text-2xl font-bold">{formData.rollout_percentage || 0}%</span>
+                      </div>
+                      <Slider
+                        value={[formData.rollout_percentage || 0]}
+                        onValueChange={([value]) => setFormData({ ...formData, rollout_percentage: value })}
+                        min={0}
+                        max={100}
+                        step={5}
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>0%</span>
+                        <span>25%</span>
+                        <span>50%</span>
+                        <span>75%</span>
+                        <span>100%</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Notas</Label>
+                      <Input
+                        value={formData.notes || ''}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        placeholder="Motivo do rollout..."
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Label>Ativado</Label>
+                      <Switch
+                        checked={formData.enabled || false}
+                        onCheckedChange={(checked) => setFormData({ ...formData, enabled: checked })}
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button 
+                        className="flex-1" 
+                        onClick={() => handleSave(platform.id)}
+                        disabled={saveMutation.isPending}
+                      >
+                        <Save className="h-4 w-4 mr-2" />
+                        Salvar
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                          setEditingPolicy(null);
+                          setFormData({});
+                        }}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Status */}
+                    <div className="flex items-center gap-2">
+                      {policy?.enabled ? (
+                        <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Ativo
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">
+                          <Power className="h-3 w-3 mr-1" />
+                          Desativado
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Versão alvo */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Versão Alvo</Label>
+                      <p className="font-mono">{policy?.target_version || 'N/A'}</p>
+                    </div>
+
+                    {/* Percentual */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Rollout</Label>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary transition-all"
+                            style={{ width: `${policy?.rollout_percentage || 0}%` }}
+                          />
+                        </div>
+                        <span className="text-lg font-bold">{policy?.rollout_percentage || 0}%</span>
+                      </div>
+                    </div>
+
+                    {/* Notas */}
+                    {policy?.notes && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Notas</Label>
+                        <p className="text-sm">{policy.notes}</p>
+                      </div>
+                    )}
+
+                    {/* Última atualização */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Atualizado</Label>
+                      <p className="text-sm">
+                        {policy?.updated_at 
+                          ? format(new Date(policy.updated_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
+                          : 'N/A'
+                        }
+                      </p>
+                    </div>
+
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => startEditing(platform.id)}
+                    >
+                      Editar
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Simulador */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Simulador de Rollout</CardTitle>
+          <CardDescription>
+            Veja quantos agentes seriam afetados com as configurações atuais
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AgentRolloutSimulator policies={policies || []} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function AgentRolloutSimulator({ policies }: { policies: RolloutPolicy[] }) {
+  const { data: agents } = useQuery({
+    queryKey: ['agents-for-rollout'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('agents')
+        .select('id, agent_name, os_type, agent_version, status')
+        .eq('status', 'active');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const calculateBucket = async (agentId: string) => {
+    const encoder = new TextEncoder();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(agentId));
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return ((hashArray[0] << 8) | hashArray[1]) % 100;
+  };
+
+  const [buckets, setBuckets] = useState<Record<string, number>>({});
+
+  // Calcular buckets para todos os agentes
+  useState(() => {
+    if (agents) {
+      Promise.all(
+        agents.map(async (agent) => ({
+          id: agent.id,
+          bucket: await calculateBucket(agent.id)
+        }))
+      ).then((results) => {
+        const bucketsMap: Record<string, number> = {};
+        results.forEach((r) => {
+          bucketsMap[r.id] = r.bucket;
+        });
+        setBuckets(bucketsMap);
+      });
+    }
+  });
+
+  const getAgentsInRollout = (platform: string) => {
+    const policy = policies.find(p => p.platform === platform && p.enabled);
+    if (!policy || !agents) return { inRollout: 0, total: 0 };
+
+    const platformAgents = agents.filter(a => 
+      (a.os_type?.toLowerCase() || 'windows') === platform
+    );
+
+    const inRollout = platformAgents.filter(a => 
+      (buckets[a.id] ?? 100) < policy.rollout_percentage
+    );
+
+    return { inRollout: inRollout.length, total: platformAgents.length };
+  };
+
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      {PLATFORMS.map((platform) => {
+        const { inRollout, total } = getAgentsInRollout(platform.id);
+        const policy = policies.find(p => p.platform === platform.id);
+        const Icon = platform.icon;
+
+        return (
+          <div key={platform.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+            <Icon className="h-5 w-5 text-muted-foreground" />
+            <div className="flex-1">
+              <p className="font-medium">{platform.label}</p>
+              <p className="text-sm text-muted-foreground">
+                {policy?.enabled ? (
+                  <>
+                    <span className="text-green-500 font-bold">{inRollout}</span>
+                    {' '}de {total} receberão update
+                  </>
+                ) : (
+                  'Rollout desativado'
+                )}
+              </p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
