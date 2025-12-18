@@ -96,6 +96,16 @@ const validateInstallerIntegrity = async (
 };
 
 const AgentInstaller = () => {
+  // Tutorial expanded on first visit
+  const [tutorialDefaultOpen] = useState(() => {
+    const seen = localStorage.getItem('installer-tutorial-seen');
+    if (!seen) {
+      localStorage.setItem('installer-tutorial-seen', 'true');
+      return 'tutorial';
+    }
+    return undefined;
+  });
+
   // Connectivity & Retry hooks
   const { isOnline } = useOnlineStatus();
   const { retryFetch, isRetrying } = useRetryFetch();
@@ -1076,6 +1086,38 @@ const AgentInstaller = () => {
         </div>
       </div>
 
+      {/* ESTADO GLOBAL DO INSTALADOR */}
+      <Card className={`border-2 ${
+        circuitBreakerOpen || !isOnline 
+          ? "bg-destructive/10 border-destructive/30" 
+          : githubHealthy === false 
+            ? "bg-warning/10 border-warning/30" 
+            : "bg-green-500/10 border-green-500/30"
+      }`}>
+        <CardContent className="py-6 text-center">
+          <div className="text-4xl mb-2">
+            {circuitBreakerOpen || !isOnline ? '🔴' : 
+             githubHealthy === false ? '🟡' : '🟢'}
+          </div>
+          <h2 className="text-2xl font-bold">
+            {circuitBreakerOpen || !isOnline 
+              ? 'Sistema Temporariamente Indisponível' 
+              : githubHealthy === false 
+                ? 'Sistema Parcialmente Disponível' 
+                : 'Sistema Pronto para Instalações'}
+          </h2>
+          <p className="text-muted-foreground mt-2">
+            {circuitBreakerOpen 
+              ? 'Aguarde alguns instantes e tente novamente' 
+              : !isOnline 
+                ? 'Verifique sua conexão com a internet' 
+                : githubHealthy === false 
+                  ? 'Build EXE indisponível, mas One-Click e Download funcionam' 
+                  : '✓ Todos os métodos de instalação disponíveis'}
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Alerta de regeneracao de credenciais */}
       {searchParams.get("regenerated") === "true" && (
         <Alert className="border-yellow-500/50 bg-yellow-500/10">
@@ -1104,36 +1146,36 @@ const AgentInstaller = () => {
         </Alert>
       )}
 
-      {/* Circuit Breaker Warning */}
+      {/* Circuit Breaker Warning - Humanizado */}
       {circuitBreakerOpen && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Circuit Breaker Ativo</AlertTitle>
+        <Alert className="border-orange-500/50 bg-orange-500/10">
+          <AlertTriangle className="h-4 w-4 text-orange-500" />
+          <AlertTitle className="text-orange-600 dark:text-orange-400">⏸️ Pausado Temporariamente</AlertTitle>
           <AlertDescription className="flex items-center justify-between gap-4">
-            <span>Backend temporariamente indisponivel. Tentativas sendo bloqueadas para protecao.</span>
+            <span className="text-muted-foreground">Servidor processando muitas requisições. Aguarde um momento.</span>
             <Button 
               size="sm" 
               variant="outline"
               onClick={() => {
                 enrollmentCircuitBreaker.reset();
-                toast.success("Circuit breaker resetado manualmente");
+                toast.success("Pronto para tentar novamente!");
                 logger.info('Circuit breaker manually reset by user');
               }}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
-              Resetar Bloqueio
+              🔄 Tentar Novamente
             </Button>
           </AlertDescription>
         </Alert>
       )}
 
-      {/* FASE 1: Connectivity & Retry Status */}
+      {/* FASE 1: Connectivity & Retry Status - Humanizado */}
       {!isOnline && (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>Sem Conexao</AlertTitle>
-          <AlertDescription>
-            Voce esta offline. Polling de builds pausado. Aguardando reconexao...
+        <Alert className="border-red-500/50 bg-red-500/10">
+          <AlertTriangle className="h-4 w-4 text-red-500" />
+          <AlertTitle className="text-red-600 dark:text-red-400">📴 Sem Internet</AlertTitle>
+          <AlertDescription className="text-muted-foreground">
+            Verificações pausadas até reconexão. Verifique sua conexão com a internet.
           </AlertDescription>
         </Alert>
       )}
@@ -1205,12 +1247,19 @@ const AgentInstaller = () => {
           </div>
 
           {previewCredentials && (
-            <Alert>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertTitle>Credenciais Geradas</AlertTitle>
-              <AlertDescription className="space-y-1 text-xs">
-                <div>Agent ID: <code className="bg-muted px-1 rounded">{previewCredentials.agentId?.slice(0, 16)}...</code></div>
-                <div>Expira em: <code className="bg-muted px-1 rounded">{new Date(previewCredentials.expiresAt!).toLocaleString()}</code></div>
+            <Alert className="bg-green-50 dark:bg-green-950/30 border-green-500/50">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertTitle className="text-green-700 dark:text-green-300">
+                ✅ Credenciais Prontas!
+              </AlertTitle>
+              <AlertDescription className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>Válidas por 24 horas</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Após 24h, você precisará gerar novas credenciais
+                </div>
               </AlertDescription>
             </Alert>
           )}
@@ -1231,9 +1280,12 @@ const AgentInstaller = () => {
         <CardContent>
           <Tabs defaultValue="one-click" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="one-click">
+              <TabsTrigger value="one-click" className="relative">
                 <Zap className="h-4 w-4 mr-2" />
-                Comando One-Click
+                Comando Rápido
+                <Badge className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0.5 bg-green-500 text-white border-0">
+                  Recomendado
+                </Badge>
               </TabsTrigger>
               <TabsTrigger value="download">
                 <Download className="h-4 w-4 mr-2" />
@@ -1241,16 +1293,16 @@ const AgentInstaller = () => {
               </TabsTrigger>
               <TabsTrigger value="exe-build">
                 <FileCheck className="h-4 w-4 mr-2" />
-                Build EXE
+                Gerar EXE
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="one-click" className="space-y-4 mt-4">
-              <Alert>
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Instalacao Instantanea</AlertTitle>
-                <AlertDescription>
-                  Gere um comando temporario que instala o agente automaticamente. Valido por 24h.
+              <Alert className="bg-green-50/50 dark:bg-green-950/20 border-green-500/30">
+                <Zap className="h-4 w-4 text-green-600" />
+                <AlertTitle className="text-green-700 dark:text-green-300">⚡ Ideal para servidores com internet</AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  Pronto em segundos. Cole no PowerShell/Terminal como Administrador. Válido por 24h.
                 </AlertDescription>
               </Alert>
 
@@ -1316,11 +1368,11 @@ const AgentInstaller = () => {
             </TabsContent>
 
             <TabsContent value="download" className="space-y-4 mt-4">
-              <Alert>
-                <Download className="h-4 w-4" />
-                <AlertTitle>Download Manual</AlertTitle>
-                <AlertDescription>
-                  Baixe o script de instalacao completo para executar manualmente no servidor.
+              <Alert className="bg-blue-50/50 dark:bg-blue-950/20 border-blue-500/30">
+                <Download className="h-4 w-4 text-blue-600" />
+                <AlertTitle className="text-blue-700 dark:text-blue-300">💾 Para instalação em redes isoladas</AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  Baixe o script e transfira via USB ou rede interna. Valide a integridade antes de usar.
                 </AlertDescription>
               </Alert>
 
@@ -1400,11 +1452,11 @@ const AgentInstaller = () => {
             </TabsContent>
 
             <TabsContent value="exe-build" className="space-y-4 mt-4">
-              <Alert>
-                <FileCheck className="h-4 w-4" />
-                <AlertTitle>Build Automatico de EXE</AlertTitle>
-                <AlertDescription>
-                  Gera um instalador Windows .exe atraves do GitHub Actions. Processo leva 2-3 minutos.
+              <Alert className="bg-purple-50/50 dark:bg-purple-950/20 border-purple-500/30">
+                <FileCheck className="h-4 w-4 text-purple-600" />
+                <AlertTitle className="text-purple-700 dark:text-purple-300">🖥️ Arquivo .EXE portátil para Windows</AlertTitle>
+                <AlertDescription className="text-muted-foreground">
+                  Executável independente que não requer PowerShell. Leva 2-3 minutos para compilar.
                 </AlertDescription>
               </Alert>
 
@@ -1644,7 +1696,7 @@ const AgentInstaller = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Accordion type="single" collapsible>
+          <Accordion type="single" collapsible defaultValue={tutorialDefaultOpen}>
             <AccordionItem value="tutorial">
               <AccordionTrigger>Como instalar o agente?</AccordionTrigger>
               <AccordionContent className="space-y-4">
@@ -1709,6 +1761,17 @@ const AgentInstaller = () => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
+        </CardContent>
+      </Card>
+
+      {/* FRASE ÂNCORA DE CONFIANÇA */}
+      <Card className="bg-muted/20 border-dashed">
+        <CardContent className="py-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            💡 Os instaladores são validados automaticamente com SHA-256.
+            <br />
+            <span className="text-primary font-medium">Suas credenciais são únicas e expiram em 24h para máxima segurança.</span>
+          </p>
         </CardContent>
       </Card>
     </div>
