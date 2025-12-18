@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Activity, AlertTriangle, CheckCircle2, Clock, TrendingUp, Wifi, WifiOff, Zap, LineChart as LineChartIcon, BarChart3 } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Activity, AlertTriangle, CheckCircle2, Clock, TrendingUp, Wifi, WifiOff, Zap, LineChart as LineChartIcon, BarChart3, Monitor } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { logger } from "@/lib/logger";
 import { getJobTypeLabel, getJobStatusLabel } from "@/lib/job-labels";
 import { formatBrazilDateTime } from "@/lib/date-utils";
+import { cn } from "@/lib/utils";
 
 interface Agent {
   id: string;
@@ -177,16 +178,42 @@ const AgentMonitoring = () => {
   const totalAgents = agents.length;
   const onlineAgents = agents.filter(a => a.status === 'active' || a.status === 'online').length;
   const offlineAgents = agents.filter(a => a.status === 'offline').length;
+  const failedJobs = recentJobs.filter(j => j.status === 'failed').length;
   const successRate = recentJobs.length > 0 
     ? Math.round((recentJobs.filter(j => j.status === 'completed').length / recentJobs.length) * 100)
-    : 0;
+    : 100;
+
+  // Determine global health status
+  const globalStatus = useMemo(() => {
+    if (offlineAgents === 0 && successRate >= 90) return 'healthy';
+    if (offlineAgents > 2 || successRate < 50) return 'critical';
+    return 'warning';
+  }, [offlineAgents, successRate]);
+
+  // Sort agents by severity (offline first)
+  const sortedAgents = useMemo(() => {
+    return [...agents].sort((a, b) => {
+      const getMinutesSinceHeartbeat = (agent: Agent) => {
+        if (!agent.last_heartbeat) return 999999;
+        return (Date.now() - new Date(agent.last_heartbeat).getTime()) / 1000 / 60;
+      };
+      
+      const aMinutes = getMinutesSinceHeartbeat(a);
+      const bMinutes = getMinutesSinceHeartbeat(b);
+      
+      // Offline first (>5 min), then warning (2-5 min), then online (<2 min)
+      if (aMinutes >= 5 && bMinutes < 5) return -1;
+      if (bMinutes >= 5 && aMinutes < 5) return 1;
+      return bMinutes - aMinutes;
+    });
+  }, [agents]);
 
   const getStatusBadge = (status: string, lastHeartbeat: string | null) => {
     if (!lastHeartbeat) {
       return (
         <Badge variant="secondary" className="gap-1">
           <WifiOff className="h-3 w-3" />
-          Sem Heartbeat
+          Sem Sinal
         </Badge>
       );
     }
@@ -221,13 +248,13 @@ const AgentMonitoring = () => {
     switch (status) {
       case 'done':
       case 'completed':
-        return <Badge className="bg-green-500">Concluido</Badge>;
+        return <Badge className="bg-green-500">✓ Concluído</Badge>;
       case 'queued':
-        return <Badge className="bg-blue-500">Fila</Badge>;
+        return <Badge className="bg-blue-500">⏳ Na Fila</Badge>;
       case 'delivered':
-        return <Badge className="bg-yellow-500">Em Progresso</Badge>;
+        return <Badge className="bg-yellow-500">⚙️ Executando</Badge>;
       case 'failed':
-        return <Badge variant="destructive">Falhou</Badge>;
+        return <Badge variant="destructive">❌ Falhou</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -241,11 +268,11 @@ const AgentMonitoring = () => {
     const diffMins = Math.floor(diffMs / (1000 * 60));
     
     if (diffMins < 1) return 'Agora mesmo';
-    if (diffMins < 60) return `${diffMins}min atras`;
+    if (diffMins < 60) return `${diffMins}min atrás`;
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h atras`;
+    if (diffHours < 24) return `${diffHours}h atrás`;
     const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d atras`;
+    return `${diffDays}d atrás`;
   };
 
   // Prepare chart data
@@ -303,6 +330,7 @@ const AgentMonitoring = () => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20">
           <Activity className="h-8 w-8 text-primary" />
@@ -315,12 +343,56 @@ const AgentMonitoring = () => {
         </div>
       </div>
 
-      {/* Metrics Grid */}
+      {/* 🟢 CAMADA 1: ESTADO GLOBAL */}
+      <Card className={cn(
+        "border-2",
+        globalStatus === 'healthy' ? "bg-green-500/10 border-green-500/30" :
+        globalStatus === 'critical' ? "bg-red-500/10 border-red-500/30" :
+        "bg-yellow-500/10 border-yellow-500/30"
+      )}>
+        <CardContent className="py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="text-5xl">
+                {globalStatus === 'healthy' ? '🟢' : 
+                 globalStatus === 'critical' ? '🔴' : '🟡'}
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">
+                  {globalStatus === 'healthy' ? 'Sistema Funcionando Normalmente' : 
+                   globalStatus === 'critical' ? 'Atenção Necessária' : 
+                   'Pequenos Ajustes Recomendados'}
+                </h2>
+                <div className="space-y-1 text-sm text-muted-foreground mt-2">
+                  {globalStatus === 'healthy' ? (
+                    <>
+                      <p>✓ Todos os computadores estão conectados</p>
+                      <p>✓ Taxa de sucesso das tarefas: {successRate}%</p>
+                    </>
+                  ) : (
+                    <>
+                      {offlineAgents > 0 && <p>• {offlineAgents} computador(es) offline precisam de verificação</p>}
+                      {failedJobs > 0 && <p>• {failedJobs} tarefa(s) falharam recentemente</p>}
+                      {successRate < 90 && <p>• Taxa de sucesso abaixo do esperado: {successRate}%</p>}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-4xl font-bold">{totalAgents}</p>
+              <p className="text-sm text-muted-foreground">computador(es) monitorado(s)</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 🟡 CAMADA 2: INDICADORES COM CONTEXTO EMOCIONAL */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="bg-gradient-card border-primary/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Computadores</CardTitle>
-            <Wifi className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Base Monitorada</CardTitle>
+            <Monitor className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalAgents}</div>
@@ -330,60 +402,101 @@ const AgentMonitoring = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={cn(
+          "bg-gradient-card",
+          onlineAgents === totalAgents && totalAgents > 0 ? "border-green-500/30" : "border-primary/20"
+        )}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Computadores Online</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-500">{onlineAgents}</div>
-            <p className="text-xs text-muted-foreground">
-              {totalAgents > 0 ? Math.round((onlineAgents / totalAgents) * 100) : 0}% do total
+            <p className={cn(
+              "text-xs",
+              onlineAgents === totalAgents && totalAgents > 0 ? "text-green-500" : "text-muted-foreground"
+            )}>
+              {onlineAgents === totalAgents && totalAgents > 0 ? '✓ Todos conectados' : `${totalAgents > 0 ? Math.round((onlineAgents / totalAgents) * 100) : 0}% do total`}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={cn(
+          "bg-gradient-card",
+          offlineAgents > 0 ? "border-red-500/30" : "border-green-500/30"
+        )}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Computadores Offline</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <AlertTriangle className={cn("h-4 w-4", offlineAgents > 0 ? "text-red-500" : "text-green-500")} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-500">{offlineAgents}</div>
-            <p className="text-xs text-muted-foreground">
-              Requerem atenção imediata
+            <div className={cn("text-2xl font-bold", offlineAgents > 0 ? "text-red-500" : "text-green-500")}>
+              {offlineAgents}
+            </div>
+            <p className={cn("text-xs", offlineAgents > 0 ? "text-red-400" : "text-green-500")}>
+              {offlineAgents > 0 ? '⚠️ Requerem verificação' : '✓ Nenhum offline'}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={cn(
+          "bg-gradient-card",
+          successRate >= 90 ? "border-green-500/30" :
+          successRate >= 50 ? "border-yellow-500/30" : "border-red-500/30"
+        )}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Taxa de Sucesso</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className={cn(
+              "h-4 w-4",
+              successRate >= 90 ? "text-green-500" :
+              successRate >= 50 ? "text-yellow-500" : "text-red-500"
+            )} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{successRate}%</div>
-            <p className="text-xs text-muted-foreground">
-              Últimas 10 tarefas
+            <div className={cn(
+              "text-2xl font-bold",
+              successRate >= 90 ? "text-green-500" :
+              successRate >= 50 ? "text-yellow-500" : "text-red-500"
+            )}>
+              {successRate}%
+            </div>
+            <p className={cn(
+              "text-xs",
+              successRate >= 90 ? "text-green-500" :
+              successRate >= 50 ? "text-yellow-500" : "text-red-400"
+            )}>
+              {successRate >= 90 ? '✓ Excelente performance' :
+               successRate >= 50 ? '⚠️ Performance moderada' : '❌ Muitas falhas detectadas'}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Historical Charts */}
+      {/* 🔵 CAMADA 3: GRÁFICOS COM NARRATIVA */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Scans Trend */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <LineChartIcon className="h-5 w-5 text-primary" />
-              Tendencia de Scans (7 dias)
+              Verificações de Segurança (7 dias)
             </CardTitle>
-            <CardDescription>Volume de scans de virus realizados</CardDescription>
+            <CardDescription>
+              Volume de scans de vírus realizados
+              <span className="block text-xs mt-1 text-muted-foreground/70">
+                📊 Linha subindo = mais verificações • Estável = operação normal
+              </span>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {scansTrendData.every(d => d.total === 0) ? (
-              <p className="text-center text-muted-foreground py-8">Sem dados para exibir</p>
+              <div className="text-center py-8">
+                <LineChartIcon className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+                <p className="text-muted-foreground">Nenhuma verificação nos últimos 7 dias</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  As verificações automáticas acontecem periodicamente
+                </p>
+              </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={scansTrendData}>
@@ -412,13 +525,24 @@ const AgentMonitoring = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-primary" />
-              Tendência de Tarefas (7 dias)
+              Execução de Tarefas (7 dias)
             </CardTitle>
-            <CardDescription>Execução de tarefas ao longo do tempo</CardDescription>
+            <CardDescription>
+              Performance das tarefas ao longo do tempo
+              <span className="block text-xs mt-1 text-muted-foreground/70">
+                📊 Verde = sucesso • Amarelo = pendente • Vermelho = falha
+              </span>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {jobsTrendData.every(d => d.total === 0) ? (
-              <p className="text-center text-muted-foreground py-8">Sem dados para exibir</p>
+              <div className="text-center py-8">
+                <BarChart3 className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+                <p className="text-muted-foreground">Nenhuma tarefa executada nos últimos 7 dias</p>
+                <p className="text-xs text-green-500 mt-1">
+                  ✓ Isso pode indicar estabilidade operacional
+                </p>
+              </div>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={jobsTrendData}>
@@ -433,7 +557,7 @@ const AgentMonitoring = () => {
                     }} 
                   />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  <Bar dataKey="completed" fill="hsl(var(--success))" name="Concluidos" />
+                  <Bar dataKey="completed" fill="hsl(var(--success))" name="Concluídos" />
                   <Bar dataKey="pending" fill="hsl(var(--warning))" name="Pendentes" />
                   <Bar dataKey="failed" fill="hsl(var(--destructive))" name="Falhados" />
                 </BarChart>
@@ -450,11 +574,22 @@ const AgentMonitoring = () => {
             <Wifi className="h-5 w-5 text-primary" />
             Tempo Online dos Computadores
           </CardTitle>
-          <CardDescription>Status de conectividade atual de cada computador</CardDescription>
+          <CardDescription>
+            Status de conectividade atual de cada computador
+            <span className="block text-xs mt-1 text-muted-foreground/70">
+              📊 Barra cheia (100%) = online agora • Barra vazia = offline
+            </span>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {uptimeChartData.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Nenhum computador cadastrado</p>
+            <div className="text-center py-8">
+              <Monitor className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+              <p className="text-muted-foreground">Nenhum computador cadastrado</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">
+                Cadastre computadores para ver o status aqui
+              </p>
+            </div>
           ) : (
             <ResponsiveContainer width="100%" height={Math.max(200, uptimeChartData.length * 40)}>
               <BarChart data={uptimeChartData} layout="vertical">
@@ -476,78 +611,101 @@ const AgentMonitoring = () => {
         </CardContent>
       </Card>
 
-      {/* Agents Status */}
+      {/* Agents Status - ORDENADO POR GRAVIDADE */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-primary" />
             Status dos Computadores
           </CardTitle>
-          <CardDescription>Atualização em tempo real</CardDescription>
+          <CardDescription>
+            Atualização em tempo real — computadores com problemas aparecem primeiro
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {agents.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Nenhum computador cadastrado</p>
+            {sortedAgents.length === 0 ? (
+              <div className="text-center py-8">
+                <Monitor className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+                <p className="text-muted-foreground">Nenhum computador cadastrado</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  Use uma chave de registro para adicionar computadores
+                </p>
+              </div>
             ) : (
-              agents.map((agent) => (
-                <div
-                  key={agent.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-3 h-3 rounded-full animate-pulse ${
-                      agent.last_heartbeat && (Date.now() - new Date(agent.last_heartbeat).getTime()) / 1000 / 60 < 2
-                        ? 'bg-green-500' 
-                        : agent.last_heartbeat && (Date.now() - new Date(agent.last_heartbeat).getTime()) / 1000 / 60 < 5
-                        ? 'bg-yellow-500'
-                        : 'bg-red-500'
-                    }`} />
-                    <div>
-                      <p className="font-medium">{agent.agent_name}</p>
-                      <p className="text-sm text-muted-foreground flex items-center gap-2">
-                        <Clock className="w-3 h-3" />
-                        Último sinal de vida: {getTimeSince(agent.last_heartbeat)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Registrado: {formatBrazilDateTime(agent.enrolled_at, 'datetime')}
-                      </p>
+              sortedAgents.map((agent) => {
+                const minutesSinceHeartbeat = agent.last_heartbeat 
+                  ? (Date.now() - new Date(agent.last_heartbeat).getTime()) / 1000 / 60 
+                  : 999;
+                const isOffline = minutesSinceHeartbeat >= 5;
+                const isWarning = minutesSinceHeartbeat >= 2 && minutesSinceHeartbeat < 5;
+                
+                return (
+                  <div
+                    key={agent.id}
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-lg border transition-colors",
+                      isOffline ? "bg-red-500/5 border-red-500/30" :
+                      isWarning ? "bg-yellow-500/5 border-yellow-500/30" :
+                      "bg-card hover:bg-accent/5"
+                    )}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "w-3 h-3 rounded-full animate-pulse",
+                        isOffline ? 'bg-red-500' :
+                        isWarning ? 'bg-yellow-500' : 'bg-green-500'
+                      )} />
+                      <div>
+                        <p className="font-medium">{agent.agent_name}</p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Clock className="w-3 h-3" />
+                          Último sinal: {getTimeSince(agent.last_heartbeat)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Registrado: {formatBrazilDateTime(agent.enrolled_at, 'datetime')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {getStatusBadge(agent.status, agent.last_heartbeat)}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {getStatusBadge(agent.status, agent.last_heartbeat)}
-                    <span className="text-xs text-muted-foreground">
-                      {formatBrazilDateTime(agent.enrolled_at, 'date')}
-                    </span>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Recent Jobs */}
+      {/* Recent Jobs - COM NOMES AMIGÁVEIS */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
             Tarefas Recentes
           </CardTitle>
-          <CardDescription>Últimas 10 tarefas executadas</CardDescription>
+          <CardDescription>Últimas 10 tarefas executadas pelo sistema</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {recentJobs.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Nenhuma tarefa executada ainda</p>
+              <div className="text-center py-8">
+                <Activity className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
+                <p className="text-muted-foreground">Nenhuma tarefa executada ainda</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  As tarefas aparecerão aqui conforme forem executadas
+                </p>
+              </div>
             ) : (
               recentJobs.map((job) => (
                 <div
                   key={job.id}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
                 >
                   <div>
-                    <p className="font-medium text-sm">{job.type}</p>
+                    {/* ⭐ USANDO getJobTypeLabel PARA NOMES AMIGÁVEIS */}
+                    <p className="font-medium text-sm">{getJobTypeLabel(job.type)}</p>
                     <p className="text-xs text-muted-foreground">
                       Computador: {job.agent_name} • {formatBrazilDateTime(job.created_at, 'short')}
                     </p>
@@ -564,6 +722,17 @@ const AgentMonitoring = () => {
               ))
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* 💡 FRASE ÂNCORA DE CONFIANÇA */}
+      <Card className="bg-muted/20 border-dashed">
+        <CardContent className="py-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            💡 Esta página atualiza automaticamente em tempo real.
+            <br />
+            <span className="text-primary">Se algo crítico acontecer, você será alertado imediatamente.</span>
+          </p>
         </CardContent>
       </Card>
     </div>
