@@ -208,27 +208,12 @@ Deno.serve(async (req) => {
     const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     
     // ============================================================
-    // VERSION-SPECIFIC SHA256 OVERRIDE
-    // v3.10.39 agents calculate SHA256 differently - use known working hash
-    // This enables v3.10.39 agents to successfully update to latest version
+    // UNIFIED SHA256 - Use dynamically calculated hash for ALL agents
+    // v3.10.39+ agents all use the same calculation method (Base64 decode + WriteAllBytes)
+    // The hash is calculated from CRLF-normalized bytes, matching what agents calculate
     // ============================================================
-    const currentAgentVersion = agent.agent_version || '';
-    let base64Sha256 = calculatedSha256;
-    let legacySha256 = storedSha256;  // ← NOVO: variável separada para campo legado
-    
-    // v3.10.39 agents have a specific SHA256 calculation that differs from server
-    // CRITICAL: Override BOTH sha256 and sha256_base64 fields for v3.10.39 agents
-    if (currentAgentVersion.includes('3.10.39')) {
-      // SHA256 that v3.10.39 agents expect (known working value)
-      const v3_10_39_sha256 = 'b41322a6cd77770b4cad5149693a599f7ef2275476789344f758340742fb88ab';
-      base64Sha256 = v3_10_39_sha256;
-      legacySha256 = v3_10_39_sha256;  // ← CORRIGIDO: Override em AMBOS os campos
-      logger.info('[serve-agent-update] Using v3.10.39-compatible SHA256 override (BOTH fields)', { 
-        requestId, 
-        agentVersion: currentAgentVersion,
-        overrideSha256: v3_10_39_sha256.substring(0, 16) + '...'
-      });
-    }
+    const base64Sha256 = calculatedSha256;
+    const legacySha256 = calculatedSha256;  // Use same calculated hash for backward compat
     
     // Base64 dos bytes normalizados
     const base64Script = encodeBase64(scriptBytes);
