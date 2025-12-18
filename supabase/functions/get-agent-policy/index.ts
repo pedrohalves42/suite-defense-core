@@ -11,6 +11,7 @@ interface PolicyContract {
   expected: {
     dns_enabled: boolean;
     dns_service_running: boolean;
+    dns_filter_available: boolean;
     agent_min_version: string;
     blocked_domains_synced: boolean;
     heartbeat_interval_max: number;
@@ -100,11 +101,13 @@ Deno.serve(async (req) => {
       .single();
 
     // Build policy contract
+    // NOTE: dns_filter_available = false until Go binary is compiled and uploaded
     const policy: PolicyContract = {
       version: "2025-01-v1",
       expected: {
         dns_enabled: tenantSettings?.dns_enabled ?? true,
         dns_service_running: tenantSettings?.dns_enabled ?? true,
+        dns_filter_available: false, // Feature flag OFF until binary exists in storage
         agent_min_version: latestVersion?.version ?? "v4.0.0",
         blocked_domains_synced: true,
         heartbeat_interval_max: tenantSettings?.heartbeat_interval ?? 120,

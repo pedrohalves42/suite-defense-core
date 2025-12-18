@@ -1597,16 +1597,147 @@ function Invoke-UpdateAgentJob {
     param($Job)
     
     try {
-        Write-Log "[UPDATE] Verificando atualizacoes..." "INFO"
+        Write-Log "[UPDATE] Iniciando update_agent - v4.0.2-UPDATE-FIX" "INFO"
         
-        Add-EvidenceEntry -Type "update_applied" -Data @{
+        Add-EvidenceEntry -Type "update_check" -Data @{
             current_version = $Global:AgentVersion
-            phase = "checking"
+            phase = "starting"
         } -Severity "info"
         
-        return @{ success = $true; output = (@{ status = "checked"; current_version = $Global:AgentVersion } | ConvertTo-Json -Compress) }
+        # Chama serve-agent-update
+        $updateResult = Invoke-SecureRequest `
+            -Path "/functions/v1/serve-agent-update" `
+            -Method GET `
+            -TimeoutSec 60
+        
+        if (-not $updateResult.Success) {
+            throw "Falha ao buscar update: HTTP $($updateResult.StatusCode)"
+        }
+        
+        $data = $updateResult.Body | ConvertFrom-Json
+        
+        # Ja esta na ultima versao?
+        if ($data.message -eq "Already up to date") {
+            Write-Log "[INFO] Agente ja esta na ultima versao ($($data.current_version))" "INFO"
+            Add-EvidenceEntry -Type "update_check" -Data @{
+                status = "already_current"
+                version = $data.current_version
+            } -Severity "info"
+            return @{ success = $true; output = ($data | ConvertTo-Json -Compress) }
+        }
+        
+        $newVersion   = $data.version
+        $expectedHash = $data.sha256
+        
+        Write-Log "[UPDATE] Atualizando agente para versao $newVersion" "INFO"
+        
+        # SMART PATH DETECTION - Tenta multiplas estrategias para encontrar script atual
+        $installDir = "C:\CyberShield"
+        $targetScript = Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"
+        
+        # Detectar script atual em execucao
+        $currentScript = $null
+        $possiblePaths = @(
+            $PSCommandPath,
+            (Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"),
+            (Join-Path $installDir "cybershield-agent-v4.ps1"),
+            (Join-Path $installDir "cybershield-agent-v3.ps1"),
+            (Join-Path $installDir "cybershield-agent.ps1")
+        )
+        
+        foreach ($path in $possiblePaths) {
+            if ($path -and (Test-Path $path)) {
+                $currentScript = $path
+                Write-Log "[UPDATE] Script atual detectado: $currentScript" "INFO"
+                break
+            }
+        }
+        
+        # Fallback: busca qualquer script cybershield-agent-*.ps1
+        if (-not $currentScript) {
+            $found = Get-ChildItem -Path $installDir -Filter "cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) {
+                $currentScript = $found.FullName
+                Write-Log "[UPDATE] Script encontrado via glob: $currentScript" "INFO"
+            }
+        }
+        
+        $tempScript = Join-Path $env:TEMP "cybershield-agent-update-$newVersion.ps1"
+        
+        # ============================================================
+        # CRITICAL: BASE64 DECODE - Preserva 100% dos bytes
+        # Imune a transformacoes JSON/PowerShell
+        # ============================================================
+        if ($data.script_content_base64) {
+            Write-Log "[UPDATE] Usando Base64 decode (safe mode)" "INFO"
+            $bytes = [System.Convert]::FromBase64String($data.script_content_base64)
+            [System.IO.File]::WriteAllBytes($tempScript, $bytes)
+            Write-Log "[UPDATE] Script salvo via WriteAllBytes ($($bytes.Length) bytes)" "INFO"
+        } else {
+            # Fallback para agentes antigos (menos seguro)
+            Write-Log "[UPDATE] Fallback para script_content (string mode)" "WARN"
+            $scriptText = $data.script_content
+            [System.IO.File]::WriteAllText($tempScript, $scriptText, [System.Text.UTF8Encoding]::new($false))
+        }
+        
+        # Validar SHA256 do arquivo ESCRITO no disco
+        $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+        if ($actualHash -ne $expectedHash.ToLower()) {
+            Remove-Item $tempScript -Force
+            throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
+        }
+        
+        Write-Log "[SUCCESS] SHA256 validado: $actualHash" "SUCCESS"
+        
+        # Backup do script atual (opcional - nao falha se nao encontrar)
+        if ($currentScript -and (Test-Path $currentScript)) {
+            $backupScript = $currentScript -replace '\.ps1$', "-backup-$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
+            try {
+                Copy-Item -Path $currentScript -Destination $backupScript -Force
+                Write-Log "[BACKUP] Backup criado: $backupScript" "INFO"
+            } catch {
+                Write-Log "[WARN] Backup falhou, continuando: $($_.Exception.Message)" "WARN"
+            }
+        } else {
+            Write-Log "[WARN] Script atual nao encontrado, pulando backup" "WARN"
+        }
+        
+        # Instalar novo script no path padrao
+        Copy-Item -Path $tempScript -Destination $targetScript -Force
+        Remove-Item $tempScript -Force
+        Write-Log "[SUCCESS] Script instalado: $targetScript" "SUCCESS"
+        
+        # Registrar evidencia de update aplicado
+        Add-EvidenceEntry -Type "update_applied" -Data @{
+            old_version = $Global:AgentVersion
+            new_version = $newVersion
+            target_path = $targetScript
+            sha256 = $actualHash
+            base64_mode = [bool]$data.script_content_base64
+        } -Severity "info"
+        
+        Write-Log "[SUCCESS] Script v$newVersion instalado em $targetScript" "SUCCESS"
+        Write-Log "[INFO] Nova versao sera carregada no proximo boot do sistema" "INFO"
+        Write-Log "[INFO] Agente continua operando normalmente com versao $($Global:AgentVersion)" "INFO"
+        
+        $output = @{
+            message     = "Update saved - will be active after Windows reboot"
+            newVersion  = $newVersion
+            currentVersion = $Global:AgentVersion
+            targetPath  = $targetScript
+            sha256      = $actualHash
+            base64Mode  = [bool]$data.script_content_base64
+            requiresReboot = $true
+            savedAt     = (Get-Date).ToUniversalTime().ToString("o")
+        }
+        
+        return @{ success = $true; output = ($output | ConvertTo-Json -Compress) }
     }
     catch {
+        Add-EvidenceEntry -Type "update_failed" -Data @{
+            error = $_.Exception.Message
+            current_version = $Global:AgentVersion
+        } -Severity "error"
         return @{ success = $false; error = $_.Exception.Message }
     }
 }
