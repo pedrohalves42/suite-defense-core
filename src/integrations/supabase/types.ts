@@ -574,6 +574,105 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_rollback_events: {
+        Row: {
+          agent_id: string | null
+          agent_name: string
+          created_at: string | null
+          details: Json | null
+          from_version: string
+          id: string
+          reason: string
+          rollback_count: number | null
+          safe_mode_triggered: boolean | null
+          tenant_id: string
+          to_version: string
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name: string
+          created_at?: string | null
+          details?: Json | null
+          from_version: string
+          id?: string
+          reason: string
+          rollback_count?: number | null
+          safe_mode_triggered?: boolean | null
+          tenant_id: string
+          to_version: string
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string
+          created_at?: string | null
+          details?: Json | null
+          from_version?: string
+          id?: string
+          reason?: string
+          rollback_count?: number | null
+          safe_mode_triggered?: boolean | null
+          tenant_id?: string
+          to_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_rollback_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_rollback_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_rollback_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_rollback_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_rollback_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_rollback_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_rollback_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_rollback_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       agent_system_metrics: {
         Row: {
           agent_id: string
