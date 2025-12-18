@@ -105,12 +105,12 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Uploading ${platform} script (${script_content.length} bytes) to ${filePath}`);
 
-    // Upload to storage bucket
+    // Upload to storage bucket - use application/octet-stream as text/plain is not allowed
     const { error: uploadError } = await supabaseAdmin.storage
       .from('agent-installers')
-      .upload(filePath, new Blob([script_content], { type: 'text/plain' }), {
+      .upload(filePath, new Blob([script_content], { type: 'application/octet-stream' }), {
         upsert: true,
-        contentType: 'text/plain'
+        contentType: 'application/octet-stream'
       });
 
     if (uploadError) {
