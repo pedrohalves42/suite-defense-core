@@ -14,6 +14,7 @@ import { Progress } from "@/components/ui/progress";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Line, LineChart as RechartsLineChart, Bar, BarChart as RechartsBarChart, Pie, PieChart as RechartsPieChart, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip } from "recharts";
 import { logger } from "@/lib/logger";
+import { getJobTypeLabel, getJobTypeLabelNoEmoji } from "@/lib/job-labels";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
 
@@ -346,13 +347,17 @@ const ServerDashboard = () => {
     };
   });
 
-  // Dados para distribuicao por tipo de job
+  // Dados para distribuicao por tipo de job (com nomes amigáveis)
   const jobTypeData = Object.entries(
     jobs.reduce((acc, job) => {
       acc[job.type] = (acc[job.type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
-  ).map(([type, count]) => ({ name: type, value: count }));
+  ).map(([type, count]) => ({ 
+    name: getJobTypeLabelNoEmoji(type), 
+    originalType: type,
+    value: count 
+  }));
 
   // Dados para jobs por agente (top 10)
   const jobsByAgentData = Object.entries(
@@ -379,7 +384,16 @@ const ServerDashboard = () => {
     };
   });
 
-  const COLORS = ['hsl(195 100% 50%)', 'hsl(160 100% 45%)', 'hsl(35 100% 55%)', 'hsl(142 76% 45%)', 'hsl(0 70% 55%)'];
+  const COLORS = [
+    'hsl(217 91% 60%)',   // blue
+    'hsl(142 71% 45%)',   // green
+    'hsl(38 92% 50%)',    // amber
+    'hsl(262 83% 58%)',   // violet
+    'hsl(0 84% 60%)',     // red
+    'hsl(189 94% 43%)',   // cyan
+    'hsl(330 81% 60%)',   // pink
+    'hsl(24 95% 53%)',    // orange
+  ];
 
   // Determinar estado global do sistema
   const systemState = useMemo(() => {
@@ -797,23 +811,39 @@ const ServerDashboard = () => {
                   </p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={280}>
                   <RechartsPieChart>
                     <Pie
                       data={jobTypeData}
-                      cx="50%"
+                      cx="35%"
                       cy="50%"
+                      innerRadius={45}
+                      outerRadius={85}
                       labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="hsl(195 100% 50%)"
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      fill="hsl(217 91% 60%)"
                       dataKey="value"
+                      paddingAngle={2}
                     >
                       {jobTypeData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: 'hsl(222 47% 11%)', border: '1px solid hsl(215 20% 25%)', borderRadius: '6px' }} />
+                    <Tooltip 
+                      formatter={(value: number, name: string) => [`${value} tarefas`, name]}
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(222 47% 11%)', 
+                        border: '1px solid hsl(215 20% 25%)', 
+                        borderRadius: '8px',
+                        padding: '8px 12px'
+                      }} 
+                    />
+                    <Legend 
+                      layout="vertical"
+                      align="right"
+                      verticalAlign="middle"
+                      wrapperStyle={{ fontSize: '11px', paddingLeft: '10px' }}
+                    />
                   </RechartsPieChart>
                 </ResponsiveContainer>
               )}
@@ -997,8 +1027,8 @@ const ServerDashboard = () => {
                                   <div className="pt-2 border-t border-border">
                                     <p className="text-xs text-muted-foreground mb-1">Última Tarefa:</p>
                                     <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-xs font-mono">
-                                        {lastJob.type}
+                                      <Badge variant="outline" className="text-xs">
+                                        {getJobTypeLabel(lastJob.type)}
                                       </Badge>
                                       <Badge variant={
                                         lastJob.status === "completed" ? "default" :
@@ -1047,8 +1077,8 @@ const ServerDashboard = () => {
                       >
                         <div>
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="font-mono text-xs">
-                              {job.type}
+                            <Badge variant="outline" className="text-xs">
+                              {getJobTypeLabel(job.type)}
                             </Badge>
                             <span className="text-sm font-mono text-foreground">{job.agent_name}</span>
                           </div>
