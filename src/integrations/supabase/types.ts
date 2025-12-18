@@ -160,6 +160,108 @@ export type Database = {
           },
         ]
       }
+      agent_evidence_logs: {
+        Row: {
+          agent_id: string | null
+          agent_name: string
+          agent_version: string | null
+          created_at: string
+          event_data: Json
+          event_type: string
+          evidence_hash: string
+          id: string
+          severity: string | null
+          state_after: string | null
+          state_before: string | null
+          tenant_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name: string
+          agent_version?: string | null
+          created_at?: string
+          event_data?: Json
+          event_type: string
+          evidence_hash: string
+          id?: string
+          severity?: string | null
+          state_after?: string | null
+          state_before?: string | null
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string
+          agent_version?: string | null
+          created_at?: string
+          event_data?: Json
+          event_type?: string
+          evidence_hash?: string
+          id?: string
+          severity?: string | null
+          state_after?: string | null
+          state_before?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_evidence_logs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_evidence_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_evidence_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       agent_group_policies: {
         Row: {
           assigned_at: string | null
@@ -7278,6 +7380,21 @@ export type Database = {
         Returns: undefined
       }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
+      submit_agent_evidence: {
+        Args: {
+          p_agent_id: string
+          p_agent_name: string
+          p_agent_version: string
+          p_event_data: Json
+          p_event_type: string
+          p_evidence_hash: string
+          p_severity?: string
+          p_state_after?: string
+          p_state_before?: string
+          p_tenant_id: string
+        }
+        Returns: string
+      }
       update_quota_usage: {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }
         Returns: undefined

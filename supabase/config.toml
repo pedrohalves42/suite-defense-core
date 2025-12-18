@@ -91,6 +91,12 @@ verify_jwt = true
 [functions.post-installation-telemetry]
 verify_jwt = false
 
+[functions.submit-agent-evidence]
+verify_jwt = false
+
+[functions.evaluate-software-risk]
+verify_jwt = true
+
 # === Installation Functions ===
 [functions.auto-generate-enrollment]
 verify_jwt = true
