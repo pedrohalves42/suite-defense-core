@@ -1,10 +1,11 @@
 /* eslint-disable no-useless-escape */
 /**
- * CyberShield Agent macOS Script - AUTO-GERADO
+ * CyberShield Agent Macos Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
- * Fonte: public/agent-scripts/cybershield-agent-macos-v3.sh
- * Versao: v3.10.40-DNS-FILTER
- * Gerado em: 2025-06-16T00:00:00.000Z
+ * Fonte: public/agent-scripts/cybershield-agent-macos-v4.sh
+ * Versao: unknown
+ * SHA256: e8b145ed220344cb6b0325c866dd278c62a7edca2d1173452efd012cdf1f3f09
+ * Gerado em: 2025-12-18T12:17:20.357Z
  */
 
 export function getAgentScriptMacos(): string {
@@ -12,1497 +13,983 @@ export function getAgentScriptMacos(): string {
 }
 
 export const AGENT_SCRIPT_MACOS_SH = `#!/usr/bin/env bash
-# CyberShield Agent - macOS
-# Version: v3.10.40-DNS-FILTER
+#
+# CyberShield Agent - macOS v4.0.1-DNS-POLICY
+#
+# FASE 2.1: State Machine Formal (6 estados)
+# FASE 2.2: Evidence Journal Local
+# FASE 2.4: DNS Filter Integration
+# FASE 2.5: Policy Contract (Desired vs Actual + Drift Detection)
+#
+# Estados:
+# - BOOTSTRAP: Inicializacao do agente
+# - SYNCING: Sincronizando com servidor
+# - ENFORCING: Operacao normal, executando jobs
+# - DEGRADED: Erro nao-critico, funcionando parcialmente
+# - ERROR: Erro critico, requer intervencao
+# - RECOVERY: Tentando auto-recuperacao
+#
+# Uso:
+#   ./cybershield-agent-macos-v4.sh \\
+#       --server-url "https://seu-projeto.supabase.co" \\
+#       --agent-token "AGENT_TOKEN_AQUI" \\
+#       --hmac-secret "64_HEX_CHARS_AQUI" \\
+#       --agent-name "meu-mac-01"
+#
 
 set -euo pipefail
 
-########################################
-# PARAMETROS
-########################################
+# ============================================
+#  CONSTANTES E VARIAVEIS GLOBAIS
+# ============================================
+AGENT_VERSION="v4.0.1-DNS-POLICY"
+BASE_DIR="/Library/Application Support/CyberShield"
+LOG_DIR="\${BASE_DIR}/logs"
+EVIDENCE_DIR="\${BASE_DIR}/evidence"
+CONFIG_DIR="\${BASE_DIR}/config"
+LOG_FILE="\${LOG_DIR}/agent.log"
+EVIDENCE_FILE="\${EVIDENCE_DIR}/journal.log"
+POLL_INTERVAL=60
 
-# Prioridade: argumentos > env vars curtas > env vars prefixadas CYBERSHIELD_*
-SERVER_URL="\${SERVER_URL:-\${CYBERSHIELD_SERVER_URL:-}}"
-AGENT_TOKEN="\${AGENT_TOKEN:-\${CYBERSHIELD_AGENT_TOKEN:-}}"
-HMAC_SECRET="\${HMAC_SECRET:-\${CYBERSHIELD_HMAC_SECRET:-}}"
-AGENT_NAME="\${AGENT_NAME:-\${CYBERSHIELD_AGENT_NAME:-\$(hostname -s)}}"
-AGENT_VERSION="\${AGENT_VERSION:-\${CYBERSHIELD_AGENT_VERSION:-v3.10.40-DNS-FILTER}}"
+# State Machine
+declare -A AGENT_STATE=(
+    [current]="BOOTSTRAP"
+    [previous]=""
+    [error_count]=0
+    [recovery_attempts]=0
+    [last_state_change]=""
+)
 
-# Parse argumentos (sobrescreve env vars)
+# Valid states and transitions
+declare -a VALID_STATES=("BOOTSTRAP" "SYNCING" "ENFORCING" "DEGRADED" "ERROR" "RECOVERY")
+declare -A STATE_TRANSITIONS=(
+    ["BOOTSTRAP"]="SYNCING ERROR"
+    ["SYNCING"]="ENFORCING DEGRADED ERROR"
+    ["ENFORCING"]="DEGRADED ERROR SYNCING"
+    ["DEGRADED"]="RECOVERY ERROR ENFORCING"
+    ["RECOVERY"]="ENFORCING DEGRADED ERROR"
+    ["ERROR"]="RECOVERY"
+)
+JOB_EXECUTION_STATES="ENFORCING DEGRADED"
+
+# DNS Filter Config
+DNS_FILTER_ENABLED=true
+DNS_FILTER_PLIST="/Library/LaunchDaemons/com.cybershield.dns.plist"
+DNS_FILTER_BINARY="\${BASE_DIR}/dns-filter/cybershield-dns"
+DNS_CONSECUTIVE_FAILURES=0
+
+# Policy Contract
+POLICY_VERSION="2025-01"
+declare -A POLICY_EXPECTED=(
+    [dns_enabled]="true"
+    [dns_service_running]="true"
+    [agent_min_version]="v4.0.0"
+    [blocked_domains_synced]="true"
+    [heartbeat_interval_max]="120"
+    [job_execution_enabled]="true"
+)
+
+# Evidence Buffer
+declare -a EVIDENCE_BUFFER=()
+EVIDENCE_FLUSH_THRESHOLD=10
+
+# ============================================
+#  PARSING DE ARGUMENTOS
+# ============================================
 while [[ \$# -gt 0 ]]; do
-  case "\$1" in
-    --server-url)
-      SERVER_URL="\$2"; shift 2;;
-    --agent-token)
-      AGENT_TOKEN="\$2"; shift 2;;
-    --hmac-secret)
-      HMAC_SECRET="\$2"; shift 2;;
-    --agent-name)
-      AGENT_NAME="\$2"; shift 2;;
-    --agent-version)
-      AGENT_VERSION="\$2"; shift 2;;
-    *)
-      echo "Parametro desconhecido: \$1" >&2
-      echo "Uso: \$0 --server-url URL --agent-token TOKEN --hmac-secret SECRET [--agent-name NAME] [--agent-version VERSION]"
-      exit 1;;
-  esac
+    case \$1 in
+        --server-url)
+            SERVER_URL="\$2"
+            shift 2
+            ;;
+        --agent-token)
+            AGENT_TOKEN="\$2"
+            shift 2
+            ;;
+        --hmac-secret)
+            HMAC_SECRET="\$2"
+            shift 2
+            ;;
+        --agent-name)
+            AGENT_NAME="\$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: \$1"
+            exit 1
+            ;;
+    esac
 done
 
-# Validacao com mensagens claras
-if [[ -z "\$SERVER_URL" ]]; then
-  echo "SERVER_URL nao definido" >&2
-  echo "Use: --server-url URL" >&2
-  echo "  ou: SERVER_URL=... (env var)" >&2
-  echo "  ou: CYBERSHIELD_SERVER_URL=... (env var prefixada)" >&2
-  exit 1
+# Defaults
+SERVER_URL="\${SERVER_URL:-}"
+AGENT_TOKEN="\${AGENT_TOKEN:-}"
+HMAC_SECRET="\${HMAC_SECRET:-}"
+AGENT_NAME="\${AGENT_NAME:-\$(hostname | tr '[:upper:]' '[:lower:]')}"
+
+# Validate required params
+if [[ -z "\$SERVER_URL" || -z "\$AGENT_TOKEN" || -z "\$HMAC_SECRET" ]]; then
+    echo "ERROR: Missing required parameters"
+    echo "Usage: \$0 --server-url URL --agent-token TOKEN --hmac-secret SECRET [--agent-name NAME]"
+    exit 1
 fi
 
-if [[ -z "\$AGENT_TOKEN" ]]; then
-  echo "AGENT_TOKEN nao definido" >&2
-  echo "Use: --agent-token TOKEN ou AGENT_TOKEN=... ou CYBERSHIELD_AGENT_TOKEN=..." >&2
-  exit 1
-fi
-
-if [[ -z "\$HMAC_SECRET" ]]; then
-  echo "HMAC_SECRET nao definido" >&2
-  echo "Use: --hmac-secret SECRET ou HMAC_SECRET=... ou CYBERSHIELD_HMAC_SECRET=..." >&2
-  exit 1
-fi
-
+# Remove trailing slash from SERVER_URL
 SERVER_URL="\${SERVER_URL%/}"
 
-########################################
-# DIRETÓRIOS DE INSTALAÇÃO
-########################################
+# ============================================
+#  CRIAR DIRETORIOS
+# ============================================
+mkdir -p "\$LOG_DIR" "\$EVIDENCE_DIR" "\$CONFIG_DIR"
 
-INSTALL_DIR="/Library/Application Support/CyberShield"
-BLOCKED_WEBSITES_FILE="\$INSTALL_DIR/blocked_websites.json"
-
-########################################
-# LOG
-########################################
-
-LOG_DIR="/Library/Logs/CyberShield"
-LOG_FILE="\$LOG_DIR/agent.log"
-
-mkdir -p "\$LOG_DIR" || true
-mkdir -p "\$INSTALL_DIR" || true
-touch "\$LOG_FILE" 2>/dev/null || true
-
+# ============================================
+#  LOGGING
+# ============================================
 log() {
-  local level="\$1"; shift
-  local ts
-  ts="\$(date '+%Y-%m-%d %H:%M:%S')"
-  local line="[\$ts] [\$level] \$*"
-  echo "\$line"
-  echo "\$line" >> "\$LOG_FILE" 2>/dev/null || true
+    local level="\${1:-INFO}"
+    local message="\$2"
+    local timestamp
+    timestamp=\$(date '+%Y-%m-%d %H:%M:%S')
+    local state="\${AGENT_STATE[current]}"
+    local line="[\$timestamp] [\$level] [\$state] \$message"
+    
+    echo "\$line"
+    echo "\$line" >> "\$LOG_FILE"
 }
 
-########################################
-# HMAC (HEX)
-########################################
-
-validate_hmac_secret() {
-  if [[ ! "\$HMAC_SECRET" =~ ^[0-9a-fA-F]{64}$ ]]; then
-    log "ERROR" "HMAC_SECRET invalido. Esperado 64 caracteres hexadecimais, recebido length=\${#HMAC_SECRET}"
-    exit 1
-  fi
-}
-
-hmac_sign() {
-  local message="\$1"
-  # macOS tambem usa openssl com hexkey
-  printf '%s' "\$message" \\
-    | openssl dgst -sha256 -mac HMAC -macopt "hexkey:\$HMAC_SECRET" \\
-    | awk '{print \$2}'
-}
-
-########################################
-# REQUISICAO SEGURA
-########################################
-
-SECURE_RESP_STATUS=""
-SECURE_RESP_BODY=""
-
-secure_request() {
-  local path="\$1"
-  local method="\$2"
-  local body="\${3:-}"
-  local timeout_sec="\${4:-30}"
-  local max_retries="\${5:-3}"
-
-  local url="\${SERVER_URL}\${path}"
-  local retry_count=0
-  local retry_delay=2
-
-  while true; do
-    local timestamp nonce payload signature http_code raw
-    # macOS date nao tem %3N -> usar segundos * 1000
-    timestamp=\$(( \$(date +%s) * 1000 ))
-
-    if command -v uuidgen >/dev/null 2>&1; then
-      nonce="\$(uuidgen)"
-    else
-      nonce="nonce-\$(date +%s)"
+# ============================================
+#  FASE 2.1: STATE MACHINE
+# ============================================
+set_state() {
+    local new_state="\$1"
+    local reason="\$2"
+    local error_details="\${3:-}"
+    local current_state="\${AGENT_STATE[current]}"
+    
+    # Validate transition
+    if [[ "\$current_state" != "\$new_state" ]]; then
+        local allowed="\${STATE_TRANSITIONS[\$current_state]}"
+        if [[ ! " \$allowed " =~ " \$new_state " ]]; then
+            log "WARN" "[STATE] INVALID TRANSITION: \$current_state -> \$new_state (allowed: \$allowed)"
+            add_evidence "state_change" "{\\"attempted_from\\":\\"\$current_state\\",\\"attempted_to\\":\\"\$new_state\\",\\"blocked\\":true}" "\$current_state" "\$current_state" "warning"
+            return 1
+        fi
     fi
-
-    payload="\${timestamp}:\${nonce}:\${body}"
-    signature="\$(hmac_sign "\$payload")"
-
-    log "DEBUG" "Request \$method \$url (body_length=\${#body})"
-
-    raw="\$(
-      curl -sS \\
-        -X "\$method" \\
-        -H "X-Agent-Token: \$AGENT_TOKEN" \\
-        -H "X-HMAC-Signature: \$signature" \\
-        -H "X-Timestamp: \$timestamp" \\
-        -H "X-Nonce: \$nonce" \\
-        -H "Content-Type: application/json" \\
-        --max-time "\$timeout_sec" \\
-        -w '\\n%{http_code}' \\
-        \${body:+ -d "\$body"} \\
-        "\$url"
-    )" || true
-
-    http_code="\$(printf '%s\\n' "\$raw" | tail -n1)"
-    SECURE_RESP_BODY="\$(printf '%s\\n' "\$raw" | sed '\$d')"
-    SECURE_RESP_STATUS="\$http_code"
-
-    log "DEBUG" "Response \$http_code from \$url"
-
-    if [[ "\$http_code" == "401" ]]; then
-      log "ERROR" "Erro de autenticacao (401). Verifique AgentToken / HmacSecret / clock."
-      return 1
+    
+    # Apply transition
+    AGENT_STATE[previous]="\$current_state"
+    AGENT_STATE[current]="\$new_state"
+    AGENT_STATE[last_state_change]=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    # Reset counters on success
+    if [[ "\$new_state" == "ENFORCING" ]]; then
+        AGENT_STATE[error_count]=0
+        AGENT_STATE[recovery_attempts]=0
     fi
-
-    if [[ "\$http_code" -ge 200 && "\$http_code" -lt 300 ]]; then
-      return 0
+    
+    # Increment error count
+    if [[ "\$new_state" == "ERROR" || "\$new_state" == "DEGRADED" ]]; then
+        ((AGENT_STATE[error_count]++))
     fi
-
-    retry_count=\$((retry_count+1))
-    if (( retry_count >= max_retries )); then
-      log "ERROR" "Falha definitiva apos \$max_retries tentativas em \$url (status=\$http_code)"
-      return 1
-    fi
-
-    log "WARN" "Tentativa \$retry_count falhou (status=\$http_code). Aguardando \${retry_delay}s..."
-    sleep "\$retry_delay"
-    retry_delay=\$((retry_delay * 2))
-  done
-}
-
-########################################
-# SYSTEM INFO / METRICS
-########################################
-
-system_info_json() {
-  local os_name os_version hostname hw_model total_ram_gb
-
-  os_name="\$(sw_vers -productName 2>/dev/null || echo "macOS")"
-  os_version="\$(sw_vers -productVersion 2>/dev/null || echo "unknown")"
-  hostname="\$(hostname -s)"
-  hw_model="\$(sysctl -n hw.model 2>/dev/null || echo "unknown")"
-  total_ram_gb="\$(echo "\$(sysctl -n hw.memsize 2>/dev/null || echo 0) / (1024^3)" | bc -l 2>/dev/null | awk '{printf "%.2f",\$1}')"
-
-  jq -n \\
-    --arg os_type "macos" \\
-    --arg os_name "\$os_name" \\
-    --arg os_version "\$os_version" \\
-    --arg hostname "\$hostname" \\
-    --arg hw_model "\$hw_model" \\
-    --arg total_ram_gb "\$total_ram_gb" \\
-    --arg agent_name "\$AGENT_NAME" \\
-    --arg agent_version "\$AGENT_VERSION" \\
-    '{
-      os_type: \$os_type,
-      os_name: \$os_name,
-      os_version: \$os_version,
-      hostname: \$hostname,
-      hardware_model: \$hw_model,
-      total_ram_gb: (\$total_ram_gb|tonumber),
-      agent_name: \$agent_name,
-      agent_version: \$agent_version
-    }'
-}
-
-system_metrics_json() {
-  local cpu_load ram_used disk_used uptime_seconds last_boot_time
-
-  # CPU load medio (1 minuto) - usar "uptime"
-  cpu_load="\$(uptime | awk -F'load averages:' '{print \$2}' 2>/dev/null | awk '{print \$1}' | tr -d ',')"
-  cpu_load="\${cpu_load:-0}"
-
-  # RAM usada (%) - macOS: usar vm_stat para calcular uso real
-  ram_used="\$(vm_stat | awk '
-    /Pages active/ {gsub(/\\./, "", \$3); active=\$3}
-    /Pages wired down/ {gsub(/\\./, "", \$4); wired=\$4}
-    /Pages free/ {gsub(/\\./, "", \$3); free=\$3}
-    /Pages speculative/ {gsub(/\\./, "", \$3); spec=\$3}
-    END {
-      page_size = 4096
-      total_pages = active + wired + free + spec
-      used_pages = active + wired
-      if (total_pages > 0) {
-        printf "%.2f", (used_pages / total_pages) * 100
-      } else {
-        print "0"
-      }
-    }')"
-  ram_used="\${ram_used:-0}"
-
-  # DISCO (%)
-  disk_used="\$(df / | awk 'NR==2 {print \$5}' | sed 's/%//')"
-  disk_used="\${disk_used:-0}"
-
-  # UPTIME - tempo desde ultimo boot via sysctl
-  local boot_epoch current_epoch
-  boot_epoch="\$(sysctl -n kern.boottime 2>/dev/null | awk -F'sec = ' '{print \$2}' | awk -F',' '{print \$1}')"
-  boot_epoch="\${boot_epoch:-0}"
-  current_epoch="\$(date +%s)"
-  uptime_seconds=\$((current_epoch - boot_epoch))
-  
-  # Formatar boot time ISO
-  last_boot_time="\$(date -r "\$boot_epoch" -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo "")"
-
-  jq -n \\
-    --arg cpu_load "\$cpu_load" \\
-    --arg ram_used "\$ram_used" \\
-    --arg disk_used "\$disk_used" \\
-    --arg uptime_seconds "\$uptime_seconds" \\
-    --arg last_boot_time "\$last_boot_time" \\
-    '{
-      cpu_load_percent: (\$cpu_load|tonumber),
-      ram_used_percent: (\$ram_used|tonumber),
-      disk_used_percent: (\$disk_used|tonumber),
-      uptime_seconds: (\$uptime_seconds|tonumber),
-      last_boot_time: \$last_boot_time
-    }'
-}
-
-########################################
-# SEND SYSTEM METRICS
-########################################
-
-send_system_metrics() {
-  local cpu_usage_percent="\$1"
-  local memory_usage_percent="\$2"
-  local disk_usage_percent="\$3"
-  local hostname="\$4"
-  local uptime_seconds="\${5:-0}"
-  local last_boot_time="\${6:-}"
-  
-  local body
-  body="\$(jq -n \\
-    --arg cpu "\$cpu_usage_percent" \\
-    --arg mem "\$memory_usage_percent" \\
-    --arg disk "\$disk_usage_percent" \\
-    --arg host "\$hostname" \\
-    --arg uptime "\$uptime_seconds" \\
-    --arg boot "\$last_boot_time" \\
-    '{
-      cpu_usage_percent: (\$cpu|tonumber),
-      memory_usage_percent: (\$mem|tonumber),
-      disk_usage_percent: (\$disk|tonumber),
-      hostname: \$host,
-      uptime_seconds: (\$uptime|tonumber),
-      last_boot_time: \$boot
-    }'
-  )"
-  
-  log "INFO" "Enviando metricas de sistema..."
-  if secure_request "/functions/v1/submit-system-metrics" "POST" "\$body" 15 3; then
-    log "SUCCESS" "Metricas enviadas com sucesso"
+    
+    log "INFO" "[STATE] \$current_state -> \$new_state (\$reason)"
+    
+    # Record evidence
+    local severity="info"
+    [[ "\$new_state" == "ERROR" ]] && severity="error"
+    [[ "\$new_state" == "DEGRADED" ]] && severity="warning"
+    
+    add_evidence "state_change" "{\\"from\\":\\"\$current_state\\",\\"to\\":\\"\$new_state\\",\\"reason\\":\\"\$reason\\",\\"error_details\\":\\"\$error_details\\"}" "\$current_state" "\$new_state" "\$severity"
+    
     return 0
-  else
-    log "WARN" "Falha ao enviar metricas (status=\$SECURE_RESP_STATUS)"
+}
+
+get_state() {
+    echo "\${AGENT_STATE[current]}"
+}
+
+can_execute_job() {
+    local state
+    state=\$(get_state)
+    [[ " \$JOB_EXECUTION_STATES " =~ " \$state " ]]
+}
+
+# ============================================
+#  FASE 2.2: EVIDENCE JOURNAL
+# ============================================
+add_evidence() {
+    local type="\$1"
+    local data="\$2"
+    local state_before="\${3:-}"
+    local state_after="\${4:-}"
+    local severity="\${5:-info}"
+    
+    local timestamp
+    timestamp=\$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    # Calculate SHA256 hash
+    local evidence_hash
+    evidence_hash=\$(echo -n "\$data" | shasum -a 256 | cut -d' ' -f1)
+    
+    local entry
+    entry=\$(cat <<EOF
+{"timestamp":"\$timestamp","type":"\$type","agent_name":"\$AGENT_NAME","agent_version":"\$AGENT_VERSION","state_before":"\$state_before","state_after":"\$state_after","severity":"\$severity","data":\$data,"evidence_hash":"\$evidence_hash"}
+EOF
+)
+    
+    # Write to local journal
+    echo "\$entry" >> "\$EVIDENCE_FILE"
+    
+    # Add to buffer
+    EVIDENCE_BUFFER+=("\$entry")
+    
+    # Flush if threshold reached
+    if [[ \${#EVIDENCE_BUFFER[@]} -ge \$EVIDENCE_FLUSH_THRESHOLD ]]; then
+        flush_evidence
+    fi
+}
+
+flush_evidence() {
+    if [[ \${#EVIDENCE_BUFFER[@]} -eq 0 ]]; then
+        return
+    fi
+    
+    log "DEBUG" "[EVIDENCE] Flushing \${#EVIDENCE_BUFFER[@]} entries to server"
+    
+    # Build entries array (simplified for macOS without jq dependency issues)
+    local entries="["
+    local first=true
+    for entry in "\${EVIDENCE_BUFFER[@]}"; do
+        if [[ "\$first" == "true" ]]; then
+            first=false
+        else
+            entries+=","
+        fi
+        entries+="\$entry"
+    done
+    entries+="]"
+    
+    local body
+    body="{\\"agent_name\\":\\"\$AGENT_NAME\\",\\"agent_version\\":\\"\$AGENT_VERSION\\",\\"entries\\":\$entries}"
+    
+    if invoke_secure_request "POST" "/functions/v1/submit-agent-evidence" "\$body" 30; then
+        log "DEBUG" "[EVIDENCE] Flushed successfully"
+        EVIDENCE_BUFFER=()
+    else
+        log "WARN" "[EVIDENCE] Flush failed, keeping in buffer"
+    fi
+}
+
+rotate_evidence() {
+    local max_size_mb=50
+    local max_age_days=7
+    
+    if [[ -f "\$EVIDENCE_FILE" ]]; then
+        local size
+        size=\$(stat -f%z "\$EVIDENCE_FILE" 2>/dev/null || echo 0)
+        local max_bytes=\$((max_size_mb * 1024 * 1024))
+        
+        if [[ \$size -gt \$max_bytes ]]; then
+            local archive="\${EVIDENCE_FILE}.\$(date +%Y%m%d-%H%M%S).bak"
+            mv "\$EVIDENCE_FILE" "\$archive"
+            log "INFO" "[EVIDENCE] Journal rotated to \$archive"
+        fi
+    fi
+    
+    # Clean old archives
+    find "\$EVIDENCE_DIR" -name "journal.log.*.bak" -mtime +\$max_age_days -delete 2>/dev/null || true
+}
+
+# ============================================
+#  AUTO-RECOVERY COM BACKOFF
+# ============================================
+invoke_auto_recovery() {
+    local failed_component="\$1"
+    local error_message="\${2:-}"
+    local max_attempts=3
+    
+    if [[ \${AGENT_STATE[recovery_attempts]} -ge \$max_attempts ]]; then
+        log "ERROR" "[RECOVERY] Max attempts (\$max_attempts) exceeded for \$failed_component"
+        set_state "ERROR" "Max recovery attempts exceeded" "Component: \$failed_component, Last error: \$error_message"
+        add_evidence "auto_recovery" "{\\"component\\":\\"\$failed_component\\",\\"success\\":false,\\"reason\\":\\"max_attempts_exceeded\\"}" "" "" "critical"
+        return 1
+    fi
+    
+    ((AGENT_STATE[recovery_attempts]++))
+    local attempt=\${AGENT_STATE[recovery_attempts]}
+    
+    # Exponential backoff: 5s, 10s, 20s
+    local backoff=\$((5 * (2 ** (attempt - 1))))
+    
+    log "WARN" "[RECOVERY] Attempt \$attempt/\$max_attempts for \$failed_component (backoff: \${backoff}s)"
+    set_state "RECOVERY" "Auto-recovery: \$failed_component (attempt \$attempt)"
+    
+    add_evidence "auto_recovery" "{\\"component\\":\\"\$failed_component\\",\\"attempt\\":\$attempt,\\"backoff_seconds\\":\$backoff}" "" "" "warning"
+    
+    sleep \$backoff
+    
+    # Try to recover
+    local recovered=false
+    case "\$failed_component" in
+        "heartbeat")
+            if send_heartbeat; then
+                recovered=true
+            fi
+            ;;
+        "dns_filter")
+            if invoke_dns_recovery; then
+                recovered=true
+            fi
+            ;;
+        "network")
+            if ping -c 1 google.com &>/dev/null; then
+                recovered=true
+            fi
+            ;;
+        *)
+            if send_heartbeat; then
+                recovered=true
+            fi
+            ;;
+    esac
+    
+    if [[ "\$recovered" == "true" ]]; then
+        log "SUCCESS" "[RECOVERY] Success for \$failed_component on attempt \$attempt"
+        set_state "ENFORCING" "Recovery successful: \$failed_component"
+        AGENT_STATE[recovery_attempts]=0
+        add_evidence "auto_recovery" "{\\"component\\":\\"\$failed_component\\",\\"attempt\\":\$attempt,\\"success\\":true}" "" "" "info"
+        return 0
+    fi
+    
+    log "WARN" "[RECOVERY] Failed for \$failed_component on attempt \$attempt"
+    set_state "DEGRADED" "Recovery attempt \$attempt failed: \$failed_component"
     return 1
-  fi
 }
 
-########################################
-# POST INSTALLATION
-########################################
-
-send_post_installation() {
-  local success="\${1:-true}"
-  local error_message="\${2:-""}"
-  local install_time="\${3:-0}"
-
-  local sys_json metrics_json body
-  sys_json="\$(system_info_json)"
-  metrics_json="\$(system_metrics_json)"
-
-  body="\$(
-    jq -n \\
-      --arg agent_name "\$AGENT_NAME" \\
-      --arg event_type "\$( [[ "\$success" == "true" ]] && echo "post_installation" || echo "post_installation_unverified" )" \\
-      --arg platform "macos" \\
-      --arg installation_method "one_click" \\
-      --arg success_b "\$success" \\
-      --arg error_message "\$error_message" \\
-      --arg agent_version "\$AGENT_VERSION" \\
-      --arg install_time "\$install_time" \\
-      --argjson metadata "\$(
-        jq -n \\
-          --argjson sys "\$sys_json" \\
-          --argjson metrics "\$metrics_json" \\
-          '{
-            os_name: \$sys.os_name,
-            os_version: \$sys.os_version,
-            hostname: \$sys.hostname,
-            hardware_model: \$sys.hardware_model,
-            total_ram_gb: \$sys.total_ram_gb,
-            cpu_load: \$metrics.cpu_load_percent,
-            ram_used: \$metrics.ram_used_percent,
-            disk_used: \$metrics.disk_used_percent
-          }'
-      )" \\
-      '{
-        agent_name: \$agent_name,
-        event_type: \$event_type,
-        platform: \$platform,
-        installation_method: \$installation_method,
-        success: (\$success_b=="true"),
-        installation_time_seconds: (\$install_time|tonumber),
-        error_message: \$error_message,
-        agent_version: \$agent_version,
-        network_connectivity: true,
-        metadata: \$metadata
-      }'
-  )"
-
-  log "INFO" "Enviando post_installation..."
-  if secure_request "/functions/v1/track-installation-event" "POST" "\$body" 20 2; then
-    log "SUCCESS" "post_installation enviado com sucesso"
-  else
-    log "WARN" "Falha ao enviar post_installation (status=\$SECURE_RESP_STATUS)"
-  fi
+# ============================================
+#  FASE 2.4: DNS FILTER INTEGRATION (macOS)
+# ============================================
+get_dns_status() {
+    local installed=false
+    local running=false
+    local status="unknown"
+    
+    if [[ -f "\$DNS_FILTER_PLIST" ]]; then
+        installed=true
+        if launchctl list | grep -q "com.cybershield.dns"; then
+            running=true
+            status="running"
+        else
+            status="stopped"
+        fi
+    fi
+    
+    echo "{\\"installed\\":\$installed,\\"running\\":\$running,\\"status\\":\\"\$status\\",\\"exe_exists\\":\$(test -f "\$DNS_FILTER_BINARY" && echo true || echo false)}"
 }
 
-########################################
-# HEARTBEAT
-########################################
+start_dns_service() {
+    if [[ ! -f "\$DNS_FILTER_BINARY" ]]; then
+        log "WARN" "[DNS] Binary not found at \$DNS_FILTER_BINARY"
+        return 1
+    fi
+    
+    if [[ ! -f "\$DNS_FILTER_PLIST" ]]; then
+        log "INFO" "[DNS] Creating LaunchDaemon..."
+        cat > "\$DNS_FILTER_PLIST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.cybershield.dns</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>\$DNS_FILTER_BINARY</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>\${LOG_DIR}/dns.log</string>
+    <key>StandardErrorPath</key>
+    <string>\${LOG_DIR}/dns-error.log</string>
+</dict>
+</plist>
+EOF
+    fi
+    
+    log "INFO" "[DNS] Starting DNS Filter service..."
+    launchctl load -w "\$DNS_FILTER_PLIST" 2>/dev/null || true
+    sleep 2
+    
+    if launchctl list | grep -q "com.cybershield.dns"; then
+        log "SUCCESS" "[DNS] Service started successfully"
+        DNS_CONSECUTIVE_FAILURES=0
+        add_evidence "dns_block" "{\\"action\\":\\"service_started\\",\\"service\\":\\"com.cybershield.dns\\"}" "" "" "info"
+        return 0
+    else
+        log "ERROR" "[DNS] Service failed to start"
+        return 1
+    fi
+}
 
+stop_dns_service() {
+    if [[ -f "\$DNS_FILTER_PLIST" ]]; then
+        log "INFO" "[DNS] Stopping DNS Filter service..."
+        launchctl unload "\$DNS_FILTER_PLIST" 2>/dev/null || true
+        add_evidence "dns_block" "{\\"action\\":\\"service_stopped\\",\\"service\\":\\"com.cybershield.dns\\"}" "" "" "info"
+    fi
+    return 0
+}
+
+test_dns_health() {
+    if ! launchctl list | grep -q "com.cybershield.dns" 2>/dev/null; then
+        ((DNS_CONSECUTIVE_FAILURES++))
+        echo "{\\"healthy\\":false,\\"reason\\":\\"Service not running\\",\\"consecutive_failures\\":\$DNS_CONSECUTIVE_FAILURES}"
+        return 1
+    fi
+    
+    # Test DNS resolution via local resolver
+    if dig @127.0.0.1 google.com +short +time=2 &>/dev/null; then
+        DNS_CONSECUTIVE_FAILURES=0
+        echo "{\\"healthy\\":true,\\"reason\\":\\"DNS resolution OK\\",\\"consecutive_failures\\":0}"
+        return 0
+    else
+        ((DNS_CONSECUTIVE_FAILURES++))
+        echo "{\\"healthy\\":false,\\"reason\\":\\"DNS resolution failed\\",\\"consecutive_failures\\":\$DNS_CONSECUTIVE_FAILURES}"
+        return 1
+    fi
+}
+
+invoke_dns_recovery() {
+    log "WARN" "[DNS] Attempting DNS Filter recovery..."
+    add_evidence "auto_recovery" "{\\"component\\":\\"dns_filter\\",\\"consecutive_failures\\":\$DNS_CONSECUTIVE_FAILURES}" "" "" "warning"
+    
+    stop_dns_service
+    sleep 2
+    
+    if start_dns_service; then
+        if test_dns_health &>/dev/null; then
+            log "SUCCESS" "[DNS] Recovery successful"
+            add_evidence "auto_recovery" "{\\"component\\":\\"dns_filter\\",\\"success\\":true}" "" "" "info"
+            return 0
+        fi
+    fi
+    
+    log "ERROR" "[DNS] Recovery failed"
+    add_evidence "auto_recovery" "{\\"component\\":\\"dns_filter\\",\\"success\\":false}" "" "" "error"
+    return 1
+}
+
+configure_system_dns() {
+    # Configure macOS to use local DNS resolver
+    local primary_service
+    primary_service=\$(networksetup -listnetworkserviceorder | grep -A 1 "Hardware Port" | grep -v "Hardware Port" | head -1 | sed 's/^.*Device: //' | tr -d ')')
+    
+    if [[ -n "\$primary_service" ]]; then
+        local service_name
+        service_name=\$(networksetup -listallnetworkservices | grep -v "^\\*" | head -1)
+        if [[ -n "\$service_name" ]]; then
+            log "INFO" "[DNS] Configuring system DNS to use local resolver"
+            networksetup -setdnsservers "\$service_name" 127.0.0.1
+            dscacheutil -flushcache
+            killall -HUP mDNSResponder 2>/dev/null || true
+        fi
+    fi
+}
+
+# ============================================
+#  FASE 2.5: POLICY CONTRACT
+# ============================================
+get_current_policy_state() {
+    local dns_status
+    dns_status=\$(get_dns_status)
+    local dns_running
+    dns_running=\$(echo "\$dns_status" | python3 -c "import sys,json; print(json.load(sys.stdin).get('running', False))" 2>/dev/null || echo "false")
+    local dns_installed
+    dns_installed=\$(echo "\$dns_status" | python3 -c "import sys,json; print(json.load(sys.stdin).get('installed', False))" 2>/dev/null || echo "false")
+    local agent_state
+    agent_state=\$(get_state)
+    local can_execute
+    can_execute_job && can_execute="true" || can_execute="false"
+    local blocked_synced
+    blocked_synced=\$(test -f "\${BASE_DIR}/blocked_websites.json" && echo "true" || echo "false")
+    
+    cat <<EOF
+{"dns_enabled":"\$DNS_FILTER_ENABLED","dns_service_running":"\$dns_running","dns_installed":"\$dns_installed","agent_version":"\$AGENT_VERSION","agent_state":"\$agent_state","job_execution_enabled":"\$can_execute","heartbeat_interval":"\$POLL_INTERVAL","blocked_domains_synced":"\$blocked_synced","timestamp":"\$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
+EOF
+}
+
+check_policy_compliance() {
+    local current
+    current=\$(get_current_policy_state)
+    local drift_count=0
+    
+    # Check DNS running (using Python for JSON parsing on macOS)
+    local actual_dns
+    actual_dns=\$(echo "\$current" | python3 -c "import sys,json; print(json.load(sys.stdin).get('dns_service_running', 'false'))" 2>/dev/null || echo "false")
+    if [[ "\${POLICY_EXPECTED[dns_service_running]}" == "true" && "\$actual_dns" != "true" && "\$actual_dns" != "True" ]]; then
+        ((drift_count++))
+        log "WARN" "[POLICY] Drift: dns_service_running expected=true actual=\$actual_dns"
+    fi
+    
+    if [[ \$drift_count -gt 0 ]]; then
+        log "WARN" "[POLICY] Drift detected: \$drift_count issue(s)"
+        add_evidence "policy_drift" "{\\"drift_count\\":\$drift_count,\\"current\\":\$current}" "" "" "warning"
+        echo "{\\"compliant\\":false,\\"drift_count\\":\$drift_count}"
+        return 1
+    fi
+    
+    log "DEBUG" "[POLICY] Compliance check passed"
+    echo "{\\"compliant\\":true,\\"drift_count\\":0}"
+    return 0
+}
+
+invoke_policy_enforcement() {
+    local compliance
+    compliance=\$(check_policy_compliance)
+    
+    if echo "\$compliance" | grep -q '"compliant":true'; then
+        return 0
+    fi
+    
+    log "INFO" "[POLICY] Attempting to enforce policy..."
+    
+    # Enforce DNS if needed
+    local current
+    current=\$(get_current_policy_state)
+    local actual_dns
+    actual_dns=\$(echo "\$current" | python3 -c "import sys,json; print(json.load(sys.stdin).get('dns_service_running', 'false'))" 2>/dev/null || echo "false")
+    
+    if [[ "\${POLICY_EXPECTED[dns_service_running]}" == "true" && "\$actual_dns" != "true" ]]; then
+        log "INFO" "[POLICY] Enforcing: Starting DNS service"
+        start_dns_service || true
+    fi
+    
+    add_evidence "policy_sync" "{\\"action\\":\\"enforcement_complete\\"}" "" "" "info"
+    return 0
+}
+
+sync_policy_from_server() {
+    log "INFO" "[POLICY] Syncing policy from server..."
+    
+    local body
+    body="{\\"agent_name\\":\\"\$AGENT_NAME\\",\\"agent_version\\":\\"\$AGENT_VERSION\\"}"
+    
+    local result
+    result=\$(invoke_secure_request "POST" "/functions/v1/get-agent-policy" "\$body" 15)
+    
+    if [[ \$? -eq 0 && -n "\$result" ]]; then
+        local server_version
+        server_version=\$(echo "\$result" | python3 -c "import sys,json; print(json.load(sys.stdin).get('version', ''))" 2>/dev/null || echo "")
+        if [[ -n "\$server_version" ]]; then
+            POLICY_VERSION="\$server_version"
+            log "SUCCESS" "[POLICY] Policy synced from server (version: \$server_version)"
+            add_evidence "policy_sync" "{\\"action\\":\\"synced_from_server\\",\\"version\\":\\"\$server_version\\"}" "" "" "info"
+            return 0
+        fi
+    fi
+    
+    log "WARN" "[POLICY] Server policy not available, using defaults"
+    return 1
+}
+
+# ============================================
+#  HMAC SIGNATURE
+# ============================================
+get_hmac_signature() {
+    local message="\$1"
+    local secret="\$2"
+    
+    # Convert hex secret to binary and compute HMAC
+    echo -n "\$message" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:\$secret" | awk '{print \$2}'
+}
+
+# ============================================
+#  SECURE REQUEST
+# ============================================
+invoke_secure_request() {
+    local method="\$1"
+    local path="\$2"
+    local body="\${3:-}"
+    local timeout="\${4:-30}"
+    
+    local uri="\${SERVER_URL}\${path}"
+    local timestamp
+    timestamp=\$(python3 -c "import time; print(int(time.time() * 1000))")
+    local nonce
+    nonce=\$(uuidgen | tr '[:upper:]' '[:lower:]')
+    
+    local payload="\${timestamp}:\${nonce}:\${body}"
+    local signature
+    signature=\$(get_hmac_signature "\$payload" "\$HMAC_SECRET")
+    
+    local response
+    local http_code
+    
+    if [[ -n "\$body" ]]; then
+        response=\$(curl -s -w "\\n%{http_code}" -X "\$method" "\$uri" \\
+            -H "Content-Type: application/json" \\
+            -H "X-Agent-Token: \$AGENT_TOKEN" \\
+            -H "X-HMAC-Signature: \$signature" \\
+            -H "X-Timestamp: \$timestamp" \\
+            -H "X-Nonce: \$nonce" \\
+            -d "\$body" \\
+            --connect-timeout "\$timeout" \\
+            --max-time "\$timeout" 2>/dev/null)
+    else
+        response=\$(curl -s -w "\\n%{http_code}" -X "\$method" "\$uri" \\
+            -H "Content-Type: application/json" \\
+            -H "X-Agent-Token: \$AGENT_TOKEN" \\
+            -H "X-HMAC-Signature: \$signature" \\
+            -H "X-Timestamp: \$timestamp" \\
+            -H "X-Nonce: \$nonce" \\
+            --connect-timeout "\$timeout" \\
+            --max-time "\$timeout" 2>/dev/null)
+    fi
+    
+    http_code=\$(echo "\$response" | tail -n1)
+    local body_response
+    body_response=\$(echo "\$response" | sed '\$d')
+    
+    if [[ "\$http_code" == "200" ]]; then
+        echo "\$body_response"
+        return 0
+    else
+        log "ERROR" "[NETWORK] \$method \$path failed with status \$http_code"
+        return 1
+    fi
+}
+
+# ============================================
+#  HEARTBEAT
+# ============================================
 send_heartbeat() {
-  local sys_json metrics_json body
-  sys_json="\$(system_info_json)"
-  metrics_json="\$(system_metrics_json)"
-
-  body="\$(
-    jq -n \\
-      --arg agent_name "\$AGENT_NAME" \\
-      --arg platform "macos" \\
-      --arg agent_version "\$AGENT_VERSION" \\
-      --argjson sys "\$sys_json" \\
-      --argjson metrics "\$metrics_json" \\
-      '{
-        agent_name: \$agent_name,
-        platform: \$platform,
-        os_name: \$sys.os_name,
-        os_version: \$sys.os_version,
-        hostname: \$sys.hostname,
-        hardware_model: \$sys.hardware_model,
-        agent_version: \$agent_version,
-        metrics: \$metrics
-      }'
-  )"
-
-  log "INFO" "Enviando heartbeat..."
-  if secure_request "/functions/v1/heartbeat" "POST" "\$body" 15 3; then
-    log "SUCCESS" "Heartbeat OK (\$SECURE_RESP_STATUS)"
-  else
-    log "ERROR" "Heartbeat falhou (status=\$SECURE_RESP_STATUS)"
-  fi
+    local os_version
+    os_version=\$(sw_vers -productVersion 2>/dev/null || echo "unknown")
+    
+    local body
+    body=\$(cat <<EOF
+{"agent_name":"\$AGENT_NAME","hostname":"\$(hostname)","os_type":"macOS","os_version":"\$os_version","agent_version":"\$AGENT_VERSION","state":"\$(get_state)","error_count":\${AGENT_STATE[error_count]}}
+EOF
+)
+    
+    log "INFO" "[HEARTBEAT] Sending heartbeat (state: \$(get_state))..."
+    
+    local result
+    result=\$(invoke_secure_request "POST" "/functions/v1/agent-heartbeat" "\$body" 15)
+    
+    if [[ \$? -eq 0 ]]; then
+        log "SUCCESS" "[HEARTBEAT] OK (200)"
+        add_evidence "heartbeat" "{\\"status\\":\\"success\\",\\"state\\":\\"\$(get_state)\\"}" "" "" "debug"
+        return 0
+    else
+        log "ERROR" "[HEARTBEAT] Failed"
+        return 1
+    fi
 }
 
-########################################
-# SUBMIT JOB RESULT
-########################################
+# ============================================
+#  POLL JOBS
+# ============================================
+poll_jobs() {
+    local body
+    body="{\\"agent_name\\":\\"\$AGENT_NAME\\",\\"agent_version\\":\\"\$AGENT_VERSION\\",\\"state\\":\\"\$(get_state)\\"}"
+    
+    log "INFO" "Polling jobs..."
+    
+    local result
+    result=\$(invoke_secure_request "POST" "/functions/v1/poll-jobs" "\$body" 20)
+    
+    if [[ \$? -ne 0 || -z "\$result" ]]; then
+        return 1
+    fi
+    
+    # Check if result is valid JSON array with items
+    local job_count
+    job_count=\$(echo "\$result" | python3 -c "import sys,json; data=json.load(sys.stdin); print(len(data) if isinstance(data, list) else 0)" 2>/dev/null || echo 0)
+    
+    if [[ "\$job_count" == "0" ]]; then
+        log "DEBUG" "[POLL] No jobs available"
+        return 0
+    fi
+    
+    log "INFO" "[JOBS] Received \$job_count job(s)"
+    
+    # Process each job
+    for i in \$(seq 0 \$((job_count - 1))); do
+        local job
+        job=\$(echo "\$result" | python3 -c "import sys,json; print(json.dumps(json.load(sys.stdin)[\$i]))" 2>/dev/null)
+        if [[ -n "\$job" ]]; then
+            execute_job "\$job"
+        fi
+    done
+}
+
+# ============================================
+#  EXECUTE JOB
+# ============================================
+execute_job() {
+    local job="\$1"
+    
+    if ! can_execute_job; then
+        local state
+        state=\$(get_state)
+        log "WARN" "[JOB] Cannot execute job in state \$state"
+        return 1
+    fi
+    
+    local job_id
+    job_id=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('id', ''))" 2>/dev/null)
+    local job_type
+    job_type=\$(echo "\$job" | python3 -c "import sys,json; print(json.load(sys.stdin).get('type', ''))" 2>/dev/null)
+    local execution_id="exec-\$(uuidgen | tr '[:upper:]' '[:lower:]')"
+    local start_time
+    start_time=\$(date +%s)
+    
+    log "INFO" "[JOB] Executing job \$job_id (type=\$job_type, exec_id=\$execution_id)"
+    
+    add_evidence "job_execution" "{\\"job_id\\":\\"\$job_id\\",\\"job_type\\":\\"\$job_type\\",\\"execution_id\\":\\"\$execution_id\\",\\"phase\\":\\"started\\"}" "" "" "info"
+    
+    local output=""
+    local status="completed"
+    local error_message=""
+    
+    case "\$job_type" in
+        "report")
+            output=\$(collect_system_metrics)
+            ;;
+        "software_inventory_collect")
+            output=\$(collect_software_inventory)
+            ;;
+        "collect_antivirus_status")
+            output=\$(collect_antivirus_status)
+            ;;
+        "collect_web_activity")
+            output=\$(collect_web_activity)
+            ;;
+        *)
+            status="failed"
+            error_message="Unsupported job type: \$job_type"
+            ;;
+    esac
+    
+    local end_time
+    end_time=\$(date +%s)
+    local exec_time=\$((end_time - start_time))
+    
+    add_evidence "job_execution" "{\\"job_id\\":\\"\$job_id\\",\\"job_type\\":\\"\$job_type\\",\\"execution_id\\":\\"\$execution_id\\",\\"phase\\":\\"\$status\\",\\"execution_time_seconds\\":\$exec_time}" "" "" "info"
+    
+    submit_job_result "\$job_id" "\$status" "\$output" "\$error_message" "\$exec_time" "\$execution_id"
+}
 
 submit_job_result() {
-  local job_id="\$1"
-  local status="\$2"
-  local output_json="\$3"
-  local error_message="\${4:-""}"
-  local exec_time="\${5:-0}"
-  local started_at="\${6:-\$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
-
-  local body
-  body="\$(
-    jq -n \\
-      --arg job_id "\$job_id" \\
-      --arg status "\$status" \\
-      --arg error_message "\$error_message" \\
-      --arg exec_time "\$exec_time" \\
-      --arg started_at "\$started_at" \\
-      --argjson output "\$output_json" \\
-      '{
-        job_id: \$job_id,
-        status: \$status,
-        output: \$output,
-        error_message: \$error_message,
-        execution_time_seconds: (\$exec_time|tonumber),
-        started_at: \$started_at
-      }'
-  )"
-
-  log "INFO" "Enviando resultado do job \$job_id (status=\$status)..."
-  if secure_request "/functions/v1/submit-job-result" "POST" "\$body" 30 3; then
-    log "SUCCESS" "Resultado do job \$job_id enviado com sucesso"
-    return 0
-  else
-    log "ERROR" "Falha ao enviar resultado do job \$job_id (status=\$SECURE_RESP_STATUS)"
-    return 1
-  fi
+    local job_id="\$1"
+    local status="\$2"
+    local output="\$3"
+    local error_message="\$4"
+    local exec_time="\$5"
+    local execution_id="\$6"
+    
+    local body
+    body=\$(cat <<EOF
+{"job_id":"\$job_id","status":"\$status","output":\$output,"error_message":"\$error_message","execution_time_seconds":\$exec_time,"agent_name":"\$AGENT_NAME","agent_version":"\$AGENT_VERSION","execution_id":"\$execution_id"}
+EOF
+)
+    
+    log "INFO" "[JOB] Submitting result for job \$job_id (status=\$status)"
+    invoke_secure_request "POST" "/functions/v1/submit-job-result" "\$body" 30
 }
 
-########################################
-# JOB HANDLERS
-########################################
-
-# Handler: sync_blocked_websites
-handle_sync_blocked_websites() {
-  local payload_json="\$1"
-  local apply_to_hosts="\${2:-false}"
-  
-  log "INFO" "Executando sync_blocked_websites..."
-  
-  # Buscar lista de websites bloqueados do servidor
-  if ! secure_request "/functions/v1/get-blocked-websites" "GET" "" 30 3; then
-    echo '{"success": false, "error": "Failed to fetch blocked websites"}'
-    return 1
-  fi
-  
-  local blocked_domains="\$SECURE_RESP_BODY"
-  local domain_count
-  domain_count="\$(printf '%s\\n' "\$blocked_domains" | jq 'length' 2>/dev/null || echo "0")"
-  
-  # Salvar lista localmente
-  printf '%s\\n' "\$blocked_domains" > "\$BLOCKED_WEBSITES_FILE"
-  log "INFO" "Saved \$domain_count blocked domains to \$BLOCKED_WEBSITES_FILE"
-  
-  # Aplicar ao hosts file se solicitado
-  apply_to_hosts="\$(printf '%s\\n' "\$payload_json" | jq -r '.apply_to_hosts // false')"
-  
-  if [[ "\$apply_to_hosts" == "true" ]]; then
-    local hosts_file="/etc/hosts"
-    local marker_start="# BEGIN CYBERSHIELD BLOCKED"
-    local marker_end="# END CYBERSHIELD BLOCKED"
-    
-    # Remover entradas antigas do CyberShield
-    if grep -q "\$marker_start" "\$hosts_file" 2>/dev/null; then
-      sudo sed -i.bak "/\$marker_start/,/\$marker_end/d" "\$hosts_file"
-    fi
-    
-    # Adicionar novas entradas
-    {
-      echo "\$marker_start"
-      printf '%s\\n' "\$blocked_domains" | jq -r '.[]' 2>/dev/null | while read -r domain; do
-        [[ -n "\$domain" ]] && echo "127.0.0.1 \$domain"
-      done
-      echo "\$marker_end"
-    } | sudo tee -a "\$hosts_file" >/dev/null
-    
-    # Flush DNS cache
-    sudo dscacheutil -flushcache 2>/dev/null || true
-    sudo killall -HUP mDNSResponder 2>/dev/null || true
-    
-    log "SUCCESS" "Applied \$domain_count domains to hosts file and flushed DNS"
-  fi
-  
-  jq -n \\
-    --arg domain_count "\$domain_count" \\
-    --arg applied "\$apply_to_hosts" \\
-    '{
-      success: true,
-      domains_synced: (\$domain_count|tonumber),
-      applied_to_hosts: (\$applied=="true"),
-      timestamp: (now|todate)
-    }'
-}
-
-# Handler: update_agent
-handle_update_agent() {
-  local payload_json="\$1"
-  local job_agent_id="\$2"
-  
-  log "INFO" "Executando update_agent..."
-  
-  # Buscar nova versao do servidor
-  if ! secure_request "/functions/v1/serve-agent-update" "GET" "" 60 3; then
-    echo '{"success": false, "error": "Failed to fetch agent update"}'
-    return 1
-  fi
-  
-  local response="\$SECURE_RESP_BODY"
-  local new_version new_script expected_sha256
-  
-  new_version="\$(printf '%s\\n' "\$response" | jq -r '.version // empty')"
-  new_script="\$(printf '%s\\n' "\$response" | jq -r '.script_content // empty')"
-  expected_sha256="\$(printf '%s\\n' "\$response" | jq -r '.sha256 // empty')"
-  
-  if [[ -z "\$new_version" ]] || [[ -z "\$new_script" ]]; then
-    log "INFO" "No update available or no script content"
-    echo '{"success": true, "message": "No update available", "current_version": "'\$AGENT_VERSION'"}'
-    return 0
-  fi
-  
-  # Verificar se ja estamos na versao mais recente
-  if [[ "\$new_version" == "\$AGENT_VERSION" ]]; then
-    log "INFO" "Already at latest version: \$AGENT_VERSION"
-    echo '{"success": true, "message": "Already at latest version", "version": "'\$AGENT_VERSION'"}'
-    return 0
-  fi
-  
-  log "INFO" "Updating from \$AGENT_VERSION to \$new_version..."
-  
-  # Smart path detection para encontrar script atual
-  local current_script_path=""
-  
-  # Estrategia 1: Usar \$0 se valido
-  if [[ -n "\${BASH_SOURCE[0]:-}" ]] && [[ -f "\${BASH_SOURCE[0]}" ]]; then
-    current_script_path="\${BASH_SOURCE[0]}"
-    log "DEBUG" "Found script via BASH_SOURCE: \$current_script_path"
-  fi
-  
-  # Estrategia 2: Buscar por nome do agente
-  if [[ -z "\$current_script_path" ]]; then
-    local agent_pattern="\$INSTALL_DIR/cybershield-agent-\${AGENT_NAME}.sh"
-    if [[ -f "\$agent_pattern" ]]; then
-      current_script_path="\$agent_pattern"
-      log "DEBUG" "Found script via agent name: \$current_script_path"
-    fi
-  fi
-  
-  # Estrategia 3: Glob search
-  if [[ -z "\$current_script_path" ]]; then
-    for f in "\$INSTALL_DIR"/cybershield-agent-*.sh; do
-      if [[ -f "\$f" ]]; then
-        current_script_path="\$f"
-        log "DEBUG" "Found script via glob: \$current_script_path"
-        break
-      fi
-    done
-  fi
-  
-  # Estrategia 4: Path padrao
-  if [[ -z "\$current_script_path" ]]; then
-    current_script_path="\$INSTALL_DIR/cybershield-agent-\${AGENT_NAME}.sh"
-    log "DEBUG" "Using default path: \$current_script_path"
-  fi
-  
-  # Backup do script atual (se existir)
-  if [[ -f "\$current_script_path" ]]; then
-    cp "\$current_script_path" "\${current_script_path}.backup" 2>/dev/null || true
-    log "INFO" "Backup created: \${current_script_path}.backup"
-  fi
-  
-  # Validar SHA256 se fornecido
-  if [[ -n "\$expected_sha256" ]]; then
-    local temp_script="/tmp/cybershield_update_\$\$.sh"
-    printf '%s\\n' "\$new_script" > "\$temp_script"
-    local actual_sha256
-    actual_sha256="\$(shasum -a 256 "\$temp_script" | awk '{print \$1}')"
-    
-    if [[ "\$actual_sha256" != "\$expected_sha256" ]]; then
-      log "ERROR" "SHA256 mismatch! Expected: \$expected_sha256, Got: \$actual_sha256"
-      rm -f "\$temp_script"
-      echo '{"success": false, "error": "SHA256 validation failed"}'
-      return 1
-    fi
-    
-    log "SUCCESS" "SHA256 validated: \$actual_sha256"
-    rm -f "\$temp_script"
-  fi
-  
-  # Salvar novo script
-  printf '%s\\n' "\$new_script" > "\$current_script_path"
-  chmod +x "\$current_script_path"
-  
-  log "SUCCESS" "Updated agent to \$new_version. New version will be active on next restart."
-  
-  jq -n \\
-    --arg old_version "\$AGENT_VERSION" \\
-    --arg new_version "\$new_version" \\
-    --arg path "\$current_script_path" \\
-    '{
-      success: true,
-      old_version: \$old_version,
-      new_version: \$new_version,
-      script_path: \$path,
-      message: "Update successful. New version active on next restart."
-    }'
-}
-
-# Handler: collect_web_activity (multi-user)
-handle_collect_web_activity() {
-  local payload_json="\$1"
-  local job_agent_id="\$2"
-  
-  log "INFO" "Executando collect_web_activity (multi-user)..."
-  
-  local web_activity_items="[]"
-  local total_domains=0
-  
-  # Iterar por todos os usuarios em /Users
-  for user_home in /Users/*; do
-    [[ -d "\$user_home" ]] || continue
-    local username
-    username="\$(basename "\$user_home")"
-    
-    # Skip usuarios de sistema
-    [[ "\$username" == "Shared" ]] && continue
-    [[ "\$username" == ".localized" ]] && continue
-    [[ "\$username" =~ ^_ ]] && continue
-    
-    log "DEBUG" "Scanning browser history for user: \$username"
-    
-    # Safari history
-    local safari_history="\$user_home/Library/Safari/History.db"
-    if [[ -f "\$safari_history" ]] && command -v sqlite3 >/dev/null 2>&1; then
-      local safari_temp="/tmp/safari_history_\${username}_\$\$.db"
-      cp "\$safari_history" "\$safari_temp" 2>/dev/null || true
-      
-      if [[ -f "\$safari_temp" ]]; then
-        local safari_urls
-        safari_urls="\$(sqlite3 "\$safari_temp" "SELECT DISTINCT url FROM history_items WHERE visit_count > 0 ORDER BY visit_time DESC LIMIT 100;" 2>/dev/null || echo "")"
-        
-        while IFS= read -r url; do
-          if [[ -n "\$url" ]]; then
-            local domain
-            domain="\$(echo "\$url" | awk -F/ '{print \$3}' | sed 's/^www\\.//')"
-            if [[ -n "\$domain" ]] && [[ ! "\$domain" =~ ^(google|apple|icloud|microsoft) ]]; then
-              web_activity_items="\$(printf '%s\\n' "\$web_activity_items" | jq \\
-                --arg domain "\$domain" \\
-                --arg source "safari_\${username}" \\
-                --arg url "\$url" \\
-                '. + [{"domain": \$domain, "source": \$source, "url_full": \$url}]')"
-              total_domains=\$((total_domains + 1))
-            fi
-          fi
-        done <<< "\$safari_urls"
-        
-        rm -f "\$safari_temp"
-      fi
-    fi
-    
-    # Chrome history
-    local chrome_history="\$user_home/Library/Application Support/Google/Chrome/Default/History"
-    if [[ -f "\$chrome_history" ]] && command -v sqlite3 >/dev/null 2>&1; then
-      local chrome_temp="/tmp/chrome_history_\${username}_\$\$.db"
-      cp "\$chrome_history" "\$chrome_temp" 2>/dev/null || true
-      
-      if [[ -f "\$chrome_temp" ]]; then
-        local chrome_urls
-        chrome_urls="\$(sqlite3 "\$chrome_temp" "SELECT DISTINCT url FROM urls WHERE last_visit_time > 0 ORDER BY last_visit_time DESC LIMIT 100;" 2>/dev/null || echo "")"
-        
-        while IFS= read -r url; do
-          if [[ -n "\$url" ]]; then
-            local domain
-            domain="\$(echo "\$url" | awk -F/ '{print \$3}' | sed 's/^www\\.//')"
-            if [[ -n "\$domain" ]] && [[ ! "\$domain" =~ ^(google|googleapis|gstatic) ]]; then
-              web_activity_items="\$(printf '%s\\n' "\$web_activity_items" | jq \\
-                --arg domain "\$domain" \\
-                --arg source "chrome_\${username}" \\
-                --arg url "\$url" \\
-                '. + [{"domain": \$domain, "source": \$source, "url_full": \$url}]')"
-              total_domains=\$((total_domains + 1))
-            fi
-          fi
-        done <<< "\$chrome_urls"
-        
-        rm -f "\$chrome_temp"
-      fi
-    fi
-    
-    # Firefox history
-    local firefox_profile_dir="\$user_home/Library/Application Support/Firefox/Profiles"
-    if [[ -d "\$firefox_profile_dir" ]]; then
-      for profile in "\$firefox_profile_dir"/*.default* "\$firefox_profile_dir"/*.dev-edition-default*; do
-        [[ -d "\$profile" ]] || continue
-        local ff_history="\$profile/places.sqlite"
-        
-        if [[ -f "\$ff_history" ]] && command -v sqlite3 >/dev/null 2>&1; then
-          local ff_temp="/tmp/ff_history_\${username}_\$\$.db"
-          cp "\$ff_history" "\$ff_temp" 2>/dev/null || true
-          
-          if [[ -f "\$ff_temp" ]]; then
-            local ff_urls
-            ff_urls="\$(sqlite3 "\$ff_temp" "SELECT DISTINCT url FROM moz_places WHERE visit_count > 0 ORDER BY last_visit_date DESC LIMIT 100;" 2>/dev/null || echo "")"
-            
-            while IFS= read -r url; do
-              if [[ -n "\$url" ]]; then
-                local domain
-                domain="\$(echo "\$url" | awk -F/ '{print \$3}' | sed 's/^www\\.//')"
-                if [[ -n "\$domain" ]] && [[ ! "\$domain" =~ ^(mozilla|firefox) ]]; then
-                  web_activity_items="\$(printf '%s\\n' "\$web_activity_items" | jq \\
-                    --arg domain "\$domain" \\
-                    --arg source "firefox_\${username}" \\
-                    --arg url "\$url" \\
-                    '. + [{"domain": \$domain, "source": \$source, "url_full": \$url}]')"
-                  total_domains=\$((total_domains + 1))
-                fi
-              fi
-            done <<< "\$ff_urls"
-            
-            rm -f "\$ff_temp"
-          fi
-        fi
-      done
-    fi
-  done
-  
-  log "SUCCESS" "Collected \$total_domains web activity entries"
-  
-  # Enviar para o servidor
-  local body
-  body="\$(jq -n \\
-    --arg agent_id "\$job_agent_id" \\
-    --argjson items "\$web_activity_items" \\
-    '{agent_id: \$agent_id, items: \$items}'
-  )"
-  
-  if secure_request "/functions/v1/submit-web-activity" "POST" "\$body" 60 3; then
-    log "SUCCESS" "Web activity submitted successfully"
-  else
-    log "WARN" "Failed to submit web activity"
-  fi
-  
-  jq -n \\
-    --arg count "\$total_domains" \\
-    '{
-      success: true,
-      domains_collected: (\$count|tonumber),
-      source: "browser_history_multiuser"
-    }'
-}
-
-# Handler: software_inventory_collect
-handle_software_inventory_collect() {
-  local payload_json="\$1"
-  local job_agent_id="\$2"
-  
-  log "INFO" "Executando software_inventory_collect..."
-  
-  local software_items="[]"
-  local total_count=0
-  
-  # Listar aplicativos em /Applications
-  for app in /Applications/*.app; do
-    [[ -d "\$app" ]] || continue
-    local app_name version
-    app_name="\$(basename "\$app" .app)"
-    version="\$(defaults read "\$app/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || echo "unknown")"
-    
-    software_items="\$(printf '%s\\n' "\$software_items" | jq \\
-      --arg name "\$app_name" \\
-      --arg version "\$version" \\
-      --arg source "applications" \\
-      '. + [{"name": \$name, "version": \$version, "source": \$source}]')"
-    total_count=\$((total_count + 1))
-  done
-  
-  # Homebrew packages
-  if command -v brew >/dev/null 2>&1; then
-    while IFS= read -r line; do
-      [[ -z "\$line" ]] && continue
-      local pkg_name pkg_version
-      pkg_name="\$(echo "\$line" | awk '{print \$1}')"
-      pkg_version="\$(echo "\$line" | awk '{print \$2}')"
-      
-      software_items="\$(printf '%s\\n' "\$software_items" | jq \\
-        --arg name "\$pkg_name" \\
-        --arg version "\$pkg_version" \\
-        --arg source "homebrew" \\
-        '. + [{"name": \$name, "version": \$version, "source": \$source}]')"
-      total_count=\$((total_count + 1))
-    done < <(brew list --versions 2>/dev/null)
-  fi
-  
-  log "SUCCESS" "Collected \$total_count software items"
-  
-  # Enviar para o servidor
-  local body
-  body="\$(jq -n \\
-    --arg agent_id "\$job_agent_id" \\
-    --argjson items "\$software_items" \\
-    '{agent_id: \$agent_id, items: \$items}'
-  )"
-  
-  if secure_request "/functions/v1/submit-software-inventory" "POST" "\$body" 60 3; then
-    log "SUCCESS" "Software inventory submitted successfully"
-  else
-    log "WARN" "Failed to submit software inventory"
-  fi
-  
-  jq -n \\
-    --arg count "\$total_count" \\
-    '{
-      success: true,
-      software_count: (\$count|tonumber)
-    }'
-}
-
-# Handler: collect_antivirus_status
-handle_collect_antivirus_status() {
-  local payload_json="\$1"
-  local job_agent_id="\$2"
-  
-  log "INFO" "Executando collect_antivirus_status..."
-  
-  local av_items="[]"
-  
-  # XProtect version
-  local xprotect_version="unknown"
-  local xprotect_plist="/Library/Apple/System/Library/CoreServices/XProtect.bundle/Contents/version.plist"
-  if [[ -f "\$xprotect_plist" ]]; then
-    xprotect_version="\$(defaults read "\$xprotect_plist" CFBundleShortVersionString 2>/dev/null || echo "unknown")"
-  fi
-  
-  av_items="\$(printf '%s\\n' "\$av_items" | jq \\
-    --arg name "XProtect" \\
-    --arg version "\$xprotect_version" \\
-    --arg status "active" \\
-    '. + [{"engine_name": \$name, "engine_version": \$version, "status": \$status}]')"
-  
-  # MRT (Malware Removal Tool)
-  local mrt_version="unknown"
-  local mrt_plist="/Library/Apple/System/Library/CoreServices/MRT.app/Contents/Info.plist"
-  if [[ -f "\$mrt_plist" ]]; then
-    mrt_version="\$(defaults read "\$mrt_plist" CFBundleShortVersionString 2>/dev/null || echo "unknown")"
-  fi
-  
-  av_items="\$(printf '%s\\n' "\$av_items" | jq \\
-    --arg name "MRT" \\
-    --arg version "\$mrt_version" \\
-    --arg status "active" \\
-    '. + [{"engine_name": \$name, "engine_version": \$version, "status": \$status}]')"
-  
-  # Gatekeeper status
-  local gatekeeper_status
-  gatekeeper_status="\$(spctl --status 2>/dev/null || echo "unknown")"
-  local gatekeeper_enabled="disabled"
-  [[ "\$gatekeeper_status" == *"enabled"* ]] && gatekeeper_enabled="enabled"
-  
-  av_items="\$(printf '%s\\n' "\$av_items" | jq \\
-    --arg name "Gatekeeper" \\
-    --arg version "N/A" \\
-    --arg status "\$gatekeeper_enabled" \\
-    '. + [{"engine_name": \$name, "engine_version": \$version, "status": \$status}]')"
-  
-  log "SUCCESS" "Collected antivirus status (XProtect, MRT, Gatekeeper)"
-  
-  # Enviar para o servidor
-  local body
-  body="\$(jq -n \\
-    --arg agent_id "\$job_agent_id" \\
-    --argjson items "\$av_items" \\
-    '{agent_id: \$agent_id, items: \$items}'
-  )"
-  
-  if secure_request "/functions/v1/submit-antivirus-status" "POST" "\$body" 30 3; then
-    log "SUCCESS" "Antivirus status submitted successfully"
-  else
-    log "WARN" "Failed to submit antivirus status"
-  fi
-  
-  jq -n \\
-    --argjson items "\$av_items" \\
-    '{
-      success: true,
-      engines_checked: (\$items|length),
-      items: \$items
-    }'
-}
-
-# Handler: fix_firewall
-handle_fix_firewall() {
-  local payload_json="\$1"
-  
-  log "INFO" "Executando fix_firewall..."
-  
-  local firewall_tool="/usr/libexec/ApplicationFirewall/socketfilterfw"
-  local changes_made="[]"
-  
-  # Verificar status atual
-  local current_status
-  current_status="\$(\$firewall_tool --getglobalstate 2>/dev/null || echo "unknown")"
-  
-  # Ativar firewall se desativado
-  if [[ "\$current_status" != *"enabled"* ]]; then
-    sudo "\$firewall_tool" --setglobalstate on 2>/dev/null
-    changes_made="\$(printf '%s\\n' "\$changes_made" | jq '. + ["Enabled application firewall"]')"
-    log "INFO" "Enabled application firewall"
-  fi
-  
-  # Ativar stealth mode
-  local stealth_status
-  stealth_status="\$(\$firewall_tool --getstealthmode 2>/dev/null || echo "unknown")"
-  if [[ "\$stealth_status" != *"enabled"* ]]; then
-    sudo "\$firewall_tool" --setstealthmode on 2>/dev/null
-    changes_made="\$(printf '%s\\n' "\$changes_made" | jq '. + ["Enabled stealth mode"]')"
-    log "INFO" "Enabled stealth mode"
-  fi
-  
-  log "SUCCESS" "Firewall configuration completed"
-  
-  jq -n \\
-    --argjson changes "\$changes_made" \\
-    '{
-      success: true,
-      changes_made: \$changes
-    }'
-}
-
-# Handler: restart_service
-handle_restart_service() {
-  local payload_json="\$1"
-  
-  log "INFO" "Executando restart_service..."
-  
-  local service_name
-  service_name="\$(printf '%s\\n' "\$payload_json" | jq -r '.service_name // empty')"
-  
-  if [[ -z "\$service_name" ]]; then
-    echo '{"success": false, "error": "service_name not provided"}'
-    return 1
-  fi
-  
-  log "INFO" "Restarting service: \$service_name"
-  
-  # Tentar LaunchDaemon primeiro
-  local plist_path="/Library/LaunchDaemons/\${service_name}.plist"
-  if [[ -f "\$plist_path" ]]; then
-    sudo launchctl unload "\$plist_path" 2>/dev/null || true
-    sleep 1
-    sudo launchctl load "\$plist_path" 2>/dev/null
-    log "SUCCESS" "Restarted LaunchDaemon: \$service_name"
-    
-    jq -n \\
-      --arg service "\$service_name" \\
-      '{
-        success: true,
-        service: \$service,
-        type: "LaunchDaemon"
-      }'
-    return 0
-  fi
-  
-  # Tentar LaunchAgent
-  plist_path="/Library/LaunchAgents/\${service_name}.plist"
-  if [[ -f "\$plist_path" ]]; then
-    sudo launchctl unload "\$plist_path" 2>/dev/null || true
-    sleep 1
-    sudo launchctl load "\$plist_path" 2>/dev/null
-    log "SUCCESS" "Restarted LaunchAgent: \$service_name"
-    
-    jq -n \\
-      --arg service "\$service_name" \\
-      '{
-        success: true,
-        service: \$service,
-        type: "LaunchAgent"
-      }'
-    return 0
-  fi
-  
-  log "ERROR" "Service not found: \$service_name"
-  jq -n \\
-    --arg service "\$service_name" \\
-    '{
-      success: false,
-      error: "Service not found",
-      service: \$service
-    }'
-}
-
-# Handler: collect_network_info
-handle_collect_network_info() {
-  local payload_json="\$1"
-  local job_agent_id="\$2"
-  
-  log "INFO" "Executando collect_network_info..."
-  
-  # Gateway IP
-  local gateway_ip
-  gateway_ip="\$(netstat -rn | awk '/default/ {print \$2; exit}')"
-  
-  # DNS servers
-  local dns_servers
-  dns_servers="\$(scutil --dns 2>/dev/null | grep 'nameserver\\[' | awk '{print \$3}' | head -5 | jq -R -s -c 'split("\\n") | map(select(length > 0))')"
-  
-  # Public IP
-  local public_ip
-  public_ip="\$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null || echo "unknown")"
-  
-  # Network adapters
-  local adapters="[]"
-  while IFS= read -r interface; do
-    [[ -z "\$interface" ]] && continue
-    local ip_addr mac_addr
-    ip_addr="\$(ifconfig "\$interface" 2>/dev/null | awk '/inet / {print \$2}')"
-    mac_addr="\$(ifconfig "\$interface" 2>/dev/null | awk '/ether / {print \$2}')"
-    
-    if [[ -n "\$ip_addr" ]]; then
-      adapters="\$(printf '%s\\n' "\$adapters" | jq \\
-        --arg name "\$interface" \\
-        --arg ip "\$ip_addr" \\
-        --arg mac "\${mac_addr:-unknown}" \\
-        '. + [{"name": \$name, "ip_address": \$ip, "mac_address": \$mac}]')"
-    fi
-  done < <(networksetup -listallhardwareports 2>/dev/null | awk '/Device:/ {print \$2}')
-  
-  # Firewall status
-  local firewall_enabled="false"
-  local fw_status
-  fw_status="\$(/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate 2>/dev/null || echo "")"
-  [[ "\$fw_status" == *"enabled"* ]] && firewall_enabled="true"
-  
-  # DNS connectivity test
-  local dns_test="false"
-  if ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1; then
-    dns_test="true"
-  fi
-  
-  # HTTPS connectivity test
-  local https_test="false"
-  if curl -s --max-time 5 https://www.google.com >/dev/null 2>&1; then
-    https_test="true"
-  fi
-  
-  log "SUCCESS" "Network info collected"
-  
-  # Enviar para o servidor
-  local body
-  body="\$(jq -n \\
-    --arg agent_id "\$job_agent_id" \\
-    --arg gateway_ip "\$gateway_ip" \\
-    --argjson dns_servers "\$dns_servers" \\
-    --arg public_ip "\$public_ip" \\
-    --argjson network_adapters "\$adapters" \\
-    --arg firewall_enabled "\$firewall_enabled" \\
-    --arg dns_test "\$dns_test" \\
-    --arg https_test "\$https_test" \\
-    '{
-      agent_id: \$agent_id,
-      gateway_ip: \$gateway_ip,
-      dns_servers: \$dns_servers,
-      public_ip: \$public_ip,
-      network_adapters: \$network_adapters,
-      firewall_public: (\$firewall_enabled=="true"),
-      dns_test_success: (\$dns_test=="true"),
-      https_test_success: (\$https_test=="true")
-    }'
-  )"
-  
-  if secure_request "/functions/v1/submit-network-info" "POST" "\$body" 30 3; then
-    log "SUCCESS" "Network info submitted successfully"
-  else
-    log "WARN" "Failed to submit network info"
-  fi
-  
-  printf '%s\\n' "\$body" | jq '. + {success: true}'
-}
-
-# Handler: light_vuln_scan
-handle_light_vuln_scan() {
-  local payload_json="\$1"
-  local job_agent_id="\$2"
-  
-  log "INFO" "Executando light_vuln_scan..."
-  
-  local findings="[]"
-  
-  # Check SSH configuration
-  if [[ -f "/etc/ssh/sshd_config" ]]; then
-    local ssh_config
-    ssh_config="\$(cat /etc/ssh/sshd_config 2>/dev/null)"
-    
-    # Root login check
-    if echo "\$ssh_config" | grep -q "^PermitRootLogin yes"; then
-      findings="\$(printf '%s\\n' "\$findings" | jq \\
-        '. + [{"severity": "high", "title": "SSH Root Login Enabled", "description": "PermitRootLogin is set to yes"}]')"
-    fi
-    
-    # Password auth check
-    if echo "\$ssh_config" | grep -q "^PasswordAuthentication yes"; then
-      findings="\$(printf '%s\\n' "\$findings" | jq \\
-        '. + [{"severity": "medium", "title": "SSH Password Auth Enabled", "description": "Password authentication should be disabled in favor of key-based auth"}]')"
-    fi
-  fi
-  
-  # Check for world-writable files in important directories
-  local world_writable
-  world_writable="\$(find /usr/local/bin /usr/bin 2>/dev/null -perm -0002 -type f | head -5)"
-  if [[ -n "\$world_writable" ]]; then
-    findings="\$(printf '%s\\n' "\$findings" | jq \\
-      --arg files "\$world_writable" \\
-      '. + [{"severity": "high", "title": "World-Writable Executables", "description": ("Found world-writable files: " + \$files)}]')"
-  fi
-  
-  # Check SIP status
-  local sip_status
-  sip_status="\$(csrutil status 2>/dev/null || echo "unknown")"
-  if [[ "\$sip_status" == *"disabled"* ]]; then
-    findings="\$(printf '%s\\n' "\$findings" | jq \\
-      '. + [{"severity": "critical", "title": "System Integrity Protection Disabled", "description": "SIP is disabled, leaving the system vulnerable"}]')"
-  fi
-  
-  # Check Gatekeeper
-  local gatekeeper
-  gatekeeper="\$(spctl --status 2>/dev/null || echo "unknown")"
-  if [[ "\$gatekeeper" == *"disabled"* ]]; then
-    findings="\$(printf '%s\\n' "\$findings" | jq \\
-      '. + [{"severity": "high", "title": "Gatekeeper Disabled", "description": "Gatekeeper is disabled, allowing unsigned apps"}]')"
-  fi
-  
-  # Check FileVault
-  local filevault
-  filevault="\$(fdesetup status 2>/dev/null || echo "unknown")"
-  if [[ "\$filevault" == *"Off"* ]]; then
-    findings="\$(printf '%s\\n' "\$findings" | jq \\
-      '. + [{"severity": "medium", "title": "FileVault Disabled", "description": "Disk encryption (FileVault) is not enabled"}]')"
-  fi
-  
-  local finding_count
-  finding_count="\$(printf '%s\\n' "\$findings" | jq 'length')"
-  log "SUCCESS" "Vulnerability scan completed: \$finding_count findings"
-  
-  # Enviar para o servidor
-  local body
-  body="\$(jq -n \\
-    --arg agent_id "\$job_agent_id" \\
-    --argjson findings "\$findings" \\
-    '{agent_id: \$agent_id, findings: \$findings}'
-  )"
-  
-  if secure_request "/functions/v1/submit-vuln-findings" "POST" "\$body" 30 3; then
-    log "SUCCESS" "Vulnerability findings submitted successfully"
-  else
-    log "WARN" "Failed to submit vulnerability findings"
-  fi
-  
-  jq -n \\
-    --argjson findings "\$findings" \\
-    '{
-      success: true,
-      findings_count: (\$findings|length),
-      findings: \$findings
-    }'
-}
-
-########################################
-# CHECK FOR UPDATES (24h interval)
-########################################
-
-check_for_updates() {
-  log "INFO" "Checking for agent updates..."
-  
-  local body
-  body="\$(jq -n \\
-    --arg agent_version "\$AGENT_VERSION" \\
-    --arg platform "macos" \\
-    '{agent_version: \$agent_version, platform: \$platform}'
-  )"
-  
-  if ! secure_request "/functions/v1/check-agent-updates" "POST" "\$body" 30 2; then
-    log "WARN" "Failed to check for updates"
-    return 1
-  fi
-  
-  local response="\$SECURE_RESP_BODY"
-  local update_available new_version
-  
-  update_available="\$(printf '%s\\n' "\$response" | jq -r '.update_available // false')"
-  new_version="\$(printf '%s\\n' "\$response" | jq -r '.version // empty')"
-  
-  if [[ "\$update_available" == "true" ]] && [[ -n "\$new_version" ]]; then
-    log "INFO" "Update available: \$new_version (current: \$AGENT_VERSION)"
-    # Auto-update sera tratado pelo servidor via job update_agent
-    return 0
-  fi
-  
-  log "INFO" "No updates available. Current version: \$AGENT_VERSION"
-  return 0
-}
-
-########################################
-# EXECUCAO DE JOB
-########################################
-
-execute_job() {
-  local job_id="\$1"
-  local job_type="\$2"
-  local payload_json="\$3"
-  local job_agent_id="\${4:-}"
-
-  log "INFO" "Executando job \$job_id (type=\$job_type)"
-  
-  local started_at
-  started_at="\$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-  local start_ts
-  start_ts=\$(date +%s)
-
-  local output_json status error_msg
-  status="completed"
-  error_msg=""
-
-  case "\$job_type" in
-    integration_test)
-      local sys metrics
-      sys="\$(system_info_json)"
-      metrics="\$(system_metrics_json)"
-      output_json="\$(
-        jq -n \\
-          --arg msg "Integration test OK" \\
-          --arg ts "\$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \\
-          --arg agent "\$AGENT_NAME" \\
-          --argjson sys "\$sys" \\
-          --argjson metrics "\$metrics" \\
-          '{
-            message: \$msg,
-            timestamp: \$ts,
-            agent: \$agent,
-            system: \$sys,
-            metrics: \$metrics
-          }'
-      )"
-      ;;
-      
-    collect_info)
-      local sys metrics
-      sys="\$(system_info_json)"
-      metrics="\$(system_metrics_json)"
-      output_json="\$(
-        jq -n \\
-          --argjson sys "\$sys" \\
-          --argjson metrics "\$metrics" \\
-          '{
-            system: \$sys,
-            metrics: \$metrics
-          }'
-      )"
-      ;;
-    
-    report)
-      local sys metrics cpu_percent mem_percent disk_percent hostname
-      sys="\$(system_info_json)"
-      metrics="\$(system_metrics_json)"
-      
-      cpu_percent="\$(printf '%s\\n' "\$metrics" | jq -r '.cpu_load_percent')"
-      mem_percent="\$(printf '%s\\n' "\$metrics" | jq -r '.ram_used_percent')"
-      disk_percent="\$(printf '%s\\n' "\$metrics" | jq -r '.disk_used_percent')"
-      hostname="\$(printf '%s\\n' "\$sys" | jq -r '.hostname')"
-      
-      output_json="\$(jq -n \\
-        --arg ts "\$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \\
-        --arg host "\$hostname" \\
-        --arg cpu "\$cpu_percent" \\
-        --arg mem "\$mem_percent" \\
-        --arg disk "\$disk_percent" \\
-        '{
-          success: true,
-          timestamp: \$ts,
-          hostname: \$host,
-          cpu_percent: (\$cpu|tonumber),
-          memory_percent: (\$mem|tonumber),
-          disk_percent: (\$disk|tonumber)
-        }'
-      )"
-      ;;
-    
-    sync_blocked_websites)
-      output_json="\$(handle_sync_blocked_websites "\$payload_json")"
-      ;;
-    
-    update_agent)
-      output_json="\$(handle_update_agent "\$payload_json" "\$job_agent_id")"
-      ;;
-    
-    collect_web_activity)
-      output_json="\$(handle_collect_web_activity "\$payload_json" "\$job_agent_id")"
-      ;;
-    
-    software_inventory_collect)
-      output_json="\$(handle_software_inventory_collect "\$payload_json" "\$job_agent_id")"
-      ;;
-    
-    collect_antivirus_status)
-      output_json="\$(handle_collect_antivirus_status "\$payload_json" "\$job_agent_id")"
-      ;;
-    
-    fix_firewall)
-      output_json="\$(handle_fix_firewall "\$payload_json")"
-      ;;
-    
-    restart_service)
-      output_json="\$(handle_restart_service "\$payload_json")"
-      ;;
-    
-    collect_network_info)
-      output_json="\$(handle_collect_network_info "\$payload_json" "\$job_agent_id")"
-      ;;
-    
-    light_vuln_scan)
-      output_json="\$(handle_light_vuln_scan "\$payload_json" "\$job_agent_id")"
-      ;;
-    
-    *)
-      status="failed"
-      error_msg="Tipo de job nao suportado: \$job_type"
-      output_json="\$(jq -n --arg error "\$error_msg" '{error: \$error}')"
-      ;;
-  esac
-
-  local end_ts exec_time
-  end_ts=\$(date +%s)
-  exec_time=\$(( end_ts - start_ts ))
-
-  # Check if job failed
-  local job_success
-  job_success="\$(printf '%s\\n' "\$output_json" | jq -r '.success // true')"
-  if [[ "\$job_success" == "false" ]]; then
-    status="failed"
-    error_msg="\$(printf '%s\\n' "\$output_json" | jq -r '.error // "Unknown error"')"
-  fi
-
-  if [[ "\$status" == "completed" ]]; then
-    submit_job_result "\$job_id" "completed" "\$output_json" "" "\$exec_time" "\$started_at"
-  else
-    log "ERROR" "\$error_msg"
-    submit_job_result "\$job_id" "failed" "\$output_json" "\$error_msg" "\$exec_time" "\$started_at"
-  fi
-}
-
-########################################
-# POLL JOBS
-########################################
-
-poll_jobs() {
-  local body
-  body="\$(
-    jq -n \\
-      --arg agent_name "\$AGENT_NAME" \\
-      --arg agent_version "\$AGENT_VERSION" \\
-      '{agent_name: \$agent_name, agent_version: \$agent_version}'
-  )"
-
-  log "INFO" "Consultando jobs..."
-  if ! secure_request "/functions/v1/poll-jobs" "POST" "\$body" 20 3; then
-    log "ERROR" "poll-jobs falhou (status=\$SECURE_RESP_STATUS)"
-    return
-  fi
-
-  if [[ -z "\$SECURE_RESP_BODY" ]]; then
-    log "WARN" "Resposta de poll-jobs vazia"
-    return
-  fi
-
-  local jobs_json="\$SECURE_RESP_BODY"
-  local count
-  if ! count="\$(printf '%s\\n' "\$jobs_json" | jq 'length' 2>/dev/null)"; then
-    log "ERROR" "Erro ao parsear JSON de poll-jobs"
-    return
-  fi
-
-  if [[ "\$count" -eq 0 ]]; then
-    log "INFO" "Nenhum job disponivel"
-    return
-  fi
-
-  log "INFO" "Recebidos \$count job(s) no poll-jobs"
-
-  printf '%s\\n' "\$jobs_json" | jq -c '.[]' | while read -r job; do
-    local job_id job_type payload_json job_agent_id
-    job_id="\$(printf '%s\\n' "\$job" | jq -r '.id')"
-    job_type="\$(printf '%s\\n' "\$job" | jq -r '.type')"
-    payload_json="\$(printf '%s\\n' "\$job" | jq -c '.payload // {}')"
-    job_agent_id="\$(printf '%s\\n' "\$job" | jq -r '.agent_id // empty')"
-    execute_job "\$job_id" "\$job_type" "\$payload_json" "\$job_agent_id"
-  done
-}
-
-########################################
-# LOOP PRINCIPAL
-########################################
-
-main() {
-  validate_hmac_secret
-
-  local heartbeat_interval=60   # Otimizado v3.10.35 (antes: 30s)
-  local poll_interval=30
-  local metrics_interval=600    # Otimizado v3.10.35 (antes: 300s / 5min)
-  local update_check_interval=86400  # 24 horas
-
-  log "INFO" "============================================"
-  log "INFO" "Iniciando CyberShield Agent - macOS \$AGENT_VERSION"
-  log "INFO" "ServerUrl = \$SERVER_URL"
-  log "INFO" "AgentName = \$AGENT_NAME"
-
-  local bootstrap_start bootstrap_elapsed
-  bootstrap_start=\$(date +%s)
-
-  send_post_installation "true" "" "0"
-  send_heartbeat
-
-  bootstrap_elapsed=\$(( \$(date +%s) - bootstrap_start ))
-  log "INFO" "Bootstrap concluido em \${bootstrap_elapsed}s"
-
-  log "INFO" "Entrando no loop principal (heartbeat=\${heartbeat_interval}s, poll=\${poll_interval}s, metrics=\${metrics_interval}s, update_check=\${update_check_interval}s)"
-
-  local last_hb last_poll last_metrics last_update_check now
-  last_hb=\$(date +%s)
-  last_poll=\$(date +%s)
-  last_metrics=\$(date +%s)
-  last_update_check=\$(date +%s)
-
-  while true; do
+# ============================================
+#  JOB HANDLERS
+# ============================================
+collect_system_metrics() {
+    local cpu_usage
+    cpu_usage=\$(top -l 1 | grep "CPU usage" | awk '{print \$3}' | tr -d '%')
+    local mem_info
+    mem_info=\$(vm_stat | awk '/Pages active/ {print \$3}' | tr -d '.')
+    local disk_usage
+    disk_usage=\$(df -h / | awk 'NR==2 {print \$5}' | tr -d '%')
+    local uptime_seconds
+    uptime_seconds=\$(sysctl -n kern.boottime | awk '{print \$4}' | tr -d ',')
+    local now
     now=\$(date +%s)
-
-    if (( now - last_hb >= heartbeat_interval )); then
-      send_heartbeat
-      last_hb=\$(date +%s)
-    fi
-
-    if (( now - last_poll >= poll_interval )); then
-      poll_jobs
-      last_poll=\$(date +%s)
-    fi
-
-    # Enviar metricas a cada 5 minutos
-    if (( now - last_metrics >= metrics_interval )); then
-      log "INFO" "Coletando metricas de sistema (5min)..."
-      local metrics_json sys_json cpu_p mem_p disk_p host uptime_s boot_time
-      
-      metrics_json="\$(system_metrics_json)"
-      sys_json="\$(system_info_json)"
-      
-      cpu_p="\$(printf '%s\\n' "\$metrics_json" | jq -r '.cpu_load_percent')"
-      mem_p="\$(printf '%s\\n' "\$metrics_json" | jq -r '.ram_used_percent')"
-      disk_p="\$(printf '%s\\n' "\$metrics_json" | jq -r '.disk_used_percent')"
-      uptime_s="\$(printf '%s\\n' "\$metrics_json" | jq -r '.uptime_seconds')"
-      boot_time="\$(printf '%s\\n' "\$metrics_json" | jq -r '.last_boot_time')"
-      host="\$(printf '%s\\n' "\$sys_json" | jq -r '.hostname')"
-      
-      if send_system_metrics "\$cpu_p" "\$mem_p" "\$disk_p" "\$host" "\$uptime_s" "\$boot_time"; then
-        log "SUCCESS" "Metricas enviadas: CPU=\${cpu_p}%, RAM=\${mem_p}%, Disco=\${disk_p}%, Uptime=\${uptime_s}s"
-      else
-        log "WARN" "Falha ao enviar metricas (nao critico)"
-      fi
-      
-      last_metrics=\$(date +%s)
-    fi
-
-    # Check for updates a cada 24 horas
-    if (( now - last_update_check >= update_check_interval )); then
-      check_for_updates
-      last_update_check=\$(date +%s)
-    fi
-
-    sleep 2
-  done
+    uptime_seconds=\$((now - uptime_seconds))
+    
+    cat <<EOF
+{"timestamp":"\$(date -u +%Y-%m-%dT%H:%M:%SZ)","hostname":"\$(hostname)","cpu_percent":\${cpu_usage:-0},"memory_percent":\${mem_info:-0},"disk_percent":\${disk_usage:-0},"uptime_seconds":\${uptime_seconds:-0},"state":"\$(get_state)"}
+EOF
 }
 
-main "\$@"
+collect_software_inventory() {
+    local packages="[]"
+    
+    # Get installed applications from /Applications
+    local apps
+    apps=\$(ls -1 /Applications 2>/dev/null | grep "\\.app\$" | head -100 | while read app; do
+        local name="\${app%.app}"
+        echo "{\\"name\\":\\"\$name\\",\\"version\\":\\"unknown\\",\\"publisher\\":\\"unknown\\"}"
+    done | tr '\\n' ',' | sed 's/,\$//')
+    
+    [[ -n "\$apps" ]] && packages="[\$apps]"
+    
+    local count
+    count=\$(echo "\$packages" | python3 -c "import sys,json; print(len(json.load(sys.stdin)))" 2>/dev/null || echo 0)
+    
+    cat <<EOF
+{"timestamp":"\$(date -u +%Y-%m-%dT%H:%M:%SZ)","hostname":"\$(hostname)","software_count":\$count,"software":\$packages}
+EOF
+}
+
+collect_antivirus_status() {
+    local engines="[]"
+    
+    # Check XProtect (built-in macOS malware protection)
+    if [[ -d "/System/Library/CoreServices/XProtect.bundle" ]]; then
+        local version
+        version=\$(defaults read /System/Library/CoreServices/XProtect.bundle/Contents/Info CFBundleShortVersionString 2>/dev/null || echo "unknown")
+        engines="[{\\"name\\":\\"XProtect\\",\\"version\\":\\"\$version\\",\\"enabled\\":true}]"
+    fi
+    
+    cat <<EOF
+{"timestamp":"\$(date -u +%Y-%m-%dT%H:%M:%SZ)","hostname":"\$(hostname)","engines":\$engines}
+EOF
+}
+
+collect_web_activity() {
+    cat <<EOF
+{"timestamp":"\$(date -u +%Y-%m-%dT%H:%M:%SZ)","hostname":"\$(hostname)","dns_cache":[],"browser_history":[]}
+EOF
+}
+
+# ============================================
+#  LOG ROTATION
+# ============================================
+rotate_logs() {
+    local max_size_mb=10
+    local max_age_days=7
+    
+    if [[ -f "\$LOG_FILE" ]]; then
+        local size
+        size=\$(stat -f%z "\$LOG_FILE" 2>/dev/null || echo 0)
+        local max_bytes=\$((max_size_mb * 1024 * 1024))
+        
+        if [[ \$size -gt \$max_bytes ]]; then
+            local archive="\${LOG_FILE}.\$(date +%Y%m%d-%H%M%S).bak"
+            mv "\$LOG_FILE" "\$archive"
+            log "INFO" "[LOG] Rotated to \$archive"
+        fi
+    fi
+    
+    find "\$LOG_DIR" -name "*.bak" -mtime +\$max_age_days -delete 2>/dev/null || true
+}
+
+# ============================================
+#  MAIN LOOP
+# ============================================
+log "INFO" "============================================"
+log "INFO" "[START] CyberShield Agent v4.0.1 - macOS"
+log "INFO" "[INFO] ServerUrl: \$SERVER_URL"
+log "INFO" "[INFO] AgentName: \$AGENT_NAME"
+log "INFO" "============================================"
+
+add_evidence "state_change" "{\\"event\\":\\"agent_started\\",\\"version\\":\\"\$AGENT_VERSION\\",\\"hostname\\":\\"\$(hostname)\\",\\"features\\":[\\"state_machine\\",\\"evidence_journal\\",\\"dns_filter\\",\\"policy_contract\\"]}" "" "BOOTSTRAP" "info"
+
+# Bootstrap
+set_state "SYNCING" "Starting initial sync"
+
+# Sync policy from server
+sync_policy_from_server || true
+
+# Start DNS if enabled
+if [[ "\$DNS_FILTER_ENABLED" == "true" && -f "\$DNS_FILTER_BINARY" ]]; then
+    log "INFO" "[BOOTSTRAP] Initializing DNS Filter..."
+    start_dns_service || true
+fi
+
+# First heartbeat
+if send_heartbeat; then
+    set_state "ENFORCING" "Initial heartbeat successful"
+else
+    set_state "DEGRADED" "Initial heartbeat failed"
+fi
+
+# Initial compliance check
+check_policy_compliance || invoke_policy_enforcement
+
+log "SUCCESS" "[SUCCESS] Bootstrap completed (state: \$(get_state))"
+
+# Timing variables
+last_heartbeat=\$(date +%s)
+last_poll=\$(date +%s)
+last_evidence_flush=\$(date +%s)
+last_rotation=\$(date +%s)
+last_dns_check=\$(date +%s)
+last_policy_check=\$(date +%s)
+last_policy_sync=\$(date +%s)
+
+# Main loop
+while true; do
+    now=\$(date +%s)
+    state=\$(get_state)
+    
+    # Heartbeat
+    if [[ \$((now - last_heartbeat)) -ge \$POLL_INTERVAL ]]; then
+        if ! send_heartbeat; then
+            if [[ "\$state" == "ENFORCING" ]]; then
+                invoke_auto_recovery "heartbeat" "Heartbeat failed"
+            fi
+        elif [[ "\$state" == "DEGRADED" ]]; then
+            set_state "ENFORCING" "Heartbeat recovered"
+        fi
+        last_heartbeat=\$now
+    fi
+    
+    # Poll jobs
+    if [[ \$((now - last_poll)) -ge \$POLL_INTERVAL ]]; then
+        if can_execute_job; then
+            poll_jobs || true
+        fi
+        last_poll=\$now
+    fi
+    
+    # DNS health check (every 2 minutes)
+    if [[ "\$DNS_FILTER_ENABLED" == "true" && \$((now - last_dns_check)) -ge 120 ]]; then
+        if ! test_dns_health &>/dev/null; then
+            if [[ \$DNS_CONSECUTIVE_FAILURES -ge 3 ]]; then
+                invoke_auto_recovery "dns_filter" "DNS health check failed"
+            fi
+        fi
+        last_dns_check=\$now
+    fi
+    
+    # Policy check (every 5 minutes)
+    if [[ \$((now - last_policy_check)) -ge 300 ]]; then
+        check_policy_compliance || invoke_policy_enforcement
+        last_policy_check=\$now
+    fi
+    
+    # Policy sync (every 30 minutes)
+    if [[ \$((now - last_policy_sync)) -ge 1800 ]]; then
+        sync_policy_from_server || true
+        last_policy_sync=\$now
+    fi
+    
+    # Evidence flush (every 5 minutes)
+    if [[ \$((now - last_evidence_flush)) -ge 300 ]]; then
+        flush_evidence
+        last_evidence_flush=\$now
+    fi
+    
+    # Log rotation (every hour)
+    if [[ \$((now - last_rotation)) -ge 3600 ]]; then
+        rotate_logs
+        rotate_evidence
+        last_rotation=\$now
+    fi
+    
+    sleep 2
+done
 `;
