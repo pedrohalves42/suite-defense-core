@@ -47,7 +47,8 @@ interface Report {
 interface AgentToken {
   id: string;
   agent_id: string;
-  token: string;
+  token_hash: string;
+  token_prefix: string;
   created_at: string;
   last_used_at: string | null;
   expires_at: string | null;
@@ -1332,7 +1333,7 @@ const ServerDashboard = () => {
                             <div className="flex-1">
                               <p className="font-mono font-semibold text-sm text-foreground">{agentName}</p>
                               <p className="text-xs text-muted-foreground font-mono mt-1">
-                                {token.token.substring(0, 8)}...{token.token.substring(token.token.length - 4)}
+                                {token.token_prefix}...****
                               </p>
                             </div>
                             <div className="text-right space-y-1">

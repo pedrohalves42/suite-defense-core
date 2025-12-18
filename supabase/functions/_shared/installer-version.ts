@@ -7,12 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v4.0.1-DNS-POLICY';
+export const INSTALLER_VERSION = 'v4.0.2-UPDATE-FIX';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
-export const LAST_UPDATED = '2025-12-18T15:00:00Z'; // All platforms updated to v4.0.1-DNS-POLICY
+export const LAST_UPDATED = '2025-12-18T18:00:00Z'; // Windows updated to v4.0.2-UPDATE-FIX
 
 export const CHANGES = [
+  '[v4.0.2-UPDATE-FIX] CRITICAL FIX: Invoke-UpdateAgentJob agora implementado REAL (nao mais stub)',
+  '[v4.0.2-UPDATE-FIX] CRITICAL FIX: Base64 decode + SHA256 validation + smart path detection',
+  '[v4.0.2-UPDATE-FIX] CRITICAL FIX: Evidence Journal registra update_check, update_applied, update_failed',
   '[v4.0.1-DNS-POLICY] ARCHITECTURE: State Machine formal com 6 estados (BOOTSTRAP, SYNCING, ENFORCING, DEGRADED, ERROR, RECOVERY)',
   '[v4.0.1-DNS-POLICY] ARCHITECTURE: Evidence Journal local estruturado (JSON Lines) com flush periodico',
   '[v4.0.1-DNS-POLICY] ARCHITECTURE: Policy Contract com deteccao de drift e enforcement automatico',

@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v4.0.1-DNS-POLICY
+    CyberShield Agent - Windows v4.0.2-UPDATE-FIX
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
@@ -14,13 +14,14 @@
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.1:
+    Funcionalidades v4.0.2:
     - State Machine formal com transicoes validadas
     - Evidence Journal local estruturado (JSON Lines)
     - Job Engine idempotente com execution_id
     - Auto-recovery com 3 tentativas + backoff exponencial
     - DNS Filter integrado como Windows Service
     - Policy Contract com deteccao de drift
+    - UPDATE_AGENT REAL com Base64 decode + SHA256 validation
     - Todas as funcionalidades v3.x mantidas
     
     Uso:
@@ -45,7 +46,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.0.1-DNS-POLICY"
+    [string]$AgentVersion = "v4.0.2-UPDATE-FIX"
 )
 
 $ErrorActionPreference = "Stop"
