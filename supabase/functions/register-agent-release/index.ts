@@ -69,6 +69,37 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ========================================
+    // SUPPLY CHAIN VALIDATION (P0 CRITICAL)
+    // Prevents placeholder/corrupted scripts from being registered
+    // ========================================
+    const MIN_SCRIPT_SIZE = 10000; // 10KB minimum for valid agent scripts
+    if (script_content.length < MIN_SCRIPT_SIZE) {
+      logger.error('[register-agent-release] SUPPLY_CHAIN_VIOLATION: Script too small', {
+        requestId,
+        platform,
+        version,
+        size: script_content.length,
+        minRequired: MIN_SCRIPT_SIZE
+      });
+      return new Response(
+        JSON.stringify({
+          error: 'SUPPLY_CHAIN_VIOLATION',
+          message: `Script content too small (${script_content.length} bytes). Minimum required: ${MIN_SCRIPT_SIZE} bytes. Possible placeholder or corruption detected.`,
+          size: script_content.length,
+          minRequired: MIN_SCRIPT_SIZE
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    logger.info('[register-agent-release] Supply chain validation passed', {
+      requestId,
+      platform,
+      version,
+      scriptSize: script_content.length
+    });
+
     // CRITICAL: Platform validation to prevent wrong script type registration
     const scriptTrimmed = script_content.trim();
     const isWindowsScript = scriptTrimmed.startsWith('<#') || scriptTrimmed.startsWith('param(');
