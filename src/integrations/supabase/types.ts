@@ -6964,16 +6964,6 @@ export type Database = {
           },
         ]
       }
-      v_security_definer_inventory: {
-        Row: {
-          category: string | null
-          definition: string | null
-          documentation: string | null
-          function_name: unknown
-          schema_name: unknown
-        }
-        Relationships: []
-      }
       v_stuck_jobs_report: {
         Row: {
           agent_name: string | null
