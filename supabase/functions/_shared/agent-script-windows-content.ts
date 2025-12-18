@@ -9,7 +9,7 @@
  */
 
 // Versão atual do agente Windows  
-export const AGENT_WINDOWS_VERSION = "v4.0.6-SAFE-ROLLBACK";
+export const AGENT_WINDOWS_VERSION = "v4.0.7";
 
 /**
  * @deprecated Script content is now fetched from storage at runtime.

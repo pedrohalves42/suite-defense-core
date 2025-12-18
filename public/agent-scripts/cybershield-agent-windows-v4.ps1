@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v4.0.6-SAFE-ROLLBACK
+    CyberShield Agent - Windows v4.0.7
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
@@ -16,11 +16,12 @@
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.6:
-    - Auto-rollback with structured backup before update (NEW)
-    - Post-update health check (state machine, heartbeat, poll-jobs) (NEW)
-    - Safe Mode after 2 consecutive rollbacks - disables auto-updates (NEW)
-    - submit-rollback-event Edge Function for telemetry (NEW)
+    Funcionalidades v4.0.7:
+    - Fixed heartbeat endpoint from /agent-heartbeat to /heartbeat (BUGFIX)
+    - Auto-rollback with structured backup before update
+    - Post-update health check (state machine, heartbeat, poll-jobs)
+    - Safe Mode after 2 consecutive rollbacks - disables auto-updates
+    - submit-rollback-event Edge Function for telemetry
     - Ed25519 signature verification for updates
     - State Machine formal com transicoes validadas
     - Evidence Journal local estruturado (JSON Lines)
@@ -53,7 +54,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.0.6-SAFE-ROLLBACK"
+    [string]$AgentVersion = "v4.0.7"
 )
 
 $ErrorActionPreference = "Stop"
@@ -1643,7 +1644,7 @@ function Send-Heartbeat {
 
     try {
         $result = Invoke-SecureRequest `
-            -Path "/functions/v1/agent-heartbeat" `
+            -Path "/functions/v1/heartbeat" `
             -Method "POST" `
             -Body $body `
             -TimeoutSec 15
@@ -2022,7 +2023,7 @@ function Invoke-UpdateAgentJob {
     param($Job)
     
     try {
-        Write-Log "[UPDATE] Iniciando update_agent - v4.0.6-SAFE-ROLLBACK" "INFO"
+        Write-Log "[UPDATE] Iniciando update_agent - v4.0.7" "INFO"
         
         # ============================================================
         # FASE 3.0: SAFE MODE CHECK
@@ -2313,10 +2314,10 @@ function Poll-Jobs {
 }
 
 # ============================================
-#  LOOP PRINCIPAL v4.0.1
+#  LOOP PRINCIPAL v4.0.7
 # ============================================
 Write-Log "============================================" "INFO"
-Write-Log "[START] CyberShield Agent v4.0.1 - DNS + Policy" "INFO"
+Write-Log "[START] CyberShield Agent v4.0.7" "INFO"
 Write-Log "[INFO] ServerUrl: $Global:ServerUrl" "DEBUG"
 Write-Log "[INFO] AgentName: $Global:AgentName" "DEBUG"
 Write-Log "============================================" "INFO"
