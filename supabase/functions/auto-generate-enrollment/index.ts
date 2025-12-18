@@ -555,16 +555,15 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
     // Extract token prefix (first 8 characters)
     const tokenPrefix = agentToken.substring(0, 8);
     
-    const { error: tokenError } = await supabase
-      .from('agent_tokens')
-      .insert({
-        agent_id: agentId,
-        token: agentToken,
-        token_hash: tokenHash,
-        token_prefix: tokenPrefix,
-        expires_at: tokenExpiresAt.toISOString(),
-        is_active: true,
-      });
+      const { error: tokenError } = await supabase
+        .from('agent_tokens')
+        .insert({
+          agent_id: agentId,
+          token_hash: tokenHash,
+          token_prefix: tokenPrefix,
+          expires_at: tokenExpiresAt.toISOString(),
+          is_active: true,
+        });
 
     if (tokenError) {
       logger.error(`[${requestId}] Failed to create agent token`, { 
