@@ -3,9 +3,9 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v4.ps1
- * Versao: v4.0.2-UPDATE-FIX
- * SHA256: c8cf3d7cec0b2e146f286b416454a40232121eac1dcc7cf2c163f04ba8a13a3f
- * Gerado em: 2025-12-18T12:17:20.350Z
+ * Versao: v4.0.3-EVIDENCE-FIX
+ * SHA256: auto-calculated-on-deploy
+ * Gerado em: 2025-12-18T15:30:00.000Z
  */
 
 export function getAgentScriptWindows(): string {
@@ -13,7 +13,7 @@ export function getAgentScriptWindows(): string {
 }
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
-    CyberShield Agent - Windows v4.0.2-UPDATE-FIX
+    CyberShield Agent - Windows v4.0.3-EVIDENCE-FIX
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
@@ -28,7 +28,7 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.2:
+    Funcionalidades v4.0.3:
     - State Machine formal com transicoes validadas
     - Evidence Journal local estruturado (JSON Lines)
     - Job Engine idempotente com execution_id
@@ -60,7 +60,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v4.0.2-UPDATE-FIX"
+    [string]\$AgentVersion = "v4.0.3-EVIDENCE-FIX"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -237,7 +237,7 @@ function Test-CanExecuteJob {
 function Add-EvidenceEntry {
     param(
         [Parameter(Mandatory = \$true)]
-        [ValidateSet("state_change", "job_execution", "dns_block", "policy_sync", "auto_recovery", "heartbeat", "update_applied", "error", "policy_drift", "security_event")]
+        [ValidateSet("state_change", "job_execution", "dns_block", "policy_sync", "auto_recovery", "heartbeat", "update_applied", "update_failed", "error", "policy_drift", "security_event")]
         [string]\$Type,
         
         [Parameter(Mandatory = \$true)]
