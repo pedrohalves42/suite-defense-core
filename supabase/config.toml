@@ -52,6 +52,10 @@ verify_jwt = false
 [functions.heartbeat]
 verify_jwt = false
 
+# Agent Heartbeat Proxy (v4.0.6 compatibility)
+[functions.agent-heartbeat]
+verify_jwt = false
+
 [functions.poll-jobs]
 verify_jwt = false
 
