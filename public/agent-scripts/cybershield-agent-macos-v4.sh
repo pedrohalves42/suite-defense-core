@@ -657,7 +657,7 @@ send_heartbeat() {
     
     local body
     body=$(cat <<EOF
-{"agent_name":"$AGENT_NAME","hostname":"$(hostname)","os_type":"macOS","os_version":"$os_version","agent_version":"$AGENT_VERSION","state":"$(get_state)","error_count":${AGENT_STATE[error_count]}}
+{"agent_name":"$AGENT_NAME","hostname":"$(hostname)","os_type":"macos","os_version":"$os_version","agent_version":"$AGENT_VERSION","state":"$(get_state)","error_count":${AGENT_STATE[error_count]}}
 EOF
 )
     

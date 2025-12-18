@@ -1602,7 +1602,7 @@ function Get-SystemInfo {
         $cs = Get-CimInstance Win32_ComputerSystem
 
         return @{
-            os_type       = "Windows"
+            os_type       = "windows"
             os_name       = $os.Caption
             os_version    = $os.Version
             build_number  = $os.BuildNumber
@@ -1615,7 +1615,7 @@ function Get-SystemInfo {
         }
     } catch {
         return @{
-            os_type       = "Windows"
+            os_type       = "windows"
             hostname      = $env:COMPUTERNAME
             agent_name    = $Global:AgentName
             agent_version = $Global:AgentVersion
