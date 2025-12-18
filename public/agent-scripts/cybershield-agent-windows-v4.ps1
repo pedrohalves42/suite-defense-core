@@ -2335,6 +2335,64 @@ try {
     # Transicao: BOOTSTRAP -> SYNCING
     Set-AgentState -NewState "SYNCING" -Reason "Starting initial sync"
 
+    # ============================================================
+    # FASE 3: HEALTH CHECK POS-UPDATE + SAFE MODE CHECK
+    # ============================================================
+    $rollbackState = Get-RollbackState
+    
+    # Verificar Safe Mode
+    if ($rollbackState.safe_mode) {
+        Write-Log "[SAFE MODE] Agente em modo seguro - auto-updates desabilitados" "WARN"
+        Add-EvidenceEntry -Type "security_event" -Data @{
+            event = "safe_mode_active"
+            version = $Global:AgentVersion
+            rollback_count = $rollbackState.rollback_count
+        } -Severity "warning"
+    }
+    
+    # Health Check pos-update: detectar se houve update recente
+    if ($rollbackState.previous_version -and $rollbackState.previous_version -ne $Global:AgentVersion) {
+        Write-Log "[HEALTH CHECK] Update detectado: $($rollbackState.previous_version) -> $($Global:AgentVersion)" "INFO"
+        Write-Log "[HEALTH CHECK] Aguardando 5s para estabilizacao..." "INFO"
+        Start-Sleep -Seconds 5
+        
+        Write-Log "[HEALTH CHECK] Validando versao $($Global:AgentVersion)..." "INFO"
+        $health = Test-PostUpdateHealth
+        
+        if (-not $health.healthy) {
+            Write-Log "[HEALTH CHECK] FALHA: $($health.reason)" "ERROR"
+            Add-EvidenceEntry -Type "security_event" -Data @{
+                event = "health_check_failed"
+                version = $Global:AgentVersion
+                previous_version = $rollbackState.previous_version
+                reason = $health.reason
+            } -Severity "error"
+            
+            # Executar rollback automatico
+            $rollbackResult = Invoke-SafeRollback -Reason "health_check_failed"
+            
+            if ($rollbackResult.safe_mode) {
+                Write-Log "[CRITICAL] Agente entrou em SAFE MODE apos rollback loop" "ERROR"
+            }
+            # Se rollback executado com sucesso, o agente sera reiniciado
+            # Se falhou, continuar em modo degradado
+        } else {
+            Write-Log "[HEALTH CHECK] Versao $($Global:AgentVersion) validada com sucesso" "SUCCESS"
+            
+            # Reset rollback state apos sucesso
+            $rollbackState.rollback_count = 0
+            $rollbackState.previous_version = $null
+            Save-RollbackState -State $rollbackState
+            
+            Add-EvidenceEntry -Type "state_change" -Data @{
+                event = "update_validated"
+                version = $Global:AgentVersion
+                health_check = "passed"
+            } -Severity "info"
+        }
+    }
+    # ============================================================
+
     # Sincronizar policy do servidor
     Write-Log "[BOOTSTRAP] Syncing policy from server..." "INFO"
     Sync-PolicyFromServer | Out-Null
