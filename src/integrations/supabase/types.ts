@@ -7151,6 +7151,40 @@ export type Database = {
           unique_identifiers: number
         }[]
       }
+      get_recent_jobs: {
+        Args: { p_limit?: number; p_tenant_id: string }
+        Returns: {
+          agent_id: string | null
+          agent_name: string
+          approved: boolean
+          completed_at: string | null
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          execution_time_seconds: number | null
+          finished_at: string | null
+          id: string
+          is_recurring: boolean | null
+          last_run_at: string | null
+          next_run_at: string | null
+          output: Json | null
+          parent_job_id: string | null
+          payload: Json | null
+          priority: number | null
+          recurrence_pattern: string | null
+          scheduled_at: string | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+          type: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_replay_attempts: {
         Args: { hours_back?: number }
         Returns: {

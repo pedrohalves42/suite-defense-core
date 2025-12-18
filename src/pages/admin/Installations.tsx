@@ -1,10 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, BarChart3, ScrollText, GitBranch } from "lucide-react";
+import { Package, HeartPulse, AlertTriangle } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import AgentInstaller from "../AgentInstaller";
-import InstallationPipelineMonitor from "./InstallationPipelineMonitor";
-import InstallationAnalytics from "./InstallationAnalytics";
-import InstallationMetrics from "./InstallationMetrics";
+import InstallationHealthOverview from "./InstallationHealthOverview";
 import InstallationLogsExplorer from "./InstallationLogsExplorer";
 
 const Installations = () => {
@@ -14,9 +12,9 @@ const Installations = () => {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Gerenciar Instalacoes</h1>
+        <h1 className="text-3xl font-bold">Central de Instalações</h1>
         <p className="text-muted-foreground">
-          Central completa para monitorar e gerenciar instalacoes de agentes
+          Instale novos agentes e monitore a saúde do processo
         </p>
       </div>
 
@@ -25,26 +23,18 @@ const Installations = () => {
         onValueChange={(value) => setSearchParams({ tab: value })}
         className="space-y-4"
       >
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="installer">
             <Package className="h-4 w-4 mr-2" />
-            Instalador
+            Instalar Agentes
           </TabsTrigger>
-          <TabsTrigger value="pipeline">
-            <GitBranch className="h-4 w-4 mr-2" />
-            Pipeline
-          </TabsTrigger>
-          <TabsTrigger value="analytics">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger value="metrics">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Metricas
+          <TabsTrigger value="health">
+            <HeartPulse className="h-4 w-4 mr-2" />
+            Saúde das Instalações
           </TabsTrigger>
           <TabsTrigger value="logs">
-            <ScrollText className="h-4 w-4 mr-2" />
-            Logs
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            Falhas e Logs
           </TabsTrigger>
         </TabsList>
 
@@ -52,16 +42,8 @@ const Installations = () => {
           <AgentInstaller />
         </TabsContent>
 
-        <TabsContent value="pipeline" className="space-y-4">
-          <InstallationPipelineMonitor />
-        </TabsContent>
-
-        <TabsContent value="analytics" className="space-y-4">
-          <InstallationAnalytics />
-        </TabsContent>
-
-        <TabsContent value="metrics" className="space-y-4">
-          <InstallationMetrics />
+        <TabsContent value="health" className="space-y-4">
+          <InstallationHealthOverview />
         </TabsContent>
 
         <TabsContent value="logs" className="space-y-4">
