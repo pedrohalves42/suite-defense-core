@@ -141,15 +141,30 @@ Deno.serve(async (req) => {
     
     const agentToken = enrollmentData.agent_token;
 
-    // FASE 1 CRITICO: Use inline agent script (always available)
-    logger.info('Using inline agent script', { requestId });
+    // FASE 1 CRITICO: Fetch agent script from storage
+    logger.info('Fetching agent script from storage', { requestId });
     
-const { getAgentScriptWindows } = await import('../_shared/agent-script-windows-content.ts');
-const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
-    const agentScriptContent = getAgentScriptWindows();
+    const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
+    
+    // Buscar script do storage bucket
+    const { data: fileData, error: storageError } = await serviceRoleClient.storage
+      .from('agent-installers')
+      .download('scripts/cybershield-agent-windows-v3.ps1');
+    
+    if (storageError || !fileData) {
+      logger.error('Failed to fetch script from storage', { requestId, error: storageError });
+      return createErrorResponse(
+        ErrorCode.INTERNAL_ERROR,
+        'Agent script not found in storage',
+        503,
+        requestId
+      );
+    }
+    
+    const agentScriptContent = await fileData.text();
     
     if (!validateAgentScriptContent(agentScriptContent)) {
-      logger.error('CRITICAL: Inline script validation failed', { requestId });
+      logger.error('CRITICAL: Script validation failed', { requestId });
       return createErrorResponse(
         ErrorCode.INTERNAL_ERROR,
         'Agent script content is invalid',

@@ -239,15 +239,43 @@ Deno.serve(async (req) => {
     let finalScriptContent = release.script_content;
     
     if (!release.script_content || release.script_content.length < 1000) {
-      logger.warn('[serve-agent-update] Script no banco e placeholder, usando embedded', { 
+      logger.warn('[serve-agent-update] Script no banco e placeholder, tentando buscar do storage', { 
         requestId, 
-        dbScriptSize: release.script_content?.length || 0,
-        embeddedScriptSize: AGENT_SCRIPT_WINDOWS_CONTENT.length
+        dbScriptSize: release.script_content?.length || 0
       });
       
-      // Usar script embedded como fallback
-      if (platform === 'windows' && AGENT_SCRIPT_WINDOWS_CONTENT) {
-        finalScriptContent = AGENT_SCRIPT_WINDOWS_CONTENT;
+      // Tentar buscar do storage bucket
+      if (platform === 'windows') {
+        try {
+          const { data: fileData, error: storageError } = await supabase.storage
+            .from('agent-installers')
+            .download('scripts/cybershield-agent-windows-v3.ps1');
+          
+          if (!storageError && fileData) {
+            finalScriptContent = await fileData.text();
+            logger.info('[serve-agent-update] Script carregado do storage', {
+              requestId,
+              size: finalScriptContent.length
+            });
+          }
+        } catch (storageErr) {
+          logger.error('[serve-agent-update] Falha ao buscar script do storage', {
+            requestId,
+            error: storageErr
+          });
+        }
+      }
+      
+      // Se ainda não temos script válido, retornar erro
+      if (!finalScriptContent || finalScriptContent.length < 1000) {
+        logger.error('[serve-agent-update] Nenhum script válido disponível', { requestId });
+        return new Response(
+          JSON.stringify({ 
+            error: 'No valid script available',
+            message: 'Script content not found in database or storage'
+          }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     }
 

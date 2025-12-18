@@ -17,18 +17,39 @@ Deno.serve(async (req) => {
     // Create Supabase client with service role
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // FASE 1 CRITICO: Use inline agent script
-    console.log(`[${requestId}] Using inline agent script`);
-const { getAgentScriptWindows } = await import('../_shared/agent-script-windows-content.ts');
-const { validateAgentScriptContent } = await import('../_shared/agent-script-validator.ts');
-    const scriptContent = getAgentScriptWindows();
+    // FASE 1 CRITICO: Fetch agent script from storage
+    console.log(`[${requestId}] Fetching agent script from storage`);
+    
+    const { validateAgentScriptContent } = await import('../_shared/agent-script-validator.ts');
+    
+    // Buscar script do storage bucket
+    const { data: fileData, error: storageError } = await supabase.storage
+      .from('agent-installers')
+      .download('scripts/cybershield-agent-windows-v3.ps1');
+    
+    if (storageError || !fileData) {
+      console.error(`[${requestId}] Failed to fetch script from storage:`, storageError);
+      return new Response(
+        JSON.stringify({
+          error: 'Agent script not found',
+          message: 'Script not found in storage bucket',
+          requestId
+        }),
+        {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+    
+    const scriptContent = await fileData.text();
     
     if (!validateAgentScriptContent(scriptContent)) {
-      console.error(`[${requestId}] CRITICAL: Inline script validation failed`);
+      console.error(`[${requestId}] CRITICAL: Script validation failed`);
       return new Response(
         JSON.stringify({
           error: 'Agent script validation failed',
-          message: 'Inline script content is invalid or corrupted',
+          message: 'Script content is invalid or corrupted',
           requestId
         }),
         {
