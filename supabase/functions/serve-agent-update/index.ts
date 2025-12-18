@@ -104,16 +104,33 @@ Deno.serve(async (req) => {
       .eq('enabled', true)
       .single();
 
+    // Calcular bucket determinístico via SHA256(agent_id) - sempre calculamos para telemetria
+    const agentIdHash = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(agent.id)
+    );
+    const bucketHashArray = Array.from(new Uint8Array(agentIdHash));
+    const bucket = ((bucketHashArray[0] << 8) | bucketHashArray[1]) % 100;
+
+    // Função helper para registrar decisão de rollout
+    const logRolloutDecision = async (decision: 'allowed' | 'skipped' | 'no_policy' | 'already_current', targetVersion: string, rolloutPercentage: number) => {
+      try {
+        await supabase.from('agent_update_decisions').insert({
+          agent_id: agent.id,
+          agent_name: agent.agent_name,
+          platform,
+          target_version: targetVersion,
+          bucket,
+          rollout_percentage: rolloutPercentage,
+          decision,
+          current_version: agent.agent_version
+        });
+      } catch (err) {
+        logger.warn('[serve-agent-update] Failed to log rollout decision', { requestId, error: err });
+      }
+    };
+
     if (rolloutPolicy) {
-      // Calcular bucket determinístico via SHA256(agent_id)
-      const agentIdHash = await crypto.subtle.digest(
-        'SHA-256',
-        new TextEncoder().encode(agent.id)
-      );
-      const hashArray = Array.from(new Uint8Array(agentIdHash));
-      // Usar primeiros 2 bytes para bucket (0-255) mod 100
-      const bucket = ((hashArray[0] << 8) | hashArray[1]) % 100;
-      
       if (bucket >= rolloutPolicy.rollout_percentage) {
         logger.info('[serve-agent-update] Agente fora do rollout', { 
           requestId, 
@@ -122,6 +139,10 @@ Deno.serve(async (req) => {
           rolloutPercentage: rolloutPolicy.rollout_percentage,
           targetVersion: rolloutPolicy.target_version
         });
+        
+        // TELEMETRIA: Registrar decisão "skipped"
+        await logRolloutDecision('skipped', rolloutPolicy.target_version, rolloutPolicy.rollout_percentage);
+        
         return new Response(
           JSON.stringify({ 
             message: 'No update available (outside rollout)',
@@ -141,10 +162,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar ultima release ativa
+    // Buscar ultima release ativa (incluindo assinatura criptográfica)
     const { data: release, error: releaseError } = await supabase
       .from('agent_releases')
-      .select('version, script_content, sha256, release_notes, created_at')
+      .select('version, script_content, sha256, release_notes, created_at, signature_base64, signed_at, signed_by')
       .eq('platform', platform)
       .eq('channel', 'stable')
       .eq('is_active', true)
@@ -200,6 +221,10 @@ Deno.serve(async (req) => {
           releaseVersion: release.version,
           normalized: { current: currentVersionNorm, release: releaseVersionNorm }
         });
+        
+        // TELEMETRIA: Registrar decisão "already_current"
+        await logRolloutDecision('already_current', release.version, rolloutPolicy?.rollout_percentage || 100);
+        
         return new Response(
           JSON.stringify({ 
             message: 'Already up to date',
@@ -277,6 +302,9 @@ Deno.serve(async (req) => {
       base64Size: base64Script.length
     });
 
+    // TELEMETRIA: Registrar decisão "allowed" (update será enviado)
+    await logRolloutDecision('allowed', release.version, rolloutPolicy?.rollout_percentage || 100);
+
     return new Response(
       JSON.stringify({
         version: release.version,
@@ -287,6 +315,10 @@ Deno.serve(async (req) => {
         // NOVO: Para agentes v3.10.39+ que suportam Base64
         script_content_base64: base64Script,     // ← Base64 dos bytes CRLF-normalizados
         sha256_base64: base64Sha256,             // ← SHA256 dos bytes Base64
+        // FASE 2: Assinatura criptográfica Ed25519
+        signature_base64: release.signature_base64 || null,
+        signed_at: release.signed_at || null,
+        signed_by: release.signed_by || null,
         release_notes: release.release_notes,
         platform: platform,
         current_version: agent.agent_version,

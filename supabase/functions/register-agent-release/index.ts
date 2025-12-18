@@ -60,7 +60,17 @@ Deno.serve(async (req) => {
 
     // Parse payload
     const payload = await req.json();
-    const { platform, version, script_content, release_notes, channel = 'stable', manual_sha256 } = payload;
+    const { 
+      platform, 
+      version, 
+      script_content, 
+      release_notes, 
+      channel = 'stable', 
+      manual_sha256,
+      // FASE 2: Assinatura criptográfica Ed25519
+      signature_base64,
+      signed_by
+    } = payload;
 
     if (!platform || !version || !script_content) {
       return new Response(
@@ -166,7 +176,9 @@ Deno.serve(async (req) => {
       platform,
       version,
       sha256: sha256.substring(0, 16) + '...',
-      size: script_content.length
+      size: script_content.length,
+      hasSignature: !!signature_base64,
+      signedBy: signed_by || null
     });
 
     // Desativar versoes anteriores como "latest"
@@ -182,18 +194,31 @@ Deno.serve(async (req) => {
       .eq('channel', channel);
 
     // Inserir em agent_releases
+    const releaseData: Record<string, unknown> = {
+      platform,
+      version,
+      channel,
+      script_content,
+      sha256,
+      release_notes: release_notes || `Release ${version}`,
+      is_active: true,
+      created_by: user.id
+    };
+
+    // FASE 2: Adicionar assinatura se fornecida
+    if (signature_base64) {
+      releaseData.signature_base64 = signature_base64;
+      releaseData.signed_at = new Date().toISOString();
+      releaseData.signed_by = signed_by || 'manual';
+      logger.info('[register-agent-release] Adding Ed25519 signature to release', {
+        requestId,
+        signedBy: releaseData.signed_by
+      });
+    }
+
     const { error: releaseError } = await supabase
       .from('agent_releases')
-      .upsert({
-        platform,
-        version,
-        channel,
-        script_content,
-        sha256,
-        release_notes: release_notes || `Release ${version}`,
-        is_active: true,
-        created_by: user.id
-      }, {
+      .upsert(releaseData, {
         onConflict: 'platform,version,channel'
       });
 
@@ -240,7 +265,9 @@ Deno.serve(async (req) => {
         platform,
         version,
         sha256,
-        size_bytes: script_content.length
+        size_bytes: script_content.length,
+        signature_present: !!signature_base64,
+        signed_by: signature_base64 ? (signed_by || 'manual') : null
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

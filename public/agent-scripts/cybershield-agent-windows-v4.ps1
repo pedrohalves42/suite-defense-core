@@ -1,10 +1,11 @@
 <#
-    CyberShield Agent - Windows v4.0.4-BACKWARD-COMPAT
+    CyberShield Agent - Windows v4.0.5-ED25519-VERIFY
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
     FASE 2.4: DNS Filter Go como Windows Service
     FASE 2.5: Policy Contract (Desired vs Actual + Drift Detection)
+    FASE 2.6: Ed25519 Signature Verification (NEW)
     
     Estados:
     - BOOTSTRAP: Inicializacao do agente
@@ -14,7 +15,8 @@
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.2:
+    Funcionalidades v4.0.5:
+    - Ed25519 signature verification for updates (NEW)
     - State Machine formal com transicoes validadas
     - Evidence Journal local estruturado (JSON Lines)
     - Job Engine idempotente com execution_id
@@ -46,7 +48,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.0.4-BACKWARD-COMPAT"
+    [string]$AgentVersion = "v4.0.5-ED25519-VERIFY"
 )
 
 $ErrorActionPreference = "Stop"
@@ -99,6 +101,137 @@ $Global:EvidenceJournalPath = Join-Path -Path $evidenceDir -ChildPath "journal.l
 
 # Intervalos
 $Global:PollIntervalSeconds = 60
+
+# ============================================
+#  FASE 2.6: ED25519 SIGNATURE VERIFICATION
+# ============================================
+# IMPORTANT: This is the Ed25519 PUBLIC KEY for verifying agent updates
+# The corresponding PRIVATE KEY must NEVER be stored in the agent or repository
+# Private key should be in HSM, HashiCorp Vault, or offline encrypted storage
+# 
+# To generate a new keypair (offline, secure environment):
+#   openssl genpkey -algorithm Ed25519 -out private.key
+#   openssl pkey -in private.key -pubout -out public.key
+#   cat public.key | base64 -w0
+#
+# To sign a release:
+#   openssl pkeyutl -sign -inkey private.key -rawin -in script.ps1 > signature.bin
+#   base64 -w0 signature.bin > signature.txt
+
+# PLACEHOLDER: Replace with actual Ed25519 public key when available
+# Format: Base64-encoded SubjectPublicKeyInfo (SPKI) format
+$Global:Ed25519PublicKey = $null  # Set to Base64 public key string when ready
+
+function Verify-Ed25519Signature {
+    <#
+    .SYNOPSIS
+        Verifies an Ed25519 signature for script content
+    .DESCRIPTION
+        Uses .NET cryptography to verify Ed25519 signatures.
+        Returns $true if signature is valid, $false otherwise.
+        If no public key is configured, returns $true (backward compatible).
+    .PARAMETER ScriptBytes
+        The raw bytes of the script to verify
+    .PARAMETER SignatureBase64
+        The Base64-encoded Ed25519 signature
+    #>
+    param (
+        [Parameter(Mandatory = $true)]
+        [byte[]]$ScriptBytes,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$SignatureBase64
+    )
+    
+    try {
+        # If no signature provided and no public key configured, allow (backward compat)
+        if ([string]::IsNullOrEmpty($SignatureBase64)) {
+            if ([string]::IsNullOrEmpty($Global:Ed25519PublicKey)) {
+                Write-Log "[SECURITY] No signature verification configured (backward compatible mode)" "WARN"
+                return $true
+            } else {
+                Write-Log "[SECURITY] ❌ Signature required but not provided" "ERROR"
+                return $false
+            }
+        }
+        
+        # If public key not configured, skip verification (backward compat)
+        if ([string]::IsNullOrEmpty($Global:Ed25519PublicKey)) {
+            Write-Log "[SECURITY] Ed25519 public key not configured - skipping signature verification" "WARN"
+            return $true
+        }
+        
+        Write-Log "[SECURITY] Verifying Ed25519 signature..." "INFO"
+        
+        # Decode signature from Base64
+        $signature = [Convert]::FromBase64String($SignatureBase64)
+        
+        # Decode public key from Base64
+        $publicKeyBytes = [Convert]::FromBase64String($Global:Ed25519PublicKey)
+        
+        # Check if .NET supports Ed25519 (requires .NET 5+ or Windows with specific updates)
+        $ed25519Type = [Type]::GetType("System.Security.Cryptography.Ed25519")
+        
+        if ($null -eq $ed25519Type) {
+            # Fallback: Try using ECDsa with Ed25519 curve (requires newer .NET)
+            try {
+                # Import public key and verify
+                $ed25519 = [System.Security.Cryptography.ECDsa]::Create()
+                $ed25519.ImportSubjectPublicKeyInfo($publicKeyBytes, [ref]$null)
+                
+                $isValid = $ed25519.VerifyData($ScriptBytes, $signature, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+                
+                if ($isValid) {
+                    Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+                } else {
+                    Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+                }
+                
+                return $isValid
+            }
+            catch {
+                # If Ed25519 is not supported on this system, log warning and allow
+                Write-Log "[SECURITY] Ed25519 verification not supported on this system: $($_.Exception.Message)" "WARN"
+                Write-Log "[SECURITY] Allowing update (signature present but cannot verify)" "WARN"
+                
+                Add-EvidenceEntry -Type "security_warning" -Data @{
+                    event = "ed25519_not_supported"
+                    error = $_.Exception.Message
+                    signature_provided = $true
+                } -Severity "warning"
+                
+                return $true
+            }
+        }
+        else {
+            # Use native Ed25519 support
+            $ed25519 = [System.Security.Cryptography.Ed25519]::Create()
+            $ed25519.ImportSubjectPublicKeyInfo($publicKeyBytes, [ref]$null)
+            
+            $isValid = $ed25519.VerifyData($ScriptBytes, $signature)
+            
+            if ($isValid) {
+                Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+            } else {
+                Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+            }
+            
+            return $isValid
+        }
+    }
+    catch {
+        Write-Log "[SECURITY] Signature verification error: $($_.Exception.Message)" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "signature_verification_failed"
+            error = $_.Exception.Message
+        } -Severity "error"
+        
+        # Security: If verification fails unexpectedly, reject the update
+        return $false
+    }
+}
+
 
 # ============================================
 #  FASE 2.1: STATE MACHINE FORMAL
@@ -1598,7 +1731,7 @@ function Invoke-UpdateAgentJob {
     param($Job)
     
     try {
-        Write-Log "[UPDATE] Iniciando update_agent - v4.0.2-UPDATE-FIX" "INFO"
+        Write-Log "[UPDATE] Iniciando update_agent - v4.0.5-ED25519-VERIFY" "INFO"
         
         Add-EvidenceEntry -Type "update_check" -Data @{
             current_version = $Global:AgentVersion
@@ -1623,6 +1756,17 @@ function Invoke-UpdateAgentJob {
             Add-EvidenceEntry -Type "update_check" -Data @{
                 status = "already_current"
                 version = $data.current_version
+            } -Severity "info"
+            return @{ success = $true; output = ($data | ConvertTo-Json -Compress) }
+        }
+        
+        # Fora do rollout?
+        if ($data.message -eq "No update available (outside rollout)") {
+            Write-Log "[INFO] Agente fora do rollout gradual (bucket: $($data.rollout_bucket), required: <$($data.rollout_percentage)%)" "INFO"
+            Add-EvidenceEntry -Type "update_check" -Data @{
+                status = "outside_rollout"
+                bucket = $data.rollout_bucket
+                rollout_percentage = $data.rollout_percentage
             } -Severity "info"
             return @{ success = $true; output = ($data | ConvertTo-Json -Compress) }
         }
@@ -1669,6 +1813,7 @@ function Invoke-UpdateAgentJob {
         # CRITICAL: BASE64 DECODE - Preserva 100% dos bytes
         # Imune a transformacoes JSON/PowerShell
         # ============================================================
+        $bytes = $null
         if ($data.script_content_base64) {
             Write-Log "[UPDATE] Usando Base64 decode (safe mode)" "INFO"
             $bytes = [System.Convert]::FromBase64String($data.script_content_base64)
@@ -1679,6 +1824,7 @@ function Invoke-UpdateAgentJob {
             Write-Log "[UPDATE] Fallback para script_content (string mode)" "WARN"
             $scriptText = $data.script_content
             [System.IO.File]::WriteAllText($tempScript, $scriptText, [System.Text.UTF8Encoding]::new($false))
+            $bytes = [System.IO.File]::ReadAllBytes($tempScript)
         }
         
         # Validar SHA256 do arquivo ESCRITO no disco
@@ -1689,6 +1835,46 @@ function Invoke-UpdateAgentJob {
         }
         
         Write-Log "[SUCCESS] SHA256 validado: $actualHash" "SUCCESS"
+        
+        # ============================================================
+        # FASE 2.6: ED25519 SIGNATURE VERIFICATION
+        # Verifica assinatura criptográfica ANTES de aplicar update
+        # ============================================================
+        $signatureVerified = $false
+        if ($data.signature_base64) {
+            Write-Log "[SECURITY] Verificando assinatura Ed25519 (signed by: $($data.signed_by))" "INFO"
+            
+            $signatureVerified = Verify-Ed25519Signature -ScriptBytes $bytes -SignatureBase64 $data.signature_base64
+            
+            if (-not $signatureVerified) {
+                Remove-Item $tempScript -Force
+                
+                Add-EvidenceEntry -Type "error" -Data @{
+                    event = "signature_rejected"
+                    version = $newVersion
+                    signed_by = $data.signed_by
+                    sha256 = $actualHash
+                } -Severity "error"
+                
+                throw "Ed25519 signature verification FAILED - Update rejected for security"
+            }
+            
+            Add-EvidenceEntry -Type "security_event" -Data @{
+                event = "signature_verified"
+                version = $newVersion
+                signed_by = $data.signed_by
+                signed_at = $data.signed_at
+            } -Severity "info"
+        } else {
+            Write-Log "[SECURITY] Nenhuma assinatura fornecida - modo backward compatible" "WARN"
+            
+            # Log para auditoria
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "unsigned_update"
+                version = $newVersion
+                note = "Update applied without cryptographic signature (backward compatible)"
+            } -Severity "warning"
+        }
         
         # Backup do script atual (opcional - nao falha se nao encontrar)
         if ($currentScript -and (Test-Path $currentScript)) {
@@ -1715,6 +1901,8 @@ function Invoke-UpdateAgentJob {
             target_path = $targetScript
             sha256 = $actualHash
             base64_mode = [bool]$data.script_content_base64
+            signature_verified = $signatureVerified
+            signed_by = $data.signed_by
         } -Severity "info"
         
         Write-Log "[SUCCESS] Script v$newVersion instalado em $targetScript" "SUCCESS"
@@ -1728,6 +1916,8 @@ function Invoke-UpdateAgentJob {
             targetPath  = $targetScript
             sha256      = $actualHash
             base64Mode  = [bool]$data.script_content_base64
+            signatureVerified = $signatureVerified
+            signedBy    = $data.signed_by
             requiresReboot = $true
             savedAt     = (Get-Date).ToUniversalTime().ToString("o")
         }

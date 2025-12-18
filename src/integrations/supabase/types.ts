@@ -537,6 +537,9 @@ export type Database = {
           release_notes: string | null
           script_content: string
           sha256: string
+          signature_base64: string | null
+          signed_at: string | null
+          signed_by: string | null
           version: string
         }
         Insert: {
@@ -549,6 +552,9 @@ export type Database = {
           release_notes?: string | null
           script_content: string
           sha256: string
+          signature_base64?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
           version: string
         }
         Update: {
@@ -561,6 +567,9 @@ export type Database = {
           release_notes?: string | null
           script_content?: string
           sha256?: string
+          signature_base64?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
           version?: string
         }
         Relationships: []
@@ -967,6 +976,88 @@ export type Database = {
           },
           {
             foreignKeyName: "agent_tokens_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_update_decisions: {
+        Row: {
+          agent_id: string | null
+          agent_name: string
+          bucket: number
+          created_at: string | null
+          current_version: string | null
+          decision: string
+          id: string
+          platform: string
+          rollout_percentage: number
+          target_version: string
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name: string
+          bucket: number
+          created_at?: string | null
+          current_version?: string | null
+          decision: string
+          id?: string
+          platform: string
+          rollout_percentage: number
+          target_version: string
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string
+          bucket?: number
+          created_at?: string | null
+          current_version?: string | null
+          decision?: string
+          id?: string
+          platform?: string
+          rollout_percentage?: number
+          target_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_update_decisions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_update_decisions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_update_decisions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_update_decisions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_update_decisions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_update_decisions_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "v_problematic_agents"
@@ -7206,6 +7297,7 @@ export type Database = {
           partition_name: string
         }[]
       }
+      cleanup_old_update_decisions: { Args: never; Returns: undefined }
       cleanup_orphaned_agents: { Args: never; Returns: number }
       cleanup_problematic_agent: { Args: { p_agent_id: string }; Returns: Json }
       cleanup_stale_queued_jobs: {
