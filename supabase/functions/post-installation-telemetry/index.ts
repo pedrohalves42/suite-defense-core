@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { verifyHmacSignature } from "../_shared/hmac.ts";
+import { hashToken } from "../_shared/token-hash.ts";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
@@ -24,10 +25,12 @@ async function recordUnverifiedTelemetry(
     const partialToken = body.agent_token;
     
     if (partialToken && typeof partialToken === 'string' && partialToken.length >= 8) {
+      // Use token_prefix for partial matching (first 8 chars)
+      const tokenPrefix = partialToken.substring(0, 8);
       const { data: tokenMatch } = await supabaseClient
         .from("agent_tokens")
         .select("agents!inner(tenant_id)")
-        .like("token", `${partialToken}%`)
+        .eq("token_prefix", tokenPrefix)
         .limit(1)
         .maybeSingle();
       
@@ -142,11 +145,12 @@ serve(async (req) => {
       );
     }
 
-    // Fetch agent token details
+    // Fetch agent token details using hash
+    const tokenHash = await hashToken(agentTokenHeader);
     const { data: agentToken, error: tokenError } = await supabaseClient
       .from("agent_tokens")
       .select("agent_id, is_active, expires_at, agents!inner(id, agent_name, tenant_id, hmac_secret)")
-      .eq("token", agentTokenHeader)
+      .eq("token_hash", tokenHash)
       .maybeSingle();
 
     if (tokenError || !agentToken) {
