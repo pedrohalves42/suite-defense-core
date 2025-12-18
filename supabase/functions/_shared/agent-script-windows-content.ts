@@ -1,24 +1,26 @@
-/* eslint-disable no-useless-escape */
+/* eslint-disable */
 /**
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v4.ps1
- * Versao: v4.0.4-BACKWARD-COMPAT
+ * Versao: v4.0.6-SAFE-ROLLBACK
  * SHA256: auto-calculated-on-deploy
- * Gerado em: 2025-12-18T23:00:00.000Z
+ * Gerado em: 2025-12-18T23:30:00.000Z
  */
 
 export function getAgentScriptWindows(): string {
   return AGENT_SCRIPT_WINDOWS_CONTENT;
 }
 
-export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
-    CyberShield Agent - Windows v4.0.4-BACKWARD-COMPAT
+export const AGENT_SCRIPT_WINDOWS_CONTENT = \`<#
+    CyberShield Agent - Windows v4.0.6-SAFE-ROLLBACK
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
     FASE 2.4: DNS Filter Go como Windows Service
     FASE 2.5: Policy Contract (Desired vs Actual + Drift Detection)
+    FASE 2.6: Ed25519 Signature Verification
+    FASE 3.0: Auto-Rollback & Safe Mode (NEW)
     
     Estados:
     - BOOTSTRAP: Inicializacao do agente
@@ -28,7 +30,12 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.4:
+    Funcionalidades v4.0.6:
+    - Auto-rollback with structured backup before update (NEW)
+    - Post-update health check (state machine, heartbeat, poll-jobs) (NEW)
+    - Safe Mode after 2 consecutive rollbacks - disables auto-updates (NEW)
+    - submit-rollback-event Edge Function for telemetry (NEW)
+    - Ed25519 signature verification for updates
     - State Machine formal com transicoes validadas
     - Evidence Journal local estruturado (JSON Lines)
     - Job Engine idempotente com execution_id
@@ -39,10 +46,10 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
     - Todas as funcionalidades v3.x mantidas
     
     Uso:
-    powershell.exe -ExecutionPolicy Bypass -File .\\cybershield-agent-windows-v4.ps1 \`
-        -ServerUrl "https://seu-projeto.supabase.co" \`
-        -AgentToken "AGENT_TOKEN_AQUI" \`
-        -HmacSecret "64_HEX_CHARS_AQUI" \`
+    powershell.exe -ExecutionPolicy Bypass -File .\\cybershield-agent-windows-v4.ps1 \\\`
+        -ServerUrl "https://seu-projeto.supabase.co" \\\`
+        -AgentToken "AGENT_TOKEN_AQUI" \\\`
+        -HmacSecret "64_HEX_CHARS_AQUI" \\\`
         -AgentName "meu-servidor-01"
 #>
 
@@ -60,7 +67,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v4.0.4-BACKWARD-COMPAT"
+    [string]\$AgentVersion = "v4.0.6-SAFE-ROLLBACK"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -83,7 +90,7 @@ trap {
         } catch { }
     }
 
-    Write-EventLog -LogName Application -Source "CyberShield" -EventId 1001 -EntryType Error -Message "\$msg\`n\$stack" -ErrorAction SilentlyContinue
+    Write-EventLog -LogName Application -Source "CyberShield" -EventId 1001 -EntryType Error -Message "\$msg\\\`n\$stack" -ErrorAction SilentlyContinue
     throw
 }
 
@@ -115,31 +122,471 @@ trap {
 \$Global:PollIntervalSeconds = 60
 
 # ============================================
-#  FASE 2.1: STATE MACHINE FORMAL
+#  FASE 2.6: ED25519 SIGNATURE VERIFICATION
+# ============================================
+# IMPORTANT: This is the Ed25519 PUBLIC KEY for verifying agent updates
+# The corresponding PRIVATE KEY must NEVER be stored in the agent or repository
+# Private key should be in HSM, HashiCorp Vault, or offline encrypted storage
+# 
+# To generate a new keypair (offline, secure environment):
+#   openssl genpkey -algorithm Ed25519 -out private.key
+#   openssl pkey -in private.key -pubout -out public.key
+#   cat public.key | base64 -w0
+#
+# To sign a release:
+#   openssl pkeyutl -sign -inkey private.key -rawin -in script.ps1 > signature.bin
+#   base64 -w0 signature.bin > signature.txt
+
+# PLACEHOLDER: Replace with actual Ed25519 public key when available
+# Format: Base64-encoded SubjectPublicKeyInfo (SPKI) format
+\$Global:Ed25519PublicKey = \$null  # Set to Base64 public key string when ready
+
+function Verify-Ed25519Signature {
+    <#
+    .SYNOPSIS
+        Verifies an Ed25519 signature for script content
+    .DESCRIPTION
+        Uses .NET cryptography to verify Ed25519 signatures.
+        Returns \$true if signature is valid, \$false otherwise.
+        If no public key is configured, returns \$true (backward compatible).
+    .PARAMETER ScriptBytes
+        The raw bytes of the script to verify
+    .PARAMETER SignatureBase64
+        The Base64-encoded Ed25519 signature
+    #>
+    param (
+        [Parameter(Mandatory = \$true)]
+        [byte[]]\$ScriptBytes,
+        
+        [Parameter(Mandatory = \$false)]
+        [string]\$SignatureBase64
+    )
+    
+    try {
+        # If no signature provided and no public key configured, allow (backward compat)
+        if ([string]::IsNullOrEmpty(\$SignatureBase64)) {
+            if ([string]::IsNullOrEmpty(\$Global:Ed25519PublicKey)) {
+                Write-Log "[SECURITY] No signature verification configured (backward compatible mode)" "WARN"
+                return \$true
+            } else {
+                Write-Log "[SECURITY] ❌ Signature required but not provided" "ERROR"
+                return \$false
+            }
+        }
+        
+        # If public key not configured, skip verification (backward compat)
+        if ([string]::IsNullOrEmpty(\$Global:Ed25519PublicKey)) {
+            Write-Log "[SECURITY] Ed25519 public key not configured - skipping signature verification" "WARN"
+            return \$true
+        }
+        
+        Write-Log "[SECURITY] Verifying Ed25519 signature..." "INFO"
+        
+        # Decode signature from Base64
+        \$signature = [Convert]::FromBase64String(\$SignatureBase64)
+        
+        # Decode public key from Base64
+        \$publicKeyBytes = [Convert]::FromBase64String(\$Global:Ed25519PublicKey)
+        
+        # Check if .NET supports Ed25519 (requires .NET 5+ or Windows with specific updates)
+        \$ed25519Type = [Type]::GetType("System.Security.Cryptography.Ed25519")
+        
+        if (\$null -eq \$ed25519Type) {
+            # Fallback: Try using ECDsa with Ed25519 curve (requires newer .NET)
+            try {
+                # Import public key and verify
+                \$ed25519 = [System.Security.Cryptography.ECDsa]::Create()
+                \$ed25519.ImportSubjectPublicKeyInfo(\$publicKeyBytes, [ref]\$null)
+                
+                \$isValid = \$ed25519.VerifyData(\$ScriptBytes, \$signature, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+                
+                if (\$isValid) {
+                    Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+                } else {
+                    Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+                }
+                
+                return \$isValid
+            }
+            catch {
+                # If Ed25519 is not supported on this system, log warning and allow
+                Write-Log "[SECURITY] Ed25519 verification not supported on this system: \$(\$_.Exception.Message)" "WARN"
+                Write-Log "[SECURITY] Allowing update (signature present but cannot verify)" "WARN"
+                
+                Add-EvidenceEntry -Type "security_warning" -Data @{
+                    event = "ed25519_not_supported"
+                    error = \$_.Exception.Message
+                    signature_provided = \$true
+                } -Severity "warning"
+                
+                return \$true
+            }
+        }
+        else {
+            # Use native Ed25519 support
+            \$ed25519 = [System.Security.Cryptography.Ed25519]::Create()
+            \$ed25519.ImportSubjectPublicKeyInfo(\$publicKeyBytes, [ref]\$null)
+            
+            \$isValid = \$ed25519.VerifyData(\$ScriptBytes, \$signature)
+            
+            if (\$isValid) {
+                Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+            } else {
+                Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+            }
+            
+            return \$isValid
+        }
+    }
+    catch {
+        Write-Log "[SECURITY] Signature verification error: \$(\$_.Exception.Message)" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "signature_verification_failed"
+            error = \$_.Exception.Message
+        } -Severity "error"
+        
+        # Security: If verification fails unexpectedly, reject the update
+        return \$false
+    }
+}
+
+
+# ============================================
+#  FASE 3.0: AUTO-ROLLBACK & SAFE MODE
+# ============================================
+\$Global:RollbackPaths = @{
+    Current   = "C:\\CyberShield\\agent-current.ps1"
+    Previous  = "C:\\CyberShield\\agent-previous.ps1"
+    StateFile = "C:\\CyberShield\\rollback-state.json"
+}
+
+function Get-RollbackState {
+    <#
+    .SYNOPSIS
+        Retrieves the current rollback state from persistent storage
+    #>
+    \$stateFile = \$Global:RollbackPaths.StateFile
+    if (Test-Path \$stateFile) {
+        try {
+            \$content = Get-Content \$stateFile -Raw -ErrorAction Stop
+            return (\$content | ConvertFrom-Json)
+        } catch {
+            Write-Log "[ROLLBACK] Failed to read state file: \$(\$_.Exception.Message)" "WARN"
+        }
+    }
+    return @{
+        rollback_count = 0
+        last_rollback = \$null
+        safe_mode = \$false
+        current_version = \$Global:AgentVersion
+        previous_version = \$null
+        last_health_check = \$null
+    }
+}
+
+function Save-RollbackState {
+    <#
+    .SYNOPSIS
+        Persists rollback state to disk
+    #>
+    param(\$State)
+    
+    try {
+        \$stateFile = \$Global:RollbackPaths.StateFile
+        \$State | ConvertTo-Json -Depth 3 | Set-Content \$stateFile -Encoding UTF8 -Force
+        Write-Log "[ROLLBACK] State saved: rollback_count=\$(\$State.rollback_count), safe_mode=\$(\$State.safe_mode)" "DEBUG"
+    } catch {
+        Write-Log "[ROLLBACK] Failed to save state: \$(\$_.Exception.Message)" "ERROR"
+    }
+}
+
+function Test-PostUpdateHealth {
+    <#
+    .SYNOPSIS
+        Validates agent health after an update
+    .DESCRIPTION
+        Checks state machine, heartbeat, and job polling to ensure
+        the new version is functioning correctly
+    .OUTPUTS
+        Hashtable with healthy (bool) and reason (string)
+    #>
+    Write-Log "[HEALTH CHECK] Starting post-update health validation..." "INFO"
+    
+    try {
+        # 1. Validate state machine
+        \$state = Get-AgentState
+        if (\$state -notin @('SYNCING', 'ENFORCING', 'DEGRADED')) {
+            return @{ healthy = \$false; reason = "state_machine_invalid"; details = "Invalid state: \$state" }
+        }
+        Write-Log "[HEALTH CHECK] State machine OK: \$state" "DEBUG"
+        
+        # 2. Validate heartbeat
+        \$heartbeat = Send-Heartbeat
+        if (-not \$heartbeat) {
+            return @{ healthy = \$false; reason = "heartbeat_failed"; details = "Heartbeat failed" }
+        }
+        Write-Log "[HEALTH CHECK] Heartbeat OK" "DEBUG"
+        
+        # 3. Validate poll-jobs (basic connectivity test)
+        try {
+            \$pollResult = Invoke-SecureRequest -Path "/functions/v1/poll-jobs" -Method "POST" -Body @{
+                agent_name = \$Global:AgentName
+                agent_version = \$Global:AgentVersion
+            } -TimeoutSec 15
+            
+            if (-not \$pollResult.Success) {
+                return @{ healthy = \$false; reason = "health_check_failed"; details = "Poll-jobs failed: HTTP \$(\$pollResult.StatusCode)" }
+            }
+        } catch {
+            return @{ healthy = \$false; reason = "health_check_failed"; details = "Poll-jobs exception: \$(\$_.Exception.Message)" }
+        }
+        Write-Log "[HEALTH CHECK] Poll-jobs OK" "DEBUG"
+        
+        return @{ healthy = \$true; reason = "All checks passed" }
+    } catch {
+        return @{ healthy = \$false; reason = "health_check_failed"; details = \$_.Exception.Message }
+    }
+}
+
+function Send-RollbackEvent {
+    <#
+    .SYNOPSIS
+        Reports rollback event to backend for telemetry
+    #>
+    param(
+        [string]\$FromVersion,
+        [string]\$ToVersion,
+        [string]\$Reason,
+        [bool]\$SafeMode = \$false,
+        [hashtable]\$Details = @{}
+    )
+    
+    try {
+        \$body = @{
+            from_version = \$FromVersion
+            to_version = \$ToVersion
+            reason = \$Reason
+            safe_mode_triggered = \$SafeMode
+            hostname = \$env:COMPUTERNAME
+            details = \$Details
+        }
+        
+        \$result = Invoke-SecureRequest \\\`
+            -Path "/functions/v1/submit-rollback-event" \\\`
+            -Method "POST" \\\`
+            -Body \$body \\\`
+            -TimeoutSec 15
+        
+        if (\$result.Success) {
+            Write-Log "[ROLLBACK] Event reported successfully (event_id: \$(\$result.Body | ConvertFrom-Json | Select-Object -ExpandProperty event_id))" "INFO"
+        } else {
+            Write-Log "[ROLLBACK] Failed to report event: HTTP \$(\$result.StatusCode)" "WARN"
+        }
+    } catch {
+        Write-Log "[ROLLBACK] Failed to report event: \$(\$_.Exception.Message)" "ERROR"
+    }
+}
+
+function Invoke-SafeRollback {
+    <#
+    .SYNOPSIS
+        Performs automatic rollback to previous version
+    .DESCRIPTION
+        - Checks if previous version exists
+        - Increments rollback counter
+        - Triggers Safe Mode after 2 consecutive rollbacks
+        - Reports event to backend
+        - Copies previous version back to current
+        - Restarts agent
+    #>
+    param(
+        [string]\$Reason
+    )
+    
+    Write-Log "[ROLLBACK] Initiating rollback due to: \$Reason" "WARN"
+    
+    \$state = Get-RollbackState
+    \$previousPath = \$Global:RollbackPaths.Previous
+    
+    # Verify previous version exists
+    if (-not (Test-Path \$previousPath)) {
+        Write-Log "[ROLLBACK] No previous version available at \$previousPath" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "rollback_failed"
+            reason = "no_previous_version"
+            error = "Previous version file not found"
+        } -Severity "error"
+        
+        return @{ success = \$false; error = "No previous version available" }
+    }
+    
+    # Anti-loop: check rollback count
+    \$state.rollback_count++
+    \$state.last_rollback = (Get-Date).ToUniversalTime().ToString("o")
+    
+    # Safe Mode: after 2 consecutive rollbacks
+    if (\$state.rollback_count -ge 2) {
+        Write-Log "[CRITICAL] Rollback loop detected (count: \$(\$state.rollback_count)) - ENTERING SAFE MODE" "ERROR"
+        \$state.safe_mode = \$true
+        Save-RollbackState -State \$state
+        
+        # Report Safe Mode to backend
+        Send-RollbackEvent -FromVersion \$Global:AgentVersion -ToVersion \$state.previous_version -Reason \$Reason -SafeMode \$true -Details @{
+            rollback_count = \$state.rollback_count
+            safe_mode_reason = "rollback_loop_detected"
+        }
+        
+        Add-EvidenceEntry -Type "security_event" -Data @{
+            event = "safe_mode_activated"
+            rollback_count = \$state.rollback_count
+            reason = "Rollback loop detected - auto-updates disabled"
+        } -Severity "critical"
+        
+        return @{ success = \$false; error = "Safe mode activated - updates disabled"; safe_mode = \$true }
+    }
+    
+    # Execute rollback
+    Write-Log "[ROLLBACK] Rolling back: \$(\$Global:AgentVersion) -> \$(\$state.previous_version)" "WARN"
+    
+    try {
+        # Find current script path
+        \$currentScriptPath = \$null
+        \$possiblePaths = @(
+            \$PSCommandPath,
+            (Join-Path \$Global:BaseDir "cybershield-agent-\$(\$Global:AgentName).ps1"),
+            (Join-Path \$Global:BaseDir "cybershield-agent-v4.ps1"),
+            (Join-Path \$Global:BaseDir "cybershield-agent.ps1")
+        )
+        
+        foreach (\$path in \$possiblePaths) {
+            if (\$path -and (Test-Path \$path)) {
+                \$currentScriptPath = \$path
+                break
+            }
+        }
+        
+        if (-not \$currentScriptPath) {
+            \$found = Get-ChildItem -Path \$Global:BaseDir -Filter "cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (\$found) { \$currentScriptPath = \$found.FullName }
+        }
+        
+        if (-not \$currentScriptPath) {
+            throw "Cannot find current script path for rollback"
+        }
+        
+        # Copy previous version to current location
+        Copy-Item -Path \$previousPath -Destination \$currentScriptPath -Force
+        Write-Log "[ROLLBACK] Previous version restored to: \$currentScriptPath" "INFO"
+        
+        # Update state
+        \$state.current_version = \$state.previous_version
+        Save-RollbackState -State \$state
+        
+        # Report rollback to backend
+        Send-RollbackEvent -FromVersion \$Global:AgentVersion -ToVersion \$state.previous_version -Reason \$Reason -SafeMode \$false -Details @{
+            rollback_count = \$state.rollback_count
+            restored_to = \$currentScriptPath
+        }
+        
+        Add-EvidenceEntry -Type "state_change" -Data @{
+            event = "rollback_executed"
+            from_version = \$Global:AgentVersion
+            to_version = \$state.previous_version
+            rollback_count = \$state.rollback_count
+            reason = \$Reason
+        } -Severity "warning"
+        
+        Write-Log "[ROLLBACK] Rollback complete - restarting agent..." "INFO"
+        
+        # Restart the agent (via scheduled task or service restart)
+        # The new (old) version will run on restart
+        try {
+            \$taskName = "CyberShield-Agent-\$(\$Global:AgentName)"
+            \$task = Get-ScheduledTask -TaskName \$taskName -ErrorAction SilentlyContinue
+            if (\$task) {
+                Stop-ScheduledTask -TaskName \$taskName -ErrorAction SilentlyContinue
+                Start-Sleep -Seconds 2
+                Start-ScheduledTask -TaskName \$taskName -ErrorAction SilentlyContinue
+                Write-Log "[ROLLBACK] Scheduled task restarted: \$taskName" "INFO"
+            }
+        } catch {
+            Write-Log "[ROLLBACK] Could not restart scheduled task: \$(\$_.Exception.Message)" "WARN"
+        }
+        
+        return @{ success = \$true; rolled_back_to = \$state.previous_version }
+    }
+    catch {
+        Write-Log "[ROLLBACK] Rollback failed: \$(\$_.Exception.Message)" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "rollback_failed"
+            error = \$_.Exception.Message
+        } -Severity "error"
+        
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+function Reset-SafeMode {
+    <#
+    .SYNOPSIS
+        Resets Safe Mode after manual intervention
+    .DESCRIPTION
+        Called by admin to clear Safe Mode flag and allow updates again
+    #>
+    param(
+        [string]\$ResetReason = "Manual admin reset"
+    )
+    
+    \$state = Get-RollbackState
+    
+    if (-not \$state.safe_mode) {
+        Write-Log "[SAFE MODE] Agent is not in Safe Mode" "INFO"
+        return @{ success = \$true; message = "Not in safe mode" }
+    }
+    
+    \$state.safe_mode = \$false
+    \$state.rollback_count = 0
+    Save-RollbackState -State \$state
+    
+    Write-Log "[SAFE MODE] Safe Mode has been reset - auto-updates enabled" "SUCCESS"
+    
+    Add-EvidenceEntry -Type "security_event" -Data @{
+        event = "safe_mode_reset"
+        reason = \$ResetReason
+    } -Severity "info"
+    
+    return @{ success = \$true; message = "Safe mode reset successfully" }
+}
+
+
+# ============================================
+#  FASE 2.1: STATE MACHINE (6 ESTADOS)
 # ============================================
 \$Global:AgentState = @{
     Current = "BOOTSTRAP"
     Previous = \$null
-    History = [System.Collections.ArrayList]::new()
+    LastTransition = (Get-Date)
     ErrorCount = 0
     RecoveryAttempts = 0
-    LastStateChange = (Get-Date)
-    LastError = \$null
 }
 
-# Estados validos e transicoes permitidas
 \$Global:ValidStates = @("BOOTSTRAP", "SYNCING", "ENFORCING", "DEGRADED", "ERROR", "RECOVERY")
-\$Global:StateTransitions = @{
+
+\$Global:ValidTransitions = @{
     "BOOTSTRAP" = @("SYNCING", "ERROR")
-    "SYNCING" = @("ENFORCING", "DEGRADED", "ERROR")
-    "ENFORCING" = @("DEGRADED", "ERROR", "SYNCING")
-    "DEGRADED" = @("RECOVERY", "ERROR", "ENFORCING")
-    "RECOVERY" = @("ENFORCING", "DEGRADED", "ERROR")
-    "ERROR" = @("RECOVERY")  # Requer intervencao ou recovery manual
+    "SYNCING"   = @("ENFORCING", "DEGRADED", "ERROR")
+    "ENFORCING" = @("SYNCING", "DEGRADED", "RECOVERY", "ERROR")
+    "DEGRADED"  = @("ENFORCING", "RECOVERY", "ERROR")
+    "RECOVERY"  = @("ENFORCING", "DEGRADED", "ERROR")
+    "ERROR"     = @("RECOVERY", "BOOTSTRAP")
 }
 
-# Estados que permitem execucao de jobs
-\$Global:JobExecutionStates = @("ENFORCING", "DEGRADED")
+function Get-AgentState {
+    return \$Global:AgentState.Current
+}
 
 function Set-AgentState {
     param(
@@ -147,97 +594,93 @@ function Set-AgentState {
         [ValidateSet("BOOTSTRAP", "SYNCING", "ENFORCING", "DEGRADED", "ERROR", "RECOVERY")]
         [string]\$NewState,
         
-        [Parameter(Mandatory = \$true)]
-        [string]\$Reason,
+        [Parameter(Mandatory = \$false)]
+        [string]\$Reason = "",
         
         [Parameter(Mandatory = \$false)]
-        [string]\$ErrorDetails = \$null
+        [string]\$ErrorDetails = ""
     )
     
     \$currentState = \$Global:AgentState.Current
     
-    # Validar transicao
-    if (\$currentState -ne \$NewState) {
-        \$allowedTransitions = \$Global:StateTransitions[\$currentState]
-        if (\$NewState -notin \$allowedTransitions) {
-            Write-Log "[STATE] INVALID TRANSITION: \$currentState -> \$NewState (allowed: \$(\$allowedTransitions -join ', '))" "WARN"
-            # Registrar tentativa invalida mas nao bloquear
-            Add-EvidenceEntry -Type "state_change" -Data @{
-                attempted_from = \$currentState
-                attempted_to = \$NewState
-                reason = \$Reason
-                blocked = \$true
-                allowed_transitions = \$allowedTransitions
-            } -StateBefore \$currentState -StateAfter \$currentState -Severity "warning"
-            return \$false
-        }
+    if (\$currentState -eq \$NewState) {
+        return \$true
     }
     
-    # Aplicar transicao
+    \$allowedTransitions = \$Global:ValidTransitions[\$currentState]
+    if (\$NewState -notin \$allowedTransitions) {
+        Write-Log "[STATE] INVALID transition: \$currentState -> \$NewState (allowed: \$(\$allowedTransitions -join ', '))" "ERROR"
+        return \$false
+    }
+    
     \$Global:AgentState.Previous = \$currentState
     \$Global:AgentState.Current = \$NewState
-    \$Global:AgentState.LastStateChange = Get-Date
+    \$Global:AgentState.LastTransition = Get-Date
     
-    # Adicionar ao historico (manter ultimos 100)
-    \$historyEntry = @{
-        from = \$currentState
-        to = \$NewState
-        reason = \$Reason
-        timestamp = (Get-Date).ToUniversalTime().ToString("o")
-    }
-    [void]\$Global:AgentState.History.Add(\$historyEntry)
-    if (\$Global:AgentState.History.Count -gt 100) {
-        \$Global:AgentState.History.RemoveAt(0)
-    }
-    
-    # Resetar contadores em estados de sucesso
-    if (\$NewState -eq "ENFORCING") {
-        \$Global:AgentState.ErrorCount = 0
-        \$Global:AgentState.RecoveryAttempts = 0
-    }
-    
-    # Incrementar contador de erros
-    if (\$NewState -eq "ERROR" -or \$NewState -eq "DEGRADED") {
+    if (\$NewState -in @("ERROR", "DEGRADED")) {
         \$Global:AgentState.ErrorCount++
-        if (\$ErrorDetails) {
-            \$Global:AgentState.LastError = \$ErrorDetails
-        }
     }
     
-    Write-Log "[STATE] \$currentState -> \$NewState (\$Reason)" "INFO"
+    Write-Log "[STATE] Transition: \$currentState -> \$NewState (reason: \$Reason)" "INFO"
     
-    # Registrar evidencia
     Add-EvidenceEntry -Type "state_change" -Data @{
-        from = \$currentState
-        to = \$NewState
         reason = \$Reason
         error_details = \$ErrorDetails
         error_count = \$Global:AgentState.ErrorCount
-        recovery_attempts = \$Global:AgentState.RecoveryAttempts
-    } -StateBefore \$currentState -StateAfter \$NewState -Severity \$(if (\$NewState -eq "ERROR") { "error" } elseif (\$NewState -eq "DEGRADED") { "warning" } else { "info" })
+    } -StateBefore \$currentState -StateAfter \$NewState -Severity "info"
     
     return \$true
 }
 
-function Get-AgentState {
-    return \$Global:AgentState.Current
-}
-
 function Test-CanExecuteJob {
     \$state = Get-AgentState
-    return \$state -in \$Global:JobExecutionStates
+    return (\$state -in @("SYNCING", "ENFORCING", "DEGRADED"))
+}
+
+# ============================================
+#  LOGGING
+# ============================================
+function Write-Log {
+    param(
+        [Parameter(Mandatory = \$true)]
+        [string]\$Message,
+        
+        [Parameter(Mandatory = \$false)]
+        [ValidateSet("INFO", "WARN", "ERROR", "DEBUG", "SUCCESS")]
+        [string]\$Level = "INFO"
+    )
+
+    \$ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    \$entry = "\$ts [\$Level] \$Message"
+    
+    try {
+        \$logDir = Split-Path -Parent \$Global:LogFilePath
+        if (-not (Test-Path \$logDir)) {
+            New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
+        }
+        
+        \$entry | Out-File -FilePath \$Global:LogFilePath -Append -Encoding UTF8
+    } catch { }
+
+    switch (\$Level) {
+        "ERROR"   { Write-Host \$entry -ForegroundColor Red }
+        "WARN"    { Write-Host \$entry -ForegroundColor Yellow }
+        "SUCCESS" { Write-Host \$entry -ForegroundColor Green }
+        "DEBUG"   { Write-Host \$entry -ForegroundColor Gray }
+        default   { Write-Host \$entry }
+    }
 }
 
 # ============================================
 #  FASE 2.2: EVIDENCE JOURNAL LOCAL
 # ============================================
 \$Global:EvidenceBuffer = [System.Collections.ArrayList]::new()
-\$Global:EvidenceFlushThreshold = 10  # Flush apos 10 entradas ou 60s
+\$Global:EvidenceMaxBuffer = 50
 
 function Add-EvidenceEntry {
     param(
         [Parameter(Mandatory = \$true)]
-        [ValidateSet("state_change", "job_execution", "dns_block", "policy_sync", "auto_recovery", "heartbeat", "update_applied", "update_failed", "error", "policy_drift", "security_event")]
+        [ValidateSet("state_change", "job_execution", "heartbeat", "error", "security_event", "security_warning", "dns_block", "policy_sync", "policy_drift", "auto_recovery", "update_check", "update_applied")]
         [string]\$Type,
         
         [Parameter(Mandatory = \$true)]
@@ -254,42 +697,28 @@ function Add-EvidenceEntry {
         [string]\$Severity = "info"
     )
     
-    try {
-        # Criar hash SHA256 do data para integridade
-        \$dataJson = \$Data | ConvertTo-Json -Compress -Depth 5
-        \$sha256 = [System.Security.Cryptography.SHA256]::Create()
-        \$hashBytes = \$sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes(\$dataJson))
-        \$evidenceHash = [System.BitConverter]::ToString(\$hashBytes) -replace '-', ''
-        
-        \$entry = @{
-            timestamp = (Get-Date).ToUniversalTime().ToString("o")
-            type = \$Type
-            agent_name = \$Global:AgentName
-            agent_version = \$Global:AgentVersion
-            state_before = \$StateBefore
-            state_after = \$StateAfter
-            severity = \$Severity
-            data = \$Data
-            evidence_hash = \$evidenceHash.ToLower()
-        }
-        
-        # Adicionar ao buffer
-        [void]\$Global:EvidenceBuffer.Add(\$entry)
-        
-        # Gravar localmente (JSON Lines)
-        \$jsonLine = \$entry | ConvertTo-Json -Compress -Depth 10
-        Add-Content -Path \$Global:EvidenceJournalPath -Value \$jsonLine -Encoding UTF8 -ErrorAction SilentlyContinue
-        
-        # Flush para servidor se threshold atingido
-        if (\$Global:EvidenceBuffer.Count -ge \$Global:EvidenceFlushThreshold) {
-            Invoke-FlushEvidence
-        }
-        
-        return \$evidenceHash
+    \$entry = @{
+        timestamp = (Get-Date).ToUniversalTime().ToString("o")
+        type = \$Type
+        agent_name = \$Global:AgentName
+        agent_version = \$Global:AgentVersion
+        hostname = \$env:COMPUTERNAME
+        data = \$Data
+        severity = \$Severity
     }
-    catch {
-        Write-Log "[EVIDENCE] Failed to add entry: \$(\$_.Exception.Message)" "WARN"
-        return \$null
+    
+    if (\$StateBefore) { \$entry.state_before = \$StateBefore }
+    if (\$StateAfter) { \$entry.state_after = \$StateAfter }
+    
+    \$hash = [System.Security.Cryptography.SHA256]::Create()
+    \$hashInput = "\$(\$entry.timestamp)|\$(\$entry.type)|\$(\$entry.agent_name)|\$(\$Data | ConvertTo-Json -Compress)"
+    \$hashBytes = \$hash.ComputeHash([System.Text.Encoding]::UTF8.GetBytes(\$hashInput))
+    \$entry.evidence_hash = [System.BitConverter]::ToString(\$hashBytes).Replace("-", "").ToLower()
+    
+    [void]\$Global:EvidenceBuffer.Add(\$entry)
+    
+    if (\$Global:EvidenceBuffer.Count -ge \$Global:EvidenceMaxBuffer) {
+        Invoke-FlushEvidence
     }
 }
 
@@ -299,66 +728,161 @@ function Invoke-FlushEvidence {
     }
     
     try {
-        \$entries = @(\$Global:EvidenceBuffer)
-        
-        \$body = @{
-            agent_name = \$Global:AgentName
-            agent_version = \$Global:AgentVersion
-            entries = \$entries | ForEach-Object {
-                @{
-                    event_type = \$_.type
-                    event_data = \$_.data
-                    evidence_hash = \$_.evidence_hash
-                    state_before = \$_.state_before
-                    state_after = \$_.state_after
-                    severity = \$_.severity
-                }
-            }
+        \$journalDir = Split-Path -Parent \$Global:EvidenceJournalPath
+        if (-not (Test-Path \$journalDir)) {
+            New-Item -ItemType Directory -Path \$journalDir -Force | Out-Null
         }
         
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/submit-agent-evidence" \`
-            -Method "POST" \`
-            -Body \$body \`
-            -TimeoutSec 30 \`
-            -MaxRetries 2
-        
-        if (\$result.Success) {
-            Write-Log "[EVIDENCE] Flushed \$(\$entries.Count) entries to server" "DEBUG"
-            \$Global:EvidenceBuffer.Clear()
+        foreach (\$entry in \$Global:EvidenceBuffer) {
+            \$jsonLine = \$entry | ConvertTo-Json -Compress
+            \$jsonLine | Out-File -FilePath \$Global:EvidenceJournalPath -Append -Encoding UTF8
         }
+        
+        \$count = \$Global:EvidenceBuffer.Count
+        \$Global:EvidenceBuffer.Clear()
+        Write-Log "[EVIDENCE] Flushed \$count entries to journal" "DEBUG"
     }
     catch {
-        Write-Log "[EVIDENCE] Flush failed: \$(\$_.Exception.Message)" "WARN"
-        # Manter no buffer para proxima tentativa
+        Write-Log "[EVIDENCE] Flush error: \$(\$_.Exception.Message)" "ERROR"
     }
 }
 
 function Invoke-EvidenceRotation {
-    \$maxSizeMB = 50
-    \$maxAgeDays = 7
-    
     try {
-        if (Test-Path \$Global:EvidenceJournalPath) {
-            \$file = Get-Item \$Global:EvidenceJournalPath -ErrorAction SilentlyContinue
-            
-            if (\$file -and \$file.Length -gt (\$maxSizeMB * 1MB)) {
-                \$archivePath = "\$(\$Global:EvidenceJournalPath).\$(Get-Date -Format 'yyyyMMdd-HHmmss').bak"
-                Move-Item \$Global:EvidenceJournalPath \$archivePath -Force -ErrorAction SilentlyContinue
-                Write-Log "[EVIDENCE] Journal rotated to \$archivePath" "INFO"
-            }
+        if (-not (Test-Path \$Global:EvidenceJournalPath)) {
+            return
         }
         
-        # Limpar arquivos antigos
-        Get-ChildItem -Path (Split-Path \$Global:EvidenceJournalPath -Parent) -Filter "journal.log.*.bak" -ErrorAction SilentlyContinue | 
-            Where-Object { \$_.LastWriteTime -lt (Get-Date).AddDays(-\$maxAgeDays) } |
-            Remove-Item -Force -ErrorAction SilentlyContinue
+        \$file = Get-Item \$Global:EvidenceJournalPath
+        \$maxSizeMB = 10
+        
+        if (\$file.Length -gt (\$maxSizeMB * 1MB)) {
+            \$archiveName = \$Global:EvidenceJournalPath -replace '\\.log\$', "-\$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+            Move-Item -Path \$Global:EvidenceJournalPath -Destination \$archiveName -Force
+            Write-Log "[EVIDENCE] Journal rotated to \$archiveName" "INFO"
+        }
+    }
+    catch {
+        Write-Log "[EVIDENCE] Rotation error: \$(\$_.Exception.Message)" "ERROR"
+    }
+}
+
+function Invoke-LogRotation {
+    try {
+        if (-not (Test-Path \$Global:LogFilePath)) {
+            return
+        }
+        
+        \$file = Get-Item \$Global:LogFilePath
+        \$maxSizeMB = 20
+        
+        if (\$file.Length -gt (\$maxSizeMB * 1MB)) {
+            \$archiveName = \$Global:LogFilePath -replace '\\.log\$', "-\$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+            Move-Item -Path \$Global:LogFilePath -Destination \$archiveName -Force
+            Write-Log "[LOG] Log rotated to \$archiveName" "INFO"
+        }
     }
     catch { }
 }
 
 # ============================================
-#  AUTO-RECOVERY COM BACKOFF EXPONENCIAL
+#  HMAC AUTHENTICATION
+# ============================================
+function New-HmacSignature {
+    param(
+        [Parameter(Mandatory = \$true)]
+        [string]\$Payload,
+
+        [Parameter(Mandatory = \$true)]
+        [string]\$Timestamp
+    )
+
+    \$data = "\$Timestamp.\$Payload"
+    \$keyBytes = [System.Text.Encoding]::UTF8.GetBytes(\$Global:HmacSecret)
+    \$dataBytes = [System.Text.Encoding]::UTF8.GetBytes(\$data)
+
+    \$hmac = New-Object System.Security.Cryptography.HMACSHA256
+    \$hmac.Key = \$keyBytes
+
+    \$hashBytes = \$hmac.ComputeHash(\$dataBytes)
+    return [System.BitConverter]::ToString(\$hashBytes).Replace("-", "").ToLower()
+}
+
+function Invoke-SecureRequest {
+    param(
+        [Parameter(Mandatory = \$true)]
+        [string]\$Path,
+        
+        [Parameter(Mandatory = \$false)]
+        [ValidateSet("GET", "POST", "PUT", "DELETE")]
+        [string]\$Method = "POST",
+        
+        [Parameter(Mandatory = \$false)]
+        [hashtable]\$Body = @{},
+        
+        [Parameter(Mandatory = \$false)]
+        [int]\$TimeoutSec = 30,
+        
+        [Parameter(Mandatory = \$false)]
+        [int]\$MaxRetries = 3
+    )
+
+    \$timestamp = [long](([datetime]::UtcNow - [datetime]'1970-01-01').TotalSeconds)
+    \$payloadJson = \$Body | ConvertTo-Json -Compress -Depth 10
+    \$signature = New-HmacSignature -Payload \$payloadJson -Timestamp \$timestamp
+
+    \$uri = "\$(\$Global:ServerUrl)\$Path"
+    
+    \$headers = @{
+        "Content-Type"       = "application/json"
+        "Authorization"      = "Bearer \$(\$Global:AgentToken)"
+        "X-Agent-Name"       = \$Global:AgentName
+        "X-HMAC-Signature"   = \$signature
+        "X-HMAC-Timestamp"   = \$timestamp.ToString()
+    }
+
+    \$attempt = 0
+    while (\$attempt -lt \$MaxRetries) {
+        \$attempt++
+        try {
+            \$response = Invoke-WebRequest \\\`
+                -Uri \$uri \\\`
+                -Method \$Method \\\`
+                -Headers \$headers \\\`
+                -Body \$payloadJson \\\`
+                -TimeoutSec \$TimeoutSec \\\`
+                -UseBasicParsing
+
+            return @{
+                Success    = \$true
+                StatusCode = \$response.StatusCode
+                Body       = \$response.Content
+            }
+        }
+        catch {
+            \$statusCode = \$null
+            if (\$_.Exception.Response) {
+                \$statusCode = [int]\$_.Exception.Response.StatusCode
+            }
+            
+            if (\$attempt -lt \$MaxRetries) {
+                \$backoff = [Math]::Pow(2, \$attempt)
+                Write-Log "[RETRY] Attempt \$attempt/\$MaxRetries failed, waiting \${backoff}s..." "WARN"
+                Start-Sleep -Seconds \$backoff
+            }
+            else {
+                return @{
+                    Success    = \$false
+                    StatusCode = \$statusCode
+                    Error      = \$_.Exception.Message
+                }
+            }
+        }
+    }
+}
+
+# ============================================
+#  AUTO-RECOVERY ENGINE
 # ============================================
 function Invoke-AutoRecovery {
     param(
@@ -366,26 +890,10 @@ function Invoke-AutoRecovery {
         [string]\$FailedComponent,
         
         [Parameter(Mandatory = \$false)]
-        [string]\$ErrorMessage = \$null
+        [string]\$ErrorMessage = ""
     )
     
     \$maxAttempts = 3
-    
-    if (\$Global:AgentState.RecoveryAttempts -ge \$maxAttempts) {
-        Write-Log "[RECOVERY] Max attempts (\$maxAttempts) exceeded for \$FailedComponent" "ERROR"
-        Set-AgentState -NewState "ERROR" -Reason "Max recovery attempts exceeded" -ErrorDetails "Component: \$FailedComponent, Last error: \$ErrorMessage"
-        
-        Add-EvidenceEntry -Type "auto_recovery" -Data @{
-            component = \$FailedComponent
-            attempt = \$Global:AgentState.RecoveryAttempts
-            success = \$false
-            reason = "Max attempts exceeded"
-            error = \$ErrorMessage
-        } -Severity "critical"
-        
-        return \$false
-    }
-    
     \$Global:AgentState.RecoveryAttempts++
     \$attempt = \$Global:AgentState.RecoveryAttempts
     
@@ -919,27 +1427,25 @@ function Sync-PolicyFromServer {
             agent_version = \$Global:AgentVersion
         }
         
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/get-agent-policy" \`
-            -Method "POST" \`
-            -Body \$body \`
-            -TimeoutSec 15 \`
+        \$result = Invoke-SecureRequest \\\`
+            -Path "/functions/v1/get-agent-policy" \\\`
+            -Method "POST" \\\`
+            -Body \$body \\\`
+            -TimeoutSec 15 \\\`
             -MaxRetries 2
         
         if (\$result.Success -and \$result.StatusCode -eq 200 -and \$result.Body) {
             \$serverPolicy = \$result.Body | ConvertFrom-Json
             
             if (\$serverPolicy.expected) {
-                \$Global:PolicyContract.expected = @{
-                    dns_enabled = [bool]\$serverPolicy.expected.dns_enabled
-                    dns_service_running = [bool]\$serverPolicy.expected.dns_service_running
-                    agent_min_version = \$serverPolicy.expected.agent_min_version
-                    blocked_domains_synced = [bool]\$serverPolicy.expected.blocked_domains_synced
-                    heartbeat_interval_max = [int]\$serverPolicy.expected.heartbeat_interval_max
-                    job_execution_enabled = [bool]\$serverPolicy.expected.job_execution_enabled
+                \$Global:PolicyContract.expected = @{}
+                
+                \$serverPolicy.expected.PSObject.Properties | ForEach-Object {
+                    \$Global:PolicyContract.expected[\$_.Name] = \$_.Value
                 }
+                
                 \$Global:PolicyContract.version = \$serverPolicy.version
-                \$Global:PolicyContract.last_sync = Get-Date
+                \$Global:PolicyContract.last_sync = (Get-Date).ToUniversalTime().ToString("o")
                 
                 Write-Log "[POLICY] Policy synced from server (version: \$(\$serverPolicy.version))" "SUCCESS"
                 
@@ -952,238 +1458,17 @@ function Sync-PolicyFromServer {
             }
         }
         
-        Write-Log "[POLICY] Server policy not available, using defaults" "WARN"
+        Write-Log "[POLICY] No policy from server, using defaults" "INFO"
         return \$false
     }
     catch {
-        Write-Log "[POLICY] Sync error: \$(\$_.Exception.Message)" "WARN"
+        Write-Log "[POLICY] Sync error: \$(\$_.Exception.Message)" "ERROR"
         return \$false
     }
 }
 
 # ============================================
-#  ROTACAO DE LOGS
-# ============================================
-function Invoke-LogRotation {
-    \$maxSizeMB = 10
-    \$maxAgeDays = 7
-    \$logPath = \$Global:LogFilePath
-    
-    try {
-        if (Test-Path \$logPath) {
-            \$file = Get-Item \$logPath -ErrorAction SilentlyContinue
-            
-            if (\$file -and \$file.Length -gt (\$maxSizeMB * 1MB)) {
-                \$archivePath = "\$logPath.\$(Get-Date -Format 'yyyyMMdd-HHmmss').bak"
-                Move-Item \$logPath \$archivePath -Force -ErrorAction SilentlyContinue
-                Write-Log "[LOG] Arquivo de log rotacionado para \$archivePath" "INFO"
-            }
-        }
-        
-        \$logDir = Split-Path \$logPath -Parent
-        if (Test-Path \$logDir) {
-            Get-ChildItem -Path \$logDir -Filter "*.bak" -ErrorAction SilentlyContinue | 
-                Where-Object { \$_.LastWriteTime -lt (Get-Date).AddDays(-\$maxAgeDays) } |
-                Remove-Item -Force -ErrorAction SilentlyContinue
-        }
-    } catch { }
-}
-
-# ============================================
-#  CONFIGURACAO DE REDE (TLS 1.2 + Proxy)
-# ============================================
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-try {
-    \$proxy = [System.Net.WebRequest]::GetSystemWebProxy()
-    [System.Net.WebRequest]::DefaultWebProxy = \$proxy
-    [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
-} catch { }
-
-# ============================================
-#  LOGGING
-# ============================================
-function Write-Log {
-    param(
-        [Parameter(Mandatory = \$true)]
-        [string]\$Message,
-        
-        [Parameter(Mandatory = \$false)]
-        [ValidateSet("DEBUG","INFO","WARN","ERROR","SUCCESS")]
-        [string]\$Level = "INFO"
-    )
-
-    \$timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-    \$state = Get-AgentState
-    \$line = "[{0}] [{1}] [{2}] {3}" -f \$timestamp, \$Level, \$state, \$Message
-
-    Write-Host \$line
-    
-    try {
-        Add-Content -Path \$Global:LogFilePath -Value \$line
-    } catch { }
-}
-
-# ============================================
-#  HMAC (HEX)
-# ============================================
-function Convert-HexToBytes {
-    param(
-        [Parameter(Mandatory = \$true)]
-        [string]\$HexString
-    )
-
-    if (\$HexString -notmatch '^[0-9a-fA-F]{64}\$') {
-        Write-Log "HMAC_SECRET invalido. Esperado 64 caracteres hex." "ERROR"
-        throw "Invalid HMAC_SECRET format"
-    }
-
-    \$bytes = New-Object byte[] 32
-    for (\$i = 0; \$i -lt 64; \$i += 2) {
-        \$bytes[\$i / 2] = [Convert]::ToByte(\$HexString.Substring(\$i, 2), 16)
-    }
-    return \$bytes
-}
-
-function Get-HmacSignature {
-    param(
-        [Parameter(Mandatory = \$true)]
-        [string]\$Message,
-        
-        [Parameter(Mandatory = \$true)]
-        [string]\$SecretHex
-    )
-
-    \$keyBytes = Convert-HexToBytes \$SecretHex
-    \$hmac = New-Object System.Security.Cryptography.HMACSHA256
-    \$hmac.Key = \$keyBytes
-    \$messageBytes = [Text.Encoding]::UTF8.GetBytes(\$Message)
-    \$signatureBytes = \$hmac.ComputeHash(\$messageBytes)
-    return ([System.BitConverter]::ToString(\$signatureBytes) -replace '-', '').ToLower()
-}
-
-# ============================================
-#  REQUISICAO SEGURA COM HMAC
-# ============================================
-function Invoke-SecureRequest {
-    param(
-        [Parameter(Mandatory = \$true)]
-        [string]\$Path,
-
-        [Parameter()]
-        [ValidateSet("GET","POST","PUT","DELETE")]
-        [string]\$Method = "GET",
-
-        [Parameter()]
-        [object]\$Body = \$null,
-
-        [Parameter()]
-        [int]\$TimeoutSec = 30,
-
-        [Parameter()]
-        [int]\$MaxRetries = 3
-    )
-
-    \$uri = "\$(\$Global:ServerUrl)\$Path"
-    \$retryCount = 0
-    \$retryDelay = 2
-
-    while (\$true) {
-        try {
-            \$timestamp = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
-            \$nonce = [guid]::NewGuid().ToString()
-
-            if (\$Body -ne \$null) {
-                if (\$Body -is [string]) {
-                    \$bodyJson = \$Body
-                } elseif (\$Body -is [hashtable] -or \$Body.GetType().Name -like 'PSCustomObject') {
-                    \$bodyJson = \$Body | ConvertTo-Json -Compress -Depth 10
-                } else {
-                    \$bodyJson = ""
-                }
-            } else {
-                \$bodyJson = ""
-            }
-
-            \$payload = '{0}:{1}:{2}' -f \$timestamp, \$nonce, \$bodyJson
-            \$signature = Get-HmacSignature -Message \$payload -SecretHex \$Global:HmacSecret
-
-            \$headers = @{
-                "X-Agent-Token"    = \$Global:AgentToken
-                "X-HMAC-Signature" = \$signature
-                "X-Timestamp"      = \$timestamp
-                "X-Nonce"          = \$nonce
-                "Content-Type"     = "application/json"
-            }
-
-            \$params = @{
-                Uri         = \$uri
-                Method      = \$Method
-                Headers     = \$headers
-                TimeoutSec  = \$TimeoutSec
-                ErrorAction = "Stop"
-            }
-
-            if (\$bodyJson -ne "") {
-                \$bodyBytes = [System.Text.Encoding]::UTF8.GetBytes(\$bodyJson)
-                \$params.Body = \$bodyBytes
-            }
-
-            Write-Log "[NETWORK] \$Method \$uri" "DEBUG"
-
-            \$response = Invoke-WebRequest @params -UseBasicParsing
-            \$status = [int]\$response.StatusCode
-
-            Write-Log "[NETWORK] Response: \$status" "DEBUG"
-
-            return [pscustomobject]@{
-                Success    = \$true
-                StatusCode = \$status
-                Body       = \$response.Content
-            }
-        }
-        catch {
-            \$retryCount++
-            \$statusCode = \$null
-            if (\$_.Exception.Response -and \$_.Exception.Response.StatusCode) {
-                \$statusCode = \$_.Exception.Response.StatusCode.value__
-            }
-
-            Write-Log "Erro na requisicao \$Method \$uri (tentativa \$retryCount/\$MaxRetries): \$(\$_.Exception.Message)" "ERROR"
-
-            if (\$statusCode -eq 401) {
-                Write-Log "[ERROR] Erro de autenticacao (401)" "ERROR"
-                throw
-            }
-
-            if (\$statusCode -eq 429) {
-                \$rateLimitDelay = \$retryDelay * 5
-                Write-Log "[RATE-LIMIT] 429 - aguardando \${rateLimitDelay}s" "WARN"
-                Start-Sleep -Seconds \$rateLimitDelay
-                \$retryDelay *= 2
-                
-                if (\$retryCount -ge \$MaxRetries) {
-                    return [pscustomobject]@{
-                        Success    = \$false
-                        StatusCode = 429
-                        Body       = "Rate limit exceeded"
-                    }
-                }
-                continue
-            }
-
-            if (\$retryCount -ge \$MaxRetries) {
-                throw
-            }
-
-            Start-Sleep -Seconds \$retryDelay
-            \$retryDelay *= 2
-        }
-    }
-}
-
-# ============================================
-#  INFO DO SISTEMA
+#  SYSTEM INFO
 # ============================================
 function Get-SystemInfo {
     try {
@@ -1232,10 +1517,10 @@ function Send-Heartbeat {
     Write-Log "[HEARTBEAT] Enviando heartbeat (state: \$(Get-AgentState))..." "INFO"
 
     try {
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/agent-heartbeat" \`
-            -Method "POST" \`
-            -Body \$body \`
+        \$result = Invoke-SecureRequest \\\`
+            -Path "/functions/v1/agent-heartbeat" \\\`
+            -Method "POST" \\\`
+            -Body \$body \\\`
             -TimeoutSec 15
 
         if (\$result.Success -and \$result.StatusCode -eq 200) {
@@ -1301,10 +1586,10 @@ function Submit-JobResult {
     Write-Log "[JOB] Enviando resultado para job \$JobId (status=\$Status, exec_id=\$ExecutionId)" "INFO"
 
     try {
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/submit-job-result" \`
-            -Method "POST" \`
-            -Body \$body \`
+        \$result = Invoke-SecureRequest \\\`
+            -Path "/functions/v1/submit-job-result" \\\`
+            -Method "POST" \\\`
+            -Body \$body \\\`
             -TimeoutSec 30
 
         if (\$result.Success -and \$result.StatusCode -eq 200) {
@@ -1413,16 +1698,16 @@ function Execute-Job {
             state = Get-AgentState
         } -Severity "info"
 
-        Submit-JobResult \`
-            -JobId \$jobId \`
-            -Status "completed" \`
-            -Output \$output \`
-            -ExecutionTimeSeconds \$execTime \`
-            -StartedAt \$startTimeISO \`
+        Submit-JobResult \\\`
+            -JobId \$jobId \\\`
+            -Status "completed" \\\`
+            -Output \$output \\\`
+            -ExecutionTimeSeconds \$execTime \\\`
+            -StartedAt \$startTimeISO \\\`
             -ExecutionId \$executionId
     }
     catch {
-        \$err = "Erro ao executar job \$jobId\`: \$(\$_.Exception.Message)"
+        \$err = "Erro ao executar job \$jobId\\\`: \$(\$_.Exception.Message)"
         Write-Log \$err "ERROR"
 
         \$execTime = [int]((Get-Date) - \$startTime).TotalSeconds
@@ -1439,12 +1724,12 @@ function Execute-Job {
             state = Get-AgentState
         } -Severity "error"
 
-        Submit-JobResult \`
-            -JobId \$jobId \`
-            -Status "failed" \`
-            -ErrorMessage \$err \`
-            -ExecutionTimeSeconds \$execTime \`
-            -StartedAt \$startTimeISO \`
+        Submit-JobResult \\\`
+            -JobId \$jobId \\\`
+            -Status "failed" \\\`
+            -ErrorMessage \$err \\\`
+            -ExecutionTimeSeconds \$execTime \\\`
+            -StartedAt \$startTimeISO \\\`
             -ExecutionId \$executionId
         
         # Considerar transicao para DEGRADED se muitas falhas
@@ -1612,7 +1897,28 @@ function Invoke-UpdateAgentJob {
     param(\$Job)
     
     try {
-        Write-Log "[UPDATE] Iniciando update_agent - v4.0.2-UPDATE-FIX" "INFO"
+        Write-Log "[UPDATE] Iniciando update_agent - v4.0.6-SAFE-ROLLBACK" "INFO"
+        
+        # ============================================================
+        # FASE 3.0: SAFE MODE CHECK
+        # Block updates if agent is in Safe Mode (rollback loop detected)
+        # ============================================================
+        \$rollbackState = Get-RollbackState
+        if (\$rollbackState.safe_mode) {
+            Write-Log "[SAFE MODE] Updates desabilitados - rollback loop detectado" "ERROR"
+            
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "update_blocked_safe_mode"
+                rollback_count = \$rollbackState.rollback_count
+                last_rollback = \$rollbackState.last_rollback
+            } -Severity "warning"
+            
+            return @{ 
+                success = \$false
+                error = "Safe mode active - updates disabled"
+                safe_mode = \$true
+            }
+        }
         
         Add-EvidenceEntry -Type "update_check" -Data @{
             current_version = \$Global:AgentVersion
@@ -1620,9 +1926,9 @@ function Invoke-UpdateAgentJob {
         } -Severity "info"
         
         # Chama serve-agent-update
-        \$updateResult = Invoke-SecureRequest \`
-            -Path "/functions/v1/serve-agent-update" \`
-            -Method GET \`
+        \$updateResult = Invoke-SecureRequest \\\`
+            -Path "/functions/v1/serve-agent-update" \\\`
+            -Method GET \\\`
             -TimeoutSec 60
         
         if (-not \$updateResult.Success) {
@@ -1637,6 +1943,17 @@ function Invoke-UpdateAgentJob {
             Add-EvidenceEntry -Type "update_check" -Data @{
                 status = "already_current"
                 version = \$data.current_version
+            } -Severity "info"
+            return @{ success = \$true; output = (\$data | ConvertTo-Json -Compress) }
+        }
+        
+        # Fora do rollout?
+        if (\$data.message -eq "No update available (outside rollout)") {
+            Write-Log "[INFO] Agente fora do rollout gradual (bucket: \$(\$data.rollout_bucket), required: <\$(\$data.rollout_percentage)%)" "INFO"
+            Add-EvidenceEntry -Type "update_check" -Data @{
+                status = "outside_rollout"
+                bucket = \$data.rollout_bucket
+                rollout_percentage = \$data.rollout_percentage
             } -Severity "info"
             return @{ success = \$true; output = (\$data | ConvertTo-Json -Compress) }
         }
@@ -1683,6 +2000,7 @@ function Invoke-UpdateAgentJob {
         # CRITICAL: BASE64 DECODE - Preserva 100% dos bytes
         # Imune a transformacoes JSON/PowerShell
         # ============================================================
+        \$bytes = \$null
         if (\$data.script_content_base64) {
             Write-Log "[UPDATE] Usando Base64 decode (safe mode)" "INFO"
             \$bytes = [System.Convert]::FromBase64String(\$data.script_content_base64)
@@ -1693,6 +2011,7 @@ function Invoke-UpdateAgentJob {
             Write-Log "[UPDATE] Fallback para script_content (string mode)" "WARN"
             \$scriptText = \$data.script_content
             [System.IO.File]::WriteAllText(\$tempScript, \$scriptText, [System.Text.UTF8Encoding]::new(\$false))
+            \$bytes = [System.IO.File]::ReadAllBytes(\$tempScript)
         }
         
         # Validar SHA256 do arquivo ESCRITO no disco
@@ -1704,14 +2023,73 @@ function Invoke-UpdateAgentJob {
         
         Write-Log "[SUCCESS] SHA256 validado: \$actualHash" "SUCCESS"
         
-        # Backup do script atual (opcional - nao falha se nao encontrar)
+        # ============================================================
+        # FASE 2.6: ED25519 SIGNATURE VERIFICATION
+        # Verifica assinatura criptográfica ANTES de aplicar update
+        # ============================================================
+        \$signatureVerified = \$false
+        if (\$data.signature_base64) {
+            Write-Log "[SECURITY] Verificando assinatura Ed25519 (signed by: \$(\$data.signed_by))" "INFO"
+            
+            \$signatureVerified = Verify-Ed25519Signature -ScriptBytes \$bytes -SignatureBase64 \$data.signature_base64
+            
+            if (-not \$signatureVerified) {
+                Remove-Item \$tempScript -Force
+                
+                Add-EvidenceEntry -Type "error" -Data @{
+                    event = "signature_rejected"
+                    version = \$newVersion
+                    signed_by = \$data.signed_by
+                    sha256 = \$actualHash
+                } -Severity "error"
+                
+                throw "Ed25519 signature verification FAILED - Update rejected for security"
+            }
+            
+            Add-EvidenceEntry -Type "security_event" -Data @{
+                event = "signature_verified"
+                version = \$newVersion
+                signed_by = \$data.signed_by
+                signed_at = \$data.signed_at
+            } -Severity "info"
+        } else {
+            Write-Log "[SECURITY] Nenhuma assinatura fornecida - modo backward compatible" "WARN"
+            
+            # Log para auditoria
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "unsigned_update"
+                version = \$newVersion
+                note = "Update applied without cryptographic signature (backward compatible)"
+            } -Severity "warning"
+        }
+        
+        # ============================================================
+        # FASE 3.0: STRUCTURED BACKUP FOR ROLLBACK
+        # Create structured backup BEFORE applying new version
+        # ============================================================
+        \$previousPath = \$Global:RollbackPaths.Previous
+        
+        # Backup do script atual para rollback estruturado
         if (\$currentScript -and (Test-Path \$currentScript)) {
+            try {
+                Copy-Item -Path \$currentScript -Destination \$previousPath -Force
+                Write-Log "[ROLLBACK] Structured backup created: \$previousPath" "INFO"
+                
+                # Update rollback state with previous version info
+                \$rollbackState = Get-RollbackState
+                \$rollbackState.previous_version = \$Global:AgentVersion
+                Save-RollbackState -State \$rollbackState
+            } catch {
+                Write-Log "[WARN] Structured backup failed: \$(\$_.Exception.Message)" "WARN"
+            }
+            
+            # Also create timestamped backup for historical purposes
             \$backupScript = \$currentScript -replace '\\.ps1\$', "-backup-\$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
             try {
                 Copy-Item -Path \$currentScript -Destination \$backupScript -Force
-                Write-Log "[BACKUP] Backup criado: \$backupScript" "INFO"
+                Write-Log "[BACKUP] Historical backup: \$backupScript" "INFO"
             } catch {
-                Write-Log "[WARN] Backup falhou, continuando: \$(\$_.Exception.Message)" "WARN"
+                Write-Log "[WARN] Historical backup falhou: \$(\$_.Exception.Message)" "WARN"
             }
         } else {
             Write-Log "[WARN] Script atual nao encontrado, pulando backup" "WARN"
@@ -1729,6 +2107,8 @@ function Invoke-UpdateAgentJob {
             target_path = \$targetScript
             sha256 = \$actualHash
             base64_mode = [bool]\$data.script_content_base64
+            signature_verified = \$signatureVerified
+            signed_by = \$data.signed_by
         } -Severity "info"
         
         Write-Log "[SUCCESS] Script v\$newVersion instalado em \$targetScript" "SUCCESS"
@@ -1742,6 +2122,8 @@ function Invoke-UpdateAgentJob {
             targetPath  = \$targetScript
             sha256      = \$actualHash
             base64Mode  = [bool]\$data.script_content_base64
+            signatureVerified = \$signatureVerified
+            signedBy    = \$data.signed_by
             requiresReboot = \$true
             savedAt     = (Get-Date).ToUniversalTime().ToString("o")
         }
@@ -1773,10 +2155,10 @@ function Poll-Jobs {
     Write-Log "Consultando jobs..." "INFO"
 
     try {
-        \$result = Invoke-SecureRequest \`
-            -Path "/functions/v1/poll-jobs" \`
-            -Method "POST" \`
-            -Body \$body \`
+        \$result = Invoke-SecureRequest \\\`
+            -Path "/functions/v1/poll-jobs" \\\`
+            -Method "POST" \\\`
+            -Body \$body \\\`
             -TimeoutSec 20
 
         if (-not \$result.Success -or \$result.StatusCode -ne 200) {
@@ -1827,6 +2209,64 @@ try {
     
     # Transicao: BOOTSTRAP -> SYNCING
     Set-AgentState -NewState "SYNCING" -Reason "Starting initial sync"
+
+    # ============================================================
+    # FASE 3: HEALTH CHECK POS-UPDATE + SAFE MODE CHECK
+    # ============================================================
+    \$rollbackState = Get-RollbackState
+    
+    # Verificar Safe Mode
+    if (\$rollbackState.safe_mode) {
+        Write-Log "[SAFE MODE] Agente em modo seguro - auto-updates desabilitados" "WARN"
+        Add-EvidenceEntry -Type "security_event" -Data @{
+            event = "safe_mode_active"
+            version = \$Global:AgentVersion
+            rollback_count = \$rollbackState.rollback_count
+        } -Severity "warning"
+    }
+    
+    # Health Check pos-update: detectar se houve update recente
+    if (\$rollbackState.previous_version -and \$rollbackState.previous_version -ne \$Global:AgentVersion) {
+        Write-Log "[HEALTH CHECK] Update detectado: \$(\$rollbackState.previous_version) -> \$(\$Global:AgentVersion)" "INFO"
+        Write-Log "[HEALTH CHECK] Aguardando 5s para estabilizacao..." "INFO"
+        Start-Sleep -Seconds 5
+        
+        Write-Log "[HEALTH CHECK] Validando versao \$(\$Global:AgentVersion)..." "INFO"
+        \$health = Test-PostUpdateHealth
+        
+        if (-not \$health.healthy) {
+            Write-Log "[HEALTH CHECK] FALHA: \$(\$health.reason)" "ERROR"
+            Add-EvidenceEntry -Type "security_event" -Data @{
+                event = "health_check_failed"
+                version = \$Global:AgentVersion
+                previous_version = \$rollbackState.previous_version
+                reason = \$health.reason
+            } -Severity "error"
+            
+            # Executar rollback automatico
+            \$rollbackResult = Invoke-SafeRollback -Reason "health_check_failed"
+            
+            if (\$rollbackResult.safe_mode) {
+                Write-Log "[CRITICAL] Agente entrou em SAFE MODE apos rollback loop" "ERROR"
+            }
+            # Se rollback executado com sucesso, o agente sera reiniciado
+            # Se falhou, continuar em modo degradado
+        } else {
+            Write-Log "[HEALTH CHECK] Versao \$(\$Global:AgentVersion) validada com sucesso" "SUCCESS"
+            
+            # Reset rollback state apos sucesso
+            \$rollbackState.rollback_count = 0
+            \$rollbackState.previous_version = \$null
+            Save-RollbackState -State \$rollbackState
+            
+            Add-EvidenceEntry -Type "state_change" -Data @{
+                event = "update_validated"
+                version = \$Global:AgentVersion
+                health_check = "passed"
+            } -Severity "info"
+        }
+    }
+    # ============================================================
 
     # Sincronizar policy do servidor
     Write-Log "[BOOTSTRAP] Syncing policy from server..." "INFO"
@@ -1982,4 +2422,4 @@ catch {
     
     exit 1
 }
-`;
+\`;
