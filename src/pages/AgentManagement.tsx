@@ -46,7 +46,7 @@ interface Agent {
 
 // Latest versions by platform
 const LATEST_VERSIONS: Record<string, string> = {
-  windows: 'v3.10.39-BASE64-SAFE-UPDATE',
+  windows: 'v3.10.40-DNS-FILTER',
   linux: 'v3.10.40-DNS-FILTER',
   macos: 'v3.10.40-DNS-FILTER',
 };
