@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Zap, Plus, Server, CheckCircle, XCircle, Clock, AlertCircle, Trash2 } from "lucide-react";
+import { Zap, Plus, Server, CheckCircle, XCircle, Clock, AlertCircle, Trash2, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -140,11 +141,11 @@ const JobCreator = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Jobs pendentes limpos com sucesso");
+      toast.success("Tarefas pendentes limpas com sucesso");
       loadJobs();
     },
     onError: (error: any) => {
-      toast.error(`Erro ao limpar jobs: ${error.message}`);
+      toast.error(`Erro ao limpar tarefas: ${error.message}`);
     }
   });
 
@@ -152,11 +153,11 @@ const JobCreator = () => {
     const pendingCount = recentJobs.filter(j => j.status === 'queued').length;
     
     if (pendingCount === 0) {
-      toast.info("Nao ha jobs pendentes para limpar");
+      toast.info("Não há tarefas pendentes para limpar");
       return;
     }
     
-    if (confirm(`Limpar ${pendingCount} job(s) pendente(s) com mais de 24h?`)) {
+    if (confirm(`Limpar ${pendingCount} tarefa(s) pendente(s) com mais de 24h?`)) {
       clearPendingJobs.mutate();
     }
   };
@@ -279,8 +280,8 @@ const JobCreator = () => {
         return;
       }
 
-      const jobTypeLabel = isRecurring ? 'Job recorrente' : isScheduled ? 'Job agendado' : 'Job';
-      toast.success(`${jobTypeLabel} criado com sucesso! ID: ${data.id}`);
+      const jobTypeLabel = isRecurring ? 'Tarefa recorrente' : isScheduled ? 'Tarefa agendada' : 'Tarefa';
+      toast.success(`${jobTypeLabel} criada com sucesso!`);
       
       // Reset form
       setPayload(getJobTypeExamples(jobType));
@@ -349,23 +350,87 @@ const JobCreator = () => {
         </Button>
       </div>
 
+      {/* Estado Global */}
+      {(() => {
+        const pendingJobs = recentJobs.filter(j => j.status === 'queued').length;
+        const completedJobs = recentJobs.filter(j => j.status === 'completed').length;
+        const failedJobs = recentJobs.filter(j => j.status === 'failed').length;
+        
+        return (
+          <Card className={cn(
+            "border-2 transition-all",
+            pendingJobs === 0 && failedJobs === 0 
+              ? "bg-success/5 border-success/30" 
+              : failedJobs > 0 
+                ? "bg-destructive/5 border-destructive/30"
+                : pendingJobs > 5 
+                  ? "bg-warning/5 border-warning/30" 
+                  : "bg-primary/5 border-primary/30"
+          )}>
+            <CardContent className="py-6">
+              <div className="flex items-center justify-center gap-4">
+                <div className="text-5xl">
+                  {pendingJobs === 0 && failedJobs === 0 ? '🟢' : 
+                   failedJobs > 0 ? '🔴' :
+                   pendingJobs > 5 ? '🟡' : '🔵'}
+                </div>
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold">
+                    {pendingJobs === 0 && failedJobs === 0 
+                      ? 'Todas as Tarefas em Dia' 
+                      : failedJobs > 0
+                        ? `${failedJobs} Tarefa(s) com Erro`
+                        : pendingJobs > 5 
+                          ? `${pendingJobs} Tarefas Aguardando` 
+                          : 'Sistema Operando Normalmente'}
+                  </h2>
+                  <p className="text-muted-foreground">
+                    {activeAgents.length} de {agents.length} computadores online • {completedJobs} tarefas concluídas
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-gradient-card border-primary/20">
+        <Card className={cn(
+          "bg-gradient-card transition-all",
+          activeAgents.length === agents.length && agents.length > 0
+            ? "border-success/30"
+            : activeAgents.length / agents.length >= 0.8
+              ? "border-primary/20"
+              : "border-warning/30"
+        )}>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Agentes Disponiveis</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Server className="h-4 w-4" />
+              Computadores
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-foreground">{agents.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {activeAgents.length} online
+            <p className={cn(
+              "text-xs mt-1",
+              activeAgents.length === agents.length && agents.length > 0
+                ? "text-success"
+                : "text-muted-foreground"
+            )}>
+              {activeAgents.length === agents.length && agents.length > 0 
+                ? `✓ Todos online (${activeAgents.length})`
+                : `${activeAgents.length} online`}
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-card border-accent/20">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Tarefas Recentes</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              Tarefas Recentes
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-foreground">{recentJobs.length}</div>
@@ -375,17 +440,35 @@ const JobCreator = () => {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-card border-success/20">
+        <Card className={cn(
+          "bg-gradient-card transition-all",
+          recentJobs.filter(j => j.status === 'queued').length === 0
+            ? "border-success/30"
+            : recentJobs.filter(j => j.status === 'queued').length > 5
+              ? "border-warning/30"
+              : "border-primary/20"
+        )}>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Tarefas Pendentes</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Pendentes
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-foreground">
-              {recentJobs.filter(j => j.status === 'queued').length}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              aguardando execução
-            </p>
+            {(() => {
+              const pending = recentJobs.filter(j => j.status === 'queued').length;
+              return (
+                <>
+                  <div className="text-3xl font-bold text-foreground">{pending}</div>
+                  <p className={cn(
+                    "text-xs mt-1",
+                    pending === 0 ? "text-success" : "text-muted-foreground"
+                  )}>
+                    {pending === 0 ? '✓ Nenhuma pendente' : 'aguardando execução'}
+                  </p>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>
@@ -472,7 +555,7 @@ const JobCreator = () => {
                     </div>
                     <details className="group">
                       <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-                        ▶ Modo avançado (editar JSON manualmente)
+                        ⚙️ Configurações detalhadas (opcional)
                       </summary>
                       <Textarea
                         id="payload"
@@ -487,9 +570,9 @@ const JobCreator = () => {
                   {/* Schedule Switch */}
                   <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg border border-border">
                     <div className="space-y-0.5">
-                      <Label htmlFor="scheduled">Agendar para Depois</Label>
+                      <Label htmlFor="scheduled">⏰ Agendar para Depois</Label>
                       <p className="text-xs text-muted-foreground">
-                        Job sera executado em uma data e hora especifica
+                        Tarefa será executada em uma data e hora específica
                       </p>
                     </div>
                     <Switch
@@ -516,7 +599,7 @@ const JobCreator = () => {
                         className="font-mono"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Job sera executado automaticamente neste horario
+                        Tarefa será executada automaticamente neste horário
                       </p>
                     </div>
                   )}
@@ -524,9 +607,9 @@ const JobCreator = () => {
                   {/* Recurring Switch */}
                   <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg border border-border">
                     <div className="space-y-0.5">
-                      <Label htmlFor="recurring">Job Recorrente</Label>
+                      <Label htmlFor="recurring">🔄 Tarefa Recorrente</Label>
                       <p className="text-xs text-muted-foreground">
-                        Job sera executado automaticamente em intervalos regulares
+                        Tarefa será executada automaticamente em intervalos regulares
                       </p>
                     </div>
                     <Switch
@@ -557,7 +640,7 @@ const JobCreator = () => {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Primeira execucao ocorrera no proximo intervalo
+                        Primeira execução ocorrerá no próximo intervalo
                       </p>
                     </div>
                   )}
@@ -565,9 +648,9 @@ const JobCreator = () => {
                   {/* Approved Switch */}
                   <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-lg border border-border">
                     <div className="space-y-0.5">
-                      <Label htmlFor="approved">Aprovacao Automatica</Label>
+                      <Label htmlFor="approved">✅ Execução Imediata</Label>
                       <p className="text-xs text-muted-foreground">
-                        Job sera executado sem aprovacao manual
+                        Tarefa será executada assim que o computador buscar
                       </p>
                     </div>
                     <Switch
@@ -587,12 +670,12 @@ const JobCreator = () => {
                     {loading ? (
                       <>
                         <Clock className="mr-2 h-5 w-5 animate-spin" />
-                        Criando Job...
+                        Criando Tarefa...
                       </>
                     ) : (
                       <>
                         <Plus className="mr-2 h-5 w-5" />
-                        Criar Job
+                        Criar Tarefa
                       </>
                     )}
                   </Button>
@@ -601,91 +684,18 @@ const JobCreator = () => {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* History Tab */}
-        <TabsContent value="history" className="mt-4">
-          <Card className="bg-gradient-card border-primary/20">
-            <CardHeader>
-              <CardTitle>Jobs Recentes</CardTitle>
-              <CardDescription>Ultimos 20 jobs criados</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loadingData ? (
-                <p className="text-center text-muted-foreground py-8">Carregando...</p>
-              ) : recentJobs.length === 0 ? (
-                <div className="text-center py-12">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">Nenhum job encontrado</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                {recentJobs.map((job) => {
-                  // Find agent to get display name
-                  const agent = agents.find(a => a.agent_name === job.agent_name);
-                  const agentDisplayName = agent ? getAgentDisplayName(agent) : job.agent_name;
-                  
-                  return (
-                    <div
-                      key={job.id}
-                      className="p-4 bg-secondary/30 rounded-lg border border-border hover:border-primary/30 transition-colors"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="outline" className="font-mono">
-                              {agentDisplayName}
-                            </Badge>
-                            <Badge variant="secondary">{job.type}</Badge>
-                            {getStatusBadge(job.status)}
-                            {!job.approved && (
-                              <Badge variant="outline" className="bg-warning/20 text-warning border-warning/30">
-                                Aguardando aprovacao
-                              </Badge>
-                            )}
-                            {job.scheduled_at && (
-                              <Badge variant="outline" className="bg-accent/20 text-accent border-accent/30">
-                                <Clock className="h-3 w-3 mr-1" />
-                                Agendado
-                              </Badge>
-                            )}
-                            {job.is_recurring && (
-                              <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">
-                                ? Recorrente
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground font-mono">
-                            ID: {job.id}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Criado: {new Date(job.created_at).toLocaleString('pt-BR')}
-                          </p>
-                          {job.scheduled_at && (
-                            <p className="text-xs text-accent">
-                              Execucao agendada: {new Date(job.scheduled_at).toLocaleString('pt-BR')}
-                            </p>
-                          )}
-                          {job.is_recurring && job.next_run_at && (
-                            <p className="text-xs text-primary">
-                              Proxima execucao: {new Date(job.next_run_at).toLocaleString('pt-BR')}
-                            </p>
-                          )}
-                          {job.is_recurring && job.last_run_at && (
-                            <p className="text-xs text-muted-foreground">
-                              Ultima execucao: {new Date(job.last_run_at).toLocaleString('pt-BR')}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
+
+      {/* Frase Âncora de Confiança */}
+      <Card className="bg-muted/20 border-dashed">
+        <CardContent className="py-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            💡 As tarefas são enviadas automaticamente quando o computador se conecta.
+            <br />
+            <span className="text-primary font-medium">O status atualiza em tempo real.</span>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
