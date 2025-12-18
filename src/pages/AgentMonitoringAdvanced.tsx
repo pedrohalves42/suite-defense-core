@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Activity, AlertCircle, CheckCircle, Clock, Cpu, HardDrive, MemoryStick, Monitor, Search, XCircle } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, Clock, Cpu, HardDrive, MemoryStick, Monitor, Search, XCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getOsDisplayName, getOsIcon } from '@/lib/os-utils';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { cn } from '@/lib/utils';
 
 interface AgentMetrics {
   id: string;
@@ -57,7 +58,6 @@ export default function AgentMonitoringAdvanced() {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [osFilter, setOsFilter] = useState<'all' | 'windows' | 'linux'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'offline'>('all');
 
   const fetchDashboardData = async (showToast = false) => {
@@ -88,7 +88,7 @@ export default function AgentMonitoringAdvanced() {
       logger.error('Error fetching dashboard data', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao carregar dados do painel',
+        description: 'Falha ao carregar dados',
         variant: 'destructive',
       });
     } finally {
@@ -100,7 +100,6 @@ export default function AgentMonitoringAdvanced() {
   useEffect(() => {
     fetchDashboardData();
 
-    // Realtime subscriptions
     const agentsChannel = supabase
       .channel('agents-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'agents' }, () => {
@@ -146,8 +145,8 @@ export default function AgentMonitoringAdvanced() {
       if (error) throw error;
 
       toast({
-        title: 'Alerta Reconhecido',
-        description: 'O alerta foi marcado como reconhecido',
+        title: 'Alerta Resolvido',
+        description: 'O alerta foi marcado como resolvido',
       });
       
       fetchDashboardData();
@@ -155,7 +154,7 @@ export default function AgentMonitoringAdvanced() {
       logger.error('Error acknowledging alert', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao reconhecer alerta',
+        description: 'Falha ao resolver alerta',
         variant: 'destructive',
       });
     }
@@ -164,138 +163,146 @@ export default function AgentMonitoringAdvanced() {
   const filteredAgents = agents.filter((agent) => {
     const matchesSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       agent.hostname?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesOs = osFilter === 'all' || agent.os_type === osFilter;
     const matchesStatus = statusFilter === 'all' || 
       (statusFilter === 'online' && agent.is_online) ||
       (statusFilter === 'offline' && !agent.is_online);
     
-    return matchesSearch && matchesOs && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
-  const getStatusBadge = (agent: AgentMetrics) => {
-    if (agent.is_online) {
-      return <Badge className="bg-green-500"><CheckCircle className="w-3 h-3 mr-1" /> Conectado</Badge>;
-    }
-    return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" /> Desconectado</Badge>;
+  const getHealthColor = (value: number | null, threshold: number) => {
+    if (value === null) return 'text-muted-foreground';
+    if (value > threshold) return 'text-destructive';
+    if (value > threshold * 0.8) return 'text-warning';
+    return 'text-success';
   };
 
-
-  const getUsageBadge = (value: number | null, threshold: number) => {
-    if (value === null) return <span className="text-muted-foreground">N/A</span>;
-    const variant = value > threshold ? 'destructive' : value > threshold * 0.7 ? 'default' : 'secondary';
-    return <Badge variant={variant}>{value.toFixed(1)}%</Badge>;
-  };
-
-  const getSeverityBadge = (severity: string) => {
-    const variants: Record<string, string> = {
-      critical: 'destructive',
-      high: 'default',
-      medium: 'secondary',
-      low: 'outline',
-    };
-    return <Badge variant={variants[severity] as any}>{severity.toUpperCase()}</Badge>;
+  const getHealthBg = (value: number | null, threshold: number) => {
+    if (value === null) return 'bg-muted';
+    if (value > threshold) return 'bg-destructive/10';
+    if (value > threshold * 0.8) return 'bg-warning/10';
+    return 'bg-success/10';
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Carregando dados...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Monitor className="w-8 h-8" />
-          Painel de Controle
-        </h1>
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-3">
+            <Monitor className="w-8 h-8 text-primary" />
+            Monitoramento em Tempo Real
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Acompanhe a saúde dos seus computadores
+          </p>
+        </div>
         <Button onClick={() => fetchDashboardData(true)} variant="outline" disabled={isRefreshing}>
-          <Activity className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <RefreshCw className={cn("w-4 h-4 mr-2", isRefreshing && 'animate-spin')} />
           {isRefreshing ? 'Atualizando...' : 'Atualizar'}
         </Button>
       </div>
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="border-l-4 border-l-primary">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Computadores Protegidos</CardTitle>
-            <Monitor className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Computadores</CardTitle>
+            <Monitor className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary?.total_agents || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {summary?.online_agents} conectados • {summary?.offline_agents} desconectados
+            <div className="text-3xl font-bold">{summary?.total_agents || 0}</div>
+            <div className="flex gap-3 mt-2 text-sm">
+              <span className="flex items-center gap-1 text-success">
+                <Wifi className="h-3 w-3" /> {summary?.online_agents || 0} online
+              </span>
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <WifiOff className="h-3 w-3" /> {summary?.offline_agents || 0} offline
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={cn("border-l-4", getHealthBg(parseFloat(summary?.avg_cpu_usage || '0'), 90))}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Processador (Média)</CardTitle>
+            <Cpu className={cn("h-4 w-4", getHealthColor(parseFloat(summary?.avg_cpu_usage || '0'), 90))} />
+          </CardHeader>
+          <CardContent>
+            <div className={cn("text-3xl font-bold", getHealthColor(parseFloat(summary?.avg_cpu_usage || '0'), 90))}>
+              {summary?.avg_cpu_usage ? `${summary.avg_cpu_usage}%` : 'N/A'}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {parseFloat(summary?.avg_cpu_usage || '0') > 90 ? '⚠️ Uso elevado' : '✓ Normal'}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={cn("border-l-4", getHealthBg(parseFloat(summary?.avg_memory_usage || '0'), 85))}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Uso do Processador</CardTitle>
-            <Cpu className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Memória RAM (Média)</CardTitle>
+            <MemoryStick className={cn("h-4 w-4", getHealthColor(parseFloat(summary?.avg_memory_usage || '0'), 85))} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {summary?.avg_cpu_usage || 'N/A'}
-              {summary?.avg_cpu_usage && '%'}
+            <div className={cn("text-3xl font-bold", getHealthColor(parseFloat(summary?.avg_memory_usage || '0'), 85))}>
+              {summary?.avg_memory_usage ? `${summary.avg_memory_usage}%` : 'N/A'}
             </div>
-            <p className="text-xs text-muted-foreground">Media de todos os computadores</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {parseFloat(summary?.avg_memory_usage || '0') > 85 ? '⚠️ Uso elevado' : '✓ Normal'}
+            </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={cn("border-l-4", getHealthBg(parseFloat(summary?.avg_disk_usage || '0'), 90))}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Uso de Memoria</CardTitle>
-            <MemoryStick className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Armazenamento (Média)</CardTitle>
+            <HardDrive className={cn("h-4 w-4", getHealthColor(parseFloat(summary?.avg_disk_usage || '0'), 90))} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {summary?.avg_memory_usage || 'N/A'}
-              {summary?.avg_memory_usage && '%'}
+            <div className={cn("text-3xl font-bold", getHealthColor(parseFloat(summary?.avg_disk_usage || '0'), 90))}>
+              {summary?.avg_disk_usage ? `${summary.avg_disk_usage}%` : 'N/A'}
             </div>
-            <p className="text-xs text-muted-foreground">Media de todos os computadores</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Uso de Armazenamento</CardTitle>
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {summary?.avg_disk_usage || 'N/A'}
-              {summary?.avg_disk_usage && '%'}
-            </div>
-            <p className="text-xs text-muted-foreground">Media de todos os computadores</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {parseFloat(summary?.avg_disk_usage || '0') > 90 ? '⚠️ Disco cheio' : '✓ Normal'}
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* Alerts Section */}
       {alerts.length > 0 && (
-        <Card>
+        <Card className="border-destructive/50 bg-destructive/5">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-destructive" />
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="w-5 h-5" />
               Alertas Pendentes ({alerts.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {alerts.slice(0, 5).map((alert) => (
-                <div key={alert.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={alert.id} className="flex items-center justify-between p-4 bg-card border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      {getSeverityBadge(alert.severity)}
+                      <Badge variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}>
+                        {alert.severity === 'critical' ? 'Crítico' : alert.severity === 'high' ? 'Alto' : 'Médio'}
+                      </Badge>
                       <span className="font-semibold">{alert.title}</span>
                     </div>
                     <p className="text-sm text-muted-foreground">{alert.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      <Clock className="w-3 h-3 inline mr-1" />
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
                       {formatBrazilDateTime(alert.created_at, 'datetime')}
                     </p>
                   </div>
@@ -304,7 +311,8 @@ export default function AgentMonitoringAdvanced() {
                     variant="outline" 
                     size="sm"
                   >
-                    Reconhecer
+                    <CheckCircle className="w-4 h-4 mr-1" />
+                    Resolver
                   </Button>
                 </div>
               ))}
@@ -313,46 +321,20 @@ export default function AgentMonitoringAdvanced() {
         </Card>
       )}
 
-      {/* Filters */}
+      {/* Search and Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
+            <div className="flex-1 min-w-[250px]">
               <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar por nome ou hostname..."
+                  placeholder="Buscar por nome do computador..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
+                  className="pl-9"
                 />
               </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={osFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setOsFilter('all')}
-                size="sm"
-              >
-                Todos ({summary?.total_agents})
-              </Button>
-              <Button
-                variant={osFilter === 'windows' ? 'default' : 'outline'}
-                onClick={() => setOsFilter('windows')}
-                size="sm"
-              >
-                ? Windows ({summary?.windows_agents})
-              </Button>
-              <Button
-                variant={osFilter === 'linux' ? 'default' : 'outline'}
-                onClick={() => setOsFilter('linux')}
-                size="sm"
-              >
-                ? Linux ({summary?.linux_agents})
-              </Button>
             </div>
             <div className="flex gap-2">
               <Button
@@ -360,81 +342,139 @@ export default function AgentMonitoringAdvanced() {
                 onClick={() => setStatusFilter('all')}
                 size="sm"
               >
-                Todos
+                Todos ({summary?.total_agents || 0})
               </Button>
               <Button
                 variant={statusFilter === 'online' ? 'default' : 'outline'}
                 onClick={() => setStatusFilter('online')}
                 size="sm"
+                className={statusFilter === 'online' ? '' : 'text-success hover:text-success'}
               >
-                Online ({summary?.online_agents})
+                <Wifi className="w-4 h-4 mr-1" />
+                Online ({summary?.online_agents || 0})
               </Button>
               <Button
                 variant={statusFilter === 'offline' ? 'default' : 'outline'}
                 onClick={() => setStatusFilter('offline')}
                 size="sm"
               >
-                Offline ({summary?.offline_agents})
+                <WifiOff className="w-4 h-4 mr-1" />
+                Offline ({summary?.offline_agents || 0})
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Agents Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Computadores Protegidos ({filteredAgents.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">Status</th>
-                  <th className="text-left p-2">Nome</th>
-                  <th className="text-left p-2">Sistema</th>
-                  <th className="text-left p-2">Computador</th>
-                  <th className="text-left p-2">Processador</th>
-                  <th className="text-left p-2">Memoria</th>
-                  <th className="text-left p-2">Armazenamento</th>
-                  <th className="text-left p-2">Tempo Ligado</th>
-                  <th className="text-left p-2">Ultima Conexao</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAgents.map((agent) => (
-                  <tr key={agent.id} className="border-b hover:bg-muted/50">
-                    <td className="p-2">{getStatusBadge(agent)}</td>
-                    <td className="p-2 font-medium">{agent.name}</td>
-                    <td className="p-2">
-                      <div className="flex items-center gap-1">
-                        <span className="text-xl">{getOsIcon(agent.os_type)}</span>
-                        <span className="text-sm">{getOsDisplayName(agent.os_type, agent.os_version || null)}</span>
-                      </div>
-                    </td>
-                    <td className="p-2 text-sm">{agent.hostname || 'N/A'}</td>
-                    <td className="p-2">{getUsageBadge(agent.cpu_usage, 90)}</td>
-                    <td className="p-2">{getUsageBadge(agent.memory_usage, 85)}</td>
-                    <td className="p-2">{getUsageBadge(agent.disk_usage, 90)}</td>
-                    <td className="p-2 text-sm">
-                      {agent.uptime_hours !== null ? `${agent.uptime_hours}h` : 'N/A'}
-                    </td>
-                    <td className="p-2 text-sm text-muted-foreground">
-                      {formatBrazilDateTime(agent.last_heartbeat, 'datetime')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {filteredAgents.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhum agente encontrado com os filtros aplicados
+      {/* Agents Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {filteredAgents.map((agent) => (
+          <Card key={agent.id} className={cn(
+            "transition-all duration-200 hover:shadow-lg",
+            agent.is_online ? "border-success/30" : "border-muted"
+          )}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{getOsIcon(agent.os_type)}</span>
+                  <div>
+                    <CardTitle className="text-base">{agent.name}</CardTitle>
+                    <p className="text-xs text-muted-foreground">{agent.hostname || 'N/A'}</p>
+                  </div>
+                </div>
+                <Badge variant={agent.is_online ? 'default' : 'secondary'} className={cn(
+                  agent.is_online ? "bg-success text-success-foreground" : ""
+                )}>
+                  {agent.is_online ? (
+                    <><CheckCircle className="w-3 h-3 mr-1" /> Online</>
+                  ) : (
+                    <><XCircle className="w-3 h-3 mr-1" /> Offline</>
+                  )}
+                </Badge>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Resource Bars */}
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">Processador</span>
+                    <span className={getHealthColor(agent.cpu_usage, 90)}>
+                      {agent.cpu_usage !== null ? `${agent.cpu_usage.toFixed(0)}%` : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className={cn("h-full transition-all", 
+                        agent.cpu_usage !== null && agent.cpu_usage > 90 ? 'bg-destructive' : 
+                        agent.cpu_usage !== null && agent.cpu_usage > 70 ? 'bg-warning' : 'bg-success'
+                      )}
+                      style={{ width: `${agent.cpu_usage || 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">Memória RAM</span>
+                    <span className={getHealthColor(agent.memory_usage, 85)}>
+                      {agent.memory_usage !== null ? `${agent.memory_usage.toFixed(0)}%` : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className={cn("h-full transition-all", 
+                        agent.memory_usage !== null && agent.memory_usage > 85 ? 'bg-destructive' : 
+                        agent.memory_usage !== null && agent.memory_usage > 70 ? 'bg-warning' : 'bg-success'
+                      )}
+                      style={{ width: `${agent.memory_usage || 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-muted-foreground">Armazenamento</span>
+                    <span className={getHealthColor(agent.disk_usage, 90)}>
+                      {agent.disk_usage !== null ? `${agent.disk_usage.toFixed(0)}%` : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className={cn("h-full transition-all", 
+                        agent.disk_usage !== null && agent.disk_usage > 90 ? 'bg-destructive' : 
+                        agent.disk_usage !== null && agent.disk_usage > 80 ? 'bg-warning' : 'bg-success'
+                      )}
+                      style={{ width: `${agent.disk_usage || 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Info */}
+              <div className="flex justify-between items-center pt-2 border-t text-xs text-muted-foreground">
+                <span>{getOsDisplayName(agent.os_type, agent.os_version || null)}</span>
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {agent.uptime_hours !== null ? `${agent.uptime_hours}h ligado` : 'N/A'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredAgents.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Monitor className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-semibold mb-2">Nenhum computador encontrado</h3>
+            <p className="text-muted-foreground">
+              {searchTerm ? 'Tente uma busca diferente' : 'Instale o agente nos computadores para começar o monitoramento'}
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

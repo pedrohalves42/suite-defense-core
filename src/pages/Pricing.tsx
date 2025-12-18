@@ -9,15 +9,15 @@ export default function Pricing() {
   const plans = [
     {
       name: 'Free',
-      description: 'Perfeito para testar',
+      description: 'Para conhecer o sistema',
       price: 'Grátis',
-      priceNote: '3 dispositivos',
+      priceNote: '3 computadores',
       icon: Shield,
       color: 'text-muted-foreground',
       bgColor: 'bg-muted',
       features: [
-        'Até 3 dispositivos',
-        'Dashboard básico',
+        'Até 3 computadores',
+        'Visibilidade básica de riscos',
         'Inventário de software',
         'Status do antivírus',
       ],
@@ -26,68 +26,67 @@ export default function Pricing() {
     },
     {
       name: 'Starter',
-      description: 'Micro e pequenas empresas',
-      price: 'R$ 150',
-      priceNote: '/mês • 5 dispositivos base',
-      priceExtra: '+R$ 20 por dispositivo adicional',
-      maxDevices: 'Até 30 dispositivos',
+      description: 'Para empresas que querem saber se está tudo bem — sem olhar painel todo dia.',
+      price: 'R$ 149',
+      priceNote: '/mês • 5 computadores',
+      priceExtra: '+R$ 19 por computador adicional',
+      maxDevices: 'Até 30 computadores',
       icon: Zap,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
-      popular: true,
       features: [
-        'Base: 5 dispositivos inclusos',
-        '+R$ 20/dispositivo adicional (até 30)',
-        'Dashboard avançado',
-        'Monitoramento em tempo real',
-        'Inventário de software',
-        'Status do antivírus',
+        '5 computadores inclusos',
+        '+R$ 19/computador adicional',
+        'Verificações automáticas de segurança',
+        'Alertas por email',
+        'Relatórios de risco mensais',
         'Suporte por email',
         '14 dias de trial grátis',
       ],
-      cta: 'Iniciar teste grátis – 14 dias',
+      cta: 'Começar diagnóstico gratuito',
       ctaVariant: 'default' as const,
     },
     {
       name: 'Business',
-      description: 'Pequenas e médias empresas',
-      price: 'R$ 450',
-      priceNote: '/mês • 25 dispositivos base',
-      priceExtra: '+R$ 18 por dispositivo adicional',
-      maxDevices: 'Até 200 dispositivos',
+      description: 'Para empresas que não podem ser surpreendidas por falhas invisíveis.',
+      price: 'R$ 399',
+      priceNote: '/mês • 25 computadores',
+      priceExtra: '+R$ 17 por computador adicional',
+      maxDevices: 'Até 200 computadores',
       icon: Crown,
       color: 'text-yellow-500',
       bgColor: 'bg-yellow-500/10',
+      popular: true,
       features: [
-        'Base: 25 dispositivos inclusos',
-        '+R$ 18/dispositivo adicional (até 200)',
+        '25 computadores inclusos',
+        '+R$ 17/computador adicional',
         'Tudo do Starter, mais:',
-        'Scans avançados ilimitados',
-        'Analytics avançado',
+        'Verificações em tempo real',
+        'Relatórios de risco para gestão',
+        'Bloqueio de sites perigosos',
         'Suporte prioritário',
-        'API access',
-        'Relatórios customizados',
+        'API para integrações',
       ],
-      cta: 'Iniciar teste grátis – 14 dias',
+      cta: 'Começar diagnóstico gratuito',
       ctaVariant: 'secondary' as const,
     },
     {
       name: 'Enterprise',
-      description: 'Grandes organizações',
+      description: 'Para empresas onde um incidente vira problema jurídico, financeiro ou reputacional.',
       price: 'Sob consulta',
       icon: Building2,
       color: 'text-red-500',
       bgColor: 'bg-red-500/10',
       features: [
-        'Dispositivos ilimitados',
+        'Computadores ilimitados',
         'Tudo do Business, mais:',
         'Suporte 24/7',
         'SLA personalizado',
         'Integração customizada',
         'Gerente de conta dedicado',
-        'Onboarding dedicado',
+        'Relatórios de compliance',
       ],
-      cta: 'Falar com Vendas',
+      cta: 'Falar com Especialista',
       ctaVariant: 'outline' as const,
       isEnterprise: true,
     },
@@ -115,12 +114,12 @@ export default function Pricing() {
       {/* Hero */}
       <section className="py-16 px-4">
         <div className="container mx-auto text-center max-w-3xl">
-          <Badge className="mb-4">Proteção completa sem equipe de TI</Badge>
+          <Badge className="mb-4">Proteção para empresas sem equipe de TI</Badge>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Proteção que cabe no seu bolso
+            Proteção que cabe no orçamento da sua empresa
           </h1>
           <p className="text-xl text-muted-foreground mb-4">
-            Inventário, antivírus, vulnerabilidades, web, desempenho — tudo em um painel.
+            Inventário, antivírus, vulnerabilidades, navegação web, desempenho — tudo em um painel.
           </p>
           <p className="text-lg text-muted-foreground mb-8">
             Configure em 3 minutos. Agente leve — não deixa o computador lento.
@@ -147,7 +146,7 @@ export default function Pricing() {
                 >
                   {plan.popular && (
                     <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
-                      Mais Popular
+                      Recomendado
                     </Badge>
                   )}
                   <CardHeader className="pb-2">
@@ -155,7 +154,7 @@ export default function Pricing() {
                       <Icon className={`h-6 w-6 ${plan.color}`} />
                     </div>
                     <CardTitle className="text-xl">{plan.name}</CardTitle>
-                    <CardDescription>{plan.description}</CardDescription>
+                    <CardDescription className="min-h-[40px]">{plan.description}</CardDescription>
                     
                     <div className="mt-4">
                       <span className="text-3xl font-bold">{plan.price}</span>
@@ -207,30 +206,30 @@ export default function Pricing() {
       {/* Pricing Calculator Example */}
       <section className="py-12 px-4 bg-muted/30">
         <div className="container mx-auto max-w-3xl">
-          <h2 className="text-2xl font-bold text-center mb-8">Exemplos de Preço</h2>
+          <h2 className="text-2xl font-bold text-center mb-8">Exemplos de Investimento</h2>
           <div className="grid md:grid-cols-3 gap-6">
             <Card>
               <CardContent className="pt-6 text-center">
                 <p className="text-4xl font-bold text-primary">10</p>
-                <p className="text-muted-foreground mb-4">dispositivos</p>
-                <p className="text-2xl font-bold">R$ 250/mês</p>
-                <p className="text-xs text-muted-foreground">Plano Starter: R$ 150 + 5×R$ 20</p>
+                <p className="text-muted-foreground mb-4">computadores</p>
+                <p className="text-2xl font-bold">R$ 244/mês</p>
+                <p className="text-xs text-muted-foreground">Plano Starter: R$ 149 + 5×R$ 19</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
                 <p className="text-4xl font-bold text-primary">50</p>
-                <p className="text-muted-foreground mb-4">dispositivos</p>
-                <p className="text-2xl font-bold">R$ 900/mês</p>
-                <p className="text-xs text-muted-foreground">Plano Business: R$ 450 + 25×R$ 18</p>
+                <p className="text-muted-foreground mb-4">computadores</p>
+                <p className="text-2xl font-bold">R$ 824/mês</p>
+                <p className="text-xs text-muted-foreground">Plano Business: R$ 399 + 25×R$ 17</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
                 <p className="text-4xl font-bold text-primary">100</p>
-                <p className="text-muted-foreground mb-4">dispositivos</p>
-                <p className="text-2xl font-bold">R$ 1.800/mês</p>
-                <p className="text-xs text-muted-foreground">Plano Business: R$ 450 + 75×R$ 18</p>
+                <p className="text-muted-foreground mb-4">computadores</p>
+                <p className="text-2xl font-bold">R$ 1.674/mês</p>
+                <p className="text-xs text-muted-foreground">Plano Business: R$ 399 + 75×R$ 17</p>
               </CardContent>
             </Card>
           </div>
@@ -246,7 +245,7 @@ export default function Pricing() {
           </p>
           <Link to="/register">
             <Button size="lg">
-              Iniciar teste grátis – 14 dias
+              Começar diagnóstico gratuito
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </Link>
@@ -259,7 +258,7 @@ export default function Pricing() {
           <h2 className="text-3xl font-bold text-center mb-12">Perguntas Frequentes</h2>
           <div className="space-y-6">
             <div className="border rounded-lg p-6">
-              <h3 className="font-semibold mb-2">Como funciona o trial de 14 dias?</h3>
+              <h3 className="font-semibold mb-2">Como funciona o diagnóstico gratuito de 14 dias?</h3>
               <p className="text-muted-foreground">
                 Você pode testar todas as funcionalidades do plano escolhido por 14 dias. 
                 Coletamos os dados do cartão no início, mas só cobramos após o período de teste.
@@ -272,11 +271,11 @@ export default function Pricing() {
               </p>
             </div>
             <div className="border rounded-lg p-6">
-              <h3 className="font-semibold mb-2">Como funciona o preço por dispositivo adicional?</h3>
+              <h3 className="font-semibold mb-2">Como funciona o preço por computador adicional?</h3>
               <p className="text-muted-foreground">
-                Cada plano inclui uma quantidade base de dispositivos. Se precisar de mais, 
-                você paga um valor fixo por dispositivo adicional: R$ 20 no Starter (até 30) 
-                ou R$ 18 no Business (até 200).
+                Cada plano inclui uma quantidade base de computadores. Se precisar de mais, 
+                você paga um valor fixo por computador adicional: R$ 19 no Starter (até 30) 
+                ou R$ 17 no Business (até 200).
               </p>
             </div>
             <div className="border rounded-lg p-6">
@@ -287,7 +286,7 @@ export default function Pricing() {
               </p>
             </div>
             <div className="border rounded-lg p-6">
-              <h3 className="font-semibold mb-2">O agente deixa o computador lento?</h3>
+              <h3 className="font-semibold mb-2">O sistema deixa o computador lento?</h3>
               <p className="text-muted-foreground">
                 Não! O agente CyberShield é extremamente leve e otimizado para rodar em segundo plano
                 sem impactar o desempenho do computador.

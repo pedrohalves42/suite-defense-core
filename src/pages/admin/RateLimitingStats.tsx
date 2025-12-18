@@ -122,11 +122,11 @@ export default function RateLimitingStats() {
 
         {/* No Data Alert */}
         {hasNoData && (
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertTitle>Nenhum dado de rate limiting encontrado</AlertTitle>
+          <Alert className="border-success/50 bg-success/5">
+            <Shield className="h-4 w-4 text-success" />
+            <AlertTitle className="text-success">✅ Tudo tranquilo!</AlertTitle>
             <AlertDescription>
-              Ainda não há dados de rate limiting no período selecionado. Isso é normal se o sistema foi recém-implantado ou não há tráfego recente nas APIs protegidas.
+              Nenhum abuso detectado nas suas APIs no período selecionado. Seu sistema está funcionando normalmente sem tentativas de sobrecarga.
             </AlertDescription>
           </Alert>
         )}

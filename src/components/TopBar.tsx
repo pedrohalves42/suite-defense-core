@@ -1,4 +1,4 @@
-import { Bell, User, LogOut, Bug } from 'lucide-react';
+import { Bell, User, LogOut, Bug, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -111,6 +111,15 @@ export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
                 </span>
               </div>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate('/admin/my-account')}>
+              <User className="mr-2 h-4 w-4" />
+              Configurações da Conta
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/admin/tenant')}>
+              <Settings className="mr-2 h-4 w-4" />
+              Configurações da Empresa
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive">
               <LogOut className="mr-2 h-4 w-4" />
