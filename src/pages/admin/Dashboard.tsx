@@ -5,9 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTenant } from '@/hooks/useTenant';
 import { 
-  Shield, Server, AlertTriangle, CheckCircle, Wifi, WifiOff, 
+  Shield, Server, AlertTriangle, CheckCircle, WifiOff, 
   ArrowRight, Brain, Activity, Bug, ShieldAlert, ChevronRight,
-  TrendingUp, Clock
+  Clock, Lightbulb
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -143,72 +143,87 @@ export default function Dashboard() {
   // Calculate security score (0-100)
   const calculateSecurityScore = () => {
     let score = 100;
-    
-    // Penalize for offline agents (-5 each, max -25)
     score -= Math.min(offlineAgents * 5, 25);
-    
-    // Penalize for critical alerts (-10 each, max -30)
     score -= Math.min(criticalAlerts * 10, 30);
-    
-    // Penalize for critical vulnerabilities (-5 each, max -25)
     score -= Math.min((vulnStats?.critical || 0) * 5, 25);
-    
-    // Penalize for low job success rate
     if (jobsStats?.rate && jobsStats.rate < 90) {
       score -= 20;
     } else if (jobsStats?.rate && jobsStats.rate < 95) {
       score -= 10;
     }
-    
     return Math.max(0, score);
   };
 
   const securityScore = calculateSecurityScore();
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-500';
-    if (score >= 60) return 'text-yellow-500';
-    return 'text-red-500';
+  // Get global status
+  const getGlobalStatus = () => {
+    if (securityScore >= 80 && criticalAlerts === 0) {
+      return {
+        emoji: '🟢',
+        title: 'Tudo sob controle',
+        description: 'Seus computadores estão protegidos. Continue trabalhando tranquilo.',
+        variant: 'success' as const
+      };
+    }
+    if (securityScore >= 60 || criticalAlerts <= 2) {
+      return {
+        emoji: '🟡',
+        title: 'Atenção necessária',
+        description: 'Alguns computadores precisam de verificação.',
+        variant: 'warning' as const
+      };
+    }
+    return {
+      emoji: '🔴',
+      title: 'Ação urgente',
+      description: 'Existe risco que pode impactar sua operação.',
+      variant: 'danger' as const
+    };
   };
 
-  const getScoreLabel = (score: number) => {
-    if (score >= 80) return 'Excelente';
-    if (score >= 60) return 'Atenção';
-    return 'Crítico';
-  };
+  const globalStatus = getGlobalStatus();
 
-  // Build next actions list
-  const nextActions = [];
+  // Build problems list with fear/consequence format
+  const problems = [];
+  
   if (criticalAlerts > 0) {
-    nextActions.push({
+    problems.push({
       icon: AlertTriangle,
-      label: `Verificar ${criticalAlerts} alerta${criticalAlerts > 1 ? 's' : ''} crítico${criticalAlerts > 1 ? 's' : ''}`,
+      problem: `${criticalAlerts} alerta${criticalAlerts > 1 ? 's' : ''} crítico${criticalAlerts > 1 ? 's' : ''} ativo${criticalAlerts > 1 ? 's' : ''}`,
+      consequence: 'Podem indicar ameaças ativas no sistema',
       to: '/admin/security-monitoring',
-      priority: 'high'
+      priority: 'high' as const
     });
   }
+  
   if (offlineAgents > 0) {
-    nextActions.push({
+    problems.push({
       icon: WifiOff,
-      label: `${offlineAgents} computador${offlineAgents > 1 ? 'es' : ''} offline`,
+      problem: `${offlineAgents} computador${offlineAgents > 1 ? 'es estão' : ' está'} desligado${offlineAgents > 1 ? 's' : ''}`,
+      consequence: 'Podem não receber atualizações de segurança',
       to: '/admin/agent-health',
-      priority: 'medium'
+      priority: 'medium' as const
     });
   }
+  
   if ((vulnStats?.critical || 0) > 0) {
-    nextActions.push({
+    problems.push({
       icon: Bug,
-      label: `Revisar ${vulnStats?.critical} vulnerabilidade${(vulnStats?.critical || 0) > 1 ? 's' : ''} crítica${(vulnStats?.critical || 0) > 1 ? 's' : ''}`,
+      problem: `${vulnStats?.critical} vulnerabilidade${(vulnStats?.critical || 0) > 1 ? 's' : ''} crítica${(vulnStats?.critical || 0) > 1 ? 's' : ''} encontrada${(vulnStats?.critical || 0) > 1 ? 's' : ''}`,
+      consequence: 'Podem ser exploradas por atacantes',
       to: '/admin/vulnerabilities',
-      priority: 'high'
+      priority: 'high' as const
     });
   }
+  
   if ((insightsCount || 0) > 0) {
-    nextActions.push({
+    problems.push({
       icon: Brain,
-      label: `${insightsCount} insight${(insightsCount || 0) > 1 ? 's' : ''} da IA pendente${(insightsCount || 0) > 1 ? 's' : ''}`,
+      problem: `${insightsCount} insight${(insightsCount || 0) > 1 ? 's' : ''} da IA aguardando`,
+      consequence: 'Recomendações para melhorar sua proteção',
       to: '/admin/ai-insights',
-      priority: 'low'
+      priority: 'low' as const
     });
   }
 
@@ -216,12 +231,10 @@ export default function Dashboard() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-32 w-full" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Skeleton className="h-64 lg:col-span-1" />
-          <Skeleton className="h-64 lg:col-span-2" />
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
+          <Skeleton className="h-48" />
+          <Skeleton className="h-48 lg:col-span-2" />
         </div>
       </div>
     );
@@ -232,36 +245,60 @@ export default function Dashboard() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">Painel Principal</h1>
-        <p className="text-muted-foreground text-sm">Como está a proteção dos seus computadores</p>
+        <p className="text-muted-foreground text-sm">Visão geral da proteção dos seus computadores</p>
       </div>
 
-      {/* Contextual Message */}
-      {securityScore >= 80 && criticalAlerts === 0 && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="bg-green-500/10 border-green-500/20">
-            <CardContent className="py-4 flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-green-500" />
-              <span className="text-green-700 dark:text-green-400 font-medium">
-                Tudo certo! Seus computadores estão protegidos.
+      {/* 1️⃣ GLOBAL STATUS CARD - Responde "Posso seguir tranquilo?" em 3 segundos */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <Card className={cn(
+          "border-2",
+          globalStatus.variant === 'success' && "bg-green-500/10 border-green-500/30",
+          globalStatus.variant === 'warning' && "bg-yellow-500/10 border-yellow-500/30",
+          globalStatus.variant === 'danger' && "bg-red-500/10 border-red-500/30"
+        )}>
+          <CardContent className="py-8 text-center">
+            <div className="text-5xl mb-3">{globalStatus.emoji}</div>
+            <h2 className={cn(
+              "text-2xl font-bold mb-2",
+              globalStatus.variant === 'success' && "text-green-600 dark:text-green-400",
+              globalStatus.variant === 'warning' && "text-yellow-600 dark:text-yellow-400",
+              globalStatus.variant === 'danger' && "text-red-600 dark:text-red-400"
+            )}>
+              {globalStatus.title}
+            </h2>
+            <p className="text-muted-foreground">{globalStatus.description}</p>
+            
+            {/* Score secundário, decorativo */}
+            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/50">
+              <Shield className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">
+                Nível de proteção: <span className={cn(
+                  "font-medium",
+                  securityScore >= 80 && "text-green-600",
+                  securityScore >= 60 && securityScore < 80 && "text-yellow-600",
+                  securityScore < 60 && "text-red-600"
+                )}>{securityScore}/100</span>
               </span>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
+      {/* Critical Alert Action (if any) */}
       {criticalAlerts > 0 && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="bg-destructive/10 border-destructive/20">
-            <CardContent className="py-4 flex items-center justify-between">
+        <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="bg-destructive/5 border-destructive/20">
+            <CardContent className="py-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-destructive" />
-                <span className="text-destructive font-medium">
-                  {criticalAlerts} alerta{criticalAlerts > 1 ? 's' : ''} crítico{criticalAlerts > 1 ? 's' : ''} requer{criticalAlerts > 1 ? 'em' : ''} atenção
+                <span className="text-sm text-destructive font-medium">
+                  {criticalAlerts} alerta{criticalAlerts > 1 ? 's' : ''} crítico{criticalAlerts > 1 ? 's' : ''} aguardando ação
                 </span>
               </div>
               <Button 
                 size="sm" 
                 variant="outline"
+                className="border-destructive/30 text-destructive hover:bg-destructive/10"
                 onClick={() => acknowledgeAllMutation.mutate()}
                 disabled={acknowledgeAllMutation.isPending}
               >
@@ -272,101 +309,70 @@ export default function Dashboard() {
         </motion.div>
       )}
 
-      {/* Main Grid: Score + Next Actions */}
+      {/* 2️⃣ Main Grid: Problems + Quick Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Security Score */}
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-          <Card className="h-full">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Nível de Proteção
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center py-6">
-              <div className="relative">
-                <svg className="w-32 h-32 transform -rotate-90">
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    fill="none"
-                    className="text-muted/20"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    stroke="currentColor"
-                    strokeWidth="8"
-                    fill="none"
-                    strokeDasharray={`${(securityScore / 100) * 352} 352`}
-                    strokeLinecap="round"
-                    className={getScoreColor(securityScore)}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className={cn("text-4xl font-bold", getScoreColor(securityScore))}>
-                    {securityScore}
-                  </span>
-                  <span className="text-xs text-muted-foreground">de 100</span>
-                </div>
-              </div>
-              <p className={cn("mt-4 font-medium", getScoreColor(securityScore))}>
-                {securityScore >= 80 ? '✓ Bem protegido' : securityScore >= 60 ? '⚠️ Atenção necessária' : '🚨 Ação urgente'}
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Next Actions */}
+        {/* O que pode virar problema */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }} 
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.15 }}
           className="lg:col-span-2"
         >
           <Card className="h-full">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                O que fazer agora
+                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                O que pode virar problema se você ignorar
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {nextActions.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <CheckCircle className="h-12 w-12 text-green-500 mb-3" />
-                  <p className="font-medium text-foreground">🎉 Nada para fazer!</p>
-                  <p className="text-sm text-muted-foreground">Seus computadores estão bem protegidos</p>
+              {problems.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <CheckCircle className="h-14 w-14 text-green-500 mb-4" />
+                  <p className="text-lg font-medium text-foreground">🎉 Nada para se preocupar!</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Todos os seus computadores estão protegidos
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {nextActions.slice(0, 4).map((action, idx) => {
-                    const Icon = action.icon;
+                <div className="space-y-3">
+                  {problems.slice(0, 4).map((item, idx) => {
+                    const Icon = item.icon;
                     return (
                       <Link
                         key={idx}
-                        to={action.to}
+                        to={item.to}
                         className={cn(
-                          "flex items-center justify-between p-3 rounded-lg transition-colors",
-                          action.priority === 'high' 
-                            ? "bg-destructive/10 hover:bg-destructive/15" 
-                            : "bg-muted/50 hover:bg-muted"
+                          "flex items-center justify-between p-4 rounded-lg transition-colors group",
+                          item.priority === 'high' 
+                            ? "bg-red-500/5 hover:bg-red-500/10 border border-red-500/20" 
+                            : item.priority === 'medium'
+                            ? "bg-yellow-500/5 hover:bg-yellow-500/10 border border-yellow-500/20"
+                            : "bg-muted/30 hover:bg-muted/50 border border-border/50"
                         )}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-start gap-3">
                           <Icon className={cn(
-                            "h-4 w-4",
-                            action.priority === 'high' ? "text-destructive" : "text-muted-foreground"
+                            "h-5 w-5 mt-0.5",
+                            item.priority === 'high' ? "text-red-500" : 
+                            item.priority === 'medium' ? "text-yellow-600" : 
+                            "text-muted-foreground"
                           )} />
-                          <span className="text-sm">{action.label}</span>
+                          <div className="flex flex-col">
+                            <span className={cn(
+                              "font-medium",
+                              item.priority === 'high' ? "text-red-700 dark:text-red-400" : 
+                              item.priority === 'medium' ? "text-yellow-700 dark:text-yellow-400" : 
+                              "text-foreground"
+                            )}>
+                              {item.problem}
+                            </span>
+                            <span className="text-xs text-muted-foreground mt-0.5">
+                              {item.consequence}
+                            </span>
+                          </div>
                         </div>
-                        <Button variant="ghost" size="sm">
-                          Ver <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
                       </Link>
                     );
                   })}
@@ -375,100 +381,94 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </motion.div>
-      </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <Link to="/admin/agent-health">
-            <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-              <CardContent className="pt-4">
+        {/* Quick Stats */}
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }} 
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card className="h-full">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Activity className="h-4 w-4 text-muted-foreground" />
+                Resumo rápido
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Computadores */}
+              <Link to="/admin/agent-health" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between">
-                  <Server className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-center gap-2">
+                    <Server className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Computadores</span>
+                  </div>
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <div className="mt-3">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-green-600">{onlineAgents}</span>
-                    <span className="text-sm text-muted-foreground">online</span>
-                  </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className="text-xl font-bold text-green-600">{onlineAgents}</span>
+                  <span className="text-sm text-muted-foreground">online</span>
                   {offlineAgents > 0 && (
-                    <p className="text-xs text-red-500 mt-1">{offlineAgents} offline</p>
+                    <span className="text-sm text-red-500">• {offlineAgents} offline</span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">Computadores</p>
-              </CardContent>
-            </Card>
-          </Link>
-        </motion.div>
+              </Link>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Link to="/admin/security-monitoring">
-            <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-              <CardContent className="pt-4">
+              {/* Alertas */}
+              <Link to="/admin/security-monitoring" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between">
-                  <ShieldAlert className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Alertas</span>
+                  </div>
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <div className="mt-3">
-                  <div className="flex items-baseline gap-2">
-                    <span className={cn("text-2xl font-bold", criticalAlerts > 0 ? "text-red-600" : "text-green-600")}>
-                      {alerts?.length || 0}
-                    </span>
-                    <span className="text-sm text-muted-foreground">ativos</span>
-                  </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className={cn("text-xl font-bold", (alerts?.length || 0) > 0 ? "text-yellow-600" : "text-green-600")}>
+                    {alerts?.length || 0}
+                  </span>
+                  <span className="text-sm text-muted-foreground">ativos</span>
                   {criticalAlerts > 0 && (
-                    <p className="text-xs text-red-500 mt-1">{criticalAlerts} críticos</p>
+                    <span className="text-sm text-red-500">• {criticalAlerts} críticos</span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">Alertas</p>
-              </CardContent>
-            </Card>
-          </Link>
-        </motion.div>
+              </Link>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <Link to="/admin/vulnerabilities">
-            <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
-              <CardContent className="pt-4">
+              {/* Vulnerabilidades */}
+              <Link to="/admin/vulnerabilities" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between">
-                  <Bug className="h-5 w-5 text-muted-foreground" />
+                  <div className="flex items-center gap-2">
+                    <Bug className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Riscos detectados</span>
+                  </div>
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <div className="mt-3">
-                  <div className="flex items-baseline gap-2">
-                    <span className={cn("text-2xl font-bold", (vulnStats?.critical || 0) > 0 ? "text-orange-600" : "text-green-600")}>
-                      {vulnStats?.total || 0}
-                    </span>
-                    <span className="text-sm text-muted-foreground">detectadas</span>
-                  </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className={cn("text-xl font-bold", (vulnStats?.critical || 0) > 0 ? "text-orange-600" : "text-green-600")}>
+                    {vulnStats?.total || 0}
+                  </span>
+                  <span className="text-sm text-muted-foreground">total</span>
                   {(vulnStats?.critical || 0) > 0 && (
-                    <p className="text-xs text-orange-500 mt-1">{vulnStats?.critical} críticas</p>
+                    <span className="text-sm text-orange-500">• {vulnStats?.critical} críticos</span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">Vulnerabilidades</p>
-              </CardContent>
-            </Card>
-          </Link>
-        </motion.div>
+              </Link>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <Activity className="h-5 w-5 text-muted-foreground" />
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="mt-3">
-                <div className="flex items-baseline gap-2">
-                  <span className={cn("text-2xl font-bold", (jobsStats?.rate || 100) >= 90 ? "text-green-600" : "text-orange-600")}>
+              {/* Taxa de Sucesso */}
+              <div className="p-3 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Taxa de sucesso</span>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className={cn("text-xl font-bold", (jobsStats?.rate || 100) >= 90 ? "text-green-600" : "text-orange-600")}>
                     {jobsStats?.rate || 100}%
                   </span>
-                  <span className="text-sm text-muted-foreground">sucesso</span>
+                  <span className="text-sm text-muted-foreground">{jobsStats?.total || 0} tarefas hoje</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{jobsStats?.total || 0} tarefas hoje</p>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Taxa de Sucesso</p>
             </CardContent>
           </Card>
         </motion.div>
@@ -476,7 +476,7 @@ export default function Dashboard() {
 
       {/* Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
           <Link to="/admin/ai-insights">
             <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
               <CardContent className="py-4 flex items-center justify-between">
@@ -497,7 +497,7 @@ export default function Dashboard() {
           </Link>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Link to="/admin/reports">
             <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
               <CardContent className="py-4 flex items-center justify-between">
@@ -516,6 +516,19 @@ export default function Dashboard() {
           </Link>
         </motion.div>
       </div>
+
+      {/* 4️⃣ ÂNCORA DE SEGURO OPERACIONAL */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+        <Card className="bg-muted/20 border-dashed">
+          <CardContent className="py-4 flex items-center justify-center gap-3 text-center">
+            <Lightbulb className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            <p className="text-sm text-muted-foreground">
+              O CyberShield monitora seus computadores automaticamente. 
+              <span className="font-medium text-foreground"> Se algo crítico acontecer, você será avisado.</span>
+            </p>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       <OnboardingWizard open={showOnboarding} onComplete={() => setShowOnboarding(false)} />
     </div>
