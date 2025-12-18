@@ -92,6 +92,7 @@ import ApiDocumentation from "./pages/admin/ApiDocumentation";
 import MyAccount from "./pages/admin/MyAccount";
 import SLODashboard from "./pages/admin/SLODashboard";
 import SystemOperations from "./pages/admin/SystemOperations";
+import ComplianceTimeline from "./pages/admin/ComplianceTimeline";
 import VerificarLaudo from "./pages/VerificarLaudo";
 import { 
   ClientDashboard, 
@@ -189,6 +190,7 @@ const App = () => (
                 <Route path="my-account" element={<MyAccount />} />
                 <Route path="slo-dashboard" element={<SLODashboard />} />
                 <Route path="system-operations" element={<SystemOperations />} />
+                <Route path="compliance-timeline" element={<ComplianceTimeline />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}

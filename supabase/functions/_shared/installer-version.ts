@@ -7,17 +7,17 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v3.10.40-DNS-FILTER';
-export const INSTALLER_VERSION_LINUX = 'v3.10.39-BASE64-SAFE-UPDATE';
-export const INSTALLER_VERSION_MACOS = 'v3.10.39-BASE64-SAFE-UPDATE';
-export const LAST_UPDATED = '2025-12-16T20:00:00Z'; // Windows updated to v3.10.40-DNS-FILTER
+export const INSTALLER_VERSION = 'v4.0.0-STATE-MACHINE';
+export const INSTALLER_VERSION_LINUX = 'v4.0.0-STATE-MACHINE';
+export const INSTALLER_VERSION_MACOS = 'v4.0.0-STATE-MACHINE';
+export const LAST_UPDATED = '2025-12-18T12:00:00Z'; // All platforms updated to v4.0.0
 
 export const CHANGES = [
-  '[v3.10.40-DNS-FILTER] FEATURE: Novo handler setup_dns_filter - instala e configura filtro DNS local',
-  '[v3.10.40-DNS-FILTER] FEATURE: Novo handler collect_dns_blocks - coleta eventos de bloqueio DNS',
-  '[v3.10.40-DNS-FILTER] FEATURE: Novo handler remove_dns_filter - remove filtro DNS e restaura DNS original',
-  '[v3.10.40-DNS-FILTER] FEATURE: Salva configuracoes DNS originais para reversao segura',
-  '[v3.10.40-DNS-FILTER] FEATURE: Suporta failsafe com DNS secundario (1.1.1.1)',
+  '[v4.0.0-STATE-MACHINE] ARCHITECTURE: State Machine formal com 6 estados (INITIALIZING, RUNNING, DEGRADED, RECOVERING, MAINTENANCE, TERMINATED)',
+  '[v4.0.0-STATE-MACHINE] ARCHITECTURE: Evidence Journal local com flush periodico para compliance',
+  '[v4.0.0-STATE-MACHINE] ARCHITECTURE: Policy Contract com validacao e enforcement automatico',
+  '[v4.0.0-STATE-MACHINE] ARCHITECTURE: Auto-recovery com exponential backoff (30s base, max 15min)',
+  '[v4.0.0-STATE-MACHINE] FEATURE: DNS Filter integration com health check automatico',
   '[v3.10.40-DNS-FILTER] FEATURE: Configura recovery automatico do servico Windows',
   '[v3.10.39-BASE64-SAFE-UPDATE] CRITICAL FIX: Auto-update agora usa Base64 para transmissao de script (100% byte-safe)',
   '[v3.10.39-BASE64-SAFE-UPDATE] CRITICAL FIX: SHA256 calculado dos bytes REAIS antes de Base64 encoding',

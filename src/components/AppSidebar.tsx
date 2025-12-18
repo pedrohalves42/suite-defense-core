@@ -115,6 +115,7 @@ export const AppSidebar = () => {
     { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity', section: 'security' },
     { icon: Clock, label: 'Histórico', to: '/admin/agent-timeline', section: 'security' },
     { icon: FileText, label: 'Laudos', to: '/admin/reports', section: 'security' },
+    { icon: ScrollText, label: 'Compliance', to: '/admin/compliance-timeline', section: 'security' },
     
     // === INFRAESTRUTURA ===
     { icon: Network, label: 'Instalações', to: '/admin/installations', section: 'infrastructure' },
