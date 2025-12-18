@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v3.10.39-BASE64-SAFE-UPDATE
+    CyberShield Agent - Windows v3.10.40-DNS-FILTER
     
     Funcionalidades:
     - HMAC SHA256 com secret em HEX (64 chars -> 32 bytes)
@@ -39,7 +39,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.39-BASE64-SAFE-UPDATE"
+    [string]$AgentVersion = "v3.10.40-DNS-FILTER"
 )
 
 $ErrorActionPreference = "Stop"

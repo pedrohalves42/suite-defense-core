@@ -14,7 +14,7 @@ import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
 const CURRENT_VERSIONS = {
-  windows: 'v3.10.39-BASE64-SAFE-UPDATE',
+  windows: 'v3.10.40-DNS-FILTER',
   linux: 'v3.10.40-DNS-FILTER',
   macos: 'v3.10.40-DNS-FILTER'
 } as const;
