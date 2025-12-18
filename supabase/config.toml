@@ -94,6 +94,9 @@ verify_jwt = false
 [functions.submit-agent-evidence]
 verify_jwt = false
 
+[functions.get-agent-policy]
+verify_jwt = false
+
 [functions.evaluate-software-risk]
 verify_jwt = true
 
