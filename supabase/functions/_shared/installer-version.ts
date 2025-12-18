@@ -7,10 +7,10 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v4.0.4-BACKWARD-COMPAT';
+export const INSTALLER_VERSION = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
-export const LAST_UPDATED = '2025-12-18T23:00:00Z'; // Windows updated to v4.0.4-BACKWARD-COMPAT
+export const LAST_UPDATED = '2025-12-18T15:17:00Z'; // RECOVERY: Rollback to last valid Windows release
 
 export const CHANGES = [
   '[v4.0.4-BACKWARD-COMPAT] CRITICAL FIX: Update handler usa "error" ao inves de "update_failed" para compatibilidade retroativa',
