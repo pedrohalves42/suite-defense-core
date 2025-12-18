@@ -7,12 +7,18 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v4.0.5-ED25519-VERIFY';
+export const INSTALLER_VERSION = 'v4.0.6-SAFE-ROLLBACK';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
-export const LAST_UPDATED = '2025-12-18T16:30:00Z';
+export const LAST_UPDATED = '2025-12-18T18:00:00Z';
 
 export const CHANGES = [
+  '[v4.0.6-SAFE-ROLLBACK] FEATURE: Auto-rollback with structured backup before update',
+  '[v4.0.6-SAFE-ROLLBACK] FEATURE: Post-update health check (state machine, heartbeat, poll-jobs)',
+  '[v4.0.6-SAFE-ROLLBACK] FEATURE: Safe Mode after 2 consecutive rollbacks - disables auto-updates',
+  '[v4.0.6-SAFE-ROLLBACK] FEATURE: submit-rollback-event Edge Function for telemetry',
+  '[v4.0.6-SAFE-ROLLBACK] FEATURE: agent_rollback_events table for audit trail',
+  '[v4.0.6-SAFE-ROLLBACK] FEATURE: System alert on Safe Mode activation',
   '[v4.0.5-ED25519-VERIFY] FEATURE: Ed25519 signature verification infrastructure for updates',
   '[v4.0.5-ED25519-VERIFY] FEATURE: Rollout gradual telemetry (agent_update_decisions table)',
   '[v4.0.5-ED25519-VERIFY] FEATURE: Signature verification in Invoke-UpdateAgentJob (backward compatible)',
