@@ -451,3 +451,7 @@ schedule = "*/5 * * * *"
 # === V4.0 Software Risk Engine ===
 [functions.evaluate-software-risk]
 verify_jwt = true
+
+# === V4.0 Compliance Reports ===
+[functions.generate-compliance-report]
+verify_jwt = true
