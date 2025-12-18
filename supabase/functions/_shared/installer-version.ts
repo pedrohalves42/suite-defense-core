@@ -13,6 +13,7 @@ export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
 export const LAST_UPDATED = '2025-12-18T18:00:00Z';
 
 export const CHANGES = [
+  '[v4.0.6-SAFE-ROLLBACK] FEATURE: Health check in bootstrap - validates update on first restart',
   '[v4.0.6-SAFE-ROLLBACK] FEATURE: Auto-rollback with structured backup before update',
   '[v4.0.6-SAFE-ROLLBACK] FEATURE: Post-update health check (state machine, heartbeat, poll-jobs)',
   '[v4.0.6-SAFE-ROLLBACK] FEATURE: Safe Mode after 2 consecutive rollbacks - disables auto-updates',
