@@ -30,6 +30,7 @@ import AgentInstallationGuide from '@/components/AgentInstallationGuide';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
+import { DiskMetricsPanel } from '@/components/agent/DiskMetricsPanel';
 
 interface Agent {
   id: string;
@@ -601,24 +602,8 @@ export default function AgentManagement() {
                           }`}
                         />
                         
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="flex items-center gap-1 text-muted-foreground">
-                            <HardDrive className="h-3 w-3" /> Disco
-                          </span>
-                          <span className={`font-medium ${
-                            (agentMetrics[agent.id].disk_usage_percent ?? 0) > 90 ? 'text-red-500' :
-                            (agentMetrics[agent.id].disk_usage_percent ?? 0) > 75 ? 'text-amber-500' : 'text-green-500'
-                          }`}>
-                            {agentMetrics[agent.id].disk_usage_percent?.toFixed(0) ?? 'N/A'}%
-                          </span>
-                        </div>
-                        <Progress 
-                          value={agentMetrics[agent.id].disk_usage_percent ?? 0} 
-                          className={`h-1.5 ${
-                            (agentMetrics[agent.id].disk_usage_percent ?? 0) > 90 ? '[&>div]:bg-red-500' :
-                            (agentMetrics[agent.id].disk_usage_percent ?? 0) > 75 ? '[&>div]:bg-amber-500' : '[&>div]:bg-green-500'
-                          }`}
-                        />
+                        {/* Seção de Discos Múltiplos */}
+                        <DiskMetricsPanel agentId={agent.id} compact />
                       </div>
                     )}
 

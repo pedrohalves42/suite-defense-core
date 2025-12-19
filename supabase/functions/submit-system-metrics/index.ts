@@ -9,6 +9,18 @@ import { hashToken } from '../_shared/token-hash.ts';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// Interface para informações de disco individual
+interface DiskInfo {
+  drive_letter: string;    // "C:", "D:", etc.
+  drive_label?: string;    // "Sistema", "Dados", etc.
+  drive_type?: string;     // "Fixed", "Removable", "Network"
+  total_gb: number;
+  used_gb: number;
+  free_gb: number;
+  usage_percent: number;
+  is_system_drive?: boolean;
+}
+
 interface SystemMetrics {
   cpu_usage_percent?: number;
   cpu_name?: string;
@@ -17,10 +29,13 @@ interface SystemMetrics {
   memory_used_gb?: number;
   memory_free_gb?: number;
   memory_usage_percent?: number;
+  // Campos de disco legado (compatibilidade com agentes antigos)
   disk_total_gb?: number;
   disk_used_gb?: number;
   disk_free_gb?: number;
   disk_usage_percent?: number;
+  // NOVO: Array de discos para suporte a múltiplos discos
+  disks?: DiskInfo[];
   network_bytes_sent?: number;
   network_bytes_received?: number;
   uptime_seconds?: number;
@@ -125,11 +140,40 @@ Deno.serve(async (req) => {
     logger.debug('Received metrics', {
       cpu: metrics.cpu_usage_percent,
       memory: metrics.memory_usage_percent,
-      disk: metrics.disk_usage_percent
+      disk: metrics.disk_usage_percent,
+      disks_count: metrics.disks?.length || 0
     });
 
+    // Processar múltiplos discos se disponível, senão usar valores legado
+    let primaryDisk = {
+      total_gb: metrics.disk_total_gb,
+      used_gb: metrics.disk_used_gb,
+      free_gb: metrics.disk_free_gb,
+      usage_percent: metrics.disk_usage_percent
+    };
+
+    // Se há múltiplos discos, encontrar o mais crítico para métricas principais
+    if (metrics.disks && metrics.disks.length > 0) {
+      const criticalDisk = metrics.disks.reduce((prev, curr) => 
+        (curr.usage_percent > (prev.usage_percent || 0)) ? curr : prev
+      );
+      
+      primaryDisk = {
+        total_gb: criticalDisk.total_gb,
+        used_gb: criticalDisk.used_gb,
+        free_gb: criticalDisk.free_gb,
+        usage_percent: criticalDisk.usage_percent
+      };
+      
+      logger.debug('Multiple disks detected, using critical disk', {
+        critical_drive: criticalDisk.drive_letter,
+        usage_percent: criticalDisk.usage_percent,
+        total_disks: metrics.disks.length
+      });
+    }
+
     logger.debug('Inserting metrics into database');
-    // Inserir metricas no banco
+    // Inserir metricas no banco (usando disco mais crítico)
     const { error: insertError } = await supabase
       .from('agent_system_metrics_partitioned')
       .insert({
@@ -142,10 +186,10 @@ Deno.serve(async (req) => {
         memory_used_gb: metrics.memory_used_gb,
         memory_free_gb: metrics.memory_free_gb,
         memory_usage_percent: metrics.memory_usage_percent,
-        disk_total_gb: metrics.disk_total_gb,
-        disk_used_gb: metrics.disk_used_gb,
-        disk_free_gb: metrics.disk_free_gb,
-        disk_usage_percent: metrics.disk_usage_percent,
+        disk_total_gb: primaryDisk.total_gb,
+        disk_used_gb: primaryDisk.used_gb,
+        disk_free_gb: primaryDisk.free_gb,
+        disk_usage_percent: primaryDisk.usage_percent,
         network_bytes_sent: metrics.network_bytes_sent,
         network_bytes_received: metrics.network_bytes_received,
         uptime_seconds: metrics.uptime_seconds,
@@ -158,6 +202,33 @@ Deno.serve(async (req) => {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+    
+    // Inserir detalhes de cada disco na tabela dedicada
+    if (metrics.disks && metrics.disks.length > 0) {
+      const diskRecords = metrics.disks.map((disk: DiskInfo) => ({
+        agent_id: agent.id,
+        tenant_id: agent.tenant_id,
+        drive_letter: disk.drive_letter,
+        drive_label: disk.drive_label || null,
+        drive_type: disk.drive_type || 'Fixed',
+        total_gb: disk.total_gb,
+        used_gb: disk.used_gb,
+        free_gb: disk.free_gb,
+        usage_percent: disk.usage_percent,
+        is_system_drive: disk.is_system_drive || false,
+      }));
+      
+      const { error: diskError } = await supabase
+        .from('agent_disk_metrics')
+        .insert(diskRecords);
+      
+      if (diskError) {
+        logger.warn('Failed to insert disk metrics', diskError);
+        // Não falhar a requisição inteira, apenas logar o erro
+      } else {
+        logger.debug(`Inserted ${diskRecords.length} disk metrics`);
+      }
     }
     
     logger.success('Metrics stored successfully');
