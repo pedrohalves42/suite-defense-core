@@ -5,7 +5,7 @@
  * Fonte: public/agent-scripts/cybershield-agent-windows-v4.ps1
  * Versao: v4.0.7
  * SHA256: 7c436a23d30ceb06569af7b8ee0a8791972a7026f26f15bfc8f678c8545986d7
- * Gerado em: 2025-12-19T00:22:46.515Z
+ * Gerado em: 2025-12-19T00:23:30.608Z
  */
 
 export function getAgentScriptWindows(): string {
