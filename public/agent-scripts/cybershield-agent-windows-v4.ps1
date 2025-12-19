@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v4.0.8
+    CyberShield Agent - Windows v4.0.9
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
@@ -16,8 +16,9 @@
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.8 (ESTABILIZACAO):
-    - FIXED: Metricas sendo enviadas a cada 5 minutos (era ignorado no loop)
+    Funcionalidades v4.0.9 (METRICAS CORRIGIDAS):
+    - CRITICAL FIX: Send-SystemMetrics funcao agora definida (estava faltando!)
+    - FIXED: Metricas sendo enviadas a cada 5 minutos
     - FIXED: ValidateSet convertido para runtime validation (backward compatible)
     - FIXED: Add-EvidenceEntry aceita tipos desconhecidos graciosamente
     - NEW: Suporte a force_update via banco (bypassa job system)
@@ -58,7 +59,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.0.8"
+    [string]$AgentVersion = "v4.0.9"
 )
 
 $ErrorActionPreference = "Stop"
@@ -1681,6 +1682,37 @@ function Send-Heartbeat {
     }
     catch {
         Write-Log "[HEARTBEAT] Erro: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
+# ============================================
+#  SEND SYSTEM METRICS
+# ============================================
+function Send-SystemMetrics {
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Metrics
+    )
+    
+    Write-Log "[METRICS] Enviando metricas para backend..." "DEBUG"
+    
+    try {
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-system-metrics" `
+            -Method "POST" `
+            -Body $Metrics `
+            -TimeoutSec 15
+        
+        if ($result.Success -and $result.StatusCode -eq 200) {
+            Write-Log "[SUCCESS] Metricas enviadas com sucesso" "SUCCESS"
+            return $true
+        } else {
+            Write-Log "[WARN] Falha ao enviar metricas (HTTP $($result.StatusCode))" "WARN"
+            return $false
+        }
+    } catch {
+        Write-Log "[ERROR] Erro ao enviar metricas: $($_.Exception.Message)" "ERROR"
         return $false
     }
 }
