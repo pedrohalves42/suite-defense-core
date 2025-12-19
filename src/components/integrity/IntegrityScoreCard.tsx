@@ -13,12 +13,12 @@ interface IntegrityMetrics {
   job_integrity_score: number;
   failed_jobs_score: number;
   global_integrity_score: number;
-  total_releases: number;
-  valid_releases: number;
-  total_jobs_with_effects: number;
-  valid_jobs_with_effects: number;
-  total_failed_jobs: number;
-  valid_failed_jobs: number;
+  active_releases: number;
+  valid_active_releases: number;
+  completed_jobs: number;
+  valid_completed_jobs: number;
+  failed_jobs: number;
+  failed_with_error: number;
 }
 
 export const IntegrityScoreCard = () => {
@@ -41,12 +41,12 @@ export const IntegrityScoreCard = () => {
           job_integrity_score: Number(data.job_integrity_score) || 100,
           failed_jobs_score: Number(data.failed_jobs_score) || 100,
           global_integrity_score: Number(data.global_integrity_score) || 100,
-          total_releases: Number(data.total_releases) || 0,
-          valid_releases: Number(data.valid_releases) || 0,
-          total_jobs_with_effects: Number(data.total_jobs_with_effects) || 0,
-          valid_jobs_with_effects: Number(data.valid_jobs_with_effects) || 0,
-          total_failed_jobs: Number(data.total_failed_jobs) || 0,
-          valid_failed_jobs: Number(data.valid_failed_jobs) || 0,
+          active_releases: Number(data.active_releases) || 0,
+          valid_active_releases: Number(data.valid_active_releases) || 0,
+          completed_jobs: Number(data.completed_jobs) || 0,
+          valid_completed_jobs: Number(data.valid_completed_jobs) || 0,
+          failed_jobs: Number(data.failed_jobs) || 0,
+          failed_with_error: Number(data.failed_with_error) || 0,
         });
       } else {
         // Default values if no data
@@ -55,12 +55,12 @@ export const IntegrityScoreCard = () => {
           job_integrity_score: 100,
           failed_jobs_score: 100,
           global_integrity_score: 100,
-          total_releases: 0,
-          valid_releases: 0,
-          total_jobs_with_effects: 0,
-          valid_jobs_with_effects: 0,
-          total_failed_jobs: 0,
-          valid_failed_jobs: 0,
+          active_releases: 0,
+          valid_active_releases: 0,
+          completed_jobs: 0,
+          valid_completed_jobs: 0,
+          failed_jobs: 0,
+          failed_with_error: 0,
         });
       }
     } catch (error) {
@@ -70,12 +70,12 @@ export const IntegrityScoreCard = () => {
         job_integrity_score: 100,
         failed_jobs_score: 100,
         global_integrity_score: 100,
-        total_releases: 0,
-        valid_releases: 0,
-        total_jobs_with_effects: 0,
-        valid_jobs_with_effects: 0,
-        total_failed_jobs: 0,
-        valid_failed_jobs: 0,
+        active_releases: 0,
+        valid_active_releases: 0,
+        completed_jobs: 0,
+        valid_completed_jobs: 0,
+        failed_jobs: 0,
+        failed_with_error: 0,
       });
     } finally {
       setLoading(false);
@@ -110,9 +110,9 @@ export const IntegrityScoreCard = () => {
   if (!metrics) return null;
 
   const overallScore = Math.round(metrics.global_integrity_score);
-  const invalidReleases = metrics.total_releases - metrics.valid_releases;
-  const jobViolations = metrics.total_jobs_with_effects - metrics.valid_jobs_with_effects;
-  const failedWithoutError = metrics.total_failed_jobs - metrics.valid_failed_jobs;
+  const invalidReleases = metrics.active_releases - metrics.valid_active_releases;
+  const jobViolations = metrics.completed_jobs - metrics.valid_completed_jobs;
+  const failedWithoutError = metrics.failed_jobs - metrics.failed_with_error;
 
   const getScoreStatus = (score: number) => {
     if (score >= 95) return { status: 'excellent', color: 'text-success', bg: 'bg-success/10', border: 'border-success/30' };
@@ -205,7 +205,7 @@ export const IntegrityScoreCard = () => {
               <TooltipContent side="bottom" className="max-w-xs">
                 <p className="font-medium mb-1">Validação de Releases</p>
                 <p className="text-xs text-muted-foreground">
-                  {metrics.valid_releases}/{metrics.total_releases} releases válidas.
+                  {metrics.valid_active_releases}/{metrics.active_releases} releases válidas.
                   Thresholds: Windows ≥50kb, Linux/macOS ≥30kb + SHA256
                 </p>
               </TooltipContent>
@@ -239,7 +239,7 @@ export const IntegrityScoreCard = () => {
               <TooltipContent side="bottom" className="max-w-xs">
                 <p className="font-medium mb-1">Jobs Completed com Side Effects</p>
                 <p className="text-xs text-muted-foreground">
-                  {metrics.valid_jobs_with_effects}/{metrics.total_jobs_with_effects} jobs geraram dados.
+                  {metrics.valid_completed_jobs}/{metrics.completed_jobs} jobs geraram dados.
                   Trigger impede completed sem side effects.
                 </p>
               </TooltipContent>
@@ -273,7 +273,7 @@ export const IntegrityScoreCard = () => {
               <TooltipContent side="bottom" className="max-w-xs">
                 <p className="font-medium mb-1">Jobs Failed com Error Message</p>
                 <p className="text-xs text-muted-foreground">
-                  {metrics.valid_failed_jobs}/{metrics.total_failed_jobs} jobs failed têm explicação.
+                  {metrics.failed_with_error}/{metrics.failed_jobs} jobs failed têm explicação.
                   Trigger impede failed sem error_message.
                 </p>
               </TooltipContent>
