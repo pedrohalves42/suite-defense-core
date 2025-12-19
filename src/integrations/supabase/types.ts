@@ -7477,6 +7477,14 @@ export type Database = {
         Returns: Json
       }
       cleanup_expired_keys: { Args: never; Returns: undefined }
+      cleanup_offline_agents_jobs: {
+        Args: never
+        Returns: {
+          agent_ids: string[]
+          cleaned_count: number
+          job_ids: string[]
+        }[]
+      }
       cleanup_old_data: { Args: never; Returns: undefined }
       cleanup_old_data_scheduled: { Args: never; Returns: Json }
       cleanup_old_disk_metrics: {
