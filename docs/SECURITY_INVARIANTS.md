@@ -1,7 +1,7 @@
 # CyberShield Security Invariants
 
 > **Documento Formal de Invariantes de Segurança**  
-> Versão: 1.2.0  
+> Versão: 1.3.0  
 > Última atualização: 2025-12-19  
 > Classificação: Interno / Due Diligence
 
@@ -11,6 +11,7 @@
 
 | Versão | Data | Alteração |
 |--------|------|-----------|
+| 1.3.0 | 2025-12-19 | Adicionado INV-010 (Digital Release Signature - ECDSA P-256) |
 | 1.2.0 | 2025-12-19 | Adicionados INV-007 (State Machine), INV-008 (Side Effects), INV-009 (Failed Error) |
 | 1.1.0 | 2025-12-17 | Adicionado INV-006 (Network Enforcement), versionamento por invariante, mapeamento CWE |
 | 1.0.0 | 2025-12-17 | Versão inicial com INV-001 a INV-005 |
@@ -624,3 +625,70 @@ npm run generate:security-evidence
 - [Supabase RLS Best Practices](https://supabase.com/docs/guides/auth/row-level-security)
 - [HMAC RFC 2104](https://datatracker.ietf.org/doc/html/rfc2104)
 - [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
+- [ECDSA Digital Signatures](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm)
+
+---
+
+## INV-010: Digital Release Signature (ECDSA P-256)
+
+**Versão**: 1.0.0  
+**CWE**: CWE-494 (Download of Code Without Integrity Check), CWE-345 (Insufficient Verification of Data Authenticity)  
+**OWASP**: A08:2021 Software and Data Integrity Failures
+
+### Declaração Formal
+
+```
+∀ release ∈ ActiveReleases:
+  release.signature_base64 IS NOT NULL
+  ∧ ECDSA_Verify(release.sha256, release.signature_base64, PUBLIC_KEY) = TRUE
+  ⟹ release.script_content é autêntico e não-repudiável
+```
+
+### Descrição
+
+Todas as releases ativas DEVEM ter assinatura digital ECDSA P-256 válida. O agente DEVE verificar a assinatura antes de executar qualquer atualização, garantindo:
+
+1. **Não-repúdio**: Prova criptográfica de quem assinou
+2. **Integridade**: Script não foi modificado após assinatura
+3. **Autenticidade**: Release foi gerada por fonte autorizada
+
+### Implementação
+
+```sql
+-- Verificar releases assinadas
+SELECT 
+  version,
+  platform,
+  sha256 IS NOT NULL AS has_hash,
+  signature_base64 IS NOT NULL AS has_signature,
+  signed_by,
+  signed_at
+FROM agent_releases
+WHERE is_active = true;
+```
+
+### Validação no Agente (PowerShell)
+
+```powershell
+function Test-ReleaseSignature {
+    param($SHA256, $SignatureBase64, $PublicKey)
+    
+    $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
+    $ecdsa.ImportSubjectPublicKeyInfo([Convert]::FromBase64String($PublicKey), [ref]$null)
+    
+    return $ecdsa.VerifyData(
+        [System.Text.Encoding]::UTF8.GetBytes($SHA256),
+        [Convert]::FromBase64String($SignatureBase64),
+        [System.Security.Cryptography.HashAlgorithmName]::SHA256
+    )
+}
+```
+
+### Edge Function
+
+- **`sign-release`**: Gera keypairs, assina releases, verifica assinaturas
+- **Ações**: `generate-keypair`, `sign`, `verify`, `sign-and-register`
+
+### Documentação Relacionada
+
+- [AGENT_SIGNATURE_VALIDATION.md](./AGENT_SIGNATURE_VALIDATION.md)
