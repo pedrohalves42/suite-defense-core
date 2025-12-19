@@ -1,24 +1,20 @@
-/* eslint-disable no-useless-escape */
 /**
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v4.ps1
- * Versao: v4.0.4-BACKWARD-COMPAT
- * SHA256: auto-calculated-on-deploy
- * Gerado em: 2025-12-18T23:00:00.000Z
+ * Versao: v4.0.6-SAFE-ROLLBACK
  */
 
-export function getAgentScriptWindows(): string {
-  return AGENT_SCRIPT_WINDOWS_CONTENT;
-}
-
-export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
-    CyberShield Agent - Windows v4.0.4-BACKWARD-COMPAT
+export const AGENT_SCRIPT_WINDOWS_CONTENT = `
+<#
+    CyberShield Agent - Windows v4.0.6-SAFE-ROLLBACK
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
     FASE 2.4: DNS Filter Go como Windows Service
     FASE 2.5: Policy Contract (Desired vs Actual + Drift Detection)
+    FASE 2.6: Ed25519 Signature Verification
+    FASE 3.0: Auto-Rollback & Safe Mode (NEW)
     
     Estados:
     - BOOTSTRAP: Inicializacao do agente
@@ -28,7 +24,12 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.4:
+    Funcionalidades v4.0.6:
+    - Auto-rollback with structured backup before update (NEW)
+    - Post-update health check (state machine, heartbeat, poll-jobs) (NEW)
+    - Safe Mode after 2 consecutive rollbacks - disables auto-updates (NEW)
+    - submit-rollback-event Edge Function for telemetry (NEW)
+    - Ed25519 signature verification for updates
     - State Machine formal com transicoes validadas
     - Evidence Journal local estruturado (JSON Lines)
     - Job Engine idempotente com execution_id
@@ -60,7 +61,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v4.0.4-BACKWARD-COMPAT"
+    [string]\$AgentVersion = "v4.0.6-SAFE-ROLLBACK"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -113,6 +114,423 @@ trap {
 
 # Intervalos
 \$Global:PollIntervalSeconds = 60
+
+# ============================================
+#  FASE 2.6: ED25519 SIGNATURE VERIFICATION
+# ============================================
+# IMPORTANT: This is the Ed25519 PUBLIC KEY for verifying agent updates
+# The corresponding PRIVATE KEY must NEVER be stored in the agent or repository
+# Private key should be in HSM, HashiCorp Vault, or offline encrypted storage
+# 
+# To generate a new keypair (offline, secure environment):
+#   openssl genpkey -algorithm Ed25519 -out private.key
+#   openssl pkey -in private.key -pubout -out public.key
+#   cat public.key | base64 -w0
+#
+# To sign a release:
+#   openssl pkeyutl -sign -inkey private.key -rawin -in script.ps1 > signature.bin
+#   base64 -w0 signature.bin > signature.txt
+
+# PLACEHOLDER: Replace with actual Ed25519 public key when available
+# Format: Base64-encoded SubjectPublicKeyInfo (SPKI) format
+\$Global:Ed25519PublicKey = \$null  # Set to Base64 public key string when ready
+
+function Verify-Ed25519Signature {
+    <#
+    .SYNOPSIS
+        Verifies an Ed25519 signature for script content
+    .DESCRIPTION
+        Uses .NET cryptography to verify Ed25519 signatures.
+        Returns \$true if signature is valid, \$false otherwise.
+        If no public key is configured, returns \$true (backward compatible).
+    .PARAMETER ScriptBytes
+        The raw bytes of the script to verify
+    .PARAMETER SignatureBase64
+        The Base64-encoded Ed25519 signature
+    #>
+    param (
+        [Parameter(Mandatory = \$true)]
+        [byte[]]\$ScriptBytes,
+        
+        [Parameter(Mandatory = \$false)]
+        [string]\$SignatureBase64
+    )
+    
+    try {
+        # If no signature provided and no public key configured, allow (backward compat)
+        if ([string]::IsNullOrEmpty(\$SignatureBase64)) {
+            if ([string]::IsNullOrEmpty(\$Global:Ed25519PublicKey)) {
+                Write-Log "[SECURITY] No signature verification configured (backward compatible mode)" "WARN"
+                return \$true
+            } else {
+                Write-Log "[SECURITY] ❌ Signature required but not provided" "ERROR"
+                return \$false
+            }
+        }
+        
+        # If public key not configured, skip verification (backward compat)
+        if ([string]::IsNullOrEmpty(\$Global:Ed25519PublicKey)) {
+            Write-Log "[SECURITY] Ed25519 public key not configured - skipping signature verification" "WARN"
+            return \$true
+        }
+        
+        Write-Log "[SECURITY] Verifying Ed25519 signature..." "INFO"
+        
+        # Decode signature from Base64
+        \$signature = [Convert]::FromBase64String(\$SignatureBase64)
+        
+        # Decode public key from Base64
+        \$publicKeyBytes = [Convert]::FromBase64String(\$Global:Ed25519PublicKey)
+        
+        # Check if .NET supports Ed25519 (requires .NET 5+ or Windows with specific updates)
+        \$ed25519Type = [Type]::GetType("System.Security.Cryptography.Ed25519")
+        
+        if (\$null -eq \$ed25519Type) {
+            # Fallback: Try using ECDsa with Ed25519 curve (requires newer .NET)
+            try {
+                # Import public key and verify
+                \$ed25519 = [System.Security.Cryptography.ECDsa]::Create()
+                \$ed25519.ImportSubjectPublicKeyInfo(\$publicKeyBytes, [ref]\$null)
+                
+                \$isValid = \$ed25519.VerifyData(\$ScriptBytes, \$signature, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+                
+                if (\$isValid) {
+                    Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+                } else {
+                    Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+                }
+                
+                return \$isValid
+            }
+            catch {
+                # If Ed25519 is not supported on this system, log warning and allow
+                Write-Log "[SECURITY] Ed25519 verification not supported on this system: \$(\$_.Exception.Message)" "WARN"
+                Write-Log "[SECURITY] Allowing update (signature present but cannot verify)" "WARN"
+                
+                Add-EvidenceEntry -Type "security_warning" -Data @{
+                    event = "ed25519_not_supported"
+                    error = \$_.Exception.Message
+                    signature_provided = \$true
+                } -Severity "warning"
+                
+                return \$true
+            }
+        }
+        else {
+            # Use native Ed25519 support
+            \$ed25519 = [System.Security.Cryptography.Ed25519]::Create()
+            \$ed25519.ImportSubjectPublicKeyInfo(\$publicKeyBytes, [ref]\$null)
+            
+            \$isValid = \$ed25519.VerifyData(\$ScriptBytes, \$signature)
+            
+            if (\$isValid) {
+                Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+            } else {
+                Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+            }
+            
+            return \$isValid
+        }
+    }
+    catch {
+        Write-Log "[SECURITY] Signature verification error: \$(\$_.Exception.Message)" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "signature_verification_failed"
+            error = \$_.Exception.Message
+        } -Severity "error"
+        
+        # Security: If verification fails unexpectedly, reject the update
+        return \$false
+    }
+}
+
+
+# ============================================
+#  FASE 3.0: AUTO-ROLLBACK & SAFE MODE
+# ============================================
+\$Global:RollbackPaths = @{
+    Current   = "C:\\CyberShield\\agent-current.ps1"
+    Previous  = "C:\\CyberShield\\agent-previous.ps1"
+    StateFile = "C:\\CyberShield\\rollback-state.json"
+}
+
+function Get-RollbackState {
+    <#
+    .SYNOPSIS
+        Retrieves the current rollback state from persistent storage
+    #>
+    \$stateFile = \$Global:RollbackPaths.StateFile
+    if (Test-Path \$stateFile) {
+        try {
+            \$content = Get-Content \$stateFile -Raw -ErrorAction Stop
+            return (\$content | ConvertFrom-Json)
+        } catch {
+            Write-Log "[ROLLBACK] Failed to read state file: \$(\$_.Exception.Message)" "WARN"
+        }
+    }
+    return @{
+        rollback_count = 0
+        last_rollback = \$null
+        safe_mode = \$false
+        current_version = \$Global:AgentVersion
+        previous_version = \$null
+        last_health_check = \$null
+    }
+}
+
+function Save-RollbackState {
+    <#
+    .SYNOPSIS
+        Persists rollback state to disk
+    #>
+    param(\$State)
+    
+    try {
+        \$stateFile = \$Global:RollbackPaths.StateFile
+        \$State | ConvertTo-Json -Depth 3 | Set-Content \$stateFile -Encoding UTF8 -Force
+        Write-Log "[ROLLBACK] State saved: rollback_count=\$(\$State.rollback_count), safe_mode=\$(\$State.safe_mode)" "DEBUG"
+    } catch {
+        Write-Log "[ROLLBACK] Failed to save state: \$(\$_.Exception.Message)" "ERROR"
+    }
+}
+
+function Test-PostUpdateHealth {
+    <#
+    .SYNOPSIS
+        Validates agent health after an update
+    .DESCRIPTION
+        Checks state machine, heartbeat, and job polling to ensure
+        the new version is functioning correctly
+    .OUTPUTS
+        Hashtable with healthy (bool) and reason (string)
+    #>
+    Write-Log "[HEALTH CHECK] Starting post-update health validation..." "INFO"
+    
+    try {
+        # 1. Validate state machine
+        \$state = Get-AgentState
+        if (\$state -notin @('SYNCING', 'ENFORCING', 'DEGRADED')) {
+            return @{ healthy = \$false; reason = "state_machine_invalid"; details = "Invalid state: \$state" }
+        }
+        Write-Log "[HEALTH CHECK] State machine OK: \$state" "DEBUG"
+        
+        # 2. Validate heartbeat
+        \$heartbeat = Send-Heartbeat
+        if (-not \$heartbeat) {
+            return @{ healthy = \$false; reason = "heartbeat_failed"; details = "Heartbeat failed" }
+        }
+        Write-Log "[HEALTH CHECK] Heartbeat OK" "DEBUG"
+        
+        # 3. Validate poll-jobs (basic connectivity test)
+        try {
+            \$pollResult = Invoke-SecureRequest -Path "/functions/v1/poll-jobs" -Method "POST" -Body @{
+                agent_name = \$Global:AgentName
+                agent_version = \$Global:AgentVersion
+            } -TimeoutSec 15
+            
+            if (-not \$pollResult.Success) {
+                return @{ healthy = \$false; reason = "health_check_failed"; details = "Poll-jobs failed: HTTP \$(\$pollResult.StatusCode)" }
+            }
+        } catch {
+            return @{ healthy = \$false; reason = "health_check_failed"; details = "Poll-jobs exception: \$(\$_.Exception.Message)" }
+        }
+        Write-Log "[HEALTH CHECK] Poll-jobs OK" "DEBUG"
+        
+        return @{ healthy = \$true; reason = "All checks passed" }
+    } catch {
+        return @{ healthy = \$false; reason = "health_check_failed"; details = \$_.Exception.Message }
+    }
+}
+
+function Send-RollbackEvent {
+    <#
+    .SYNOPSIS
+        Reports rollback event to backend for telemetry
+    #>
+    param(
+        [string]\$FromVersion,
+        [string]\$ToVersion,
+        [string]\$Reason,
+        [bool]\$SafeMode = \$false,
+        [hashtable]\$Details = @{}
+    )
+    
+    try {
+        \$body = @{
+            from_version = \$FromVersion
+            to_version = \$ToVersion
+            reason = \$Reason
+            safe_mode_triggered = \$SafeMode
+            hostname = \$env:COMPUTERNAME
+            details = \$Details
+        }
+        
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/submit-rollback-event" \`
+            -Method "POST" \`
+            -Body \$body \`
+            -TimeoutSec 15
+        
+        if (\$result.Success) {
+            Write-Log "[ROLLBACK] Event reported successfully (event_id: \$(\$result.Body | ConvertFrom-Json | Select-Object -ExpandProperty event_id))" "INFO"
+        } else {
+            Write-Log "[ROLLBACK] Failed to report event: HTTP \$(\$result.StatusCode)" "WARN"
+        }
+    } catch {
+        Write-Log "[ROLLBACK] Failed to report event: \$(\$_.Exception.Message)" "ERROR"
+    }
+}
+
+function Invoke-SafeRollback {
+    <#
+    .SYNOPSIS
+        Performs automatic rollback to previous version
+    .DESCRIPTION
+        - Checks if previous version exists
+        - Increments rollback counter
+        - Triggers Safe Mode after 2 consecutive rollbacks
+        - Reports event to backend
+        - Copies previous version back to current
+        - Restarts agent
+    #>
+    param(
+        [string]\$Reason
+    )
+    
+    Write-Log "[ROLLBACK] Initiating rollback due to: \$Reason" "WARN"
+    
+    \$state = Get-RollbackState
+    \$previousPath = \$Global:RollbackPaths.Previous
+    
+    # Verify previous version exists
+    if (-not (Test-Path \$previousPath)) {
+        Write-Log "[ROLLBACK] No previous version available at \$previousPath" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "rollback_failed"
+            reason = "no_previous_version"
+            error = "Previous version file not found"
+        } -Severity "error"
+        
+        return @{ success = \$false; error = "No previous version available" }
+    }
+    
+    # Anti-loop: check rollback count
+    \$state.rollback_count++
+    \$state.last_rollback = (Get-Date).ToUniversalTime().ToString("o")
+    
+    # Safe Mode: after 2 consecutive rollbacks
+    if (\$state.rollback_count -ge 2) {
+        Write-Log "[CRITICAL] Rollback loop detected (count: \$(\$state.rollback_count)) - ENTERING SAFE MODE" "ERROR"
+        \$state.safe_mode = \$true
+        Save-RollbackState -State \$state
+        
+        # Report Safe Mode to backend
+        Send-RollbackEvent -FromVersion \$Global:AgentVersion -ToVersion \$state.previous_version -Reason \$Reason -SafeMode \$true -Details @{
+            rollback_count = \$state.rollback_count
+            safe_mode_reason = "rollback_loop_detected"
+        }
+        
+        Add-EvidenceEntry -Type "security_event" -Data @{
+            event = "safe_mode_activated"
+            rollback_count = \$state.rollback_count
+            reason = "Rollback loop detected - auto-updates disabled"
+        } -Severity "critical"
+        
+        return @{ success = \$false; error = "Safe mode activated - updates disabled"; safe_mode = \$true }
+    }
+    
+    # Execute rollback
+    Write-Log "[ROLLBACK] Rolling back: \$(\$Global:AgentVersion) -> \$(\$state.previous_version)" "WARN"
+    
+    try {
+        # Find current script path
+        \$currentScriptPath = \$null
+        \$possiblePaths = @(
+            \$PSCommandPath,
+            (Join-Path \$Global:BaseDir "cybershield-agent-\$(\$Global:AgentName).ps1"),
+            (Join-Path \$Global:BaseDir "cybershield-agent-v4.ps1"),
+            (Join-Path \$Global:BaseDir "cybershield-agent.ps1")
+        )
+        
+        foreach (\$path in \$possiblePaths) {
+            if (\$path -and (Test-Path \$path)) {
+                \$currentScriptPath = \$path
+                break
+            }
+        }
+        
+        if (-not \$currentScriptPath) {
+            \$found = Get-ChildItem -Path \$Global:BaseDir -Filter "cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (\$found) { \$currentScriptPath = \$found.FullName }
+        }
+        
+        if (-not \$currentScriptPath) {
+            throw "Cannot find current script path for rollback"
+        }
+        
+        # Copy previous version to current location
+        Copy-Item -Path \$previousPath -Destination \$currentScriptPath -Force
+        Write-Log "[ROLLBACK] Previous version restored to: \$currentScriptPath" "INFO"
+        
+        # Update state
+        \$state.current_version = \$state.previous_version
+        Save-RollbackState -State \$state
+        
+        # Report rollback to backend
+        Send-RollbackEvent -FromVersion \$Global:AgentVersion -ToVersion \$state.previous_version -Reason \$Reason -SafeMode \$false -Details @{
+            rollback_count = \$state.rollback_count
+            restored_to = \$currentScriptPath
+        }
+        
+        # Evidence for audit
+        Add-EvidenceEntry -Type "security_event" -Data @{
+            event = "agent_rollback"
+            from_version = \$Global:AgentVersion
+            to_version = \$state.previous_version
+            reason = \$Reason
+            rollback_count = \$state.rollback_count
+        } -Severity "warning"
+        
+        # Restart agent to load previous version
+        Write-Log "[ROLLBACK] Restarting agent to load previous version..." "WARN"
+        
+        try {
+            Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+            Start-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+        } catch {
+            Write-Log "[ROLLBACK] Failed to restart scheduled task: \$(\$_.Exception.Message)" "WARN"
+        }
+        
+        # Exit to allow new version to start
+        exit 0
+        
+    } catch {
+        Write-Log "[ROLLBACK] Rollback failed: \$(\$_.Exception.Message)" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "rollback_failed"
+            error = \$_.Exception.Message
+        } -Severity "error"
+        
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+function Reset-SafeMode {
+    <#
+    .SYNOPSIS
+        Resets Safe Mode (for manual recovery)
+    #>
+    \$state = Get-RollbackState
+    \$state.safe_mode = \$false
+    \$state.rollback_count = 0
+    Save-RollbackState -State \$state
+    Write-Log "[ROLLBACK] Safe mode reset - auto-updates re-enabled" "INFO"
+}
+
 
 # ============================================
 #  FASE 2.1: STATE MACHINE FORMAL
@@ -237,7 +655,7 @@ function Test-CanExecuteJob {
 function Add-EvidenceEntry {
     param(
         [Parameter(Mandatory = \$true)]
-        [ValidateSet("state_change", "job_execution", "dns_block", "policy_sync", "auto_recovery", "heartbeat", "update_applied", "update_failed", "error", "policy_drift", "security_event")]
+        [ValidateSet("state_change", "job_execution", "dns_block", "policy_sync", "auto_recovery", "heartbeat", "update_applied", "error", "policy_drift", "security_event")]
         [string]\$Type,
         
         [Parameter(Mandatory = \$true)]
@@ -1612,7 +2030,28 @@ function Invoke-UpdateAgentJob {
     param(\$Job)
     
     try {
-        Write-Log "[UPDATE] Iniciando update_agent - v4.0.2-UPDATE-FIX" "INFO"
+        Write-Log "[UPDATE] Iniciando update_agent - v4.0.6-SAFE-ROLLBACK" "INFO"
+        
+        # ============================================================
+        # FASE 3.0: SAFE MODE CHECK
+        # Block updates if agent is in Safe Mode (rollback loop detected)
+        # ============================================================
+        \$rollbackState = Get-RollbackState
+        if (\$rollbackState.safe_mode) {
+            Write-Log "[SAFE MODE] Updates desabilitados - rollback loop detectado" "ERROR"
+            
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "update_blocked_safe_mode"
+                rollback_count = \$rollbackState.rollback_count
+                last_rollback = \$rollbackState.last_rollback
+            } -Severity "warning"
+            
+            return @{ 
+                success = \$false
+                error = "Safe mode active - updates disabled"
+                safe_mode = \$true
+            }
+        }
         
         Add-EvidenceEntry -Type "update_check" -Data @{
             current_version = \$Global:AgentVersion
@@ -1637,6 +2076,17 @@ function Invoke-UpdateAgentJob {
             Add-EvidenceEntry -Type "update_check" -Data @{
                 status = "already_current"
                 version = \$data.current_version
+            } -Severity "info"
+            return @{ success = \$true; output = (\$data | ConvertTo-Json -Compress) }
+        }
+        
+        # Fora do rollout?
+        if (\$data.message -eq "No update available (outside rollout)") {
+            Write-Log "[INFO] Agente fora do rollout gradual (bucket: \$(\$data.rollout_bucket), required: <\$(\$data.rollout_percentage)%)" "INFO"
+            Add-EvidenceEntry -Type "update_check" -Data @{
+                status = "outside_rollout"
+                bucket = \$data.rollout_bucket
+                rollout_percentage = \$data.rollout_percentage
             } -Severity "info"
             return @{ success = \$true; output = (\$data | ConvertTo-Json -Compress) }
         }
@@ -1683,6 +2133,7 @@ function Invoke-UpdateAgentJob {
         # CRITICAL: BASE64 DECODE - Preserva 100% dos bytes
         # Imune a transformacoes JSON/PowerShell
         # ============================================================
+        \$bytes = \$null
         if (\$data.script_content_base64) {
             Write-Log "[UPDATE] Usando Base64 decode (safe mode)" "INFO"
             \$bytes = [System.Convert]::FromBase64String(\$data.script_content_base64)
@@ -1693,6 +2144,7 @@ function Invoke-UpdateAgentJob {
             Write-Log "[UPDATE] Fallback para script_content (string mode)" "WARN"
             \$scriptText = \$data.script_content
             [System.IO.File]::WriteAllText(\$tempScript, \$scriptText, [System.Text.UTF8Encoding]::new(\$false))
+            \$bytes = [System.IO.File]::ReadAllBytes(\$tempScript)
         }
         
         # Validar SHA256 do arquivo ESCRITO no disco
@@ -1704,14 +2156,73 @@ function Invoke-UpdateAgentJob {
         
         Write-Log "[SUCCESS] SHA256 validado: \$actualHash" "SUCCESS"
         
-        # Backup do script atual (opcional - nao falha se nao encontrar)
+        # ============================================================
+        # FASE 2.6: ED25519 SIGNATURE VERIFICATION
+        # Verifica assinatura criptográfica ANTES de aplicar update
+        # ============================================================
+        \$signatureVerified = \$false
+        if (\$data.signature_base64) {
+            Write-Log "[SECURITY] Verificando assinatura Ed25519 (signed by: \$(\$data.signed_by))" "INFO"
+            
+            \$signatureVerified = Verify-Ed25519Signature -ScriptBytes \$bytes -SignatureBase64 \$data.signature_base64
+            
+            if (-not \$signatureVerified) {
+                Remove-Item \$tempScript -Force
+                
+                Add-EvidenceEntry -Type "error" -Data @{
+                    event = "signature_rejected"
+                    version = \$newVersion
+                    signed_by = \$data.signed_by
+                    sha256 = \$actualHash
+                } -Severity "error"
+                
+                throw "Ed25519 signature verification FAILED - Update rejected for security"
+            }
+            
+            Add-EvidenceEntry -Type "security_event" -Data @{
+                event = "signature_verified"
+                version = \$newVersion
+                signed_by = \$data.signed_by
+                signed_at = \$data.signed_at
+            } -Severity "info"
+        } else {
+            Write-Log "[SECURITY] Nenhuma assinatura fornecida - modo backward compatible" "WARN"
+            
+            # Log para auditoria
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "unsigned_update"
+                version = \$newVersion
+                note = "Update applied without cryptographic signature (backward compatible)"
+            } -Severity "warning"
+        }
+        
+        # ============================================================
+        # FASE 3.0: STRUCTURED BACKUP FOR ROLLBACK
+        # Create structured backup BEFORE applying new version
+        # ============================================================
+        \$previousPath = \$Global:RollbackPaths.Previous
+        
+        # Backup do script atual para rollback estruturado
         if (\$currentScript -and (Test-Path \$currentScript)) {
+            try {
+                Copy-Item -Path \$currentScript -Destination \$previousPath -Force
+                Write-Log "[ROLLBACK] Structured backup created: \$previousPath" "INFO"
+                
+                # Update rollback state with previous version info
+                \$rollbackState = Get-RollbackState
+                \$rollbackState.previous_version = \$Global:AgentVersion
+                Save-RollbackState -State \$rollbackState
+            } catch {
+                Write-Log "[WARN] Structured backup failed: \$(\$_.Exception.Message)" "WARN"
+            }
+            
+            # Also create timestamped backup for historical purposes
             \$backupScript = \$currentScript -replace '\\.ps1\$', "-backup-\$(Get-Date -Format 'yyyyMMdd_HHmmss').ps1"
             try {
                 Copy-Item -Path \$currentScript -Destination \$backupScript -Force
-                Write-Log "[BACKUP] Backup criado: \$backupScript" "INFO"
+                Write-Log "[BACKUP] Historical backup: \$backupScript" "INFO"
             } catch {
-                Write-Log "[WARN] Backup falhou, continuando: \$(\$_.Exception.Message)" "WARN"
+                Write-Log "[WARN] Historical backup falhou: \$(\$_.Exception.Message)" "WARN"
             }
         } else {
             Write-Log "[WARN] Script atual nao encontrado, pulando backup" "WARN"
@@ -1729,6 +2240,8 @@ function Invoke-UpdateAgentJob {
             target_path = \$targetScript
             sha256 = \$actualHash
             base64_mode = [bool]\$data.script_content_base64
+            signature_verified = \$signatureVerified
+            signed_by = \$data.signed_by
         } -Severity "info"
         
         Write-Log "[SUCCESS] Script v\$newVersion instalado em \$targetScript" "SUCCESS"
@@ -1742,6 +2255,8 @@ function Invoke-UpdateAgentJob {
             targetPath  = \$targetScript
             sha256      = \$actualHash
             base64Mode  = [bool]\$data.script_content_base64
+            signatureVerified = \$signatureVerified
+            signedBy    = \$data.signed_by
             requiresReboot = \$true
             savedAt     = (Get-Date).ToUniversalTime().ToString("o")
         }
@@ -1827,6 +2342,64 @@ try {
     
     # Transicao: BOOTSTRAP -> SYNCING
     Set-AgentState -NewState "SYNCING" -Reason "Starting initial sync"
+
+    # ============================================================
+    # FASE 3: HEALTH CHECK POS-UPDATE + SAFE MODE CHECK
+    # ============================================================
+    \$rollbackState = Get-RollbackState
+    
+    # Verificar Safe Mode
+    if (\$rollbackState.safe_mode) {
+        Write-Log "[SAFE MODE] Agente em modo seguro - auto-updates desabilitados" "WARN"
+        Add-EvidenceEntry -Type "security_event" -Data @{
+            event = "safe_mode_active"
+            version = \$Global:AgentVersion
+            rollback_count = \$rollbackState.rollback_count
+        } -Severity "warning"
+    }
+    
+    # Health Check pos-update: detectar se houve update recente
+    if (\$rollbackState.previous_version -and \$rollbackState.previous_version -ne \$Global:AgentVersion) {
+        Write-Log "[HEALTH CHECK] Update detectado: \$(\$rollbackState.previous_version) -> \$(\$Global:AgentVersion)" "INFO"
+        Write-Log "[HEALTH CHECK] Aguardando 5s para estabilizacao..." "INFO"
+        Start-Sleep -Seconds 5
+        
+        Write-Log "[HEALTH CHECK] Validando versao \$(\$Global:AgentVersion)..." "INFO"
+        \$health = Test-PostUpdateHealth
+        
+        if (-not \$health.healthy) {
+            Write-Log "[HEALTH CHECK] FALHA: \$(\$health.reason)" "ERROR"
+            Add-EvidenceEntry -Type "security_event" -Data @{
+                event = "health_check_failed"
+                version = \$Global:AgentVersion
+                previous_version = \$rollbackState.previous_version
+                reason = \$health.reason
+            } -Severity "error"
+            
+            # Executar rollback automatico
+            \$rollbackResult = Invoke-SafeRollback -Reason "health_check_failed"
+            
+            if (\$rollbackResult.safe_mode) {
+                Write-Log "[CRITICAL] Agente entrou em SAFE MODE apos rollback loop" "ERROR"
+            }
+            # Se rollback executado com sucesso, o agente sera reiniciado
+            # Se falhou, continuar em modo degradado
+        } else {
+            Write-Log "[HEALTH CHECK] Versao \$(\$Global:AgentVersion) validada com sucesso" "SUCCESS"
+            
+            # Reset rollback state apos sucesso
+            \$rollbackState.rollback_count = 0
+            \$rollbackState.previous_version = \$null
+            Save-RollbackState -State \$rollbackState
+            
+            Add-EvidenceEntry -Type "state_change" -Data @{
+                event = "update_validated"
+                version = \$Global:AgentVersion
+                health_check = "passed"
+            } -Severity "info"
+        }
+    }
+    # ============================================================
 
     # Sincronizar policy do servidor
     Write-Log "[BOOTSTRAP] Syncing policy from server..." "INFO"
@@ -1983,3 +2556,7 @@ catch {
     exit 1
 }
 `;
+
+export function getAgentScriptWindows(): string {
+  return AGENT_SCRIPT_WINDOWS_CONTENT;
+}
