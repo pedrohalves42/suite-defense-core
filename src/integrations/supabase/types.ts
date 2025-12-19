@@ -1353,9 +1353,13 @@ export type Database = {
           agent_version: string | null
           display_name: string | null
           enrolled_at: string
+          force_update_at: string | null
+          force_update_reason: string | null
+          force_update_version: string | null
           hmac_secret: string
           hostname: string | null
           id: string
+          last_forced_update_applied: string | null
           last_heartbeat: string | null
           os_type: string | null
           os_version: string | null
@@ -1368,9 +1372,13 @@ export type Database = {
           agent_version?: string | null
           display_name?: string | null
           enrolled_at?: string
+          force_update_at?: string | null
+          force_update_reason?: string | null
+          force_update_version?: string | null
           hmac_secret: string
           hostname?: string | null
           id?: string
+          last_forced_update_applied?: string | null
           last_heartbeat?: string | null
           os_type?: string | null
           os_version?: string | null
@@ -1383,9 +1391,13 @@ export type Database = {
           agent_version?: string | null
           display_name?: string | null
           enrolled_at?: string
+          force_update_at?: string | null
+          force_update_reason?: string | null
+          force_update_version?: string | null
           hmac_secret?: string
           hostname?: string | null
           id?: string
+          last_forced_update_applied?: string | null
           last_heartbeat?: string | null
           os_type?: string | null
           os_version?: string | null
