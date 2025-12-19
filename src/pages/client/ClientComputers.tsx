@@ -21,6 +21,7 @@ import { formatRelativeTime } from '@/lib/date-utils';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { DiskMetricsPanel } from '@/components/agent/DiskMetricsPanel';
 
 // Health indicator component
 const HealthIndicator = ({ cpu, memory, disk }: { cpu?: number; memory?: number; disk?: number }) => {
@@ -297,6 +298,11 @@ export const ClientComputers = () => {
                           </p>
                           <p className="text-xs text-muted-foreground">Disco</p>
                         </div>
+                      </div>
+                      
+                      {/* Painel de múltiplos discos */}
+                      <div className="mt-3 pt-3 border-t">
+                        <DiskMetricsPanel agentId={agent.id} compact />
                       </div>
                     )}
 

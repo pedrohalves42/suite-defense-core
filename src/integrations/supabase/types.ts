@@ -160,6 +160,111 @@ export type Database = {
           },
         ]
       }
+      agent_disk_metrics: {
+        Row: {
+          agent_id: string
+          collected_at: string | null
+          created_at: string | null
+          drive_label: string | null
+          drive_letter: string
+          drive_type: string | null
+          free_gb: number
+          id: string
+          is_system_drive: boolean | null
+          tenant_id: string
+          total_gb: number
+          usage_percent: number
+          used_gb: number
+        }
+        Insert: {
+          agent_id: string
+          collected_at?: string | null
+          created_at?: string | null
+          drive_label?: string | null
+          drive_letter: string
+          drive_type?: string | null
+          free_gb: number
+          id?: string
+          is_system_drive?: boolean | null
+          tenant_id: string
+          total_gb: number
+          usage_percent: number
+          used_gb: number
+        }
+        Update: {
+          agent_id?: string
+          collected_at?: string | null
+          created_at?: string | null
+          drive_label?: string | null
+          drive_letter?: string
+          drive_type?: string | null
+          free_gb?: number
+          id?: string
+          is_system_drive?: boolean | null
+          tenant_id?: string
+          total_gb?: number
+          usage_percent?: number
+          used_gb?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_disk_metrics_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_disk_metrics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_disk_metrics_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       agent_evidence_logs: {
         Row: {
           agent_id: string | null
@@ -7374,6 +7479,10 @@ export type Database = {
       cleanup_expired_keys: { Args: never; Returns: undefined }
       cleanup_old_data: { Args: never; Returns: undefined }
       cleanup_old_data_scheduled: { Args: never; Returns: Json }
+      cleanup_old_disk_metrics: {
+        Args: { retention_days?: number }
+        Returns: number
+      }
       cleanup_old_failed_attempts: { Args: never; Returns: undefined }
       cleanup_old_hmac_signatures: { Args: never; Returns: number }
       cleanup_old_metrics: { Args: never; Returns: undefined }
@@ -7463,6 +7572,20 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: undefined
+      }
+      get_agent_disk_details: {
+        Args: { p_agent_id: string }
+        Returns: {
+          collected_at: string
+          drive_label: string
+          drive_letter: string
+          drive_type: string
+          free_gb: number
+          is_system_drive: boolean
+          total_gb: number
+          usage_percent: number
+          used_gb: number
+        }[]
       }
       get_agent_health_metrics: {
         Args: { p_tenant_id: string }
