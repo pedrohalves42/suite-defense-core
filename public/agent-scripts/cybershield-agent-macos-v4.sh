@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v4.0.7
+# CyberShield Agent - macOS v4.0.9
 #
 # FASE 2.1: State Machine Formal (6 estados)
 # FASE 2.2: Evidence Journal Local

@@ -13,10 +13,11 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
+// GSV-Ω: Todas as plataformas sincronizadas em v4.0.9 (HARDENED)
 const CURRENT_VERSIONS = {
   windows: 'v4.0.9',
-  linux: 'v4.0.7',
-  macos: 'v4.0.7'
+  linux: 'v4.0.9',
+  macos: 'v4.0.9'
 } as const;
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
