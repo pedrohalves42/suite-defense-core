@@ -244,8 +244,8 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Painel Principal</h1>
-        <p className="text-muted-foreground text-sm">Visão geral da proteção dos seus computadores</p>
+        <h1 className="text-xl font-bold text-foreground">Painel Principal</h1>
+        <p className="text-muted-foreground text-xs">Visão geral da proteção dos seus computadores</p>
       </div>
 
       {/* 1️⃣ GLOBAL STATUS CARD - Responde "Posso seguir tranquilo?" em 3 segundos */}
@@ -256,10 +256,10 @@ export default function Dashboard() {
           globalStatus.variant === 'warning' && "bg-yellow-500/10 border-yellow-500/30",
           globalStatus.variant === 'danger' && "bg-red-500/10 border-red-500/30"
         )}>
-          <CardContent className="py-8 text-center">
-            <div className="text-5xl mb-3">{globalStatus.emoji}</div>
+          <CardContent className="py-6 text-center">
+            <div className="text-4xl mb-2">{globalStatus.emoji}</div>
             <h2 className={cn(
-              "text-2xl font-bold mb-2",
+              "text-lg font-bold mb-1",
               globalStatus.variant === 'success' && "text-green-600 dark:text-green-400",
               globalStatus.variant === 'warning' && "text-yellow-600 dark:text-yellow-400",
               globalStatus.variant === 'danger' && "text-red-600 dark:text-red-400"
@@ -406,7 +406,7 @@ export default function Dashboard() {
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-xl font-bold text-green-600">{onlineAgents}</span>
+                  <span className="text-lg font-bold text-green-600">{onlineAgents}</span>
                   <span className="text-sm text-muted-foreground">online</span>
                   {offlineAgents > 0 && (
                     <span className="text-sm text-red-500">• {offlineAgents} offline</span>
@@ -424,7 +424,7 @@ export default function Dashboard() {
                   <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="mt-2 flex items-baseline gap-2">
-                  <span className={cn("text-xl font-bold", (alerts?.length || 0) > 0 ? "text-yellow-600" : "text-green-600")}>
+                  <span className={cn("text-lg font-bold", (alerts?.length || 0) > 0 ? "text-yellow-600" : "text-green-600")}>
                     {alerts?.length || 0}
                   </span>
                   <span className="text-sm text-muted-foreground">ativos</span>
