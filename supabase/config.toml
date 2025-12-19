@@ -467,3 +467,7 @@ verify_jwt = true
 # === V4.0 Compliance Reports ===
 [functions.generate-compliance-report]
 verify_jwt = true
+
+# === Agent Release Sync ===
+[functions.sync-release-from-repo]
+verify_jwt = false
