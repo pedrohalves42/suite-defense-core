@@ -7,12 +7,16 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v4.0.6-SAFE-ROLLBACK';
+export const INSTALLER_VERSION = 'v4.0.10';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
-export const LAST_UPDATED = '2025-12-18T18:00:00Z';
+export const LAST_UPDATED = '2025-12-19T03:15:00Z';
 
 export const CHANGES = [
+  '[v4.0.10] FASE VIKTOR: Force Update via Heartbeat Response para recovery de agentes',
+  '[v4.0.10] FEATURE: Send-SystemMetrics nativo para métricas em tempo real',
+  '[v4.0.10] FEATURE: Apply-ForcedUpdate para updates sem dependência de jobs',
+  '[v4.0.10] FIX: Version mismatch prevention - auto-sync with agent_releases',
   '[v4.0.6-SAFE-ROLLBACK] FEATURE: Health check in bootstrap - validates update on first restart',
   '[v4.0.6-SAFE-ROLLBACK] FEATURE: Auto-rollback with structured backup before update',
   '[v4.0.6-SAFE-ROLLBACK] FEATURE: Post-update health check (state machine, heartbeat, poll-jobs)',
