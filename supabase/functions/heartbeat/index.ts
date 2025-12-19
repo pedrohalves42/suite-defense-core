@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { encodeBase64 } from 'https://deno.land/std@0.208.0/encoding/base64.ts'
 import { AgentTokenSchema } from '../_shared/validation.ts'
 import { handleException, corsHeaders } from '../_shared/error-handler.ts'
 import { verifyHmacSignature } from '../_shared/hmac.ts'
@@ -224,13 +225,20 @@ Deno.serve(async (req) => {
         .single()
 
       if (release) {
-        // Normalizar script: CRLF → LF, trim
-        const normalizedScript = release.script_content.replace(/\r\n/g, '\n').trim() + '\n'
+        // Normalizar script para Windows (mesmo algoritmo do serve-agent-update)
+        const normalizeForWindows = (content: string): string => {
+          return content
+            .replace(/\r\n/g, '\n')   
+            .replace(/\r/g, '\n')     
+            .replace(/\n/g, '\r\n');  
+        };
         
-        // Encode Base64 para transmissão segura
+        const normalizedScript = normalizeForWindows(release.script_content);
+        
+        // Encode Base64 usando Deno std (consistente com serve-agent-update)
         const encoder = new TextEncoder()
         const scriptBytes = encoder.encode(normalizedScript)
-        const base64Script = btoa(String.fromCharCode(...scriptBytes))
+        const base64Script = encodeBase64(scriptBytes)
         
         // Calcular SHA256 do conteúdo normalizado (mesmo algoritmo do serve-agent-update)
         const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes)

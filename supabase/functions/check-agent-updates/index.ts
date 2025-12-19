@@ -127,15 +127,18 @@ Deno.serve(async (req) => {
     const platform = (agent.os_type?.toLowerCase() || 'windows');
     console.log(`[${requestId}] Platform: ${platform}`);
 
-    // 5. Buscar versao latest para o platform
-    const { data: latestVersion, error: versionError } = await supabase
-      .from('agent_versions')
-      .select('*')
+    // 5. Buscar versao latest da tabela agent_releases (consistente com serve-agent-update)
+    const { data: latestRelease, error: releaseError } = await supabase
+      .from('agent_releases')
+      .select('version, platform, sha256, release_notes, created_at')
       .eq('platform', platform)
-      .eq('is_latest', true)
-      .single();
+      .eq('channel', 'stable')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (versionError || !latestVersion) {
+    if (releaseError || !latestRelease) {
       console.log(`[${requestId}] No updates available for platform ${platform}`);
       return new Response(
         JSON.stringify({
@@ -150,18 +153,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[${requestId}] Latest version found: ${latestVersion.version}`);
+    console.log(`[${requestId}] Latest version found: ${latestRelease.version}`);
 
     // 6. Retornar informacoes da versao
     return new Response(
       JSON.stringify({
         has_update: true,
-        version: latestVersion.version,
-        platform: latestVersion.platform,
-        sha256: latestVersion.sha256,
-        size_bytes: latestVersion.size_bytes,
-        download_url: latestVersion.download_url,
-        release_notes: latestVersion.release_notes,
+        version: latestRelease.version,
+        platform: latestRelease.platform,
+        sha256: latestRelease.sha256,
+        release_notes: latestRelease.release_notes,
         requestId
       }),
       {
