@@ -7265,6 +7265,17 @@ export type Database = {
         }
         Relationships: []
       }
+      v_integrity_score: {
+        Row: {
+          invalid_releases: number | null
+          job_integrity_score: number | null
+          recent_completed_jobs: number | null
+          recent_violations: number | null
+          supply_chain_score: number | null
+          total_releases: number | null
+        }
+        Relationships: []
+      }
       v_problematic_agents: {
         Row: {
           agent_name: string | null
