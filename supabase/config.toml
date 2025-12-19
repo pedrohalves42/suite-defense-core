@@ -480,3 +480,7 @@ schedule = "*/5 * * * *"
 # === Chaos Test (Zero Trust Validation) ===
 [functions.chaos-test]
 verify_jwt = true
+
+# === ECDSA Release Signing ===
+[functions.sign-release]
+verify_jwt = true
