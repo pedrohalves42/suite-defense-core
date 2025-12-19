@@ -276,34 +276,35 @@ export const ClientComputers = () => {
                     )}
 
                     {metrics && (
-                      <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border">
-                        <div className="text-center">
-                          <Cpu className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-                          <p className={`text-sm font-medium ${(metrics.cpu_usage_percent || 0) >= 90 ? 'text-red-500' : ''}`}>
-                            {metrics.cpu_usage_percent?.toFixed(0) || '--'}%
-                          </p>
-                          <p className="text-xs text-muted-foreground">CPU</p>
+                      <>
+                        <div className="grid grid-cols-3 gap-2 pt-3 border-t border-border">
+                          <div className="text-center">
+                            <Cpu className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
+                            <p className={`text-sm font-medium ${(metrics.cpu_usage_percent || 0) >= 90 ? 'text-red-500' : ''}`}>
+                              {metrics.cpu_usage_percent?.toFixed(0) || '--'}%
+                            </p>
+                            <p className="text-xs text-muted-foreground">CPU</p>
+                          </div>
+                          <div className="text-center">
+                            <MemoryStick className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
+                            <p className={`text-sm font-medium ${(metrics.memory_usage_percent || 0) >= 90 ? 'text-red-500' : ''}`}>
+                              {metrics.memory_usage_percent?.toFixed(0) || '--'}%
+                            </p>
+                            <p className="text-xs text-muted-foreground">Memória</p>
+                          </div>
+                          <div className="text-center">
+                            <HardDrive className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
+                            <p className={`text-sm font-medium ${(metrics.disk_usage_percent || 0) >= 90 ? 'text-red-500' : ''}`}>
+                              {metrics.disk_usage_percent?.toFixed(0) || '--'}%
+                            </p>
+                            <p className="text-xs text-muted-foreground">Disco</p>
+                          </div>
                         </div>
-                        <div className="text-center">
-                          <MemoryStick className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-                          <p className={`text-sm font-medium ${(metrics.memory_usage_percent || 0) >= 90 ? 'text-red-500' : ''}`}>
-                            {metrics.memory_usage_percent?.toFixed(0) || '--'}%
-                          </p>
-                          <p className="text-xs text-muted-foreground">Memória</p>
+                        {/* Painel de múltiplos discos */}
+                        <div className="mt-3 pt-3 border-t">
+                          <DiskMetricsPanel agentId={agent.id} compact />
                         </div>
-                        <div className="text-center">
-                          <HardDrive className="h-4 w-4 mx-auto text-muted-foreground mb-1" />
-                          <p className={`text-sm font-medium ${(metrics.disk_usage_percent || 0) >= 90 ? 'text-red-500' : ''}`}>
-                            {metrics.disk_usage_percent?.toFixed(0) || '--'}%
-                          </p>
-                          <p className="text-xs text-muted-foreground">Disco</p>
-                        </div>
-                      </div>
-                      
-                      {/* Painel de múltiplos discos */}
-                      <div className="mt-3 pt-3 border-t">
-                        <DiskMetricsPanel agentId={agent.id} compact />
-                      </div>
+                      </>
                     )}
 
                     {/* Request Verification Button */}
