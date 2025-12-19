@@ -303,143 +303,14 @@ Deno.serve(async (req) => {
       )
     }
 
-     // ? BUG FIX P1: Atualizar o job com TODOS os campos v3, incluindo timestamps
-    const updateData: Record<string, unknown> = {
-      status: status,
-      finished_at: finished_at || new Date().toISOString(),
-      completed_at: new Date().toISOString() // Compatibilidade legado
-    }
-
-    // ? BUG FIX P1: Incluir started_at explicitamente
-    if (started_at) {
-      updateData.started_at = started_at
-    }
-
-    // Adicionar campos extras se existirem
-    if (output !== undefined) {
-      updateData.output = output
-    }
-    if (error_message) {
-      updateData.error_message = error_message
-    }
-    if (execution_time_seconds !== undefined) {
-      updateData.execution_time_seconds = execution_time_seconds
-    }
-
-    // GOVERNANÇA: Validar contrato de sucesso para sync_blocked_websites
-    if (job.type === 'sync_blocked_websites' && status === 'completed' && output) {
-      // Parse output if string
-      let outputDataSync: Record<string, unknown> = {}
-      if (typeof output === 'object' && output !== null) {
-        outputDataSync = output as Record<string, unknown>
-      } else if (typeof output === 'string') {
-        try { outputDataSync = JSON.parse(output) } catch { /* ignore */ }
-      }
-      const applyToHosts = outputDataSync.apply_to_hosts === true
-      const hostsModified = Number(outputDataSync.hosts_modified) || 0
-      const blockedDomainsCount = Number(outputDataSync.blocked_domains_count) || 0
-      
-      // Se apply_to_hosts foi solicitado mas nenhum host foi modificado = warning
-      if (applyToHosts && hostsModified === 0 && blockedDomainsCount > 0) {
-        updateData.status = 'completed_with_warning'
-        updateData.error_message = `Bloqueio solicitado mas hosts_modified=0. ${blockedDomainsCount} domínios não foram aplicados ao arquivo hosts.`
-        console.warn('[submit-job-result] GOVERNANCE WARNING: sync_blocked_websites completed but hosts not modified', {
-          job_id,
-          agent: agent.agent_name,
-          blocked_domains_count: blockedDomainsCount,
-          hosts_modified: hostsModified
-        })
-      }
-    }
-
-    console.log('[submit-job-result] Updating job with data:', {
-      job_id,
-      updateData: JSON.stringify(updateData, null, 2),
-      updateFields: Object.keys(updateData)
-    })
-
-    const { data: updateResult, error: updateError } = await supabase
-      .from('jobs')
-      .update(updateData)
-      .eq('id', job_id)
-      .select()
-
-    if (updateError) {
-      console.error('[submit-job-result] Database update failed:', {
-        job_id,
-        error: updateError.message,
-        error_code: updateError.code,
-        error_details: updateError.details,
-        error_hint: updateError.hint
-      })
-      return new Response(
-        JSON.stringify({ error: 'Erro ao atualizar job', details: updateError.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    console.log('[submit-job-result] Job updated successfully:', {
-      job_id,
-      agent: agent.agent_name,
-      final_status: status,
-      updated_record: updateResult ? JSON.stringify(updateResult[0]) : 'null',
-      rows_affected: updateResult?.length || 0
-    })
-
     // ============================================================
-    // HARDENING: Validação de versão após update_agent
-    // Se o job é update_agent e o agente ainda está em versão legada,
-    // o update não foi aplicado de fato - registrar warning
+    // ZERO TRUST ARCHITECTURE: INSERIR DADOS ANTES DE MARCAR COMPLETED
+    // O trigger enforce_job_side_effects bloqueia completed sem side effects
     // ============================================================
-    if (job.type === 'update_agent' && status === 'completed') {
-      // Parse output if string
-      let payload_data: Record<string, unknown> = {}
-      if (typeof output === 'object' && output !== null) {
-        payload_data = output as Record<string, unknown>
-      } else if (typeof output === 'string') {
-        try { payload_data = JSON.parse(output) } catch { /* ignore */ }
-      }
-      const targetVersion = payload_data?.target_version || payload_data?.version
-      
-      // Buscar versão atual do agente para verificar se update realmente funcionou
-      const { data: currentAgent } = await supabase
-        .from('agents')
-        .select('agent_version')
-        .eq('id', agent.id)
-        .single()
-      
-      const legacyVersions = ['3.10.37', '3.10.39', '3.10.14']
-      const currentVersion = currentAgent?.agent_version || ''
-      const isStillLegacy = legacyVersions.some(v => currentVersion.includes(v))
-      
-      if (isStillLegacy && targetVersion) {
-        console.warn('[submit-job-result] HARDENING WARNING: update_agent completed but agent still on legacy version', {
-          job_id,
-          agent: agent.agent_name,
-          current_version: currentVersion,
-          target_version: targetVersion,
-          note: 'Update saved to disk but requires Windows reboot to apply'
-        })
-        
-        // Adicionar warning ao job sem mudar status
-        await supabase
-          .from('jobs')
-          .update({
-            error_message: `Update entregue mas agente ainda em ${currentVersion}. Script salvo em disco - reinício do Windows necessário.`
-          })
-          .eq('id', job_id)
-      }
-    }
-
-    // ============================================================
-    // CRITICAL FIX: Process job outputs and insert into specific tables
-    // Before v4.0.10, agents called submit-software-inventory/submit-web-activity directly
-    // Now v4.0.10+ sends everything via submit-job-result, so we need to process here
-    // ============================================================
-    if (status === 'completed' && output) {
-      // CRITICAL FIX: Parse JSON string output from agents (v4.0.10+)
-      // Agents may send output as JSON string instead of object
-      let outputData: Record<string, unknown> = {}
+    
+    // Parse output PRIMEIRO (antes de qualquer update)
+    let outputData: Record<string, unknown> = {}
+    if (output) {
       if (typeof output === 'object' && output !== null) {
         outputData = output as Record<string, unknown>
       } else if (typeof output === 'string') {
@@ -448,11 +319,6 @@ Deno.serve(async (req) => {
           if (typeof parsed === 'object' && parsed !== null) {
             outputData = parsed as Record<string, unknown>
           }
-          console.log('[submit-job-result] Successfully parsed JSON string output:', {
-            job_id: job.id,
-            job_type: job.type,
-            keys: Object.keys(outputData)
-          })
         } catch (parseErr) {
           console.warn('[submit-job-result] Failed to parse output as JSON string:', {
             job_id: job.id,
@@ -461,11 +327,21 @@ Deno.serve(async (req) => {
           })
         }
       }
+    }
+    
+    // Flag para rastrear se side effects foram inseridos
+    let sideEffectsInserted = false
+    let insertedRecordsCount = 0
+    
+    // ============================================================
+    // PROCESS SIDE EFFECTS ANTES DE MARCAR COMPLETED
+    // ============================================================
+    if (status === 'completed') {
       
-      // PROCESS SOFTWARE INVENTORY
+      // PROCESS SOFTWARE INVENTORY (ANTES do update)
       if (job.type === 'software_inventory_collect' && (outputData.software || outputData.installed_software)) {
         try {
-          console.log('[submit-job-result] Processing software inventory output...')
+          console.log('[submit-job-result] [ZERO_TRUST] Processing software inventory BEFORE marking completed...')
           const softwareList = outputData.software || outputData.installed_software || []
           
           if (Array.isArray(softwareList) && softwareList.length > 0) {
@@ -483,9 +359,8 @@ Deno.serve(async (req) => {
               version: String(sw.version || sw.Version || sw.DisplayVersion || ''),
               vendor: String(sw.vendor || sw.Vendor || sw.Publisher || ''),
               install_location: String(sw.install_location || sw.InstallLocation || sw.InstallPath || ''),
-              install_date: sw.install_date || sw.InstallDate || null,
               risk_level: String(sw.risk_level || sw.RiskLevel || 'unknown').toLowerCase(),
-              collected_at: new Date().toISOString()
+              last_seen_at: new Date().toISOString()
             }))
             
             // Batch insert
@@ -504,19 +379,22 @@ Deno.serve(async (req) => {
               }
             }
             
-            console.log(`[submit-job-result] Inserted ${insertedCount}/${softwareRecords.length} software records`)
-          } else {
-            console.log('[submit-job-result] No software data to process')
+            console.log(`[submit-job-result] [ZERO_TRUST] Inserted ${insertedCount}/${softwareRecords.length} software records`)
+            
+            if (insertedCount > 0) {
+              sideEffectsInserted = true
+              insertedRecordsCount = insertedCount
+            }
           }
         } catch (swErr) {
           console.error('[submit-job-result] Error processing software inventory:', swErr)
         }
       }
       
-      // PROCESS WEB ACTIVITY
+      // PROCESS WEB ACTIVITY (ANTES do update)
       if (job.type === 'collect_web_activity' && (outputData.dns_cache || outputData.browser_history)) {
         try {
-          console.log('[submit-job-result] Processing web activity output...')
+          console.log('[submit-job-result] [ZERO_TRUST] Processing web activity BEFORE marking completed...')
           
           const dnsCache = outputData.dns_cache || []
           const browserHistory = outputData.browser_history || []
@@ -615,44 +493,171 @@ Deno.serve(async (req) => {
               }
             }
             
-            console.log(`[submit-job-result] Inserted ${insertedCount}/${activityRecords.length} web activity records`)
+            console.log(`[submit-job-result] [ZERO_TRUST] Inserted ${insertedCount}/${activityRecords.length} web activity records`)
             
-            // INTEGRITY VALIDATION: Verify data was actually persisted
-            if (insertedCount < activityRecords.length) {
-              console.warn('[submit-job-result] INTEGRITY WARNING: collect_web_activity partial insert', {
-                job_id,
-                agent: agent.agent_name,
-                expected: activityRecords.length,
-                inserted: insertedCount,
-                missing: activityRecords.length - insertedCount
-              })
+            if (insertedCount > 0) {
+              sideEffectsInserted = true
+              insertedRecordsCount = insertedCount
             }
-            
-            // Verify by querying back
-            const { count: verifyCount } = await supabase
-              .from('agent_web_activity')
-              .select('*', { count: 'exact', head: true })
-              .eq('agent_id', job.agent_id)
-              .gte('created_at', new Date(Date.now() - 60000).toISOString()) // last 1 minute
-            
-            if ((verifyCount || 0) < insertedCount * 0.5) {
-              console.error('[submit-job-result] INTEGRITY ALERT: collect_web_activity data not found after insert', {
-                job_id,
-                agent: agent.agent_name,
-                inserted: insertedCount,
-                verified: verifyCount
-              })
-            } else {
-              console.log(`[submit-job-result] INTEGRITY OK: Verified ${verifyCount} records persisted`)
-            }
-          } else {
-            console.log('[submit-job-result] No web activity domains to process')
           }
         } catch (webErr) {
           console.error('[submit-job-result] Error processing web activity:', webErr)
         }
       }
     }
+    
+    // ============================================================
+    // AGORA ATUALIZAR O JOB (após side effects inseridos)
+    // O trigger enforce_job_side_effects validará a integridade
+    // ============================================================
+    const updateData: Record<string, unknown> = {
+      status: status,
+      finished_at: finished_at || new Date().toISOString(),
+      completed_at: new Date().toISOString()
+    }
+
+    if (started_at) {
+      updateData.started_at = started_at
+    }
+    if (output !== undefined) {
+      updateData.output = output
+    }
+    if (error_message) {
+      updateData.error_message = error_message
+    }
+    if (execution_time_seconds !== undefined) {
+      updateData.execution_time_seconds = execution_time_seconds
+    }
+
+    // GOVERNANÇA: Validar contrato de sucesso para sync_blocked_websites
+    if (job.type === 'sync_blocked_websites' && status === 'completed' && output) {
+      const applyToHosts = outputData.apply_to_hosts === true
+      const hostsModified = Number(outputData.hosts_modified) || 0
+      const blockedDomainsCount = Number(outputData.blocked_domains_count) || 0
+      
+      if (applyToHosts && hostsModified === 0 && blockedDomainsCount > 0) {
+        updateData.status = 'completed_with_warning'
+        updateData.error_message = `Bloqueio solicitado mas hosts_modified=0. ${blockedDomainsCount} domínios não foram aplicados ao arquivo hosts.`
+        console.warn('[submit-job-result] GOVERNANCE WARNING: sync_blocked_websites completed but hosts not modified', {
+          job_id,
+          agent: agent.agent_name,
+          blocked_domains_count: blockedDomainsCount,
+          hosts_modified: hostsModified
+        })
+      }
+    }
+
+    console.log('[submit-job-result] [ZERO_TRUST] Updating job with data:', {
+      job_id,
+      status: updateData.status,
+      sideEffectsInserted,
+      insertedRecordsCount,
+      updateFields: Object.keys(updateData)
+    })
+
+    const { data: updateResult, error: updateError } = await supabase
+      .from('jobs')
+      .update(updateData)
+      .eq('id', job_id)
+      .select()
+
+    if (updateError) {
+      // ZERO TRUST: Se o erro for JOB_INTEGRITY_VIOLATION, logar claramente
+      const isIntegrityViolation = updateError.message?.includes('JOB_INTEGRITY_VIOLATION')
+      
+      console.error('[submit-job-result] Database update failed:', {
+        job_id,
+        error: updateError.message,
+        error_code: updateError.code,
+        isIntegrityViolation,
+        sideEffectsInserted,
+        insertedRecordsCount
+      })
+      
+      if (isIntegrityViolation) {
+        console.error('[submit-job-result] [ZERO_TRUST_BLOCKED] Trigger blocked completed without side effects!', {
+          job_id,
+          job_type: job.type,
+          agent: agent.agent_name
+        })
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          error: isIntegrityViolation ? 'Job integrity violation: missing side effects' : 'Erro ao atualizar job', 
+          details: updateError.message,
+          code: isIntegrityViolation ? 'INTEGRITY_VIOLATION' : updateError.code
+        }),
+        { status: isIntegrityViolation ? 422 : 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // [JOB_INTEGRITY_OK] - Log explícito de sucesso (prova de vida)
+    if (status === 'completed') {
+      console.info('[JOB_INTEGRITY_OK]', {
+        job_id: job.id,
+        type: job.type,
+        agent_id: job.agent_id,
+        agent_name: agent.agent_name,
+        sideEffectsInserted,
+        insertedRecordsCount
+      })
+    }
+
+    console.log('[submit-job-result] Job updated successfully:', {
+      job_id,
+      agent: agent.agent_name,
+      final_status: status,
+      rows_affected: updateResult?.length || 0
+    })
+
+    // ============================================================
+    // HARDENING: Validação de versão após update_agent
+    // Se o job é update_agent e o agente ainda está em versão legada,
+    // o update não foi aplicado de fato - registrar warning
+    // ============================================================
+    if (job.type === 'update_agent' && status === 'completed') {
+      // Parse output if string
+      let payload_data: Record<string, unknown> = {}
+      if (typeof output === 'object' && output !== null) {
+        payload_data = output as Record<string, unknown>
+      } else if (typeof output === 'string') {
+        try { payload_data = JSON.parse(output) } catch { /* ignore */ }
+      }
+      const targetVersion = payload_data?.target_version || payload_data?.version
+      
+      // Buscar versão atual do agente para verificar se update realmente funcionou
+      const { data: currentAgent } = await supabase
+        .from('agents')
+        .select('agent_version')
+        .eq('id', agent.id)
+        .single()
+      
+      const legacyVersions = ['3.10.37', '3.10.39', '3.10.14']
+      const currentVersion = currentAgent?.agent_version || ''
+      const isStillLegacy = legacyVersions.some(v => currentVersion.includes(v))
+      
+      if (isStillLegacy && targetVersion) {
+        console.warn('[submit-job-result] HARDENING WARNING: update_agent completed but agent still on legacy version', {
+          job_id,
+          agent: agent.agent_name,
+          current_version: currentVersion,
+          target_version: targetVersion,
+          note: 'Update saved to disk but requires Windows reboot to apply'
+        })
+        
+        // Adicionar warning ao job sem mudar status
+        await supabase
+          .from('jobs')
+          .update({
+            error_message: `Update entregue mas agente ainda em ${currentVersion}. Script salvo em disco - reinício do Windows necessário.`
+          })
+          .eq('id', job_id)
+      }
+    }
+
+    // NOTE: Software inventory e web activity já processados ANTES do update (Zero Trust)
+    // O código abaixo foi movido para antes do UPDATE para garantir integridade
 
     // Trigger automatic report generation for security collection jobs - CORRIGIDO: usar job.type
     const reportTriggerJobTypes = [
