@@ -3,9 +3,9 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v4.ps1
- * Versao: v4.0.8
- * SHA256: 3ffb12d03b48b2b6559af028e9fa5772d7003f3a8584e59eb7ff42d62ffd9054
- * Gerado em: 2025-12-19T01:12:15.441Z
+ * Versao: v4.0.11
+ * SHA256: c4d116897232dfae51845a1c2a0c69d743f639be26417ad4859e457c985be063
+ * Gerado em: 2025-12-19T18:00:14.163Z
  */
 
 export function getAgentScriptWindows(): string {
@@ -13,7 +13,7 @@ export function getAgentScriptWindows(): string {
 }
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
-    CyberShield Agent - Windows v4.0.8
+    CyberShield Agent - Windows v4.0.11
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
@@ -21,6 +21,7 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
     FASE 2.5: Policy Contract (Desired vs Actual + Drift Detection)
     FASE 2.6: Ed25519 Signature Verification
     FASE 3.0: Auto-Rollback & Safe Mode (NEW)
+    FASE VIKTOR: Force Update via Heartbeat Response
     
     Estados:
     - BOOTSTRAP: Inicializacao do agente
@@ -30,12 +31,20 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.8 (ESTABILIZACAO):
-    - FIXED: Metricas sendo enviadas a cada 5 minutos (era ignorado no loop)
-    - FIXED: ValidateSet convertido para runtime validation (backward compatible)
-    - FIXED: Add-EvidenceEntry aceita tipos desconhecidos graciosamente
-    - NEW: Suporte a force_update via banco (bypassa job system)
-    - Fixed heartbeat endpoint from /agent-heartbeat to /heartbeat
+    Funcionalidades v4.0.11 (DISK METRICS FIX):
+    - CRITICAL FIX: Coleta de TODOS os discos (nao apenas C:)
+    - NEW: Invoke-ReportJob coleta disk_total_gb, disk_free_gb, disks[]
+    - NEW: Send-SystemMetrics envia array disks completo para backend
+    - NEW: Informacoes detalhadas: drive_letter, drive_label, is_system_drive
+    - NEW: Logging melhorado para debug de metricas
+    - FIXED: agent_disk_metrics agora populada corretamente
+    
+    v4.0.10 (VIKTOR RECOVERY):
+    - Force Update via Heartbeat Response (bypassa job system completamente)
+    - Apply-ForcedUpdate funcao imortal que processa update do heartbeat
+    - Confirmacao de force_update no backend apos aplicacao
+    - Send-SystemMetrics funcao agora definida
+    - Metricas sendo enviadas a cada 5 minutos
     - Auto-rollback with structured backup before update
     - Post-update health check (state machine, heartbeat, poll-jobs)
     - Safe Mode after 2 consecutive rollbacks - disables auto-updates
@@ -72,7 +81,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v4.0.8"
+    [string]\$AgentVersion = "v4.0.11"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -97,6 +106,55 @@ trap {
 
     Write-EventLog -LogName Application -Source "CyberShield" -EventId 1001 -EntryType Error -Message "\$msg\`n\$stack" -ErrorAction SilentlyContinue
     throw
+}
+
+# ============================================
+#  BOOTSTRAP VALIDATION - CRITICAL FUNCTIONS
+# ============================================
+# This validation runs AFTER all functions are defined (at script execution)
+# We defer the actual check to after function definitions
+\$Global:RequiredFunctions = @(
+    "Write-Log",
+    "Send-Heartbeat",
+    "Send-SystemMetrics",
+    "Invoke-ReportJob",
+    "Invoke-SecureRequest",
+    "Add-EvidenceEntry",
+    "Set-AgentState"
+)
+
+function Invoke-BootstrapValidation {
+    Write-Host "[BOOTSTRAP] Validando funcoes criticas..." -ForegroundColor Cyan
+    
+    \$missingFunctions = @()
+    foreach (\$fn in \$Global:RequiredFunctions) {
+        if (-not (Get-Command \$fn -ErrorAction SilentlyContinue)) {
+            \$missingFunctions += \$fn
+        }
+    }
+    
+    if (\$missingFunctions.Count -gt 0) {
+        \$errorMsg = "FATAL: Funcoes criticas nao definidas: \$(\$missingFunctions -join ', ')"
+        Write-Host "[BOOTSTRAP] \$errorMsg" -ForegroundColor Red
+        
+        # Tentar logar no arquivo antes de abortar
+        \$logPath = "C:\\CyberShield\\logs\\bootstrap-error.log"
+        \$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        
+        # Criar diretorio se nao existir
+        \$logDir = Split-Path \$logPath -Parent
+        if (-not (Test-Path \$logDir)) {
+            New-Item -ItemType Directory -Path \$logDir -Force | Out-Null
+        }
+        
+        "\$timestamp | BOOTSTRAP FAILED | \$errorMsg" | Out-File -FilePath \$logPath -Append -Encoding UTF8
+        
+        # Nao executar agente quebrado - forcar reinstalacao
+        throw \$errorMsg
+    }
+    
+    Write-Host "[BOOTSTRAP] Todas as funcoes criticas validadas" -ForegroundColor Green
+    return \$true
 }
 
 # ============================================
@@ -1657,6 +1715,9 @@ function Get-SystemInfo {
 # ============================================
 #  HEARTBEAT
 # ============================================
+# ============================================
+#  HEARTBEAT (COM FORCE UPDATE VIA RESPONSE)
+# ============================================
 function Send-Heartbeat {
     \$sysInfo = Get-SystemInfo
 
@@ -1682,6 +1743,31 @@ function Send-Heartbeat {
         if (\$result.Success -and \$result.StatusCode -eq 200) {
             Write-Log "[HEARTBEAT] OK (200)" "SUCCESS"
             
+            # FASE VIKTOR: Processar force_update no response do heartbeat
+            # Isso bypassa o job system e funciona com QUALQUER versao de agente
+            try {
+                \$response = \$result.Body | ConvertFrom-Json
+                
+                if (\$response.force_update -eq \$true) {
+                    Write-Log "[FORCE UPDATE] Update forcado detectado via heartbeat!" "WARN"
+                    Write-Log "[FORCE UPDATE] Target version: \$(\$response.target_version)" "INFO"
+                    
+                    # Aplicar force update imediatamente
+                    \$updateResult = Apply-ForcedUpdate -Response \$response
+                    
+                    if (\$updateResult.success) {
+                        # Se chegou aqui, agente vai reiniciar - nao retorna
+                        return \$true
+                    } else {
+                        Write-Log "[FORCE UPDATE] Falha ao aplicar: \$(\$updateResult.error)" "ERROR"
+                        # Continua operando normalmente mesmo com falha no force update
+                    }
+                }
+            } catch {
+                # Erro ao processar response nao deve quebrar o heartbeat
+                Write-Log "[HEARTBEAT] Erro ao processar response: \$(\$_.Exception.Message)" "WARN"
+            }
+            
             Add-EvidenceEntry -Type "heartbeat" -Data @{
                 status = "success"
                 state = Get-AgentState
@@ -1695,6 +1781,235 @@ function Send-Heartbeat {
     }
     catch {
         Write-Log "[HEARTBEAT] Erro: \$(\$_.Exception.Message)" "ERROR"
+        return \$false
+    }
+}
+
+# ============================================
+#  FORCE UPDATE VIA HEARTBEAT (VIKTOR METHOD)
+# ============================================
+# Esta funcao:
+# 1. NAO depende do job system
+# 2. NAO usa ValidateSet que pode quebrar
+# 3. Processa dados recebidos diretamente no heartbeat response
+# 4. Funciona com agentes antigos que nao tem update_agent funcionando
+# ============================================
+function Apply-ForcedUpdate {
+    param(
+        [Parameter(Mandatory = \$true)]
+        \$Response
+    )
+    
+    try {
+        Write-Log "[FORCE UPDATE] Iniciando aplicacao de update forcado..." "INFO"
+        
+        # Extrair dados do response
+        \$targetVersion = \$Response.target_version
+        \$base64Content = \$Response.script_content_base64
+        \$expectedHash = \$Response.sha256
+        \$reason = \$Response.reason
+        
+        if (-not \$targetVersion -or -not \$base64Content -or -not \$expectedHash) {
+            throw "Dados de force update incompletos no response"
+        }
+        
+        Write-Log "[FORCE UPDATE] Version: \$targetVersion, Reason: \$reason" "INFO"
+        
+        # SAFE MODE CHECK - mesmo check do Invoke-UpdateAgentJob
+        \$rollbackState = Get-RollbackState
+        if (\$rollbackState.safe_mode) {
+            Write-Log "[SAFE MODE] Updates desabilitados - rollback loop detectado" "ERROR"
+            
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "force_update_blocked_safe_mode"
+                target_version = \$targetVersion
+                rollback_count = \$rollbackState.rollback_count
+            } -Severity "warning"
+            
+            return @{ success = \$false; error = "Safe mode active - updates disabled" }
+        }
+        
+        # Criar arquivo temporario
+        \$tempScript = Join-Path \$env:TEMP "cybershield-force-update-\$targetVersion.ps1"
+        
+        # CRITICAL: Base64 decode - preserva 100% dos bytes
+        Write-Log "[FORCE UPDATE] Decodificando Base64..." "DEBUG"
+        \$bytes = [System.Convert]::FromBase64String(\$base64Content)
+        [System.IO.File]::WriteAllBytes(\$tempScript, \$bytes)
+        Write-Log "[FORCE UPDATE] Script salvo: \$(\$bytes.Length) bytes" "DEBUG"
+        
+        # Validar SHA256
+        \$actualHash = (Get-FileHash -Path \$tempScript -Algorithm SHA256).Hash.ToLower()
+        if (\$actualHash -ne \$expectedHash.ToLower()) {
+            Remove-Item \$tempScript -Force -ErrorAction SilentlyContinue
+            throw "SHA256 mismatch! Esperado: \$expectedHash, Obtido: \$actualHash"
+        }
+        
+        Write-Log "[FORCE UPDATE] SHA256 validado: \$actualHash" "SUCCESS"
+        
+        # Detectar script atual
+        \$installDir = "C:\\CyberShield"
+        \$targetScript = Join-Path \$installDir "cybershield-agent-\$(\$Global:AgentName).ps1"
+        
+        \$currentScript = \$null
+        \$possiblePaths = @(
+            \$PSCommandPath,
+            (Join-Path \$installDir "cybershield-agent-\$(\$Global:AgentName).ps1"),
+            (Join-Path \$installDir "cybershield-agent-v4.ps1"),
+            (Join-Path \$installDir "cybershield-agent.ps1")
+        )
+        
+        foreach (\$path in \$possiblePaths) {
+            if (\$path -and (Test-Path \$path)) {
+                \$currentScript = \$path
+                break
+            }
+        }
+        
+        if (-not \$currentScript) {
+            \$found = Get-ChildItem -Path \$installDir -Filter "cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (\$found) { \$currentScript = \$found.FullName }
+        }
+        
+        # BACKUP para rollback estruturado
+        \$previousPath = \$Global:RollbackPaths.Previous
+        if (\$currentScript -and (Test-Path \$currentScript)) {
+            try {
+                Copy-Item -Path \$currentScript -Destination \$previousPath -Force
+                Write-Log "[FORCE UPDATE] Backup criado: \$previousPath" "INFO"
+                
+                \$rollbackState = Get-RollbackState
+                \$rollbackState.previous_version = \$Global:AgentVersion
+                Save-RollbackState -State \$rollbackState
+            } catch {
+                Write-Log "[FORCE UPDATE] Backup falhou: \$(\$_.Exception.Message)" "WARN"
+            }
+        }
+        
+        # APLICAR UPDATE
+        Copy-Item -Path \$tempScript -Destination \$targetScript -Force
+        Remove-Item \$tempScript -Force -ErrorAction SilentlyContinue
+        Write-Log "[FORCE UPDATE] Script instalado: \$targetScript" "SUCCESS"
+        
+        # Registrar evidencia
+        Add-EvidenceEntry -Type "force_update" -Data @{
+            old_version = \$Global:AgentVersion
+            new_version = \$targetVersion
+            target_path = \$targetScript
+            sha256 = \$actualHash
+            reason = \$reason
+            method = "heartbeat_response"
+        } -Severity "info"
+        
+        # Confirmar no backend que force update foi aplicado
+        try {
+            \$confirmResult = Invoke-SecureRequest \`
+                -Path "/functions/v1/confirm-force-update" \`
+                -Method "POST" \`
+                -Body @{
+                    new_version = \$targetVersion
+                    old_version = \$Global:AgentVersion
+                } \`
+                -TimeoutSec 10
+            
+            if (\$confirmResult.Success) {
+                Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend" "SUCCESS"
+            }
+        } catch {
+            Write-Log "[FORCE UPDATE] Falha ao confirmar no backend (nao critico): \$(\$_.Exception.Message)" "WARN"
+        }
+        
+        Write-Log "[FORCE UPDATE] Update \$targetVersion aplicado com sucesso!" "SUCCESS"
+        Write-Log "[FORCE UPDATE] Nova versao sera ativada no proximo boot do Windows" "INFO"
+        
+        return @{ success = \$true; version = \$targetVersion }
+        
+    } catch {
+        Write-Log "[FORCE UPDATE] Erro: \$(\$_.Exception.Message)" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "force_update_failed"
+            error = \$_.Exception.Message
+            target_version = \$Response.target_version
+        } -Severity "error"
+        
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# ============================================
+#  SEND SYSTEM METRICS (HYBRID - v4.0.9)
+# ============================================
+function Send-SystemMetrics {
+    param(
+        [Parameter(Mandatory = \$false)]
+        [hashtable]\$Metrics = \$null
+    )
+    
+    Write-Log "[METRICS] Iniciando coleta/envio de metricas..." "DEBUG"
+    
+    try {
+        # Se metricas nao foram passadas, coletar via Invoke-ReportJob
+        if (-not \$Metrics) {
+            Write-Log "[METRICS] Coletando metricas automaticamente..." "DEBUG"
+            \$metricsJob = @{ id = "auto-metrics"; type = "report" }
+            \$metricsResult = Invoke-ReportJob -Job \$metricsJob
+            
+            if (-not \$metricsResult.success) {
+                Write-Log "[METRICS] Falha na coleta de metricas: \$(\$metricsResult.output)" "WARN"
+                return \$false
+            }
+            
+            try {
+                \$metricsData = \$metricsResult.output | ConvertFrom-Json
+                
+                # v4.0.11: Enviar TODAS as informacoes de metricas, incluindo discos
+                \$Metrics = @{
+                    cpu_usage_percent = \$metricsData.cpu_percent
+                    cpu_name = \$metricsData.cpu_name
+                    cpu_cores = \$metricsData.cpu_cores
+                    memory_usage_percent = \$metricsData.memory_percent
+                    memory_total_gb = \$metricsData.memory_total_gb
+                    memory_used_gb = \$metricsData.memory_used_gb
+                    memory_free_gb = \$metricsData.memory_free_gb
+                    disk_usage_percent = \$metricsData.disk_percent
+                    disk_total_gb = \$metricsData.disk_total_gb
+                    disk_used_gb = \$metricsData.disk_used_gb
+                    disk_free_gb = \$metricsData.disk_free_gb
+                    disks = \$metricsData.disks
+                    hostname = \$metricsData.hostname
+                    uptime_seconds = \$metricsData.uptime_seconds
+                    last_boot_time = \$metricsData.last_boot_time
+                }
+                
+                \$diskCount = if (\$metricsData.disks) { \$metricsData.disks.Count } else { 0 }
+                Write-Log "[METRICS] Payload preparado: CPU=\$(\$Metrics.cpu_usage_percent)%, RAM=\$(\$Metrics.memory_usage_percent)%, Discos=\$diskCount" "DEBUG"
+                
+            } catch {
+                Write-Log "[METRICS] Falha ao parsear metricas: \$(\$_.Exception.Message)" "WARN"
+                return \$false
+            }
+        }
+        
+        Write-Log "[METRICS] Enviando metricas para backend..." "DEBUG"
+        
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/submit-system-metrics" \`
+            -Method "POST" \`
+            -Body \$Metrics \`
+            -TimeoutSec 15
+        
+        if (\$result.Success -and \$result.StatusCode -eq 200) {
+            \$diskCount = if (\$Metrics.disks) { \$Metrics.disks.Count } else { 0 }
+            Write-Log "[SUCCESS] Metricas enviadas: CPU=\$(\$Metrics.cpu_usage_percent)%, RAM=\$(\$Metrics.memory_usage_percent)%, Discos=\$diskCount" "SUCCESS"
+            return \$true
+        }
+        
+        Write-Log "[WARN] Falha ao enviar metricas (HTTP \$(\$result.StatusCode))" "WARN"
+        return \$false
+        
+    } catch {
+        Write-Log "[ERROR] Erro em Send-SystemMetrics: \$(\$_.Exception.Message)" "ERROR"
         return \$false
     }
 }
@@ -1902,18 +2217,50 @@ function Invoke-ReportJob {
     param(\$Job)
     
     try {
+        # CPU
         \$cpuUsage = (Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
         if (\$null -eq \$cpuUsage) { \$cpuUsage = 0 }
+        \$cpuInfo = Get-WmiObject Win32_Processor | Select-Object -First 1
         
+        # Memory
         \$os = Get-WmiObject Win32_OperatingSystem
+        \$memTotalGB = [math]::Round(\$os.TotalVisibleMemorySize / 1MB, 2)
+        \$memFreeGB = [math]::Round(\$os.FreePhysicalMemory / 1MB, 2)
+        \$memUsedGB = [math]::Round(\$memTotalGB - \$memFreeGB, 2)
         \$memUsage = [math]::Round(((\$os.TotalVisibleMemorySize - \$os.FreePhysicalMemory) / \$os.TotalVisibleMemorySize) * 100, 2)
         
-        \$disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
-        \$diskPercent = if (\$disk -and \$disk.Size -gt 0) { 
-            [math]::Round(((\$disk.Size - \$disk.FreeSpace) / \$disk.Size) * 100, 2) 
-        } else { 0 }
+        # Disks - Collect ALL fixed drives (v4.0.11)
+        \$disksArray = @()
+        \$allDisks = Get-WmiObject Win32_LogicalDisk -Filter "DriveType=3"  # DriveType=3 = Fixed disks
+        \$systemDrive = \$env:SystemDrive  # Usually "C:"
         
-        \$bootTime = (Get-WmiObject Win32_OperatingSystem).LastBootUpTime
+        foreach (\$d in \$allDisks) {
+            if (\$d.Size -gt 0) {
+                \$totalGB = [math]::Round(\$d.Size / 1GB, 2)
+                \$freeGB = [math]::Round(\$d.FreeSpace / 1GB, 2)
+                \$usedGB = [math]::Round(\$totalGB - \$freeGB, 2)
+                \$usagePercent = [math]::Round(((\$d.Size - \$d.FreeSpace) / \$d.Size) * 100, 2)
+                
+                \$disksArray += @{
+                    drive_letter = \$d.DeviceID
+                    drive_label = if (\$d.VolumeName) { \$d.VolumeName } else { "" }
+                    drive_type = "Fixed"
+                    total_gb = \$totalGB
+                    used_gb = \$usedGB
+                    free_gb = \$freeGB
+                    usage_percent = \$usagePercent
+                    is_system_drive = (\$d.DeviceID -eq \$systemDrive)
+                }
+            }
+        }
+        
+        # Primary disk metrics (for legacy compatibility)
+        \$primaryDisk = \$disksArray | Where-Object { \$_.is_system_drive } | Select-Object -First 1
+        if (-not \$primaryDisk -and \$disksArray.Count -gt 0) {
+            \$primaryDisk = \$disksArray[0]
+        }
+        
+        \$bootTime = \$os.LastBootUpTime
         \$bootDateTime = [Management.ManagementDateTimeConverter]::ToDateTime(\$bootTime)
         \$uptimeSeconds = [int]((Get-Date) - \$bootDateTime).TotalSeconds
         
@@ -1921,14 +2268,25 @@ function Invoke-ReportJob {
             timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             hostname = \$env:COMPUTERNAME
             cpu_percent = [math]::Round(\$cpuUsage, 2)
+            cpu_name = \$cpuInfo.Name
+            cpu_cores = \$cpuInfo.NumberOfCores
             memory_percent = \$memUsage
-            disk_percent = \$diskPercent
+            memory_total_gb = \$memTotalGB
+            memory_used_gb = \$memUsedGB
+            memory_free_gb = \$memFreeGB
+            disk_percent = if (\$primaryDisk) { \$primaryDisk.usage_percent } else { 0 }
+            disk_total_gb = if (\$primaryDisk) { \$primaryDisk.total_gb } else { 0 }
+            disk_used_gb = if (\$primaryDisk) { \$primaryDisk.used_gb } else { 0 }
+            disk_free_gb = if (\$primaryDisk) { \$primaryDisk.free_gb } else { 0 }
+            disks = \$disksArray
             uptime_seconds = \$uptimeSeconds
             last_boot_time = \$bootDateTime.ToUniversalTime().ToString("o")
             state = Get-AgentState
         }
         
-        return @{ success = \$true; output = (\$report | ConvertTo-Json -Compress) }
+        Write-Log "[METRICS] Coletado: CPU=\$(\$report.cpu_percent)%, RAM=\$(\$report.memory_percent)%, Discos=\$(\$disksArray.Count)" "DEBUG"
+        
+        return @{ success = \$true; output = (\$report | ConvertTo-Json -Compress -Depth 5) }
     }
     catch {
         return @{ success = \$false; error = \$_.Exception.Message }
@@ -2344,10 +2702,15 @@ function Poll-Jobs {
 }
 
 # ============================================
-#  LOOP PRINCIPAL v4.0.7
+#  BOOTSTRAP VALIDATION (ANTES DO LOOP)
+# ============================================
+Invoke-BootstrapValidation
+
+# ============================================
+#  LOOP PRINCIPAL v4.0.9-HARDENED
 # ============================================
 Write-Log "============================================" "INFO"
-Write-Log "[START] CyberShield Agent v4.0.7" "INFO"
+Write-Log "[START] CyberShield Agent v4.0.9-HARDENED" "INFO"
 Write-Log "[INFO] ServerUrl: \$Global:ServerUrl" "DEBUG"
 Write-Log "[INFO] AgentName: \$Global:AgentName" "DEBUG"
 Write-Log "============================================" "INFO"
@@ -2538,43 +2901,18 @@ try {
             }
 
             # ============================================
-            #  ENVIO DE METRICAS A CADA 5 MINUTOS (v4.0.7 FIX)
+            #  ENVIO DE METRICAS A CADA 5 MINUTOS (v4.0.9 SIMPLIFIED)
             # ============================================
             try {
                 if (((\$now - \$lastMetrics).TotalSeconds) -ge 300) {
-                    Write-Log "[METRICS] Coletando metricas de sistema..." "INFO"
-                    \$metricsJob = @{ id = "auto-metrics"; type = "report" }
-                    \$metricsResult = Invoke-ReportJob -Job \$metricsJob
+                    # Send-SystemMetrics agora e auto-contida (coleta + envia)
+                    \$sent = Send-SystemMetrics
                     
-                    if (\$metricsResult.success) {
-                        # Parsear JSON e enviar para backend
-                        try {
-                            \$metricsData = \$metricsResult.output | ConvertFrom-Json
-                            
-                            \$payload = @{
-                                cpu_usage_percent = \$metricsData.cpu_percent
-                                memory_usage_percent = \$metricsData.memory_percent
-                                disk_usage_percent = \$metricsData.disk_percent
-                                hostname = \$metricsData.hostname
-                                uptime_seconds = \$metricsData.uptime_seconds
-                                last_boot_time = \$metricsData.last_boot_time
-                            }
-                            
-                            \$sent = Send-SystemMetrics -Metrics \$payload
-                            if (\$sent) {
-                                Write-Log "[SUCCESS] Metricas enviadas: CPU=\$(\$metricsData.cpu_percent)%, RAM=\$(\$metricsData.memory_percent)%, Disco=\$(\$metricsData.disk_percent)%" "SUCCESS"
-                                
-                                Add-EvidenceEntry -Type "metrics_sent" -Data @{
-                                    cpu = \$metricsData.cpu_percent
-                                    memory = \$metricsData.memory_percent
-                                    disk = \$metricsData.disk_percent
-                                } -Severity "debug"
-                            }
-                        } catch {
-                            Write-Log "[WARN] Falha ao parsear metricas: \$(\$_.Exception.Message)" "WARN"
-                        }
-                    } else {
-                        Write-Log "[WARN] Falha ao coletar metricas (nao critico): \$(\$metricsResult.output)" "WARN"
+                    if (\$sent) {
+                        Add-EvidenceEntry -Type "metrics_sent" -Data @{
+                            auto = \$true
+                            version = "v4.0.9"
+                        } -Severity "debug"
                     }
                     
                     \$lastMetrics = Get-Date

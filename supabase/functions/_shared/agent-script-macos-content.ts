@@ -3,9 +3,9 @@
  * CyberShield Agent Macos Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-macos-v4.sh
- * Versao: v4.0.7
- * SHA256: 0b1c3eea9de6e006569d64a5cea9a5166de3d5d2357be3393f5d64e86ec0b01c
- * Gerado em: 2025-12-19T01:12:15.455Z
+ * Versao: v4.0.9
+ * SHA256: 2e419b55b788699bd77bdaa9386e2d04dadaf685070bf91dabcca4f2e046a0a1
+ * Gerado em: 2025-12-19T18:00:14.185Z
  */
 
 export function getAgentScriptMacos(): string {
@@ -14,7 +14,7 @@ export function getAgentScriptMacos(): string {
 
 export const AGENT_SCRIPT_MACOS_SH = `#!/usr/bin/env bash
 #
-# CyberShield Agent - macOS v4.0.7
+# CyberShield Agent - macOS v4.0.9
 #
 # FASE 2.1: State Machine Formal (6 estados)
 # FASE 2.2: Evidence Journal Local
@@ -42,7 +42,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTES E VARIAVEIS GLOBAIS
 # ============================================
-AGENT_VERSION="v4.0.7"
+AGENT_VERSION="v4.0.9"
 BASE_DIR="/Library/Application Support/CyberShield"
 LOG_DIR="\${BASE_DIR}/logs"
 EVIDENCE_DIR="\${BASE_DIR}/evidence"
@@ -141,6 +141,38 @@ SERVER_URL="\${SERVER_URL%/}"
 #  CRIAR DIRETORIOS
 # ============================================
 mkdir -p "\$LOG_DIR" "\$EVIDENCE_DIR" "\$CONFIG_DIR"
+
+# ============================================
+#  BOOTSTRAP VALIDATION - CRITICAL FUNCTIONS
+# ============================================
+validate_critical_functions() {
+    local required_functions=(
+        "log"
+        "send_heartbeat"
+        "send_system_metrics"
+        "invoke_secure_request"
+        "add_evidence"
+        "set_state"
+    )
+    
+    echo "[BOOTSTRAP] Validando funcoes criticas..." >&2
+    
+    local missing=()
+    for fn in "\${required_functions[@]}"; do
+        if ! declare -f "\$fn" &>/dev/null; then
+            missing+=("\$fn")
+        fi
+    done
+    
+    if [[ \${#missing[@]} -gt 0 ]]; then
+        local error_msg="FATAL: Funcoes criticas ausentes: \${missing[*]}"
+        echo "[BOOTSTRAP] \$error_msg" >&2
+        echo "\$(date '+%Y-%m-%d %H:%M:%S') | BOOTSTRAP FAILED | \$error_msg" >> "\${LOG_DIR}/bootstrap-error.log"
+        exit 1
+    fi
+    
+    echo "[BOOTSTRAP] Todas as funcoes criticas validadas" >&2
+}
 
 # ============================================
 #  LOGGING
@@ -691,6 +723,41 @@ EOF
 }
 
 # ============================================
+#  SEND SYSTEM METRICS (v4.0.9)
+# ============================================
+send_system_metrics() {
+    log "DEBUG" "[METRICS] Coletando metricas do sistema..."
+    
+    local metrics
+    metrics=\$(collect_system_metrics 2>/dev/null)
+    
+    if [[ -z "\$metrics" ]]; then
+        log "WARN" "[METRICS] Falha na coleta de metricas"
+        return 1
+    fi
+    
+    log "DEBUG" "[METRICS] Enviando metricas para backend..."
+    
+    local body
+    body="{\\"agent_name\\":\\"\$AGENT_NAME\\",\\"agent_version\\":\\"\$AGENT_VERSION\\",\\"metrics\\":\$metrics}"
+    
+    local result
+    result=\$(invoke_secure_request "POST" "/functions/v1/submit-system-metrics" "\$body" 15)
+    
+    if [[ \$? -eq 0 ]]; then
+        local cpu mem disk
+        cpu=\$(echo "\$metrics" | python3 -c "import sys,json; print(json.load(sys.stdin).get('cpu_percent', '?'))" 2>/dev/null || echo "?")
+        mem=\$(echo "\$metrics" | python3 -c "import sys,json; print(json.load(sys.stdin).get('memory_percent', '?'))" 2>/dev/null || echo "?")
+        disk=\$(echo "\$metrics" | python3 -c "import sys,json; print(json.load(sys.stdin).get('disk_percent', '?'))" 2>/dev/null || echo "?")
+        log "SUCCESS" "[METRICS] Metricas enviadas: CPU=\${cpu}%, RAM=\${mem}%, Disco=\${disk}%"
+        return 0
+    else
+        log "WARN" "[METRICS] Falha ao enviar metricas"
+        return 1
+    fi
+}
+
+# ============================================
 #  POLL JOBS
 # ============================================
 poll_jobs() {
@@ -889,8 +956,12 @@ rotate_logs() {
 # ============================================
 #  MAIN LOOP
 # ============================================
+
+# Bootstrap validation - verifica funcoes criticas
+validate_critical_functions
+
 log "INFO" "============================================"
-log "INFO" "[START] CyberShield Agent v4.0.1 - macOS"
+log "INFO" "[START] CyberShield Agent v4.0.9-HARDENED - macOS"
 log "INFO" "[INFO] ServerUrl: \$SERVER_URL"
 log "INFO" "[INFO] AgentName: \$AGENT_NAME"
 log "INFO" "============================================"
@@ -929,6 +1000,7 @@ last_rotation=\$(date +%s)
 last_dns_check=\$(date +%s)
 last_policy_check=\$(date +%s)
 last_policy_sync=\$(date +%s)
+last_metrics=\$(date +%s)
 
 # Main loop
 while true; do
@@ -975,6 +1047,14 @@ while true; do
     if [[ \$((now - last_policy_sync)) -ge 1800 ]]; then
         sync_policy_from_server || true
         last_policy_sync=\$now
+    fi
+    
+    # System Metrics (every 5 minutes)
+    if [[ \$((now - last_metrics)) -ge 300 ]]; then
+        if send_system_metrics; then
+            add_evidence "metrics_sent" "{\\"auto\\":true}" "" "" "debug"
+        fi
+        last_metrics=\$now
     fi
     
     # Evidence flush (every 5 minutes)
