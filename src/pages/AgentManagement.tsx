@@ -45,13 +45,6 @@ interface Agent {
   agent_version: string | null;
 }
 
-// Latest versions by platform
-const LATEST_VERSIONS: Record<string, string> = {
-  windows: 'v3.10.40-DNS-FILTER',
-  linux: 'v3.10.40-DNS-FILTER',
-  macos: 'v3.10.40-DNS-FILTER',
-};
-
 type StatusFilter = 'all' | 'online' | 'offline' | 'pending' | 'disabled';
 type VersionFilter = 'all' | 'outdated' | 'current';
 
@@ -64,6 +57,33 @@ export default function AgentManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [versionFilter, setVersionFilter] = useState<VersionFilter>('all');
+
+  // Fetch latest versions from database
+  const { data: latestVersions } = useQuery<Record<string, string>>({
+    queryKey: ['latest-agent-versions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('agent_releases')
+        .select('platform, version')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        logger.error('Error fetching latest versions', { error });
+        return {};
+      }
+      
+      // Get the latest version per platform
+      const versions: Record<string, string> = {};
+      data?.forEach(release => {
+        if (!versions[release.platform]) {
+          versions[release.platform] = release.version;
+        }
+      });
+      return versions;
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
   const [checkingHealthFor, setCheckingHealthFor] = useState<string | null>(null);
 
   const { data: agents, isLoading, refetch } = useQuery<Agent[]>({
@@ -158,10 +178,11 @@ export default function AgentManagement() {
   };
 
   const isVersionOutdated = (agent: Agent): boolean => {
-    if (!agent.agent_version || !agent.os_type) return false;
+    if (!agent.agent_version || !agent.os_type || !latestVersions) return false;
     const platform = agent.os_type.toLowerCase().includes('windows') ? 'windows' 
       : agent.os_type.toLowerCase().includes('linux') ? 'linux' : 'macos';
-    const latestVersion = LATEST_VERSIONS[platform];
+    const latestVersion = latestVersions[platform];
+    if (!latestVersion) return false;
     return agent.agent_version !== latestVersion;
   };
 
