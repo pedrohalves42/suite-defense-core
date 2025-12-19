@@ -13,9 +13,9 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
-// GSV-Ω: Todas as plataformas sincronizadas em v4.0.9 (HARDENED)
+// GSV-Ω: Todas as plataformas sincronizadas (VIKTOR RECOVERY)
 const CURRENT_VERSIONS = {
-  windows: 'v4.0.9',
+  windows: 'v4.0.10',
   linux: 'v4.0.9',
   macos: 'v4.0.9'
 } as const;

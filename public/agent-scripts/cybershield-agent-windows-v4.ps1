@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v4.0.9
+    CyberShield Agent - Windows v4.0.10
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
@@ -7,6 +7,7 @@
     FASE 2.5: Policy Contract (Desired vs Actual + Drift Detection)
     FASE 2.6: Ed25519 Signature Verification
     FASE 3.0: Auto-Rollback & Safe Mode (NEW)
+    FASE VIKTOR: Force Update via Heartbeat Response
     
     Estados:
     - BOOTSTRAP: Inicializacao do agente
@@ -16,12 +17,14 @@
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.9 (METRICAS CORRIGIDAS):
+    Funcionalidades v4.0.10 (VIKTOR RECOVERY):
+    - NEW: Force Update via Heartbeat Response (bypassa job system completamente)
+    - NEW: Apply-ForcedUpdate funcao imortal que processa update do heartbeat
+    - NEW: Confirmacao de force_update no backend apos aplicacao
     - CRITICAL FIX: Send-SystemMetrics funcao agora definida (estava faltando!)
     - FIXED: Metricas sendo enviadas a cada 5 minutos
     - FIXED: ValidateSet convertido para runtime validation (backward compatible)
     - FIXED: Add-EvidenceEntry aceita tipos desconhecidos graciosamente
-    - NEW: Suporte a force_update via banco (bypassa job system)
     - Fixed heartbeat endpoint from /agent-heartbeat to /heartbeat
     - Auto-rollback with structured backup before update
     - Post-update health check (state machine, heartbeat, poll-jobs)
@@ -59,7 +62,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.0.9"
+    [string]$AgentVersion = "v4.0.10"
 )
 
 $ErrorActionPreference = "Stop"
@@ -1693,6 +1696,9 @@ function Get-SystemInfo {
 # ============================================
 #  HEARTBEAT
 # ============================================
+# ============================================
+#  HEARTBEAT (COM FORCE UPDATE VIA RESPONSE)
+# ============================================
 function Send-Heartbeat {
     $sysInfo = Get-SystemInfo
 
@@ -1718,6 +1724,31 @@ function Send-Heartbeat {
         if ($result.Success -and $result.StatusCode -eq 200) {
             Write-Log "[HEARTBEAT] OK (200)" "SUCCESS"
             
+            # FASE VIKTOR: Processar force_update no response do heartbeat
+            # Isso bypassa o job system e funciona com QUALQUER versao de agente
+            try {
+                $response = $result.Body | ConvertFrom-Json
+                
+                if ($response.force_update -eq $true) {
+                    Write-Log "[FORCE UPDATE] Update forcado detectado via heartbeat!" "WARN"
+                    Write-Log "[FORCE UPDATE] Target version: $($response.target_version)" "INFO"
+                    
+                    # Aplicar force update imediatamente
+                    $updateResult = Apply-ForcedUpdate -Response $response
+                    
+                    if ($updateResult.success) {
+                        # Se chegou aqui, agente vai reiniciar - nao retorna
+                        return $true
+                    } else {
+                        Write-Log "[FORCE UPDATE] Falha ao aplicar: $($updateResult.error)" "ERROR"
+                        # Continua operando normalmente mesmo com falha no force update
+                    }
+                }
+            } catch {
+                # Erro ao processar response nao deve quebrar o heartbeat
+                Write-Log "[HEARTBEAT] Erro ao processar response: $($_.Exception.Message)" "WARN"
+            }
+            
             Add-EvidenceEntry -Type "heartbeat" -Data @{
                 status = "success"
                 state = Get-AgentState
@@ -1732,6 +1763,158 @@ function Send-Heartbeat {
     catch {
         Write-Log "[HEARTBEAT] Erro: $($_.Exception.Message)" "ERROR"
         return $false
+    }
+}
+
+# ============================================
+#  FORCE UPDATE VIA HEARTBEAT (VIKTOR METHOD)
+# ============================================
+# Esta funcao:
+# 1. NAO depende do job system
+# 2. NAO usa ValidateSet que pode quebrar
+# 3. Processa dados recebidos diretamente no heartbeat response
+# 4. Funciona com agentes antigos que nao tem update_agent funcionando
+# ============================================
+function Apply-ForcedUpdate {
+    param(
+        [Parameter(Mandatory = $true)]
+        $Response
+    )
+    
+    try {
+        Write-Log "[FORCE UPDATE] Iniciando aplicacao de update forcado..." "INFO"
+        
+        # Extrair dados do response
+        $targetVersion = $Response.target_version
+        $base64Content = $Response.script_content_base64
+        $expectedHash = $Response.sha256
+        $reason = $Response.reason
+        
+        if (-not $targetVersion -or -not $base64Content -or -not $expectedHash) {
+            throw "Dados de force update incompletos no response"
+        }
+        
+        Write-Log "[FORCE UPDATE] Version: $targetVersion, Reason: $reason" "INFO"
+        
+        # SAFE MODE CHECK - mesmo check do Invoke-UpdateAgentJob
+        $rollbackState = Get-RollbackState
+        if ($rollbackState.safe_mode) {
+            Write-Log "[SAFE MODE] Updates desabilitados - rollback loop detectado" "ERROR"
+            
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "force_update_blocked_safe_mode"
+                target_version = $targetVersion
+                rollback_count = $rollbackState.rollback_count
+            } -Severity "warning"
+            
+            return @{ success = $false; error = "Safe mode active - updates disabled" }
+        }
+        
+        # Criar arquivo temporario
+        $tempScript = Join-Path $env:TEMP "cybershield-force-update-$targetVersion.ps1"
+        
+        # CRITICAL: Base64 decode - preserva 100% dos bytes
+        Write-Log "[FORCE UPDATE] Decodificando Base64..." "DEBUG"
+        $bytes = [System.Convert]::FromBase64String($base64Content)
+        [System.IO.File]::WriteAllBytes($tempScript, $bytes)
+        Write-Log "[FORCE UPDATE] Script salvo: $($bytes.Length) bytes" "DEBUG"
+        
+        # Validar SHA256
+        $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+        if ($actualHash -ne $expectedHash.ToLower()) {
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
+        }
+        
+        Write-Log "[FORCE UPDATE] SHA256 validado: $actualHash" "SUCCESS"
+        
+        # Detectar script atual
+        $installDir = "C:\CyberShield"
+        $targetScript = Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"
+        
+        $currentScript = $null
+        $possiblePaths = @(
+            $PSCommandPath,
+            (Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"),
+            (Join-Path $installDir "cybershield-agent-v4.ps1"),
+            (Join-Path $installDir "cybershield-agent.ps1")
+        )
+        
+        foreach ($path in $possiblePaths) {
+            if ($path -and (Test-Path $path)) {
+                $currentScript = $path
+                break
+            }
+        }
+        
+        if (-not $currentScript) {
+            $found = Get-ChildItem -Path $installDir -Filter "cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) { $currentScript = $found.FullName }
+        }
+        
+        # BACKUP para rollback estruturado
+        $previousPath = $Global:RollbackPaths.Previous
+        if ($currentScript -and (Test-Path $currentScript)) {
+            try {
+                Copy-Item -Path $currentScript -Destination $previousPath -Force
+                Write-Log "[FORCE UPDATE] Backup criado: $previousPath" "INFO"
+                
+                $rollbackState = Get-RollbackState
+                $rollbackState.previous_version = $Global:AgentVersion
+                Save-RollbackState -State $rollbackState
+            } catch {
+                Write-Log "[FORCE UPDATE] Backup falhou: $($_.Exception.Message)" "WARN"
+            }
+        }
+        
+        # APLICAR UPDATE
+        Copy-Item -Path $tempScript -Destination $targetScript -Force
+        Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+        Write-Log "[FORCE UPDATE] Script instalado: $targetScript" "SUCCESS"
+        
+        # Registrar evidencia
+        Add-EvidenceEntry -Type "force_update" -Data @{
+            old_version = $Global:AgentVersion
+            new_version = $targetVersion
+            target_path = $targetScript
+            sha256 = $actualHash
+            reason = $reason
+            method = "heartbeat_response"
+        } -Severity "info"
+        
+        # Confirmar no backend que force update foi aplicado
+        try {
+            $confirmResult = Invoke-SecureRequest `
+                -Path "/functions/v1/confirm-force-update" `
+                -Method "POST" `
+                -Body @{
+                    new_version = $targetVersion
+                    old_version = $Global:AgentVersion
+                } `
+                -TimeoutSec 10
+            
+            if ($confirmResult.Success) {
+                Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend" "SUCCESS"
+            }
+        } catch {
+            Write-Log "[FORCE UPDATE] Falha ao confirmar no backend (nao critico): $($_.Exception.Message)" "WARN"
+        }
+        
+        Write-Log "[FORCE UPDATE] Update $targetVersion aplicado com sucesso!" "SUCCESS"
+        Write-Log "[FORCE UPDATE] Nova versao sera ativada no proximo boot do Windows" "INFO"
+        
+        return @{ success = $true; version = $targetVersion }
+        
+    } catch {
+        Write-Log "[FORCE UPDATE] Erro: $($_.Exception.Message)" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "force_update_failed"
+            error = $_.Exception.Message
+            target_version = $Response.target_version
+        } -Severity "error"
+        
+        return @{ success = $false; error = $_.Exception.Message }
     }
 }
 

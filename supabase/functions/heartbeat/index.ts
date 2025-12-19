@@ -194,6 +194,83 @@ Deno.serve(async (req) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('token_hash', tokenHash)
 
+    // ============================================================
+    // FASE VIKTOR: FORCE UPDATE VIA HEARTBEAT RESPONSE
+    // Se agent tem force_update_version pendente, incluir dados completos no response
+    // Isso bypassa completamente o job system e funciona com agentes antigos
+    // ============================================================
+    const { data: forceCheck } = await supabase
+      .from('agents')
+      .select('force_update_version, force_update_reason')
+      .eq('id', agent.id)
+      .single()
+
+    // Se tem force_update pendente, buscar release e incluir no response
+    if (forceCheck?.force_update_version) {
+      logger.info('Force update detected for agent', { 
+        agentName: agent.agent_name, 
+        targetVersion: forceCheck.force_update_version 
+      })
+      
+      // Determinar plataforma (default windows para retrocompatibilidade)
+      const platform = updateData.os_type || 'windows'
+      
+      const { data: release } = await supabase
+        .from('agent_releases')
+        .select('version, script_content, sha256')
+        .eq('version', forceCheck.force_update_version)
+        .eq('platform', platform)
+        .eq('is_active', true)
+        .single()
+
+      if (release) {
+        // Normalizar script: CRLF → LF, trim
+        const normalizedScript = release.script_content.replace(/\r\n/g, '\n').trim() + '\n'
+        
+        // Encode Base64 para transmissão segura
+        const encoder = new TextEncoder()
+        const scriptBytes = encoder.encode(normalizedScript)
+        const base64Script = btoa(String.fromCharCode(...scriptBytes))
+        
+        // Calcular SHA256 do conteúdo normalizado (mesmo algoritmo do serve-agent-update)
+        const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes)
+        const hashArray = Array.from(new Uint8Array(hashBuffer))
+        const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+        logger.info('Sending force update via heartbeat response', {
+          agentName: agent.agent_name,
+          targetVersion: release.version,
+          platform,
+          sha256: calculatedSha256.substring(0, 16) + '...'
+        })
+
+        return new Response(
+          JSON.stringify({ 
+            ok: true,
+            agent: agent.agent_name,
+            timestamp: new Date().toISOString(),
+            // FORCE UPDATE DATA
+            force_update: true,
+            target_version: release.version,
+            script_content_base64: base64Script,
+            sha256: calculatedSha256,
+            reason: forceCheck.force_update_reason || 'Forced update via backend'
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          }
+        )
+      } else {
+        logger.warn('Force update version not found in agent_releases', {
+          agentName: agent.agent_name,
+          targetVersion: forceCheck.force_update_version,
+          platform
+        })
+      }
+    }
+
+    // Response normal (sem force update)
     return new Response(
       JSON.stringify({ 
         ok: true,
