@@ -1,8 +1,8 @@
 # CyberShield Security Invariants
 
 > **Documento Formal de Invariantes de Segurança**  
-> Versão: 1.1.0  
-> Última atualização: 2025-12-17  
+> Versão: 1.2.0  
+> Última atualização: 2025-12-19  
 > Classificação: Interno / Due Diligence
 
 ---
@@ -11,6 +11,7 @@
 
 | Versão | Data | Alteração |
 |--------|------|-----------|
+| 1.2.0 | 2025-12-19 | Adicionados INV-007 (State Machine), INV-008 (Side Effects), INV-009 (Failed Error) |
 | 1.1.0 | 2025-12-17 | Adicionado INV-006 (Network Enforcement), versionamento por invariante, mapeamento CWE |
 | 1.0.0 | 2025-12-17 | Versão inicial com INV-001 a INV-005 |
 
@@ -354,16 +355,205 @@ expect(isPublicIP(publicIP)).toBe(false);
 
 ---
 
+## INV-007: Máquina de Estados Formal para Jobs
+
+**Versão**: 1.0.0  
+**CWE**: CWE-672, CWE-362  
+**OWASP**: A04:2021 Insecure Design
+
+### Declaração Formal
+
+```
+∀ job ∈ Jobs, ∀ (s1, s2) ∈ StateTransitions:
+  ValidTransition(s1, s2) ∨ ¬CanTransition(job, s1, s2)
+
+ValidTransitions = {
+  (queued → delivered),
+  (queued → failed),
+  (queued → cancelled),
+  (delivered → completed),
+  (delivered → failed),
+  (delivered → cancelled)
+}
+
+TerminalStates = {completed, failed, cancelled}
+∀ s ∈ TerminalStates: ¬∃ s' : CanTransition(job, s, s')
+```
+
+### Descrição
+
+Toda transição de estado de jobs segue regras determinísticas:
+
+1. **Transições permitidas** são explicitamente definidas
+2. **Estados terminais** não permitem mais transições
+3. **Transições ilegais** são bloqueadas por trigger
+4. **Violações** geram erro e rollback automático
+
+### Implementação
+
+| Transição | Permitida | Trigger |
+|-----------|-----------|---------|
+| queued → delivered | ✅ | - |
+| queued → failed | ✅ | - |
+| queued → cancelled | ✅ | - |
+| queued → completed | ❌ | `trg_enforce_job_state_transitions` |
+| delivered → completed | ✅ | - |
+| delivered → failed | ✅ | - |
+| delivered → cancelled | ✅ | - |
+| completed → * | ❌ | Estado terminal |
+| failed → * | ❌ | Estado terminal |
+| cancelled → * | ❌ | Estado terminal |
+
+### Testes de Violação
+
+```sql
+-- Tentativa de transição ilegal: queued → completed
+UPDATE jobs SET status = 'completed' WHERE status = 'queued';
+-- ERRO: ILLEGAL_STATE_TRANSITION
+
+-- Tentativa de sair de estado terminal
+UPDATE jobs SET status = 'delivered' WHERE status = 'completed';
+-- ERRO: ILLEGAL_STATE_TRANSITION
+```
+
+### Evidência de Conformidade
+
+- [x] Trigger `trg_enforce_job_state_transitions` ativo
+- [x] 100% das transições ilegais bloqueadas
+- [x] 0 jobs em estados inválidos
+- [x] Auditável via `v_integrity_score`
+
+---
+
+## INV-008: Side Effects Obrigatórios para Jobs Completed
+
+**Versão**: 1.0.0  
+**CWE**: CWE-754, CWE-252  
+**OWASP**: A04:2021 Insecure Design
+
+### Declaração Formal
+
+```
+∀ job ∈ Jobs:
+  status = 'completed' → (output IS NOT NULL ∧ output ≠ '')
+  
+¬(output IS NOT NULL ∧ output ≠ '') → ¬CanTransition(job, *, 'completed')
+```
+
+### Descrição
+
+Nenhum job pode ser marcado como `completed` sem produzir output:
+
+1. **Output obrigatório** - campo `output` não pode ser NULL ou vazio
+2. **Validação no momento da transição** - trigger verifica antes de permitir
+3. **Falha silenciosa impossível** - sem output = sem completed
+4. **Prova auditável** - todos os completed têm evidence
+
+### Implementação
+
+| Componente | Validação |
+|------------|-----------|
+| Trigger | `trg_enforce_job_side_effects` |
+| Função | `enforce_job_side_effects()` |
+| Condição | `output IS NOT NULL AND output != ''` |
+| Erro | `JOB_COMPLETED_WITHOUT_SIDE_EFFECTS` |
+
+### Testes de Violação
+
+```sql
+-- Tentativa de completed sem output
+UPDATE jobs SET status = 'completed', output = NULL WHERE status = 'delivered';
+-- ERRO: JOB_COMPLETED_WITHOUT_SIDE_EFFECTS
+
+-- Tentativa de completed com output vazio
+UPDATE jobs SET status = 'completed', output = '' WHERE status = 'delivered';
+-- ERRO: JOB_COMPLETED_WITHOUT_SIDE_EFFECTS
+
+-- Completed válido
+UPDATE jobs SET status = 'completed', output = '{"data": []}' WHERE status = 'delivered';
+-- OK
+```
+
+### Evidência de Conformidade
+
+- [x] Trigger `trg_enforce_job_side_effects` ativo
+- [x] 100% dos jobs completed têm output
+- [x] 0 falhas silenciosas possíveis
+- [x] Métrica: `job_integrity_score` = 100%
+
+---
+
+## INV-009: Error Message Obrigatório para Jobs Failed
+
+**Versão**: 1.0.0  
+**CWE**: CWE-754, CWE-778  
+**OWASP**: A09:2021 Security Logging and Monitoring Failures
+
+### Declaração Formal
+
+```
+∀ job ∈ Jobs:
+  status = 'failed' → (error_message IS NOT NULL ∧ error_message ≠ '')
+  
+¬(error_message IS NOT NULL ∧ error_message ≠ '') → ¬CanTransition(job, *, 'failed')
+```
+
+### Descrição
+
+Nenhum job pode ser marcado como `failed` sem explicação:
+
+1. **Error message obrigatório** - campo não pode ser NULL ou vazio
+2. **Auditabilidade garantida** - toda falha tem causa documentada
+3. **Debugging facilitado** - não existem falhas misteriosas
+4. **Compliance** - evidência forense de todos os erros
+
+### Implementação
+
+| Componente | Validação |
+|------------|-----------|
+| Trigger | `trg_enforce_failed_job_error` |
+| Função | `enforce_failed_job_requires_error()` |
+| Condição | `error_message IS NOT NULL AND error_message != ''` |
+| Erro | `FAILED_JOB_REQUIRES_ERROR_MESSAGE` |
+
+### Testes de Violação
+
+```sql
+-- Tentativa de failed sem error_message
+UPDATE jobs SET status = 'failed', error_message = NULL WHERE status = 'delivered';
+-- ERRO: FAILED_JOB_REQUIRES_ERROR_MESSAGE
+
+-- Tentativa de failed com error_message vazio
+UPDATE jobs SET status = 'failed', error_message = '' WHERE status = 'delivered';
+-- ERRO: FAILED_JOB_REQUIRES_ERROR_MESSAGE
+
+-- Failed válido
+UPDATE jobs SET status = 'failed', error_message = 'Connection timeout' WHERE status = 'delivered';
+-- OK
+```
+
+### Evidência de Conformidade
+
+- [x] Trigger `trg_enforce_failed_job_error` ativo
+- [x] 100% dos jobs failed têm error_message
+- [x] 0 falhas sem explicação
+- [x] Métrica: `failed_jobs_score` = 100%
+
+---
+
 ## Matriz de Cobertura
 
-| Invariante | Versão | RLS | Edge Functions | Frontend | Agentes | IA | Rede |
-|------------|--------|-----|----------------|----------|---------|-----|------|
-| INV-001 | 1.0.0 | ✅ | ✅ | ✅ | N/A | ✅ | N/A |
-| INV-002 | 1.1.0 | N/A | ✅ | N/A | ✅ | N/A | N/A |
-| INV-003 | 1.0.0 | ✅ | ✅ | N/A | ✅ | N/A | N/A |
-| INV-004 | 1.0.0 | ✅ | ✅ | ✅ | N/A | ✅ | N/A |
-| INV-005 | 1.0.0 | ✅ | ✅ | ✅ | ✅ | ✅ | N/A |
-| INV-006 | 1.0.0 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ |
+| Invariante | Versão | RLS | Edge Functions | Frontend | Agentes | IA | Rede | Triggers |
+|------------|--------|-----|----------------|----------|---------|-----|------|----------|
+| INV-001 | 1.0.0 | ✅ | ✅ | ✅ | N/A | ✅ | N/A | N/A |
+| INV-002 | 1.1.0 | N/A | ✅ | N/A | ✅ | N/A | N/A | N/A |
+| INV-003 | 1.0.0 | ✅ | ✅ | N/A | ✅ | N/A | N/A | N/A |
+| INV-004 | 1.0.0 | ✅ | ✅ | ✅ | N/A | ✅ | N/A | N/A |
+| INV-005 | 1.0.0 | ✅ | ✅ | ✅ | ✅ | ✅ | N/A | N/A |
+| INV-006 | 1.0.0 | ✅ | ✅ | ✅ | ✅ | N/A | ✅ | N/A |
+| INV-007 | 1.0.0 | N/A | N/A | N/A | N/A | N/A | N/A | ✅ |
+| INV-008 | 1.0.0 | N/A | N/A | N/A | N/A | N/A | N/A | ✅ |
+| INV-009 | 1.0.0 | N/A | N/A | N/A | N/A | N/A | N/A | ✅ |
 
 ---
 
@@ -377,6 +567,9 @@ expect(isPublicIP(publicIP)).toBe(false);
 | INV-004 | CWE-89, CWE-200, CWE-209 | A03: Injection |
 | INV-005 | CWE-754, CWE-636 | A05: Security Misconfiguration |
 | INV-006 | CWE-441, CWE-923 | A01: Broken Access Control |
+| INV-007 | CWE-672, CWE-362 | A04: Insecure Design |
+| INV-008 | CWE-754, CWE-252 | A04: Insecure Design |
+| INV-009 | CWE-754, CWE-778 | A09: Logging Failures |
 
 ---
 

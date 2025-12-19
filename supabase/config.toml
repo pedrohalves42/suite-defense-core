@@ -476,3 +476,7 @@ verify_jwt = false
 [functions.integrity-sentinel]
 verify_jwt = false
 schedule = "*/5 * * * *"
+
+# === Chaos Test (Zero Trust Validation) ===
+[functions.chaos-test]
+verify_jwt = true
