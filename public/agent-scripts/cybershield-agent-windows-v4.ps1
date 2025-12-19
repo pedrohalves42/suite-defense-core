@@ -87,6 +87,55 @@ trap {
 }
 
 # ============================================
+#  BOOTSTRAP VALIDATION - CRITICAL FUNCTIONS
+# ============================================
+# This validation runs AFTER all functions are defined (at script execution)
+# We defer the actual check to after function definitions
+$Global:RequiredFunctions = @(
+    "Write-Log",
+    "Send-Heartbeat",
+    "Send-SystemMetrics",
+    "Invoke-ReportJob",
+    "Invoke-SecureRequest",
+    "Add-EvidenceEntry",
+    "Set-AgentState"
+)
+
+function Invoke-BootstrapValidation {
+    Write-Host "[BOOTSTRAP] Validando funcoes criticas..." -ForegroundColor Cyan
+    
+    $missingFunctions = @()
+    foreach ($fn in $Global:RequiredFunctions) {
+        if (-not (Get-Command $fn -ErrorAction SilentlyContinue)) {
+            $missingFunctions += $fn
+        }
+    }
+    
+    if ($missingFunctions.Count -gt 0) {
+        $errorMsg = "FATAL: Funcoes criticas nao definidas: $($missingFunctions -join ', ')"
+        Write-Host "[BOOTSTRAP] $errorMsg" -ForegroundColor Red
+        
+        # Tentar logar no arquivo antes de abortar
+        $logPath = "C:\CyberShield\logs\bootstrap-error.log"
+        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        
+        # Criar diretorio se nao existir
+        $logDir = Split-Path $logPath -Parent
+        if (-not (Test-Path $logDir)) {
+            New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+        }
+        
+        "$timestamp | BOOTSTRAP FAILED | $errorMsg" | Out-File -FilePath $logPath -Append -Encoding UTF8
+        
+        # Nao executar agente quebrado - forcar reinstalacao
+        throw $errorMsg
+    }
+    
+    Write-Host "[BOOTSTRAP] Todas as funcoes criticas validadas" -ForegroundColor Green
+    return $true
+}
+
+# ============================================
 #  VARIAVEIS GLOBAIS
 # ============================================
 $Global:ServerUrl    = $ServerUrl.TrimEnd('/')
@@ -1687,17 +1736,46 @@ function Send-Heartbeat {
 }
 
 # ============================================
-#  SEND SYSTEM METRICS
+#  SEND SYSTEM METRICS (HYBRID - v4.0.9)
 # ============================================
 function Send-SystemMetrics {
     param(
-        [Parameter(Mandatory = $true)]
-        [hashtable]$Metrics
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Metrics = $null
     )
     
-    Write-Log "[METRICS] Enviando metricas para backend..." "DEBUG"
+    Write-Log "[METRICS] Iniciando coleta/envio de metricas..." "DEBUG"
     
     try {
+        # Se metricas nao foram passadas, coletar via Invoke-ReportJob
+        if (-not $Metrics) {
+            Write-Log "[METRICS] Coletando metricas automaticamente..." "DEBUG"
+            $metricsJob = @{ id = "auto-metrics"; type = "report" }
+            $metricsResult = Invoke-ReportJob -Job $metricsJob
+            
+            if (-not $metricsResult.success) {
+                Write-Log "[METRICS] Falha na coleta de metricas: $($metricsResult.output)" "WARN"
+                return $false
+            }
+            
+            try {
+                $metricsData = $metricsResult.output | ConvertFrom-Json
+                $Metrics = @{
+                    cpu_usage_percent = $metricsData.cpu_percent
+                    memory_usage_percent = $metricsData.memory_percent
+                    disk_usage_percent = $metricsData.disk_percent
+                    hostname = $metricsData.hostname
+                    uptime_seconds = $metricsData.uptime_seconds
+                    last_boot_time = $metricsData.last_boot_time
+                }
+            } catch {
+                Write-Log "[METRICS] Falha ao parsear metricas: $($_.Exception.Message)" "WARN"
+                return $false
+            }
+        }
+        
+        Write-Log "[METRICS] Enviando metricas para backend..." "DEBUG"
+        
         $result = Invoke-SecureRequest `
             -Path "/functions/v1/submit-system-metrics" `
             -Method "POST" `
@@ -1705,14 +1783,15 @@ function Send-SystemMetrics {
             -TimeoutSec 15
         
         if ($result.Success -and $result.StatusCode -eq 200) {
-            Write-Log "[SUCCESS] Metricas enviadas com sucesso" "SUCCESS"
+            Write-Log "[SUCCESS] Metricas enviadas: CPU=$($Metrics.cpu_usage_percent)%, RAM=$($Metrics.memory_usage_percent)%" "SUCCESS"
             return $true
-        } else {
-            Write-Log "[WARN] Falha ao enviar metricas (HTTP $($result.StatusCode))" "WARN"
-            return $false
         }
+        
+        Write-Log "[WARN] Falha ao enviar metricas (HTTP $($result.StatusCode))" "WARN"
+        return $false
+        
     } catch {
-        Write-Log "[ERROR] Erro ao enviar metricas: $($_.Exception.Message)" "ERROR"
+        Write-Log "[ERROR] Erro em Send-SystemMetrics: $($_.Exception.Message)" "ERROR"
         return $false
     }
 }
@@ -2362,10 +2441,15 @@ function Poll-Jobs {
 }
 
 # ============================================
-#  LOOP PRINCIPAL v4.0.7
+#  BOOTSTRAP VALIDATION (ANTES DO LOOP)
+# ============================================
+Invoke-BootstrapValidation
+
+# ============================================
+#  LOOP PRINCIPAL v4.0.9-HARDENED
 # ============================================
 Write-Log "============================================" "INFO"
-Write-Log "[START] CyberShield Agent v4.0.7" "INFO"
+Write-Log "[START] CyberShield Agent v4.0.9-HARDENED" "INFO"
 Write-Log "[INFO] ServerUrl: $Global:ServerUrl" "DEBUG"
 Write-Log "[INFO] AgentName: $Global:AgentName" "DEBUG"
 Write-Log "============================================" "INFO"
@@ -2556,43 +2640,18 @@ try {
             }
 
             # ============================================
-            #  ENVIO DE METRICAS A CADA 5 MINUTOS (v4.0.7 FIX)
+            #  ENVIO DE METRICAS A CADA 5 MINUTOS (v4.0.9 SIMPLIFIED)
             # ============================================
             try {
                 if ((($now - $lastMetrics).TotalSeconds) -ge 300) {
-                    Write-Log "[METRICS] Coletando metricas de sistema..." "INFO"
-                    $metricsJob = @{ id = "auto-metrics"; type = "report" }
-                    $metricsResult = Invoke-ReportJob -Job $metricsJob
+                    # Send-SystemMetrics agora e auto-contida (coleta + envia)
+                    $sent = Send-SystemMetrics
                     
-                    if ($metricsResult.success) {
-                        # Parsear JSON e enviar para backend
-                        try {
-                            $metricsData = $metricsResult.output | ConvertFrom-Json
-                            
-                            $payload = @{
-                                cpu_usage_percent = $metricsData.cpu_percent
-                                memory_usage_percent = $metricsData.memory_percent
-                                disk_usage_percent = $metricsData.disk_percent
-                                hostname = $metricsData.hostname
-                                uptime_seconds = $metricsData.uptime_seconds
-                                last_boot_time = $metricsData.last_boot_time
-                            }
-                            
-                            $sent = Send-SystemMetrics -Metrics $payload
-                            if ($sent) {
-                                Write-Log "[SUCCESS] Metricas enviadas: CPU=$($metricsData.cpu_percent)%, RAM=$($metricsData.memory_percent)%, Disco=$($metricsData.disk_percent)%" "SUCCESS"
-                                
-                                Add-EvidenceEntry -Type "metrics_sent" -Data @{
-                                    cpu = $metricsData.cpu_percent
-                                    memory = $metricsData.memory_percent
-                                    disk = $metricsData.disk_percent
-                                } -Severity "debug"
-                            }
-                        } catch {
-                            Write-Log "[WARN] Falha ao parsear metricas: $($_.Exception.Message)" "WARN"
-                        }
-                    } else {
-                        Write-Log "[WARN] Falha ao coletar metricas (nao critico): $($metricsResult.output)" "WARN"
+                    if ($sent) {
+                        Add-EvidenceEntry -Type "metrics_sent" -Data @{
+                            auto = $true
+                            version = "v4.0.9"
+                        } -Severity "debug"
                     }
                     
                     $lastMetrics = Get-Date

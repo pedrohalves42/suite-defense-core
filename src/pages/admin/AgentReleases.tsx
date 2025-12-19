@@ -166,7 +166,7 @@ export default function AgentReleases() {
       // Generate release notes based on version
       const versionStr = version as string;
       const releaseNotes = versionStr === 'v4.0.9'
-        ? `${version}: CRITICAL FIX - Send-SystemMetrics função adicionada (estava faltando!), métricas agora funcionam corretamente.`
+        ? `${version}: HARDENED - Bootstrap validation, Send-SystemMetrics auto-coleta, blindagem contra funções ausentes.`
         : versionStr === 'v4.0.8'
         ? `${version}: ESTABILIZAÇÃO - Send-SystemMetrics integrado ao loop principal, ValidateSet convertido para validação runtime, suporte a force_update via backend.`
         : versionStr === 'v4.0.7'
@@ -253,7 +253,7 @@ export default function AgentReleases() {
       // Generate release notes based on version
       const currentVersionStr = currentVersion as string;
       const releaseNotes = currentVersionStr === 'v4.0.9'
-        ? `${currentVersion}: CRITICAL FIX - Send-SystemMetrics função adicionada (estava faltando!), métricas agora funcionam corretamente.`
+        ? `${currentVersion}: HARDENED - Bootstrap validation, Send-SystemMetrics auto-coleta, blindagem contra funções ausentes.`
         : currentVersionStr === 'v4.0.8'
         ? `${currentVersion}: ESTABILIZAÇÃO - Send-SystemMetrics integrado ao loop principal, ValidateSet convertido para validação runtime, suporte a force_update via backend.`
         : currentVersionStr === 'v4.0.7'
