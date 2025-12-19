@@ -216,6 +216,11 @@ schedule = "*/15 * * * *"
 verify_jwt = false
 schedule = "*/30 * * * *"
 
+# P1-02: Cleanup jobs for offline agents (every hour)
+[functions.cleanup-offline-agents-jobs]
+verify_jwt = false
+schedule = "0 * * * *"
+
 [functions.analyze-network-anomalies]
 verify_jwt = true
 
