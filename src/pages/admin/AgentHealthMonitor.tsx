@@ -170,11 +170,11 @@ export default function AgentHealthMonitor() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Server className="h-8 w-8 text-primary" />
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Server className="h-5 w-5 text-primary" />
             Status dos Computadores
           </h1>
-          <p className="text-muted-foreground mt-1">Veja se todos os seus computadores estão funcionando bem</p>
+          <p className="text-sm text-muted-foreground">Veja se todos os seus computadores estão funcionando bem</p>
         </div>
         <Button variant="outline" onClick={() => refetch()}>
           <Activity className="h-4 w-4 mr-2" />
@@ -218,7 +218,7 @@ export default function AgentHealthMonitor() {
                 <span className="text-sm font-medium text-muted-foreground">Protegidos</span>
                 <CheckCircle className="h-5 w-5 text-green-500" />
               </div>
-              <div className="text-3xl font-bold text-green-600">{counts.healthy}</div>
+              <div className="text-2xl font-bold text-green-600">{counts.healthy}</div>
               <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
                 <div className="h-full bg-green-500 transition-all" style={{ width: `${healthPercentage}%` }} />
               </div>
@@ -234,7 +234,7 @@ export default function AgentHealthMonitor() {
                 <span className="text-sm font-medium text-muted-foreground">Precisam de Atenção</span>
                 <AlertCircle className="h-5 w-5 text-yellow-500" />
               </div>
-              <div className="text-3xl font-bold text-yellow-600">{counts.critical}</div>
+              <div className="text-2xl font-bold text-yellow-600">{counts.critical}</div>
               <p className="text-xs text-muted-foreground mt-2">
                 {counts.critical > 0 ? 'Verifique esses computadores' : '✓ Nenhum problema'}
               </p>
@@ -249,7 +249,7 @@ export default function AgentHealthMonitor() {
                 <span className="text-sm font-medium text-muted-foreground">Desligados</span>
                 <WifiOff className="h-5 w-5 text-gray-500" />
               </div>
-              <div className="text-3xl font-bold text-gray-600">{counts.offline}</div>
+              <div className="text-2xl font-bold text-gray-600">{counts.offline}</div>
               <p className="text-xs text-muted-foreground mt-2">
                 {counts.offline > 0 ? 'Computadores offline' : '✓ Todos conectados'}
               </p>
@@ -264,7 +264,7 @@ export default function AgentHealthMonitor() {
                 <span className="text-sm font-medium text-muted-foreground">Conexões ao Vivo</span>
                 <Heart className="h-5 w-5 text-red-500 animate-pulse" />
               </div>
-              <div className="text-3xl font-bold text-red-600">{liveHeartbeats}</div>
+              <div className="text-2xl font-bold text-red-600">{liveHeartbeats}</div>
               <p className="text-xs text-muted-foreground mt-2">Recebidas agora</p>
             </CardContent>
           </Card>

@@ -99,8 +99,8 @@ export default function InstallationLogsExplorer() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Explorador de Logs de Instalacao</h1>
-          <p className="text-muted-foreground">Busca avancada e analise de logs do pipeline de instalacao</p>
+          <h1 className="text-xl font-bold">Explorador de Logs de Instalacao</h1>
+          <p className="text-sm text-muted-foreground">Busca avancada e analise de logs do pipeline de instalacao</p>
         </div>
         <Button
           onClick={() => {

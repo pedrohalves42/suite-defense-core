@@ -85,8 +85,8 @@ export default function InstallationPipelineMonitor() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Pipeline de Instalacao</h1>
-          <p className="text-muted-foreground">Monitoramento em tempo real do fluxo de instalacao de agentes</p>
+          <h1 className="text-xl font-bold">Pipeline de Instalacao</h1>
+          <p className="text-sm text-muted-foreground">Monitoramento em tempo real do fluxo de instalacao de agentes</p>
         </div>
         <div className="flex gap-3 items-center">
           <Button
@@ -124,7 +124,7 @@ export default function InstallationPipelineMonitor() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics?.success_rate_pct || 0}%</div>
+            <div className="text-xl font-bold">{metrics?.success_rate_pct || 0}%</div>
             <p className="text-xs text-muted-foreground">
               {metrics?.total_installed || 0} / {metrics?.total_command_copied || 0} instalados
             </p>
@@ -137,7 +137,7 @@ export default function InstallationPipelineMonitor() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics?.total_active || 0}</div>
+            <div className="text-xl font-bold">{metrics?.total_active || 0}</div>
             <p className="text-xs text-muted-foreground">
               Enviando heartbeats
             </p>
@@ -150,7 +150,7 @@ export default function InstallationPipelineMonitor() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Math.round(metrics?.avg_install_time_seconds || 0)}s</div>
+            <div className="text-xl font-bold">{Math.round(metrics?.avg_install_time_seconds || 0)}s</div>
             <p className="text-xs text-muted-foreground">
               De instalacao
             </p>
@@ -163,7 +163,7 @@ export default function InstallationPipelineMonitor() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics?.conversion_rate_generated_to_installed_pct || 0}%</div>
+            <div className="text-xl font-bold">{metrics?.conversion_rate_generated_to_installed_pct || 0}%</div>
             <p className="text-xs text-muted-foreground">
               Gerado ? Instalado
             </p>
@@ -176,7 +176,7 @@ export default function InstallationPipelineMonitor() {
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{metrics?.total_stuck || 0}</div>
+            <div className="text-xl font-bold text-destructive">{metrics?.total_stuck || 0}</div>
             <p className="text-xs text-muted-foreground">
               {'>'}30min sem conclusao
             </p>
