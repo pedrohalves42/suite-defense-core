@@ -276,17 +276,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FASE 1 CRITICO: Use inline agent script (always available)
-    console.log(`[${requestId}] Using inline agent script`);
+    // FASE 1 CRITICO: Fetch agent script from storage
+    console.log(`[${requestId}] Fetching agent script from storage`);
     
-const { getAgentScriptWindows } = await import('../_shared/agent-script-windows-content.ts');
-const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
-    const agentScriptContent = getAgentScriptWindows();
+    const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
+    
+    // Buscar script do storage bucket
+    const { data: fileData, error: storageError } = await supabaseClient.storage
+      .from('agent-installers')
+      .download('scripts/cybershield-agent-windows-v3.ps1');
+    
+    if (storageError || !fileData) {
+      console.error(`[${requestId}] Failed to fetch script from storage:`, storageError);
+      return new Response(
+        'Failed to generate secure installer - script not found in storage',
+        {
+          status: 503,
+          headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
+        }
+      );
+    }
+    
+    const agentScriptContent = await fileData.text();
     
     if (!validateAgentScriptContent(agentScriptContent)) {
-      console.error(`[${requestId}] CRITICAL: Inline script validation failed`);
+      console.error(`[${requestId}] CRITICAL: Script validation failed`);
       return new Response(
-        'Failed to generate secure installer - inline script validation failed',
+        'Failed to generate secure installer - script validation failed',
         {
           status: 503,
           headers: { ...corsHeaders, 'Content-Type': 'text/plain' }

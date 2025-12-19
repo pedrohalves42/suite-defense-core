@@ -648,7 +648,7 @@ $Global:EvidenceFlushThreshold = 10  # Flush apos 10 entradas ou 60s
 function Add-EvidenceEntry {
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet("state_change", "job_execution", "dns_block", "policy_sync", "auto_recovery", "heartbeat", "update_applied", "update_check", "error", "policy_drift", "security_event")]
+        [ValidateSet("state_change", "job_execution", "dns_block", "policy_sync", "auto_recovery", "heartbeat", "update_applied", "error", "policy_drift", "security_event")]
         [string]$Type,
         
         [Parameter(Mandatory = $true)]
@@ -1602,7 +1602,7 @@ function Get-SystemInfo {
         $cs = Get-CimInstance Win32_ComputerSystem
 
         return @{
-            os_type       = "windows"
+            os_type       = "Windows"
             os_name       = $os.Caption
             os_version    = $os.Version
             build_number  = $os.BuildNumber
@@ -1615,7 +1615,7 @@ function Get-SystemInfo {
         }
     } catch {
         return @{
-            os_type       = "windows"
+            os_type       = "Windows"
             hostname      = $env:COMPUTERNAME
             agent_name    = $Global:AgentName
             agent_version = $Global:AgentVersion

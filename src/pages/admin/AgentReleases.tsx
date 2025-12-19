@@ -14,7 +14,7 @@ import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
 const CURRENT_VERSIONS = {
-  windows: 'v4.0.1-DNS-POLICY',
+  windows: 'v4.0.7',
   linux: 'v4.0.1-DNS-POLICY',
   macos: 'v4.0.1-DNS-POLICY'
 } as const;
@@ -112,6 +112,7 @@ export default function AgentReleases() {
   };
 
   // Fetch and register script directly from public/agent-scripts folder
+  // Also uploads to storage bucket for Edge Functions to access
   const handleRegisterFromPublic = async (platform: 'windows' | 'linux' | 'macos') => {
     const platformLabel = platform === 'windows' ? 'Windows' : platform === 'linux' ? 'Linux' : 'macOS';
     const version = CURRENT_VERSIONS[platform];
@@ -121,7 +122,7 @@ export default function AgentReleases() {
         ? 'cybershield-agent-linux-v4.sh'
         : 'cybershield-agent-macos-v4.sh';
     
-    if (!confirm(`Registrar ${version} (${platformLabel}) com script completo?\n\nIsso irá:\n1. Carregar o script de /agent-scripts/${scriptFileName}\n2. Calcular SHA256\n3. Registrar no banco de dados\n\nContinuar?`)) {
+    if (!confirm(`Registrar ${version} (${platformLabel}) com script completo?\n\nIsso irá:\n1. Carregar o script de /agent-scripts/${scriptFileName}\n2. Upload para storage bucket\n3. Calcular SHA256\n4. Registrar no banco de dados\n\nContinuar?`)) {
       return;
     }
 
@@ -144,12 +145,37 @@ export default function AgentReleases() {
 
       toast.success(`Script ${platformLabel} carregado: ${(scriptContent.length / 1024).toFixed(1)} KB`);
 
+      // Upload to storage bucket
+      toast.info(`Fazendo upload para storage bucket...`);
+      try {
+        const { error: uploadError } = await supabase.functions.invoke('upload-agent-script', {
+          body: { platform, script_content: scriptContent }
+        });
+        
+        if (uploadError) {
+          console.warn(`Upload to storage failed: ${uploadError.message}, continuing with DB registration...`);
+          toast.warning(`Upload para storage falhou: ${uploadError.message}. Continuando com registro no banco...`);
+        } else {
+          toast.success(`Script ${platformLabel} enviado para storage bucket`);
+        }
+      } catch (uploadErr) {
+        console.warn(`Upload to storage exception: ${uploadErr}, continuing with DB registration...`);
+        toast.warning(`Upload para storage falhou. Continuando com registro no banco...`);
+      }
+
+      // Generate release notes based on version
+      const releaseNotes = version === 'v4.0.7'
+        ? `${version}: BUGFIX - Corrigido endpoint de heartbeat de /agent-heartbeat para /heartbeat. Mantidas funcionalidades de auto-rollback, health check, e Safe Mode.`
+        : version.includes('SAFE-ROLLBACK') 
+        ? `${version}: Auto-rollback com backup estruturado, health check pós-update, Safe Mode após 2 rollbacks consecutivos, telemetria de eventos de rollback.`
+        : `${version}: Script ${platformLabel} com otimizações (heartbeat 60s, metrics 10min, log rotation 7d/10MB).`;
+
       // Register the release - SHA256 will be calculated automatically by the hook
       registerRelease({
         version: version,
         platform: platform,
         script_content: scriptContent,
-        release_notes: `${version}: Script ${platformLabel} com otimizações v3.10.35 (heartbeat 60s, metrics 10min, log rotation 7d/10MB).`,
+        release_notes: releaseNotes,
         channel: 'stable'
       });
 
@@ -209,12 +235,27 @@ export default function AgentReleases() {
 
       toast.success(`Script ${platformLabel} carregado: ${(scriptContent.length / 1024).toFixed(1)} KB`);
 
+      // Upload to storage bucket
+      try {
+        await supabase.functions.invoke('upload-agent-script', {
+          body: { platform, script_content: scriptContent }
+        });
+        toast.success(`Script enviado para storage bucket`);
+      } catch (uploadErr) {
+        console.warn(`Upload to storage failed, continuing...`);
+      }
+
+      // Generate release notes based on version
+      const releaseNotes = currentVersion.includes('SAFE-ROLLBACK') 
+        ? `${currentVersion}: Auto-rollback com backup estruturado, health check pós-update, Safe Mode após 2 rollbacks consecutivos.`
+        : `${currentVersion}: Script ${platformLabel} com otimizações (heartbeat 60s, metrics 10min, log rotation 7d/10MB).`;
+
       // Register the release - SHA256 will be calculated automatically
       registerRelease({
         version: currentVersion,
         platform: platform,
         script_content: scriptContent,
-        release_notes: `${currentVersion}: Script ${platformLabel} com otimizações v3.10.35 (heartbeat 60s, metrics 10min, log rotation 7d/10MB).`,
+        release_notes: releaseNotes,
         channel: 'stable'
       });
 
