@@ -68,7 +68,8 @@ function extractVersion(content, platform) {
   if (platform === 'windows') {
     match = content.match(/AgentVersion\s*=\s*"([^"]+)"/);
   } else {
-    match = content.match(/# Version:\s*(\S+)/);
+    // Match format: "# CyberShield Agent - Linux v4.0.7" or "# CyberShield Agent - macOS v4.0.7"
+    match = content.match(/# CyberShield Agent - (?:Linux|macOS) (v[\d.]+(?:-[\w-]+)?)/);
   }
   return match ? match[1] : 'unknown';
 }

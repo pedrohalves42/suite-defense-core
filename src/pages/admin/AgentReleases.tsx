@@ -15,8 +15,8 @@ import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
 const CURRENT_VERSIONS = {
   windows: 'v4.0.7',
-  linux: 'v4.0.1-DNS-POLICY',
-  macos: 'v4.0.1-DNS-POLICY'
+  linux: 'v4.0.7',
+  macos: 'v4.0.7'
 } as const;
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
@@ -166,7 +166,7 @@ export default function AgentReleases() {
       // Generate release notes based on version
       const releaseNotes = version === 'v4.0.7'
         ? `${version}: BUGFIX - Corrigido endpoint de heartbeat de /agent-heartbeat para /heartbeat. Mantidas funcionalidades de auto-rollback, health check, e Safe Mode.`
-        : version.includes('SAFE-ROLLBACK') 
+        : (version as string).includes('SAFE-ROLLBACK') 
         ? `${version}: Auto-rollback com backup estruturado, health check pós-update, Safe Mode após 2 rollbacks consecutivos, telemetria de eventos de rollback.`
         : `${version}: Script ${platformLabel} com otimizações (heartbeat 60s, metrics 10min, log rotation 7d/10MB).`;
 
@@ -246,7 +246,9 @@ export default function AgentReleases() {
       }
 
       // Generate release notes based on version
-      const releaseNotes = currentVersion.includes('SAFE-ROLLBACK') 
+      const releaseNotes = currentVersion === 'v4.0.7'
+        ? `${currentVersion}: BUGFIX - Corrigido endpoint de heartbeat de /agent-heartbeat para /heartbeat.`
+        : (currentVersion as string).includes('SAFE-ROLLBACK') 
         ? `${currentVersion}: Auto-rollback com backup estruturado, health check pós-update, Safe Mode após 2 rollbacks consecutivos.`
         : `${currentVersion}: Script ${platformLabel} com otimizações (heartbeat 60s, metrics 10min, log rotation 7d/10MB).`;
 
