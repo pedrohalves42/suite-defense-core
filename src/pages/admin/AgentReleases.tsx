@@ -14,7 +14,7 @@ import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
 const CURRENT_VERSIONS = {
-  windows: 'v4.0.7',
+  windows: 'v4.0.8',
   linux: 'v4.0.7',
   macos: 'v4.0.7'
 } as const;
@@ -164,7 +164,9 @@ export default function AgentReleases() {
       }
 
       // Generate release notes based on version
-      const releaseNotes = version === 'v4.0.7'
+      const releaseNotes = version === 'v4.0.8'
+        ? `${version}: ESTABILIZAÇÃO - Send-SystemMetrics integrado ao loop principal, ValidateSet convertido para validação runtime, suporte a force_update via backend.`
+        : version === 'v4.0.7'
         ? `${version}: BUGFIX - Corrigido endpoint de heartbeat de /agent-heartbeat para /heartbeat. Mantidas funcionalidades de auto-rollback, health check, e Safe Mode.`
         : (version as string).includes('SAFE-ROLLBACK') 
         ? `${version}: Auto-rollback com backup estruturado, health check pós-update, Safe Mode após 2 rollbacks consecutivos, telemetria de eventos de rollback.`
@@ -246,7 +248,9 @@ export default function AgentReleases() {
       }
 
       // Generate release notes based on version
-      const releaseNotes = currentVersion === 'v4.0.7'
+      const releaseNotes = currentVersion === 'v4.0.8'
+        ? `${currentVersion}: ESTABILIZAÇÃO - Send-SystemMetrics integrado ao loop principal, ValidateSet convertido para validação runtime, suporte a force_update via backend.`
+        : currentVersion === 'v4.0.7'
         ? `${currentVersion}: BUGFIX - Corrigido endpoint de heartbeat de /agent-heartbeat para /heartbeat.`
         : (currentVersion as string).includes('SAFE-ROLLBACK') 
         ? `${currentVersion}: Auto-rollback com backup estruturado, health check pós-update, Safe Mode após 2 rollbacks consecutivos.`
