@@ -3,9 +3,9 @@
  * CyberShield Agent Linux Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-linux-v4.sh
- * Versao: unknown
+ * Versao: v4.0.7
  * SHA256: ca91e3eb2b6d559d178ed02a95f0da6c66088bad0415f8bd3e7dac86736dc595
- * Gerado em: 2025-12-19T00:23:30.645Z
+ * Gerado em: 2025-12-19T00:32:28.001Z
  */
 
 export function getAgentScriptLinux(): string {
