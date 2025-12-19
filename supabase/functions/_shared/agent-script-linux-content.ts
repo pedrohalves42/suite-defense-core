@@ -5,7 +5,7 @@
  * Fonte: public/agent-scripts/cybershield-agent-linux-v4.sh
  * Versao: v4.0.7
  * SHA256: ca91e3eb2b6d559d178ed02a95f0da6c66088bad0415f8bd3e7dac86736dc595
- * Gerado em: 2025-12-19T00:32:28.001Z
+ * Gerado em: 2025-12-19T01:12:15.450Z
  */
 
 export function getAgentScriptLinux(): string {

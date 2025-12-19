@@ -3,9 +3,9 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v4.ps1
- * Versao: v4.0.7
- * SHA256: 7c436a23d30ceb06569af7b8ee0a8791972a7026f26f15bfc8f678c8545986d7
- * Gerado em: 2025-12-19T00:32:27.990Z
+ * Versao: v4.0.8
+ * SHA256: 3ffb12d03b48b2b6559af028e9fa5772d7003f3a8584e59eb7ff42d62ffd9054
+ * Gerado em: 2025-12-19T01:12:15.441Z
  */
 
 export function getAgentScriptWindows(): string {
@@ -13,7 +13,7 @@ export function getAgentScriptWindows(): string {
 }
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
-    CyberShield Agent - Windows v4.0.7
+    CyberShield Agent - Windows v4.0.8
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
@@ -30,8 +30,12 @@ export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.7:
-    - Fixed heartbeat endpoint from /agent-heartbeat to /heartbeat (BUGFIX)
+    Funcionalidades v4.0.8 (ESTABILIZACAO):
+    - FIXED: Metricas sendo enviadas a cada 5 minutos (era ignorado no loop)
+    - FIXED: ValidateSet convertido para runtime validation (backward compatible)
+    - FIXED: Add-EvidenceEntry aceita tipos desconhecidos graciosamente
+    - NEW: Suporte a force_update via banco (bypassa job system)
+    - Fixed heartbeat endpoint from /agent-heartbeat to /heartbeat
     - Auto-rollback with structured backup before update
     - Post-update health check (state machine, heartbeat, poll-jobs)
     - Safe Mode after 2 consecutive rollbacks - disables auto-updates
@@ -68,7 +72,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v4.0.7"
+    [string]\$AgentVersion = "v4.0.8"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -662,7 +666,6 @@ function Test-CanExecuteJob {
 function Add-EvidenceEntry {
     param(
         [Parameter(Mandatory = \$true)]
-        [ValidateSet("state_change", "job_execution", "dns_block", "policy_sync", "auto_recovery", "heartbeat", "update_applied", "update_check", "error", "policy_drift", "security_event")]
         [string]\$Type,
         
         [Parameter(Mandatory = \$true)]
@@ -680,6 +683,19 @@ function Add-EvidenceEntry {
     )
     
     try {
+        # RUNTIME VALIDATION - Backward + Forward compatible (substitui ValidateSet rígido)
+        \$AllowedTypes = @(
+            "state_change", "job_execution", "dns_block", "policy_sync", 
+            "auto_recovery", "heartbeat", "update_applied", "update_check", 
+            "error", "policy_drift", "security_event", "security_warning",
+            "metrics_sent", "force_update"
+        )
+        
+        if (\$Type -notin \$AllowedTypes) {
+            Write-Log "[EVIDENCE] Tipo desconhecido aceito graciosamente: \$Type" "WARN"
+            # Não bloqueia - aceita qualquer tipo para forward compatibility
+        }
+        
         # Criar hash SHA256 do data para integridade
         \$dataJson = \$Data | ConvertTo-Json -Compress -Depth 5
         \$sha256 = [System.Security.Cryptography.SHA256]::Create()
@@ -2519,6 +2535,53 @@ try {
             if (((\$now - \$lastEvidenceFlush).TotalSeconds) -ge 300) {
                 Invoke-FlushEvidence
                 \$lastEvidenceFlush = Get-Date
+            }
+
+            # ============================================
+            #  ENVIO DE METRICAS A CADA 5 MINUTOS (v4.0.7 FIX)
+            # ============================================
+            try {
+                if (((\$now - \$lastMetrics).TotalSeconds) -ge 300) {
+                    Write-Log "[METRICS] Coletando metricas de sistema..." "INFO"
+                    \$metricsJob = @{ id = "auto-metrics"; type = "report" }
+                    \$metricsResult = Invoke-ReportJob -Job \$metricsJob
+                    
+                    if (\$metricsResult.success) {
+                        # Parsear JSON e enviar para backend
+                        try {
+                            \$metricsData = \$metricsResult.output | ConvertFrom-Json
+                            
+                            \$payload = @{
+                                cpu_usage_percent = \$metricsData.cpu_percent
+                                memory_usage_percent = \$metricsData.memory_percent
+                                disk_usage_percent = \$metricsData.disk_percent
+                                hostname = \$metricsData.hostname
+                                uptime_seconds = \$metricsData.uptime_seconds
+                                last_boot_time = \$metricsData.last_boot_time
+                            }
+                            
+                            \$sent = Send-SystemMetrics -Metrics \$payload
+                            if (\$sent) {
+                                Write-Log "[SUCCESS] Metricas enviadas: CPU=\$(\$metricsData.cpu_percent)%, RAM=\$(\$metricsData.memory_percent)%, Disco=\$(\$metricsData.disk_percent)%" "SUCCESS"
+                                
+                                Add-EvidenceEntry -Type "metrics_sent" -Data @{
+                                    cpu = \$metricsData.cpu_percent
+                                    memory = \$metricsData.memory_percent
+                                    disk = \$metricsData.disk_percent
+                                } -Severity "debug"
+                            }
+                        } catch {
+                            Write-Log "[WARN] Falha ao parsear metricas: \$(\$_.Exception.Message)" "WARN"
+                        }
+                    } else {
+                        Write-Log "[WARN] Falha ao coletar metricas (nao critico): \$(\$metricsResult.output)" "WARN"
+                    }
+                    
+                    \$lastMetrics = Get-Date
+                }
+            } catch {
+                # NUNCA derrubar o loop por causa de metrics
+                Write-Log "[WARN] Erro ao processar metrics: \$(\$_.Exception.Message)" "WARN"
             }
 
             # Rotacao de logs/evidence a cada hora

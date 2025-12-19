@@ -5,7 +5,7 @@
  * Fonte: public/agent-scripts/cybershield-agent-macos-v4.sh
  * Versao: v4.0.7
  * SHA256: 0b1c3eea9de6e006569d64a5cea9a5166de3d5d2357be3393f5d64e86ec0b01c
- * Gerado em: 2025-12-19T00:32:28.006Z
+ * Gerado em: 2025-12-19T01:12:15.455Z
  */
 
 export function getAgentScriptMacos(): string {
