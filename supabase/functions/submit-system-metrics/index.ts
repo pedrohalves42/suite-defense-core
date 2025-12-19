@@ -137,11 +137,17 @@ Deno.serve(async (req) => {
     logger.debug('Parsing metrics request');
     // Parse metricas
     const metrics: SystemMetrics = await req.json();
-    logger.debug('Received metrics', {
+    
+    // Enhanced logging for debugging disk metrics (v4.0.11)
+    logger.info('Received metrics payload', {
+      agent: agent.agent_name,
       cpu: metrics.cpu_usage_percent,
       memory: metrics.memory_usage_percent,
-      disk: metrics.disk_usage_percent,
-      disks_count: metrics.disks?.length || 0
+      disk_legacy: metrics.disk_usage_percent,
+      disk_total_gb: metrics.disk_total_gb,
+      disk_free_gb: metrics.disk_free_gb,
+      disks_count: metrics.disks?.length || 0,
+      disks_drives: metrics.disks?.map(d => d.drive_letter).join(',') || 'none'
     });
 
     // Processar múltiplos discos se disponível, senão usar valores legado

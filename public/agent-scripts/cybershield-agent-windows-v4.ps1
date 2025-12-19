@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v4.0.10
+    CyberShield Agent - Windows v4.0.11
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
@@ -17,15 +17,20 @@
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.10 (VIKTOR RECOVERY):
-    - NEW: Force Update via Heartbeat Response (bypassa job system completamente)
-    - NEW: Apply-ForcedUpdate funcao imortal que processa update do heartbeat
-    - NEW: Confirmacao de force_update no backend apos aplicacao
-    - CRITICAL FIX: Send-SystemMetrics funcao agora definida (estava faltando!)
-    - FIXED: Metricas sendo enviadas a cada 5 minutos
-    - FIXED: ValidateSet convertido para runtime validation (backward compatible)
-    - FIXED: Add-EvidenceEntry aceita tipos desconhecidos graciosamente
-    - Fixed heartbeat endpoint from /agent-heartbeat to /heartbeat
+    Funcionalidades v4.0.11 (DISK METRICS FIX):
+    - CRITICAL FIX: Coleta de TODOS os discos (nao apenas C:)
+    - NEW: Invoke-ReportJob coleta disk_total_gb, disk_free_gb, disks[]
+    - NEW: Send-SystemMetrics envia array disks completo para backend
+    - NEW: Informacoes detalhadas: drive_letter, drive_label, is_system_drive
+    - NEW: Logging melhorado para debug de metricas
+    - FIXED: agent_disk_metrics agora populada corretamente
+    
+    v4.0.10 (VIKTOR RECOVERY):
+    - Force Update via Heartbeat Response (bypassa job system completamente)
+    - Apply-ForcedUpdate funcao imortal que processa update do heartbeat
+    - Confirmacao de force_update no backend apos aplicacao
+    - Send-SystemMetrics funcao agora definida
+    - Metricas sendo enviadas a cada 5 minutos
     - Auto-rollback with structured backup before update
     - Post-update health check (state machine, heartbeat, poll-jobs)
     - Safe Mode after 2 consecutive rollbacks - disables auto-updates
@@ -62,7 +67,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.0.10"
+    [string]$AgentVersion = "v4.0.11"
 )
 
 $ErrorActionPreference = "Stop"
@@ -1943,14 +1948,29 @@ function Send-SystemMetrics {
             
             try {
                 $metricsData = $metricsResult.output | ConvertFrom-Json
+                
+                # v4.0.11: Enviar TODAS as informacoes de metricas, incluindo discos
                 $Metrics = @{
                     cpu_usage_percent = $metricsData.cpu_percent
+                    cpu_name = $metricsData.cpu_name
+                    cpu_cores = $metricsData.cpu_cores
                     memory_usage_percent = $metricsData.memory_percent
+                    memory_total_gb = $metricsData.memory_total_gb
+                    memory_used_gb = $metricsData.memory_used_gb
+                    memory_free_gb = $metricsData.memory_free_gb
                     disk_usage_percent = $metricsData.disk_percent
+                    disk_total_gb = $metricsData.disk_total_gb
+                    disk_used_gb = $metricsData.disk_used_gb
+                    disk_free_gb = $metricsData.disk_free_gb
+                    disks = $metricsData.disks
                     hostname = $metricsData.hostname
                     uptime_seconds = $metricsData.uptime_seconds
                     last_boot_time = $metricsData.last_boot_time
                 }
+                
+                $diskCount = if ($metricsData.disks) { $metricsData.disks.Count } else { 0 }
+                Write-Log "[METRICS] Payload preparado: CPU=$($Metrics.cpu_usage_percent)%, RAM=$($Metrics.memory_usage_percent)%, Discos=$diskCount" "DEBUG"
+                
             } catch {
                 Write-Log "[METRICS] Falha ao parsear metricas: $($_.Exception.Message)" "WARN"
                 return $false
@@ -1966,7 +1986,8 @@ function Send-SystemMetrics {
             -TimeoutSec 15
         
         if ($result.Success -and $result.StatusCode -eq 200) {
-            Write-Log "[SUCCESS] Metricas enviadas: CPU=$($Metrics.cpu_usage_percent)%, RAM=$($Metrics.memory_usage_percent)%" "SUCCESS"
+            $diskCount = if ($Metrics.disks) { $Metrics.disks.Count } else { 0 }
+            Write-Log "[SUCCESS] Metricas enviadas: CPU=$($Metrics.cpu_usage_percent)%, RAM=$($Metrics.memory_usage_percent)%, Discos=$diskCount" "SUCCESS"
             return $true
         }
         
@@ -2182,18 +2203,50 @@ function Invoke-ReportJob {
     param($Job)
     
     try {
+        # CPU
         $cpuUsage = (Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
         if ($null -eq $cpuUsage) { $cpuUsage = 0 }
+        $cpuInfo = Get-WmiObject Win32_Processor | Select-Object -First 1
         
+        # Memory
         $os = Get-WmiObject Win32_OperatingSystem
+        $memTotalGB = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2)
+        $memFreeGB = [math]::Round($os.FreePhysicalMemory / 1MB, 2)
+        $memUsedGB = [math]::Round($memTotalGB - $memFreeGB, 2)
         $memUsage = [math]::Round((($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / $os.TotalVisibleMemorySize) * 100, 2)
         
-        $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
-        $diskPercent = if ($disk -and $disk.Size -gt 0) { 
-            [math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 2) 
-        } else { 0 }
+        # Disks - Collect ALL fixed drives (v4.0.11)
+        $disksArray = @()
+        $allDisks = Get-WmiObject Win32_LogicalDisk -Filter "DriveType=3"  # DriveType=3 = Fixed disks
+        $systemDrive = $env:SystemDrive  # Usually "C:"
         
-        $bootTime = (Get-WmiObject Win32_OperatingSystem).LastBootUpTime
+        foreach ($d in $allDisks) {
+            if ($d.Size -gt 0) {
+                $totalGB = [math]::Round($d.Size / 1GB, 2)
+                $freeGB = [math]::Round($d.FreeSpace / 1GB, 2)
+                $usedGB = [math]::Round($totalGB - $freeGB, 2)
+                $usagePercent = [math]::Round((($d.Size - $d.FreeSpace) / $d.Size) * 100, 2)
+                
+                $disksArray += @{
+                    drive_letter = $d.DeviceID
+                    drive_label = if ($d.VolumeName) { $d.VolumeName } else { "" }
+                    drive_type = "Fixed"
+                    total_gb = $totalGB
+                    used_gb = $usedGB
+                    free_gb = $freeGB
+                    usage_percent = $usagePercent
+                    is_system_drive = ($d.DeviceID -eq $systemDrive)
+                }
+            }
+        }
+        
+        # Primary disk metrics (for legacy compatibility)
+        $primaryDisk = $disksArray | Where-Object { $_.is_system_drive } | Select-Object -First 1
+        if (-not $primaryDisk -and $disksArray.Count -gt 0) {
+            $primaryDisk = $disksArray[0]
+        }
+        
+        $bootTime = $os.LastBootUpTime
         $bootDateTime = [Management.ManagementDateTimeConverter]::ToDateTime($bootTime)
         $uptimeSeconds = [int]((Get-Date) - $bootDateTime).TotalSeconds
         
@@ -2201,14 +2254,25 @@ function Invoke-ReportJob {
             timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             hostname = $env:COMPUTERNAME
             cpu_percent = [math]::Round($cpuUsage, 2)
+            cpu_name = $cpuInfo.Name
+            cpu_cores = $cpuInfo.NumberOfCores
             memory_percent = $memUsage
-            disk_percent = $diskPercent
+            memory_total_gb = $memTotalGB
+            memory_used_gb = $memUsedGB
+            memory_free_gb = $memFreeGB
+            disk_percent = if ($primaryDisk) { $primaryDisk.usage_percent } else { 0 }
+            disk_total_gb = if ($primaryDisk) { $primaryDisk.total_gb } else { 0 }
+            disk_used_gb = if ($primaryDisk) { $primaryDisk.used_gb } else { 0 }
+            disk_free_gb = if ($primaryDisk) { $primaryDisk.free_gb } else { 0 }
+            disks = $disksArray
             uptime_seconds = $uptimeSeconds
             last_boot_time = $bootDateTime.ToUniversalTime().ToString("o")
             state = Get-AgentState
         }
         
-        return @{ success = $true; output = ($report | ConvertTo-Json -Compress) }
+        Write-Log "[METRICS] Coletado: CPU=$($report.cpu_percent)%, RAM=$($report.memory_percent)%, Discos=$($disksArray.Count)" "DEBUG"
+        
+        return @{ success = $true; output = ($report | ConvertTo-Json -Compress -Depth 5) }
     }
     catch {
         return @{ success = $false; error = $_.Exception.Message }
