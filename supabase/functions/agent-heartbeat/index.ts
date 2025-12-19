@@ -1,11 +1,11 @@
 /**
- * Agent Heartbeat Proxy - v4.0.7 Compatibility
+ * Agent Heartbeat Proxy - v4.0.7 Compatibility + Force Update
  * 
  * This Edge Function acts as a proxy/alias for the main heartbeat endpoint.
- * Purpose: Allow agents with v4.0.6 (which incorrectly call /agent-heartbeat) 
- * to send heartbeats and receive update jobs.
+ * VIKTOR RECOVERY: Now includes force_update logic to update v4.0.6-SAFE-ROLLBACK agents
  * 
- * Once all agents are updated to v4.0.7+, this proxy can be removed.
+ * Purpose: Allow agents with v4.0.6 (which incorrectly call /agent-heartbeat) 
+ * to send heartbeats AND receive force updates directly in response.
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
@@ -16,6 +16,7 @@ import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logger } from '../_shared/logger.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
+import { encodeBase64 } from "https://deno.land/std@0.208.0/encoding/base64.ts"
 
 Deno.serve(async (req) => {
   // CORS preflight
@@ -61,11 +62,11 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Fetch agent by token hash
+    // Fetch agent by token hash - VIKTOR: Include force_update fields and tenant_id
     const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status)')
+      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, tenant_id, force_update_version, force_update_reason, agent_version)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -84,6 +85,10 @@ Deno.serve(async (req) => {
       agent_name: string; 
       hmac_secret: string; 
       status: string;
+      tenant_id: string;
+      force_update_version: string | null;
+      force_update_reason: string | null;
+      agent_version: string | null;
     }
     
     // HMAC verification
@@ -157,9 +162,9 @@ Deno.serve(async (req) => {
       status: 'active'
     }
     
-    if (osInfo.os_type || osInfo.platform) {
-      // Normalize os_type to lowercase (Windows -> windows, Linux -> linux, macOS -> macos)
-      const rawOsType = osInfo.os_type || osInfo.platform || ''
+    // Normalize os_type from body or use agent's current value
+    const rawOsType = osInfo.os_type || osInfo.platform || ''
+    if (rawOsType) {
       updateData.os_type = rawOsType.toLowerCase()
     }
     if (osInfo.os_version) {
@@ -194,6 +199,87 @@ Deno.serve(async (req) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('token_hash', tokenHash)
 
+    // ========================================================
+    // VIKTOR RECOVERY: Check for force_update and include in response
+    // ========================================================
+    if (agent.force_update_version && agent.force_update_version !== agent.agent_version) {
+      logger.info('[PROXY] Force update pending', { 
+        agentName: agent.agent_name,
+        currentVersion: agent.agent_version,
+        targetVersion: agent.force_update_version
+      })
+
+      // Determine platform (default to windows for legacy agents)
+      const platform = (updateData.os_type || 'windows').toLowerCase()
+
+      // Fetch the release script
+      const { data: release, error: releaseError } = await supabase
+        .from('agent_releases')
+        .select('id, version, script_content, sha256')
+        .eq('version', agent.force_update_version)
+        .eq('platform', platform)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (releaseError) {
+        logger.error('[PROXY] Failed to fetch release', { 
+          error: releaseError,
+          version: agent.force_update_version,
+          platform 
+        })
+      }
+
+      if (release?.script_content) {
+        logger.info('[PROXY] Sending force_update in response', { 
+          agentName: agent.agent_name,
+          targetVersion: release.version,
+          platform
+        })
+
+        // Normalize line endings (CRLF for Windows)
+        let normalizedScript = release.script_content
+        if (platform === 'windows') {
+          normalizedScript = normalizedScript.replace(/\r\n/g, '\n').replace(/\n/g, '\r\n')
+        }
+
+        // Encode to Base64
+        const encoder = new TextEncoder()
+        const scriptBytes = encoder.encode(normalizedScript)
+        const base64Script = encodeBase64(scriptBytes)
+
+        // Calculate SHA256 of normalized script
+        const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes)
+        const hashArray = Array.from(new Uint8Array(hashBuffer))
+        const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+        // Return response WITH force_update data
+        return new Response(
+          JSON.stringify({ 
+            ok: true,
+            agent: agent.agent_name,
+            timestamp: new Date().toISOString(),
+            proxy: true,
+            // VIKTOR RECOVERY: Force update data
+            force_update: true,
+            target_version: release.version,
+            script_content_base64: base64Script,
+            sha256: calculatedSha256,
+            reason: agent.force_update_reason || 'System recovery update'
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          }
+        )
+      } else {
+        logger.warn('[PROXY] No active release found for force_update', { 
+          version: agent.force_update_version,
+          platform
+        })
+      }
+    }
+
+    // Standard response (no force_update)
     return new Response(
       JSON.stringify({ 
         ok: true,
