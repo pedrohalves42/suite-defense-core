@@ -328,10 +328,16 @@ Deno.serve(async (req) => {
 
     // GOVERNANÇA: Validar contrato de sucesso para sync_blocked_websites
     if (job.type === 'sync_blocked_websites' && status === 'completed' && output) {
-      const outputData = typeof output === 'object' ? output : {}
-      const applyToHosts = outputData.apply_to_hosts === true
-      const hostsModified = outputData.hosts_modified || 0
-      const blockedDomainsCount = outputData.blocked_domains_count || 0
+      // Parse output if string
+      let outputDataSync: Record<string, unknown> = {}
+      if (typeof output === 'object' && output !== null) {
+        outputDataSync = output as Record<string, unknown>
+      } else if (typeof output === 'string') {
+        try { outputDataSync = JSON.parse(output) } catch { /* ignore */ }
+      }
+      const applyToHosts = outputDataSync.apply_to_hosts === true
+      const hostsModified = Number(outputDataSync.hosts_modified) || 0
+      const blockedDomainsCount = Number(outputDataSync.blocked_domains_count) || 0
       
       // Se apply_to_hosts foi solicitado mas nenhum host foi modificado = warning
       if (applyToHosts && hostsModified === 0 && blockedDomainsCount > 0) {
@@ -386,7 +392,13 @@ Deno.serve(async (req) => {
     // o update não foi aplicado de fato - registrar warning
     // ============================================================
     if (job.type === 'update_agent' && status === 'completed') {
-      const payload_data = typeof output === 'object' ? output : {}
+      // Parse output if string
+      let payload_data: Record<string, unknown> = {}
+      if (typeof output === 'object' && output !== null) {
+        payload_data = output as Record<string, unknown>
+      } else if (typeof output === 'string') {
+        try { payload_data = JSON.parse(output) } catch { /* ignore */ }
+      }
       const targetVersion = payload_data?.target_version || payload_data?.version
       
       // Buscar versão atual do agente para verificar se update realmente funcionou
@@ -425,7 +437,30 @@ Deno.serve(async (req) => {
     // Now v4.0.10+ sends everything via submit-job-result, so we need to process here
     // ============================================================
     if (status === 'completed' && output) {
-      const outputData = typeof output === 'object' ? output : {}
+      // CRITICAL FIX: Parse JSON string output from agents (v4.0.10+)
+      // Agents may send output as JSON string instead of object
+      let outputData: Record<string, unknown> = {}
+      if (typeof output === 'object' && output !== null) {
+        outputData = output as Record<string, unknown>
+      } else if (typeof output === 'string') {
+        try {
+          const parsed = JSON.parse(output)
+          if (typeof parsed === 'object' && parsed !== null) {
+            outputData = parsed as Record<string, unknown>
+          }
+          console.log('[submit-job-result] Successfully parsed JSON string output:', {
+            job_id: job.id,
+            job_type: job.type,
+            keys: Object.keys(outputData)
+          })
+        } catch (parseErr) {
+          console.warn('[submit-job-result] Failed to parse output as JSON string:', {
+            job_id: job.id,
+            output_preview: String(output).substring(0, 200),
+            error: parseErr instanceof Error ? parseErr.message : 'Unknown error'
+          })
+        }
+      }
       
       // PROCESS SOFTWARE INVENTORY
       if (job.type === 'software_inventory_collect' && (outputData.software || outputData.installed_software)) {
