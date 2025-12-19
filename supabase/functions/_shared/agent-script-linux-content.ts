@@ -4,8 +4,8 @@
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-linux-v4.sh
  * Versao: unknown
- * SHA256: 72eb2c13f042f57012daa623288daa9861272e20291711dd1651711222f1be20
- * Gerado em: 2025-12-18T12:17:20.354Z
+ * SHA256: ca91e3eb2b6d559d178ed02a95f0da6c66088bad0415f8bd3e7dac86736dc595
+ * Gerado em: 2025-12-19T00:22:46.529Z
  */
 
 export function getAgentScriptLinux(): string {
@@ -14,7 +14,7 @@ export function getAgentScriptLinux(): string {
 
 export const AGENT_SCRIPT_LINUX_SH = `#!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v4.0.1-DNS-POLICY
+# CyberShield Agent - Linux v4.0.7
 #
 # FASE 2.1: State Machine Formal (6 estados)
 # FASE 2.2: Evidence Journal Local
@@ -42,7 +42,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTES E VARIAVEIS GLOBAIS
 # ============================================
-AGENT_VERSION="v4.0.1-DNS-POLICY"
+AGENT_VERSION="v4.0.7"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="\${BASE_DIR}/logs"
 EVIDENCE_DIR="\${BASE_DIR}/evidence"
@@ -674,14 +674,14 @@ invoke_secure_request() {
 send_heartbeat() {
     local body
     body=\$(cat <<EOF
-{"agent_name":"\$AGENT_NAME","hostname":"\$(hostname)","os_type":"Linux","os_version":"\$(uname -r)","agent_version":"\$AGENT_VERSION","state":"\$(get_state)","error_count":\${AGENT_STATE[error_count]}}
+{"agent_name":"\$AGENT_NAME","hostname":"\$(hostname)","os_type":"linux","os_version":"\$(uname -r)","agent_version":"\$AGENT_VERSION","state":"\$(get_state)","error_count":\${AGENT_STATE[error_count]}}
 EOF
 )
     
     log "INFO" "[HEARTBEAT] Sending heartbeat (state: \$(get_state))..."
     
     local result
-    result=\$(invoke_secure_request "POST" "/functions/v1/agent-heartbeat" "\$body" 15)
+    result=\$(invoke_secure_request "POST" "/functions/v1/heartbeat" "\$body" 15)
     
     if [[ \$? -eq 0 ]]; then
         log "SUCCESS" "[HEARTBEAT] OK (200)"
