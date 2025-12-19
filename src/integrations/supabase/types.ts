@@ -7731,6 +7731,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      reprocess_job_outputs: {
+        Args: { p_hours_back?: number }
+        Returns: {
+          agent_name: string
+          job_id: string
+          job_type: string
+          needs_reprocessing: boolean
+          output_type: string
+        }[]
+      }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
       submit_agent_evidence: {
         Args: {
