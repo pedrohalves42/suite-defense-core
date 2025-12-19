@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     const tokenHash = await hashToken(agentToken);
     const { data: tokenData, error: tokenError } = await supabase
       .from('agent_tokens')
-      .select('agent_id, is_active, agents!inner(id, agent_name, hmac_secret, agent_version, os_type)')
+      .select('agent_id, is_active, agents!inner(id, agent_name, hmac_secret, agent_version, os_type, force_update_version, force_update_reason)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .single();
@@ -63,6 +63,8 @@ Deno.serve(async (req) => {
       hmac_secret: string; 
       agent_version: string | null; 
       os_type: string | null;
+      force_update_version: string | null;
+      force_update_reason: string | null;
     };
 
     // Verificar HMAC
@@ -95,6 +97,95 @@ Deno.serve(async (req) => {
     const platform = agent.os_type?.toLowerCase() || 'windows';
 
     // ============================================================
+    // FORCE UPDATE: Prioridade absoluta - bypassa rollout e jobs
+    // ============================================================
+    if (agent.force_update_version) {
+      logger.info('[serve-agent-update] FORCE UPDATE detectado', { 
+        requestId, 
+        agentName: agent.agent_name,
+        currentVersion: agent.agent_version,
+        forceVersion: agent.force_update_version,
+        reason: agent.force_update_reason
+      });
+
+      // Buscar release forçada
+      const { data: forcedRelease, error: forcedError } = await supabase
+        .from('agent_releases')
+        .select('version, script_content, sha256, release_notes, signature_base64, signed_at, signed_by')
+        .eq('version', agent.force_update_version)
+        .eq('platform', platform)
+        .eq('is_active', true)
+        .single();
+
+      if (forcedError || !forcedRelease) {
+        logger.error('[serve-agent-update] Force update version not found', { 
+          requestId, 
+          forceVersion: agent.force_update_version,
+          platform 
+        });
+        // Limpar force_update se versão não existe
+        await supabase
+          .from('agents')
+          .update({ 
+            force_update_version: null, 
+            force_update_reason: null, 
+            force_update_at: null 
+          })
+          .eq('id', agent.id);
+        
+        return new Response(
+          JSON.stringify({ 
+            error: 'Forced version not found',
+            force_update_version: agent.force_update_version
+          }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Normalizar script para Windows
+      const normalizeForWindows = (content: string): string => {
+        return content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
+      };
+      
+      const normalizedScript = normalizeForWindows(forcedRelease.script_content);
+      const encoder = new TextEncoder();
+      const scriptBytes = encoder.encode(normalizedScript);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', scriptBytes);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const calculatedSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      const base64Script = encodeBase64(scriptBytes);
+
+      logger.info('[serve-agent-update] FORCE UPDATE: Enviando script', { 
+        requestId, 
+        agentName: agent.agent_name,
+        fromVersion: agent.agent_version,
+        toVersion: forcedRelease.version,
+        reason: agent.force_update_reason
+      });
+
+      return new Response(
+        JSON.stringify({
+          version: forcedRelease.version,
+          script_content: forcedRelease.script_content,
+          sha256: calculatedSha256,
+          script_content_base64: base64Script,
+          sha256_base64: calculatedSha256,
+          signature_base64: forcedRelease.signature_base64 || null,
+          signed_at: forcedRelease.signed_at || null,
+          signed_by: forcedRelease.signed_by || null,
+          release_notes: forcedRelease.release_notes,
+          platform: platform,
+          current_version: agent.agent_version,
+          // FLAGS ESPECIAIS PARA FORCE UPDATE
+          force_update: true,
+          bypass_jobs: true,
+          force_update_reason: agent.force_update_reason
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ============================================================
     // ROLLOUT GRADUAL: Verificar policy antes de enviar update
     // ============================================================
     const { data: rolloutPolicy } = await supabase
@@ -113,7 +204,7 @@ Deno.serve(async (req) => {
     const bucket = ((bucketHashArray[0] << 8) | bucketHashArray[1]) % 100;
 
     // Função helper para registrar decisão de rollout
-    const logRolloutDecision = async (decision: 'allowed' | 'skipped' | 'no_policy' | 'already_current', targetVersion: string, rolloutPercentage: number) => {
+    const logRolloutDecision = async (decision: 'allowed' | 'skipped' | 'no_policy' | 'already_current' | 'force_update', targetVersion: string, rolloutPercentage: number) => {
       try {
         await supabase.from('agent_update_decisions').insert({
           agent_id: agent.id,
