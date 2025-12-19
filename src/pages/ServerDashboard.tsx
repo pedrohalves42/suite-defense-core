@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings, BarChart3, PieChart, LineChart, CheckCircle2, XCircle, Info } from "lucide-react";
+import { IntegrityScoreCard } from "@/components/integrity/IntegrityScoreCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -620,6 +621,52 @@ const ServerDashboard = () => {
                 tenantsWithIssues > 0 ? "text-warning" : "text-success"
               )}>
                 {tenantsWithIssues > 0 ? `${tenantsWithIssues} com pendências` : 'Todas saudáveis'}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            CAMADA 2.5 — INTEGRIDADE DO SISTEMA (Zero Trust)
+            Supply Chain + Job Integrity Score
+        ═══════════════════════════════════════════════════════════════════ */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <IntegrityScoreCard />
+          
+          {/* Card de tokens ativos */}
+          <Card className="bg-gradient-card border-primary/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
+                <Key className="h-4 w-4 text-primary" />
+                Tokens de Agente
+              </CardTitle>
+              <CardDescription className="text-[10px]">Credenciais ativas no sistema</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">
+                {agentTokens.filter(t => t.is_active).length} ativos
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {agentTokens.filter(t => !t.is_active).length} inativos
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Card de Rate Limits */}
+          <Card className="bg-gradient-card border-primary/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
+                <ShieldAlert className="h-4 w-4 text-primary" />
+                Rate Limiting
+              </CardTitle>
+              <CardDescription className="text-[10px]">Proteção contra abusos</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">
+                {rateLimits.filter(r => r.blocked_until && new Date(r.blocked_until) > new Date()).length} bloqueados
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {rateLimits.length} registros recentes
               </p>
             </CardContent>
           </Card>
