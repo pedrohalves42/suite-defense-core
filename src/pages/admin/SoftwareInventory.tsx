@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, Package, Search, RefreshCw, ShieldCheck, ShieldAlert, ShieldX, Shield } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
@@ -52,14 +52,33 @@ export default function SoftwareInventory() {
   const [searchTerm, setSearchTerm] = useState('');
   const { tenant } = useTenant();
   
+  // Query to get agents list for name lookup
+  const { data: agents } = useQuery({
+    queryKey: ['agents-list-for-jobs', tenant?.id],
+    queryFn: async () => {
+      if (!tenant) return [];
+      const { data } = await supabase
+        .from('agents')
+        .select('id, agent_name')
+        .eq('tenant_id', tenant.id);
+      return data || [];
+    },
+    enabled: !!tenant
+  });
+  
   const { data: software, isLoading, error } = useSoftwareInventory(selectedAgent, !!selectedAgent);
 
   const createJobMutation = useMutation({
-    mutationFn: async (agentName: string) => {
+    mutationFn: async (agentId: string) => {
       if (!tenant) throw new Error('Empresa não encontrada');
       
+      // CRITICAL FIX: Find agent_name by agent_id
+      const agent = agents?.find(a => a.id === agentId);
+      if (!agent) throw new Error('Agente não encontrado');
+      
       const { error } = await supabase.from('jobs').insert({
-        agent_name: agentName,
+        agent_id: agentId,           // UUID
+        agent_name: agent.agent_name, // Correct name!
         type: 'software_inventory_collect',
         status: 'queued',
         tenant_id: tenant.id,

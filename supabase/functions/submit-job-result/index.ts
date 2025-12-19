@@ -419,6 +419,177 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ============================================================
+    // CRITICAL FIX: Process job outputs and insert into specific tables
+    // Before v4.0.10, agents called submit-software-inventory/submit-web-activity directly
+    // Now v4.0.10+ sends everything via submit-job-result, so we need to process here
+    // ============================================================
+    if (status === 'completed' && output) {
+      const outputData = typeof output === 'object' ? output : {}
+      
+      // PROCESS SOFTWARE INVENTORY
+      if (job.type === 'software_inventory_collect' && (outputData.software || outputData.installed_software)) {
+        try {
+          console.log('[submit-job-result] Processing software inventory output...')
+          const softwareList = outputData.software || outputData.installed_software || []
+          
+          if (Array.isArray(softwareList) && softwareList.length > 0) {
+            // Delete existing software for this agent first
+            await supabase
+              .from('software_inventory')
+              .delete()
+              .eq('agent_id', job.agent_id)
+            
+            // Prepare records for insert
+            const softwareRecords = softwareList.map((sw: Record<string, unknown>) => ({
+              tenant_id: agent.tenant_id,
+              agent_id: job.agent_id,
+              name: String(sw.name || sw.Name || sw.DisplayName || 'Unknown'),
+              version: String(sw.version || sw.Version || sw.DisplayVersion || ''),
+              vendor: String(sw.vendor || sw.Vendor || sw.Publisher || ''),
+              install_location: String(sw.install_location || sw.InstallLocation || sw.InstallPath || ''),
+              install_date: sw.install_date || sw.InstallDate || null,
+              risk_level: String(sw.risk_level || sw.RiskLevel || 'unknown').toLowerCase(),
+              collected_at: new Date().toISOString()
+            }))
+            
+            // Batch insert
+            const batchSize = 100
+            let insertedCount = 0
+            for (let i = 0; i < softwareRecords.length; i += batchSize) {
+              const batch = softwareRecords.slice(i, i + batchSize)
+              const { error: insertError } = await supabase
+                .from('software_inventory')
+                .insert(batch)
+              
+              if (insertError) {
+                console.error(`[submit-job-result] Error inserting software batch ${i}:`, insertError)
+              } else {
+                insertedCount += batch.length
+              }
+            }
+            
+            console.log(`[submit-job-result] Inserted ${insertedCount}/${softwareRecords.length} software records`)
+          } else {
+            console.log('[submit-job-result] No software data to process')
+          }
+        } catch (swErr) {
+          console.error('[submit-job-result] Error processing software inventory:', swErr)
+        }
+      }
+      
+      // PROCESS WEB ACTIVITY
+      if (job.type === 'collect_web_activity' && (outputData.dns_cache || outputData.browser_history)) {
+        try {
+          console.log('[submit-job-result] Processing web activity output...')
+          
+          const dnsCache = outputData.dns_cache || []
+          const browserHistory = outputData.browser_history || []
+          
+          // Collect unique domains with metadata
+          const domainMap = new Map<string, { visitCount: number; source: string; lastSeen: string }>()
+          
+          // Process DNS cache
+          if (Array.isArray(dnsCache)) {
+            for (const entry of dnsCache) {
+              const domain = String(entry.domain || entry.Name || entry.RecordName || '').toLowerCase().trim()
+              if (domain && domain.length > 0) {
+                const existing = domainMap.get(domain)
+                if (existing) {
+                  existing.visitCount++
+                } else {
+                  domainMap.set(domain, { visitCount: 1, source: 'dns_cache', lastSeen: new Date().toISOString() })
+                }
+              }
+            }
+          }
+          
+          // Process browser history
+          if (Array.isArray(browserHistory)) {
+            for (const entry of browserHistory) {
+              let domain = entry.domain
+              if (!domain && entry.url) {
+                try {
+                  domain = new URL(entry.url).hostname
+                } catch { /* ignore */ }
+              }
+              if (domain) {
+                domain = domain.toLowerCase().trim()
+                const existing = domainMap.get(domain)
+                if (existing) {
+                  existing.visitCount++
+                  existing.source = 'browser_history'
+                } else {
+                  domainMap.set(domain, { visitCount: 1, source: 'browser_history', lastSeen: new Date().toISOString() })
+                }
+              }
+            }
+          }
+          
+          if (domainMap.size > 0) {
+            // Fetch blocked websites to mark is_blocked
+            const { data: blockedSites } = await supabase
+              .from('blocked_websites')
+              .select('domain_pattern')
+              .eq('tenant_id', agent.tenant_id)
+              .eq('is_active', true)
+            
+            const blockedPatterns = (blockedSites || []).map(s => s.domain_pattern.toLowerCase())
+            
+            // Prepare records
+            const activityRecords = Array.from(domainMap.entries()).map(([domain, data]) => {
+              // Check if domain is blocked
+              let isBlocked = false
+              for (const pattern of blockedPatterns) {
+                if (pattern.startsWith('*.')) {
+                  const base = pattern.slice(2)
+                  if (domain === base || domain.endsWith('.' + base)) {
+                    isBlocked = true
+                    break
+                  }
+                } else if (domain === pattern || domain.endsWith('.' + pattern)) {
+                  isBlocked = true
+                  break
+                }
+              }
+              
+              return {
+                tenant_id: agent.tenant_id,
+                agent_id: job.agent_id,
+                domain,
+                source: data.source,
+                visit_count: data.visitCount,
+                visited_at: data.lastSeen,
+                is_blocked: isBlocked
+              }
+            })
+            
+            // Batch insert
+            const batchSize = 100
+            let insertedCount = 0
+            for (let i = 0; i < activityRecords.length; i += batchSize) {
+              const batch = activityRecords.slice(i, i + batchSize)
+              const { error: insertError } = await supabase
+                .from('agent_web_activity')
+                .insert(batch)
+              
+              if (insertError) {
+                console.error(`[submit-job-result] Error inserting web activity batch ${i}:`, insertError)
+              } else {
+                insertedCount += batch.length
+              }
+            }
+            
+            console.log(`[submit-job-result] Inserted ${insertedCount}/${activityRecords.length} web activity records`)
+          } else {
+            console.log('[submit-job-result] No web activity domains to process')
+          }
+        } catch (webErr) {
+          console.error('[submit-job-result] Error processing web activity:', webErr)
+        }
+      }
+    }
+
     // Trigger automatic report generation for security collection jobs - CORRIGIDO: usar job.type
     const reportTriggerJobTypes = [
       'software_inventory_collect',
