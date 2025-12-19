@@ -616,6 +616,35 @@ Deno.serve(async (req) => {
             }
             
             console.log(`[submit-job-result] Inserted ${insertedCount}/${activityRecords.length} web activity records`)
+            
+            // INTEGRITY VALIDATION: Verify data was actually persisted
+            if (insertedCount < activityRecords.length) {
+              console.warn('[submit-job-result] INTEGRITY WARNING: collect_web_activity partial insert', {
+                job_id,
+                agent: agent.agent_name,
+                expected: activityRecords.length,
+                inserted: insertedCount,
+                missing: activityRecords.length - insertedCount
+              })
+            }
+            
+            // Verify by querying back
+            const { count: verifyCount } = await supabase
+              .from('agent_web_activity')
+              .select('*', { count: 'exact', head: true })
+              .eq('agent_id', job.agent_id)
+              .gte('created_at', new Date(Date.now() - 60000).toISOString()) // last 1 minute
+            
+            if ((verifyCount || 0) < insertedCount * 0.5) {
+              console.error('[submit-job-result] INTEGRITY ALERT: collect_web_activity data not found after insert', {
+                job_id,
+                agent: agent.agent_name,
+                inserted: insertedCount,
+                verified: verifyCount
+              })
+            } else {
+              console.log(`[submit-job-result] INTEGRITY OK: Verified ${verifyCount} records persisted`)
+            }
           } else {
             console.log('[submit-job-result] No web activity domains to process')
           }
