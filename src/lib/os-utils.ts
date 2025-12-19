@@ -20,9 +20,17 @@ export function getWindowsVersion(buildNumber: string): string {
     '10.0.18362': 'Windows 10 1903',
     '10.0.17763': 'Windows 10 1809',
     '10.0.17134': 'Windows 10 1803',
-    // Windows Server
+    // Windows Server (modern)
     '10.0.20348': 'Windows Server 2022',
     '10.0.14393': 'Windows Server 2016',
+    // Windows 8.1 / Server 2012 R2
+    '6.3.9600': 'Windows Server 2012 R2',
+    '6.3.9200': 'Windows 8.1',
+    // Windows 8 / Server 2012
+    '6.2.9200': 'Windows Server 2012',
+    // Windows 7 / Server 2008 R2
+    '6.1.7601': 'Windows 7 SP1',
+    '6.1.7600': 'Windows Server 2008 R2',
   };
 
   // Direct match
@@ -38,13 +46,31 @@ export function getWindowsVersion(buildNumber: string): string {
       return versionMap[majorMinorBuild];
     }
 
-    // Detect Windows 11 vs 10 based on build
+    // Detect Windows version based on major.minor
+    const major = parseInt(parts[0], 10);
+    const minor = parseInt(parts[1], 10);
     const build = parseInt(parts[2], 10);
+    
     if (!isNaN(build)) {
-      if (build >= 22000) {
-        return `Windows 11 (Build ${build})`;
-      } else if (build >= 10240) {
-        return `Windows 10 (Build ${build})`;
+      // Windows 10/11 (10.0.x)
+      if (major === 10 && minor === 0) {
+        if (build >= 22000) {
+          return `Windows 11 (Build ${build})`;
+        } else if (build >= 10240) {
+          return `Windows 10 (Build ${build})`;
+        }
+      }
+      // Windows 8.1 / Server 2012 R2 (6.3.x)
+      if (major === 6 && minor === 3) {
+        return `Windows Server 2012 R2 (Build ${build})`;
+      }
+      // Windows 8 / Server 2012 (6.2.x)
+      if (major === 6 && minor === 2) {
+        return `Windows Server 2012 (Build ${build})`;
+      }
+      // Windows 7 / Server 2008 R2 (6.1.x)
+      if (major === 6 && minor === 1) {
+        return `Windows 7/Server 2008 R2 (Build ${build})`;
       }
     }
   }
