@@ -107,15 +107,65 @@ Deno.serve(async (req) => {
 
     logger.debug('Agent polling', { agentName: agent.agent_name })
 
+    // FASE CORRECAO: Verificar se agente está online antes de entregar jobs
+    // Buscar dados completos do agente incluindo last_heartbeat
+    const { data: agentData, error: agentError } = await supabase
+      .from('agents')
+      .select('id, last_heartbeat, status')
+      .eq('id', token.agent_id)
+      .single()
+
+    if (agentError || !agentData) {
+      logger.error('Error fetching agent data', { error: agentError?.message, agentId: token.agent_id })
+      return new Response(
+        JSON.stringify({ error: 'Agent not found' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      )
+    }
+
+    // VALIDACAO CRITICA: Não entregar jobs para agentes que estavam offline >24h
+    // (exceto se este poll está "ressuscitando" o agente)
+    const now = new Date()
+    const lastHeartbeat = agentData.last_heartbeat ? new Date(agentData.last_heartbeat) : null
+    const hoursSinceHeartbeat = lastHeartbeat 
+      ? (now.getTime() - lastHeartbeat.getTime()) / (1000 * 60 * 60)
+      : Infinity
+
+    // Se estava offline >24h, primeiro apenas atualizar heartbeat e retornar vazio
+    // Na próxima poll (após heartbeat atualizado), jobs serão entregues normalmente
+    if (hoursSinceHeartbeat > 24) {
+      logger.warn('Agent was offline >24h, updating heartbeat but not delivering jobs yet', {
+        agentName: agent.agent_name,
+        hoursSinceHeartbeat: hoursSinceHeartbeat.toFixed(2),
+        lastHeartbeat: agentData.last_heartbeat
+      })
+      
+      // Atualizar apenas heartbeat (sem entregar jobs)
+      await supabase
+        .from('agents')
+        .update({ last_heartbeat: now.toISOString(), status: 'active' })
+        .eq('id', token.agent_id)
+      
+      await supabase
+        .from('agent_tokens')
+        .update({ last_used_at: now.toISOString() })
+        .eq('token_hash', tokenHash)
+      
+      return new Response(
+        JSON.stringify([]),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+
     // Atualizar heartbeat e last_used_at do token (usando hash)
     await Promise.all([
       supabase
         .from('agents')
-        .update({ last_heartbeat: new Date().toISOString() })
+        .update({ last_heartbeat: now.toISOString() })
         .eq('agent_name', agent.agent_name),
       supabase
         .from('agent_tokens')
-        .update({ last_used_at: new Date().toISOString() })
+        .update({ last_used_at: now.toISOString() })
         .eq('token_hash', tokenHash)
     ])
 
