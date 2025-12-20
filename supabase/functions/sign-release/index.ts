@@ -372,12 +372,22 @@ Deno.serve(async (req) => {
 
       case 'sign-document': {
         // Sign an arbitrary document (Whitepaper, policy, etc.)
+        // AUDIT COMPLIANT: Accepts pre-calculated hash OR content (hash calculated internally)
         const body = await req.json();
-        const { document_name, document_content, invariants_version, audit_level } = body;
+        const { document_name, document_content, document_hash: providedHash, invariants_version, audit_level } = body;
 
-        if (!document_name || !document_content) {
+        if (!document_name) {
           return new Response(
-            JSON.stringify({ error: 'Missing required fields: document_name, document_content' }),
+            JSON.stringify({ error: 'Missing required field: document_name' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // OPTION 1: Pre-calculated hash (recommended for supply chain auditing)
+        // OPTION 2: Content provided (system calculates hash)
+        if (!providedHash && !document_content) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required field: document_hash OR document_content' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
@@ -394,22 +404,38 @@ Deno.serve(async (req) => {
           );
         }
 
-        logger.info('[sign-release] Signing document', { requestId, document_name });
+        let document_hash: string;
+        let hashSource: 'provided' | 'calculated';
 
-        // Calculate SHA-256 of document content
-        const encoder = new TextEncoder();
-        const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(document_content));
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const document_hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        if (providedHash) {
+          // Validate hash format (64 hex characters = SHA-256)
+          if (!/^[a-f0-9]{64}$/i.test(providedHash)) {
+            return new Response(
+              JSON.stringify({ error: 'Invalid document_hash: must be 64 hex characters (SHA-256)' }),
+              { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          document_hash = providedHash.toLowerCase();
+          hashSource = 'provided';
+        } else {
+          // Calculate SHA-256 of document content
+          const encoder = new TextEncoder();
+          const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(document_content));
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          document_hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          hashSource = 'calculated';
+        }
 
-        // Sign the hash with ECDSA
+        logger.info('[sign-release] Signing document', { requestId, document_name, hashSource });
+
+        // Sign the HASH (never the content directly) - AUDIT BEST PRACTICE
         const signature_base64 = await signWithPrivateKey(document_hash, privateKey);
         const now = new Date().toISOString();
 
         // Persist to signed_documents table
         const { error: insertError } = await supabase
           .from('signed_documents')
-          .upsert({
+          .insert({
             document_name,
             document_hash,
             signature_base64,
@@ -421,11 +447,10 @@ Deno.serve(async (req) => {
             invariants_version: invariants_version || null,
             audit_level: audit_level || 'STANDARD',
             metadata: {
-              content_length: document_content.length,
+              hash_source: hashSource,
+              content_length: document_content?.length || null,
               signed_by_user_id: user.id
             }
-          }, {
-            onConflict: 'document_name'
           });
 
         if (insertError) {
@@ -436,16 +461,18 @@ Deno.serve(async (req) => {
         logger.info('[sign-release] Document signed and persisted', { 
           requestId, 
           document_name,
-          document_hash: document_hash.substring(0, 16) + '...'
+          document_hash: document_hash.substring(0, 16) + '...',
+          hashSource
         });
 
         return new Response(
           JSON.stringify({
             success: true,
             document: document_name,
-            algorithm: 'ECDSA',
+            algorithm: 'ECDSA-P256-SHA256',
             curve: 'prime256v1',
             hash_algorithm: 'SHA-256',
+            hash_source: hashSource,
             document_hash,
             signature_base64,
             signed_at: now,
