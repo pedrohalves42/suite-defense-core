@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAgentReleases } from "@/hooks/useAgentReleases";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-import { Package, CheckCircle, AlertCircle } from "lucide-react";
+import { Package, CheckCircle, AlertCircle, ShieldCheck, Loader2 } from "lucide-react";
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,6 +30,77 @@ export default function AgentReleases() {
   const [isForceReregistering, setIsForceReregistering] = useState(false);
   const [fetchingScript, setFetchingScript] = useState(false);
   const [validatingHash, setValidatingHash] = useState<string | null>(null);
+  const [isSigningReleases, setIsSigningReleases] = useState(false);
+
+  // Sign all unsigned active releases using ECDSA
+  const handleSignReleases = async () => {
+    if (!isSuperAdmin) {
+      toast.error('Apenas super_admin pode assinar releases');
+      return;
+    }
+
+    if (!confirm('Assinar todas as releases ativas sem assinatura?\n\nIsso irá:\n1. Usar a chave ECDSA configurada no backend\n2. Gerar assinaturas digitais P-256-SHA256\n3. Atualizar as releases no banco\n\nContinuar?')) {
+      return;
+    }
+
+    try {
+      setIsSigningReleases(true);
+      toast.info('Assinando releases...', { duration: 5000 });
+
+      const { data, error } = await supabase.functions.invoke('sign-release', {
+        body: {},
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      // Build query params manually for GET-style action
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sign-release?action=sign-existing`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+          },
+          body: JSON.stringify({})
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || result.message || 'Falha ao assinar releases');
+      }
+
+      const signedCount = result.signed_count || 0;
+      const totalCount = result.total_count || 0;
+
+      if (signedCount > 0) {
+        toast.success(`${signedCount} releases assinadas com sucesso!`, {
+          description: `Algoritmo: ${result.algorithm || 'ECDSA-P256-SHA256'}`
+        });
+      } else if (totalCount === 0) {
+        toast.info('Nenhuma release para assinar', {
+          description: 'Todas as releases ativas já estão assinadas'
+        });
+      } else {
+        toast.warning('Algumas releases não foram assinadas', {
+          description: `Assinadas: ${signedCount}/${totalCount}`
+        });
+      }
+
+      // Refresh releases list
+      refetch();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      toast.error('Erro ao assinar releases', {
+        description: errorMessage
+      });
+      console.error('[AgentReleases] Sign error:', error);
+    } finally {
+      setIsSigningReleases(false);
+    }
+  };
 
   // Validate SHA256 of a release against the public script
   const handleValidateSHA256 = async (platform: 'windows' | 'linux' | 'macos', releaseId: string, dbSha256: string) => {
@@ -324,6 +395,21 @@ export default function AgentReleases() {
           <p className="text-muted-foreground">Gerenciar versoes de agentes e auto-update</p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {/* Sign unsigned releases - ECDSA */}
+          <Button 
+            onClick={handleSignReleases}
+            disabled={isSigningReleases || !isSuperAdmin}
+            variant="outline"
+            size="sm"
+            className="gap-1 border-green-500 text-green-700 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-950/30"
+          >
+            {isSigningReleases ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <ShieldCheck className="h-3 w-3" />
+            )}
+            {isSigningReleases ? 'Assinando...' : 'Assinar Releases'}
+          </Button>
           {/* Register from public folder - primary method */}
           <Button 
             onClick={() => handleRegisterFromPublic('windows')}
@@ -426,7 +512,7 @@ export default function AgentReleases() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 flex-wrap">
                         <Package className="h-5 w-5" />
                         {release.version}
                         {release.is_active && (
@@ -438,12 +524,32 @@ export default function AgentReleases() {
                         {latestRelease?.id === release.id && (
                           <Badge variant="default">Latest</Badge>
                         )}
+                        {/* ECDSA Signature Status */}
+                        {release.signature_base64 ? (
+                          <Badge variant="outline" className="bg-blue-50 dark:bg-blue-950/30 border-blue-500 text-blue-700 dark:text-blue-400">
+                            <ShieldCheck className="h-3 w-3 mr-1" />
+                            Assinada
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/30 border-amber-500 text-amber-700 dark:text-amber-400">
+                            <AlertCircle className="h-3 w-3 mr-1" />
+                            Sem Assinatura
+                          </Badge>
+                        )}
                       </CardTitle>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
                         <Badge variant="secondary">{release.platform}</Badge>
                         <Badge variant="outline">{release.channel}</Badge>
                         <span>•</span>
                         <span>{formatBrazilDateTime(release.created_at, 'datetime')}</span>
+                        {release.signed_at && (
+                          <>
+                            <span>•</span>
+                            <span className="text-blue-600 dark:text-blue-400">
+                              Assinada: {formatBrazilDateTime(release.signed_at, 'datetime')}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                     {isValid ? (
