@@ -246,17 +246,33 @@ Deno.serve(async (req) => {
 
       case 'sign-existing': {
         // Sign existing releases that don't have signatures
-        const body = await req.json();
-        const { private_key, release_ids } = body;
+        // Uses ECDSA_PRIVATE_KEY from environment (secret) - more secure
+        const body = await req.json().catch(() => ({}));
+        const { release_ids } = body;
 
-        if (!private_key) {
+        // Get private key from secret (priority) or body (fallback for migration)
+        const privateKeyFromSecret = Deno.env.get('ECDSA_PRIVATE_KEY');
+        const privateKey = privateKeyFromSecret || body.private_key;
+
+        if (!privateKey) {
           return new Response(
-            JSON.stringify({ error: 'Missing required field: private_key' }),
+            JSON.stringify({ 
+              error: 'Missing ECDSA private key',
+              message: 'Configure ECDSA_PRIVATE_KEY secret or provide private_key in body',
+              hint: 'Generate keypair with action=generate-keypair, then add the private_key as a secret'
+            }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        logger.info('[sign-release] Signing existing releases', { requestId, count: release_ids?.length || 'all active' });
+        const usingSecret = !!privateKeyFromSecret;
+        logger.info('[sign-release] Signing existing releases', { 
+          requestId, 
+          count: release_ids?.length || 'all active',
+          source: usingSecret ? 'secret' : 'body'
+        });
+
+        
 
         // Get releases to sign
         let query = supabase
@@ -293,7 +309,7 @@ Deno.serve(async (req) => {
 
         for (const release of releases) {
           try {
-            const signature = await signWithPrivateKey(release.sha256, private_key);
+            const signature = await signWithPrivateKey(release.sha256, privateKey);
             
             const { error: updateError } = await supabase
               .from('agent_releases')
