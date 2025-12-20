@@ -370,7 +370,7 @@ Deno.serve(async (req) => {
           expected_behavior: 'View accessible and returns scores',
           actual_result: hasRequiredFields ? 'PASS' : 'FAIL',
           error_message: hasRequiredFields ? undefined : 'Missing required fields',
-        execution_time_ms: Date.now() - test5Start
+          execution_time_ms: Date.now() - test5Start
         });
       }
     } catch (err: unknown) {
@@ -407,7 +407,73 @@ Deno.serve(async (req) => {
       ]
     };
 
+    const executionTimeMs = Date.now() - startTime;
     console.log(`[chaos-test] Completed: ${passed}/${results.length} PASS, ${failed} FAIL, ${errors} ERROR`);
+
+    // ========================================
+    // PERSIST RESULTS TO DATABASE
+    // ========================================
+    try {
+      const { error: persistError } = await supabase
+        .from('chaos_test_results')
+        .insert({
+          executed_at: report.timestamp,
+          total_tests: report.total_tests,
+          passed: report.passed,
+          failed: report.failed,
+          errors: report.errors,
+          global_result: report.global_result,
+          report: report,
+          execution_time_ms: executionTimeMs
+        });
+
+      if (persistError) {
+        console.error('[chaos-test] Failed to persist results:', persistError.message);
+      } else {
+        console.log('[chaos-test] Results persisted to chaos_test_results table');
+      }
+    } catch (persistErr) {
+      console.error('[chaos-test] Error persisting results:', persistErr);
+    }
+
+    // ========================================
+    // CREATE CRITICAL ALERT ON FAILURE
+    // ========================================
+    if (failed > 0 || errors > 0) {
+      try {
+        // Get a tenant for the alert (system_alerts requires tenant_id)
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('id')
+          .limit(1)
+          .single();
+
+        if (tenant) {
+          const { error: alertError } = await supabase
+            .from('system_alerts')
+            .insert({
+              tenant_id: tenant.id,
+              alert_type: 'chaos_test_failure',
+              severity: 'critical',
+              title: 'Chaos Test FAILED - System Integrity Compromised',
+              message: `${failed} tests failed, ${errors} errors. Immediate investigation required.`,
+              details: {
+                report,
+                failed_tests: results.filter(r => r.actual_result !== 'PASS'),
+                execution_time_ms: executionTimeMs
+              }
+            });
+
+          if (alertError) {
+            console.error('[chaos-test] Failed to create alert:', alertError.message);
+          } else {
+            console.log('[chaos-test] CRITICAL ALERT created for failed tests');
+          }
+        }
+      } catch (alertErr) {
+        console.error('[chaos-test] Error creating alert:', alertErr);
+      }
+    }
 
     return new Response(JSON.stringify(report, null, 2), {
       status: report.global_result === 'ALL_PASS' ? 200 : 500,

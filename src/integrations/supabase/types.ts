@@ -2505,6 +2505,45 @@ export type Database = {
           },
         ]
       }
+      chaos_test_results: {
+        Row: {
+          created_at: string
+          errors: number
+          executed_at: string
+          execution_time_ms: number | null
+          failed: number
+          global_result: string
+          id: string
+          passed: number
+          report: Json
+          total_tests: number
+        }
+        Insert: {
+          created_at?: string
+          errors: number
+          executed_at?: string
+          execution_time_ms?: number | null
+          failed: number
+          global_result: string
+          id?: string
+          passed: number
+          report: Json
+          total_tests: number
+        }
+        Update: {
+          created_at?: string
+          errors?: number
+          executed_at?: string
+          execution_time_ms?: number | null
+          failed?: number
+          global_result?: string
+          id?: string
+          passed?: number
+          report?: Json
+          total_tests?: number
+        }
+        Relationships: []
+      }
       custom_trials: {
         Row: {
           company_name: string
