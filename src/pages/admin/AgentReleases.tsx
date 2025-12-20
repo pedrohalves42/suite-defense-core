@@ -47,19 +47,20 @@ export default function AgentReleases() {
       setIsSigningReleases(true);
       toast.info('Assinando releases...', { duration: 5000 });
 
-      const { data, error } = await supabase.functions.invoke('sign-release', {
-        body: {},
-        headers: { 'Content-Type': 'application/json' }
-      });
+      // Get session for authorization
+      const session = (await supabase.auth.getSession()).data.session;
+      if (!session?.access_token) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
 
-      // Build query params manually for GET-style action
+      // Call sign-release edge function with action parameter
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sign-release?action=sign-existing`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            'Authorization': `Bearer ${session.access_token}`,
             'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
           },
           body: JSON.stringify({})
