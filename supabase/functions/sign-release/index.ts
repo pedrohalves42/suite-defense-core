@@ -12,6 +12,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
  * - POST /sign-release?action=generate-keypair - Generate new ECDSA keypair
  * - POST /sign-release?action=sign - Sign a release (requires private key)
  * - POST /sign-release?action=verify - Verify a release signature
+ * - POST /sign-release?action=sign-existing - Sign existing active releases without signatures
  * - GET  /sign-release?action=public-key - Get the stored public key
  * 
  * Security: Requires super_admin role
@@ -243,6 +244,116 @@ Deno.serve(async (req) => {
         );
       }
 
+      case 'sign-existing': {
+        // Sign existing releases that don't have signatures
+        const body = await req.json();
+        const { private_key, release_ids } = body;
+
+        if (!private_key) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required field: private_key' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        logger.info('[sign-release] Signing existing releases', { requestId, count: release_ids?.length || 'all active' });
+
+        // Get releases to sign
+        let query = supabase
+          .from('agent_releases')
+          .select('id, version, platform, sha256, signature_base64')
+          .eq('is_active', true);
+
+        if (release_ids && Array.isArray(release_ids) && release_ids.length > 0) {
+          query = query.in('id', release_ids);
+        } else {
+          // Only sign releases without signatures
+          query = query.is('signature_base64', null);
+        }
+
+        const { data: releases, error: fetchError } = await query;
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        if (!releases || releases.length === 0) {
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              message: 'No releases to sign', 
+              signed_count: 0 
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const results = [];
+        const now = new Date().toISOString();
+
+        for (const release of releases) {
+          try {
+            const signature = await signWithPrivateKey(release.sha256, private_key);
+            
+            const { error: updateError } = await supabase
+              .from('agent_releases')
+              .update({
+                signature_base64: signature,
+                signed_at: now,
+                signed_by: user.email
+              })
+              .eq('id', release.id);
+
+            if (updateError) {
+              results.push({
+                id: release.id,
+                version: release.version,
+                platform: release.platform,
+                success: false,
+                error: updateError.message
+              });
+            } else {
+              results.push({
+                id: release.id,
+                version: release.version,
+                platform: release.platform,
+                success: true,
+                signature_base64: signature.substring(0, 20) + '...'
+              });
+            }
+          } catch (signError) {
+            const sErr = signError as Error;
+            results.push({
+              id: release.id,
+              version: release.version,
+              platform: release.platform,
+              success: false,
+              error: sErr.message
+            });
+          }
+        }
+
+        const signedCount = results.filter(r => r.success).length;
+        logger.info('[sign-release] Finished signing existing releases', { 
+          requestId, 
+          total: releases.length, 
+          signed: signedCount 
+        });
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            signed_count: signedCount,
+            total_count: releases.length,
+            algorithm: 'ECDSA-P256-SHA256',
+            signed_at: now,
+            signed_by: user.email,
+            results
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       case 'sign-and-register': {
         // Combined action: sign a release and register it atomically
         const body = await req.json();
@@ -354,7 +465,7 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             error: 'Invalid action',
-            valid_actions: ['generate-keypair', 'sign', 'verify', 'sign-and-register']
+            valid_actions: ['generate-keypair', 'sign', 'verify', 'sign-existing', 'sign-and-register']
           }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
