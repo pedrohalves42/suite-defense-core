@@ -5186,6 +5186,54 @@ export type Database = {
           },
         ]
       }
+      signed_documents: {
+        Row: {
+          algorithm: string
+          audit_level: string | null
+          created_at: string
+          curve: string
+          document_hash: string
+          document_name: string
+          hash_algorithm: string
+          id: string
+          invariants_version: string | null
+          metadata: Json | null
+          signature_base64: string
+          signed_at: string
+          signed_by: string
+        }
+        Insert: {
+          algorithm?: string
+          audit_level?: string | null
+          created_at?: string
+          curve?: string
+          document_hash: string
+          document_name: string
+          hash_algorithm?: string
+          id?: string
+          invariants_version?: string | null
+          metadata?: Json | null
+          signature_base64: string
+          signed_at?: string
+          signed_by: string
+        }
+        Update: {
+          algorithm?: string
+          audit_level?: string | null
+          created_at?: string
+          curve?: string
+          document_hash?: string
+          document_name?: string
+          hash_algorithm?: string
+          id?: string
+          invariants_version?: string | null
+          metadata?: Json | null
+          signature_base64?: string
+          signed_at?: string
+          signed_by?: string
+        }
+        Relationships: []
+      }
       slo_alerts: {
         Row: {
           acknowledged: boolean | null

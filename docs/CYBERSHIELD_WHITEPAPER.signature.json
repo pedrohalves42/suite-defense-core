@@ -1,0 +1,32 @@
+{
+  "document": "CYBERSHIELD_WHITEPAPER.md",
+  "algorithm": "ECDSA",
+  "curve": "prime256v1",
+  "hash_algorithm": "SHA-256",
+  "document_hash": "PENDING_SIGNATURE",
+  "signature_base64": "PENDING_SIGNATURE",
+  "signed_at": null,
+  "signed_by": "CyberShield Root Key",
+  "invariants_version": "INV-001 → INV-010",
+  "audit_level": "SUPREME_SYSTEM_VERIFICATION",
+  "status": "AWAITING_SIGNATURE",
+  "verification_instructions": {
+    "description": "This file will be populated when the Whitepaper is signed via the sign-document Edge Function action",
+    "step_1": "Calculate SHA-256 of CYBERSHIELD_WHITEPAPER.md",
+    "step_2": "Verify signature using public key from docs/keys/ecdsa_public.pem",
+    "command_linux": "openssl dgst -sha256 -verify docs/keys/ecdsa_public.pem -signature whitepaper.sig docs/CYBERSHIELD_WHITEPAPER.md",
+    "command_verify_hash": "sha256sum docs/CYBERSHIELD_WHITEPAPER.md",
+    "api_endpoint": "POST /functions/v1/sign-release?action=sign-document",
+    "api_body": {
+      "document_name": "CYBERSHIELD_WHITEPAPER.md",
+      "document_content": "<contents of CYBERSHIELD_WHITEPAPER.md>",
+      "invariants_version": "INV-001 → INV-010",
+      "audit_level": "SUPREME_SYSTEM_VERIFICATION"
+    }
+  },
+  "notes": [
+    "After signing, this file will contain the actual document_hash and signature_base64",
+    "The signature is stored in both this file and the signed_documents database table",
+    "Public key for verification is available at docs/keys/ecdsa_public.pem"
+  ]
+}
