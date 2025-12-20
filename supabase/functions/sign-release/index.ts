@@ -370,6 +370,94 @@ Deno.serve(async (req) => {
         );
       }
 
+      case 'sign-document': {
+        // Sign an arbitrary document (Whitepaper, policy, etc.)
+        const body = await req.json();
+        const { document_name, document_content, invariants_version, audit_level } = body;
+
+        if (!document_name || !document_content) {
+          return new Response(
+            JSON.stringify({ error: 'Missing required fields: document_name, document_content' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Get private key from secret
+        const privateKey = Deno.env.get('ECDSA_PRIVATE_KEY');
+        if (!privateKey) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Missing ECDSA private key',
+              message: 'Configure ECDSA_PRIVATE_KEY secret'
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        logger.info('[sign-release] Signing document', { requestId, document_name });
+
+        // Calculate SHA-256 of document content
+        const encoder = new TextEncoder();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(document_content));
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const document_hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        // Sign the hash with ECDSA
+        const signature_base64 = await signWithPrivateKey(document_hash, privateKey);
+        const now = new Date().toISOString();
+
+        // Persist to signed_documents table
+        const { error: insertError } = await supabase
+          .from('signed_documents')
+          .upsert({
+            document_name,
+            document_hash,
+            signature_base64,
+            algorithm: 'ECDSA-P256-SHA256',
+            curve: 'prime256v1',
+            hash_algorithm: 'SHA-256',
+            signed_at: now,
+            signed_by: user.email || 'CyberShield Root Key',
+            invariants_version: invariants_version || null,
+            audit_level: audit_level || 'STANDARD',
+            metadata: {
+              content_length: document_content.length,
+              signed_by_user_id: user.id
+            }
+          }, {
+            onConflict: 'document_name'
+          });
+
+        if (insertError) {
+          logger.error('[sign-release] Failed to persist signature', { requestId, error: insertError.message });
+          throw insertError;
+        }
+
+        logger.info('[sign-release] Document signed and persisted', { 
+          requestId, 
+          document_name,
+          document_hash: document_hash.substring(0, 16) + '...'
+        });
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            document: document_name,
+            algorithm: 'ECDSA',
+            curve: 'prime256v1',
+            hash_algorithm: 'SHA-256',
+            document_hash,
+            signature_base64,
+            signed_at: now,
+            signed_by: user.email || 'CyberShield Root Key',
+            invariants_version: invariants_version || null,
+            audit_level: audit_level || 'STANDARD',
+            persisted: true
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       case 'sign-and-register': {
         // Combined action: sign a release and register it atomically
         const body = await req.json();
@@ -481,7 +569,7 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             error: 'Invalid action',
-            valid_actions: ['generate-keypair', 'sign', 'verify', 'sign-existing', 'sign-and-register']
+            valid_actions: ['generate-keypair', 'sign', 'verify', 'sign-existing', 'sign-and-register', 'sign-document']
           }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
