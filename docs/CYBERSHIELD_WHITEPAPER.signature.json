@@ -1,6 +1,6 @@
 {
   "document": "CYBERSHIELD_WHITEPAPER.md",
-  "algorithm": "ECDSA",
+  "algorithm": "ECDSA-P256-SHA256",
   "curve": "prime256v1",
   "hash_algorithm": "SHA-256",
   "document_hash": "PENDING_SIGNATURE",
@@ -10,23 +10,54 @@
   "invariants_version": "INV-001 → INV-010",
   "audit_level": "SUPREME_SYSTEM_VERIFICATION",
   "status": "AWAITING_SIGNATURE",
-  "verification_instructions": {
-    "description": "This file will be populated when the Whitepaper is signed via the sign-document Edge Function action",
-    "step_1": "Calculate SHA-256 of CYBERSHIELD_WHITEPAPER.md",
-    "step_2": "Verify signature using public key from docs/keys/ecdsa_public.pem",
-    "command_linux": "openssl dgst -sha256 -verify docs/keys/ecdsa_public.pem -signature whitepaper.sig docs/CYBERSHIELD_WHITEPAPER.md",
-    "command_verify_hash": "sha256sum docs/CYBERSHIELD_WHITEPAPER.md",
-    "api_endpoint": "POST /functions/v1/sign-release?action=sign-document",
-    "api_body": {
-      "document_name": "CYBERSHIELD_WHITEPAPER.md",
-      "document_content": "<contents of CYBERSHIELD_WHITEPAPER.md>",
-      "invariants_version": "INV-001 → INV-010",
-      "audit_level": "SUPREME_SYSTEM_VERIFICATION"
+  
+  "verification": {
+    "public_endpoint": "GET /functions/v1/verify-document?name=CYBERSHIELD_WHITEPAPER.md",
+    "trust_model": "Zero Trust - caller must verify independently",
+    "public_key_location": "docs/keys/ecdsa_public.pem"
+  },
+  
+  "verification_steps": {
+    "step_1": {
+      "action": "Fetch signature metadata",
+      "command": "curl -s 'https://<project>/functions/v1/verify-document?name=CYBERSHIELD_WHITEPAPER.md'",
+      "expected": "JSON with document_hash and signature_base64"
+    },
+    "step_2": {
+      "action": "Calculate local hash",
+      "command_linux": "sha256sum docs/CYBERSHIELD_WHITEPAPER.md",
+      "command_windows": "Get-FileHash -Algorithm SHA256 docs/CYBERSHIELD_WHITEPAPER.md"
+    },
+    "step_3": {
+      "action": "Compare hashes",
+      "validation": "document_hash from API must match local hash exactly"
+    },
+    "step_4": {
+      "action": "Verify signature cryptographically (optional)",
+      "requires": "OpenSSL and public key from docs/keys/ecdsa_public.pem",
+      "command": "openssl dgst -sha256 -verify docs/keys/ecdsa_public.pem -signature sig.bin hash.bin"
     }
   },
+  
+  "signing_workflow": {
+    "description": "To sign this document, a super_admin must:",
+    "step_1": "Calculate SHA-256 of CYBERSHIELD_WHITEPAPER.md locally",
+    "step_2": "Call POST /functions/v1/sign-release?action=sign-document with document_hash",
+    "step_3": "Update this file with returned document_hash and signature_base64",
+    "step_4": "Commit changes to repository"
+  },
+  
+  "immutability": {
+    "guarantee": "Once signed, document record is protected by database triggers",
+    "update_blocked": true,
+    "delete_blocked": true,
+    "trigger_name": "trg_prevent_signed_document_update, trg_prevent_signed_document_delete"
+  },
+  
   "notes": [
-    "After signing, this file will contain the actual document_hash and signature_base64",
-    "The signature is stored in both this file and the signed_documents database table",
-    "Public key for verification is available at docs/keys/ecdsa_public.pem"
+    "This file will be updated when the Whitepaper is officially signed",
+    "The signature is also stored in the signed_documents database table",
+    "Duplicate documents (same hash) are prevented by unique constraint",
+    "Public verification endpoint does NOT assert validity - caller must verify"
   ]
 }
