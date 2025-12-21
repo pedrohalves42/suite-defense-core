@@ -259,31 +259,34 @@ export function useTriggerManualPlaybook() {
     }) => {
       if (!tenant?.id) throw new Error('Tenant not found');
 
-      // Criar execução diretamente
-      const insertData = {
-        playbook_id: playbookId,
-        tenant_id: tenant.id,
-        agent_id: agentId || null,
-        trigger_source: 'manual',
-        trigger_context: context as unknown,
-        status: 'pending',
-      };
-      const { data, error } = await supabase
-        .from('playbook_executions')
-        .insert(insertData as any)
-        .select('id')
-        .single();
+      // ✅ CRÍTICO: Usar Edge Function para gerar snapshots imutáveis
+      const response = await supabase.functions.invoke('evaluate-playbook-triggers', {
+        body: {
+          tenant_id: tenant.id,
+          trigger_type: 'manual',
+          agent_id: agentId,
+          context: {
+            ...context,
+            playbook_id: playbookId, // Forçar playbook específico
+          },
+        },
+      });
 
-      if (error) throw error;
-      return data;
+      if (response.error) throw response.error;
+      
+      if (!response.data?.triggered) {
+        throw new Error(response.data?.reason || 'Playbook não pode ser acionado no momento');
+      }
+      
+      return response.data;
     },
     onSuccess: () => {
       toast.success('Playbook acionado manualmente');
       queryClient.invalidateQueries({ queryKey: ['playbook-executions-pending'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Trigger manual playbook error:', error);
-      toast.error('Erro ao acionar playbook');
+      toast.error(error.message || 'Erro ao acionar playbook');
     },
   });
 }
