@@ -29,6 +29,9 @@ export const useAgentReleases = () => {
       release_notes,
       channel = 'stable',
       manual_sha256,
+      // SSA-004: Assinatura Ed25519 opcional (auto-gerada no backend se não fornecida)
+      signature_base64,
+      signed_by,
     }: {
       version: string;
       platform: string;
@@ -36,6 +39,8 @@ export const useAgentReleases = () => {
       release_notes?: string;
       channel?: string;
       manual_sha256?: string;
+      signature_base64?: string;
+      signed_by?: string;
     }) => {
       // Normalize script content for Windows (same logic as serve-agent-update)
       // This ensures SHA256 in database matches what agents receive
@@ -66,7 +71,15 @@ export const useAgentReleases = () => {
         console.log('[useAgentReleases] Calculated SHA256 from normalized content:', sha256.substring(0, 16) + '...');
       }
 
+      console.log('[useAgentReleases] Registering release', {
+        platform,
+        version,
+        hasSignature: !!signature_base64,
+        signedBy: signed_by || 'automation (backend)'
+      });
+
       // Call register-agent-release Edge Function
+      // SSA-004: Backend auto-signs if ED25519_PRIVATE_KEY is configured
       const { data: result, error } = await supabase.functions.invoke('register-agent-release', {
         body: {
           version,
@@ -76,15 +89,21 @@ export const useAgentReleases = () => {
           manual_sha256,
           release_notes,
           channel,
+          // SSA-004: Pass signature if provided, otherwise backend auto-signs
+          signature_base64,
+          signed_by,
         },
       });
 
       if (error) throw error;
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['agent-releases'] });
-      toast.success('Release registrada com sucesso');
+      const signatureStatus = data?.signature_present 
+        ? `(assinada por ${data.signed_by})` 
+        : '(sem assinatura)';
+      toast.success(`Release registrada com sucesso ${signatureStatus}`);
     },
     onError: (error) => {
       console.error('Error registering release:', error);

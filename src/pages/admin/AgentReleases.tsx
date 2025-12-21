@@ -12,12 +12,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
+import { RegisterReleasesV410 } from "@/components/admin/RegisterReleasesV410";
+
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
-// GSV-Ω: Todas as plataformas sincronizadas (VIKTOR RECOVERY)
+// SSA-004: v4.1.0 - Payload Signing Ed25519
 const CURRENT_VERSIONS = {
-  windows: 'v4.0.10',
-  linux: 'v4.0.9',
-  macos: 'v4.0.9'
+  windows: 'v4.1.0',
+  linux: 'v4.1.0',
+  macos: 'v4.1.0'
 } as const;
 
 // SHA256 will be calculated automatically WITHOUT BOM by useAgentReleases hook (v3.10.12+ standard)
@@ -455,6 +457,11 @@ export default function AgentReleases() {
 
       {/* Agent Version Sync */}
       <AgentVersionSync latestVersions={CURRENT_VERSIONS} />
+
+      {/* SSA-004: Register v4.1.0 with Ed25519 Signing */}
+      {isSuperAdmin && (
+        <RegisterReleasesV410 />
+      )}
 
       {/* Action Card */}
       {needsRegistration && (

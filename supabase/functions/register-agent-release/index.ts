@@ -1,15 +1,19 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
 import { logger } from '../_shared/logger.ts';
+import { signPayload } from '../_shared/crypto-utils.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const ED25519_PRIVATE_KEY = Deno.env.get('ED25519_PRIVATE_KEY');
 
 /**
- * FASE 3: Edge Function para registrar novas releases de agentes
+ * FASE 3 + SSA-004: Edge Function para registrar novas releases de agentes
  * 
  * Permite que o deploy automatizado registre novas versoes nas tabelas
  * agent_releases e agent_versions sem necessidade de SQL manual.
+ * 
+ * SSA-004: Auto-assina releases com Ed25519 se chave privada disponivel
  */
 
 Deno.serve(async (req) => {
@@ -205,14 +209,42 @@ Deno.serve(async (req) => {
       created_by: user.id
     };
 
-    // FASE 2: Adicionar assinatura se fornecida
-    if (signature_base64) {
-      releaseData.signature_base64 = signature_base64;
+    // SSA-004: Auto-assinar com Ed25519 se chave privada disponivel
+    let finalSignature = signature_base64;
+    let finalSignedBy = signed_by || 'manual';
+
+    if (!finalSignature && ED25519_PRIVATE_KEY) {
+      try {
+        // Assinar o script content diretamente (canonical format for releases)
+        const canonicalPayload = `release:${platform}:${version}:${sha256}`;
+        finalSignature = await signPayload(canonicalPayload, ED25519_PRIVATE_KEY);
+        finalSignedBy = 'automation';
+        logger.info('[register-agent-release] Auto-signed release with Ed25519', {
+          requestId,
+          platform,
+          version,
+          canonicalPayload: canonicalPayload.substring(0, 50) + '...'
+        });
+      } catch (signError) {
+        logger.error('[register-agent-release] Failed to auto-sign release', {
+          requestId,
+          error: (signError as Error).message
+        });
+        // Continue without signature - not critical for release registration
+      }
+    }
+
+    if (finalSignature) {
+      releaseData.signature_base64 = finalSignature;
       releaseData.signed_at = new Date().toISOString();
-      releaseData.signed_by = signed_by || 'manual';
+      releaseData.signed_by = finalSignedBy;
       logger.info('[register-agent-release] Adding Ed25519 signature to release', {
         requestId,
         signedBy: releaseData.signed_by
+      });
+    } else if (!ED25519_PRIVATE_KEY) {
+      logger.warn('[register-agent-release] ED25519_PRIVATE_KEY not configured - release will be unsigned', {
+        requestId
       });
     }
 
