@@ -4254,6 +4254,231 @@ export type Database = {
           },
         ]
       }
+      playbook_actions: {
+        Row: {
+          action_payload: Json
+          action_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          label: string
+          order_index: number
+          playbook_id: string | null
+          risk_level: string | null
+        }
+        Insert: {
+          action_payload?: Json
+          action_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          label: string
+          order_index: number
+          playbook_id?: string | null
+          risk_level?: string | null
+        }
+        Update: {
+          action_payload?: Json
+          action_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          label?: string
+          order_index?: number
+          playbook_id?: string | null
+          risk_level?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_actions_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "playbooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      playbook_executions: {
+        Row: {
+          actions_taken: Json | null
+          agent_id: string | null
+          completed_at: string | null
+          evidence_ids: string[] | null
+          executed_by: string | null
+          id: string
+          ignore_reason: string | null
+          notes: string | null
+          playbook_id: string | null
+          status: string | null
+          tenant_id: string
+          trigger_context: Json | null
+          trigger_event_id: string | null
+          trigger_source: string | null
+          triggered_at: string | null
+        }
+        Insert: {
+          actions_taken?: Json | null
+          agent_id?: string | null
+          completed_at?: string | null
+          evidence_ids?: string[] | null
+          executed_by?: string | null
+          id?: string
+          ignore_reason?: string | null
+          notes?: string | null
+          playbook_id?: string | null
+          status?: string | null
+          tenant_id: string
+          trigger_context?: Json | null
+          trigger_event_id?: string | null
+          trigger_source?: string | null
+          triggered_at?: string | null
+        }
+        Update: {
+          actions_taken?: Json | null
+          agent_id?: string | null
+          completed_at?: string | null
+          evidence_ids?: string[] | null
+          executed_by?: string | null
+          id?: string
+          ignore_reason?: string | null
+          notes?: string | null
+          playbook_id?: string | null
+          status?: string | null
+          tenant_id?: string
+          trigger_context?: Json | null
+          trigger_event_id?: string | null
+          trigger_source?: string | null
+          triggered_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbook_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "playbook_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_executions_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "playbooks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbook_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      playbooks: {
+        Row: {
+          cooldown_minutes: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_enabled: boolean | null
+          is_system: boolean | null
+          name: string
+          require_approval: boolean | null
+          severity: string
+          tenant_id: string | null
+          trigger_conditions: Json
+          trigger_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          cooldown_minutes?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          is_system?: boolean | null
+          name: string
+          require_approval?: boolean | null
+          severity?: string
+          tenant_id?: string | null
+          trigger_conditions?: Json
+          trigger_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          cooldown_minutes?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          require_approval?: boolean | null
+          severity?: string
+          tenant_id?: string | null
+          trigger_conditions?: Json
+          trigger_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playbooks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playbooks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       policy_enforcement_logs: {
         Row: {
           action_taken: string
@@ -7795,6 +8020,15 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: undefined
+      }
+      evaluate_playbook_trigger: {
+        Args: {
+          p_agent_id?: string
+          p_tenant_id: string
+          p_trigger_context?: Json
+          p_trigger_type: string
+        }
+        Returns: string
       }
       get_agent_disk_details: {
         Args: { p_agent_id: string }

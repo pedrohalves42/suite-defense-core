@@ -493,3 +493,10 @@ verify_jwt = false
 # === Risk Score Engine (Fase 1) ===
 [functions.calculate-risk-score]
 verify_jwt = true
+
+# === Playbooks System ===
+[functions.evaluate-playbook-triggers]
+verify_jwt = false
+
+[functions.execute-playbook-action]
+verify_jwt = true
