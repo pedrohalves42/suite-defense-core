@@ -11,6 +11,7 @@ import {
   Server, 
   TrendingUp 
 } from "lucide-react";
+import JobTestRunner from "@/components/admin/JobTestRunner";
 
 export default function SystemHealth() {
   const { data: agentStats, isLoading: loadingAgents } = useQuery({
@@ -247,6 +248,9 @@ export default function SystemHealth() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Job Test Runner */}
+      <JobTestRunner />
 
       {performanceMetrics && performanceMetrics.length > 0 && (
         <Card>

@@ -15,6 +15,7 @@ export const JOB_TYPE_LABELS: Record<string, string> = {
   setup_dns_filter: '🛡️ Setup DNS Filter',
   collect_dns_blocks: '📊 Coletar Bloqueios DNS',
   remove_dns_filter: '🗑️ Remover DNS Filter',
+  integration_test_v3: '🧪 Teste de Integração v3',
 };
 
 export const JOB_STATUS_LABELS: Record<string, string> = {
@@ -77,6 +78,7 @@ export const JOB_TYPE_LABELS_NO_EMOJI: Record<string, string> = {
   setup_dns_filter: 'Setup DNS Filter',
   collect_dns_blocks: 'Coletar Bloqueios DNS',
   remove_dns_filter: 'Remover DNS Filter',
+  integration_test_v3: 'Teste de Integração v3',
 };
 
 export const getJobTypeLabelNoEmoji = (type: string): string => 
