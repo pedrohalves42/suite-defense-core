@@ -2769,7 +2769,7 @@ export type Database = {
           installer_sha256: string | null
           installer_size_bytes: number | null
           is_active: boolean
-          key: string
+          key: string | null
           key_hash: string | null
           max_uses: number
           tenant_id: string
@@ -2790,7 +2790,7 @@ export type Database = {
           installer_sha256?: string | null
           installer_size_bytes?: number | null
           is_active?: boolean
-          key: string
+          key?: string | null
           key_hash?: string | null
           max_uses?: number
           tenant_id: string
@@ -2811,7 +2811,7 @@ export type Database = {
           installer_sha256?: string | null
           installer_size_bytes?: number | null
           is_active?: boolean
-          key?: string
+          key?: string | null
           key_hash?: string | null
           max_uses?: number
           tenant_id?: string
