@@ -60,6 +60,7 @@ interface SystemAlert {
 interface GroupedAlert extends SystemAlert {
   count: number;
   latestValue: number | null;
+  groupKey: string;
 }
 
 export default function AgentMonitoringAdvanced() {
@@ -186,7 +187,7 @@ export default function AgentMonitoringAdvanced() {
       const key = `${alert.alert_type}-${alert.title}-${metricRange}`;
       
       if (!groups[key]) {
-        groups[key] = { ...alert, count: 1, latestValue: metricValue };
+        groups[key] = { ...alert, count: 1, latestValue: metricValue, groupKey: key };
       } else {
         groups[key].count++;
         // Manter o mais recente
@@ -427,7 +428,7 @@ export default function AgentMonitoringAdvanced() {
           <CardContent>
             <div className="space-y-3">
               {groupedAlerts.slice(0, 5).map((alert) => (
-                <div key={`${alert.alert_type}-${alert.title}`} className="flex items-center justify-between p-4 bg-card border rounded-lg">
+                <div key={alert.groupKey || `${alert.alert_type}-${alert.title}`} className="flex items-center justify-between p-4 bg-card border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <Badge variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}>
