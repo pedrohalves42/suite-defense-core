@@ -85,11 +85,20 @@ Deno.serve(async (req) => {
 
     const { enrollmentKey, agentName } = validation.data;
 
-    // Validate enrollment key
+    // P1 SEC-001 FIX: Validate enrollment key by hash (not plaintext)
+    // Hash the incoming key and compare with stored hash
+    const keyHashBuffer = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(enrollmentKey)
+    );
+    const enrollmentKeyHash = Array.from(new Uint8Array(keyHashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
     const { data: keyData, error: keyError } = await supabase
       .from('enrollment_keys')
       .select('*')
-      .eq('key', enrollmentKey)
+      .eq('key_hash', enrollmentKeyHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
       .limit(1)
