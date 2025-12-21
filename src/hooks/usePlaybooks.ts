@@ -105,7 +105,7 @@ export function usePendingPlaybookExecutions() {
         .limit(20);
 
       if (error) throw error;
-      return data as PlaybookExecution[];
+      return (data || []) as unknown as PlaybookExecution[];
     },
     enabled: !!tenant?.id,
     refetchInterval: 30000, // Refetch a cada 30 segundos
@@ -164,7 +164,7 @@ export function usePlaybookExecutionHistory(limit = 50) {
         .limit(limit);
 
       if (error) throw error;
-      return data as PlaybookExecution[];
+      return (data || []) as unknown as PlaybookExecution[];
     },
     enabled: !!tenant?.id,
   });
@@ -260,16 +260,17 @@ export function useTriggerManualPlaybook() {
       if (!tenant?.id) throw new Error('Tenant not found');
 
       // Criar execução diretamente
+      const insertData = {
+        playbook_id: playbookId,
+        tenant_id: tenant.id,
+        agent_id: agentId || null,
+        trigger_source: 'manual',
+        trigger_context: context as unknown,
+        status: 'pending',
+      };
       const { data, error } = await supabase
         .from('playbook_executions')
-        .insert({
-          playbook_id: playbookId,
-          tenant_id: tenant.id,
-          agent_id: agentId || null,
-          trigger_source: 'manual',
-          trigger_context: context,
-          status: 'pending',
-        })
+        .insert(insertData as any)
         .select('id')
         .single();
 
