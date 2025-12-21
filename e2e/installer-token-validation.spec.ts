@@ -105,7 +105,7 @@ test.describe('Installer Token Validation', () => {
     test.info().annotations.push({ type: 'expectedToken', description: expectedToken });
   });
 
-  test('2. Download installer and validate token consistency', async () => {
+  test('2. Download installer and validate token is generated fresh', async () => {
     expect(enrollmentKey).toBeDefined();
 
     // Baixar instalador via serve-installer
@@ -125,10 +125,24 @@ test.describe('Installer Token Validation', () => {
     expect(installerScript).toContain('CyberShield Agent');
     expect(installerScript.length).toBeGreaterThan(10000);
 
-    // Buscar token ATIVO do backend
+    // P1 SEC-002: Token is now generated fresh at download time and stored as hash
+    // We verify that:
+    // 1. A token exists in the installer
+    // 2. A token hash exists in agent_tokens for this agent
+    // 3. The token prefix in agent_tokens matches the installer token prefix
+
+    // Extrair token do instalador (formato: $AgentToken = "uuid" ou $AGENT_TOKEN = "uuid")
+    const tokenMatch = installerScript.match(/\$(?:AgentToken|AGENT_TOKEN)\s*=\s*["']([^"']+)["']/);
+    expect(tokenMatch).toBeTruthy();
+
+    const tokenInInstaller = tokenMatch![1];
+    const tokenPrefixInInstaller = tokenInInstaller.substring(0, 8);
+    console.log('[Test 2] Token prefix in installer:', tokenPrefixInInstaller);
+
+    // Buscar token_prefix do backend (token hash is stored, not plaintext)
     const { data: tokenData, error: tokenError } = await supabaseClient
       .from('agent_tokens')
-      .select('token')
+      .select('token_prefix, token_hash, is_active')
       .eq('agent_id', agentId)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -138,20 +152,16 @@ test.describe('Installer Token Validation', () => {
     expect(tokenError).toBeNull();
     expect(tokenData).toBeTruthy();
 
-    const activeTokenFromDB = tokenData!.token;
-    console.log('[Test 2] Active token from DB:', activeTokenFromDB.substring(0, 8));
+    console.log('[Test 2] Token prefix from DB:', tokenData!.token_prefix);
 
-    // Extrair token do instalador (formato: $AgentToken = "uuid")
-    const tokenMatch = installerScript.match(/\$AgentToken\s*=\s*"([^"]+)"/);
-    expect(tokenMatch).toBeTruthy();
+    // VALIDACAO P1: Token prefix no instalador DEVE corresponder ao prefix no DB
+    // (P1 SEC-002: plaintext token not stored, only hash and prefix)
+    expect(tokenPrefixInInstaller).toBe(tokenData!.token_prefix);
+    expect(tokenData!.is_active).toBe(true);
+    expect(tokenData!.token_hash).toBeTruthy();
+    expect(tokenData!.token_hash.length).toBe(64); // SHA-256 hex
 
-    const tokenInInstaller = tokenMatch![1];
-    console.log('[Test 2] Token in installer:', tokenInInstaller.substring(0, 8));
-
-    // VALIDACAO CRITICA: Token no instalador DEVE ser identico ao token ativo no DB
-    expect(tokenInInstaller).toBe(activeTokenFromDB);
-
-    console.log('[Test 2] [OK]  Token consistency validated!');
+    console.log('[Test 2] [OK]  Token prefix consistency validated! (P1 SEC-002 compliant)');
   });
 
   test('3. Validate installer has self-test', async () => {
