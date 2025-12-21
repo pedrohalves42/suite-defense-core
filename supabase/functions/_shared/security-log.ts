@@ -6,7 +6,7 @@ export interface SecurityLogParams {
   userId?: string;
   ipAddress: string;
   endpoint: string;
-  attackType: 'sql_injection' | 'xss' | 'path_traversal' | 'rate_limit' | 'invalid_input' | 'brute_force' | 'unauthorized' | 'control_characters';
+  attackType: 'sql_injection' | 'xss' | 'path_traversal' | 'rate_limit' | 'invalid_input' | 'brute_force' | 'unauthorized' | 'control_characters' | 'duplicate_job_submission' | 'quota_exceeded' | 'zombie_job_ttl';
   severity: 'low' | 'medium' | 'high' | 'critical';
   blocked: boolean;
   details?: Record<string, any>;

@@ -5,6 +5,7 @@ import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logSecurityEvent } from '../_shared/security-log.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
+import { sanitizeJobOutput, sanitizeErrorMessage, sanitizeForStorage } from '../_shared/sanitize.ts'
 
 Deno.serve(async (req) => {
   // QUAL-01: Proper HTTP method validation
@@ -290,9 +291,28 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Impedir que job seja processado duas vezes
+    // SSA-006: Impedir que job seja processado duas vezes COM LOGGING
     if (['done', 'completed', 'failed'].includes(job.status)) {
-      console.log('[submit-job-result] Job already done:', job_id)
+      console.log('[submit-job-result] Job already done - duplicate submission:', job_id)
+      
+      // SSA-006: Log duplicate submission attempt in security_logs
+      await logSecurityEvent({
+        supabase,
+        tenantId: agent.tenant_id,
+        ipAddress,
+        endpoint: '/submit-job-result',
+        attackType: 'duplicate_job_submission',
+        severity: 'low',
+        blocked: false,
+        details: {
+          job_id,
+          job_status: job.status,
+          agent_name: agent.agent_name,
+          submitted_status: status,
+          note: 'Duplicate result submission - job already completed'
+        }
+      })
+      
       return new Response(
         JSON.stringify({ 
           success: true,
@@ -351,15 +371,15 @@ Deno.serve(async (req) => {
               .delete()
               .eq('agent_id', job.agent_id)
             
-            // Prepare records for insert
+            // Prepare records for insert - SSA-007: Sanitizar campos de texto
             const softwareRecords = softwareList.map((sw: Record<string, unknown>) => ({
               tenant_id: agent.tenant_id,
               agent_id: job.agent_id,
-              name: String(sw.name || sw.Name || sw.DisplayName || 'Unknown'),
-              version: String(sw.version || sw.Version || sw.DisplayVersion || ''),
-              vendor: String(sw.vendor || sw.Vendor || sw.Publisher || ''),
-              install_location: String(sw.install_location || sw.InstallLocation || sw.InstallPath || ''),
-              risk_level: String(sw.risk_level || sw.RiskLevel || 'unknown').toLowerCase(),
+              name: sanitizeForStorage(sw.name || sw.Name || sw.DisplayName || 'Unknown', 255),
+              version: sanitizeForStorage(sw.version || sw.Version || sw.DisplayVersion || '', 100),
+              vendor: sanitizeForStorage(sw.vendor || sw.Vendor || sw.Publisher || '', 255),
+              install_location: sanitizeForStorage(sw.install_location || sw.InstallLocation || sw.InstallPath || '', 500),
+              risk_level: sanitizeForStorage(sw.risk_level || sw.RiskLevel || 'unknown', 20).toLowerCase(),
               last_seen_at: new Date().toISOString()
             }))
             
@@ -519,11 +539,13 @@ Deno.serve(async (req) => {
     if (started_at) {
       updateData.started_at = started_at
     }
+    // SSA-007: Sanitizar output antes de gravar
     if (output !== undefined) {
-      updateData.output = output
+      updateData.output = sanitizeJobOutput(output)
     }
+    // SSA-007: Sanitizar error_message
     if (error_message) {
-      updateData.error_message = error_message
+      updateData.error_message = sanitizeErrorMessage(error_message)
     }
     if (execution_time_seconds !== undefined) {
       updateData.execution_time_seconds = execution_time_seconds
