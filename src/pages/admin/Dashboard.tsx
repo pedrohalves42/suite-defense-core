@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { getAgentStatusInfo } from '@/lib/agent-utils';
 import { toast } from 'sonner';
+import { RiskScoreCard } from '@/components/admin/RiskScoreCard';
 
 export default function Dashboard() {
   const { tenant } = useTenant();
@@ -248,41 +249,8 @@ export default function Dashboard() {
         <p className="text-muted-foreground text-xs">Visão geral da proteção dos seus computadores</p>
       </div>
 
-      {/* 1️⃣ GLOBAL STATUS CARD - Responde "Posso seguir tranquilo?" em 3 segundos */}
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <Card className={cn(
-          "border-2",
-          globalStatus.variant === 'success' && "bg-green-500/10 border-green-500/30",
-          globalStatus.variant === 'warning' && "bg-yellow-500/10 border-yellow-500/30",
-          globalStatus.variant === 'danger' && "bg-red-500/10 border-red-500/30"
-        )}>
-          <CardContent className="py-6 text-center">
-            <div className="text-4xl mb-2">{globalStatus.emoji}</div>
-            <h2 className={cn(
-              "text-lg font-bold mb-1",
-              globalStatus.variant === 'success' && "text-green-600 dark:text-green-400",
-              globalStatus.variant === 'warning' && "text-yellow-600 dark:text-yellow-400",
-              globalStatus.variant === 'danger' && "text-red-600 dark:text-red-400"
-            )}>
-              {globalStatus.title}
-            </h2>
-            <p className="text-muted-foreground">{globalStatus.description}</p>
-            
-            {/* Score secundário, decorativo */}
-            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/50">
-              <Shield className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">
-                Nível de proteção: <span className={cn(
-                  "font-medium",
-                  securityScore >= 80 && "text-green-600",
-                  securityScore >= 60 && securityScore < 80 && "text-yellow-600",
-                  securityScore < 60 && "text-red-600"
-                )}>{securityScore}/100</span>
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+      {/* 1️⃣ RISK SCORE CARD - Responde "Posso seguir tranquilo?" em 3 segundos */}
+      <RiskScoreCard />
 
       {/* Critical Alert Action (if any) */}
       {criticalAlerts > 0 && (

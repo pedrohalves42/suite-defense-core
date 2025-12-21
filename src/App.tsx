@@ -95,7 +95,8 @@ import SLODashboard from "./pages/admin/SLODashboard";
 import SystemOperations from "./pages/admin/SystemOperations";
 import ComplianceTimeline from "./pages/admin/ComplianceTimeline";
 import VerificarLaudo from "./pages/VerificarLaudo";
-import { 
+import RiskScore from "./pages/admin/RiskScore";
+import {
   ClientDashboard, 
   ClientComputers, 
   ClientSecurityStatus, 
@@ -192,6 +193,7 @@ const App = () => (
                 <Route path="slo-dashboard" element={<SLODashboard />} />
                 <Route path="system-operations" element={<SystemOperations />} />
                 <Route path="compliance-timeline" element={<ComplianceTimeline />} />
+                <Route path="risk-score" element={<RiskScore />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}

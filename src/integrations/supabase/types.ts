@@ -5765,6 +5765,102 @@ export type Database = {
           },
         ]
       }
+      tenant_risk_scores: {
+        Row: {
+          agent_id: string | null
+          breakdown: Json
+          calculated_at: string
+          calculation_version: string
+          id: string
+          previous_score: number | null
+          scope: string
+          score: number
+          tenant_id: string
+          trend: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          breakdown?: Json
+          calculated_at?: string
+          calculation_version?: string
+          id?: string
+          previous_score?: number | null
+          scope: string
+          score: number
+          tenant_id: string
+          trend?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          breakdown?: Json
+          calculated_at?: string
+          calculation_version?: string
+          id?: string
+          previous_score?: number | null
+          scope?: string
+          score?: number
+          tenant_id?: string
+          trend?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_scores_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_scores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_risk_scores_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_settings: {
         Row: {
           alert_email: string | null
