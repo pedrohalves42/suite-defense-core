@@ -28,7 +28,8 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { 
-  PlaybookExecution, 
+  PlaybookExecution,
+  PlaybookAction,
   useExecutePlaybook, 
   useIgnorePlaybookExecution 
 } from '@/hooks/usePlaybooks';
@@ -77,7 +78,11 @@ export function PlaybookRecommendation({ execution, onExecuted }: PlaybookRecomm
   const context = execution.trigger_context as Record<string, unknown> || {};
   const agentInfo = context.agent_info as Record<string, unknown> || {};
 
-  const actions = playbook?.actions?.sort((a, b) => a.order_index - b.order_index) || [];
+  // ✅ CRÍTICO: Usar actions_snapshot imutável se disponível (auditabilidade)
+  const actionsSnapshot = (execution as any).actions_snapshot as PlaybookAction[] | undefined;
+  const actions = actionsSnapshot?.length 
+    ? [...actionsSnapshot].sort((a, b) => a.order_index - b.order_index)
+    : playbook?.actions?.sort((a, b) => a.order_index - b.order_index) || [];
 
   const handleExecuteAll = async () => {
     await executePlaybook.mutateAsync({ executionId: execution.id });
