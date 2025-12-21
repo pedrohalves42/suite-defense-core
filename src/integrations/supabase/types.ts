@@ -5999,6 +5999,48 @@ export type Database = {
           },
         ]
       }
+      tenant_job_quotas: {
+        Row: {
+          created_at: string
+          id: string
+          max_delivered_jobs: number
+          max_queued_jobs: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_delivered_jobs?: number
+          max_queued_jobs?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_delivered_jobs?: number
+          max_queued_jobs?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_job_quotas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_job_quotas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_risk_scores: {
         Row: {
           agent_id: string | null
@@ -7871,6 +7913,13 @@ export type Database = {
         Returns: {
           agents_processed: number
           rows_inserted: number
+        }[]
+      }
+      auto_cancel_zombie_jobs: {
+        Args: never
+        Returns: {
+          cancelled_count: number
+          job_ids: string[]
         }[]
       }
       calculate_next_run: {
