@@ -357,8 +357,8 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       totalRoles: userRoles.length 
     });
 
-    // P1 SEC-001 FIX: Store enrollment key as hash only
-    // Generate hash for secure storage
+    // P1 SEC-001 FIX: Store enrollment key as HASH ONLY (zero plaintext)
+    // Generate SHA-256 hash for secure storage
     const keyHashBuffer = await crypto.subtle.digest(
       'SHA-256',
       new TextEncoder().encode(enrollmentKey)
@@ -367,13 +367,13 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    // Create enrollment key with hash (plaintext key still stored temporarily for backward compat)
-    logger.debug(`[${requestId}] Creating enrollment key`, { keyPrefix: enrollmentKey.substring(0, 8) });
+    // Create enrollment key with HASH ONLY - NO PLAINTEXT KEY STORED
+    logger.debug(`[${requestId}] Creating enrollment key (hash-only)`, { keyPrefix: enrollmentKey.substring(0, 8) });
     const { error: keyError } = await supabase
       .from('enrollment_keys')
       .insert({
-        key: enrollmentKey, // Still stored for backward compat, will be removed in future migration
-        key_hash: enrollmentKeyHash, // P1 FIX: Secure hash for validation
+        // P1 SECURITY: key field is NULL - only hash is stored
+        key_hash: enrollmentKeyHash,
         tenant_id: tenantId,
         created_by: user.id,
         expires_at: expiresAt.toISOString(),
