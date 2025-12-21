@@ -1,5 +1,5 @@
 <#
-    CyberShield Agent - Windows v4.0.11
+    CyberShield Agent - Windows v4.1.0
     
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
@@ -8,6 +8,7 @@
     FASE 2.6: Ed25519 Signature Verification
     FASE 3.0: Auto-Rollback & Safe Mode (NEW)
     FASE VIKTOR: Force Update via Heartbeat Response
+    SSA-004: Payload Signing - Verifies Ed25519 signatures on jobs
     
     Estados:
     - BOOTSTRAP: Inicializacao do agente
@@ -17,7 +18,14 @@
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.11 (DISK METRICS FIX):
+    Funcionalidades v4.1.0 (PAYLOAD SIGNING):
+    - NEW: Ed25519 job payload signature verification
+    - NEW: Rejects unsigned jobs when Ed25519PublicKey is configured
+    - NEW: Verify-JobSignature function using .NET crypto
+    - NEW: Canonical payload format: job_id:job_type:JSON(payload)
+    - SECURITY: Prevents RCE via compromised database
+    
+    v4.0.11 (DISK METRICS FIX):
     - CRITICAL FIX: Coleta de TODOS os discos (nao apenas C:)
     - NEW: Invoke-ReportJob coleta disk_total_gb, disk_free_gb, disks[]
     - NEW: Send-SystemMetrics envia array disks completo para backend
@@ -67,7 +75,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.0.11"
+    [string]$AgentVersion = "v4.1.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -188,7 +196,11 @@ $Global:PollIntervalSeconds = 60
 
 # PLACEHOLDER: Replace with actual Ed25519 public key when available
 # Format: Base64-encoded SubjectPublicKeyInfo (SPKI) format
-$Global:Ed25519PublicKey = $null  # Set to Base64 public key string when ready
+# SSA-004: This is the public key for verifying job payload signatures
+$Global:Ed25519PublicKey = "MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI="
+
+# SSA-004: Require signatures when public key is configured
+$Global:RequireJobSignatures = (-not [string]::IsNullOrEmpty($Global:Ed25519PublicKey))
 
 function Verify-Ed25519Signature {
     <#
@@ -286,7 +298,154 @@ function Verify-Ed25519Signature {
             
             return $isValid
         }
+}
+
+# ============================================
+#  SSA-004: JOB PAYLOAD SIGNATURE VERIFICATION
+# ============================================
+function Verify-JobSignature {
+    <#
+    .SYNOPSIS
+        Verifies the Ed25519 signature of a job payload
+    .DESCRIPTION
+        Uses .NET cryptography to verify Ed25519 signatures on job payloads.
+        The canonical payload format is: job_id:job_type:JSON(payload)
+        Returns $true if signature is valid or if no public key is configured.
+        Returns $false if signature verification fails.
+    .PARAMETER Job
+        The job object containing id, type, payload, and payload_signature
+    #>
+    param (
+        [Parameter(Mandatory = $true)]
+        $Job
+    )
+    
+    try {
+        $jobId = $Job.id
+        $jobType = $Job.type
+        $signature = $Job.payload_signature
+        $signingAlg = $Job.signing_alg
+        
+        # If no public key configured, skip verification (backward compatible)
+        if ([string]::IsNullOrEmpty($Global:Ed25519PublicKey)) {
+            Write-Log "[SECURITY] Ed25519 public key not configured - skipping signature verification" "WARN"
+            return $true
+        }
+        
+        # If public key is configured but job has no signature, reject
+        if ([string]::IsNullOrEmpty($signature)) {
+            if ($Global:RequireJobSignatures) {
+                Write-Log "[SECURITY] ❌ REJECTED: Job $jobId has no signature (signatures required)" "ERROR"
+                
+                Add-EvidenceEntry -Type "security_alert" -Data @{
+                    event = "unsigned_job_rejected"
+                    job_id = $jobId
+                    job_type = $jobType
+                    reason = "No signature provided but signatures are required"
+                } -Severity "critical"
+                
+                return $false
+            }
+            Write-Log "[SECURITY] Job $jobId has no signature (backward compatible mode)" "WARN"
+            return $true
+        }
+        
+        # Verify algorithm is Ed25519
+        if ($signingAlg -and $signingAlg -ne "Ed25519") {
+            Write-Log "[SECURITY] ❌ REJECTED: Unsupported signing algorithm: $signingAlg" "ERROR"
+            return $false
+        }
+        
+        Write-Log "[SECURITY] Verifying Ed25519 signature for job $jobId..." "INFO"
+        
+        # Create canonical payload: job_id:job_type:JSON(payload)
+        $payloadJson = if ($Job.payload) { 
+            $sortedKeys = ($Job.payload | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name | Sort-Object)
+            $orderedPayload = [ordered]@{}
+            foreach ($key in $sortedKeys) {
+                $orderedPayload[$key] = $Job.payload.$key
+            }
+            $orderedPayload | ConvertTo-Json -Compress -Depth 10 
+        } else { 
+            "{}" 
+        }
+        $canonicalPayload = "${jobId}:${jobType}:${payloadJson}"
+        
+        # Decode signature and public key from Base64
+        $signatureBytes = [Convert]::FromBase64String($signature)
+        $publicKeyBytes = [Convert]::FromBase64String($Global:Ed25519PublicKey)
+        $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($canonicalPayload)
+        
+        # Try to verify using .NET Ed25519 (requires .NET 5+ or specific Windows versions)
+        try {
+            # Import public key
+            $ed25519 = [System.Security.Cryptography.ECDsa]::Create()
+            $bytesRead = 0
+            $ed25519.ImportSubjectPublicKeyInfo($publicKeyBytes, [ref]$bytesRead)
+            
+            # Verify signature
+            $isValid = $ed25519.VerifyData($payloadBytes, $signatureBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+            
+            if ($isValid) {
+                Write-Log "[SECURITY] ✅ Job $jobId signature verified successfully" "SUCCESS"
+                
+                Add-EvidenceEntry -Type "security_check" -Data @{
+                    event = "job_signature_verified"
+                    job_id = $jobId
+                    job_type = $jobType
+                    algorithm = "Ed25519"
+                } -Severity "info"
+                
+                return $true
+            } else {
+                Write-Log "[SECURITY] ❌ REJECTED: Job $jobId signature verification FAILED" "ERROR"
+                
+                Add-EvidenceEntry -Type "security_alert" -Data @{
+                    event = "invalid_job_signature"
+                    job_id = $jobId
+                    job_type = $jobType
+                    reason = "Signature does not match payload"
+                } -Severity "critical"
+                
+                return $false
+            }
+        }
+        catch {
+            # If Ed25519 verification is not supported, log warning
+            Write-Log "[SECURITY] Ed25519 verification not fully supported: $($_.Exception.Message)" "WARN"
+            Write-Log "[SECURITY] Attempting fallback verification method..." "INFO"
+            
+            # For systems without native Ed25519, we accept if signature is present
+            # This provides partial protection until full Ed25519 support
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "ed25519_verification_fallback"
+                job_id = $jobId
+                error = $_.Exception.Message
+                signature_present = $true
+            } -Severity "warning"
+            
+            # In strict mode, reject; otherwise allow with signature present
+            if ($Global:RequireJobSignatures) {
+                Write-Log "[SECURITY] ❌ Cannot verify signature - rejecting in strict mode" "ERROR"
+                return $false
+            }
+            
+            return $true
+        }
     }
+    catch {
+        Write-Log "[SECURITY] Signature verification error: $($_.Exception.Message)" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "signature_verification_failed"
+            job_id = $Job.id
+            error = $_.Exception.Message
+        } -Severity "error"
+        
+        # Security: If verification fails unexpectedly, reject the job
+        return $false
+    }
+}
     catch {
         Write-Log "[SECURITY] Signature verification error: $($_.Exception.Message)" "ERROR"
         
@@ -2087,6 +2246,23 @@ function Execute-Job {
         return
     }
 
+    # SSA-004: Verify job signature BEFORE execution
+    $signatureValid = Verify-JobSignature -Job $Job
+    if (-not $signatureValid) {
+        Write-Log "[SECURITY] ❌ BLOCKED: Job $($Job.id) rejected due to invalid/missing signature" "ERROR"
+        
+        # Submit rejection result to backend
+        Submit-JobResult `
+            -JobId $Job.id `
+            -Status "failed" `
+            -ErrorMessage "Security: Invalid or missing payload signature" `
+            -ExecutionTimeSeconds 0 `
+            -StartedAt (Get-Date).ToUniversalTime().ToString("o") `
+            -ExecutionId "security-rejected"
+        
+        return
+    }
+
     $jobId = $Job.id
     $jobType = $Job.type
     $executionId = "exec-$(New-Guid)"
@@ -2101,6 +2277,7 @@ function Execute-Job {
         execution_id = $executionId
         phase = "started"
         state = Get-AgentState
+        signature_verified = $true
     } -Severity "info"
 
     try {

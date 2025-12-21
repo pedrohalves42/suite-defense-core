@@ -6,7 +6,7 @@ import { checkRateLimit } from '../_shared/rate-limit.ts'
 import { logger } from '../_shared/logger.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
-
+import { signJob } from '../_shared/crypto-utils.ts'
 Deno.serve(async (req) => {
   // QUAL-01: Proper HTTP method validation
   if (req.method === 'OPTIONS') {
@@ -234,19 +234,53 @@ Deno.serve(async (req) => {
       )
     }
 
+    // SSA-004: Sign jobs with Ed25519 for RCE prevention
+    const privateKey = Deno.env.get('ED25519_PRIVATE_KEY')
+    const signingEnabled = !!privateKey
+    
+    if (!signingEnabled) {
+      logger.warn('ED25519_PRIVATE_KEY not configured - jobs will be unsigned', { agentName: agent.agent_name })
+    }
+
     // Preparar resposta ANTES de marcar como delivered
-    const jobsResponse = validJobs.map(j => ({
-      id: j.id,
-      type: j.type,
-      payload: j.payload || {},
-      approved: j.approved ?? true,
-      agent_id: j.agent_id || token.agent_id
+    const jobsResponse = await Promise.all(validJobs.map(async (j) => {
+      const jobPayload = j.payload || {}
+      
+      // Sign the job if private key is available
+      let signatureInfo: { payload_signature?: string; signing_alg?: string } = {}
+      
+      if (signingEnabled && privateKey) {
+        try {
+          const signed = await signJob(j.id, j.type, jobPayload, privateKey)
+          signatureInfo = {
+            payload_signature: signed.signature,
+            signing_alg: signed.algorithm
+          }
+          logger.debug('Job signed successfully', { jobId: j.id, algorithm: signed.algorithm })
+        } catch (signError) {
+          logger.error('Failed to sign job', { 
+            jobId: j.id, 
+            error: signError instanceof Error ? signError.message : 'Unknown error'
+          })
+          // Continue without signature - agents should handle this based on their config
+        }
+      }
+      
+      return {
+        id: j.id,
+        type: j.type,
+        payload: jobPayload,
+        approved: j.approved ?? true,
+        agent_id: j.agent_id || token.agent_id,
+        ...signatureInfo
+      }
     }))
 
     // LOG CRÍTICO: mostrar exatamente o que será retornado
     logger.info('Jobs to return to agent', { 
       agentName: agent.agent_name,
       responseCount: jobsResponse.length,
+      signingEnabled,
       response: JSON.stringify(jobsResponse)
     })
 
