@@ -13,6 +13,16 @@ interface TriggerEvent {
   context?: Record<string, unknown>;
 }
 
+interface PlaybookAction {
+  id: string;
+  order_index: number;
+  action_type: string;
+  label: string;
+  description: string;
+  action_payload: Record<string, unknown>;
+  risk_level: string;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -69,27 +79,22 @@ serve(async (req) => {
 
     // Usar o primeiro playbook (tenant-specific tem prioridade)
     const playbook = playbooks[0];
+    const cooldownMinutes = playbook.cooldown_minutes || 60;
 
-    // Verificar cooldown
-    const { data: recentExecutions } = await supabase
-      .from('playbook_executions')
-      .select('id, triggered_at')
-      .eq('playbook_id', playbook.id)
-      .eq('tenant_id', tenant_id)
-      .eq('agent_id', agent_id || null)
-      .not('status', 'in', '("cancelled","ignored")')
-      .gte('triggered_at', new Date(Date.now() - (playbook.cooldown_minutes || 60) * 60 * 1000).toISOString())
-      .limit(1);
+    // ✅ ANTI-LOOP: Usar função robusta do banco
+    const { data: hasRecentExec } = await supabase.rpc('has_recent_playbook_execution', {
+      p_playbook_id: playbook.id,
+      p_tenant_id: tenant_id,
+      p_agent_id: agent_id || null,
+      p_cooldown_minutes: cooldownMinutes
+    });
 
-    if (recentExecutions && recentExecutions.length > 0) {
-      console.log(`[evaluate-playbook-triggers] Cooldown active for playbook ${playbook.id}`);
+    if (hasRecentExec) {
+      console.log(`[evaluate-playbook-triggers] Cooldown active for playbook ${playbook.id} (${cooldownMinutes}min)`);
       return new Response(JSON.stringify({
         triggered: false,
-        reason: 'Cooldown active',
-        cooldown_until: new Date(
-          new Date(recentExecutions[0].triggered_at).getTime() + 
-          (playbook.cooldown_minutes || 60) * 60 * 1000
-        ).toISOString(),
+        reason: 'Cooldown active - recent execution exists',
+        cooldown_minutes: cooldownMinutes,
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -122,7 +127,34 @@ serve(async (req) => {
       agentInfo = agent;
     }
 
-    // Criar execução pendente
+    // ✅ ENTERPRISE: Criar snapshot imutável do playbook
+    const playbookSnapshot = {
+      id: playbook.id,
+      name: playbook.name,
+      description: playbook.description,
+      severity: playbook.severity,
+      trigger_type: playbook.trigger_type,
+      trigger_conditions: playbook.trigger_conditions,
+      version: playbook.version,
+      require_approval: playbook.require_approval,
+      cooldown_minutes: cooldownMinutes,
+      snapshot_created_at: new Date().toISOString(),
+    };
+
+    // ✅ ENTERPRISE: Criar snapshot imutável das ações
+    const actionsSnapshot = (playbook.actions as PlaybookAction[] || [])
+      .sort((a, b) => a.order_index - b.order_index)
+      .map((action) => ({
+        id: action.id,
+        order_index: action.order_index,
+        action_type: action.action_type,
+        label: action.label,
+        description: action.description,
+        action_payload: action.action_payload,
+        risk_level: action.risk_level,
+      }));
+
+    // Criar execução pendente COM SNAPSHOTS
     const { data: execution, error: execError } = await supabase
       .from('playbook_executions')
       .insert({
@@ -135,6 +167,9 @@ serve(async (req) => {
           agent_info: agentInfo,
           evaluated_at: new Date().toISOString(),
         },
+        // ✅ IMUTÁVEL: Snapshots congelados no momento do trigger
+        playbook_snapshot: playbookSnapshot,
+        actions_snapshot: actionsSnapshot,
         status: playbook.require_approval ? 'pending' : 'in_progress',
       })
       .select('id')
@@ -145,13 +180,12 @@ serve(async (req) => {
       throw execError;
     }
 
-    console.log(`[evaluate-playbook-triggers] Created execution ${execution.id} for playbook ${playbook.name}`);
+    console.log(`[evaluate-playbook-triggers] Created execution ${execution.id} with immutable snapshots (v${playbook.version})`);
 
     // Se não requer aprovação, executar automaticamente
     if (!playbook.require_approval) {
       console.log(`[evaluate-playbook-triggers] Auto-executing playbook ${playbook.name}`);
       
-      // Chamar execute-playbook-action via fetch interna
       try {
         const executeUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/execute-playbook-action`;
         await fetch(executeUrl, {
@@ -178,10 +212,12 @@ serve(async (req) => {
       details: {
         playbook_id: playbook.id,
         playbook_name: playbook.name,
+        playbook_version: playbook.version,
         execution_id: execution.id,
         trigger_type,
         agent_id,
         require_approval: playbook.require_approval,
+        snapshots_created: true,
       },
     });
 
@@ -191,11 +227,13 @@ serve(async (req) => {
       playbook: {
         id: playbook.id,
         name: playbook.name,
+        version: playbook.version,
         severity: playbook.severity,
         require_approval: playbook.require_approval,
-        actions_count: playbook.actions?.length || 0,
+        actions_count: actionsSnapshot.length,
       },
       agent_info: agentInfo,
+      snapshots_created: true,
       execution_time_ms: Date.now() - startTime,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
