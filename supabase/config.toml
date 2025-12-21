@@ -489,3 +489,7 @@ verify_jwt = true
 # === Document Verification (Public - Zero Trust) ===
 [functions.verify-document]
 verify_jwt = false
+
+# === Risk Score Engine (Fase 1) ===
+[functions.calculate-risk-score]
+verify_jwt = true
