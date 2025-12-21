@@ -69,29 +69,72 @@ Deno.serve(async (req) => {
       agent_name
     });
 
-    // Build query
-    let query = supabase
+    // Build cutoff date
+    const cutoffDate = new Date();
+    if (older_than_days > 0) {
+      cutoffDate.setDate(cutoffDate.getDate() - older_than_days);
+    }
+
+    // First, get IDs of jobs matching the criteria (to delete children first)
+    let parentQuery = supabase
       .from('jobs')
-      .delete()
+      .select('id')
       .eq('tenant_id', userRole.tenant_id);
 
-    // Apply filters
     if (status.length > 0) {
-      query = query.in('status', status);
+      parentQuery = parentQuery.in('status', status);
     }
 
     if (older_than_days > 0) {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - older_than_days);
-      query = query.lt('created_at', cutoffDate.toISOString());
+      parentQuery = parentQuery.lt('created_at', cutoffDate.toISOString());
     }
 
     if (agent_name) {
-      query = query.eq('agent_name', agent_name);
+      parentQuery = parentQuery.eq('agent_name', agent_name);
     }
 
-    // Execute deletion
-    const { data: deletedJobs, error: deleteError } = await query.select('id');
+    const { data: parentJobs, error: parentQueryError } = await parentQuery;
+
+    if (parentQueryError) {
+      logger.error('[cleanup-jobs] Query failed', { requestId, error: parentQueryError.message });
+      return new Response(
+        JSON.stringify({ error: 'Failed to query jobs', details: parentQueryError.message, requestId }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!parentJobs || parentJobs.length === 0) {
+      logger.info('[cleanup-jobs] No jobs to delete', { requestId });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          deleted_count: 0,
+          filters: { status, older_than_days, agent_name },
+          requestId
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const parentIds = parentJobs.map(j => j.id);
+
+    // Step 1: Delete child jobs first (jobs that reference these parents)
+    const { error: childDeleteError } = await supabase
+      .from('jobs')
+      .delete()
+      .in('parent_job_id', parentIds);
+
+    if (childDeleteError) {
+      logger.warn('[cleanup-jobs] Failed to delete child jobs', { requestId, error: childDeleteError.message });
+      // Continue anyway - CASCADE should handle it now
+    }
+
+    // Step 2: Delete the parent jobs
+    const { data: deletedJobs, error: deleteError } = await supabase
+      .from('jobs')
+      .delete()
+      .in('id', parentIds)
+      .select('id');
 
     if (deleteError) {
       logger.error('[cleanup-jobs] Delete failed', { requestId, error: deleteError.message });
