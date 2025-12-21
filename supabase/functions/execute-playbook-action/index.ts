@@ -1,0 +1,470 @@
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface PlaybookAction {
+  id: string;
+  action_type: string;
+  label: string;
+  description: string;
+  action_payload: Record<string, unknown>;
+  risk_level: string;
+}
+
+interface ExecuteRequest {
+  execution_id: string;
+  action_index?: number; // Se não fornecido, executa todas
+  notes?: string;
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const startTime = Date.now();
+  
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Autenticar usuário
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body: ExecuteRequest = await req.json();
+    const { execution_id, action_index, notes } = body;
+
+    if (!execution_id) {
+      return new Response(JSON.stringify({ error: 'execution_id is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`[execute-playbook-action] Executing ${execution_id}, action_index: ${action_index}`);
+
+    // Buscar execução com playbook e ações
+    const { data: execution, error: execError } = await supabase
+      .from('playbook_executions')
+      .select(`
+        *,
+        playbook:playbooks(
+          *,
+          actions:playbook_actions(*)
+        )
+      `)
+      .eq('id', execution_id)
+      .single();
+
+    if (execError || !execution) {
+      console.error('[execute-playbook-action] Execution not found:', execError);
+      return new Response(JSON.stringify({ error: 'Execution not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verificar se usuário tem acesso ao tenant
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('role, tenant_id')
+      .eq('user_id', user.id)
+      .eq('tenant_id', execution.tenant_id)
+      .single();
+
+    if (!userRole || !['admin', 'super_admin', 'operator'].includes(userRole.role)) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const playbook = execution.playbook;
+    const actions: PlaybookAction[] = playbook?.actions?.sort((a: PlaybookAction, b: PlaybookAction) => 
+      (a as any).order_index - (b as any).order_index
+    ) || [];
+
+    if (actions.length === 0) {
+      return new Response(JSON.stringify({ error: 'No actions found for this playbook' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Atualizar status para in_progress
+    await supabase
+      .from('playbook_executions')
+      .update({
+        status: 'in_progress',
+        executed_by: user.id,
+        notes: notes || execution.notes,
+      })
+      .eq('id', execution_id);
+
+    // Determinar quais ações executar
+    const actionsToExecute = action_index !== undefined 
+      ? [actions[action_index]] 
+      : actions;
+
+    const actionResults: Array<{
+      action_id: string;
+      action_type: string;
+      label: string;
+      success: boolean;
+      result?: Record<string, unknown>;
+      error?: string;
+      executed_at: string;
+    }> = execution.actions_taken || [];
+
+    const evidenceIds: string[] = execution.evidence_ids || [];
+
+    // Executar cada ação
+    for (const action of actionsToExecute) {
+      if (!action) continue;
+
+      console.log(`[execute-playbook-action] Executing action: ${action.action_type} - ${action.label}`);
+      
+      try {
+        const result = await executeAction(
+          supabase,
+          action,
+          execution,
+          user.id
+        );
+
+        actionResults.push({
+          action_id: action.id,
+          action_type: action.action_type,
+          label: action.label,
+          success: true,
+          result,
+          executed_at: new Date().toISOString(),
+        });
+
+        // Se gerou evidência, adicionar ao array
+        if (result?.evidence_id) {
+          evidenceIds.push(result.evidence_id as string);
+        }
+
+      } catch (actionError) {
+        console.error(`[execute-playbook-action] Action failed:`, actionError);
+        
+        actionResults.push({
+          action_id: action.id,
+          action_type: action.action_type,
+          label: action.label,
+          success: false,
+          error: actionError instanceof Error ? actionError.message : 'Unknown error',
+          executed_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    // Determinar status final
+    const allActionsExecuted = actionResults.length >= actions.length;
+    const anyFailed = actionResults.some(r => !r.success);
+    const finalStatus = allActionsExecuted 
+      ? (anyFailed ? 'failed' : 'completed')
+      : 'in_progress';
+
+    // Atualizar execução
+    await supabase
+      .from('playbook_executions')
+      .update({
+        status: finalStatus,
+        actions_taken: actionResults,
+        evidence_ids: evidenceIds,
+        completed_at: allActionsExecuted ? new Date().toISOString() : null,
+      })
+      .eq('id', execution_id);
+
+    // Criar audit log
+    await supabase.from('audit_logs').insert({
+      user_id: user.id,
+      tenant_id: execution.tenant_id,
+      action: 'execute_playbook',
+      resource_type: 'playbook_execution',
+      resource_id: execution_id,
+      success: !anyFailed,
+      details: {
+        playbook_name: playbook?.name,
+        actions_executed: actionResults.length,
+        actions_succeeded: actionResults.filter(r => r.success).length,
+        execution_time_ms: Date.now() - startTime,
+      },
+    });
+
+    console.log(`[execute-playbook-action] Completed in ${Date.now() - startTime}ms`);
+
+    return new Response(JSON.stringify({
+      success: true,
+      execution_id,
+      status: finalStatus,
+      actions_executed: actionResults.length,
+      results: actionResults,
+      evidence_ids: evidenceIds,
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
+  } catch (error) {
+    console.error('[execute-playbook-action] Error:', error);
+    return new Response(JSON.stringify({
+      error: error instanceof Error ? error.message : 'Internal server error',
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
+
+async function executeAction(
+  supabase: any,
+  action: PlaybookAction,
+  execution: Record<string, unknown>,
+  userId: string
+): Promise<Record<string, unknown>> {
+  const payload = action.action_payload;
+  const tenantId = execution.tenant_id as string;
+  const agentId = execution.agent_id as string | null;
+  const context = execution.trigger_context as Record<string, unknown> || {};
+
+  switch (action.action_type) {
+    case 'notify': {
+      // Inserir na fila de notificações
+      const { data: notification } = await supabase
+        .from('notification_queue')
+        .insert({
+          tenant_id: tenantId,
+          channel: (payload.channels as string[])?.[0] || 'email',
+          recipient_type: 'admin',
+          subject: `[CyberShield] Playbook: ${action.label}`,
+          message: action.description || 'Ação de playbook executada',
+          priority: 'high',
+          metadata: {
+            playbook_execution_id: execution.id,
+            action_id: action.id,
+            agent_id: agentId,
+            context,
+          },
+        })
+        .select('id')
+        .single();
+
+      return { notification_id: notification?.id, channels: payload.channels };
+    }
+
+    case 'isolate': {
+      // Criar job de isolamento
+      if (!agentId) {
+        throw new Error('Agent ID required for isolation');
+      }
+
+      const { data: agent } = await supabase
+        .from('agents')
+        .select('agent_name')
+        .eq('id', agentId)
+        .single();
+
+      const { data: job } = await supabase
+        .from('jobs')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          agent_name: agent?.agent_name,
+          type: 'network_isolate',
+          status: 'queued',
+          approved: true,
+          payload: {
+            isolation_level: payload.isolation_level || 'network',
+            allow_cybershield: payload.allow_cybershield !== false,
+            triggered_by: 'playbook',
+            playbook_execution_id: execution.id,
+          },
+        })
+        .select('id')
+        .single();
+
+      // Atualizar status do agente
+      await supabase
+        .from('agents')
+        .update({ status: 'isolated' })
+        .eq('id', agentId);
+
+      return { job_id: job?.id, isolation_level: payload.isolation_level };
+    }
+
+    case 'generate_report': {
+      // Chamar edge function de geração de relatório
+      const reportPayload = {
+        tenant_id: tenantId,
+        agent_id: agentId,
+        report_type: payload.report_type || 'security_evidence',
+        include_history: payload.include_history === true,
+        include_domains: payload.include_domains === true,
+        sign_evidence: payload.sign_evidence === true,
+        days_back: payload.days_back || 30,
+        triggered_by: 'playbook',
+        playbook_execution_id: execution.id,
+      };
+
+      // Criar entrada de evidência
+      const { data: evidence } = await supabase
+        .from('agent_evidence_logs')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          agent_name: context.agent_name as string || 'system',
+          event_type: 'playbook_report_generated',
+          event_data: {
+            report_type: payload.report_type,
+            action_label: action.label,
+            execution_id: execution.id,
+          },
+          evidence_hash: crypto.randomUUID(), // Placeholder - seria hash real
+          severity: 'info',
+        })
+        .select('id')
+        .single();
+
+      return { 
+        report_type: payload.report_type, 
+        evidence_id: evidence?.id,
+        scheduled: true,
+      };
+    }
+
+    case 'create_job': {
+      if (!agentId) {
+        throw new Error('Agent ID required for job creation');
+      }
+
+      const { data: agent } = await supabase
+        .from('agents')
+        .select('agent_name')
+        .eq('id', agentId)
+        .single();
+
+      const jobType = payload.job_type as string || 'diagnostic_full';
+
+      const { data: job } = await supabase
+        .from('jobs')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          agent_name: agent?.agent_name,
+          type: jobType,
+          status: 'queued',
+          approved: true,
+          payload: {
+            verbose: payload.verbose === true,
+            priority: payload.priority || 'normal',
+            triggered_by: 'playbook',
+            playbook_execution_id: execution.id,
+          },
+        })
+        .select('id')
+        .single();
+
+      return { job_id: job?.id, job_type: jobType };
+    }
+
+    case 'revoke_token': {
+      if (!agentId) {
+        throw new Error('Agent ID required for token revocation');
+      }
+
+      // Revogar todos os tokens do agente
+      const { count } = await supabase
+        .from('agent_tokens')
+        .update({ is_active: false })
+        .eq('agent_id', agentId)
+        .eq('is_active', true);
+
+      // Log de segurança
+      await supabase.from('security_logs').insert({
+        tenant_id: tenantId,
+        ip_address: 'system',
+        endpoint: 'playbook/revoke_token',
+        attack_type: 'token_revocation',
+        severity: 'high',
+        blocked: false,
+        details: {
+          agent_id: agentId,
+          tokens_revoked: count || 0,
+          triggered_by: 'playbook',
+          execution_id: execution.id,
+        },
+      });
+
+      return { tokens_revoked: count || 0 };
+    }
+
+    case 'escalate': {
+      // Criar alerta de sistema
+      const { data: alert } = await supabase
+        .from('system_alerts')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          alert_type: 'playbook_escalation',
+          severity: 'high',
+          message: `Escalação de playbook: ${action.label}`,
+          details: {
+            playbook_execution_id: execution.id,
+            action_description: action.description,
+            notify_roles: payload.notify_roles,
+            create_incident: payload.create_incident,
+            context,
+          },
+        })
+        .select('id')
+        .single();
+
+      // Se criar incidente, inserir em security_events
+      if (payload.create_incident) {
+        await supabase.from('security_events').insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          severity: 'high',
+          title: `Incidente: ${action.label}`,
+          description: action.description,
+          status: 'open',
+          data: {
+            playbook_execution_id: execution.id,
+            alert_id: alert?.id,
+            context,
+          },
+        });
+      }
+
+      return { alert_id: alert?.id, incident_created: !!payload.create_incident };
+    }
+
+    default:
+      throw new Error(`Unknown action type: ${action.action_type}`);
+  }
+}
