@@ -357,12 +357,23 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       totalRoles: userRoles.length 
     });
 
-    // Create enrollment key
-    logger.debug(`[${requestId}] Creating enrollment key`, { enrollmentKey });
+    // P1 SEC-001 FIX: Store enrollment key as hash only
+    // Generate hash for secure storage
+    const keyHashBuffer = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(enrollmentKey)
+    );
+    const enrollmentKeyHash = Array.from(new Uint8Array(keyHashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    // Create enrollment key with hash (plaintext key still stored temporarily for backward compat)
+    logger.debug(`[${requestId}] Creating enrollment key`, { keyPrefix: enrollmentKey.substring(0, 8) });
     const { error: keyError } = await supabase
       .from('enrollment_keys')
       .insert({
-        key: enrollmentKey,
+        key: enrollmentKey, // Still stored for backward compat, will be removed in future migration
+        key_hash: enrollmentKeyHash, // P1 FIX: Secure hash for validation
         tenant_id: tenantId,
         created_by: user.id,
         expires_at: expiresAt.toISOString(),
@@ -579,16 +590,17 @@ async function handleRequest(req: Request, requestId: string, startTime: number)
       throw new Error(`Failed to create agent token: ${tokenError.message}`);
     }
 
-    // Link enrollment key to agent and store token for installer generation
+    // P1 SEC-002 FIX: Link enrollment key WITHOUT storing plaintext token
+    // Token is stored hashed in agent_tokens table, serve-installer fetches via agent_id
     const { error: linkError } = await supabase
       .from('enrollment_keys')
       .update({ 
         agent_id: agentId,
         used_by_agent: agentName,
         used_at: new Date().toISOString(),
-        agent_token: agentToken  // Store plaintext token for serve-installer
+        // agent_token: REMOVED - P1 SEC-002 fix: no plaintext tokens in enrollment_keys
       })
-      .eq('key', enrollmentKey);
+      .eq('key_hash', enrollmentKeyHash);
       
     if (linkError) {
       logger.warn(`[${requestId}] Failed to link enrollment key`, linkError);

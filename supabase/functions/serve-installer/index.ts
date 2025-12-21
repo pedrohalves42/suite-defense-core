@@ -217,11 +217,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Fetch enrollment key with agent_token
+    // P1 SEC-001 FIX: Validate enrollment key by hash (not plaintext)
+    const keyHashBuffer = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(enrollmentKey)
+    );
+    const enrollmentKeyHash = Array.from(new Uint8Array(keyHashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    // Fetch enrollment key by hash (agent_token removed - P1 SEC-002 fix)
     const { data: enrollmentData, error: enrollmentError } = await supabaseClient
       .from('enrollment_keys')
-      .select('agent_id, is_active, expires_at, tenant_id, agent_token')
-      .eq('key', enrollmentKey)
+      .select('agent_id, is_active, expires_at, tenant_id')
+      .eq('key_hash', enrollmentKeyHash)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -250,14 +259,61 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get token from enrollment_keys (stored during auto-generate-enrollment)
-    if (!enrollmentData.agent_token) {
-      console.error(`[${requestId}] Agent token not found in enrollment_keys - please regenerate enrollment key`);
-      return new Response('Agent token not available. Please generate a new enrollment key.', { 
+    // P1 SEC-002 FIX: Validate agent_id exists before generating token
+    if (!enrollmentData.agent_id) {
+      console.error(`[${requestId}] Agent ID not found in enrollment_keys - please regenerate enrollment key`);
+      return new Response('Agent not linked to enrollment key. Please generate a new enrollment key.', { 
         status: 404,
         headers: corsHeaders
       });
     }
+
+    // P1 SEC-002 FIX: Generate fresh token at installer download time
+    // This ensures no plaintext tokens are stored in database
+    // Token is created here and stored hashed in agent_tokens
+    const freshAgentToken = crypto.randomUUID();
+    
+    // Hash the fresh token for storage
+    const freshTokenHashBuffer = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(freshAgentToken)
+    );
+    const freshTokenHash = Array.from(new Uint8Array(freshTokenHashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    const freshTokenPrefix = freshAgentToken.substring(0, 8);
+
+    // Deactivate old tokens for this agent
+    await supabaseClient
+      .from('agent_tokens')
+      .update({ is_active: false })
+      .eq('agent_id', enrollmentData.agent_id);
+
+    // Create new token with hash
+    const tokenExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+    const { error: tokenInsertError } = await supabaseClient
+      .from('agent_tokens')
+      .insert({
+        agent_id: enrollmentData.agent_id,
+        token_hash: freshTokenHash,
+        token_prefix: freshTokenPrefix,
+        expires_at: tokenExpiresAt.toISOString(),
+        is_active: true,
+      });
+
+    if (tokenInsertError) {
+      console.error(`[${requestId}] Failed to create fresh agent token`, tokenInsertError);
+      return new Response('Failed to generate agent credentials', { 
+        status: 500,
+        headers: corsHeaders
+      });
+    }
+
+    console.log(`[${requestId}] Fresh agent token generated`, {
+      tokenPrefix: freshTokenPrefix,
+      agentId: enrollmentData.agent_id
+    });
+
 
     // Fetch agent info AND hmac_secret from agents table
     const { data: agentData, error: agentError } = await supabaseClient
@@ -345,8 +401,9 @@ Deno.serve(async (req) => {
     });
 
 
-    // Get credentials from enrollment_keys and agents table
-    const agentToken = enrollmentData.agent_token;
+    // P1 SEC-002 FIX: Use freshly generated token (created above when installer was requested)
+    // This token was just created and stored hashed in agent_tokens
+    const agentToken = freshAgentToken;
     const hmacSecret = agentData.hmac_secret;
     
     // Validate token is a valid UUID format
@@ -369,7 +426,7 @@ Deno.serve(async (req) => {
     }
     
     console.log(`[${requestId}] Credentials validated:`, {
-      token_prefix: agentToken.substring(0, 8),
+      token_prefix: freshTokenPrefix,
       hmac_prefix: hmacSecret.substring(0, 8),
       token_format: 'UUID',
       hmac_format: 'SHA256-HEX'

@@ -8217,6 +8217,7 @@ export type Database = {
       }
       hash_agent_token: { Args: { p_token: string }; Returns: string }
       hash_enrollment_key: { Args: { p_key: string }; Returns: string }
+      hash_enrollment_key_secure: { Args: { p_key: string }; Returns: string }
       installation_health_summary: {
         Args: never
         Returns: {
@@ -8286,6 +8287,18 @@ export type Database = {
           script_size: number
           sha256: string
           version: string
+        }[]
+      }
+      validate_enrollment_key_by_hash: {
+        Args: { p_key_hash: string }
+        Returns: {
+          agent_id: string
+          current_uses: number
+          expires_at: string
+          id: string
+          is_active: boolean
+          max_uses: number
+          tenant_id: string
         }[]
       }
     }
