@@ -4300,6 +4300,7 @@ export type Database = {
       }
       playbook_executions: {
         Row: {
+          actions_snapshot: Json | null
           actions_taken: Json | null
           agent_id: string | null
           completed_at: string | null
@@ -4307,8 +4308,10 @@ export type Database = {
           executed_by: string | null
           id: string
           ignore_reason: string | null
+          ignored_reason: string | null
           notes: string | null
           playbook_id: string | null
+          playbook_snapshot: Json | null
           status: string | null
           tenant_id: string
           trigger_context: Json | null
@@ -4317,6 +4320,7 @@ export type Database = {
           triggered_at: string | null
         }
         Insert: {
+          actions_snapshot?: Json | null
           actions_taken?: Json | null
           agent_id?: string | null
           completed_at?: string | null
@@ -4324,8 +4328,10 @@ export type Database = {
           executed_by?: string | null
           id?: string
           ignore_reason?: string | null
+          ignored_reason?: string | null
           notes?: string | null
           playbook_id?: string | null
+          playbook_snapshot?: Json | null
           status?: string | null
           tenant_id: string
           trigger_context?: Json | null
@@ -4334,6 +4340,7 @@ export type Database = {
           triggered_at?: string | null
         }
         Update: {
+          actions_snapshot?: Json | null
           actions_taken?: Json | null
           agent_id?: string | null
           completed_at?: string | null
@@ -4341,8 +4348,10 @@ export type Database = {
           executed_by?: string | null
           id?: string
           ignore_reason?: string | null
+          ignored_reason?: string | null
           notes?: string | null
           playbook_id?: string | null
+          playbook_snapshot?: Json | null
           status?: string | null
           tenant_id?: string
           trigger_context?: Json | null
@@ -4431,6 +4440,7 @@ export type Database = {
           trigger_conditions: Json
           trigger_type: string
           updated_at: string | null
+          version: number
         }
         Insert: {
           cooldown_minutes?: number | null
@@ -4446,6 +4456,7 @@ export type Database = {
           trigger_conditions?: Json
           trigger_type: string
           updated_at?: string | null
+          version?: number
         }
         Update: {
           cooldown_minutes?: number | null
@@ -4461,6 +4472,7 @@ export type Database = {
           trigger_conditions?: Json
           trigger_type?: string
           updated_at?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -8156,6 +8168,15 @@ export type Database = {
       get_report_frequency_days: {
         Args: { p_plan_name: string }
         Returns: number
+      }
+      has_recent_playbook_execution: {
+        Args: {
+          p_agent_id?: string
+          p_cooldown_minutes?: number
+          p_playbook_id: string
+          p_tenant_id: string
+        }
+        Returns: boolean
       }
       has_role: {
         Args: {
