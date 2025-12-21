@@ -96,6 +96,7 @@ import SystemOperations from "./pages/admin/SystemOperations";
 import ComplianceTimeline from "./pages/admin/ComplianceTimeline";
 import VerificarLaudo from "./pages/VerificarLaudo";
 import RiskScore from "./pages/admin/RiskScore";
+import Playbooks from "./pages/admin/Playbooks";
 import {
   ClientDashboard, 
   ClientComputers, 
@@ -194,6 +195,7 @@ const App = () => (
                 <Route path="system-operations" element={<SystemOperations />} />
                 <Route path="compliance-timeline" element={<ComplianceTimeline />} />
                 <Route path="risk-score" element={<RiskScore />} />
+                <Route path="playbooks" element={<Playbooks />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}

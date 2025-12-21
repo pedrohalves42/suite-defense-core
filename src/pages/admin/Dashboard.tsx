@@ -17,6 +17,7 @@ import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { getAgentStatusInfo } from '@/lib/agent-utils';
 import { toast } from 'sonner';
 import { RiskScoreCard } from '@/components/admin/RiskScoreCard';
+import { PlaybooksPendingWidget } from '@/components/admin/PlaybooksPendingWidget';
 
 export default function Dashboard() {
   const { tenant } = useTenant();
@@ -251,6 +252,9 @@ export default function Dashboard() {
 
       {/* 1️⃣ RISK SCORE CARD - Responde "Posso seguir tranquilo?" em 3 segundos */}
       <RiskScoreCard />
+
+      {/* Playbooks Pending Widget */}
+      <PlaybooksPendingWidget compact className="w-full" />
 
       {/* Critical Alert Action (if any) */}
       {criticalAlerts > 0 && (
