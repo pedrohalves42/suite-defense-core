@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,12 +12,10 @@ import {
   BookOpen,
   CheckCircle2,
   Clock,
-  FileText,
   History,
   Lock,
   Play,
   Shield,
-  X,
   Zap,
 } from 'lucide-react';
 import {
@@ -30,10 +27,9 @@ import {
   PlaybookExecution,
 } from '@/hooks/usePlaybooks';
 import { PlaybookRecommendation } from '@/components/admin/PlaybookRecommendation';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { SEO } from '@/components/SEO';
 
 const TRIGGER_TYPE_LABELS: Record<string, string> = {
   agent_offline: 'Agente Offline',
@@ -74,11 +70,7 @@ export default function Playbooks() {
   const manualPlaybooks = playbooks?.filter(p => p.trigger_type === 'manual') || [];
 
   return (
-    <AdminLayout>
-      <SEO 
-        title="Playbooks de Resposta | CyberShield"
-        description="Gerencie playbooks automáticos de resposta a incidentes"
-      />
+    <div className="p-6">
       
       <div className="space-y-6">
         {/* Header */}
@@ -286,7 +278,7 @@ export default function Playbooks() {
           </TabsContent>
         </Tabs>
       </div>
-    </AdminLayout>
+    </div>
   );
 }
 
