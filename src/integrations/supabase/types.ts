@@ -4308,7 +4308,6 @@ export type Database = {
           executed_by: string | null
           id: string
           ignore_reason: string | null
-          ignored_reason: string | null
           notes: string | null
           playbook_id: string | null
           playbook_snapshot: Json | null
@@ -4328,7 +4327,6 @@ export type Database = {
           executed_by?: string | null
           id?: string
           ignore_reason?: string | null
-          ignored_reason?: string | null
           notes?: string | null
           playbook_id?: string | null
           playbook_snapshot?: Json | null
@@ -4348,7 +4346,6 @@ export type Database = {
           executed_by?: string | null
           id?: string
           ignore_reason?: string | null
-          ignored_reason?: string | null
           notes?: string | null
           playbook_id?: string | null
           playbook_snapshot?: Json | null
@@ -8097,6 +8094,39 @@ export type Database = {
           os_version: string
           status: string
           uptime_seconds: number
+        }[]
+      }
+      get_playbook_execution_breakdown: {
+        Args: { p_days_back?: number; p_tenant_id: string }
+        Returns: {
+          avg_response_minutes: number
+          completed_count: number
+          failed_count: number
+          ignored_count: number
+          last_triggered_at: string
+          playbook_id: string
+          playbook_name: string
+          severity: string
+          total_triggers: number
+        }[]
+      }
+      get_playbook_metrics: {
+        Args: { p_days_back?: number; p_tenant_id: string }
+        Returns: {
+          avg_response_time_minutes: number
+          execution_rate_pct: number
+          ignore_rate_pct: number
+          max_response_time_minutes: number
+          min_response_time_minutes: number
+          most_triggered_count: number
+          most_triggered_playbook_id: string
+          most_triggered_playbook_name: string
+          period_end: string
+          period_start: string
+          total_completed: number
+          total_executions: number
+          total_failed: number
+          total_ignored: number
         }[]
       }
       get_problematic_agents: {
