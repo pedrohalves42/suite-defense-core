@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface PlaybookAction {
   id: string;
+  order_index: number;
   action_type: string;
   label: string;
   description: string;
@@ -66,16 +67,10 @@ serve(async (req) => {
 
     console.log(`[execute-playbook-action] Executing ${execution_id}, action_index: ${action_index}`);
 
-    // Buscar execução com playbook e ações
+    // ✅ ENTERPRISE: Buscar execução COM SNAPSHOTS IMUTÁVEIS
     const { data: execution, error: execError } = await supabase
       .from('playbook_executions')
-      .select(`
-        *,
-        playbook:playbooks(
-          *,
-          actions:playbook_actions(*)
-        )
-      `)
+      .select('*')
       .eq('id', execution_id)
       .single();
 
@@ -83,6 +78,17 @@ serve(async (req) => {
       console.error('[execute-playbook-action] Execution not found:', execError);
       return new Response(JSON.stringify({ error: 'Execution not found' }), {
         status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Verificar se execução já foi finalizada
+    if (['completed', 'failed', 'cancelled', 'ignored'].includes(execution.status)) {
+      return new Response(JSON.stringify({ 
+        error: 'Execution already finalized',
+        status: execution.status 
+      }), {
+        status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -102,17 +108,18 @@ serve(async (req) => {
       });
     }
 
-    const playbook = execution.playbook;
-    const actions: PlaybookAction[] = playbook?.actions?.sort((a: PlaybookAction, b: PlaybookAction) => 
-      (a as any).order_index - (b as any).order_index
-    ) || [];
+    // ✅ ENTERPRISE: Usar ações do SNAPSHOT IMUTÁVEL (não do playbook atual)
+    const actionsSnapshot = execution.actions_snapshot as PlaybookAction[] || [];
+    const playbookSnapshot = execution.playbook_snapshot as Record<string, unknown> || {};
 
-    if (actions.length === 0) {
-      return new Response(JSON.stringify({ error: 'No actions found for this playbook' }), {
+    if (actionsSnapshot.length === 0) {
+      return new Response(JSON.stringify({ error: 'No actions found in snapshot' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log(`[execute-playbook-action] Using immutable snapshot v${playbookSnapshot.version} with ${actionsSnapshot.length} actions`);
 
     // Atualizar status para in_progress
     await supabase
@@ -124,10 +131,10 @@ serve(async (req) => {
       })
       .eq('id', execution_id);
 
-    // Determinar quais ações executar
+    // Determinar quais ações executar (já ordenadas no snapshot)
     const actionsToExecute = action_index !== undefined 
-      ? [actions[action_index]] 
-      : actions;
+      ? [actionsSnapshot[action_index]] 
+      : actionsSnapshot;
 
     const actionResults: Array<{
       action_id: string;
@@ -141,18 +148,19 @@ serve(async (req) => {
 
     const evidenceIds: string[] = execution.evidence_ids || [];
 
-    // Executar cada ação
+    // Executar cada ação do SNAPSHOT
     for (const action of actionsToExecute) {
       if (!action) continue;
 
-      console.log(`[execute-playbook-action] Executing action: ${action.action_type} - ${action.label}`);
+      console.log(`[execute-playbook-action] Executing action from snapshot: ${action.action_type} - ${action.label}`);
       
       try {
         const result = await executeAction(
           supabase,
           action,
           execution,
-          user.id
+          user.id,
+          playbookSnapshot
         );
 
         actionResults.push({
@@ -184,7 +192,7 @@ serve(async (req) => {
     }
 
     // Determinar status final
-    const allActionsExecuted = actionResults.length >= actions.length;
+    const allActionsExecuted = actionResults.length >= actionsSnapshot.length;
     const anyFailed = actionResults.some(r => !r.success);
     const finalStatus = allActionsExecuted 
       ? (anyFailed ? 'failed' : 'completed')
@@ -201,7 +209,7 @@ serve(async (req) => {
       })
       .eq('id', execution_id);
 
-    // Criar audit log
+    // ✅ ENTERPRISE: Criar audit log com referência ao snapshot
     await supabase.from('audit_logs').insert({
       user_id: user.id,
       tenant_id: execution.tenant_id,
@@ -210,22 +218,26 @@ serve(async (req) => {
       resource_id: execution_id,
       success: !anyFailed,
       details: {
-        playbook_name: playbook?.name,
+        playbook_name: playbookSnapshot.name,
+        playbook_version: playbookSnapshot.version,
         actions_executed: actionResults.length,
         actions_succeeded: actionResults.filter(r => r.success).length,
+        used_immutable_snapshot: true,
         execution_time_ms: Date.now() - startTime,
       },
     });
 
-    console.log(`[execute-playbook-action] Completed in ${Date.now() - startTime}ms`);
+    console.log(`[execute-playbook-action] Completed in ${Date.now() - startTime}ms (snapshot v${playbookSnapshot.version})`);
 
     return new Response(JSON.stringify({
       success: true,
       execution_id,
       status: finalStatus,
+      playbook_version: playbookSnapshot.version,
       actions_executed: actionResults.length,
       results: actionResults,
       evidence_ids: evidenceIds,
+      used_immutable_snapshot: true,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -245,7 +257,8 @@ async function executeAction(
   supabase: any,
   action: PlaybookAction,
   execution: Record<string, unknown>,
-  userId: string
+  userId: string,
+  playbookSnapshot: Record<string, unknown>
 ): Promise<Record<string, unknown>> {
   const payload = action.action_payload;
   const tenantId = execution.tenant_id as string;
@@ -266,6 +279,7 @@ async function executeAction(
           priority: 'high',
           metadata: {
             playbook_execution_id: execution.id,
+            playbook_version: playbookSnapshot.version,
             action_id: action.id,
             agent_id: agentId,
             context,
@@ -303,6 +317,7 @@ async function executeAction(
             allow_cybershield: payload.allow_cybershield !== false,
             triggered_by: 'playbook',
             playbook_execution_id: execution.id,
+            playbook_version: playbookSnapshot.version,
           },
         })
         .select('id')
@@ -318,31 +333,22 @@ async function executeAction(
     }
 
     case 'generate_report': {
-      // Chamar edge function de geração de relatório
-      const reportPayload = {
-        tenant_id: tenantId,
-        agent_id: agentId,
-        report_type: payload.report_type || 'security_evidence',
-        include_history: payload.include_history === true,
-        include_domains: payload.include_domains === true,
-        sign_evidence: payload.sign_evidence === true,
-        days_back: payload.days_back || 30,
-        triggered_by: 'playbook',
-        playbook_execution_id: execution.id,
-      };
-
       // Criar entrada de evidência
       const { data: evidence } = await supabase
         .from('agent_evidence_logs')
         .insert({
           tenant_id: tenantId,
           agent_id: agentId,
-          agent_name: context.agent_name as string || 'system',
+          agent_name: (context.agent_info as any)?.agent_name || 'system',
           event_type: 'playbook_report_generated',
           event_data: {
             report_type: payload.report_type,
             action_label: action.label,
             execution_id: execution.id,
+            playbook_version: playbookSnapshot.version,
+            include_history: payload.include_history,
+            include_domains: payload.include_domains,
+            days_back: payload.days_back || 30,
           },
           evidence_hash: crypto.randomUUID(), // Placeholder - seria hash real
           severity: 'info',
@@ -384,6 +390,7 @@ async function executeAction(
             priority: payload.priority || 'normal',
             triggered_by: 'playbook',
             playbook_execution_id: execution.id,
+            playbook_version: playbookSnapshot.version,
           },
         })
         .select('id')
@@ -417,6 +424,7 @@ async function executeAction(
           tokens_revoked: count || 0,
           triggered_by: 'playbook',
           execution_id: execution.id,
+          playbook_version: playbookSnapshot.version,
         },
       });
 
@@ -435,6 +443,7 @@ async function executeAction(
           message: `Escalação de playbook: ${action.label}`,
           details: {
             playbook_execution_id: execution.id,
+            playbook_version: playbookSnapshot.version,
             action_description: action.description,
             notify_roles: payload.notify_roles,
             create_incident: payload.create_incident,
@@ -455,6 +464,7 @@ async function executeAction(
           status: 'open',
           data: {
             playbook_execution_id: execution.id,
+            playbook_version: playbookSnapshot.version,
             alert_id: alert?.id,
             context,
           },
