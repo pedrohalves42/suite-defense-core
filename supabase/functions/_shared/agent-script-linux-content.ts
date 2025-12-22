@@ -3,9 +3,9 @@
  * CyberShield Agent Linux Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-linux-v4.sh
- * Versao: v4.0.9
- * SHA256: 2523bf7f1b525fb5bd909a299bf371443e39ce0a0259a925ab07be3ce5109f6b
- * Gerado em: 2025-12-19T18:00:14.177Z
+ * Versao: v4.1.0
+ * SHA256: 1d338a239fb410d69ab83e2fcc3d18a186188846405b1fb6ffc8c1a1134de6b2
+ * Gerado em: 2025-12-22T03:14:21.277Z
  */
 
 export function getAgentScriptLinux(): string {
@@ -14,12 +14,13 @@ export function getAgentScriptLinux(): string {
 
 export const AGENT_SCRIPT_LINUX_SH = `#!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v4.0.9
+# CyberShield Agent - Linux v4.1.0
 #
 # FASE 2.1: State Machine Formal (6 estados)
 # FASE 2.2: Evidence Journal Local
 # FASE 2.4: DNS Filter Integration
 # FASE 2.5: Policy Contract (Desired vs Actual + Drift Detection)
+# SSA-004: Payload Signing - Verifies Ed25519 signatures on jobs
 #
 # Estados:
 # - BOOTSTRAP: Inicializacao do agente
@@ -28,6 +29,13 @@ export const AGENT_SCRIPT_LINUX_SH = `#!/usr/bin/env bash
 # - DEGRADED: Erro nao-critico, funcionando parcialmente
 # - ERROR: Erro critico, requer intervencao
 # - RECOVERY: Tentando auto-recuperacao
+#
+# Funcionalidades v4.1.0 (PAYLOAD SIGNING):
+# - NEW: Ed25519 job payload signature verification via OpenSSL
+# - NEW: Rejects unsigned jobs when Ed25519PublicKey is configured
+# - NEW: verify_job_signature function
+# - NEW: Canonical payload format: job_id:job_type:JSON(payload)
+# - SECURITY: Prevents RCE via compromised database
 #
 # Uso:
 #   ./cybershield-agent-linux-v4.sh \\
@@ -42,7 +50,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTES E VARIAVEIS GLOBAIS
 # ============================================
-AGENT_VERSION="v4.0.9"
+AGENT_VERSION="v4.1.0"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="\${BASE_DIR}/logs"
 EVIDENCE_DIR="\${BASE_DIR}/evidence"
@@ -92,6 +100,11 @@ declare -A POLICY_EXPECTED=(
 # Evidence Buffer
 declare -a EVIDENCE_BUFFER=()
 EVIDENCE_FLUSH_THRESHOLD=10
+
+# SSA-004: Ed25519 Public Key for job signature verification
+# Format: Base64-encoded SubjectPublicKeyInfo (SPKI)
+ED25519_PUBLIC_KEY="MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI="
+REQUIRE_JOB_SIGNATURES=true
 
 # ============================================
 #  PARSING DE ARGUMENTOS
@@ -792,6 +805,87 @@ poll_jobs() {
 }
 
 # ============================================
+#  SSA-004: JOB SIGNATURE VERIFICATION
+# ============================================
+verify_job_signature() {
+    local job="\$1"
+    
+    local job_id
+    job_id=\$(echo "\$job" | jq -r '.id')
+    local job_type
+    job_type=\$(echo "\$job" | jq -r '.type')
+    local signature
+    signature=\$(echo "\$job" | jq -r '.payload_signature // empty')
+    local signing_alg
+    signing_alg=\$(echo "\$job" | jq -r '.signing_alg // empty')
+    
+    # If no public key configured, skip verification
+    if [[ -z "\$ED25519_PUBLIC_KEY" ]]; then
+        log "WARN" "[SECURITY] Ed25519 public key not configured - skipping signature verification"
+        return 0
+    fi
+    
+    # If no signature provided
+    if [[ -z "\$signature" ]]; then
+        if [[ "\$REQUIRE_JOB_SIGNATURES" == "true" ]]; then
+            log "ERROR" "[SECURITY] ❌ REJECTED: Job \$job_id has no signature (signatures required)"
+            add_evidence "security_alert" "{\\"event\\":\\"unsigned_job_rejected\\",\\"job_id\\":\\"\$job_id\\",\\"job_type\\":\\"\$job_type\\"}" "" "" "critical"
+            return 1
+        fi
+        log "WARN" "[SECURITY] Job \$job_id has no signature (backward compatible mode)"
+        return 0
+    fi
+    
+    # Verify algorithm
+    if [[ -n "\$signing_alg" && "\$signing_alg" != "Ed25519" ]]; then
+        log "ERROR" "[SECURITY] ❌ REJECTED: Unsupported signing algorithm: \$signing_alg"
+        return 1
+    fi
+    
+    log "INFO" "[SECURITY] Verifying Ed25519 signature for job \$job_id..."
+    
+    # Create canonical payload: job_id:job_type:JSON(payload)
+    local payload_json
+    payload_json=\$(echo "\$job" | jq -c '.payload // {}' | jq -cS '.')
+    local canonical_payload="\${job_id}:\${job_type}:\${payload_json}"
+    
+    # Create temp files for verification
+    local temp_dir
+    temp_dir=\$(mktemp -d)
+    local pubkey_file="\${temp_dir}/pubkey.pem"
+    local sig_file="\${temp_dir}/signature.bin"
+    local payload_file="\${temp_dir}/payload.txt"
+    
+    # Write public key in PEM format
+    echo "-----BEGIN PUBLIC KEY-----" > "\$pubkey_file"
+    echo "\$ED25519_PUBLIC_KEY" >> "\$pubkey_file"
+    echo "-----END PUBLIC KEY-----" >> "\$pubkey_file"
+    
+    # Decode signature from Base64
+    echo -n "\$signature" | base64 -d > "\$sig_file" 2>/dev/null || {
+        log "ERROR" "[SECURITY] Failed to decode signature from Base64"
+        rm -rf "\$temp_dir"
+        return 1
+    }
+    
+    # Write payload
+    echo -n "\$canonical_payload" > "\$payload_file"
+    
+    # Verify with OpenSSL
+    if openssl pkeyutl -verify -pubin -inkey "\$pubkey_file" -rawin -in "\$payload_file" -sigfile "\$sig_file" 2>/dev/null; then
+        log "SUCCESS" "[SECURITY] ✅ Job \$job_id signature verified successfully"
+        add_evidence "security_check" "{\\"event\\":\\"job_signature_verified\\",\\"job_id\\":\\"\$job_id\\",\\"job_type\\":\\"\$job_type\\",\\"algorithm\\":\\"Ed25519\\"}" "" "" "info"
+        rm -rf "\$temp_dir"
+        return 0
+    else
+        log "ERROR" "[SECURITY] ❌ REJECTED: Job \$job_id signature verification FAILED"
+        add_evidence "security_alert" "{\\"event\\":\\"invalid_job_signature\\",\\"job_id\\":\\"\$job_id\\",\\"job_type\\":\\"\$job_type\\"}" "" "" "critical"
+        rm -rf "\$temp_dir"
+        return 1
+    fi
+}
+
+# ============================================
 #  EXECUTE JOB
 # ============================================
 execute_job() {
@@ -801,6 +895,15 @@ execute_job() {
         local state
         state=\$(get_state)
         log "WARN" "[JOB] Cannot execute job in state \$state"
+        return 1
+    fi
+    
+    # SSA-004: Verify job signature BEFORE execution
+    if ! verify_job_signature "\$job"; then
+        local job_id
+        job_id=\$(echo "\$job" | jq -r '.id')
+        log "ERROR" "[SECURITY] ❌ BLOCKED: Job \$job_id rejected due to invalid/missing signature"
+        submit_job_result "\$job_id" "failed" "{}" "Security: Invalid or missing payload signature" "0" "security-rejected"
         return 1
     fi
     
@@ -814,7 +917,7 @@ execute_job() {
     
     log "INFO" "[JOB] Executing job \$job_id (type=\$job_type, exec_id=\$execution_id)"
     
-    add_evidence "job_execution" "{\\"job_id\\":\\"\$job_id\\",\\"job_type\\":\\"\$job_type\\",\\"execution_id\\":\\"\$execution_id\\",\\"phase\\":\\"started\\"}" "" "" "info"
+    add_evidence "job_execution" "{\\"job_id\\":\\"\$job_id\\",\\"job_type\\":\\"\$job_type\\",\\"execution_id\\":\\"\$execution_id\\",\\"phase\\":\\"started\\",\\"signature_verified\\":true}" "" "" "info"
     
     local output=""
     local status="completed"
