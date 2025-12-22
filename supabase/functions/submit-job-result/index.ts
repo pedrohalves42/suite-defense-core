@@ -365,13 +365,7 @@ Deno.serve(async (req) => {
           const softwareList = outputData.software || outputData.installed_software || []
           
           if (Array.isArray(softwareList) && softwareList.length > 0) {
-            // Delete existing software for this agent first
-            await supabase
-              .from('software_inventory')
-              .delete()
-              .eq('agent_id', job.agent_id)
-            
-            // Prepare records for insert - SSA-007: Sanitizar campos de texto
+            // Prepare records for UPSERT - SSA-007: Sanitizar campos de texto
             const softwareRecords = softwareList.map((sw: Record<string, unknown>) => ({
               tenant_id: agent.tenant_id,
               agent_id: job.agent_id,
@@ -383,27 +377,30 @@ Deno.serve(async (req) => {
               last_seen_at: new Date().toISOString()
             }))
             
-            // Batch insert
+            // UPSERT em batches - evita race condition e duplicate key errors
             const batchSize = 100
-            let insertedCount = 0
+            let upsertedCount = 0
             for (let i = 0; i < softwareRecords.length; i += batchSize) {
               const batch = softwareRecords.slice(i, i + batchSize)
-              const { error: insertError } = await supabase
+              const { error: upsertError } = await supabase
                 .from('software_inventory')
-                .insert(batch)
+                .upsert(batch, { 
+                  onConflict: 'agent_id,name,version',
+                  ignoreDuplicates: false 
+                })
               
-              if (insertError) {
-                console.error(`[submit-job-result] Error inserting software batch ${i}:`, insertError)
+              if (upsertError) {
+                console.error(`[submit-job-result] Error upserting software batch ${i}:`, upsertError)
               } else {
-                insertedCount += batch.length
+                upsertedCount += batch.length
               }
             }
             
-            console.log(`[submit-job-result] [ZERO_TRUST] Inserted ${insertedCount}/${softwareRecords.length} software records`)
+            console.log(`[submit-job-result] [ZERO_TRUST] Upserted ${upsertedCount}/${softwareRecords.length} software records`)
             
-            if (insertedCount > 0) {
+            if (upsertedCount > 0) {
               sideEffectsInserted = true
-              insertedRecordsCount = insertedCount
+              insertedRecordsCount = upsertedCount
             }
           }
         } catch (swErr) {
