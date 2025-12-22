@@ -1,7 +1,8 @@
 <#
-    CyberShield Agent - Windows v4.1.1
+    CyberShield Agent - Windows v4.1.2
     
     SSA-009: Restauração da coleta de browser_history (Chrome, Firefox, Edge)
+    SSA-010: Restauração de todos os jobs do v3 (scan, fix_firewall, restart_service, etc.)
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
     FASE 2.4: DNS Filter Go como Windows Service
@@ -76,7 +77,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.1.1"
+    [string]$AgentVersion = "v4.1.2"
 )
 
 $ErrorActionPreference = "Stop"
@@ -2315,6 +2316,50 @@ function Execute-Job {
                 if ($result.success) { $output = $result.output }
                 else { throw $result.error }
             }
+            "integration_test" {
+                $sys = Get-SystemInfo
+                $output = @{
+                    message = "Integration test executed successfully"
+                    timestamp = (Get-Date).ToUniversalTime().ToString("o")
+                    agent = $Global:AgentName
+                    version = $Global:AgentVersion
+                    system = $sys
+                } | ConvertTo-Json -Compress
+            }
+            "collect_info" {
+                $sys = Get-SystemInfo
+                $output = $sys | ConvertTo-Json -Compress
+            }
+            "scan" {
+                $result = Invoke-ScanJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "fix_firewall" {
+                $result = Invoke-FixFirewallJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "restart_service" {
+                $result = Invoke-RestartServiceJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "collect_network_info" {
+                $result = Invoke-CollectNetworkInfoJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "sync_blocked_websites" {
+                $result = Invoke-SyncBlockedWebsitesJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "reinstall_agent" {
+                $result = Invoke-ReinstallAgentJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
             default {
                 throw "Tipo de job nao suportado: $jobType"
             }
@@ -2535,6 +2580,459 @@ function Invoke-CollectAntivirusJob {
         } catch { }
         
         return @{ success = $true; output = ($avStatus | ConvertTo-Json -Compress -Depth 5) }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  SSA-010: RESTORED JOBS FROM V3
+# ============================================
+
+# SCAN JOB - Verifica arquivos com scan-virus (VirusTotal)
+function Invoke-ScanJob {
+    param($Job)
+    
+    try {
+        Write-Log "[SCAN] Iniciando scan de arquivo..." "INFO"
+        
+        $payload = $Job.payload
+        if ($payload -is [string]) {
+            $payload = $payload | ConvertFrom-Json
+        }
+        
+        $filePath = $payload.filePath
+        $tenantId = $payload.tenantId
+        
+        if (-not $filePath) {
+            throw "Payload invalido: 'filePath' nao informado"
+        }
+        
+        # Expandir variaveis de ambiente
+        if ($filePath -match '%USERPROFILE%') {
+            $userProfiles = Get-ChildItem "C:\Users" -Directory -ErrorAction SilentlyContinue | 
+                Where-Object { $_.Name -notin @("Public", "Default", "Default User", "All Users") }
+            
+            $expandedPath = $null
+            foreach ($profile in $userProfiles) {
+                $testPath = $filePath -replace '%USERPROFILE%', $profile.FullName
+                if (Test-Path $testPath) {
+                    $expandedPath = $testPath
+                    break
+                }
+            }
+            
+            if ($null -eq $expandedPath) {
+                throw "Caminho nao encontrado em nenhum perfil de usuario: $filePath"
+            }
+            $filePath = $expandedPath
+        }
+        elseif ($filePath -match '%([^%]+)%') {
+            $filePath = [System.Environment]::ExpandEnvironmentVariables($filePath)
+        }
+        
+        if (-not (Test-Path $filePath)) {
+            throw "Caminho nao encontrado: $filePath"
+        }
+        
+        $fileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
+        Write-Log "[SCAN] Escaneando: $filePath (hash: $fileHash)" "INFO"
+        
+        $scanBody = @{
+            tenant_id = $tenantId
+            agent_name = $Global:AgentName
+            filePath = $filePath
+            fileHash = $fileHash
+        }
+        
+        $scanResult = Invoke-SecureRequest `
+            -Path "/functions/v1/scan-virus" `
+            -Method POST `
+            -Body $scanBody `
+            -TimeoutSec 60
+        
+        if (-not $scanResult.Success) {
+            throw "Falha ao chamar scan-virus: HTTP $($scanResult.StatusCode)"
+        }
+        
+        $scanData = $scanResult.Body | ConvertFrom-Json
+        
+        $output = @{
+            filePath = $filePath
+            fileHash = $fileHash
+            isMalicious = $scanData.isMalicious
+            positives = $scanData.positives
+            totalScans = $scanData.totalScans
+            permalink = $scanData.permalink
+            quarantined = $false
+        }
+        
+        if ($scanData.isMalicious) {
+            Write-Log "[WARN] MALWARE DETECTADO: $($scanData.positives)/$($scanData.totalScans) engines" "WARN"
+            
+            $quarantineRoot = "C:\CyberShield\Quarantine"
+            if (-not (Test-Path $quarantineRoot)) {
+                New-Item -ItemType Directory -Path $quarantineRoot -Force | Out-Null
+            }
+            
+            $fileName = [System.IO.Path]::GetFileName($filePath)
+            $guid = [guid]::NewGuid().ToString()
+            $quarantinePath = Join-Path $quarantineRoot "$guid`_$fileName"
+            
+            Move-Item -Path $filePath -Destination $quarantinePath -Force
+            Write-Log "[SUCCESS] Arquivo movido para quarentena: $quarantinePath" "SUCCESS"
+            
+            $output.quarantined = $true
+            $output.quarantinePath = $quarantinePath
+        }
+        
+        return @{ success = $true; output = ($output | ConvertTo-Json -Compress) }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# FIX FIREWALL JOB - Ativa firewall em todos os perfis
+function Invoke-FixFirewallJob {
+    param($Job)
+    
+    Write-Log "[FIX-FIREWALL] Iniciando auto-remediacao de firewall..." "INFO"
+    
+    try {
+        $profiles = @()
+        
+        try {
+            if (Get-Command Get-NetFirewallProfile -ErrorAction SilentlyContinue) {
+                $fwProfiles = Get-NetFirewallProfile -ErrorAction Stop
+                foreach ($p in $fwProfiles) {
+                    $profiles += [PSCustomObject]@{
+                        Name = $p.Name
+                        Enabled = $p.Enabled
+                    }
+                }
+            }
+        } catch {
+            # Fallback netsh
+            $netshOutput = netsh advfirewall show allprofiles state 2>&1 | Out-String
+            foreach ($profileName in @("Domain", "Private", "Public")) {
+                $enabled = $false
+                $pattern = "(?s)$profileName.*?State\s+(ON|OFF)"
+                if ($netshOutput -match $pattern) {
+                    $enabled = ($Matches[1] -eq "ON")
+                }
+                $profiles += [PSCustomObject]@{
+                    Name = $profileName
+                    Enabled = $enabled
+                }
+            }
+        }
+        
+        if ($profiles.Count -eq 0) {
+            throw "Nao foi possivel obter status dos perfis de firewall"
+        }
+        
+        $fixed = @()
+        foreach ($p in $profiles) {
+            if (-not $p.Enabled) {
+                Write-Log "[FIX-FIREWALL] Ativando firewall no perfil $($p.Name)" "INFO"
+                
+                try {
+                    if (Get-Command Set-NetFirewallProfile -ErrorAction SilentlyContinue) {
+                        Set-NetFirewallProfile -Name $p.Name -Enabled True -ErrorAction Stop
+                    } else {
+                        netsh advfirewall set $($p.Name.ToLower())profile state on 2>&1 | Out-Null
+                    }
+                    $fixed += $p.Name
+                } catch {
+                    Write-Log "[FIX-FIREWALL] Falha ao ativar perfil $($p.Name): $($_.Exception.Message)" "ERROR"
+                }
+            }
+        }
+        
+        if ($fixed.Count -gt 0) {
+            Write-Log "[FIX-FIREWALL] Firewall ativado em: $($fixed -join ', ')" "SUCCESS"
+            return @{ success = $true; output = "Firewall ativado em perfis: $($fixed -join ', ')" }
+        } else {
+            Write-Log "[FIX-FIREWALL] Firewall ja estava ativo em todos os perfis" "INFO"
+            return @{ success = $true; output = "Firewall ja ativo em todos os perfis" }
+        }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# RESTART SERVICE JOB - Reinicia um servico especifico
+function Invoke-RestartServiceJob {
+    param($Job)
+    
+    Write-Log "[RESTART-SERVICE] Iniciando restart de servico..." "INFO"
+    
+    try {
+        $payload = $Job.payload
+        if ($payload -is [string]) {
+            $payload = $payload | ConvertFrom-Json
+        }
+        
+        if (-not $payload -or -not $payload.service_name) {
+            throw "service_name nao especificado no payload"
+        }
+        
+        $serviceName = $payload.service_name
+        
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        if (-not $service) {
+            throw "Servico '$serviceName' nao encontrado"
+        }
+        
+        Write-Log "[RESTART-SERVICE] Reiniciando servico: $serviceName (Status atual: $($service.Status))" "INFO"
+        
+        Restart-Service -Name $serviceName -Force -ErrorAction Stop
+        
+        Start-Sleep -Seconds 2
+        
+        $serviceAfter = Get-Service -Name $serviceName -ErrorAction Stop
+        Write-Log "[RESTART-SERVICE] Servico reiniciado. Status: $($serviceAfter.Status)" "SUCCESS"
+        
+        return @{ success = $true; output = "Servico '$serviceName' reiniciado. Status: $($serviceAfter.Status)" }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# COLLECT NETWORK INFO JOB - Coleta informacoes de rede
+function Invoke-CollectNetworkInfoJob {
+    param($Job)
+    
+    Write-Log "[NETWORK-INFO] Iniciando coleta de informacoes de rede..." "INFO"
+    
+    try {
+        $firewallDomain = $null
+        $firewallPrivate = $null
+        $firewallPublic = $null
+        
+        try {
+            if (Get-Command Get-NetFirewallProfile -ErrorAction SilentlyContinue) {
+                $profiles = Get-NetFirewallProfile
+                foreach ($p in $profiles) {
+                    switch ($p.Name) {
+                        "Domain" { $firewallDomain = $p.Enabled }
+                        "Private" { $firewallPrivate = $p.Enabled }
+                        "Public" { $firewallPublic = $p.Enabled }
+                    }
+                }
+            }
+        } catch { }
+        
+        $openPorts = @()
+        try {
+            $tcpListening = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object -First 50
+            foreach ($conn in $tcpListening) {
+                $processName = "unknown"
+                try { 
+                    $proc = Get-Process -Id $conn.OwningProcess -ErrorAction SilentlyContinue
+                    if ($proc) { $processName = $proc.ProcessName }
+                } catch { }
+                $openPorts += @{ port = $conn.LocalPort; process = $processName; protocol = "TCP" }
+            }
+        } catch { }
+        
+        $networkAdapters = @()
+        try {
+            $adapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' }
+            foreach ($adapter in $adapters) {
+                $ipConfig = Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1
+                $networkAdapters += @{
+                    name = $adapter.Name
+                    ip_address = if ($ipConfig) { $ipConfig.IPAddress } else { "" }
+                    mac_address = $adapter.MacAddress
+                    status = $adapter.Status
+                }
+            }
+        } catch { }
+        
+        $dnsServers = @()
+        try {
+            $dnsConfig = Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | 
+                Where-Object { $_.ServerAddresses } | 
+                Select-Object -ExpandProperty ServerAddresses -Unique
+            $dnsServers = @($dnsConfig)
+        } catch { }
+        
+        $gatewayIp = $null
+        try {
+            $gateway = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($gateway) { $gatewayIp = $gateway.NextHop }
+        } catch { }
+        
+        $publicIp = $null
+        try {
+            $response = Invoke-RestMethod -Uri "https://api.ipify.org?format=json" -TimeoutSec 5 -ErrorAction SilentlyContinue
+            if ($response.ip) { $publicIp = $response.ip }
+        } catch { }
+        
+        $payload = @{
+            firewall_domain = $firewallDomain
+            firewall_private = $firewallPrivate
+            firewall_public = $firewallPublic
+            open_ports = @($openPorts)
+            network_adapters = @($networkAdapters)
+            dns_servers = @($dnsServers)
+            gateway_ip = $gatewayIp
+            public_ip = $publicIp
+        }
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-network-info" `
+            -Method "POST" `
+            -Body $payload `
+            -TimeoutSec 30
+        
+        if (-not $result.Success) {
+            throw "Falha ao enviar info de rede (HTTP $($result.StatusCode))"
+        }
+        
+        Write-Log "[NETWORK-INFO] Informacoes de rede enviadas com sucesso" "SUCCESS"
+        
+        return @{ success = $true; output = ($payload | ConvertTo-Json -Compress -Depth 3) }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# SYNC BLOCKED WEBSITES JOB - Sincroniza lista de sites bloqueados
+function Invoke-SyncBlockedWebsitesJob {
+    param($Job)
+    
+    try {
+        Write-Log "[BLOCKED-SITES] Iniciando sincronizacao de sites bloqueados..." "INFO"
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/get-blocked-websites" `
+            -Method "GET" `
+            -TimeoutSec 30
+        
+        if (-not $result.Success) {
+            throw "Falha ao buscar lista de sites bloqueados (HTTP $($result.StatusCode))"
+        }
+        
+        $data = $result.Body | ConvertFrom-Json
+        $blockedDomains = @()
+        
+        if ($null -ne $data.blocked_websites -and $data.blocked_websites.Count -gt 0) {
+            $blockedDomains = @($data.blocked_websites | ForEach-Object { $_.domain_pattern })
+        }
+        elseif ($null -ne $data.blocked_domains -and $data.blocked_domains.Count -gt 0) {
+            $blockedDomains = @($data.blocked_domains)
+        }
+        
+        Write-Log "[BLOCKED-SITES] Recebidos $($blockedDomains.Count) dominios bloqueados" "INFO"
+        
+        $blockedListPath = "C:\CyberShield\blocked_websites.json"
+        $blockedData = @{
+            updated_at = [DateTime]::UtcNow.ToString("o")
+            domains = $blockedDomains
+        }
+        
+        $blockedJson = $blockedData | ConvertTo-Json -Compress
+        [System.IO.File]::WriteAllText($blockedListPath, $blockedJson, [System.Text.UTF8Encoding]::new($false))
+        
+        Write-Log "[BLOCKED-SITES] Lista salva em $blockedListPath" "SUCCESS"
+        
+        return @{
+            success = $true
+            output = (@{
+                message = "Sites bloqueados sincronizados"
+                domains_count = $blockedDomains.Count
+                list_path = $blockedListPath
+            } | ConvertTo-Json -Compress)
+        }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# REINSTALL AGENT JOB - Reinstala o agente completamente
+function Invoke-ReinstallAgentJob {
+    param($Job)
+    
+    try {
+        Write-Log "[REINSTALL] Iniciando reinstalacao do agente..." "INFO"
+        
+        $updateResult = Invoke-SecureRequest `
+            -Path "/functions/v1/serve-agent-update" `
+            -Method GET `
+            -TimeoutSec 60
+        
+        if (-not $updateResult.Success) {
+            throw "Falha ao buscar script: HTTP $($updateResult.StatusCode)"
+        }
+        
+        $data = $updateResult.Body | ConvertFrom-Json
+        $expectedHash = $data.sha256
+        $newVersion = $data.version
+        
+        $installDir = "C:\CyberShield"
+        $targetScript = Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"
+        $tempScript = Join-Path $env:TEMP "cybershield-reinstall-$newVersion.ps1"
+        
+        if ($data.script_content_base64) {
+            $bytes = [System.Convert]::FromBase64String($data.script_content_base64)
+            [System.IO.File]::WriteAllBytes($tempScript, $bytes)
+        } else {
+            [System.IO.File]::WriteAllText($tempScript, $data.script_content, [System.Text.UTF8Encoding]::new($false))
+        }
+        
+        $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+        if ($actualHash -ne $expectedHash.ToLower()) {
+            Remove-Item $tempScript -Force
+            throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
+        }
+        
+        # Remover tasks antigas
+        Get-ScheduledTask -ErrorAction SilentlyContinue | 
+            Where-Object { $_.TaskName -like "*CyberShield*" } |
+            ForEach-Object {
+                Stop-ScheduledTask -TaskName $_.TaskName -ErrorAction SilentlyContinue
+                Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue
+            }
+        
+        # Limpar scripts antigos
+        Get-ChildItem -Path $installDir -Filter "*.ps1" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        
+        # Instalar novo script
+        Copy-Item -Path $tempScript -Destination $targetScript -Force
+        Remove-Item $tempScript -Force
+        
+        # Criar nova scheduled task
+        $action = New-ScheduledTaskAction -Execute "powershell.exe" `
+            -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$targetScript`""
+        $trigger = New-ScheduledTaskTrigger -AtStartup
+        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+            -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+        $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
+        
+        Register-ScheduledTask -TaskName "CyberShieldAgent" -Action $action -Trigger $trigger `
+            -Settings $settings -Principal $principal -Force | Out-Null
+        
+        Start-ScheduledTask -TaskName "CyberShieldAgent"
+        
+        Write-Log "[REINSTALL] Agente reinstalado com sucesso" "SUCCESS"
+        
+        return @{
+            success = $true
+            output = (@{
+                message = "Agent reinstalled successfully"
+                newVersion = $newVersion
+                targetPath = $targetScript
+                sha256 = $actualHash
+            } | ConvertTo-Json -Compress)
+        }
     }
     catch {
         return @{ success = $false; error = $_.Exception.Message }
