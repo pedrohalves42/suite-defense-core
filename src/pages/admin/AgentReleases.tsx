@@ -17,10 +17,10 @@ import { MassReinstallHelper } from "@/components/admin/MassReinstallHelper";
 import { SyncStorageBucket } from "@/components/admin/SyncStorageBucket";
 
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
-// SSA-004: v4.1.0 - Payload Signing Ed25519
+// SSA-009: v4.1.2 - Full Jobs + Browser History + Storage Sync
 const CURRENT_VERSIONS = {
-  windows: 'v4.1.0',
-  linux: 'v4.1.0',
+  windows: 'v4.1.2',
+  linux: 'v4.1.2',
   macos: 'v4.1.0'
 } as const;
 
