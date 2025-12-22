@@ -3544,7 +3544,7 @@ function Invoke-UpdateAgentJob {
     param($Job)
     
     try {
-        Write-Log "[UPDATE] Iniciando update_agent - v4.0.7" "INFO"
+        Write-Log "[UPDATE] Iniciando update_agent - v4.1.2" "INFO"
         
         # ============================================================
         # FASE 3.0: SAFE MODE CHECK
