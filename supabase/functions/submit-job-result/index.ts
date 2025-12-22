@@ -69,6 +69,64 @@ Deno.serve(async (req) => {
 
     const agent = Array.isArray(token.agents) ? token.agents[0] : token.agents
 
+    // SSA-023: Version Gate Enforcement
+    // Bloquear agentes com versões muito antigas que podem ter bugs conhecidos
+    const MIN_SUPPORTED_VERSION = 'v4.1.0'
+    
+    // Buscar versão do agente
+    const { data: agentData } = await supabase
+      .from('agents')
+      .select('agent_version')
+      .eq('id', agent.id)
+      .single()
+    
+    const agentVersion = agentData?.agent_version || 'v0.0.0'
+    
+    // Função para comparar versões semânticas
+    const compareVersions = (v1: string, v2: string): number => {
+      const normalize = (v: string) => v.replace('v', '').split('.').map(Number)
+      const [a, b] = [normalize(v1), normalize(v2)]
+      for (let i = 0; i < 3; i++) {
+        if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) - (b[i] || 0)
+      }
+      return 0
+    }
+    
+    if (compareVersions(agentVersion, MIN_SUPPORTED_VERSION) < 0) {
+      console.warn('[submit-job-result] SSA-023: Rejecting job from outdated agent', {
+        agent: agent.agent_name,
+        agentVersion,
+        minRequired: MIN_SUPPORTED_VERSION
+      })
+      
+      await logSecurityEvent({
+        supabase,
+        tenantId: agent.tenant_id,
+        ipAddress,
+        endpoint: '/submit-job-result',
+        attackType: 'unauthorized',
+        severity: 'medium',
+        blocked: true,
+        details: {
+          reason: 'unsupported_version',
+          agent_name: agent.agent_name,
+          agent_version: agentVersion,
+          min_required: MIN_SUPPORTED_VERSION,
+          action: 'upgrade_required'
+        }
+      })
+      
+      return new Response(
+        JSON.stringify({ 
+          error: 'unsupported_version',
+          min_required: MIN_SUPPORTED_VERSION,
+          current: agentVersion,
+          message: 'Agent version too old. Please update to continue submitting job results.'
+        }),
+        { status: 426, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // 2. Verificar HMAC obrigatorio
     if (!agent.hmac_secret) {
       console.error('[submit-job-result] CRITICAL: Agent without HMAC secret:', agent.agent_name)

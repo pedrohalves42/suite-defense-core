@@ -171,6 +171,26 @@ Deno.serve(async (req) => {
 
     logger.info('Fetching jobs for agent', { agentName: agent.agent_name, agentId: token.agent_id })
     
+    // SSA-026: Verificar backlog do agente antes de entregar mais jobs
+    const MAX_PENDING_JOBS = 50
+    const { count: pendingCount, error: countError } = await supabase
+      .from('jobs')
+      .select('*', { count: 'exact', head: true })
+      .eq('agent_id', token.agent_id)
+      .in('status', ['queued', 'delivered'])
+
+    if (!countError && (pendingCount || 0) >= MAX_PENDING_JOBS) {
+      logger.warn('SSA-026: Agent hit job limit, not delivering new jobs', { 
+        agentName: agent.agent_name, 
+        pendingCount, 
+        maxLimit: MAX_PENDING_JOBS 
+      })
+      return new Response(
+        JSON.stringify([]),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+    
     // Buscar jobs pendentes (max 3) - usando agent_name OU agent_id
     // P1: Ordenar por prioridade (1=critical, 2=standard, 3=heavy) e depois por created_at
     const { data: jobs, error: jobsError } = await supabase
