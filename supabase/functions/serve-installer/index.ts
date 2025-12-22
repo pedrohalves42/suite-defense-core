@@ -332,31 +332,39 @@ Deno.serve(async (req) => {
       });
     }
 
-    // FASE 1 CRITICO: Fetch agent script from storage
-    console.log(`[${requestId}] Fetching agent script from storage`);
+    // CRITICAL FIX: Fetch Windows agent script from agent_releases table (same as Linux/macOS)
+    // This ensures version synchronization - no more desync with storage bucket
+    console.log(`[${requestId}] Fetching Windows agent script from agent_releases database`);
     
     const { validateAgentScriptContent, calculateScriptHash } = await import('../_shared/agent-script-validator.ts');
     
-    // Buscar script do storage bucket
-    const { data: fileData, error: storageError } = await supabaseClient.storage
-      .from('agent-installers')
-      .download('scripts/cybershield-agent-windows-v3.ps1');
+    // Buscar script da tabela agent_releases (fonte única de verdade)
+    const { data: windowsReleaseData, error: windowsReleaseError } = await supabaseClient
+      .from('agent_releases')
+      .select('script_content, version, sha256')
+      .eq('platform', 'windows')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
     
-    if (storageError || !fileData) {
-      console.error(`[${requestId}] Failed to fetch script from storage:`, storageError);
+    if (windowsReleaseError || !windowsReleaseData?.script_content) {
+      console.error(`[${requestId}] No active Windows agent release found:`, windowsReleaseError);
       return new Response(
-        'Failed to generate secure installer - script not found in storage',
-        {
-          status: 503,
-          headers: { ...corsHeaders, 'Content-Type': 'text/plain' }
-        }
+        JSON.stringify({
+          error: 'No active Windows agent release found',
+          details: 'Please register an active agent release for Windows in Admin > Agent Releases',
+          requestId
+        }),
+        { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    const agentScriptContent = await fileData.text();
+    const agentScriptContent = windowsReleaseData.script_content;
+    const registeredVersion = windowsReleaseData.version;
     
     if (!validateAgentScriptContent(agentScriptContent)) {
-      console.error(`[${requestId}] CRITICAL: Script validation failed`);
+      console.error(`[${requestId}] CRITICAL: Script validation failed for Windows release`);
       return new Response(
         'Failed to generate secure installer - script validation failed',
         {
@@ -377,27 +385,12 @@ Deno.serve(async (req) => {
       });
     }
     
-    // CRITICAL: Validate embedded script version
-    const expectedVersion = INSTALLER_VERSION;
-    if (!agentScriptContent.includes(expectedVersion)) {
-      console.error(`[${requestId}] CRITICAL: Agent script version mismatch`, {
-        expected: expectedVersion,
-        scriptPreview: agentScriptContent.substring(0, 500)
-      });
-      return new Response(
-        `Agent script version mismatch: expected ${expectedVersion} but embedded script has different version`,
-        { 
-          status: 503,
-          headers: corsHeaders
-        }
-      );
-    }
-    
-    console.log(`[${requestId}] Agent script validated successfully`, { 
+    console.log(`[${requestId}] Windows agent script loaded from database`, { 
       size: agentScriptContent.length,
       sizeKB: (agentScriptContent.length / 1024).toFixed(2),
       hash: agentScriptHash,
-      version: expectedVersion
+      registeredVersion,
+      source: 'agent_releases'
     });
 
 

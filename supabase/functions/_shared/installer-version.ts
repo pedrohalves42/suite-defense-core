@@ -7,10 +7,10 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v4.0.10';
+export const INSTALLER_VERSION = 'v4.1.2';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
-export const LAST_UPDATED = '2025-12-19T03:15:00Z';
+export const LAST_UPDATED = '2025-01-21T18:00:00Z';
 
 export const CHANGES = [
   '[v4.0.10] FASE VIKTOR: Force Update via Heartbeat Response para recovery de agentes',
