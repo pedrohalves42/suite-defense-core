@@ -2067,9 +2067,22 @@ function Apply-ForcedUpdate {
         }
         
         Write-Log "[FORCE UPDATE] Update $targetVersion aplicado com sucesso!" "SUCCESS"
-        Write-Log "[FORCE UPDATE] Nova versao sera ativada no proximo boot do Windows" "INFO"
         
-        return @{ success = $true; version = $targetVersion }
+        # SSA-010 FIX: Auto-restart da Scheduled Task para ativar IMEDIATAMENTE
+        # (Mesmo padrao do Rollback que funciona corretamente)
+        Write-Log "[FORCE UPDATE] Reiniciando Scheduled Task para ativar nova versao..." "INFO"
+        try {
+            Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+            Start-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+            Write-Log "[FORCE UPDATE] Task reiniciada - nova versao ativa!" "SUCCESS"
+        } catch {
+            Write-Log "[FORCE UPDATE] Restart task falhou, sera ativado no proximo boot: $($_.Exception.Message)" "WARN"
+        }
+        
+        # EXIT para permitir novo script iniciar (processo atual termina)
+        Write-Log "[FORCE UPDATE] Encerrando processo atual para nova versao iniciar..." "INFO"
+        exit 0
         
     } catch {
         Write-Log "[FORCE UPDATE] Erro: $($_.Exception.Message)" "ERROR"
