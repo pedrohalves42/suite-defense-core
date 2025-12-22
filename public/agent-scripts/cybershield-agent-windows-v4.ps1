@@ -3772,23 +3772,22 @@ function Invoke-UpdateAgentJob {
         } -Severity "info"
         
         Write-Log "[SUCCESS] Script v$newVersion instalado em $targetScript" "SUCCESS"
-        Write-Log "[INFO] Nova versao sera carregada no proximo boot do sistema" "INFO"
-        Write-Log "[INFO] Agente continua operando normalmente com versao $($Global:AgentVersion)" "INFO"
         
-        $output = @{
-            message     = "Update saved - will be active after Windows reboot"
-            newVersion  = $newVersion
-            currentVersion = $Global:AgentVersion
-            targetPath  = $targetScript
-            sha256      = $actualHash
-            base64Mode  = [bool]$data.script_content_base64
-            signatureVerified = $signatureVerified
-            signedBy    = $data.signed_by
-            requiresReboot = $true
-            savedAt     = (Get-Date).ToUniversalTime().ToString("o")
+        # SSA-014 FIX: Auto-restart igual ao Apply-ForcedUpdate
+        # (Mesmo padrão que funciona corretamente no forced update)
+        Write-Log "[UPDATE] Reiniciando Scheduled Task para ativar nova versao..." "INFO"
+        try {
+            Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+            Start-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+            Write-Log "[UPDATE] Task reiniciada - nova versao ativa!" "SUCCESS"
+        } catch {
+            Write-Log "[UPDATE] Restart task falhou, sera ativado no proximo boot: $($_.Exception.Message)" "WARN"
         }
         
-        return @{ success = $true; output = ($output | ConvertTo-Json -Compress) }
+        # EXIT para permitir novo script iniciar (processo atual termina)
+        Write-Log "[UPDATE] Encerrando processo atual para nova versao iniciar..." "INFO"
+        exit 0
     }
     catch {
         # CRITICAL: Use "error" instead of "update_failed" for backward compatibility
