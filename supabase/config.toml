@@ -505,3 +505,7 @@ verify_jwt = true
 [functions.auto-cleanup-jobs]
 verify_jwt = false
 schedule = "0 */2 * * *"
+
+# === Storage Bucket Sync (fallback de emergência) ===
+[functions.sync-storage-bucket]
+verify_jwt = false
