@@ -3,9 +3,9 @@
  * CyberShield Agent Windows Script - AUTO-GERADO
  * NAO EDITAR MANUALMENTE.
  * Fonte: public/agent-scripts/cybershield-agent-windows-v4.ps1
- * Versao: v4.1.0
- * SHA256: 2fc2f879476c087d856fc21e1fb13e2171a4d5ab9ae391501edc0a49b842feb5
- * Gerado em: 2025-12-22T03:14:21.268Z
+ * Versao: v4.1.2
+ * SHA256: 54eb905ea0fe24206132f7f17b9bcf78a61264170f1202cf89e50682a1788a7e
+ * Gerado em: 2025-12-22T03:18:16.216Z
  */
 
 export function getAgentScriptWindows(): string {
@@ -13,8 +13,10 @@ export function getAgentScriptWindows(): string {
 }
 
 export const AGENT_SCRIPT_WINDOWS_CONTENT = `<#
-    CyberShield Agent - Windows v4.1.0
+    CyberShield Agent - Windows v4.1.2
     
+    SSA-009: Restauração da coleta de browser_history (Chrome, Firefox, Edge)
+    SSA-010: Restauração de todos os jobs do v3 (scan, fix_firewall, restart_service, etc.)
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
     FASE 2.4: DNS Filter Go como Windows Service
@@ -89,7 +91,7 @@ param(
     [string]\$AgentName = \$env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = \$false)]
-    [string]\$AgentVersion = "v4.1.0"
+    [string]\$AgentVersion = "v4.1.2"
 )
 
 \$ErrorActionPreference = "Stop"
@@ -2328,6 +2330,50 @@ function Execute-Job {
                 if (\$result.success) { \$output = \$result.output }
                 else { throw \$result.error }
             }
+            "integration_test" {
+                \$sys = Get-SystemInfo
+                \$output = @{
+                    message = "Integration test executed successfully"
+                    timestamp = (Get-Date).ToUniversalTime().ToString("o")
+                    agent = \$Global:AgentName
+                    version = \$Global:AgentVersion
+                    system = \$sys
+                } | ConvertTo-Json -Compress
+            }
+            "collect_info" {
+                \$sys = Get-SystemInfo
+                \$output = \$sys | ConvertTo-Json -Compress
+            }
+            "scan" {
+                \$result = Invoke-ScanJob -Job \$Job
+                if (\$result.success) { \$output = \$result.output }
+                else { throw \$result.error }
+            }
+            "fix_firewall" {
+                \$result = Invoke-FixFirewallJob -Job \$Job
+                if (\$result.success) { \$output = \$result.output }
+                else { throw \$result.error }
+            }
+            "restart_service" {
+                \$result = Invoke-RestartServiceJob -Job \$Job
+                if (\$result.success) { \$output = \$result.output }
+                else { throw \$result.error }
+            }
+            "collect_network_info" {
+                \$result = Invoke-CollectNetworkInfoJob -Job \$Job
+                if (\$result.success) { \$output = \$result.output }
+                else { throw \$result.error }
+            }
+            "sync_blocked_websites" {
+                \$result = Invoke-SyncBlockedWebsitesJob -Job \$Job
+                if (\$result.success) { \$output = \$result.output }
+                else { throw \$result.error }
+            }
+            "reinstall_agent" {
+                \$result = Invoke-ReinstallAgentJob -Job \$Job
+                if (\$result.success) { \$output = \$result.output }
+                else { throw \$result.error }
+            }
             default {
                 throw "Tipo de job nao suportado: \$jobType"
             }
@@ -2554,33 +2600,957 @@ function Invoke-CollectAntivirusJob {
     }
 }
 
-function Invoke-CollectWebActivityJob {
+# ============================================
+#  SSA-010: RESTORED JOBS FROM V3
+# ============================================
+
+# SCAN JOB - Verifica arquivos com scan-virus (VirusTotal)
+function Invoke-ScanJob {
     param(\$Job)
     
     try {
-        \$activity = @{
-            timestamp = (Get-Date).ToUniversalTime().ToString("o")
-            hostname = \$env:COMPUTERNAME
-            dns_cache = @()
-            browser_history = @()
+        Write-Log "[SCAN] Iniciando scan de arquivo..." "INFO"
+        
+        \$payload = \$Job.payload
+        if (\$payload -is [string]) {
+            \$payload = \$payload | ConvertFrom-Json
         }
         
-        # DNS Cache
+        \$filePath = \$payload.filePath
+        \$tenantId = \$payload.tenantId
+        
+        if (-not \$filePath) {
+            throw "Payload invalido: 'filePath' nao informado"
+        }
+        
+        # Expandir variaveis de ambiente
+        if (\$filePath -match '%USERPROFILE%') {
+            \$userProfiles = Get-ChildItem "C:\\Users" -Directory -ErrorAction SilentlyContinue | 
+                Where-Object { \$_.Name -notin @("Public", "Default", "Default User", "All Users") }
+            
+            \$expandedPath = \$null
+            foreach (\$profile in \$userProfiles) {
+                \$testPath = \$filePath -replace '%USERPROFILE%', \$profile.FullName
+                if (Test-Path \$testPath) {
+                    \$expandedPath = \$testPath
+                    break
+                }
+            }
+            
+            if (\$null -eq \$expandedPath) {
+                throw "Caminho nao encontrado em nenhum perfil de usuario: \$filePath"
+            }
+            \$filePath = \$expandedPath
+        }
+        elseif (\$filePath -match '%([^%]+)%') {
+            \$filePath = [System.Environment]::ExpandEnvironmentVariables(\$filePath)
+        }
+        
+        if (-not (Test-Path \$filePath)) {
+            throw "Caminho nao encontrado: \$filePath"
+        }
+        
+        \$fileHash = (Get-FileHash -Path \$filePath -Algorithm SHA256).Hash.ToLower()
+        Write-Log "[SCAN] Escaneando: \$filePath (hash: \$fileHash)" "INFO"
+        
+        \$scanBody = @{
+            tenant_id = \$tenantId
+            agent_name = \$Global:AgentName
+            filePath = \$filePath
+            fileHash = \$fileHash
+        }
+        
+        \$scanResult = Invoke-SecureRequest \`
+            -Path "/functions/v1/scan-virus" \`
+            -Method POST \`
+            -Body \$scanBody \`
+            -TimeoutSec 60
+        
+        if (-not \$scanResult.Success) {
+            throw "Falha ao chamar scan-virus: HTTP \$(\$scanResult.StatusCode)"
+        }
+        
+        \$scanData = \$scanResult.Body | ConvertFrom-Json
+        
+        \$output = @{
+            filePath = \$filePath
+            fileHash = \$fileHash
+            isMalicious = \$scanData.isMalicious
+            positives = \$scanData.positives
+            totalScans = \$scanData.totalScans
+            permalink = \$scanData.permalink
+            quarantined = \$false
+        }
+        
+        if (\$scanData.isMalicious) {
+            Write-Log "[WARN] MALWARE DETECTADO: \$(\$scanData.positives)/\$(\$scanData.totalScans) engines" "WARN"
+            
+            \$quarantineRoot = "C:\\CyberShield\\Quarantine"
+            if (-not (Test-Path \$quarantineRoot)) {
+                New-Item -ItemType Directory -Path \$quarantineRoot -Force | Out-Null
+            }
+            
+            \$fileName = [System.IO.Path]::GetFileName(\$filePath)
+            \$guid = [guid]::NewGuid().ToString()
+            \$quarantinePath = Join-Path \$quarantineRoot "\$guid\`_\$fileName"
+            
+            Move-Item -Path \$filePath -Destination \$quarantinePath -Force
+            Write-Log "[SUCCESS] Arquivo movido para quarentena: \$quarantinePath" "SUCCESS"
+            
+            \$output.quarantined = \$true
+            \$output.quarantinePath = \$quarantinePath
+        }
+        
+        return @{ success = \$true; output = (\$output | ConvertTo-Json -Compress) }
+    }
+    catch {
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# FIX FIREWALL JOB - Ativa firewall em todos os perfis
+function Invoke-FixFirewallJob {
+    param(\$Job)
+    
+    Write-Log "[FIX-FIREWALL] Iniciando auto-remediacao de firewall..." "INFO"
+    
+    try {
+        \$profiles = @()
+        
         try {
-            \$dnsCache = Get-DnsClientCache -ErrorAction SilentlyContinue | Select-Object -First 100
-            foreach (\$entry in \$dnsCache) {
-                \$activity.dns_cache += @{
-                    domain = \$entry.Name
-                    type = \$entry.Type
-                    ttl = \$entry.TimeToLive
+            if (Get-Command Get-NetFirewallProfile -ErrorAction SilentlyContinue) {
+                \$fwProfiles = Get-NetFirewallProfile -ErrorAction Stop
+                foreach (\$p in \$fwProfiles) {
+                    \$profiles += [PSCustomObject]@{
+                        Name = \$p.Name
+                        Enabled = \$p.Enabled
+                    }
+                }
+            }
+        } catch {
+            # Fallback netsh
+            \$netshOutput = netsh advfirewall show allprofiles state 2>&1 | Out-String
+            foreach (\$profileName in @("Domain", "Private", "Public")) {
+                \$enabled = \$false
+                \$pattern = "(?s)\$profileName.*?State\\s+(ON|OFF)"
+                if (\$netshOutput -match \$pattern) {
+                    \$enabled = (\$Matches[1] -eq "ON")
+                }
+                \$profiles += [PSCustomObject]@{
+                    Name = \$profileName
+                    Enabled = \$enabled
+                }
+            }
+        }
+        
+        if (\$profiles.Count -eq 0) {
+            throw "Nao foi possivel obter status dos perfis de firewall"
+        }
+        
+        \$fixed = @()
+        foreach (\$p in \$profiles) {
+            if (-not \$p.Enabled) {
+                Write-Log "[FIX-FIREWALL] Ativando firewall no perfil \$(\$p.Name)" "INFO"
+                
+                try {
+                    if (Get-Command Set-NetFirewallProfile -ErrorAction SilentlyContinue) {
+                        Set-NetFirewallProfile -Name \$p.Name -Enabled True -ErrorAction Stop
+                    } else {
+                        netsh advfirewall set \$(\$p.Name.ToLower())profile state on 2>&1 | Out-Null
+                    }
+                    \$fixed += \$p.Name
+                } catch {
+                    Write-Log "[FIX-FIREWALL] Falha ao ativar perfil \$(\$p.Name): \$(\$_.Exception.Message)" "ERROR"
+                }
+            }
+        }
+        
+        if (\$fixed.Count -gt 0) {
+            Write-Log "[FIX-FIREWALL] Firewall ativado em: \$(\$fixed -join ', ')" "SUCCESS"
+            return @{ success = \$true; output = "Firewall ativado em perfis: \$(\$fixed -join ', ')" }
+        } else {
+            Write-Log "[FIX-FIREWALL] Firewall ja estava ativo em todos os perfis" "INFO"
+            return @{ success = \$true; output = "Firewall ja ativo em todos os perfis" }
+        }
+    }
+    catch {
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# RESTART SERVICE JOB - Reinicia um servico especifico
+function Invoke-RestartServiceJob {
+    param(\$Job)
+    
+    Write-Log "[RESTART-SERVICE] Iniciando restart de servico..." "INFO"
+    
+    try {
+        \$payload = \$Job.payload
+        if (\$payload -is [string]) {
+            \$payload = \$payload | ConvertFrom-Json
+        }
+        
+        if (-not \$payload -or -not \$payload.service_name) {
+            throw "service_name nao especificado no payload"
+        }
+        
+        \$serviceName = \$payload.service_name
+        
+        \$service = Get-Service -Name \$serviceName -ErrorAction SilentlyContinue
+        if (-not \$service) {
+            throw "Servico '\$serviceName' nao encontrado"
+        }
+        
+        Write-Log "[RESTART-SERVICE] Reiniciando servico: \$serviceName (Status atual: \$(\$service.Status))" "INFO"
+        
+        Restart-Service -Name \$serviceName -Force -ErrorAction Stop
+        
+        Start-Sleep -Seconds 2
+        
+        \$serviceAfter = Get-Service -Name \$serviceName -ErrorAction Stop
+        Write-Log "[RESTART-SERVICE] Servico reiniciado. Status: \$(\$serviceAfter.Status)" "SUCCESS"
+        
+        return @{ success = \$true; output = "Servico '\$serviceName' reiniciado. Status: \$(\$serviceAfter.Status)" }
+    }
+    catch {
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# COLLECT NETWORK INFO JOB - Coleta informacoes de rede
+function Invoke-CollectNetworkInfoJob {
+    param(\$Job)
+    
+    Write-Log "[NETWORK-INFO] Iniciando coleta de informacoes de rede..." "INFO"
+    
+    try {
+        \$firewallDomain = \$null
+        \$firewallPrivate = \$null
+        \$firewallPublic = \$null
+        
+        try {
+            if (Get-Command Get-NetFirewallProfile -ErrorAction SilentlyContinue) {
+                \$profiles = Get-NetFirewallProfile
+                foreach (\$p in \$profiles) {
+                    switch (\$p.Name) {
+                        "Domain" { \$firewallDomain = \$p.Enabled }
+                        "Private" { \$firewallPrivate = \$p.Enabled }
+                        "Public" { \$firewallPublic = \$p.Enabled }
+                    }
                 }
             }
         } catch { }
         
-        return @{ success = \$true; output = (\$activity | ConvertTo-Json -Compress -Depth 5) }
+        \$openPorts = @()
+        try {
+            \$tcpListening = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object -First 50
+            foreach (\$conn in \$tcpListening) {
+                \$processName = "unknown"
+                try { 
+                    \$proc = Get-Process -Id \$conn.OwningProcess -ErrorAction SilentlyContinue
+                    if (\$proc) { \$processName = \$proc.ProcessName }
+                } catch { }
+                \$openPorts += @{ port = \$conn.LocalPort; process = \$processName; protocol = "TCP" }
+            }
+        } catch { }
+        
+        \$networkAdapters = @()
+        try {
+            \$adapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { \$_.Status -eq 'Up' }
+            foreach (\$adapter in \$adapters) {
+                \$ipConfig = Get-NetIPAddress -InterfaceIndex \$adapter.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1
+                \$networkAdapters += @{
+                    name = \$adapter.Name
+                    ip_address = if (\$ipConfig) { \$ipConfig.IPAddress } else { "" }
+                    mac_address = \$adapter.MacAddress
+                    status = \$adapter.Status
+                }
+            }
+        } catch { }
+        
+        \$dnsServers = @()
+        try {
+            \$dnsConfig = Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | 
+                Where-Object { \$_.ServerAddresses } | 
+                Select-Object -ExpandProperty ServerAddresses -Unique
+            \$dnsServers = @(\$dnsConfig)
+        } catch { }
+        
+        \$gatewayIp = \$null
+        try {
+            \$gateway = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (\$gateway) { \$gatewayIp = \$gateway.NextHop }
+        } catch { }
+        
+        \$publicIp = \$null
+        try {
+            \$response = Invoke-RestMethod -Uri "https://api.ipify.org?format=json" -TimeoutSec 5 -ErrorAction SilentlyContinue
+            if (\$response.ip) { \$publicIp = \$response.ip }
+        } catch { }
+        
+        \$payload = @{
+            firewall_domain = \$firewallDomain
+            firewall_private = \$firewallPrivate
+            firewall_public = \$firewallPublic
+            open_ports = @(\$openPorts)
+            network_adapters = @(\$networkAdapters)
+            dns_servers = @(\$dnsServers)
+            gateway_ip = \$gatewayIp
+            public_ip = \$publicIp
+        }
+        
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/submit-network-info" \`
+            -Method "POST" \`
+            -Body \$payload \`
+            -TimeoutSec 30
+        
+        if (-not \$result.Success) {
+            throw "Falha ao enviar info de rede (HTTP \$(\$result.StatusCode))"
+        }
+        
+        Write-Log "[NETWORK-INFO] Informacoes de rede enviadas com sucesso" "SUCCESS"
+        
+        return @{ success = \$true; output = (\$payload | ConvertTo-Json -Compress -Depth 3) }
     }
     catch {
         return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# SYNC BLOCKED WEBSITES JOB - Sincroniza lista de sites bloqueados
+function Invoke-SyncBlockedWebsitesJob {
+    param(\$Job)
+    
+    try {
+        Write-Log "[BLOCKED-SITES] Iniciando sincronizacao de sites bloqueados..." "INFO"
+        
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/get-blocked-websites" \`
+            -Method "GET" \`
+            -TimeoutSec 30
+        
+        if (-not \$result.Success) {
+            throw "Falha ao buscar lista de sites bloqueados (HTTP \$(\$result.StatusCode))"
+        }
+        
+        \$data = \$result.Body | ConvertFrom-Json
+        \$blockedDomains = @()
+        
+        if (\$null -ne \$data.blocked_websites -and \$data.blocked_websites.Count -gt 0) {
+            \$blockedDomains = @(\$data.blocked_websites | ForEach-Object { \$_.domain_pattern })
+        }
+        elseif (\$null -ne \$data.blocked_domains -and \$data.blocked_domains.Count -gt 0) {
+            \$blockedDomains = @(\$data.blocked_domains)
+        }
+        
+        Write-Log "[BLOCKED-SITES] Recebidos \$(\$blockedDomains.Count) dominios bloqueados" "INFO"
+        
+        \$blockedListPath = "C:\\CyberShield\\blocked_websites.json"
+        \$blockedData = @{
+            updated_at = [DateTime]::UtcNow.ToString("o")
+            domains = \$blockedDomains
+        }
+        
+        \$blockedJson = \$blockedData | ConvertTo-Json -Compress
+        [System.IO.File]::WriteAllText(\$blockedListPath, \$blockedJson, [System.Text.UTF8Encoding]::new(\$false))
+        
+        Write-Log "[BLOCKED-SITES] Lista salva em \$blockedListPath" "SUCCESS"
+        
+        return @{
+            success = \$true
+            output = (@{
+                message = "Sites bloqueados sincronizados"
+                domains_count = \$blockedDomains.Count
+                list_path = \$blockedListPath
+            } | ConvertTo-Json -Compress)
+        }
+    }
+    catch {
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# REINSTALL AGENT JOB - Reinstala o agente completamente
+function Invoke-ReinstallAgentJob {
+    param(\$Job)
+    
+    try {
+        Write-Log "[REINSTALL] Iniciando reinstalacao do agente..." "INFO"
+        
+        \$updateResult = Invoke-SecureRequest \`
+            -Path "/functions/v1/serve-agent-update" \`
+            -Method GET \`
+            -TimeoutSec 60
+        
+        if (-not \$updateResult.Success) {
+            throw "Falha ao buscar script: HTTP \$(\$updateResult.StatusCode)"
+        }
+        
+        \$data = \$updateResult.Body | ConvertFrom-Json
+        \$expectedHash = \$data.sha256
+        \$newVersion = \$data.version
+        
+        \$installDir = "C:\\CyberShield"
+        \$targetScript = Join-Path \$installDir "cybershield-agent-\$(\$Global:AgentName).ps1"
+        \$tempScript = Join-Path \$env:TEMP "cybershield-reinstall-\$newVersion.ps1"
+        
+        if (\$data.script_content_base64) {
+            \$bytes = [System.Convert]::FromBase64String(\$data.script_content_base64)
+            [System.IO.File]::WriteAllBytes(\$tempScript, \$bytes)
+        } else {
+            [System.IO.File]::WriteAllText(\$tempScript, \$data.script_content, [System.Text.UTF8Encoding]::new(\$false))
+        }
+        
+        \$actualHash = (Get-FileHash -Path \$tempScript -Algorithm SHA256).Hash.ToLower()
+        if (\$actualHash -ne \$expectedHash.ToLower()) {
+            Remove-Item \$tempScript -Force
+            throw "SHA256 mismatch! Esperado: \$expectedHash, Obtido: \$actualHash"
+        }
+        
+        # Remover tasks antigas
+        Get-ScheduledTask -ErrorAction SilentlyContinue | 
+            Where-Object { \$_.TaskName -like "*CyberShield*" } |
+            ForEach-Object {
+                Stop-ScheduledTask -TaskName \$_.TaskName -ErrorAction SilentlyContinue
+                Unregister-ScheduledTask -TaskName \$_.TaskName -Confirm:\$false -ErrorAction SilentlyContinue
+            }
+        
+        # Limpar scripts antigos
+        Get-ChildItem -Path \$installDir -Filter "*.ps1" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        
+        # Instalar novo script
+        Copy-Item -Path \$tempScript -Destination \$targetScript -Force
+        Remove-Item \$tempScript -Force
+        
+        # Criar nova scheduled task
+        \$action = New-ScheduledTaskAction -Execute "powershell.exe" \`
+            -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File \`"\$targetScript\`""
+        \$trigger = New-ScheduledTaskTrigger -AtStartup
+        \$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries \`
+            -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+        \$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
+        
+        Register-ScheduledTask -TaskName "CyberShieldAgent" -Action \$action -Trigger \$trigger \`
+            -Settings \$settings -Principal \$principal -Force | Out-Null
+        
+        Start-ScheduledTask -TaskName "CyberShieldAgent"
+        
+        Write-Log "[REINSTALL] Agente reinstalado com sucesso" "SUCCESS"
+        
+        return @{
+            success = \$true
+            output = (@{
+                message = "Agent reinstalled successfully"
+                newVersion = \$newVersion
+                targetPath = \$targetScript
+                sha256 = \$actualHash
+            } | ConvertTo-Json -Compress)
+        }
+    }
+    catch {
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
+}
+
+# ============================================
+#  SSA-009: WEB ACTIVITY HELPER FUNCTIONS
+# ============================================
+
+# Converter WebKit timestamp (Chrome/Edge) para DateTime
+# WebKit: microseconds since 1601-01-01
+function ConvertFrom-WebKitTimestamp {
+    param([Nullable[Int64]]\$timestamp)
+    if (-not \$timestamp -or \$timestamp -le 0) { return \$null }
+    try {
+        \$origin = [DateTime]::new(1601, 1, 1, 0, 0, 0, [DateTimeKind]::Utc)
+        return \$origin.AddTicks(\$timestamp * 10)
+    } catch {
+        return \$null
+    }
+}
+
+# Converter Firefox PRTime para DateTime
+# PRTime: microseconds since 1970-01-01
+function ConvertFrom-PRTime {
+    param([Nullable[Int64]]\$timestamp)
+    if (-not \$timestamp -or \$timestamp -le 0) { return \$null }
+    try {
+        return [DateTimeOffset]::FromUnixTimeMilliseconds(
+            [math]::Floor(\$timestamp / 1000)
+        ).UtcDateTime
+    } catch {
+        return \$null
+    }
+}
+
+# Extrair dominio de URL
+function Extract-DomainFromUrl {
+    param([string]\$url)
+    if ([string]::IsNullOrWhiteSpace(\$url)) { return \$null }
+    try {
+        \$match = [regex]::Match(\$url, 'https?://([a-zA-Z0-9][a-zA-Z0-9\\-\\.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,})')
+        if (\$match.Success) {
+            return \$match.Groups[1].Value
+        }
+    } catch {}
+    return \$null
+}
+
+# Coleta SQLite segura com timeout
+function Get-BrowserHistorySQLite {
+    param(
+        [string]\$DbPath,
+        [string]\$Query,
+        [string]\$BrowserName,
+        [string]\$UserName
+    )
+    
+    \$results = New-Object System.Collections.ArrayList
+    
+    try {
+        # Guard de performance: arquivos > 200MB sao ignorados
+        \$fileInfo = Get-Item \$DbPath -ErrorAction Stop
+        \$maxSize = 200 * 1024 * 1024  # 200MB
+        if (\$fileInfo.Length -gt \$maxSize) {
+            Write-Log "[WEB-ACTIVITY] \$BrowserName (\$UserName): arquivo muito grande (\$('{0:N0}' -f (\$fileInfo.Length / 1MB))MB), pulando SQLite" "WARN"
+            return \$null
+        }
+        
+        # Tentar carregar assembly SQLite (disponivel no .NET)
+        \$assembly = \$null
+        try {
+            \$assembly = [System.Reflection.Assembly]::LoadWithPartialName("System.Data.SQLite")
+        } catch {}
+        
+        if (-not \$assembly) {
+            # Fallback: SQLite provider nao disponivel, retorna null para usar fallback regex
+            return \$null
+        }
+        
+        \$connectionString = "Data Source=\$DbPath;Version=3;Read Only=True;Journal Mode=Off;"
+        \$connection = New-Object System.Data.SQLite.SQLiteConnection(\$connectionString)
+        \$connection.Open()
+        
+        \$command = \$connection.CreateCommand()
+        \$command.CommandText = \$Query
+        \$command.CommandTimeout = 2  # Timeout de 2 segundos
+        
+        \$reader = \$command.ExecuteReader()
+        while (\$reader.Read()) {
+            [void]\$results.Add(@{
+                url = \$reader["url"]
+                last_visit_time = \$reader["last_visit_time"]
+                visit_count = \$reader["visit_count"]
+            })
+        }
+        
+        \$reader.Close()
+        \$connection.Close()
+        
+        return \$results
+        
+    } catch {
+        Write-Log "[WEB-ACTIVITY] SQLite falhou para \$BrowserName (\$UserName): \$(\$_.Exception.Message)" "DEBUG"
+        return \$null
+    }
+}
+
+# ============================================
+#  SSA-009: FULL WEB ACTIVITY COLLECTION
+# ============================================
+function Invoke-CollectWebActivityJob {
+    param(\$Job)
+
+    Write-Log "[WEB-ACTIVITY-V3] Iniciando coleta de atividade web com timestamps reais..." "INFO"
+
+    try {
+        \$payload = \$null
+        if (\$null -ne \$Job.payload -and \$Job.payload) {
+            try {
+                if (\$Job.payload -is [string]) {
+                    \$payload = \$Job.payload | ConvertFrom-Json
+                } else {
+                    \$payload = \$Job.payload
+                }
+            } catch {
+                Write-Log "[WEB-ACTIVITY-V3] Payload invalido, usando defaults" "WARN"
+            }
+        }
+
+        \$maxDomains = 500
+        if (\$payload -and \$payload.max_domains) {
+            \$maxDomains = [int]\$payload.max_domains
+        }
+
+        \$nowUtc = [DateTime]::UtcNow
+        # Usar ArrayList para performance O(n)
+        \$items = New-Object System.Collections.ArrayList
+
+        # 1. Coletar DNS Cache (sem timestamps reais - usa hora atual)
+        Write-Log "[WEB-ACTIVITY-V3] Coletando cache DNS..." "INFO"
+        try {
+            \$dnsEntries = Get-DnsClientCache -ErrorAction SilentlyContinue
+            if (\$dnsEntries) {
+                \$dnsEntries = \$dnsEntries |
+                    Where-Object { \$_.Entry -and \$_.Name } |
+                    Sort-Object -Property Name -Unique |
+                    Select-Object -First 100
+
+                foreach (\$entry in \$dnsEntries) {
+                    \$domain = \$entry.Name
+                    if ([string]::IsNullOrWhiteSpace(\$domain)) { continue }
+                    if (\$domain -like "localhost*" -or \$domain -like "*.local" -or \$domain -like "local") { continue }
+
+                    [void]\$items.Add(@{
+                        domain = \$domain
+                        source = "dns_cache"
+                        visited_at = \$nowUtc.ToString("o")
+                        visit_count = 1  # DNS nao tem contagem real
+                    })
+                }
+                Write-Log "[WEB-ACTIVITY-V3] Cache DNS: \$(\$dnsEntries.Count) dominios" "INFO"
+            }
+        } catch {
+            Write-Log "[WEB-ACTIVITY-V3] Erro ao ler cache DNS: \$(\$_.Exception.Message)" "WARN"
+        }
+
+        # 2. Coletar historico de TODOS OS PERFIS DE USUARIO
+        Write-Log "[WEB-ACTIVITY-V3] Coletando historico de todos os perfis de usuario..." "INFO"
+        
+        \$userProfiles = @()
+        try {
+            \$userProfiles = Get-ChildItem -Path "C:\\Users" -Directory -ErrorAction SilentlyContinue | 
+                Where-Object { \$_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
+            Write-Log "[WEB-ACTIVITY-V3] Encontrados \$(\$userProfiles.Count) perfis de usuario" "INFO"
+        } catch {
+            Write-Log "[WEB-ACTIVITY-V3] Erro ao listar perfis de usuario: \$(\$_.Exception.Message)" "WARN"
+        }
+        
+        foreach (\$userProfile in \$userProfiles) {
+            \$userName = \$userProfile.Name
+            \$userPath = \$userProfile.FullName
+            
+            Write-Log "[WEB-ACTIVITY-V3] Processando perfil: \$userName" "DEBUG"
+            
+            # 2a. Chrome History - SQLITE COM TIMESTAMPS REAIS
+            try {
+                \$chromeHistoryPath = Join-Path \$userPath "AppData\\Local\\Google\\Chrome\\User Data\\Default\\History"
+                if (Test-Path \$chromeHistoryPath) {
+                    \$tempHistoryPath = "\$env:TEMP\\chrome_history_temp_\$(Get-Random).db"
+                    Copy-Item -Path \$chromeHistoryPath -Destination \$tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    
+                    if (Test-Path \$tempHistoryPath) {
+                        \$sqliteResults = \$null
+                        
+                        # Tentar SQLite primeiro para dados reais
+                        try {
+                            \$sqliteResults = Get-BrowserHistorySQLite \`
+                                -DbPath \$tempHistoryPath \`
+                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" \`
+                                -BrowserName "Chrome" \`
+                                -UserName \$userName
+                        } catch {
+                            Write-Log "[WEB-ACTIVITY-V3] Chrome SQLite falhou (\$userName): \$(\$_.Exception.Message)" "DEBUG"
+                        }
+                        
+                        if (\$sqliteResults -and \$sqliteResults.Count -gt 0) {
+                            # SUCESSO: Dados reais do SQLite
+                            foreach (\$row in \$sqliteResults) {
+                                \$domain = Extract-DomainFromUrl \$row.url
+                                if (-not \$domain -or \$domain -like "localhost*" -or \$domain -like "*.local" -or \$domain -like "*google*") { continue }
+                                
+                                \$visitedAt = ConvertFrom-WebKitTimestamp \$row.last_visit_time
+                                [void]\$items.Add(@{
+                                    domain = \$domain
+                                    source = "chrome_history_\$userName"
+                                    visited_at = if (\$visitedAt) { \$visitedAt.ToString("o") } else { \$nowUtc.ToString("o") }
+                                    visit_count = [int]\$row.visit_count
+                                })
+                            }
+                            Write-Log "[WEB-ACTIVITY-V3] Chrome (\$userName): \$(\$sqliteResults.Count) registros via SQLite (timestamps reais)" "INFO"
+                        } else {
+                            # FALLBACK: Regex para compatibilidade
+                            try {
+                                \$maxBytes = 5 * 1024 * 1024
+                                \$fileInfo = Get-Item \$tempHistoryPath
+                                \$bytesToRead = [Math]::Min(\$fileInfo.Length, \$maxBytes)
+                                
+                                \$fileStream = [System.IO.File]::OpenRead(\$tempHistoryPath)
+                                \$buffer = New-Object byte[] \$bytesToRead
+                                [void]\$fileStream.Read(\$buffer, 0, \$bytesToRead)
+                                \$fileStream.Close()
+                                \$fileStream.Dispose()
+                                
+                                if (\$buffer) {
+                                    \$dataString = [System.Text.Encoding]::UTF8.GetString(\$buffer)
+                                    \$urlMatches = [regex]::Matches(\$dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\\-\\.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,})')
+                                    
+                                    \$chromeDomains = \$urlMatches | 
+                                        ForEach-Object { \$_.Groups[1].Value } | 
+                                        Where-Object { \$_ -notlike "localhost*" -and \$_ -notlike "*.local" -and \$_ -notlike "*google*" } |
+                                        Select-Object -Unique -First 50
+                                    
+                                    foreach (\$domain in \$chromeDomains) {
+                                        [void]\$items.Add(@{
+                                            domain = \$domain
+                                            source = "chrome_history_\$userName"
+                                            visited_at = \$nowUtc.ToString("o")
+                                            visit_count = 1  # Fallback: sem contagem real
+                                        })
+                                    }
+                                    Write-Log "[WEB-ACTIVITY-V3] Chrome (\$userName): \$(\$chromeDomains.Count) dominios via regex (fallback)" "INFO"
+                                    
+                                    \$buffer = \$null
+                                    \$dataString = \$null
+                                }
+                            } catch {
+                                Write-Log "[WEB-ACTIVITY-V3] Chrome regex falhou (\$userName): \$(\$_.Exception.Message)" "WARN"
+                            }
+                        }
+                        Remove-Item \$tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    }
+                }
+            } catch {
+                Write-Log "[WEB-ACTIVITY-V3] Erro ao acessar Chrome (\$userName): \$(\$_.Exception.Message)" "WARN"
+            }
+            
+            # 2b. Firefox History - SQLITE COM TIMESTAMPS REAIS
+            try {
+                \$firefoxProfilesPath = Join-Path \$userPath "AppData\\Roaming\\Mozilla\\Firefox\\Profiles"
+                if (Test-Path \$firefoxProfilesPath) {
+                    \$profiles = Get-ChildItem -Path \$firefoxProfilesPath -Directory -ErrorAction SilentlyContinue
+                    foreach (\$profile in \$profiles) {
+                        \$placesPath = Join-Path \$profile.FullName "places.sqlite"
+                        if (Test-Path \$placesPath) {
+                            \$tempPlacesPath = "\$env:TEMP\\firefox_places_temp_\$(Get-Random).db"
+                            Copy-Item -Path \$placesPath -Destination \$tempPlacesPath -Force -ErrorAction SilentlyContinue
+                            
+                            if (Test-Path \$tempPlacesPath) {
+                                \$sqliteResults = \$null
+                                
+                                # Tentar SQLite primeiro
+                                try {
+                                    \$sqliteResults = Get-BrowserHistorySQLite \`
+                                        -DbPath \$tempPlacesPath \`
+                                        -Query "SELECT url, last_visit_date, visit_count FROM moz_places WHERE visit_count > 0 ORDER BY last_visit_date DESC LIMIT 200" \`
+                                        -BrowserName "Firefox" \`
+                                        -UserName \$userName
+                                } catch {
+                                    Write-Log "[WEB-ACTIVITY-V3] Firefox SQLite falhou (\$userName): \$(\$_.Exception.Message)" "DEBUG"
+                                }
+                                
+                                if (\$sqliteResults -and \$sqliteResults.Count -gt 0) {
+                                    foreach (\$row in \$sqliteResults) {
+                                        \$domain = Extract-DomainFromUrl \$row.url
+                                        if (-not \$domain -or \$domain -like "localhost*" -or \$domain -like "*.local" -or \$domain -like "*mozilla*") { continue }
+                                        
+                                        \$visitedAt = ConvertFrom-PRTime \$row.last_visit_time
+                                        [void]\$items.Add(@{
+                                            domain = \$domain
+                                            source = "firefox_history_\$userName"
+                                            visited_at = if (\$visitedAt) { \$visitedAt.ToString("o") } else { \$nowUtc.ToString("o") }
+                                            visit_count = [int]\$row.visit_count
+                                        })
+                                    }
+                                    Write-Log "[WEB-ACTIVITY-V3] Firefox (\$userName): \$(\$sqliteResults.Count) registros via SQLite" "INFO"
+                                } else {
+                                    # Fallback regex
+                                    try {
+                                        \$maxBytes = 5 * 1024 * 1024
+                                        \$fileInfo = Get-Item \$tempPlacesPath
+                                        \$bytesToRead = [Math]::Min(\$fileInfo.Length, \$maxBytes)
+                                        
+                                        \$fileStream = [System.IO.File]::OpenRead(\$tempPlacesPath)
+                                        \$buffer = New-Object byte[] \$bytesToRead
+                                        [void]\$fileStream.Read(\$buffer, 0, \$bytesToRead)
+                                        \$fileStream.Close()
+                                        \$fileStream.Dispose()
+                                        
+                                        if (\$buffer) {
+                                            \$dataString = [System.Text.Encoding]::UTF8.GetString(\$buffer)
+                                            \$urlMatches = [regex]::Matches(\$dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\\-\\.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,})')
+                                            
+                                            \$firefoxDomains = \$urlMatches | 
+                                                ForEach-Object { \$_.Groups[1].Value } | 
+                                                Where-Object { \$_ -notlike "localhost*" -and \$_ -notlike "*.local" -and \$_ -notlike "*mozilla*" } |
+                                                Select-Object -Unique -First 50
+                                            
+                                            foreach (\$domain in \$firefoxDomains) {
+                                                [void]\$items.Add(@{
+                                                    domain = \$domain
+                                                    source = "firefox_history_\$userName"
+                                                    visited_at = \$nowUtc.ToString("o")
+                                                    visit_count = 1
+                                                })
+                                            }
+                                            Write-Log "[WEB-ACTIVITY-V3] Firefox (\$userName): \$(\$firefoxDomains.Count) dominios via regex" "INFO"
+                                            
+                                            \$buffer = \$null
+                                            \$dataString = \$null
+                                        }
+                                    } catch {
+                                        Write-Log "[WEB-ACTIVITY-V3] Firefox regex falhou (\$userName): \$(\$_.Exception.Message)" "WARN"
+                                    }
+                                }
+                                Remove-Item \$tempPlacesPath -Force -ErrorAction SilentlyContinue
+                            }
+                            break
+                        }
+                    }
+                }
+            } catch {
+                Write-Log "[WEB-ACTIVITY-V3] Erro ao acessar Firefox (\$userName): \$(\$_.Exception.Message)" "WARN"
+            }
+            
+            # 2c. Edge History - SQLITE COM TIMESTAMPS REAIS
+            try {
+                \$edgeHistoryPath = Join-Path \$userPath "AppData\\Local\\Microsoft\\Edge\\User Data\\Default\\History"
+                if (Test-Path \$edgeHistoryPath) {
+                    \$tempHistoryPath = "\$env:TEMP\\edge_history_temp_\$(Get-Random).db"
+                    Copy-Item -Path \$edgeHistoryPath -Destination \$tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    
+                    if (Test-Path \$tempHistoryPath) {
+                        \$sqliteResults = \$null
+                        
+                        try {
+                            \$sqliteResults = Get-BrowserHistorySQLite \`
+                                -DbPath \$tempHistoryPath \`
+                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" \`
+                                -BrowserName "Edge" \`
+                                -UserName \$userName
+                        } catch {
+                            Write-Log "[WEB-ACTIVITY-V3] Edge SQLite falhou (\$userName): \$(\$_.Exception.Message)" "DEBUG"
+                        }
+                        
+                        if (\$sqliteResults -and \$sqliteResults.Count -gt 0) {
+                            foreach (\$row in \$sqliteResults) {
+                                \$domain = Extract-DomainFromUrl \$row.url
+                                if (-not \$domain -or \$domain -like "localhost*" -or \$domain -like "*.local" -or \$domain -like "*microsoft*" -or \$domain -like "*bing*") { continue }
+                                
+                                \$visitedAt = ConvertFrom-WebKitTimestamp \$row.last_visit_time
+                                [void]\$items.Add(@{
+                                    domain = \$domain
+                                    source = "edge_history_\$userName"
+                                    visited_at = if (\$visitedAt) { \$visitedAt.ToString("o") } else { \$nowUtc.ToString("o") }
+                                    visit_count = [int]\$row.visit_count
+                                })
+                            }
+                            Write-Log "[WEB-ACTIVITY-V3] Edge (\$userName): \$(\$sqliteResults.Count) registros via SQLite" "INFO"
+                        } else {
+                            # Fallback regex
+                            try {
+                                \$maxBytes = 5 * 1024 * 1024
+                                \$fileInfo = Get-Item \$tempHistoryPath
+                                \$bytesToRead = [Math]::Min(\$fileInfo.Length, \$maxBytes)
+                                
+                                \$fileStream = [System.IO.File]::OpenRead(\$tempHistoryPath)
+                                \$buffer = New-Object byte[] \$bytesToRead
+                                [void]\$fileStream.Read(\$buffer, 0, \$bytesToRead)
+                                \$fileStream.Close()
+                                \$fileStream.Dispose()
+                                
+                                if (\$buffer) {
+                                    \$dataString = [System.Text.Encoding]::UTF8.GetString(\$buffer)
+                                    \$urlMatches = [regex]::Matches(\$dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\\-\\.]*[a-zA-Z0-9]\\.[a-zA-Z]{2,})')
+                                    
+                                    \$edgeDomains = \$urlMatches | 
+                                        ForEach-Object { \$_.Groups[1].Value } | 
+                                        Where-Object { \$_ -notlike "localhost*" -and \$_ -notlike "*.local" -and \$_ -notlike "*microsoft*" -and \$_ -notlike "*bing*" } |
+                                        Select-Object -Unique -First 50
+                                    
+                                    foreach (\$domain in \$edgeDomains) {
+                                        [void]\$items.Add(@{
+                                            domain = \$domain
+                                            source = "edge_history_\$userName"
+                                            visited_at = \$nowUtc.ToString("o")
+                                            visit_count = 1
+                                        })
+                                    }
+                                    Write-Log "[WEB-ACTIVITY-V3] Edge (\$userName): \$(\$edgeDomains.Count) dominios via regex" "INFO"
+                                    
+                                    \$buffer = \$null
+                                    \$dataString = \$null
+                                }
+                            } catch {
+                                Write-Log "[WEB-ACTIVITY-V3] Edge regex falhou (\$userName): \$(\$_.Exception.Message)" "WARN"
+                            }
+                        }
+                        Remove-Item \$tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    }
+                }
+            } catch {
+                Write-Log "[WEB-ACTIVITY-V3] Erro ao acessar Edge (\$userName): \$(\$_.Exception.Message)" "WARN"
+            }
+        }
+
+        # AGREGACAO POR DOMINIO: soma visit_count, usa ultimo visited_at
+        Write-Log "[WEB-ACTIVITY-V3] Agregando por dominio..." "INFO"
+        \$aggregated = @{}
+        foreach (\$item in \$items) {
+            \$key = \$item.domain
+            if (\$aggregated.ContainsKey(\$key)) {
+                \$aggregated[\$key].visit_count += \$item.visit_count
+                # Manter o timestamp mais recente
+                if (\$item.visited_at -gt \$aggregated[\$key].visited_at) {
+                    \$aggregated[\$key].visited_at = \$item.visited_at
+                    \$aggregated[\$key].source = \$item.source
+                }
+            } else {
+                \$aggregated[\$key] = @{
+                    domain = \$item.domain
+                    source = \$item.source
+                    visited_at = \$item.visited_at
+                    visit_count = \$item.visit_count
+                }
+            }
+        }
+        
+        \$uniqueItems = @(\$aggregated.Values) | Select-Object -First \$maxDomains
+        
+        Write-Log "[WEB-ACTIVITY-V3] Agregacao: \$(\$items.Count) items -> \$(\$uniqueItems.Count) dominios unicos" "INFO"
+
+        if (-not \$uniqueItems.Count) {
+            Write-Log "[WEB-ACTIVITY-V3] Nenhum dominio encontrado em nenhuma fonte" "INFO"
+            return @{
+                success = \$true
+                output  = "Nenhum dominio encontrado"
+            }
+        }
+
+        Write-Log "[WEB-ACTIVITY-V3] Total de dominios unicos: \$(\$uniqueItems.Count)" "INFO"
+
+        # FEATURE FLAG: web_activity_version v3 para rastreabilidade
+        \$body = @{
+            agent_id = \$Job.agent_id
+            items    = \$uniqueItems
+            web_activity_version = "v3"  # Feature flag para identificar dados SSA-009
+        }
+
+        \$result = Invoke-SecureRequest \`
+            -Path "/functions/v1/submit-web-activity" \`
+            -Method "POST" \`
+            -Body \$body \`
+            -TimeoutSec 30
+
+        if (-not \$result.Success) {
+            throw "Falha ao enviar atividade web (HTTP \$(\$result.StatusCode))"
+        }
+
+        Write-Log "[WEB-ACTIVITY-V3] Atividade enviada com sucesso. Dominios: \$(\$uniqueItems.Count)" "SUCCESS"
+
+        return @{
+            success = \$true
+            output  = "Atividade web v3 enviada. Dominios: \$(\$uniqueItems.Count)"
+        }
+    }
+    catch {
+        \$errorMsg = "Erro em Invoke-CollectWebActivityJob: \$(\$_.Exception.Message)"
+        Write-Log "[ERROR] \$errorMsg" "ERROR"
+        return @{
+            success = \$false
+            error   = \$errorMsg
+        }
     }
 }
 
