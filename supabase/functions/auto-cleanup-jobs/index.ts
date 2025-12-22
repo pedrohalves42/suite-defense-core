@@ -1,0 +1,167 @@
+/**
+ * Auto Cleanup Jobs - Edge Function
+ * 
+ * Executa limpeza automática de jobs órfãos:
+ * - Jobs em 'queued' há mais de 24 horas -> cancelled
+ * - Jobs em 'delivered' há mais de 1 hora -> failed
+ * 
+ * Pode ser executada via:
+ * - CRON job (pg_cron)
+ * - Chamada manual (com autenticação)
+ */
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
+import { corsHeaders } from '../_shared/cors.ts'
+
+interface CleanupResult {
+  queued_cancelled: number
+  delivered_failed: number
+  total_cleaned: number
+  tenants_affected: string[]
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
+  }
+
+  const requestId = crypto.randomUUID()
+  const startTime = Date.now()
+  
+  console.log(`[${requestId}] auto-cleanup-jobs started`)
+
+  // Validate authorization (internal secret, scheduled, or admin)
+  const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET')
+  const providedSecret = req.headers.get('X-Internal-Secret')
+  const authHeader = req.headers.get('authorization')
+  
+  // Allow: scheduled execution (no auth), internal secret, or bearer token
+  const isScheduled = !providedSecret && !authHeader
+  const isInternal = INTERNAL_SECRET && providedSecret === INTERNAL_SECRET
+  const hasBearer = authHeader?.startsWith('Bearer ')
+  
+  if (!isScheduled && !isInternal && !hasBearer) {
+    console.warn(`[${requestId}] Unauthorized access attempt`)
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Parse optional request body for custom thresholds
+    let queuedThresholdHours = 24
+    let deliveredThresholdHours = 1
+    let targetTenantId: string | null = null
+
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json()
+        queuedThresholdHours = body.queued_threshold_hours ?? 24
+        deliveredThresholdHours = body.delivered_threshold_hours ?? 1
+        targetTenantId = body.tenant_id ?? null
+      } catch {
+        // Use defaults if body parsing fails
+      }
+    }
+
+    console.log(`[${requestId}] Thresholds: queued=${queuedThresholdHours}h, delivered=${deliveredThresholdHours}h`)
+    if (targetTenantId) {
+      console.log(`[${requestId}] Target tenant: ${targetTenantId}`)
+    }
+
+    const queuedCutoff = new Date(Date.now() - queuedThresholdHours * 60 * 60 * 1000).toISOString()
+    const deliveredCutoff = new Date(Date.now() - deliveredThresholdHours * 60 * 60 * 1000).toISOString()
+
+    // Step 1: Cancel old queued jobs
+    let queuedQuery = supabase
+      .from('jobs')
+      .update({
+        status: 'cancelled',
+        error_message: `Auto-cancelled: agent did not collect job within ${queuedThresholdHours}h`,
+        completed_at: new Date().toISOString()
+      })
+      .eq('status', 'queued')
+      .lt('created_at', queuedCutoff)
+
+    if (targetTenantId) {
+      queuedQuery = queuedQuery.eq('tenant_id', targetTenantId)
+    }
+
+    const { data: cancelledJobs, error: cancelError } = await queuedQuery.select('id, tenant_id')
+
+    if (cancelError) {
+      console.error(`[${requestId}] Error cancelling queued jobs:`, cancelError)
+      throw cancelError
+    }
+
+    const queuedCancelled = cancelledJobs?.length ?? 0
+    console.log(`[${requestId}] Cancelled ${queuedCancelled} old queued jobs`)
+
+    // Step 2: Fail old delivered jobs (timeout)
+    let deliveredQuery = supabase
+      .from('jobs')
+      .update({
+        status: 'failed',
+        error_message: `Timeout: agent did not report result within ${deliveredThresholdHours}h`,
+        completed_at: new Date().toISOString()
+      })
+      .eq('status', 'delivered')
+      .lt('delivered_at', deliveredCutoff)
+
+    if (targetTenantId) {
+      deliveredQuery = deliveredQuery.eq('tenant_id', targetTenantId)
+    }
+
+    const { data: failedJobs, error: failError } = await deliveredQuery.select('id, tenant_id')
+
+    if (failError) {
+      console.error(`[${requestId}] Error failing delivered jobs:`, failError)
+      throw failError
+    }
+
+    const deliveredFailed = failedJobs?.length ?? 0
+    console.log(`[${requestId}] Failed ${deliveredFailed} timed out delivered jobs`)
+
+    // Calculate affected tenants
+    const allJobs = [...(cancelledJobs ?? []), ...(failedJobs ?? [])]
+    const tenantsAffected = [...new Set(allJobs.map(j => j.tenant_id))]
+
+    const result: CleanupResult = {
+      queued_cancelled: queuedCancelled,
+      delivered_failed: deliveredFailed,
+      total_cleaned: queuedCancelled + deliveredFailed,
+      tenants_affected: tenantsAffected
+    }
+
+    const duration = Date.now() - startTime
+    console.log(`[${requestId}] Cleanup completed in ${duration}ms:`, result)
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        request_id: requestId,
+        duration_ms: duration,
+        ...result
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+
+  } catch (error) {
+    const duration = Date.now() - startTime
+    console.error(`[${requestId}] Error after ${duration}ms:`, error)
+    
+    return new Response(
+      JSON.stringify({ 
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error',
+        request_id: requestId
+      }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+})

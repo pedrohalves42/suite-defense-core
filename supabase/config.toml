@@ -500,3 +500,8 @@ verify_jwt = false
 
 [functions.execute-playbook-action]
 verify_jwt = true
+
+# === Auto Cleanup Jobs (every 2 hours) ===
+[functions.auto-cleanup-jobs]
+verify_jwt = false
+schedule = "0 */2 * * *"
