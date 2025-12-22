@@ -14,6 +14,7 @@ import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
 import { RegisterReleasesV412 } from "@/components/admin/RegisterReleasesV412";
 import { MassReinstallHelper } from "@/components/admin/MassReinstallHelper";
+import { SyncStorageBucket } from "@/components/admin/SyncStorageBucket";
 
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
 // SSA-004: v4.1.0 - Payload Signing Ed25519
@@ -467,6 +468,11 @@ export default function AgentReleases() {
       {/* Mass Reinstall Helper for v4.0.x -> v4.1.2 migration */}
       {isSuperAdmin && (
         <MassReinstallHelper />
+      )}
+
+      {/* Storage Bucket Sync - Fallback de emergência */}
+      {isSuperAdmin && (
+        <SyncStorageBucket />
       )}
 
       {/* Action Card */}
