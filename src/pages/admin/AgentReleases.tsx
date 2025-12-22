@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
 import { RegisterReleasesV412 } from "@/components/admin/RegisterReleasesV412";
+import { MassReinstallHelper } from "@/components/admin/MassReinstallHelper";
 
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
 // SSA-004: v4.1.0 - Payload Signing Ed25519
@@ -461,6 +462,11 @@ export default function AgentReleases() {
       {/* SSA-009 + SSA-010: Register v4.1.2 with Full Jobs + Browser History */}
       {isSuperAdmin && (
         <RegisterReleasesV412 />
+      )}
+
+      {/* Mass Reinstall Helper for v4.0.x -> v4.1.2 migration */}
+      {isSuperAdmin && (
+        <MassReinstallHelper />
       )}
 
       {/* Action Card */}
