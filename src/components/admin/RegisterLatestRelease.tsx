@@ -24,9 +24,9 @@ const SCRIPT_FILES: Record<string, string> = {
 };
 
 export function RegisterLatestRelease() {
-  const [version, setVersion] = useState("v4.1.4");
+  const [version, setVersion] = useState("v4.1.5");
   const [releaseNotes, setReleaseNotes] = useState(
-    "- Correção do erro MissingCatchOrFinally na função Verify-Ed25519Signature\n- SSA-011 v2: Implementação completa de assinatura Ed25519"
+    "- Fix ParserError: bloco catch órfão causando ExitCode 1\n- v4.1.4: Correção MissingCatchOrFinally em Verify-Ed25519Signature\n- SSA-011 v2: Assinatura Ed25519"
   );
   const [platforms, setPlatforms] = useState({
     windows: true,

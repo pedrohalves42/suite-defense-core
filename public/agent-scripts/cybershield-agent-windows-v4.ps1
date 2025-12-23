@@ -1,6 +1,7 @@
 <#
-    CyberShield Agent - Windows v4.1.4
+    CyberShield Agent - Windows v4.1.5
     
+    v4.1.5: Fix ParserError - orphan catch block causing ExitCode 1
     v4.1.4: Fix MissingCatchOrFinally in Verify-Ed25519Signature
     
     SSA-009: Restauração da coleta de browser_history (Chrome, Firefox, Edge)
@@ -79,7 +80,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.1.4"
+    [string]$AgentVersion = "v4.1.5"
 )
 
 $ErrorActionPreference = "Stop"
@@ -456,18 +457,6 @@ function Verify-JobSignature {
         } -Severity "error"
         
         # Security: If verification fails unexpectedly, reject the job
-        return $false
-    }
-}
-    catch {
-        Write-Log "[SECURITY] Signature verification error: $($_.Exception.Message)" "ERROR"
-        
-        Add-EvidenceEntry -Type "error" -Data @{
-            event = "signature_verification_failed"
-            error = $_.Exception.Message
-        } -Severity "error"
-        
-        # Security: If verification fails unexpectedly, reject the update
         return $false
     }
 }
