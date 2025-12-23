@@ -17,12 +17,13 @@ interface ReleaseResult {
 }
 
 /**
- * Component to register v4.1.2 releases with Ed25519 signatures
+ * Component to register v4.1.3 releases with Ed25519 signatures
  * SSA-004: Payload Signing implementation
  * SSA-009: Browser History Collection
  * SSA-010: Full V3 Jobs Restoration
+ * SSA-011: Fix PowerShell MissingCatchOrFinally syntax error
  */
-export function RegisterReleasesV412() {
+export function RegisterReleasesV413() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [results, setResults] = useState<ReleaseResult[]>([]);
   const [currentPlatform, setCurrentPlatform] = useState<string | null>(null);
@@ -33,7 +34,12 @@ export function RegisterReleasesV412() {
     { id: 'macos', name: 'macOS', file: '/agent-scripts/cybershield-agent-macos-v4.sh' },
   ];
 
-  const releaseNotes = `v4.1.2 - SSA-010: Full V3 Jobs Restoration + SSA-009: Browser History
+  const releaseNotes = `v4.1.3 - SSA-011: Fix MissingCatchOrFinally + SSA-010 + SSA-009
+
+BUGFIX (SSA-011):
+- Corrigido erro de sintaxe PowerShell "MissingCatchOrFinally" na linha 303
+- Função Verify-ScriptSignature com try/catch corrigido
+- Agentes podem agora sincronizar corretamente
 
 RESTORED JOBS (SSA-010):
 - scan: Antivirus and security scanning
@@ -61,7 +67,7 @@ SECURITY (SSA-004):
     const { data, error } = await supabase.functions.invoke('register-agent-release', {
       body: {
         platform,
-        version: 'v4.1.2',
+        version: 'v4.1.3',
         script_content: scriptContent,
         release_notes: releaseNotes,
         channel: 'stable',
@@ -105,7 +111,7 @@ SECURITY (SSA-004):
             signed_by: result.signed_by,
           }]);
 
-          toast.success(`${platform.name} v4.1.2 registrado com sucesso`);
+          toast.success(`${platform.name} v4.1.3 registrado com sucesso`);
           
         } catch (platformError) {
           const error = platformError as Error;
@@ -127,32 +133,32 @@ SECURITY (SSA-004):
   const signedCount = results.filter(r => r.signature_present).length;
 
   return (
-    <Card className="border-green-500/30 bg-green-500/5">
+    <Card className="border-blue-500/30 bg-blue-500/5">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Shield className="h-5 w-5 text-green-500" />
-          <CardTitle>Registrar Releases v4.1.2 (SSA-009 + SSA-010)</CardTitle>
-          <Badge className="bg-green-600">NOVA</Badge>
+          <Shield className="h-5 w-5 text-blue-500" />
+          <CardTitle>Registrar Releases v4.1.3 (SSA-011 Bugfix)</CardTitle>
+          <Badge className="bg-blue-600">HOTFIX</Badge>
         </div>
         <CardDescription>
-          Full V3 Jobs Restoration + Browser History Collection para Windows, Linux e macOS
+          Correção do erro MissingCatchOrFinally + Full V3 Jobs + Browser History
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-lg bg-muted/50 p-4 text-sm">
-          <h4 className="font-semibold mb-2">Novidades v4.1.2:</h4>
+          <h4 className="font-semibold mb-2">Novidades v4.1.3:</h4>
           <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-            <li><strong>SSA-010:</strong> 8 job handlers restaurados do v3 (scan, fix_firewall, restart_service, collect_network_info, sync_blocked_websites, integration_test, collect_info, reinstall_agent)</li>
+            <li><strong>SSA-011:</strong> Corrigido erro de sintaxe PowerShell "MissingCatchOrFinally" na função Verify-ScriptSignature</li>
+            <li><strong>SSA-010:</strong> 8 job handlers restaurados do v3</li>
             <li><strong>SSA-009:</strong> Browser history collection (Chrome, Firefox, Edge)</li>
             <li><strong>SSA-004:</strong> Ed25519 signature verification mantido</li>
-            <li>14 job types totais suportados</li>
           </ul>
         </div>
 
         <Button 
           onClick={handleRegisterAll} 
           disabled={isRegistering}
-          className="w-full bg-green-600 hover:bg-green-700"
+          className="w-full bg-blue-600 hover:bg-blue-700"
           size="lg"
         >
           {isRegistering ? (
@@ -163,7 +169,7 @@ SECURITY (SSA-004):
           ) : (
             <>
               <Upload className="mr-2 h-4 w-4" />
-              Registrar 3 Releases v4.1.2
+              Registrar 3 Releases v4.1.3
             </>
           )}
         </Button>
@@ -176,7 +182,7 @@ SECURITY (SSA-004):
                 {successCount}/3 sucesso
               </Badge>
               {signedCount > 0 && (
-                <Badge variant="outline" className="border-green-500 text-green-600">
+                <Badge variant="outline" className="border-blue-500 text-blue-600">
                   {signedCount} assinadas
                 </Badge>
               )}
@@ -188,13 +194,13 @@ SECURITY (SSA-004):
                   key={result.platform}
                   className={`flex items-center justify-between p-3 rounded-lg border ${
                     result.success 
-                      ? 'bg-green-500/10 border-green-500/20' 
+                      ? 'bg-blue-500/10 border-blue-500/20' 
                       : 'bg-destructive/10 border-destructive/20'
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     {result.success ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircle className="h-4 w-4 text-blue-500" />
                     ) : (
                       <XCircle className="h-4 w-4 text-destructive" />
                     )}
@@ -205,7 +211,7 @@ SECURITY (SSA-004):
                   </div>
                   <div className="flex items-center gap-2 text-xs">
                     {result.signature_present && (
-                      <Badge className="bg-green-600">
+                      <Badge className="bg-blue-600">
                         Assinada ({result.signed_by})
                       </Badge>
                     )}
