@@ -73,18 +73,18 @@ export const DiskMetricsPanel = ({ agentId, compact = false }: DiskMetricsPanelP
   }
 
   if (compact) {
-    // Versão compacta: mostrar apenas contagem e disco mais crítico
-    const criticalDisk = disks.reduce((prev, curr) => 
-      curr.usage_percent > prev.usage_percent ? curr : prev
-    );
-    
+    // Versão compacta: mostrar todos os discos
     return (
-      <div className="flex items-center gap-2 text-sm">
+      <div className="flex items-center gap-2 text-sm flex-wrap">
         <HardDrive className="h-4 w-4 text-muted-foreground" />
-        <span className="text-muted-foreground">{disks.length} disco{disks.length > 1 ? 's' : ''}</span>
-        <span className={cn('font-medium', getUsageColor(criticalDisk.usage_percent))}>
-          {criticalDisk.drive_letter} {criticalDisk.usage_percent.toFixed(0)}%
-        </span>
+        {disks.map((disk, idx) => (
+          <span 
+            key={disk.drive_letter}
+            className={cn('font-medium', getUsageColor(disk.usage_percent))}
+          >
+            {disk.drive_letter} {disk.usage_percent.toFixed(0)}%{idx < disks.length - 1 ? ',' : ''}
+          </span>
+        ))}
       </div>
     );
   }
