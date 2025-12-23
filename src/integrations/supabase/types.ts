@@ -3553,8 +3553,10 @@ export type Database = {
           completed_at: string | null
           created_at: string
           delivered_at: string | null
+          delivery_attempts: number
           error_message: string | null
           execution_time_seconds: number | null
+          expires_at: string | null
           finished_at: string | null
           id: string
           is_recurring: boolean | null
@@ -3578,8 +3580,10 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivery_attempts?: number
           error_message?: string | null
           execution_time_seconds?: number | null
+          expires_at?: string | null
           finished_at?: string | null
           id?: string
           is_recurring?: boolean | null
@@ -3603,8 +3607,10 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           delivered_at?: string | null
+          delivery_attempts?: number
           error_message?: string | null
           execution_time_seconds?: number | null
+          expires_at?: string | null
           finished_at?: string | null
           id?: string
           is_recurring?: boolean | null
@@ -8227,8 +8233,10 @@ export type Database = {
           completed_at: string | null
           created_at: string
           delivered_at: string | null
+          delivery_attempts: number
           error_message: string | null
           execution_time_seconds: number | null
+          expires_at: string | null
           finished_at: string | null
           id: string
           is_recurring: boolean | null
