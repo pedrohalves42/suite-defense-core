@@ -7,12 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v4.1.2';
+export const INSTALLER_VERSION = 'v4.1.5';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
-export const LAST_UPDATED = '2025-01-21T18:00:00Z';
+export const LAST_UPDATED = '2025-12-23T12:30:00Z';
 
 export const CHANGES = [
+  '[v4.1.5] FIX: ParserError - bloco catch órfão causando ExitCode 1 na Scheduled Task',
+  '[v4.1.4] FIX: MissingCatchOrFinally em Verify-Ed25519Signature',
+  '[v4.1.3] FIX: Syntax validation no instalador antes de criar Scheduled Task',
   '[v4.0.10] FASE VIKTOR: Force Update via Heartbeat Response para recovery de agentes',
   '[v4.0.10] FEATURE: Send-SystemMetrics nativo para métricas em tempo real',
   '[v4.0.10] FEATURE: Apply-ForcedUpdate para updates sem dependência de jobs',
