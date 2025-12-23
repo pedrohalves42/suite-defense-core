@@ -65,8 +65,8 @@ Deno.serve(async (req) => {
 
     // Get statistics
     const { count: agentCount } = await supabase.from("agents").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId);
-    const { count: vulnCount } = await supabase.from("software_vulnerabilities").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId);
-    const { data: vulns } = await supabase.from("software_vulnerabilities").select("severity").eq("tenant_id", tenantId);
+    const { count: vulnCount } = await supabase.from("vuln_findings").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId);
+    const { data: vulns } = await supabase.from("vuln_findings").select("severity").eq("tenant_id", tenantId);
     const { data: avData } = await supabase.from("antivirus_status").select("threats_found").eq("tenant_id", tenantId);
     const { count: eventCount } = await supabase.from("agent_evidence_logs").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId).gte("created_at", periodStart);
     const { count: auditCount } = await supabase.from("audit_logs").select("*", { count: "exact", head: true }).eq("tenant_id", tenantId).gte("created_at", periodStart);
