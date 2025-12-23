@@ -8053,6 +8053,17 @@ export type Database = {
           job_ids: string[]
         }[]
       }
+      cleanup_stuck_jobs_v2: {
+        Args: {
+          p_delivered_timeout_hours?: number
+          p_queued_timeout_hours?: number
+        }
+        Returns: {
+          cleaned_delivered: number
+          cleaned_queued: number
+          job_ids: string[]
+        }[]
+      }
       create_metrics_partition_if_needed: { Args: never; Returns: undefined }
       current_user_tenant_id: { Args: never; Returns: string }
       detect_blocked_access_attempts: {
