@@ -100,9 +100,19 @@ export function ComplianceReportGenerator() {
       const payload = await fetchComplianceReport(selectedTemplate);
       setReportPayload(payload);
       toast.success(`Relatório ${selectedTemplate} gerado com sucesso!`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating compliance report:", error);
-      toast.error("Erro ao gerar relatório de compliance");
+      const errorMessage = error?.message || "Erro desconhecido";
+      
+      if (errorMessage.includes('NO_TENANT') || errorMessage.includes('não está associado') || errorMessage.includes('User not associated')) {
+        toast.error("Você não está associado a nenhum tenant. Contate o administrador.");
+      } else if (errorMessage.includes('Edge Function') || errorMessage.includes('Failed to fetch')) {
+        toast.error("Erro ao conectar com o servidor. Tente novamente.");
+      } else if (errorMessage.includes('Não autenticado')) {
+        toast.error("Sessão expirada. Faça login novamente.");
+      } else {
+        toast.error(`Erro ao gerar relatório: ${errorMessage}`);
+      }
     } finally {
       setIsGenerating(false);
     }

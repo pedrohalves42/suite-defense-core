@@ -148,9 +148,17 @@ export default function Reports() {
         await refetchReport();
         toast.success("Relatório de segurança gerado com sucesso!");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error generating report:", error);
-      toast.error("Erro ao gerar relatório: " + (error instanceof Error ? error.message : "Unknown error"));
+      const errorMessage = error?.message || "Erro desconhecido";
+      
+      if (errorMessage.includes('NO_TENANT') || errorMessage.includes('não está associado')) {
+        toast.error("Você não está associado a nenhum tenant. Contate o administrador.");
+      } else if (errorMessage.includes('Edge Function') || errorMessage.includes('Failed to fetch')) {
+        toast.error("Erro ao conectar com o servidor. Tente novamente em alguns segundos.");
+      } else {
+        toast.error(`Erro ao gerar relatório: ${errorMessage}`);
+      }
     } finally {
       setIsGenerating(false);
     }

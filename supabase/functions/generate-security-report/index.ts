@@ -346,7 +346,17 @@ serve(async (req) => {
       .maybeSingle();
 
     if (!userRoles) {
-      throw new Error('No tenant found for user');
+      console.error(`[generate-security-report] No tenant found for user_id: ${user.id}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Usuário não está associado a nenhum tenant. Contate o administrador.',
+          code: 'NO_TENANT'
+        }), 
+        { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
     const tenantId = userRoles.tenant_id;
