@@ -17,9 +17,9 @@ import { MassReinstallHelper } from "@/components/admin/MassReinstallHelper";
 import { SyncStorageBucket } from "@/components/admin/SyncStorageBucket";
 
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
-// SSA-009: v4.1.2 - Full Jobs + Browser History + Storage Sync
+// SSA-011: v4.1.3 - Fix PowerShell MissingCatchOrFinally syntax error
 const CURRENT_VERSIONS = {
-  windows: 'v4.1.2',
+  windows: 'v4.1.3',
   linux: 'v4.1.2',
   macos: 'v4.1.0'
 } as const;
