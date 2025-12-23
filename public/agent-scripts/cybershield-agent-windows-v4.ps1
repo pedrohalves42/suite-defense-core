@@ -1,5 +1,7 @@
 <#
-    CyberShield Agent - Windows v4.1.2
+    CyberShield Agent - Windows v4.1.4
+    
+    v4.1.4: Fix MissingCatchOrFinally in Verify-Ed25519Signature
     
     SSA-009: Restauração da coleta de browser_history (Chrome, Firefox, Edge)
     SSA-010: Restauração de todos os jobs do v3 (scan, fix_firewall, restart_service, etc.)
@@ -77,7 +79,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.1.2"
+    [string]$AgentVersion = "v4.1.4"
 )
 
 $ErrorActionPreference = "Stop"
@@ -300,6 +302,15 @@ function Verify-Ed25519Signature {
             
             return $isValid
         }
+    }
+    catch {
+        Write-Log "[SECURITY] Ed25519 signature verification error: $($_.Exception.Message)" "ERROR"
+        Add-EvidenceEntry -Type "security_error" -Data @{
+            event = "signature_verification_error"
+            error = $_.Exception.Message
+        } -Severity "error"
+        return $false
+    }
 }
 
 # ============================================
