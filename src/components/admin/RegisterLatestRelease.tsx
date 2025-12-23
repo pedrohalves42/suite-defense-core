@@ -17,6 +17,12 @@ interface PlatformResult {
   sha256?: string;
 }
 
+const SCRIPT_FILES: Record<string, string> = {
+  windows: "cybershield-agent-windows-v4.ps1",
+  linux: "cybershield-agent-linux-v4.sh",
+  macos: "cybershield-agent-macos-v4.sh",
+};
+
 export function RegisterLatestRelease() {
   const [version, setVersion] = useState("v4.1.4");
   const [releaseNotes, setReleaseNotes] = useState(
@@ -28,10 +34,51 @@ export function RegisterLatestRelease() {
     macos: false,
   });
   const [isRegistering, setIsRegistering] = useState(false);
+  const [currentPlatform, setCurrentPlatform] = useState<string | null>(null);
   const [results, setResults] = useState<PlatformResult[]>([]);
 
   const togglePlatform = (platform: keyof typeof platforms) => {
     setPlatforms((prev) => ({ ...prev, [platform]: !prev[platform] }));
+  };
+
+  const fetchScriptContent = async (platform: string): Promise<string> => {
+    const fileName = SCRIPT_FILES[platform];
+    if (!fileName) throw new Error(`Unknown platform: ${platform}`);
+
+    const response = await fetch(`/agent-scripts/${fileName}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${platform} script: ${response.status}`);
+    }
+    return response.text();
+  };
+
+  const registerPlatform = async (platform: string, scriptContent: string): Promise<PlatformResult> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("register-agent-release", {
+        body: {
+          version: version.trim(),
+          platform,
+          script_content: scriptContent,
+          release_notes: releaseNotes.trim(),
+          channel: "stable",
+        },
+      });
+
+      if (error) throw error;
+
+      return {
+        platform,
+        success: true,
+        version: data?.version || version,
+        sha256: data?.sha256,
+      };
+    } catch (err: any) {
+      return {
+        platform,
+        success: false,
+        error: err.message || "Unknown error",
+      };
+    }
   };
 
   const handleRegister = async () => {
@@ -52,36 +99,50 @@ export function RegisterLatestRelease() {
     setIsRegistering(true);
     setResults([]);
 
-    try {
-      const { data, error } = await supabase.functions.invoke("register-agent-release", {
-        body: {
-          version: version.trim(),
-          platforms: selectedPlatforms,
-          releaseNotes: releaseNotes.trim(),
-          channel: "stable",
-        },
-      });
+    const platformResults: PlatformResult[] = [];
 
-      if (error) throw error;
+    for (const platform of selectedPlatforms) {
+      setCurrentPlatform(platform);
+      
+      try {
+        toast.info(`Carregando script ${platform}...`);
+        const scriptContent = await fetchScriptContent(platform);
+        
+        const minSize = platform === "windows" ? 40000 : 20000;
+        if (scriptContent.length < minSize) {
+          platformResults.push({
+            platform,
+            success: false,
+            error: `Script muito pequeno (${(scriptContent.length / 1024).toFixed(1)}KB)`,
+          });
+          continue;
+        }
 
-      const platformResults: PlatformResult[] = data?.results || [];
-      setResults(platformResults);
-
-      const successCount = platformResults.filter((r) => r.success).length;
-      const failCount = platformResults.filter((r) => !r.success).length;
-
-      if (successCount > 0 && failCount === 0) {
-        toast.success(`${successCount} plataforma(s) registrada(s) com sucesso`);
-      } else if (successCount > 0 && failCount > 0) {
-        toast.warning(`${successCount} sucesso, ${failCount} falha(s)`);
-      } else {
-        toast.error("Falha ao registrar releases");
+        toast.info(`Registrando ${platform} (${(scriptContent.length / 1024).toFixed(1)}KB)...`);
+        const result = await registerPlatform(platform, scriptContent);
+        platformResults.push(result);
+      } catch (err: any) {
+        platformResults.push({
+          platform,
+          success: false,
+          error: err.message || "Failed to fetch script",
+        });
       }
-    } catch (error: any) {
-      console.error("Erro ao registrar:", error);
-      toast.error(error.message || "Erro ao registrar release");
-    } finally {
-      setIsRegistering(false);
+    }
+
+    setResults(platformResults);
+    setCurrentPlatform(null);
+    setIsRegistering(false);
+
+    const successCount = platformResults.filter((r) => r.success).length;
+    const failCount = platformResults.filter((r) => !r.success).length;
+
+    if (successCount > 0 && failCount === 0) {
+      toast.success(`${successCount} plataforma(s) registrada(s) com sucesso`);
+    } else if (successCount > 0 && failCount > 0) {
+      toast.warning(`${successCount} sucesso, ${failCount} falha(s)`);
+    } else {
+      toast.error("Falha ao registrar releases");
     }
   };
 
@@ -93,7 +154,7 @@ export function RegisterLatestRelease() {
           Registrar Nova Release
         </CardTitle>
         <CardDescription>
-          Registra e assina automaticamente os scripts do agente para as plataformas selecionadas
+          Carrega scripts de /agent-scripts/, registra e assina automaticamente
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -112,33 +173,19 @@ export function RegisterLatestRelease() {
           <div className="space-y-2">
             <Label>Plataformas</Label>
             <div className="flex items-center gap-4 pt-2">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="windows"
-                  checked={platforms.windows}
-                  onCheckedChange={() => togglePlatform("windows")}
-                  disabled={isRegistering}
-                />
-                <Label htmlFor="windows" className="cursor-pointer">Windows</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="linux"
-                  checked={platforms.linux}
-                  onCheckedChange={() => togglePlatform("linux")}
-                  disabled={isRegistering}
-                />
-                <Label htmlFor="linux" className="cursor-pointer">Linux</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="macos"
-                  checked={platforms.macos}
-                  onCheckedChange={() => togglePlatform("macos")}
-                  disabled={isRegistering}
-                />
-                <Label htmlFor="macos" className="cursor-pointer">macOS</Label>
-              </div>
+              {(["windows", "linux", "macos"] as const).map((platform) => (
+                <div key={platform} className="flex items-center gap-2">
+                  <Checkbox
+                    id={platform}
+                    checked={platforms[platform]}
+                    onCheckedChange={() => togglePlatform(platform)}
+                    disabled={isRegistering}
+                  />
+                  <Label htmlFor={platform} className="cursor-pointer capitalize">
+                    {platform}
+                  </Label>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -164,7 +211,7 @@ export function RegisterLatestRelease() {
           {isRegistering ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Registrando e Assinando...
+              {currentPlatform ? `Registrando ${currentPlatform}...` : "Registrando..."}
             </>
           ) : (
             <>
@@ -193,7 +240,7 @@ export function RegisterLatestRelease() {
                 )}
                 <span className="font-medium capitalize">{result.platform}:</span>
                 {result.success ? (
-                  <span>{result.version} registrada (SHA: {result.sha256?.slice(0, 12)}...)</span>
+                  <span>{result.version} (SHA: {result.sha256?.slice(0, 12)}...)</span>
                 ) : (
                   <span>{result.error}</span>
                 )}
@@ -205,9 +252,8 @@ export function RegisterLatestRelease() {
         <div className="flex items-start gap-2 rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-sm text-yellow-700 dark:text-yellow-400">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            <strong>Importante:</strong> Após registrar uma nova versão, gere novos instaladores 
-            para os agentes que precisam atualizar. Agentes existentes receberão a atualização 
-            automaticamente no próximo heartbeat.
+            <strong>Importante:</strong> Após registrar, gere novos instaladores para os agentes.
+            Agentes existentes receberão a atualização no próximo heartbeat.
           </p>
         </div>
       </CardContent>
