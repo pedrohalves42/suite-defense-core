@@ -119,7 +119,8 @@ export const AppSidebar = () => {
     
     // === INFRAESTRUTURA ===
     { icon: Network, label: 'Instalações', to: '/admin/installations', section: 'infrastructure' },
-    { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases', section: 'infrastructure' },
+    { icon: GitBranch, label: 'Releases', to: '/admin/agent-releases', section: 'infrastructure' },
+    { icon: Activity, label: 'Versões & Capabilities', to: '/admin/agent-versions', section: 'infrastructure' },
     { icon: Heart, label: 'Saúde do Sistema', to: '/admin/slo-dashboard', section: 'infrastructure' },
     { icon: Gauge, label: 'Controle de Uso', to: '/admin/rate-limiting', section: 'infrastructure' },
     { icon: Inbox, label: 'Fila de Tarefas', to: '/admin/dead-letter-queue', section: 'infrastructure' },
