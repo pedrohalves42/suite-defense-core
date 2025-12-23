@@ -130,6 +130,50 @@ export default function AgentVersionMonitor() {
     }
   };
 
+  const handleForceUpdateAll = async () => {
+    if (!latestRelease || !agents) {
+      toast({
+        title: 'Erro',
+        description: 'Nenhuma versão de release ativa encontrada',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const outdatedAgents = agents.filter(a => a.agent_version !== latestRelease);
+    if (outdatedAgents.length === 0) {
+      toast({
+        title: 'Info',
+        description: 'Todos os agentes já estão na versão mais recente',
+      });
+      return;
+    }
+
+    const outdatedIds = outdatedAgents.map(a => a.id);
+    const { error } = await supabase
+      .from('agents')
+      .update({
+        force_update_version: latestRelease,
+        force_update_reason: 'Bulk force update via Version Monitor',
+        force_update_at: new Date().toISOString(),
+      })
+      .in('id', outdatedIds);
+
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: `Falha ao agendar updates: ${error.message}`,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Updates Agendados',
+        description: `${outdatedAgents.length} agentes serão atualizados para ${latestRelease}`,
+      });
+      refetch();
+    }
+  };
+
   const getStatusBadge = (agent: AgentWithCapabilities) => {
     if (!agent.last_heartbeat) {
       return <Badge variant="outline" className="text-muted-foreground">Nunca conectou</Badge>;
@@ -222,10 +266,18 @@ export default function AgentVersionMonitor() {
               Acompanhe versões e capabilities dos agentes • Versão mais recente: {latestRelease || 'N/A'}
             </p>
           </div>
-          <Button onClick={() => refetch()} variant="outline" size="sm" disabled={isRefetching}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
+          <div className="flex gap-2">
+            {stats && stats.total - stats.onLatest > 0 && latestRelease && (
+              <Button onClick={handleForceUpdateAll} variant="default" size="sm">
+                <Zap className="h-4 w-4 mr-2" />
+                Forçar Update para Todos ({stats.total - stats.onLatest})
+              </Button>
+            )}
+            <Button onClick={() => refetch()} variant="outline" size="sm" disabled={isRefetching}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? 'animate-spin' : ''}`} />
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}

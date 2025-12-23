@@ -51,11 +51,13 @@ const AgentMonitoring = () => {
   const { data: initialJobs } = useQuery({
     queryKey: ['jobs-monitoring'],
     queryFn: async () => {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
+        .gte('created_at', twentyFourHoursAgo)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(100);
       
       if (error) throw error;
       return data as Job[];
