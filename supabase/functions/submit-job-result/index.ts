@@ -71,7 +71,8 @@ Deno.serve(async (req) => {
 
     // SSA-023: Version Gate Enforcement
     // Bloquear agentes com versões muito antigas que podem ter bugs conhecidos
-    const MIN_SUPPORTED_VERSION = 'v4.1.0'
+    // RECOVERY 2025-01-22: Relaxed from v4.1.0 to v4.0.9 to allow v4.0.10 agents
+    const MIN_SUPPORTED_VERSION = 'v4.0.9'
     
     // Buscar versão do agente
     const { data: agentData } = await supabase
