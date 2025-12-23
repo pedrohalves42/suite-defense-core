@@ -24,9 +24,14 @@ const SCRIPT_FILES: Record<string, string> = {
 };
 
 export function RegisterLatestRelease() {
-  const [version, setVersion] = useState("v4.1.5");
+  const [version, setVersion] = useState("v4.1.6");
   const [releaseNotes, setReleaseNotes] = useState(
-    "- Fix ParserError: bloco catch órfão causando ExitCode 1\n- v4.1.4: Correção MissingCatchOrFinally em Verify-Ed25519Signature\n- SSA-011 v2: Assinatura Ed25519"
+    "- Ed25519 Capability Detection: Detect PS 5.1 support, audit-only mode when unsupported\n" +
+    "- Self-Test at Startup: Invoke-AgentSelfTest validates environment\n" +
+    "- Truthful Version Telemetry: ed25519_supported, signature_mode in heartbeat\n" +
+    "- Fix hardcoded versions (v4.0.9-HARDENED, v4.1.2)\n" +
+    "- Fix v3.log references in installer\n" +
+    "- Anti-cache headers (Cache-Control: no-store)"
   );
   const [platforms, setPlatforms] = useState({
     windows: true,
