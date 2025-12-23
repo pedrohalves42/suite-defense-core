@@ -798,6 +798,7 @@ Deno.serve(async (req) => {
     console.log(`[${requestId}] Completed successfully in ${duration}ms`);
 
       // FASE 2: Return script with SHA256 and version in headers
+      // v4.1.6: Added Cache-Control: no-store to prevent proxy/browser caching
       return new Response(templateContent, {
         headers: {
           ...corsHeaders,
@@ -809,6 +810,9 @@ Deno.serve(async (req) => {
           'X-Installer-Updated': LAST_UPDATED,
           'X-Content-Type-Options': 'nosniff',
           'X-Frame-Options': 'DENY',
+          'Cache-Control': 'no-store, no-cache, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
       });
     }, { timeoutMs: 30000 }); // 30s timeout for debug and complex operations

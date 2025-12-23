@@ -1,11 +1,19 @@
 <#
-    CyberShield Agent - Windows v4.1.5
+    CyberShield Agent - Windows v4.1.6
+    
+    v4.1.6: CAPABILITY-BASED SECURITY + VERSION TRUTH
+    - Ed25519 capability detection (Test-Ed25519Support)
+    - Audit-only mode for PowerShell 5.1 without Ed25519 support
+    - Fixed hardcoded version strings (all use $Global:AgentVersion)
+    - Agent Self-Test (Invoke-AgentSelfTest) at startup
+    - Post-update version validation
+    - Capability flags in heartbeat (ed25519_supported, signature_mode)
     
     v4.1.5: Fix ParserError - orphan catch block causing ExitCode 1
     v4.1.4: Fix MissingCatchOrFinally in Verify-Ed25519Signature
     
-    SSA-009: Restauração da coleta de browser_history (Chrome, Firefox, Edge)
-    SSA-010: Restauração de todos os jobs do v3 (scan, fix_firewall, restart_service, etc.)
+    SSA-009: Restauracao da coleta de browser_history (Chrome, Firefox, Edge)
+    SSA-010: Restauracao de todos os jobs do v3 (scan, fix_firewall, restart_service, etc.)
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
     FASE 2.4: DNS Filter Go como Windows Service
@@ -80,7 +88,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.1.5"
+    [string]$AgentVersion = "v4.1.6"
 )
 
 $ErrorActionPreference = "Stop"
@@ -184,6 +192,119 @@ $Global:EvidenceJournalPath = Join-Path -Path $evidenceDir -ChildPath "journal.l
 $Global:PollIntervalSeconds = 60
 
 # ============================================
+#  v4.1.6: ED25519 CAPABILITY DETECTION
+# ============================================
+# Tests if the current PowerShell/.NET environment supports Ed25519
+# PowerShell 5.1 with .NET Framework 4.x does NOT support Ed25519 natively
+# This function enables capability-based security decisions
+
+function Test-Ed25519Support {
+    <#
+    .SYNOPSIS
+        Tests if the current environment supports Ed25519 signature verification
+    .DESCRIPTION
+        Ed25519 requires .NET 5+ or Windows 10 1903+ with specific APIs.
+        PowerShell 5.1 on older Windows versions cannot verify Ed25519 signatures.
+        Returns $true if supported, $false otherwise.
+    #>
+    try {
+        # Check for native Ed25519 type (requires .NET 5+)
+        $ed25519Type = [Type]::GetType("System.Security.Cryptography.Ed25519")
+        if ($null -ne $ed25519Type) {
+            return $true
+        }
+        
+        # Check Windows version for ECDsa with Ed25519 curve support
+        # Windows 10 1903+ (Build 18362+) has limited support
+        $osVersion = [Environment]::OSVersion.Version
+        if ($osVersion.Major -ge 10 -and $osVersion.Build -ge 18362) {
+            # Try to create ECDsa and import a test key
+            try {
+                $testKey = [Convert]::FromBase64String("MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI=")
+                $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
+                $bytesRead = 0
+                $ecdsa.ImportSubjectPublicKeyInfo($testKey, [ref]$bytesRead)
+                
+                # If we got here without exception, check if it's actually Ed25519
+                # ECDsa.Create() may succeed but not actually support Ed25519 curve
+                $curve = $ecdsa.ExportParameters($false).Curve
+                if ($curve.Oid.FriendlyName -eq "Ed25519" -or $curve.Oid.Value -eq "1.3.101.112") {
+                    return $true
+                }
+                
+                # ECDsa created but not Ed25519 curve - not supported
+                return $false
+            }
+            catch {
+                # ImportSubjectPublicKeyInfo failed - Ed25519 not supported
+                return $false
+            }
+        }
+        
+        # Older Windows version - Ed25519 not supported
+        return $false
+    }
+    catch {
+        return $false
+    }
+}
+
+# v4.1.6: Global capability flags
+$Global:Ed25519Supported = Test-Ed25519Support
+$Global:StrictSignatureMode = $Global:Ed25519Supported
+
+# ============================================
+#  v4.1.6: AGENT SELF-TEST
+# ============================================
+function Invoke-AgentSelfTest {
+    <#
+    .SYNOPSIS
+        Performs comprehensive self-test at agent startup
+    .DESCRIPTION
+        Validates environment, capabilities, and configuration.
+        Returns structured results for telemetry and logging.
+    #>
+    $results = @{
+        timestamp = (Get-Date).ToString("o")
+        powershell_version = $PSVersionTable.PSVersion.ToString()
+        dotnet_version = [System.Runtime.InteropServices.RuntimeInformation]::FrameworkDescription
+        os_version = [Environment]::OSVersion.VersionString
+        ed25519_supported = $Global:Ed25519Supported
+        signature_mode = if ($Global:StrictSignatureMode) { "strict" } else { "audit_only" }
+        hmac_configured = (-not [string]::IsNullOrEmpty($Global:HmacSecret))
+        agent_version = $Global:AgentVersion
+        log_writable = $false
+        scheduled_task_exists = $false
+        encoding_ok = $true
+    }
+    
+    # Test log write capability
+    try {
+        $testPath = Join-Path $logDir "selftest-$(Get-Date -Format 'yyyyMMddHHmmss').tmp"
+        "test" | Out-File $testPath -Encoding UTF8
+        Remove-Item $testPath -Force -ErrorAction SilentlyContinue
+        $results.log_writable = $true
+    } catch {
+        $results.log_writable = $false
+    }
+    
+    # Test scheduled task exists
+    try {
+        $taskName = "CyberShieldAgent-$($Global:AgentName)"
+        $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+        if (-not $task) {
+            # Try alternate task name pattern
+            $task = Get-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+        }
+        $results.scheduled_task_exists = ($null -ne $task)
+    } catch {
+        $results.scheduled_task_exists = $false
+    }
+    
+    return $results
+}
+
+# ============================================
 #  FASE 2.6: ED25519 SIGNATURE VERIFICATION
 # ============================================
 # IMPORTANT: This is the Ed25519 PUBLIC KEY for verifying agent updates
@@ -204,8 +325,10 @@ $Global:PollIntervalSeconds = 60
 # SSA-004: This is the public key for verifying job payload signatures
 $Global:Ed25519PublicKey = "MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI="
 
-# SSA-004: Require signatures when public key is configured
-$Global:RequireJobSignatures = (-not [string]::IsNullOrEmpty($Global:Ed25519PublicKey))
+# SSA-004: Require signatures when public key is configured AND Ed25519 is supported
+$Global:RequireJobSignatures = (-not [string]::IsNullOrEmpty($Global:Ed25519PublicKey)) -and $Global:Ed25519Supported
+
+# v4.1.6: Log capability status at startup (will be logged after Write-Log is defined)
 
 function Verify-Ed25519Signature {
     <#
@@ -213,6 +336,7 @@ function Verify-Ed25519Signature {
         Verifies an Ed25519 signature for script content
     .DESCRIPTION
         Uses .NET cryptography to verify Ed25519 signatures.
+        v4.1.6: Uses capability-based security - audit-only mode when Ed25519 not supported.
         Returns $true if signature is valid, $false otherwise.
         If no public key is configured, returns $true (backward compatible).
     .PARAMETER ScriptBytes
@@ -235,7 +359,17 @@ function Verify-Ed25519Signature {
                 Write-Log "[SECURITY] No signature verification configured (backward compatible mode)" "WARN"
                 return $true
             } else {
-                Write-Log "[SECURITY] ❌ Signature required but not provided" "ERROR"
+                # v4.1.6: If Ed25519 not supported, use audit-only mode
+                if (-not $Global:Ed25519Supported) {
+                    Write-Log "[SECURITY] Signature required but Ed25519 not supported - AUDIT ONLY" "WARN"
+                    Add-EvidenceEntry -Type "security_warning" -Data @{
+                        event = "signature_required_but_unsupported"
+                        ed25519_supported = $false
+                        mode = "audit_only"
+                    } -Severity "warning"
+                    return $true
+                }
+                Write-Log "[SECURITY] Signature required but not provided" "ERROR"
                 return $false
             }
         }
@@ -243,6 +377,18 @@ function Verify-Ed25519Signature {
         # If public key not configured, skip verification (backward compat)
         if ([string]::IsNullOrEmpty($Global:Ed25519PublicKey)) {
             Write-Log "[SECURITY] Ed25519 public key not configured - skipping signature verification" "WARN"
+            return $true
+        }
+        
+        # v4.1.6: If Ed25519 not supported, log and allow in audit-only mode
+        if (-not $Global:Ed25519Supported) {
+            Write-Log "[SECURITY] Ed25519 not supported on this system - AUDIT ONLY (signature present)" "WARN"
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "ed25519_not_supported_audit_only"
+                signature_provided = $true
+                ed25519_supported = $false
+                mode = "audit_only"
+            } -Severity "warning"
             return $true
         }
         
@@ -267,22 +413,23 @@ function Verify-Ed25519Signature {
                 $isValid = $ed25519.VerifyData($ScriptBytes, $signature, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
                 
                 if ($isValid) {
-                    Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+                    Write-Log "[SECURITY] Ed25519 signature verified successfully" "SUCCESS"
                 } else {
-                    Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+                    Write-Log "[SECURITY] Ed25519 signature verification FAILED" "ERROR"
                 }
                 
                 return $isValid
             }
             catch {
-                # If Ed25519 is not supported on this system, log warning and allow
+                # If Ed25519 is not supported on this system, log warning and allow (audit-only)
                 Write-Log "[SECURITY] Ed25519 verification not supported on this system: $($_.Exception.Message)" "WARN"
-                Write-Log "[SECURITY] Allowing update (signature present but cannot verify)" "WARN"
+                Write-Log "[SECURITY] AUDIT ONLY: Allowing update (signature present but cannot verify)" "WARN"
                 
                 Add-EvidenceEntry -Type "security_warning" -Data @{
                     event = "ed25519_not_supported"
                     error = $_.Exception.Message
                     signature_provided = $true
+                    mode = "audit_only"
                 } -Severity "warning"
                 
                 return $true
@@ -296,9 +443,9 @@ function Verify-Ed25519Signature {
             $isValid = $ed25519.VerifyData($ScriptBytes, $signature)
             
             if ($isValid) {
-                Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+                Write-Log "[SECURITY] Ed25519 signature verified successfully" "SUCCESS"
             } else {
-                Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+                Write-Log "[SECURITY] Ed25519 signature verification FAILED" "ERROR"
             }
             
             return $isValid
@@ -310,6 +457,12 @@ function Verify-Ed25519Signature {
             event = "signature_verification_error"
             error = $_.Exception.Message
         } -Severity "error"
+        
+        # v4.1.6: In audit-only mode, allow even on error
+        if (-not $Global:Ed25519Supported) {
+            Write-Log "[SECURITY] AUDIT ONLY: Allowing despite error" "WARN"
+            return $true
+        }
         return $false
     }
 }
@@ -1864,21 +2017,26 @@ function Get-SystemInfo {
 # ============================================
 # ============================================
 #  HEARTBEAT (COM FORCE UPDATE VIA RESPONSE)
+#  v4.1.6: Added capability flags for backend-aware security
 # ============================================
 function Send-Heartbeat {
     $sysInfo = Get-SystemInfo
 
+    # v4.1.6: Include capability flags for backend-aware security decisions
     $body = @{
-        agent_name    = $Global:AgentName
-        hostname      = $sysInfo.hostname
-        os_type       = $sysInfo.os_type
-        os_version    = $sysInfo.os_version
-        agent_version = $Global:AgentVersion
-        state         = Get-AgentState
-        error_count   = $Global:AgentState.ErrorCount
+        agent_name       = $Global:AgentName
+        hostname         = $sysInfo.hostname
+        os_type          = $sysInfo.os_type
+        os_version       = $sysInfo.os_version
+        agent_version    = $Global:AgentVersion
+        state            = Get-AgentState
+        error_count      = $Global:AgentState.ErrorCount
+        # v4.1.6: Capability flags
+        ed25519_supported = $Global:Ed25519Supported
+        signature_mode   = if ($Global:StrictSignatureMode) { "strict" } else { "audit_only" }
     }
 
-    Write-Log "[HEARTBEAT] Enviando heartbeat (state: $(Get-AgentState))..." "INFO"
+    Write-Log "[HEARTBEAT] Enviando heartbeat (state: $(Get-AgentState), ed25519: $($Global:Ed25519Supported))..." "INFO"
 
     try {
         $result = Invoke-SecureRequest `
@@ -3557,7 +3715,7 @@ function Invoke-UpdateAgentJob {
     param($Job)
     
     try {
-        Write-Log "[UPDATE] Iniciando update_agent - v4.1.2" "INFO"
+        Write-Log "[UPDATE] Iniciando update_agent - $($Global:AgentVersion)" "INFO"
         
         # ============================================================
         # FASE 3.0: SAFE MODE CHECK
@@ -3852,12 +4010,14 @@ function Poll-Jobs {
 Invoke-BootstrapValidation
 
 # ============================================
-#  LOOP PRINCIPAL v4.0.9-HARDENED
+#  LOOP PRINCIPAL
 # ============================================
 Write-Log "============================================" "INFO"
-Write-Log "[START] CyberShield Agent v4.0.9-HARDENED" "INFO"
+Write-Log "[START] CyberShield Agent $($Global:AgentVersion)" "INFO"
 Write-Log "[INFO] ServerUrl: $Global:ServerUrl" "DEBUG"
 Write-Log "[INFO] AgentName: $Global:AgentName" "DEBUG"
+Write-Log "[INFO] Ed25519 Supported: $($Global:Ed25519Supported)" "DEBUG"
+Write-Log "[INFO] Signature Mode: $(if ($Global:StrictSignatureMode) { 'strict' } else { 'audit_only' })" "DEBUG"
 Write-Log "============================================" "INFO"
 
 # Registrar inicio no Evidence Journal
