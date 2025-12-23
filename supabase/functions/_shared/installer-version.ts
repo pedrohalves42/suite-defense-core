@@ -7,13 +7,18 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v4.1.5';
+export const INSTALLER_VERSION = 'v4.1.6';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
-export const LAST_UPDATED = '2025-12-23T12:30:00Z';
+export const LAST_UPDATED = '2025-12-23T18:00:00Z';
 
 export const CHANGES = [
-  '[v4.1.5] FIX: ParserError - bloco catch órfão causando ExitCode 1 na Scheduled Task',
+  '[v4.1.6] CAPABILITY: Ed25519 detection + audit-only mode for PS 5.1',
+  '[v4.1.6] FIX: All hardcoded versions now use $Global:AgentVersion',
+  '[v4.1.6] FIX: Installer log references v4 (not v3)',
+  '[v4.1.6] FEATURE: Agent Self-Test (Invoke-AgentSelfTest) at startup',
+  '[v4.1.6] FEATURE: Capability flags in heartbeat (ed25519_supported)',
+  '[v4.1.5] FIX: ParserError - bloco catch orfao causando ExitCode 1 na Scheduled Task',
   '[v4.1.4] FIX: MissingCatchOrFinally em Verify-Ed25519Signature',
   '[v4.1.3] FIX: Syntax validation no instalador antes de criar Scheduled Task',
   '[v4.0.10] FASE VIKTOR: Force Update via Heartbeat Response para recovery de agentes',

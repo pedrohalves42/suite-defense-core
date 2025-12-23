@@ -613,7 +613,7 @@ if ($taskInfo.LastTaskResult -ne 0 -and $taskInfo.LastTaskResult -ne $null) {
     
     # Sugerir proximos passos
     Write-InstallerLog "Proximos passos de diagnostico:" "INFO"
-    Write-InstallerLog "  1. Verificar log do agente: C:\\CyberShield\\logs\\cybershield-agent-v3.log" "INFO"
+    Write-InstallerLog "  1. Verificar log do agente: C:\\CyberShield\\logs\\cybershield-agent-v4.log" "INFO"
     Write-InstallerLog "  2. Executar manualmente: C:\\CyberShield\\cybershield-agent-$AgentName.ps1" "INFO"
     Write-InstallerLog "  3. Verificar Event Viewer: Logs de Aplicativo" "INFO"
 }
@@ -621,7 +621,7 @@ if ($taskInfo.LastTaskResult -ne 0 -and $taskInfo.LastTaskResult -ne $null) {
 # Verificar se o agente conseguiu iniciar (log criado)
 Start-Sleep -Seconds 10
 
-$agentLogPath = Join-Path $LogsPath "cybershield-agent-v3.log"
+$agentLogPath = Join-Path $LogsPath "cybershield-agent-v4.log"
 if (Test-Path $agentLogPath) {
     $logSize = (Get-Item $agentLogPath).Length
     Write-InstallerLog "[OK]  Log do agente detectado: $agentLogPath ($logSize bytes)" "SUCCESS"
