@@ -460,8 +460,20 @@ if ($scriptSize -lt 10000) {  # Script completo deve ter ~50KB+
 
 Write-InstallerLog "[OK]  Script do agente validado: $scriptSize bytes" "SUCCESS"
 
+# ============= VALIDACAO CRITICA: Sintaxe PowerShell =============
+Write-InstallerLog "Validando sintaxe PowerShell do script..." "INFO"
+try {
+    $scriptContent = Get-Content -Path $AgentScriptPath -Raw -ErrorAction Stop
+    $null = [ScriptBlock]::Create($scriptContent)
+    Write-InstallerLog "[OK]  Sintaxe PowerShell validada com sucesso" "SUCCESS"
+} catch {
+    Write-InstallerLog "[ERROR]  ERRO CRITICO: Script com erro de sintaxe PowerShell!" "ERROR"
+    Write-InstallerLog "[ERROR]  Detalhes: $($_.Exception.Message)" "ERROR"
+    throw "Script do agente contem erro de sintaxe. Instalacao abortada. Erro: $($_.Exception.Message)"
+}
+
 # Testar escrita no log do agente antes de criar a scheduled task
-$AgentLogPath = Join-Path $LogsPath "cybershield-agent-v3.log"
+$AgentLogPath = Join-Path $LogsPath "cybershield-agent-v4.log"
 
 # Remover log antigo se existir, para evitar conflitos com handle travado
 if (Test-Path $AgentLogPath) {
