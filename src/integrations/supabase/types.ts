@@ -1457,6 +1457,7 @@ export type Database = {
           agent_name: string
           agent_version: string | null
           display_name: string | null
+          ed25519_supported: boolean | null
           enrolled_at: string
           force_update_at: string | null
           force_update_reason: string | null
@@ -1469,6 +1470,7 @@ export type Database = {
           os_type: string | null
           os_version: string | null
           payload_hash: string | null
+          signature_mode: string | null
           status: string
           tenant_id: string
         }
@@ -1476,6 +1478,7 @@ export type Database = {
           agent_name: string
           agent_version?: string | null
           display_name?: string | null
+          ed25519_supported?: boolean | null
           enrolled_at?: string
           force_update_at?: string | null
           force_update_reason?: string | null
@@ -1488,6 +1491,7 @@ export type Database = {
           os_type?: string | null
           os_version?: string | null
           payload_hash?: string | null
+          signature_mode?: string | null
           status?: string
           tenant_id: string
         }
@@ -1495,6 +1499,7 @@ export type Database = {
           agent_name?: string
           agent_version?: string | null
           display_name?: string | null
+          ed25519_supported?: boolean | null
           enrolled_at?: string
           force_update_at?: string | null
           force_update_reason?: string | null
@@ -1507,6 +1512,7 @@ export type Database = {
           os_type?: string | null
           os_version?: string | null
           payload_hash?: string | null
+          signature_mode?: string | null
           status?: string
           tenant_id?: string
         }

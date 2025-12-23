@@ -143,6 +143,8 @@ Deno.serve(async (req) => {
       os_version?: string;
       hostname?: string;
       agent_version?: string;
+      ed25519_supported?: boolean;
+      signature_mode?: string;
     }
 
     const updateData: AgentUpdate = { 
@@ -165,6 +167,16 @@ Deno.serve(async (req) => {
     const agentVersion = (osInfo as any).agent_version as string | undefined;
     if (agentVersion) {
       updateData.agent_version = agentVersion;
+    }
+    
+    // FASE 5: Capturar Ed25519 capability flags do payload
+    const ed25519Supported = (osInfo as any).ed25519_supported as boolean | undefined;
+    const signatureMode = (osInfo as any).signature_mode as string | undefined;
+    if (ed25519Supported !== undefined) {
+      updateData.ed25519_supported = ed25519Supported;
+    }
+    if (signatureMode) {
+      updateData.signature_mode = signatureMode;
     }
 
     const { error: updateError } = await supabase

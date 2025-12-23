@@ -79,6 +79,7 @@ import VulnerabilityFindings from "./pages/admin/VulnerabilityFindings";
 import WebActivity from "./pages/admin/WebActivity";
 import AgentTimeline from "./pages/admin/AgentTimeline";
 import AgentReleases from "./pages/admin/AgentReleases";
+import AgentVersionMonitor from "./pages/admin/AgentVersionMonitor";
 import Reports from "./pages/admin/Reports";
 import CustomTrials from "./pages/admin/CustomTrials";
 import RateLimitingStats from "./pages/admin/RateLimitingStats";
@@ -181,6 +182,7 @@ const App = () => (
                 <Route path="web-activity" element={<WebActivity />} />
                 <Route path="agent-timeline" element={<AgentTimeline />} />
                 <Route path="agent-releases" element={<AgentReleases />} />
+                <Route path="agent-versions" element={<AgentVersionMonitor />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="rate-limiting" element={<RateLimitingStats />} />
                 <Route path="dead-letter-queue" element={<DeadLetterQueue />} />
