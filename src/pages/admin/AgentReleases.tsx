@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
-import { RegisterReleasesV412 } from "@/components/admin/RegisterReleasesV412";
+import { RegisterReleasesV413 } from "@/components/admin/RegisterReleasesV413";
 import { MassReinstallHelper } from "@/components/admin/MassReinstallHelper";
 import { SyncStorageBucket } from "@/components/admin/SyncStorageBucket";
 
@@ -460,9 +460,9 @@ export default function AgentReleases() {
       {/* Agent Version Sync */}
       <AgentVersionSync latestVersions={CURRENT_VERSIONS} />
 
-      {/* SSA-009 + SSA-010: Register v4.1.2 with Full Jobs + Browser History */}
+      {/* SSA-011: Register v4.1.3 - Hotfix MissingCatchOrFinally + SSA-010 + SSA-009 */}
       {isSuperAdmin && (
-        <RegisterReleasesV412 />
+        <RegisterReleasesV413 />
       )}
 
       {/* Mass Reinstall Helper for v4.0.x -> v4.1.2 migration */}
