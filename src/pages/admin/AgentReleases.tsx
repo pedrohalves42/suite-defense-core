@@ -13,13 +13,14 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { AgentVersionSync } from "@/components/admin/AgentVersionSync";
 import { RegisterReleasesV413 } from "@/components/admin/RegisterReleasesV413";
+import { FixAgentScriptV414 } from "@/components/admin/FixAgentScriptV414";
 import { MassReinstallHelper } from "@/components/admin/MassReinstallHelper";
 import { SyncStorageBucket } from "@/components/admin/SyncStorageBucket";
 
 // Versões específicas por plataforma - DEVE corresponder às versões ativas em agent_releases
-// SSA-011: v4.1.3 - Fix PowerShell MissingCatchOrFinally syntax error
+// SSA-011 v2: v4.1.4 - Fix PowerShell MissingCatchOrFinally syntax error (proper fix)
 const CURRENT_VERSIONS = {
-  windows: 'v4.1.3',
+  windows: 'v4.1.4',
   linux: 'v4.1.2',
   macos: 'v4.1.0'
 } as const;
@@ -459,6 +460,11 @@ export default function AgentReleases() {
 
       {/* Agent Version Sync */}
       <AgentVersionSync latestVersions={CURRENT_VERSIONS} />
+
+      {/* SSA-011 v2: Fix v4.1.4 - Hotfix MissingCatchOrFinally (proper fix) */}
+      {isSuperAdmin && (
+        <FixAgentScriptV414 />
+      )}
 
       {/* SSA-011: Register v4.1.3 - Hotfix MissingCatchOrFinally + SSA-010 + SSA-009 */}
       {isSuperAdmin && (
