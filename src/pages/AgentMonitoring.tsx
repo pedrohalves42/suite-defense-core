@@ -1,9 +1,10 @@
 import { useEffect, useState, useMemo } from "react";
-import { Activity, AlertTriangle, CheckCircle2, Clock, TrendingUp, Wifi, WifiOff, Zap, LineChart as LineChartIcon, BarChart3, Monitor } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Clock, TrendingUp, Wifi, WifiOff, Zap, LineChart as LineChartIcon, BarChart3, Monitor, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { subDays } from "date-fns";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useTenant } from "@/hooks/useTenant";
@@ -11,7 +12,7 @@ import { logger } from "@/lib/logger";
 import { getJobTypeLabel, getJobStatusLabel } from "@/lib/job-labels";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { cn } from "@/lib/utils";
-
+import { toast } from "sonner";
 interface Agent {
   id: string;
   agent_name: string;
@@ -31,9 +32,30 @@ interface Job {
 
 const AgentMonitoring = () => {
   const { tenant } = useTenant();
+  const queryClient = useQueryClient();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
+  // Helper function to calculate agent status based on last_heartbeat
+  const getAgentCalculatedStatus = (agent: Agent): 'online' | 'warning' | 'offline' | 'never_connected' => {
+    if (!agent.last_heartbeat) return 'never_connected';
+    const minutesSince = (Date.now() - new Date(agent.last_heartbeat).getTime()) / 1000 / 60;
+    if (minutesSince < 2) return 'online';
+    if (minutesSince < 5) return 'warning';
+    return 'offline';
+  };
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['agents-monitoring'] });
+    queryClient.invalidateQueries({ queryKey: ['jobs-monitoring'] });
+    queryClient.invalidateQueries({ queryKey: ['historical-scans'] });
+    queryClient.invalidateQueries({ queryKey: ['historical-jobs'] });
+    queryClient.invalidateQueries({ queryKey: ['agent-uptime'] });
+    setLastUpdate(new Date());
+    toast.success("Dados atualizados!");
+  };
   // Fetch initial data
   const { data: initialAgents } = useQuery({
     queryKey: ['agents-monitoring'],
@@ -176,10 +198,16 @@ const AgentMonitoring = () => {
     };
   }, [initialAgents, initialJobs]);
 
-  // Calculate metrics
+  // Calculate metrics - using last_heartbeat for accurate online/offline status
   const totalAgents = agents.length;
-  const onlineAgents = agents.filter(a => a.status === 'active' || a.status === 'online').length;
-  const offlineAgents = agents.filter(a => a.status === 'offline').length;
+  const onlineAgents = agents.filter(a => {
+    const status = getAgentCalculatedStatus(a);
+    return status === 'online' || status === 'warning';
+  }).length;
+  const offlineAgents = agents.filter(a => {
+    const status = getAgentCalculatedStatus(a);
+    return status === 'offline' || status === 'never_connected';
+  }).length;
   const failedJobs = recentJobs.filter(j => j.status === 'failed').length;
   const successRate = recentJobs.length > 0 
     ? Math.round((recentJobs.filter(j => j.status === 'completed').length / recentJobs.length) * 100)
@@ -333,15 +361,29 @@ const AgentMonitoring = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20">
-          <Activity className="h-8 w-8 text-primary" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20">
+            <Activity className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Monitoramento em Tempo Real
+            </h1>
+            <p className="text-sm text-muted-foreground">Acompanhe status e performance dos computadores</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Monitoramento em Tempo Real
-          </h1>
-          <p className="text-sm text-muted-foreground">Acompanhe status e performance dos computadores</p>
+        
+        {/* Last Update Indicator + Refresh Button */}
+        <div className="flex items-center gap-3 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            <span>Atualizado: {formatBrazilDateTime(lastUpdate, 'time')}</span>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleRefresh} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Atualizar
+          </Button>
         </div>
       </div>
 
