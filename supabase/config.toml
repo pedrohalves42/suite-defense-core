@@ -517,3 +517,7 @@ verify_jwt = true
 # === SSA-011 v2: Fix Agent Script v4.1.4 ===
 [functions.fix-agent-script-v414]
 verify_jwt = true
+
+# === P1: Agent Key Registration (public key rotation) ===
+[functions.register-agent-key]
+verify_jwt = false
