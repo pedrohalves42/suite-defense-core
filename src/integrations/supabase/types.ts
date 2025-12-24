@@ -8775,6 +8775,14 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      verify_document_signature: {
+        Args: { p_document_hash: string; p_signature: string }
+        Returns: {
+          document_name: string
+          is_valid: boolean
+          signed_at: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "operator" | "viewer" | "super_admin"
