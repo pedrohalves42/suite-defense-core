@@ -194,22 +194,29 @@ Deno.serve(async (req) => {
     // P0-003: Usar RPC claim_jobs_for_agent para claiming atômico com locking
     // Isso previne race conditions e garante que apenas um processo pode reclamar cada job
     // A RPC já filtra por expires_at > NOW() e já marca como 'delivered' atomicamente
+    // FASE 4: Agora também cria job_executions para trilha de auditoria imutável
     interface ClaimedJob {
-      id: string
-      type: string
+      job_id: string
+      job_type: string
       payload: Record<string, unknown>
-      approved: boolean
-      agent_id: string | null
-      agent_name: string | null
-      priority: number
-      created_at: string
+      execution_id: string    // ID da execução (job_executions)
+      nonce: string           // Nonce único para esta execução
+      payload_hash: string    // SHA256 do payload para verificação
       expires_at: string
     }
+    
+    // Buscar tenant_id do agente para a RPC
+    const { data: agentFullData } = await supabase
+      .from('agents')
+      .select('tenant_id')
+      .eq('id', token.agent_id)
+      .single()
     
     const { data: jobs, error: jobsError } = await supabase
       .rpc('claim_jobs_for_agent', {
         p_agent_id: token.agent_id,
         p_agent_name: agent.agent_name,
+        p_tenant_id: agentFullData?.tenant_id,
         p_limit: 3
       }) as { data: ClaimedJob[] | null, error: { message: string } | null }
 
@@ -221,31 +228,37 @@ Deno.serve(async (req) => {
       )
     }
 
-    // LOG CRÍTICO: mostrar jobs reclamados atomicamente
-    logger.info('Jobs claimed atomically', { 
+    // LOG CRÍTICO: mostrar jobs reclamados atomicamente (com execution_id)
+    logger.info('Jobs claimed atomically with executions', { 
       agentName: agent.agent_name,
       jobCount: jobs?.length ?? 0,
-      jobIds: jobs?.map((j: ClaimedJob) => j.id) ?? [],
-      jobTypes: jobs?.map((j: ClaimedJob) => j.type) ?? []
+      jobIds: jobs?.map((j: ClaimedJob) => j.job_id) ?? [],
+      jobTypes: jobs?.map((j: ClaimedJob) => j.job_type) ?? [],
+      executionIds: jobs?.map((j: ClaimedJob) => j.execution_id) ?? []
     })
 
-    // Filtro de validação (null, ID, type, payload)
+    // Filtro de validação (null, ID, type, payload, execution_id)
     const validJobs = (jobs || []).filter((job: ClaimedJob) => {
       if (!job) {
         logger.warn('NULL job detected, filtering out')
         return false
       }
-      if (!job.id || typeof job.id !== 'string') {
-        logger.warn('Job without valid ID', { job })
+      if (!job.job_id || typeof job.job_id !== 'string') {
+        logger.warn('Job without valid job_id', { job })
         return false
       }
-      if (!job.type || typeof job.type !== 'string') {
-        logger.warn('Job without valid type', { jobId: job.id })
+      if (!job.job_type || typeof job.job_type !== 'string') {
+        logger.warn('Job without valid job_type', { jobId: job.job_id })
         return false
       }
       // Payload pode ser {} mas não null/undefined
       if (job.payload === undefined || job.payload === null) {
-        logger.warn('Job without payload', { jobId: job.id })
+        logger.warn('Job without payload', { jobId: job.job_id })
+        return false
+      }
+      // Execution ID é obrigatório na nova arquitetura
+      if (!job.execution_id || typeof job.execution_id !== 'string') {
+        logger.warn('Job without execution_id', { jobId: job.job_id })
         return false
       }
       return true
@@ -253,7 +266,7 @@ Deno.serve(async (req) => {
 
     logger.info('Valid jobs after filtering', { 
       count: validJobs.length,
-      validJobIds: validJobs.map((j: ClaimedJob) => j.id)
+      validJobIds: validJobs.map((j: ClaimedJob) => j.job_id)
     })
 
     // Se não há jobs válidos, retornar array vazio imediatamente
@@ -274,6 +287,7 @@ Deno.serve(async (req) => {
     }
 
     // Preparar resposta - jobs já foram marcados como delivered pela RPC
+    // Agora inclui execution_id, nonce e payload_hash para trilha de auditoria
     const jobsResponse = await Promise.all(validJobs.map(async (j: ClaimedJob) => {
       const jobPayload = j.payload || {}
       
@@ -282,15 +296,15 @@ Deno.serve(async (req) => {
       
       if (signingEnabled && privateKey) {
         try {
-          const signed = await signJob(j.id, j.type, jobPayload, privateKey)
+          const signed = await signJob(j.job_id, j.job_type, jobPayload, privateKey)
           signatureInfo = {
             payload_signature: signed.signature,
             signing_alg: signed.algorithm
           }
-          logger.debug('Job signed successfully', { jobId: j.id, algorithm: signed.algorithm })
+          logger.debug('Job signed successfully', { jobId: j.job_id, algorithm: signed.algorithm })
         } catch (signError) {
           logger.error('Failed to sign job', { 
-            jobId: j.id, 
+            jobId: j.job_id, 
             error: signError instanceof Error ? signError.message : 'Unknown error'
           })
           // Continue without signature - agents should handle this based on their config
@@ -298,27 +312,34 @@ Deno.serve(async (req) => {
       }
       
       return {
-        id: j.id,
-        type: j.type,
+        id: j.job_id,
+        type: j.job_type,
         payload: jobPayload,
-        approved: j.approved ?? true,
-        agent_id: j.agent_id || token.agent_id,
-        expires_at: j.expires_at, // P1: Incluir expires_at no payload para validação client-side
+        approved: true,
+        agent_id: token.agent_id,
+        expires_at: j.expires_at,
+        // FASE 4: Trilha de auditoria imutável
+        execution_id: j.execution_id,
+        nonce: j.nonce,
+        payload_hash: j.payload_hash,
         ...signatureInfo
       }
     }))
 
-    // LOG CRÍTICO: mostrar exatamente o que será retornado
-    logger.info('Jobs to return to agent', { 
+    // LOG CRÍTICO: mostrar exatamente o que será retornado (com execution tracking)
+    logger.info('Jobs to return to agent with execution tracking', { 
       agentName: agent.agent_name,
       responseCount: jobsResponse.length,
       signingEnabled,
+      executionIds: jobsResponse.map(j => j.execution_id),
       response: JSON.stringify(jobsResponse)
     })
 
     // Jobs já foram marcados como 'delivered' atomicamente pela RPC claim_jobs_for_agent
-    logger.success('Jobs delivered via atomic claim', { 
-      jobIds: validJobs.map((j: ClaimedJob) => j.id), 
+    // E job_executions criadas para trilha de auditoria
+    logger.success('Jobs delivered via atomic claim with audit trail', { 
+      jobIds: validJobs.map((j: ClaimedJob) => j.job_id), 
+      executionIds: validJobs.map((j: ClaimedJob) => j.execution_id),
       count: validJobs.length 
     })
 
