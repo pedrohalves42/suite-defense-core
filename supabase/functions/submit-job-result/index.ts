@@ -810,17 +810,31 @@ Deno.serve(async (req) => {
         })
       
       if (execError) {
-        console.error('[submit-job-result] [AUDIT_TRAIL] Error finalizing execution:', {
+        console.error('[submit-job-result] [AUDIT_TRAIL] [P2.1] Error finalizing execution:', {
           error: execError.message,
+          error_code: execError.code,
+          error_details: execError.details,
           execution_id,
-          job_id
+          job_id,
+          agent: agent.agent_name
         })
-        // Continuar mesmo se falhar - backward compatibility
+        // Continuar mesmo se falhar - o current_execution_id será limpo no UPDATE abaixo
       } else if (execResult?.success) {
         executionFinalized = true
-        console.log('[submit-job-result] [AUDIT_TRAIL] Execution finalized successfully:', execResult)
+        console.log('[submit-job-result] [AUDIT_TRAIL] [P2.1] Execution finalized successfully:', {
+          ...execResult,
+          job_id,
+          execution_id,
+          agent: agent.agent_name
+        })
       } else if (execResult?.error) {
-        console.warn('[submit-job-result] [AUDIT_TRAIL] Execution finalization failed:', execResult)
+        console.warn('[submit-job-result] [AUDIT_TRAIL] [P2.1] Execution finalization failed:', {
+          result: execResult,
+          job_id,
+          execution_id,
+          agent: agent.agent_name,
+          note: 'current_execution_id will still be cleared in main UPDATE'
+        })
       }
     } else {
       // Backward compatibility: agentes antigos não enviam execution_id
@@ -871,8 +885,18 @@ Deno.serve(async (req) => {
     const updateData: Record<string, unknown> = {
       status: status,
       finished_at: finished_at || new Date().toISOString(),
-      completed_at: new Date().toISOString()
+      completed_at: new Date().toISOString(),
+      // P2.1 CRITICAL FIX: SEMPRE limpar current_execution_id quando job é finalizado
+      // Isso garante que o job possa ser re-executado se necessário
+      // E evita estados órfãos em job_executions
+      current_execution_id: null
     }
+    
+    console.log('[submit-job-result] [P2.1_CLEANUP] Setting current_execution_id = NULL for completed job:', {
+      job_id,
+      status,
+      executionFinalized
+    })
 
     if (started_at) {
       updateData.started_at = started_at
