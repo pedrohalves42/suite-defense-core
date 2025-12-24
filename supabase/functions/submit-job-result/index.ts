@@ -362,6 +362,63 @@ Deno.serve(async (req) => {
       )
     }
 
+    // ============================================================
+    // P1: VALIDAÇÃO DE INTEGRIDADE OBRIGATÓRIA
+    // Comparar payload_hash do job com payload_hash da execution
+    // Se diferir → ataque, bug ou corrupção
+    // ============================================================
+    if (execution_id && job.payload_hash) {
+      const { data: execution, error: execFetchError } = await supabase
+        .from('job_executions')
+        .select('payload_hash')
+        .eq('id', execution_id)
+        .maybeSingle()
+      
+      if (execFetchError) {
+        console.error('[submit-job-result] [P1] Error fetching execution payload_hash:', execFetchError)
+      } else if (execution?.payload_hash && job.payload_hash !== execution.payload_hash) {
+        console.error('[submit-job-result] [SECURITY] [P1] PAYLOAD_TAMPERED:', {
+          job_id,
+          execution_id,
+          job_payload_hash: job.payload_hash,
+          execution_payload_hash: execution.payload_hash,
+          agent_name: agent.agent_name
+        })
+        
+        await logSecurityEvent({
+          supabase,
+          tenantId: agent.tenant_id,
+          ipAddress,
+          endpoint: '/submit-job-result',
+          attackType: 'payload_tampering',
+          severity: 'critical',
+          blocked: true,
+          details: {
+            job_id,
+            execution_id,
+            agent_name: agent.agent_name,
+            job_payload_hash: job.payload_hash,
+            execution_payload_hash: execution.payload_hash,
+            reason: 'Job payload hash does not match execution payload hash - possible tampering or corruption'
+          }
+        })
+        
+        return new Response(
+          JSON.stringify({ 
+            error: 'PAYLOAD_TAMPERED',
+            message: 'Job payload integrity check failed'
+          }),
+          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      } else if (execution?.payload_hash) {
+        console.log('[submit-job-result] [P1] Payload integrity VERIFIED:', {
+          job_id,
+          execution_id,
+          hash_match: true
+        })
+      }
+    }
+
     // SSA-006: Impedir que job seja processado duas vezes COM LOGGING
     if (['done', 'completed', 'failed'].includes(job.status)) {
       console.log('[submit-job-result] Job already done - duplicate submission:', job_id)
