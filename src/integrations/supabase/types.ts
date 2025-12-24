@@ -3811,6 +3811,7 @@ export type Database = {
           output: Json | null
           parent_job_id: string | null
           payload: Json | null
+          payload_hash: string | null
           priority: number | null
           recurrence_pattern: string | null
           scheduled_at: string | null
@@ -3839,6 +3840,7 @@ export type Database = {
           output?: Json | null
           parent_job_id?: string | null
           payload?: Json | null
+          payload_hash?: string | null
           priority?: number | null
           recurrence_pattern?: string | null
           scheduled_at?: string | null
@@ -3867,6 +3869,7 @@ export type Database = {
           output?: Json | null
           parent_job_id?: string | null
           payload?: Json | null
+          payload_hash?: string | null
           priority?: number | null
           recurrence_pattern?: string | null
           scheduled_at?: string | null
@@ -8236,6 +8239,7 @@ export type Database = {
         Args: { from_time?: string; pattern: string }
         Returns: string
       }
+      calculate_payload_hash: { Args: { p_payload: Json }; Returns: string }
       calculate_pipeline_metrics: {
         Args: { p_hours_back?: number; p_tenant_id: string }
         Returns: {
@@ -8603,6 +8607,7 @@ export type Database = {
           output: Json | null
           parent_job_id: string | null
           payload: Json | null
+          payload_hash: string | null
           priority: number | null
           recurrence_pattern: string | null
           scheduled_at: string | null
