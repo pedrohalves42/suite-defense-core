@@ -201,6 +201,7 @@ Deno.serve(async (req) => {
     const payload = await req.json()
 
     // ? BUG FIX P1: Extrair TODOS os campos v3, incluindo timestamps
+    // FASE 4: Adicionar campos para trilha de auditoria imutável
     const job_id = payload.job_id
     const status = payload.status
     const output = payload.output
@@ -208,6 +209,11 @@ Deno.serve(async (req) => {
     const execution_time_seconds = payload.execution_time_seconds
     const started_at = payload.started_at
     const finished_at = payload.finished_at
+    // FASE 4: Campos de auditoria
+    const execution_id = payload.execution_id
+    const nonce = payload.nonce
+    const result_signature = payload.result_signature
+    const signature_algorithm = payload.signature_algorithm
 
     // Validacao de schema v3
     if (!job_id || typeof job_id !== 'string') {
@@ -257,7 +263,11 @@ Deno.serve(async (req) => {
       has_started_at: !!started_at,
       has_finished_at: !!finished_at,
       started_at_value: started_at,
-      finished_at_value: finished_at
+      finished_at_value: finished_at,
+      // FASE 4: Auditoria
+      execution_id: execution_id || 'NOT_PROVIDED',
+      nonce: nonce || 'NOT_PROVIDED',
+      has_signature: !!result_signature
     })
 
     // Buscar o job - CORRIGIDO: usar 'type' não 'job_type'
@@ -583,6 +593,109 @@ Deno.serve(async (req) => {
     }
     
     // ============================================================
+    // FASE 4: ATUALIZAR JOB EXECUTION PRIMEIRO (trilha de auditoria imutável)
+    // Depois atualizar o job principal
+    // ============================================================
+    
+    // Calcular hash do output para verificação
+    const outputString = output ? JSON.stringify(output) : null
+    const outputHash = outputString 
+      ? await crypto.subtle.digest('SHA-256', new TextEncoder().encode(outputString))
+          .then(hash => Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join(''))
+      : null
+    
+    // Tentar finalizar a execução via RPC se execution_id foi fornecido
+    let executionFinalized = false
+    if (execution_id) {
+      console.log('[submit-job-result] [AUDIT_TRAIL] Finalizing job execution:', {
+        job_id,
+        execution_id,
+        status,
+        has_signature: !!result_signature
+      })
+      
+      const { data: execResult, error: execError } = await supabase
+        .rpc('finalize_job_execution', {
+          p_job_id: job_id,
+          p_execution_id: execution_id,
+          p_agent_id: agent.id,
+          p_status: status,
+          p_started_at: started_at || null,
+          p_finished_at: finished_at || new Date().toISOString(),
+          p_output_hash: outputHash,
+          p_error_message: error_message ? sanitizeErrorMessage(error_message) : null,
+          p_execution_time_seconds: execution_time_seconds || null,
+          p_result_signature: result_signature || null,
+          p_signature_verified: false // TODO: Implementar verificação de assinatura
+        })
+      
+      if (execError) {
+        console.error('[submit-job-result] [AUDIT_TRAIL] Error finalizing execution:', {
+          error: execError.message,
+          execution_id,
+          job_id
+        })
+        // Continuar mesmo se falhar - backward compatibility
+      } else if (execResult?.success) {
+        executionFinalized = true
+        console.log('[submit-job-result] [AUDIT_TRAIL] Execution finalized successfully:', execResult)
+      } else if (execResult?.error) {
+        console.warn('[submit-job-result] [AUDIT_TRAIL] Execution finalization failed:', execResult)
+      }
+    } else {
+      // Backward compatibility: agentes antigos não enviam execution_id
+      // Tentar buscar a execution mais recente para este job
+      console.log('[submit-job-result] [AUDIT_TRAIL] No execution_id provided, attempting fallback lookup')
+      
+      const { data: existingExecution } = await supabase
+        .from('job_executions')
+        .select('id')
+        .eq('job_id', job_id)
+        .eq('agent_id', agent.id)
+        .eq('status', 'claimed')
+        .order('claimed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      
+      if (existingExecution?.id) {
+        console.log('[submit-job-result] [AUDIT_TRAIL] Found existing execution for fallback:', existingExecution.id)
+        
+        const { data: execResult, error: execError } = await supabase
+          .rpc('finalize_job_execution', {
+            p_job_id: job_id,
+            p_execution_id: existingExecution.id,
+            p_agent_id: agent.id,
+            p_status: status,
+            p_started_at: started_at || null,
+            p_finished_at: finished_at || new Date().toISOString(),
+            p_output_hash: outputHash,
+            p_error_message: error_message ? sanitizeErrorMessage(error_message) : null,
+            p_execution_time_seconds: execution_time_seconds || null,
+            p_result_signature: null,
+            p_signature_verified: false
+          })
+        
+        if (!execError && execResult?.success) {
+          executionFinalized = true
+          console.log('[submit-job-result] [AUDIT_TRAIL] Fallback execution finalized:', execResult)
+        }
+      } else {
+        console.log('[submit-job-result] [AUDIT_TRAIL] No existing execution found - legacy job without audit trail')
+      }
+    }
+    
+    // Log signature status for future implementation
+    if (result_signature) {
+      console.log('[submit-job-result] [SIGNATURE_READY] Agent result signature received:', {
+        job_id,
+        execution_id,
+        algorithm: signature_algorithm || 'ECDSA-P256-SHA256',
+        signature_preview: result_signature.substring(0, 32) + '...',
+        note: 'Signature verification not yet implemented'
+      })
+    }
+    
+    // ============================================================
     // AGORA ATUALIZAR O JOB (após side effects inseridos)
     // O trigger enforce_job_side_effects validará a integridade
     // ============================================================
@@ -606,6 +719,13 @@ Deno.serve(async (req) => {
     if (execution_time_seconds !== undefined) {
       updateData.execution_time_seconds = execution_time_seconds
     }
+    
+    // FASE 4: Log se execution foi finalizada
+    console.log('[submit-job-result] [AUDIT_TRAIL] Execution status before job update:', {
+      job_id,
+      executionFinalized,
+      execution_id: execution_id || 'NOT_PROVIDED'
+    })
 
     // GOVERNANÇA: Validar contrato de sucesso para sync_blocked_websites
     if (job.type === 'sync_blocked_websites' && status === 'completed' && output) {
@@ -1029,6 +1149,8 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true,
         job_id,
+        execution_id: execution_id || null,
+        execution_finalized: executionFinalized,
         message: `Job marcado como ${status}`
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
