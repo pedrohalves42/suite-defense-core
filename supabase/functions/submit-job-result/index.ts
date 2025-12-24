@@ -211,10 +211,36 @@ Deno.serve(async (req) => {
     const started_at = payload.started_at
     const finished_at = payload.finished_at
     // FASE 4: Campos de auditoria
-    const execution_id = payload.execution_id
+    const raw_execution_id = payload.execution_id
     const nonce = payload.nonce
     const result_signature = payload.result_signature
     const signature_algorithm = payload.signature_algorithm
+
+    // P2.1 FIX: Normalizar execution_id - remover prefixo "exec-" se presente
+    // Agentes enviam "exec-<uuid>", mas o banco usa UUID puro
+    let execution_id: string | null = null
+    if (raw_execution_id && typeof raw_execution_id === 'string') {
+      let normalized = raw_execution_id
+      if (raw_execution_id.startsWith('exec-')) {
+        normalized = raw_execution_id.substring(5)
+        console.log('[submit-job-result] [P2.1] Normalized execution_id from agent format:', {
+          original: raw_execution_id,
+          normalized
+        })
+      }
+      // Validar formato UUID
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (uuidRegex.test(normalized)) {
+        execution_id = normalized
+      } else {
+        console.warn('[submit-job-result] [P2.1] execution_id is not a valid UUID after normalization:', {
+          original: raw_execution_id,
+          normalized,
+          job_id
+        })
+        // execution_id permanece null - fallback para busca por job_id
+      }
+    }
 
     // Validacao de schema v3
     if (!job_id || typeof job_id !== 'string') {
