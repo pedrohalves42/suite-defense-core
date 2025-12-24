@@ -6,6 +6,7 @@ import { logSecurityEvent } from '../_shared/security-log.ts'
 import { validateHttpMethod, handleCorsPreflightRequest } from '../_shared/http-method-validator.ts'
 import { hashToken } from '../_shared/token-hash.ts'
 import { sanitizeJobOutput, sanitizeErrorMessage, sanitizeForStorage } from '../_shared/sanitize.ts'
+import { verifyResultSignature, computeOutputHash } from '../_shared/verify-result-signature.ts'
 
 Deno.serve(async (req) => {
   // QUAL-01: Proper HTTP method validation
@@ -604,6 +605,100 @@ Deno.serve(async (req) => {
           .then(hash => Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join(''))
       : null
     
+    // ============================================================
+    // P1: VERIFICAR ASSINATURA DO RESULTADO (se fornecida)
+    // Verificar ANTES de finalizar a execução
+    // ============================================================
+    let signatureVerified = false
+    let signatureVerificationDetails: Record<string, unknown> = {}
+    
+    if (result_signature && execution_id && nonce) {
+      console.log('[submit-job-result] [P1_SIGNATURE] Verifying result signature:', {
+        job_id,
+        execution_id,
+        algorithm: signature_algorithm || 'ECDSA-P256-SHA256',
+        signature_preview: result_signature.substring(0, 32) + '...'
+      })
+      
+      try {
+        const verifyResult = await verifyResultSignature(
+          supabase,
+          agent.id,
+          {
+            jobId: job_id,
+            executionId: execution_id,
+            nonce: nonce,
+            outputHash: outputHash || '',
+            status: status
+          },
+          result_signature,
+          signature_algorithm || 'ECDSA-P256-SHA256'
+        )
+        
+        signatureVerified = verifyResult.valid
+        signatureVerificationDetails = {
+          verified: verifyResult.valid,
+          keyId: verifyResult.keyId,
+          keyVersion: verifyResult.keyVersion,
+          isCurrent: verifyResult.isCurrent,
+          algorithm: verifyResult.algorithm,
+          errorCode: verifyResult.errorCode,
+          errorMessage: verifyResult.errorMessage
+        }
+        
+        if (verifyResult.valid) {
+          console.log('[submit-job-result] [P1_SIGNATURE] Signature VERIFIED:', {
+            job_id,
+            execution_id,
+            keyVersion: verifyResult.keyVersion,
+            isCurrent: verifyResult.isCurrent
+          })
+        } else {
+          console.warn('[submit-job-result] [P1_SIGNATURE] Signature INVALID:', {
+            job_id,
+            execution_id,
+            errorCode: verifyResult.errorCode,
+            errorMessage: verifyResult.errorMessage
+          })
+          
+          // Log security event for invalid signature
+          await logSecurityEvent({
+            supabase,
+            tenantId: agent.tenant_id,
+            ipAddress,
+            endpoint: '/submit-job-result',
+            attackType: 'invalid_input',
+            severity: 'high',
+            blocked: false, // Allow for now, log for monitoring
+            details: {
+              reason: 'invalid_result_signature',
+              job_id,
+              execution_id,
+              agent_name: agent.agent_name,
+              error_code: verifyResult.errorCode
+            }
+          })
+        }
+      } catch (sigError) {
+        console.error('[submit-job-result] [P1_SIGNATURE] Verification error:', sigError)
+        signatureVerificationDetails = {
+          verified: false,
+          error: sigError instanceof Error ? sigError.message : 'Unknown error'
+        }
+      }
+    } else if (result_signature) {
+      // Signature provided but missing execution_id or nonce
+      console.warn('[submit-job-result] [P1_SIGNATURE] Signature provided but missing context:', {
+        job_id,
+        has_execution_id: !!execution_id,
+        has_nonce: !!nonce
+      })
+      signatureVerificationDetails = {
+        verified: false,
+        error: 'Missing execution_id or nonce for signature verification'
+      }
+    }
+    
     // Tentar finalizar a execução via RPC se execution_id foi fornecido
     let executionFinalized = false
     if (execution_id) {
@@ -611,7 +706,8 @@ Deno.serve(async (req) => {
         job_id,
         execution_id,
         status,
-        has_signature: !!result_signature
+        has_signature: !!result_signature,
+        signature_verified: signatureVerified
       })
       
       const { data: execResult, error: execError } = await supabase
@@ -626,7 +722,7 @@ Deno.serve(async (req) => {
           p_error_message: error_message ? sanitizeErrorMessage(error_message) : null,
           p_execution_time_seconds: execution_time_seconds || null,
           p_result_signature: result_signature || null,
-          p_signature_verified: false // TODO: Implementar verificação de assinatura
+          p_signature_verified: signatureVerified
         })
       
       if (execError) {
@@ -682,17 +778,6 @@ Deno.serve(async (req) => {
       } else {
         console.log('[submit-job-result] [AUDIT_TRAIL] No existing execution found - legacy job without audit trail')
       }
-    }
-    
-    // Log signature status for future implementation
-    if (result_signature) {
-      console.log('[submit-job-result] [SIGNATURE_READY] Agent result signature received:', {
-        job_id,
-        execution_id,
-        algorithm: signature_algorithm || 'ECDSA-P256-SHA256',
-        signature_preview: result_signature.substring(0, 32) + '...',
-        note: 'Signature verification not yet implemented'
-      })
     }
     
     // ============================================================

@@ -8641,6 +8641,16 @@ export type Database = {
           version: number
         }[]
       }
+      get_valid_agent_signing_key_by_agent: {
+        Args: { p_agent_id: string }
+        Returns: {
+          algorithm: string
+          is_current: boolean
+          key_id: string
+          public_key: string
+          version: number
+        }[]
+      }
       has_recent_playbook_execution: {
         Args: {
           p_agent_id?: string
