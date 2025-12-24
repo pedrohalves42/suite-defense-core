@@ -191,35 +191,46 @@ Deno.serve(async (req) => {
       )
     }
     
-    // Buscar jobs pendentes (max 3) - usando agent_name OU agent_id
-    // P1: Ordenar por prioridade (1=critical, 2=standard, 3=heavy) e depois por created_at
+    // P0-003: Usar RPC claim_jobs_for_agent para claiming atômico com locking
+    // Isso previne race conditions e garante que apenas um processo pode reclamar cada job
+    // A RPC já filtra por expires_at > NOW() e já marca como 'delivered' atomicamente
+    interface ClaimedJob {
+      id: string
+      type: string
+      payload: Record<string, unknown>
+      approved: boolean
+      agent_id: string | null
+      agent_name: string | null
+      priority: number
+      created_at: string
+      expires_at: string
+    }
+    
     const { data: jobs, error: jobsError } = await supabase
-      .from('jobs')
-      .select('id, type, payload, approved, agent_id, agent_name, status, created_at, priority')
-      .or(`agent_name.eq.${agent.agent_name},agent_id.eq.${token.agent_id}`)
-      .eq('status', 'queued')
-      .order('priority', { ascending: true })
-      .order('created_at', { ascending: true })
-      .limit(3)
+      .rpc('claim_jobs_for_agent', {
+        p_agent_id: token.agent_id,
+        p_agent_name: agent.agent_name,
+        p_limit: 3
+      }) as { data: ClaimedJob[] | null, error: { message: string } | null }
 
     if (jobsError) {
-      logger.error('Error fetching jobs', { error: jobsError.message, agentName: agent.agent_name })
+      logger.error('Error claiming jobs', { error: jobsError.message, agentName: agent.agent_name })
       return new Response(
         JSON.stringify([]),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
-    // LOG CRÍTICO: mostrar jobs encontrados antes de qualquer filtro
-    logger.info('Jobs found in database', { 
+    // LOG CRÍTICO: mostrar jobs reclamados atomicamente
+    logger.info('Jobs claimed atomically', { 
       agentName: agent.agent_name,
       jobCount: jobs?.length ?? 0,
-      jobIds: jobs?.map(j => j.id) ?? [],
-      jobTypes: jobs?.map(j => j.type) ?? []
+      jobIds: jobs?.map((j: ClaimedJob) => j.id) ?? [],
+      jobTypes: jobs?.map((j: ClaimedJob) => j.type) ?? []
     })
 
     // Filtro de validação (null, ID, type, payload)
-    const validJobs = (jobs || []).filter(job => {
+    const validJobs = (jobs || []).filter((job: ClaimedJob) => {
       if (!job) {
         logger.warn('NULL job detected, filtering out')
         return false
@@ -242,7 +253,7 @@ Deno.serve(async (req) => {
 
     logger.info('Valid jobs after filtering', { 
       count: validJobs.length,
-      validJobIds: validJobs.map(j => j.id)
+      validJobIds: validJobs.map((j: ClaimedJob) => j.id)
     })
 
     // Se não há jobs válidos, retornar array vazio imediatamente
@@ -262,8 +273,8 @@ Deno.serve(async (req) => {
       logger.warn('ED25519_PRIVATE_KEY not configured - jobs will be unsigned', { agentName: agent.agent_name })
     }
 
-    // Preparar resposta ANTES de marcar como delivered
-    const jobsResponse = await Promise.all(validJobs.map(async (j) => {
+    // Preparar resposta - jobs já foram marcados como delivered pela RPC
+    const jobsResponse = await Promise.all(validJobs.map(async (j: ClaimedJob) => {
       const jobPayload = j.payload || {}
       
       // Sign the job if private key is available
@@ -292,6 +303,7 @@ Deno.serve(async (req) => {
         payload: jobPayload,
         approved: j.approved ?? true,
         agent_id: j.agent_id || token.agent_id,
+        expires_at: j.expires_at, // P1: Incluir expires_at no payload para validação client-side
         ...signatureInfo
       }
     }))
@@ -304,22 +316,11 @@ Deno.serve(async (req) => {
       response: JSON.stringify(jobsResponse)
     })
 
-    // AGORA marcar jobs como entregues (apenas após preparar resposta)
-    const jobIds = validJobs.map(j => j.id)
-    const { error: updateError } = await supabase
-      .from('jobs')
-      .update({ 
-        status: 'delivered',
-        delivered_at: new Date().toISOString()
-      })
-      .in('id', jobIds)
-
-    if (updateError) {
-      logger.error('Error updating job status to delivered', { error: updateError.message, jobIds })
-      // Ainda retorna os jobs - agente deve processá-los
-    } else {
-      logger.success('Jobs marked as delivered', { jobIds, count: jobIds.length })
-    }
+    // Jobs já foram marcados como 'delivered' atomicamente pela RPC claim_jobs_for_agent
+    logger.success('Jobs delivered via atomic claim', { 
+      jobIds: validJobs.map((j: ClaimedJob) => j.id), 
+      count: validJobs.length 
+    })
 
     // Retornar jobs ao agente
     return new Response(

@@ -7982,6 +7982,20 @@ export type Database = {
           total_attempts: number
         }[]
       }
+      claim_jobs_for_agent: {
+        Args: { p_agent_id: string; p_agent_name: string; p_limit?: number }
+        Returns: {
+          agent_id: string
+          agent_name: string
+          approved: boolean
+          created_at: string
+          expires_at: string
+          id: string
+          payload: Json
+          priority: number
+          type: string
+        }[]
+      }
       cleanup_all_problematic_agents: {
         Args: { p_tenant_id: string }
         Returns: Json
