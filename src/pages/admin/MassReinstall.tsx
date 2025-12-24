@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
-const SUPABASE_URL = "https://iavbnmduxpxhwubqrzzn.supabase.co";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 const CLEANUP_SCRIPT = `# =========================================
 # CyberShield - Script de Limpeza Completa
