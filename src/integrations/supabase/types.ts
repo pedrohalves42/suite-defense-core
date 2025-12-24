@@ -778,6 +778,88 @@ export type Database = {
           },
         ]
       }
+      agent_signing_keys: {
+        Row: {
+          agent_id: string
+          algorithm: string
+          created_at: string
+          id: string
+          key_fingerprint: string
+          public_key: string
+          revoked_at: string | null
+          revoked_reason: string | null
+          valid_from: string
+          version: number
+        }
+        Insert: {
+          agent_id: string
+          algorithm?: string
+          created_at?: string
+          id?: string
+          key_fingerprint: string
+          public_key: string
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          valid_from?: string
+          version?: number
+        }
+        Update: {
+          agent_id?: string
+          algorithm?: string
+          created_at?: string
+          id?: string
+          key_fingerprint?: string
+          public_key?: string
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          valid_from?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_signing_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_signing_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_signing_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_signing_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_signing_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_signing_keys_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_system_metrics: {
         Row: {
           agent_id: string
@@ -7820,11 +7902,12 @@ export type Database = {
         Row: {
           avg_execution_time_seconds: number | null
           avg_queue_time_seconds: number | null
+          calculated_at: string | null
           completed_count: number | null
           delivered_count: number | null
-          expired_delivered_count: number | null
+          duplicate_execution_jobs: number | null
+          expired_completed_count: number | null
           failed_count: number | null
-          has_duplicate_executions: number | null
           tenant_id: string | null
         }
         Relationships: [
@@ -8548,6 +8631,16 @@ export type Database = {
         Args: { p_plan_name: string }
         Returns: number
       }
+      get_valid_agent_signing_key: {
+        Args: { p_agent_id: string; p_fingerprint: string }
+        Returns: {
+          algorithm: string
+          is_current: boolean
+          key_id: string
+          public_key: string
+          version: number
+        }[]
+      }
       has_recent_playbook_execution: {
         Args: {
           p_agent_id?: string
@@ -8589,6 +8682,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      register_agent_signing_key: {
+        Args: {
+          p_agent_id: string
+          p_algorithm?: string
+          p_fingerprint: string
+          p_public_key: string
+        }
+        Returns: {
+          key_id: string
+          valid_from: string
+          version: number
+        }[]
+      }
       reprocess_job_outputs: {
         Args: { p_hours_back?: number }
         Returns: {
@@ -8600,6 +8706,10 @@ export type Database = {
         }[]
       }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
+      revoke_agent_signing_key: {
+        Args: { p_key_id: string; p_reason?: string }
+        Returns: boolean
+      }
       submit_agent_evidence: {
         Args: {
           p_agent_id: string
