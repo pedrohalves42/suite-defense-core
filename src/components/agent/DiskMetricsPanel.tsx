@@ -73,17 +73,29 @@ export const DiskMetricsPanel = ({ agentId, compact = false }: DiskMetricsPanelP
   }
 
   if (compact) {
-    // Versão compacta: mostrar todos os discos
+    // Versão compacta: mostrar todos os discos com barras de progresso
     return (
-      <div className="flex items-center gap-2 text-sm flex-wrap">
-        <HardDrive className="h-4 w-4 text-muted-foreground" />
-        {disks.map((disk, idx) => (
-          <span 
-            key={disk.drive_letter}
-            className={cn('font-medium', getUsageColor(disk.usage_percent))}
-          >
-            {disk.drive_letter} {disk.usage_percent.toFixed(0)}%{idx < disks.length - 1 ? ',' : ''}
-          </span>
+      <div className="space-y-2">
+        {disks.map((disk) => (
+          <div key={disk.drive_letter}>
+            <div className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <HardDrive className="h-3 w-3" /> {disk.drive_letter}
+              </span>
+              <span className={cn('font-medium', getUsageColor(disk.usage_percent))}>
+                {disk.usage_percent.toFixed(0)}%
+              </span>
+            </div>
+            <Progress 
+              value={disk.usage_percent} 
+              className={cn(
+                'h-1.5',
+                disk.usage_percent >= 95 ? '[&>div]:bg-destructive' :
+                disk.usage_percent >= 85 ? '[&>div]:bg-amber-500' :
+                disk.usage_percent >= 70 ? '[&>div]:bg-yellow-500' : '[&>div]:bg-emerald-500'
+              )}
+            />
+          </div>
         ))}
       </div>
     );
