@@ -1470,6 +1470,9 @@ export type Database = {
           os_type: string | null
           os_version: string | null
           payload_hash: string | null
+          result_key_fingerprint: string | null
+          result_key_registered_at: string | null
+          result_public_key: string | null
           signature_mode: string | null
           status: string
           tenant_id: string
@@ -1491,6 +1494,9 @@ export type Database = {
           os_type?: string | null
           os_version?: string | null
           payload_hash?: string | null
+          result_key_fingerprint?: string | null
+          result_key_registered_at?: string | null
+          result_public_key?: string | null
           signature_mode?: string | null
           status?: string
           tenant_id: string
@@ -1512,6 +1518,9 @@ export type Database = {
           os_type?: string | null
           os_version?: string | null
           payload_hash?: string | null
+          result_key_fingerprint?: string | null
+          result_key_registered_at?: string | null
+          result_public_key?: string | null
           signature_mode?: string | null
           status?: string
           tenant_id?: string
@@ -3545,6 +3554,160 @@ export type Database = {
         }
         Relationships: []
       }
+      job_executions: {
+        Row: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          claimed_at: string
+          created_at: string
+          error_message: string | null
+          execution_time_seconds: number | null
+          exit_code: number | null
+          finished_at: string | null
+          id: string
+          job_id: string
+          nonce: string
+          output_hash: string | null
+          payload_hash: string
+          result_signature: string | null
+          signature_algorithm: string | null
+          signature_verified: boolean | null
+          started_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id: string
+          agent_name: string
+          agent_version: string
+          claimed_at?: string
+          created_at?: string
+          error_message?: string | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id: string
+          nonce?: string
+          output_hash?: string | null
+          payload_hash: string
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string
+          agent_name?: string
+          agent_version?: string
+          claimed_at?: string
+          created_at?: string
+          error_message?: string | null
+          execution_time_seconds?: number | null
+          exit_code?: number | null
+          finished_at?: string | null
+          id?: string
+          job_id?: string
+          nonce?: string
+          output_hash?: string | null
+          payload_hash?: string
+          result_signature?: string | null
+          signature_algorithm?: string | null
+          signature_verified?: boolean | null
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "job_executions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_executions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_executions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_normalized"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_executions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_executions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "v_stuck_jobs_report"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           agent_id: string | null
@@ -3552,6 +3715,7 @@ export type Database = {
           approved: boolean
           completed_at: string | null
           created_at: string
+          current_execution_id: string | null
           delivered_at: string | null
           delivery_attempts: number
           error_message: string | null
@@ -3579,6 +3743,7 @@ export type Database = {
           approved?: boolean
           completed_at?: string | null
           created_at?: string
+          current_execution_id?: string | null
           delivered_at?: string | null
           delivery_attempts?: number
           error_message?: string | null
@@ -3606,6 +3771,7 @@ export type Database = {
           approved?: boolean
           completed_at?: string | null
           created_at?: string
+          current_execution_id?: string | null
           delivered_at?: string | null
           delivery_attempts?: number
           error_message?: string | null
@@ -3682,6 +3848,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_current_execution_id_fkey"
+            columns: ["current_execution_id"]
+            isOneToOne: false
+            referencedRelation: "job_executions"
             referencedColumns: ["id"]
           },
           {
@@ -7643,6 +7816,48 @@ export type Database = {
         }
         Relationships: []
       }
+      v_job_execution_health: {
+        Row: {
+          avg_execution_time_seconds: number | null
+          avg_queue_time_seconds: number | null
+          completed_count: number | null
+          delivered_count: number | null
+          expired_delivered_count: number | null
+          failed_count: number | null
+          has_duplicate_executions: number | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_problematic_agents: {
         Row: {
           agent_name: string | null
@@ -7982,20 +8197,38 @@ export type Database = {
           total_attempts: number
         }[]
       }
-      claim_jobs_for_agent: {
-        Args: { p_agent_id: string; p_agent_name: string; p_limit?: number }
-        Returns: {
-          agent_id: string
-          agent_name: string
-          approved: boolean
-          created_at: string
-          expires_at: string
-          id: string
-          payload: Json
-          priority: number
-          type: string
-        }[]
-      }
+      claim_jobs_for_agent:
+        | {
+            Args: { p_agent_id: string; p_agent_name: string; p_limit?: number }
+            Returns: {
+              agent_id: string
+              agent_name: string
+              approved: boolean
+              created_at: string
+              expires_at: string
+              id: string
+              payload: Json
+              priority: number
+              type: string
+            }[]
+          }
+        | {
+            Args: {
+              p_agent_id: string
+              p_agent_name: string
+              p_limit?: number
+              p_tenant_id: string
+            }
+            Returns: {
+              execution_id: string
+              expires_at: string
+              job_id: string
+              job_type: string
+              nonce: string
+              payload: Json
+              payload_hash: string
+            }[]
+          }
       cleanup_all_problematic_agents: {
         Args: { p_tenant_id: string }
         Returns: Json
@@ -8092,6 +8325,17 @@ export type Database = {
           inserted_count: number
         }[]
       }
+      detect_duplicate_executions: {
+        Args: { p_hours_back?: number }
+        Returns: {
+          agent_name: string
+          execution_count: number
+          first_claimed_at: string
+          job_id: string
+          last_claimed_at: string
+          tenant_id: string
+        }[]
+      }
       diagnose_agent: { Args: { p_agent_name: string }; Returns: Json }
       diagnose_agent_issues: {
         Args: { p_agent_name: string; p_tenant_id: string }
@@ -8124,6 +8368,22 @@ export type Database = {
           p_trigger_type: string
         }
         Returns: string
+      }
+      finalize_job_execution: {
+        Args: {
+          p_agent_id: string
+          p_error_message?: string
+          p_execution_id: string
+          p_execution_time_seconds?: number
+          p_finished_at?: string
+          p_job_id: string
+          p_output_hash?: string
+          p_result_signature?: string
+          p_signature_verified?: boolean
+          p_started_at?: string
+          p_status: string
+        }
+        Returns: Json
       }
       get_agent_disk_details: {
         Args: { p_agent_id: string }
@@ -8246,6 +8506,7 @@ export type Database = {
           approved: boolean
           completed_at: string | null
           created_at: string
+          current_execution_id: string | null
           delivered_at: string | null
           delivery_attempts: number
           error_message: string | null
