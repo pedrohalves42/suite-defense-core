@@ -272,9 +272,10 @@ Deno.serve(async (req) => {
     })
 
     // Buscar o job - CORRIGIDO: usar 'type' não 'job_type'
+    // P1: Incluir payload_hash para validação de integridade
     const { data: job, error: fetchError } = await supabase
       .from('jobs')
-      .select('id, agent_name, tenant_id, status, type, agent_id')
+      .select('id, agent_name, tenant_id, status, type, agent_id, payload_hash')
       .eq('id', job_id)
       .maybeSingle()
 
