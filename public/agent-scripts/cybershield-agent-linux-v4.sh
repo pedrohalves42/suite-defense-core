@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v4.1.0
+# CyberShield Agent - Linux v4.1.7
 #
 # FASE 2.1: State Machine Formal (6 estados)
 # FASE 2.2: Evidence Journal Local
 # FASE 2.4: DNS Filter Integration
 # FASE 2.5: Policy Contract (Desired vs Actual + Drift Detection)
 # SSA-004: Payload Signing - Verifies Ed25519 signatures on jobs
+# PHASE 1: Process Control - kill_process, stop_service, disable_service, restart_service
 #
 # Estados:
 # - BOOTSTRAP: Inicializacao do agente
@@ -16,12 +17,14 @@
 # - ERROR: Erro critico, requer intervencao
 # - RECOVERY: Tentando auto-recuperacao
 #
-# Funcionalidades v4.1.0 (PAYLOAD SIGNING):
-# - NEW: Ed25519 job payload signature verification via OpenSSL
-# - NEW: Rejects unsigned jobs when Ed25519PublicKey is configured
-# - NEW: verify_job_signature function
-# - NEW: Canonical payload format: job_id:job_type:JSON(payload)
-# - SECURITY: Prevents RCE via compromised database
+# Funcionalidades v4.1.7 (PHASE 1 - PROCESS CONTROL):
+# - NEW: kill_process handler - Terminate processes by name
+# - NEW: stop_service handler - Stop system services
+# - NEW: disable_service handler - Stop + disable startup
+# - NEW: restart_service handler - Restart system services
+# - SECURITY: Protected processes/services lists (defense in depth)
+# - SECURITY: Agent-side validation prevents killing critical processes
+# - PARITY: Windows / Linux / macOS support
 #
 # Uso:
 #   ./cybershield-agent-linux-v4.sh \
@@ -36,7 +39,7 @@ set -euo pipefail
 # ============================================
 #  CONSTANTES E VARIAVEIS GLOBAIS
 # ============================================
-AGENT_VERSION="v4.1.0"
+AGENT_VERSION="v4.1.7"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
@@ -91,6 +94,38 @@ EVIDENCE_FLUSH_THRESHOLD=10
 # Format: Base64-encoded SubjectPublicKeyInfo (SPKI)
 ED25519_PUBLIC_KEY="MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI="
 REQUIRE_JOB_SIGNATURES=true
+
+# ============================================
+#  PHASE 1: PROTECTED TARGETS (DEFENSE IN DEPTH)
+# ============================================
+# Even if backend validation fails, agent NEVER touches these
+readonly PROTECTED_PROCESSES=(
+    "systemd" "init" "kthreadd" "sshd" "dbus-daemon"
+    "systemd-journald" "systemd-udevd" "systemd-logind"
+    "rsyslogd" "syslogd" "auditd" "polkitd"
+)
+
+readonly PROTECTED_SERVICES=(
+    "sshd" "systemd-journald" "dbus" "NetworkManager"
+    "firewalld" "ufw" "rsyslog" "auditd" "polkit"
+    "systemd-udevd" "systemd-logind"
+)
+
+is_protected_process() {
+    local target="$1"
+    for p in "${PROTECTED_PROCESSES[@]}"; do
+        [[ "$p" == "$target" ]] && return 0
+    done
+    return 1
+}
+
+is_protected_service() {
+    local target="$1"
+    for s in "${PROTECTED_SERVICES[@]}"; do
+        [[ "$s" == "$target" ]] && return 0
+    done
+    return 1
+}
 
 # ============================================
 #  PARSING DE ARGUMENTOS
@@ -922,6 +957,49 @@ execute_job() {
         "collect_web_activity")
             output=$(collect_web_activity)
             ;;
+        # ===============================
+        # PHASE 1 — PROCESS CONTROL JOBS
+        # ===============================
+        "kill_process")
+            local result
+            result=$(handle_kill_process "$job")
+            if echo "$result" | jq -e '.success == true' >/dev/null 2>&1; then
+                output="$result"
+            else
+                status="failed"
+                error_message=$(echo "$result" | jq -r '.error // "Unknown error"')
+            fi
+            ;;
+        "stop_service")
+            local result
+            result=$(handle_stop_service "$job")
+            if echo "$result" | jq -e '.success == true' >/dev/null 2>&1; then
+                output="$result"
+            else
+                status="failed"
+                error_message=$(echo "$result" | jq -r '.error // "Unknown error"')
+            fi
+            ;;
+        "disable_service")
+            local result
+            result=$(handle_disable_service "$job")
+            if echo "$result" | jq -e '.success == true' >/dev/null 2>&1; then
+                output="$result"
+            else
+                status="failed"
+                error_message=$(echo "$result" | jq -r '.error // "Unknown error"')
+            fi
+            ;;
+        "restart_service")
+            local result
+            result=$(handle_restart_service "$job")
+            if echo "$result" | jq -e '.success == true' >/dev/null 2>&1; then
+                output="$result"
+            else
+                status="failed"
+                error_message=$(echo "$result" | jq -r '.error // "Unknown error"')
+            fi
+            ;;
         *)
             status="failed"
             error_message="Unsupported job type: $job_type"
@@ -1021,6 +1099,119 @@ EOF
 }
 
 # ============================================
+#  PHASE 1: PROCESS CONTROL HANDLERS
+# ============================================
+
+handle_kill_process() {
+    local job="$1"
+    local name
+    name=$(echo "$job" | jq -r '.payload.process_name // empty')
+    
+    [[ -z "$name" ]] && { echo '{"success":false,"error":"process_name ausente"}'; return 1; }
+    
+    if is_protected_process "$name"; then
+        log "WARN" "[KILL-PROCESS] BLOCKED: processo protegido ($name)"
+        echo "{\"success\":false,\"error\":\"SECURITY: processo protegido ($name)\"}"
+        return 1
+    fi
+    
+    if ! pgrep -f "$name" >/dev/null 2>&1; then
+        echo "{\"success\":false,\"error\":\"processo nao encontrado ($name)\"}"
+        return 1
+    fi
+    
+    local count
+    count=$(pgrep -fc "$name" 2>/dev/null || echo 0)
+    
+    pkill -f "$name" 2>/dev/null
+    
+    log "INFO" "[KILL-PROCESS] Processo '$name' finalizado ($count instancias)"
+    echo "{\"success\":true,\"output\":\"Processo '$name' finalizado ($count instancias)\"}"
+}
+
+handle_stop_service() {
+    local job="$1"
+    local svc
+    svc=$(echo "$job" | jq -r '.payload.service_name // empty')
+    
+    [[ -z "$svc" ]] && { echo '{"success":false,"error":"service_name ausente"}'; return 1; }
+    
+    if is_protected_service "$svc"; then
+        log "WARN" "[STOP-SERVICE] BLOCKED: servico protegido ($svc)"
+        echo "{\"success\":false,\"error\":\"SECURITY: servico protegido ($svc)\"}"
+        return 1
+    fi
+    
+    if ! systemctl is-active --quiet "$svc" 2>/dev/null; then
+        log "INFO" "[STOP-SERVICE] Servico '$svc' ja estava parado"
+        echo "{\"success\":true,\"output\":\"Servico '$svc' ja estava parado\"}"
+        return 0
+    fi
+    
+    systemctl stop "$svc" 2>/dev/null
+    
+    if systemctl is-active --quiet "$svc" 2>/dev/null; then
+        echo "{\"success\":false,\"error\":\"falha ao parar servico ($svc)\"}"
+        return 1
+    fi
+    
+    log "INFO" "[STOP-SERVICE] Servico '$svc' parado"
+    echo "{\"success\":true,\"output\":\"Servico '$svc' parado\"}"
+}
+
+handle_disable_service() {
+    local job="$1"
+    local svc
+    svc=$(echo "$job" | jq -r '.payload.service_name // empty')
+    
+    [[ -z "$svc" ]] && { echo '{"success":false,"error":"service_name ausente"}'; return 1; }
+    
+    if is_protected_service "$svc"; then
+        log "WARN" "[DISABLE-SERVICE] BLOCKED: servico protegido ($svc)"
+        echo "{\"success\":false,\"error\":\"SECURITY: servico protegido ($svc)\"}"
+        return 1
+    fi
+    
+    systemctl stop "$svc" 2>/dev/null || true
+    systemctl disable "$svc" 2>/dev/null
+    
+    if systemctl is-enabled --quiet "$svc" 2>/dev/null; then
+        echo "{\"success\":false,\"error\":\"falha ao desativar servico ($svc)\"}"
+        return 1
+    fi
+    
+    local status
+    status=$(systemctl is-active "$svc" 2>/dev/null || echo "inactive")
+    
+    log "INFO" "[DISABLE-SERVICE] Servico '$svc' desativado (status: $status)"
+    echo "{\"success\":true,\"output\":\"Servico '$svc' desativado (status: $status)\"}"
+}
+
+handle_restart_service() {
+    local job="$1"
+    local svc
+    svc=$(echo "$job" | jq -r '.payload.service_name // empty')
+    
+    [[ -z "$svc" ]] && { echo '{"success":false,"error":"service_name ausente"}'; return 1; }
+    
+    if is_protected_service "$svc"; then
+        log "WARN" "[RESTART-SERVICE] BLOCKED: servico protegido ($svc)"
+        echo "{\"success\":false,\"error\":\"SECURITY: servico protegido ($svc)\"}"
+        return 1
+    fi
+    
+    systemctl restart "$svc" 2>/dev/null
+    
+    if ! systemctl is-active --quiet "$svc" 2>/dev/null; then
+        echo "{\"success\":false,\"error\":\"falha ao reiniciar servico ($svc)\"}"
+        return 1
+    fi
+    
+    log "INFO" "[RESTART-SERVICE] Servico '$svc' reiniciado"
+    echo "{\"success\":true,\"output\":\"Servico '$svc' reiniciado\"}"
+}
+
+# ============================================
 #  LOG ROTATION
 # ============================================
 rotate_logs() {
@@ -1050,7 +1241,7 @@ rotate_logs() {
 validate_critical_functions
 
 log "INFO" "============================================"
-log "INFO" "[START] CyberShield Agent v4.0.9-HARDENED - Linux"
+log "INFO" "[START] CyberShield Agent $AGENT_VERSION - Linux"
 log "INFO" "[INFO] ServerUrl: $SERVER_URL"
 log "INFO" "[INFO] AgentName: $AGENT_NAME"
 log "INFO" "============================================"
