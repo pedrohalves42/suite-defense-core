@@ -24,19 +24,21 @@ const SCRIPT_FILES: Record<string, string> = {
 };
 
 export function RegisterLatestRelease() {
-  const [version, setVersion] = useState("v4.1.6");
+  const [version, setVersion] = useState("v4.1.7");
   const [releaseNotes, setReleaseNotes] = useState(
-    "- Ed25519 Capability Detection: Detect PS 5.1 support, audit-only mode when unsupported\n" +
-    "- Self-Test at Startup: Invoke-AgentSelfTest validates environment\n" +
-    "- Truthful Version Telemetry: ed25519_supported, signature_mode in heartbeat\n" +
-    "- Fix hardcoded versions (v4.0.9-HARDENED, v4.1.2)\n" +
-    "- Fix v3.log references in installer\n" +
-    "- Anti-cache headers (Cache-Control: no-store)"
+    "v4.1.7 — Phase 1: Process Control\n" +
+    "- NEW: kill_process handler - Terminate processes by name\n" +
+    "- NEW: stop_service handler - Stop system services\n" +
+    "- NEW: disable_service handler - Stop + disable startup\n" +
+    "- NEW: restart_service handler - Restart system services\n" +
+    "- SECURITY: Protected processes/services lists (defense in depth)\n" +
+    "- SECURITY: Agent-side validation prevents killing critical processes\n" +
+    "- PARITY: Windows / Linux / macOS support"
   );
   const [platforms, setPlatforms] = useState({
     windows: true,
-    linux: false,
-    macos: false,
+    linux: true,
+    macos: true,
   });
   const [isRegistering, setIsRegistering] = useState(false);
   const [currentPlatform, setCurrentPlatform] = useState<string | null>(null);
