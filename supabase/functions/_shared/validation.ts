@@ -67,7 +67,11 @@ export const CreateJobSchema = z.object({
     'collect_dns_blocks',
     'remove_dns_filter',
     'fix_firewall',
-    'restart_service'
+    'restart_service',
+    // Phase 1 - Process Control
+    'kill_process',
+    'stop_service',
+    'disable_service'
   ], { errorMap: () => ({ message: 'Tipo de job invalido' }) }),
   payload: z.record(z.unknown()).optional(),
   approved: z.boolean().default(true),
@@ -128,7 +132,11 @@ export const CreateJobSchemaEnhanced = z.object({
     'collect_dns_blocks',
     'remove_dns_filter',
     'fix_firewall',
-    'restart_service'
+    'restart_service',
+    // Phase 1 - Process Control
+    'kill_process',
+    'stop_service',
+    'disable_service'
   ], { errorMap: () => ({ message: 'Tipo de job invalido' }) }),
   payload: z.record(z.unknown()).optional().refine(payload => {
     if (!payload) return true;
