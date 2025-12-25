@@ -1,5 +1,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { 
+  isProcessProtected, 
+  isServiceProtected 
+} from '../_shared/protected-targets.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -480,27 +484,33 @@ async function executeAction(
         throw new Error('Agent ID required for kill_process action');
       }
 
+      // Verificar status do agente (warn se offline, mas não bloquear)
       const { data: agent } = await supabase
         .from('agents')
-        .select('agent_name')
+        .select('agent_name, status, last_heartbeat')
         .eq('id', agentId)
         .single();
+
+      if (!agent) {
+        throw new Error(`Agent not found: ${agentId}`);
+      }
+
+      // Log warning se agente pode estar offline
+      if (agent.last_heartbeat) {
+        const diffMs = Date.now() - new Date(agent.last_heartbeat).getTime();
+        const diffMins = diffMs / (1000 * 60);
+        if (diffMins > 5) {
+          console.warn(`[execute-playbook-action] Agent ${agentId} may be offline (last heartbeat: ${diffMins.toFixed(1)} min ago). Job will be queued.`);
+        }
+      }
 
       // Obter nome do processo do contexto ou payload
       const processName = (context.process_name as string) || 
                           (payload.process_name as string) || 
                           'unknown';
 
-      // Lista de processos protegidos (não pode matar)
-      const PROTECTED_PROCESSES = [
-        'csrss.exe', 'smss.exe', 'wininit.exe', 'winlogon.exe', 
-        'services.exe', 'lsass.exe', 'svchost.exe', 'System',
-        'dwm.exe', 'explorer.exe', 'taskmgr.exe', 'RuntimeBroker.exe'
-      ];
-
-      if (PROTECTED_PROCESSES.some(p => 
-        p.toLowerCase() === processName.toLowerCase()
-      )) {
+      // Usar função centralizada de proteção
+      if (isProcessProtected(processName)) {
         throw new Error(`Protected process cannot be killed: ${processName}`);
       }
 
@@ -509,7 +519,7 @@ async function executeAction(
         .insert({
           tenant_id: tenantId,
           agent_id: agentId,
-          agent_name: agent?.agent_name,
+          agent_name: agent.agent_name,
           type: 'kill_process',
           status: 'queued',
           approved: true,
@@ -534,6 +544,7 @@ async function executeAction(
         success: true,
         details: {
           agent_id: agentId,
+          agent_status: agent.status,
           process_name: processName,
           triggered_by: 'playbook',
           playbook_execution_id: execution.id,
@@ -551,25 +562,29 @@ async function executeAction(
 
       const { data: agent } = await supabase
         .from('agents')
-        .select('agent_name')
+        .select('agent_name, status, last_heartbeat')
         .eq('id', agentId)
         .single();
+
+      if (!agent) {
+        throw new Error(`Agent not found: ${agentId}`);
+      }
+
+      // Log warning se agente pode estar offline
+      if (agent.last_heartbeat) {
+        const diffMs = Date.now() - new Date(agent.last_heartbeat).getTime();
+        const diffMins = diffMs / (1000 * 60);
+        if (diffMins > 5) {
+          console.warn(`[execute-playbook-action] Agent ${agentId} may be offline. Job will be queued.`);
+        }
+      }
 
       const serviceName = (context.service_name as string) || 
                           (payload.service_name as string) || 
                           'unknown';
 
-      // Lista de serviços protegidos
-      const PROTECTED_SERVICES = [
-        'eventlog', 'PlugPlay', 'Power', 'RpcSs', 'SENS', 
-        'Schedule', 'Winmgmt', 'wuauserv', 'CryptSvc', 'DcomLaunch',
-        'Dhcp', 'Dnscache', 'LanmanServer', 'LanmanWorkstation',
-        'NlaSvc', 'Netman', 'WinDefend', 'MpsSvc'
-      ];
-
-      if (PROTECTED_SERVICES.some(s => 
-        s.toLowerCase() === serviceName.toLowerCase()
-      )) {
+      // Usar função centralizada de proteção
+      if (isServiceProtected(serviceName)) {
         throw new Error(`Protected service cannot be stopped: ${serviceName}`);
       }
 
@@ -578,7 +593,7 @@ async function executeAction(
         .insert({
           tenant_id: tenantId,
           agent_id: agentId,
-          agent_name: agent?.agent_name,
+          agent_name: agent.agent_name,
           type: 'stop_service',
           status: 'queued',
           approved: true,
@@ -601,6 +616,7 @@ async function executeAction(
         success: true,
         details: {
           agent_id: agentId,
+          agent_status: agent.status,
           service_name: serviceName,
           triggered_by: 'playbook',
           playbook_execution_id: execution.id,
@@ -618,24 +634,29 @@ async function executeAction(
 
       const { data: agent } = await supabase
         .from('agents')
-        .select('agent_name')
+        .select('agent_name, status, last_heartbeat')
         .eq('id', agentId)
         .single();
+
+      if (!agent) {
+        throw new Error(`Agent not found: ${agentId}`);
+      }
+
+      // Log warning se agente pode estar offline
+      if (agent.last_heartbeat) {
+        const diffMs = Date.now() - new Date(agent.last_heartbeat).getTime();
+        const diffMins = diffMs / (1000 * 60);
+        if (diffMins > 5) {
+          console.warn(`[execute-playbook-action] Agent ${agentId} may be offline. Job will be queued.`);
+        }
+      }
 
       const serviceName = (context.service_name as string) || 
                           (payload.service_name as string) || 
                           'unknown';
 
-      const PROTECTED_SERVICES = [
-        'eventlog', 'PlugPlay', 'Power', 'RpcSs', 'SENS', 
-        'Schedule', 'Winmgmt', 'wuauserv', 'CryptSvc', 'DcomLaunch',
-        'Dhcp', 'Dnscache', 'LanmanServer', 'LanmanWorkstation',
-        'NlaSvc', 'Netman', 'WinDefend', 'MpsSvc'
-      ];
-
-      if (PROTECTED_SERVICES.some(s => 
-        s.toLowerCase() === serviceName.toLowerCase()
-      )) {
+      // Usar função centralizada de proteção
+      if (isServiceProtected(serviceName)) {
         throw new Error(`Protected service cannot be disabled: ${serviceName}`);
       }
 
@@ -644,7 +665,7 @@ async function executeAction(
         .insert({
           tenant_id: tenantId,
           agent_id: agentId,
-          agent_name: agent?.agent_name,
+          agent_name: agent.agent_name,
           type: 'disable_service',
           status: 'queued',
           approved: true,
@@ -667,6 +688,7 @@ async function executeAction(
         success: true,
         details: {
           agent_id: agentId,
+          agent_status: agent.status,
           service_name: serviceName,
           triggered_by: 'playbook',
           playbook_execution_id: execution.id,
@@ -684,20 +706,39 @@ async function executeAction(
 
       const { data: agent } = await supabase
         .from('agents')
-        .select('agent_name')
+        .select('agent_name, status, last_heartbeat')
         .eq('id', agentId)
         .single();
+
+      if (!agent) {
+        throw new Error(`Agent not found: ${agentId}`);
+      }
+
+      // Log warning se agente pode estar offline
+      if (agent.last_heartbeat) {
+        const diffMs = Date.now() - new Date(agent.last_heartbeat).getTime();
+        const diffMins = diffMs / (1000 * 60);
+        if (diffMins > 5) {
+          console.warn(`[execute-playbook-action] Agent ${agentId} may be offline. Job will be queued.`);
+        }
+      }
 
       const serviceName = (context.service_name as string) || 
                           (payload.service_name as string) || 
                           'CyberShieldAgent';
+
+      // Restart service NÃO valida proteção - usado para reiniciar o próprio agente
+      // Apenas log de warning para serviços críticos
+      if (isServiceProtected(serviceName)) {
+        console.warn(`[execute-playbook-action] Warning: restarting protected service ${serviceName}`);
+      }
 
       const { data: job } = await supabase
         .from('jobs')
         .insert({
           tenant_id: tenantId,
           agent_id: agentId,
-          agent_name: agent?.agent_name,
+          agent_name: agent.agent_name,
           type: 'restart_service',
           status: 'queued',
           approved: true,
@@ -720,6 +761,7 @@ async function executeAction(
         success: true,
         details: {
           agent_id: agentId,
+          agent_status: agent.status,
           service_name: serviceName,
           triggered_by: 'playbook',
           playbook_execution_id: execution.id,
