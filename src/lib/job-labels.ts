@@ -16,6 +16,10 @@ export const JOB_TYPE_LABELS: Record<string, string> = {
   collect_dns_blocks: '📊 Coletar Bloqueios DNS',
   remove_dns_filter: '🗑️ Remover DNS Filter',
   integration_test_v3: '🧪 Teste de Integração v3',
+  // Fase 1: Controle de Processos
+  kill_process: '☠️ Encerrar Processo',
+  stop_service: '⏹️ Parar Serviço',
+  disable_service: '🚫 Desabilitar Serviço',
 };
 
 export const JOB_STATUS_LABELS: Record<string, string> = {
@@ -79,6 +83,60 @@ export const JOB_TYPE_LABELS_NO_EMOJI: Record<string, string> = {
   collect_dns_blocks: 'Coletar Bloqueios DNS',
   remove_dns_filter: 'Remover DNS Filter',
   integration_test_v3: 'Teste de Integração v3',
+  // Fase 1: Controle de Processos
+  kill_process: 'Encerrar Processo',
+  stop_service: 'Parar Serviço',
+  disable_service: 'Desabilitar Serviço',
+};
+
+// Lista de processos críticos do sistema que NÃO podem ser encerrados
+export const PROTECTED_PROCESSES: string[] = [
+  'csrss.exe',
+  'smss.exe',
+  'wininit.exe',
+  'winlogon.exe',
+  'services.exe',
+  'lsass.exe',
+  'svchost.exe',
+  'System',
+  'dwm.exe',
+  'explorer.exe',
+  'taskmgr.exe',
+  'RuntimeBroker.exe',
+];
+
+// Lista de serviços críticos que NÃO podem ser desabilitados
+export const PROTECTED_SERVICES: string[] = [
+  'eventlog',
+  'PlugPlay',
+  'Power',
+  'RpcSs',
+  'SENS',
+  'Schedule',
+  'Winmgmt',
+  'wuauserv',
+  'CryptSvc',
+  'DcomLaunch',
+  'Dhcp',
+  'Dnscache',
+  'LanmanServer',
+  'LanmanWorkstation',
+  'NlaSvc',
+  'Netman',
+  'WinDefend',
+  'MpsSvc',
+];
+
+// Validar se processo pode ser encerrado
+export const isProcessProtected = (processName: string): boolean => {
+  const name = processName.toLowerCase();
+  return PROTECTED_PROCESSES.some(p => p.toLowerCase() === name);
+};
+
+// Validar se serviço pode ser gerenciado
+export const isServiceProtected = (serviceName: string): boolean => {
+  const name = serviceName.toLowerCase();
+  return PROTECTED_SERVICES.some(s => s.toLowerCase() === name);
 };
 
 export const getJobTypeLabelNoEmoji = (type: string): string => 
