@@ -474,6 +474,262 @@ async function executeAction(
       return { alert_id: alert?.id, incident_created: !!payload.create_incident };
     }
 
+    // ====== FASE 1: Controle de Processos ======
+    case 'kill_process': {
+      if (!agentId) {
+        throw new Error('Agent ID required for kill_process action');
+      }
+
+      const { data: agent } = await supabase
+        .from('agents')
+        .select('agent_name')
+        .eq('id', agentId)
+        .single();
+
+      // Obter nome do processo do contexto ou payload
+      const processName = (context.process_name as string) || 
+                          (payload.process_name as string) || 
+                          'unknown';
+
+      // Lista de processos protegidos (não pode matar)
+      const PROTECTED_PROCESSES = [
+        'csrss.exe', 'smss.exe', 'wininit.exe', 'winlogon.exe', 
+        'services.exe', 'lsass.exe', 'svchost.exe', 'System',
+        'dwm.exe', 'explorer.exe', 'taskmgr.exe', 'RuntimeBroker.exe'
+      ];
+
+      if (PROTECTED_PROCESSES.some(p => 
+        p.toLowerCase() === processName.toLowerCase()
+      )) {
+        throw new Error(`Protected process cannot be killed: ${processName}`);
+      }
+
+      const { data: job } = await supabase
+        .from('jobs')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          agent_name: agent?.agent_name,
+          type: 'kill_process',
+          status: 'queued',
+          approved: true,
+          payload: {
+            process_name: processName,
+            use_force: payload.use_force !== false,
+            triggered_by: 'playbook',
+            playbook_execution_id: execution.id,
+            playbook_version: playbookSnapshot.version,
+          },
+        })
+        .select('id')
+        .single();
+
+      // Audit log
+      await supabase.from('audit_logs').insert({
+        user_id: userId,
+        tenant_id: tenantId,
+        action: 'kill_process',
+        resource_type: 'job',
+        resource_id: job?.id,
+        success: true,
+        details: {
+          agent_id: agentId,
+          process_name: processName,
+          triggered_by: 'playbook',
+          playbook_execution_id: execution.id,
+        },
+      });
+
+      console.log(`[execute-playbook-action] Created kill_process job for ${processName}`);
+      return { job_id: job?.id, process_name: processName };
+    }
+
+    case 'stop_service': {
+      if (!agentId) {
+        throw new Error('Agent ID required for stop_service action');
+      }
+
+      const { data: agent } = await supabase
+        .from('agents')
+        .select('agent_name')
+        .eq('id', agentId)
+        .single();
+
+      const serviceName = (context.service_name as string) || 
+                          (payload.service_name as string) || 
+                          'unknown';
+
+      // Lista de serviços protegidos
+      const PROTECTED_SERVICES = [
+        'eventlog', 'PlugPlay', 'Power', 'RpcSs', 'SENS', 
+        'Schedule', 'Winmgmt', 'wuauserv', 'CryptSvc', 'DcomLaunch',
+        'Dhcp', 'Dnscache', 'LanmanServer', 'LanmanWorkstation',
+        'NlaSvc', 'Netman', 'WinDefend', 'MpsSvc'
+      ];
+
+      if (PROTECTED_SERVICES.some(s => 
+        s.toLowerCase() === serviceName.toLowerCase()
+      )) {
+        throw new Error(`Protected service cannot be stopped: ${serviceName}`);
+      }
+
+      const { data: job } = await supabase
+        .from('jobs')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          agent_name: agent?.agent_name,
+          type: 'stop_service',
+          status: 'queued',
+          approved: true,
+          payload: {
+            service_name: serviceName,
+            triggered_by: 'playbook',
+            playbook_execution_id: execution.id,
+            playbook_version: playbookSnapshot.version,
+          },
+        })
+        .select('id')
+        .single();
+
+      await supabase.from('audit_logs').insert({
+        user_id: userId,
+        tenant_id: tenantId,
+        action: 'stop_service',
+        resource_type: 'job',
+        resource_id: job?.id,
+        success: true,
+        details: {
+          agent_id: agentId,
+          service_name: serviceName,
+          triggered_by: 'playbook',
+          playbook_execution_id: execution.id,
+        },
+      });
+
+      console.log(`[execute-playbook-action] Created stop_service job for ${serviceName}`);
+      return { job_id: job?.id, service_name: serviceName };
+    }
+
+    case 'disable_service': {
+      if (!agentId) {
+        throw new Error('Agent ID required for disable_service action');
+      }
+
+      const { data: agent } = await supabase
+        .from('agents')
+        .select('agent_name')
+        .eq('id', agentId)
+        .single();
+
+      const serviceName = (context.service_name as string) || 
+                          (payload.service_name as string) || 
+                          'unknown';
+
+      const PROTECTED_SERVICES = [
+        'eventlog', 'PlugPlay', 'Power', 'RpcSs', 'SENS', 
+        'Schedule', 'Winmgmt', 'wuauserv', 'CryptSvc', 'DcomLaunch',
+        'Dhcp', 'Dnscache', 'LanmanServer', 'LanmanWorkstation',
+        'NlaSvc', 'Netman', 'WinDefend', 'MpsSvc'
+      ];
+
+      if (PROTECTED_SERVICES.some(s => 
+        s.toLowerCase() === serviceName.toLowerCase()
+      )) {
+        throw new Error(`Protected service cannot be disabled: ${serviceName}`);
+      }
+
+      const { data: job } = await supabase
+        .from('jobs')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          agent_name: agent?.agent_name,
+          type: 'disable_service',
+          status: 'queued',
+          approved: true,
+          payload: {
+            service_name: serviceName,
+            triggered_by: 'playbook',
+            playbook_execution_id: execution.id,
+            playbook_version: playbookSnapshot.version,
+          },
+        })
+        .select('id')
+        .single();
+
+      await supabase.from('audit_logs').insert({
+        user_id: userId,
+        tenant_id: tenantId,
+        action: 'disable_service',
+        resource_type: 'job',
+        resource_id: job?.id,
+        success: true,
+        details: {
+          agent_id: agentId,
+          service_name: serviceName,
+          triggered_by: 'playbook',
+          playbook_execution_id: execution.id,
+        },
+      });
+
+      console.log(`[execute-playbook-action] Created disable_service job for ${serviceName}`);
+      return { job_id: job?.id, service_name: serviceName };
+    }
+
+    case 'restart_service': {
+      if (!agentId) {
+        throw new Error('Agent ID required for restart_service action');
+      }
+
+      const { data: agent } = await supabase
+        .from('agents')
+        .select('agent_name')
+        .eq('id', agentId)
+        .single();
+
+      const serviceName = (context.service_name as string) || 
+                          (payload.service_name as string) || 
+                          'CyberShieldAgent';
+
+      const { data: job } = await supabase
+        .from('jobs')
+        .insert({
+          tenant_id: tenantId,
+          agent_id: agentId,
+          agent_name: agent?.agent_name,
+          type: 'restart_service',
+          status: 'queued',
+          approved: true,
+          payload: {
+            service_name: serviceName,
+            triggered_by: 'playbook',
+            playbook_execution_id: execution.id,
+            playbook_version: playbookSnapshot.version,
+          },
+        })
+        .select('id')
+        .single();
+
+      await supabase.from('audit_logs').insert({
+        user_id: userId,
+        tenant_id: tenantId,
+        action: 'restart_service',
+        resource_type: 'job',
+        resource_id: job?.id,
+        success: true,
+        details: {
+          agent_id: agentId,
+          service_name: serviceName,
+          triggered_by: 'playbook',
+          playbook_execution_id: execution.id,
+        },
+      });
+
+      console.log(`[execute-playbook-action] Created restart_service job for ${serviceName}`);
+      return { job_id: job?.id, service_name: serviceName };
+    }
+
     default:
       throw new Error(`Unknown action type: ${action.action_type}`);
   }
