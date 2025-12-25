@@ -16,6 +16,7 @@ import { logger } from "@/lib/logger";
 import { useMutation } from "@tanstack/react-query";
 import { getJobTypeLabel, getJobStatusLabel, JOB_TYPE_LABELS } from "@/lib/job-labels";
 import { getAgentDisplayName } from "@/lib/agent-utils";
+import { useTenant } from "@/hooks/useTenant";
 
 interface Agent {
   id: string;
@@ -42,6 +43,7 @@ interface Job {
 }
 
 const JobCreator = () => {
+  const { tenant } = useTenant();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
@@ -158,11 +160,15 @@ const JobCreator = () => {
 
   const clearPendingJobs = useMutation({
     mutationFn: async () => {
+      if (!tenant?.id) throw new Error("Tenant não encontrado");
+      // Fix: Use 1h threshold instead of 24h, and filter by tenant
+      const oneHourAgo = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
       const { error } = await supabase
         .from('jobs')
         .delete()
+        .eq('tenant_id', tenant.id)
         .eq('status', 'queued')
-        .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+        .lt('created_at', oneHourAgo);
       
       if (error) throw error;
     },
@@ -183,7 +189,7 @@ const JobCreator = () => {
       return;
     }
     
-    if (confirm(`Limpar ${pendingCount} tarefa(s) pendente(s) com mais de 24h?`)) {
+    if (confirm(`Limpar tarefas pendentes há mais de 1 hora? (${pendingCount} na fila atualmente)`)) {
       clearPendingJobs.mutate();
     }
   };

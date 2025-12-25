@@ -56,34 +56,40 @@ const AgentMonitoring = () => {
     setLastUpdate(new Date());
     toast.success("Dados atualizados!");
   };
-  // Fetch initial data
+  // Fetch initial data - filtered by tenant
   const { data: initialAgents } = useQuery({
-    queryKey: ['agents-monitoring'],
+    queryKey: ['agents-monitoring', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from('agents_safe')
         .select('*')
+        .eq('tenant_id', tenant.id)
         .order('enrolled_at', { ascending: false });
       
       if (error) throw error;
       return data as Agent[];
-    }
+    },
+    enabled: !!tenant?.id
   });
 
   const { data: initialJobs } = useQuery({
-    queryKey: ['jobs-monitoring'],
+    queryKey: ['jobs-monitoring', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('jobs')
         .select('*')
+        .eq('tenant_id', tenant.id)
         .gte('created_at', twentyFourHoursAgo)
         .order('created_at', { ascending: false })
         .limit(100);
       
       if (error) throw error;
       return data as Job[];
-    }
+    },
+    enabled: !!tenant?.id
   });
 
   // Historical data for charts - last 7 days
@@ -209,8 +215,10 @@ const AgentMonitoring = () => {
     return status === 'offline' || status === 'never_connected';
   }).length;
   const failedJobs = recentJobs.filter(j => j.status === 'failed').length;
-  const successRate = recentJobs.length > 0 
-    ? Math.round((recentJobs.filter(j => j.status === 'completed').length / recentJobs.length) * 100)
+  // Fix: Calculate success rate only from finished jobs (completed + failed)
+  const finishedJobs = recentJobs.filter(j => j.status === 'completed' || j.status === 'failed');
+  const successRate = finishedJobs.length > 0 
+    ? Math.round((finishedJobs.filter(j => j.status === 'completed').length / finishedJobs.length) * 100)
     : 100;
 
   // Determine global health status
