@@ -7,12 +7,15 @@
  * IMPORTANTE: Atualizar este arquivo sempre que modificar installer-template.ts
  */
 
-export const INSTALLER_VERSION = 'v4.1.6';
+export const INSTALLER_VERSION = 'v4.1.7';
 export const INSTALLER_VERSION_LINUX = 'v4.0.1-DNS-POLICY';
 export const INSTALLER_VERSION_MACOS = 'v4.0.1-DNS-POLICY';
-export const LAST_UPDATED = '2025-12-23T18:00:00Z';
+export const LAST_UPDATED = '2025-12-25T00:00:00Z';
 
 export const CHANGES = [
+  '[v4.1.7] PHASE 1: Process Control - kill_process, stop_service, disable_service handlers',
+  '[v4.1.7] SECURITY: Protected processes/services lists (defense in depth)',
+  '[v4.1.7] SECURITY: Agent-side validation prevents killing critical system processes',
   '[v4.1.6] CAPABILITY: Ed25519 detection + audit-only mode for PS 5.1',
   '[v4.1.6] FIX: All hardcoded versions now use $Global:AgentVersion',
   '[v4.1.6] FIX: Installer log references v4 (not v3)',

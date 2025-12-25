@@ -1,5 +1,12 @@
 <#
-    CyberShield Agent - Windows v4.1.6
+    CyberShield Agent - Windows v4.1.7
+    
+    v4.1.7: PHASE 1 - PROCESS CONTROL
+    - NEW: kill_process handler - Terminate processes by name
+    - NEW: stop_service handler - Stop Windows services  
+    - NEW: disable_service handler - Stop + disable startup type
+    - SECURITY: Protected processes/services lists (defense in depth)
+    - SECURITY: Agent-side validation prevents killing critical system processes
     
     v4.1.6: CAPABILITY-BASED SECURITY + VERSION TRUTH
     - Ed25519 capability detection (Test-Ed25519Support)
@@ -88,7 +95,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.1.6"
+    [string]$AgentVersion = "v4.1.7"
 )
 
 $ErrorActionPreference = "Stop"
@@ -190,6 +197,23 @@ $Global:EvidenceJournalPath = Join-Path -Path $evidenceDir -ChildPath "journal.l
 
 # Intervalos
 $Global:PollIntervalSeconds = 60
+
+# ============================================
+#  PHASE 1: PROTECTED TARGETS (DEFENSE IN DEPTH)
+# ============================================
+# Even if backend validation fails, agent NEVER touches these
+$Global:ProtectedProcesses = @(
+    "lsass", "csrss", "smss", "wininit", "winlogon",
+    "services", "svchost", "System", "dwm", "explorer",
+    "taskmgr", "RuntimeBroker", "spoolsv", "msdtc"
+)
+
+$Global:ProtectedServices = @(
+    "WinDefend", "EventLog", "RpcSs", "SamSs", "LanmanServer",
+    "LanmanWorkstation", "Dhcp", "Dnscache", "PlugPlay", "Power",
+    "SENS", "Schedule", "Winmgmt", "wuauserv", "CryptSvc",
+    "DcomLaunch", "NlaSvc", "Netman", "MpsSvc"
+)
 
 # ============================================
 #  v4.1.6: ED25519 CAPABILITY DETECTION
@@ -2531,6 +2555,22 @@ function Execute-Job {
                 if ($result.success) { $output = $result.output }
                 else { throw $result.error }
             }
+            # === PHASE 1: PROCESS CONTROL JOBS ===
+            "kill_process" {
+                $result = Invoke-KillProcessJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "stop_service" {
+                $result = Invoke-StopServiceJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "disable_service" {
+                $result = Invoke-DisableServiceJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
             default {
                 throw "Tipo de job nao suportado: $jobType"
             }
@@ -2953,6 +2993,11 @@ function Invoke-RestartServiceJob {
         
         $serviceName = $payload.service_name
         
+        # DEFENSE IN DEPTH: Block protected services
+        if ($Global:ProtectedServices -contains $serviceName) {
+            throw "SECURITY: Servico '$serviceName' e protegido e nao pode ser reiniciado"
+        }
+        
         $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
         if (-not $service) {
             throw "Servico '$serviceName' nao encontrado"
@@ -2968,6 +3013,176 @@ function Invoke-RestartServiceJob {
         Write-Log "[RESTART-SERVICE] Servico reiniciado. Status: $($serviceAfter.Status)" "SUCCESS"
         
         return @{ success = $true; output = "Servico '$serviceName' reiniciado. Status: $($serviceAfter.Status)" }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  PHASE 1: KILL PROCESS JOB
+# ============================================
+function Invoke-KillProcessJob {
+    param($Job)
+    
+    Write-Log "[KILL-PROCESS] Iniciando terminacao de processo..." "INFO"
+    
+    try {
+        $payload = $Job.payload
+        if ($payload -is [string]) {
+            $payload = $payload | ConvertFrom-Json
+        }
+        
+        if (-not $payload -or -not $payload.process_name) {
+            throw "process_name nao especificado no payload"
+        }
+        
+        $processName = $payload.process_name
+        $normalizedName = $processName.ToLower().Replace('.exe', '')
+        
+        # DEFENSE IN DEPTH: Block protected processes
+        if ($Global:ProtectedProcesses -contains $normalizedName) {
+            throw "SECURITY: Processo '$processName' e protegido e nao pode ser terminado"
+        }
+        
+        $processes = Get-Process -Name $normalizedName -ErrorAction SilentlyContinue
+        if (-not $processes) {
+            throw "Processo '$processName' nao encontrado"
+        }
+        
+        $count = ($processes | Measure-Object).Count
+        Write-Log "[KILL-PROCESS] Terminando $count instancia(s) de: $processName" "INFO"
+        
+        $processes | Stop-Process -Force -ErrorAction Stop
+        
+        Start-Sleep -Seconds 1
+        
+        $remaining = Get-Process -Name $normalizedName -ErrorAction SilentlyContinue
+        if ($remaining) {
+            $remainingCount = ($remaining | Measure-Object).Count
+            Write-Log "[KILL-PROCESS] AVISO: $remainingCount instancia(s) ainda ativas" "WARN"
+            return @{ 
+                success = $true
+                output = "Processo '$processName' parcialmente terminado. $remainingCount instancia(s) ainda ativas"
+            }
+        }
+        
+        Write-Log "[KILL-PROCESS] Processo '$processName' terminado com sucesso" "SUCCESS"
+        return @{ 
+            success = $true
+            output = "Processo '$processName' terminado ($count instancia(s))"
+        }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  PHASE 1: STOP SERVICE JOB
+# ============================================
+function Invoke-StopServiceJob {
+    param($Job)
+    
+    Write-Log "[STOP-SERVICE] Iniciando parada de servico..." "INFO"
+    
+    try {
+        $payload = $Job.payload
+        if ($payload -is [string]) {
+            $payload = $payload | ConvertFrom-Json
+        }
+        
+        if (-not $payload -or -not $payload.service_name) {
+            throw "service_name nao especificado no payload"
+        }
+        
+        $serviceName = $payload.service_name
+        
+        # DEFENSE IN DEPTH: Block protected services
+        if ($Global:ProtectedServices -contains $serviceName) {
+            throw "SECURITY: Servico '$serviceName' e protegido e nao pode ser parado"
+        }
+        
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        if (-not $service) {
+            throw "Servico '$serviceName' nao encontrado"
+        }
+        
+        if ($service.Status -eq "Stopped") {
+            Write-Log "[STOP-SERVICE] Servico '$serviceName' ja esta parado" "INFO"
+            return @{ success = $true; output = "Servico '$serviceName' ja estava parado" }
+        }
+        
+        Write-Log "[STOP-SERVICE] Parando servico: $serviceName (Status: $($service.Status))" "INFO"
+        
+        Stop-Service -Name $serviceName -Force -ErrorAction Stop
+        
+        Start-Sleep -Seconds 2
+        
+        $serviceAfter = Get-Service -Name $serviceName -ErrorAction Stop
+        Write-Log "[STOP-SERVICE] Servico parado. Status: $($serviceAfter.Status)" "SUCCESS"
+        
+        return @{ 
+            success = $true
+            output = "Servico '$serviceName' parado. Status: $($serviceAfter.Status)"
+        }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  PHASE 1: DISABLE SERVICE JOB
+# ============================================
+function Invoke-DisableServiceJob {
+    param($Job)
+    
+    Write-Log "[DISABLE-SERVICE] Iniciando desativacao de servico..." "INFO"
+    
+    try {
+        $payload = $Job.payload
+        if ($payload -is [string]) {
+            $payload = $payload | ConvertFrom-Json
+        }
+        
+        if (-not $payload -or -not $payload.service_name) {
+            throw "service_name nao especificado no payload"
+        }
+        
+        $serviceName = $payload.service_name
+        
+        # DEFENSE IN DEPTH: Block protected services
+        if ($Global:ProtectedServices -contains $serviceName) {
+            throw "SECURITY: Servico '$serviceName' e protegido e nao pode ser desativado"
+        }
+        
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        if (-not $service) {
+            throw "Servico '$serviceName' nao encontrado"
+        }
+        
+        Write-Log "[DISABLE-SERVICE] Desativando servico: $serviceName" "INFO"
+        
+        # 1. Change startup type to Disabled
+        Set-Service -Name $serviceName -StartupType Disabled -ErrorAction Stop
+        
+        # 2. Stop the service (ignore if already stopped)
+        if ($service.Status -ne "Stopped") {
+            Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
+        }
+        
+        Start-Sleep -Seconds 2
+        
+        $serviceAfter = Get-Service -Name $serviceName -ErrorAction Stop
+        $startupType = (Get-WmiObject Win32_Service -Filter "Name='$serviceName'").StartMode
+        
+        Write-Log "[DISABLE-SERVICE] Servico desativado. Status: $($serviceAfter.Status), StartupType: $startupType" "SUCCESS"
+        
+        return @{ 
+            success = $true
+            output = "Servico '$serviceName' desativado. Status: $($serviceAfter.Status), StartupType: $startupType"
+        }
     }
     catch {
         return @{ success = $false; error = $_.Exception.Message }
