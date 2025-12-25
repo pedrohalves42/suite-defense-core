@@ -3649,6 +3649,7 @@ export type Database = {
           finished_at: string | null
           id: string
           job_id: string
+          legacy: boolean | null
           nonce: string
           output_hash: string | null
           payload_hash: string
@@ -3671,6 +3672,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           job_id: string
+          legacy?: boolean | null
           nonce?: string
           output_hash?: string | null
           payload_hash: string
@@ -3693,6 +3695,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           job_id?: string
+          legacy?: boolean | null
           nonce?: string
           output_hash?: string | null
           payload_hash?: string
@@ -8405,6 +8408,10 @@ export type Database = {
         }[]
       }
       create_metrics_partition_if_needed: { Args: never; Returns: undefined }
+      create_retroactive_execution: {
+        Args: { p_job_id: string }
+        Returns: string
+      }
       current_user_tenant_id: { Args: never; Returns: string }
       detect_blocked_access_attempts: {
         Args: never
