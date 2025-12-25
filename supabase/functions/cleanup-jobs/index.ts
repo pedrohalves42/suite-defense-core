@@ -118,6 +118,32 @@ Deno.serve(async (req) => {
 
     const parentIds = parentJobs.map(j => j.id);
 
+    // Step 0.1: Delete job_executions that reference these jobs (FK constraint)
+    const { error: execDeleteError } = await supabase
+      .from('job_executions')
+      .delete()
+      .in('job_id', parentIds);
+
+    if (execDeleteError) {
+      logger.warn('[cleanup-jobs] Failed to delete job executions', { 
+        requestId, 
+        error: execDeleteError.message 
+      });
+    }
+
+    // Step 0.2: Delete generated_reports that reference these jobs (FK constraint)
+    const { error: reportsDeleteError } = await supabase
+      .from('generated_reports')
+      .delete()
+      .in('job_id', parentIds);
+
+    if (reportsDeleteError) {
+      logger.warn('[cleanup-jobs] Failed to delete generated reports', { 
+        requestId, 
+        error: reportsDeleteError.message 
+      });
+    }
+
     // Step 1: Delete child jobs first (jobs that reference these parents)
     const { error: childDeleteError } = await supabase
       .from('jobs')
