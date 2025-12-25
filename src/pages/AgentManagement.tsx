@@ -24,13 +24,16 @@ import {
   Server, Trash2, Power, PowerOff, XCircle, Clock, Activity, 
   AlertTriangle, Loader2, Trash, Search, Monitor, Cpu, HardDrive,
   RefreshCw, Shield, ShieldAlert, ShieldCheck, ArrowUpCircle, Filter,
-  MemoryStick
+  MemoryStick, Terminal
 } from 'lucide-react';
 import AgentInstallationGuide from '@/components/AgentInstallationGuide';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import { DiskMetricsPanel } from '@/components/agent/DiskMetricsPanel';
+import { ProcessControlDispatcher } from '@/components/admin/ProcessControlDispatcher';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Agent {
   id: string;
@@ -50,6 +53,8 @@ type VersionFilter = 'all' | 'outdated' | 'current';
 
 export default function AgentManagement() {
   const { tenant } = useTenant();
+  const { isAdmin, isSuperAdmin } = useUserRole();
+  const canAccessProcessControl = isAdmin || isSuperAdmin;
   const queryClient = useQueryClient();
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
   const [agentToDisable, setAgentToDisable] = useState<Agent | null>(null);
@@ -57,6 +62,7 @@ export default function AgentManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [versionFilter, setVersionFilter] = useState<VersionFilter>('all');
+  const [processControlOpen, setProcessControlOpen] = useState(false);
 
   // Fetch latest versions from database
   const { data: latestVersions } = useQuery<Record<string, string>>({
@@ -418,6 +424,55 @@ export default function AgentManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Process Control Section - Admin Only */}
+      {canAccessProcessControl && agents && agents.length > 0 && (
+        <Collapsible open={processControlOpen} onOpenChange={setProcessControlOpen}>
+          <Card className="border-amber-500/30">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-500/10 rounded-lg">
+                      <Terminal className="h-5 w-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        Controle Remoto de Processos
+                        <Badge variant="outline" className="text-xs border-amber-500 text-amber-500">
+                          Admin
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Encerrar processos ou gerenciar serviços remotamente
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm">
+                    {processControlOpen ? 'Fechar' : 'Expandir'}
+                  </Button>
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <ProcessControlDispatcher 
+                  agents={agents.filter(a => {
+                    const status = getAgentStatus(a);
+                    return status === 'online';
+                  }).map(a => ({
+                    id: a.id,
+                    agent_name: a.agent_name,
+                    hostname: a.hostname,
+                    status: a.status,
+                    os_type: a.os_type
+                  }))} 
+                />
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
 
       {/* Filters */}
       <Card>
