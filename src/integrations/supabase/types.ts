@@ -2430,6 +2430,226 @@ export type Database = {
           },
         ]
       }
+      approval_chains: {
+        Row: {
+          applies_to_actions: string[]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          min_approvers: number
+          name: string
+          tenant_id: string
+          timeout_hours: number
+          updated_at: string
+        }
+        Insert: {
+          applies_to_actions?: string[]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          min_approvers?: number
+          name: string
+          tenant_id: string
+          timeout_hours?: number
+          updated_at?: string
+        }
+        Update: {
+          applies_to_actions?: string[]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          min_approvers?: number
+          name?: string
+          tenant_id?: string
+          timeout_hours?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_chains_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_chains_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      approval_requests: {
+        Row: {
+          action_payload: Json
+          action_type: string
+          approved_at: string | null
+          chain_id: string | null
+          created_at: string
+          current_approvers: number
+          executed_at: string | null
+          expires_at: string
+          id: string
+          playbook_execution_id: string | null
+          rejection_reason: string | null
+          requested_by: string
+          required_approvers: number
+          status: string
+          target_agent_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          action_payload?: Json
+          action_type: string
+          approved_at?: string | null
+          chain_id?: string | null
+          created_at?: string
+          current_approvers?: number
+          executed_at?: string | null
+          expires_at: string
+          id?: string
+          playbook_execution_id?: string | null
+          rejection_reason?: string | null
+          requested_by: string
+          required_approvers?: number
+          status?: string
+          target_agent_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          action_payload?: Json
+          action_type?: string
+          approved_at?: string | null
+          chain_id?: string | null
+          created_at?: string
+          current_approvers?: number
+          executed_at?: string | null
+          expires_at?: string
+          id?: string
+          playbook_execution_id?: string | null
+          rejection_reason?: string | null
+          requested_by?: string
+          required_approvers?: number
+          status?: string
+          target_agent_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_requests_chain_id_fkey"
+            columns: ["chain_id"]
+            isOneToOne: false
+            referencedRelation: "approval_chains"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_playbook_execution_id_fkey"
+            columns: ["playbook_execution_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_target_agent_id_fkey"
+            columns: ["target_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_target_agent_id_fkey"
+            columns: ["target_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_target_agent_id_fkey"
+            columns: ["target_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_target_agent_id_fkey"
+            columns: ["target_agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_target_agent_id_fkey"
+            columns: ["target_agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "approval_requests_target_agent_id_fkey"
+            columns: ["target_agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      approvals: {
+        Row: {
+          approved_by: string
+          created_at: string
+          decision: string
+          id: string
+          reason: string | null
+          request_id: string
+        }
+        Insert: {
+          approved_by: string
+          created_at?: string
+          decision: string
+          id?: string
+          reason?: string | null
+          request_id: string
+        }
+        Update: {
+          approved_by?: string
+          created_at?: string
+          decision?: string
+          id?: string
+          reason?: string | null
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approvals_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "approval_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -3094,6 +3314,75 @@ export type Database = {
         }
         Relationships: []
       }
+      evidence_bundles: {
+        Row: {
+          audit_id: string
+          bundle_type: string
+          created_at: string
+          created_by: string | null
+          download_expires_at: string | null
+          download_url: string | null
+          file_count: number
+          id: string
+          included_evidence: Json
+          manifest_hash: string
+          period_end: string
+          period_start: string
+          tenant_id: string
+          total_size_bytes: number
+          verification_url: string | null
+        }
+        Insert: {
+          audit_id: string
+          bundle_type?: string
+          created_at?: string
+          created_by?: string | null
+          download_expires_at?: string | null
+          download_url?: string | null
+          file_count?: number
+          id?: string
+          included_evidence?: Json
+          manifest_hash: string
+          period_end: string
+          period_start: string
+          tenant_id: string
+          total_size_bytes?: number
+          verification_url?: string | null
+        }
+        Update: {
+          audit_id?: string
+          bundle_type?: string
+          created_at?: string
+          created_by?: string | null
+          download_expires_at?: string | null
+          download_url?: string | null
+          file_count?: number
+          id?: string
+          included_evidence?: Json
+          manifest_hash?: string
+          period_end?: string
+          period_start?: string
+          tenant_id?: string
+          total_size_bytes?: number
+          verification_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evidence_bundles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evidence_bundles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       failed_jobs_dlq: {
         Row: {
           agent_id: string | null
@@ -3535,6 +3824,120 @@ export type Database = {
           used_at?: string
         }
         Relationships: []
+      }
+      incident_timelines: {
+        Row: {
+          agent_id: string | null
+          causal_chain: Json
+          created_at: string
+          id: string
+          incident_type: string
+          narrative_summary: string | null
+          resolution: string | null
+          resolved_at: string | null
+          root_cause: string | null
+          severity: string
+          started_at: string
+          status: string
+          tenant_id: string
+          timeline_events: Json
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          causal_chain?: Json
+          created_at?: string
+          id?: string
+          incident_type: string
+          narrative_summary?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          root_cause?: string | null
+          severity: string
+          started_at: string
+          status?: string
+          tenant_id: string
+          timeline_events?: Json
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          causal_chain?: Json
+          created_at?: string
+          id?: string
+          incident_type?: string
+          narrative_summary?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          root_cause?: string | null
+          severity?: string
+          started_at?: string
+          status?: string
+          tenant_id?: string
+          timeline_events?: Json
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_timelines_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_timelines_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_timelines_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_timelines_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_timelines_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "incident_timelines_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_timelines_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_timelines_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       installation_analytics: {
         Row: {
@@ -5320,6 +5723,72 @@ export type Database = {
           },
           {
             foreignKeyName: "risk_decision_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      risk_delta_snapshots: {
+        Row: {
+          actions_executed: number
+          actions_pending_approval: number
+          created_at: string
+          delta: number | null
+          estimated_cost_avoided: number | null
+          executive_summary: string | null
+          id: string
+          incidents_prevented: number
+          key_events: Json
+          risk_score_end: number | null
+          risk_score_start: number | null
+          snapshot_date: string
+          tenant_id: string
+          threats_blocked: number
+        }
+        Insert: {
+          actions_executed?: number
+          actions_pending_approval?: number
+          created_at?: string
+          delta?: number | null
+          estimated_cost_avoided?: number | null
+          executive_summary?: string | null
+          id?: string
+          incidents_prevented?: number
+          key_events?: Json
+          risk_score_end?: number | null
+          risk_score_start?: number | null
+          snapshot_date: string
+          tenant_id: string
+          threats_blocked?: number
+        }
+        Update: {
+          actions_executed?: number
+          actions_pending_approval?: number
+          created_at?: string
+          delta?: number | null
+          estimated_cost_avoided?: number | null
+          executive_summary?: string | null
+          id?: string
+          incidents_prevented?: number
+          key_events?: Json
+          risk_score_end?: number | null
+          risk_score_start?: number | null
+          snapshot_date?: string
+          tenant_id?: string
+          threats_blocked?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_delta_snapshots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_delta_snapshots_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_system_operations_summary"
@@ -8693,6 +9162,15 @@ export type Database = {
           job_ids: string[]
         }[]
       }
+      create_approval_request: {
+        Args: {
+          p_action_payload: Json
+          p_action_type: string
+          p_playbook_execution_id?: string
+          p_target_agent_id?: string
+        }
+        Returns: Json
+      }
       create_metrics_partition_if_needed: { Args: never; Returns: undefined }
       create_retroactive_execution: {
         Args: { p_job_id: string }
@@ -9000,6 +9478,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      reconstruct_incident_timeline: {
+        Args: { p_agent_id: string; p_end_time: string; p_start_time: string }
+        Returns: Json
+      }
       register_agent_signing_key: {
         Args: {
           p_agent_id: string
@@ -9050,6 +9532,10 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: string
+      }
+      submit_approval: {
+        Args: { p_decision: string; p_reason?: string; p_request_id: string }
+        Returns: Json
       }
       update_quota_usage: {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }
