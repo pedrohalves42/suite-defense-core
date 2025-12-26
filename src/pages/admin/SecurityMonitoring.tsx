@@ -18,12 +18,16 @@ import {
   Lock,
   Unlock,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  CheckCircle
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from 'recharts';
 import { toast } from 'sonner';
 import { subHours } from 'date-fns';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { UI_LABELS, getAttackTypeLabel, getSeverityInfo } from '@/lib/ui-dictionary';
+import { HelpTooltip } from '@/components/ui/tech-tooltip';
+import { motion } from 'framer-motion';
 
 interface SecurityMetrics {
   rate_limit_breaches: number;
@@ -227,22 +231,41 @@ export default function SecurityMonitoring() {
   };
 
   const getSeverityBadge = (severity: string) => {
-    switch (severity) {
-      case 'critical':
-        return <Badge variant="destructive">Crítico</Badge>;
-      case 'high':
-        return <Badge className="bg-orange-500">Alto</Badge>;
-      case 'warning':
-        return <Badge className="bg-yellow-500">Aviso</Badge>;
-      default:
-        return <Badge variant="secondary">Info</Badge>;
-    }
+    const info = getSeverityInfo(severity);
+    return (
+      <Badge className={info.badgeClass}>
+        {info.emoji} {severity === 'critical' ? 'Urgente' : severity === 'high' ? 'Importante' : severity === 'warning' ? 'Atenção' : 'Info'}
+      </Badge>
+    );
   };
+
+  // Contextual message based on metrics
+  const getContextMessage = () => {
+    if (!metrics) return null;
+    
+    if (metrics.rate_limit_breaches > 5 || metrics.failed_logins > 10) {
+      return {
+        type: 'warning',
+        message: UI_LABELS.context_help.rate_limits_high
+      };
+    }
+    
+    if (metrics.critical_events === 0 && metrics.blocked_ips === 0) {
+      return {
+        type: 'success',
+        message: UI_LABELS.context_help.all_secure
+      };
+    }
+    
+    return null;
+  };
+
+  const contextMessage = getContextMessage();
 
   return (
     <AdminPageLayout
-      title="Monitoramento de Segurança"
-      description="Dashboard consolidado de métricas e alertas de segurança em tempo real"
+      title={UI_LABELS.pages.security_monitoring.title}
+      description={UI_LABELS.pages.security_monitoring.description}
     >
       <div className="space-y-6">
         {/* Controls */}
@@ -258,75 +281,117 @@ export default function SecurityMonitoring() {
           
           <Button onClick={handleRunSecurityScan} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
-            Executar Scan
+            {UI_LABELS.actions.run_scan}
           </Button>
         </div>
 
-        {/* Metric Cards */}
+        {/* Contextual Status Message */}
+        {contextMessage && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+            <Card className={contextMessage.type === 'success' 
+              ? 'bg-green-500/10 border-green-500/20' 
+              : 'bg-yellow-500/10 border-yellow-500/20'
+            }>
+              <CardContent className="py-4 flex items-center gap-3">
+                {contextMessage.type === 'success' ? (
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                ) : (
+                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                )}
+                <span className={contextMessage.type === 'success' 
+                  ? 'text-green-700 dark:text-green-400' 
+                  : 'text-yellow-700 dark:text-yellow-400'
+                }>
+                  {contextMessage.message}
+                </span>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Metric Cards - Humanized */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Rate Limits</CardTitle>
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                {UI_LABELS.rate_limit.label}
+                <HelpTooltip term="rate_limit" />
+              </CardTitle>
               <Ban className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{metrics?.rate_limit_breaches || 0}</div>
-              <p className="text-xs text-muted-foreground">violações</p>
+              <p className="text-xs text-muted-foreground">{UI_LABELS.rate_limit.description}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Logins Falhos</CardTitle>
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                {UI_LABELS.failed_logins.label}
+                <HelpTooltip term="failed_login" />
+              </CardTitle>
               <Lock className="h-4 w-4 text-warning" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{metrics?.failed_logins || 0}</div>
-              <p className="text-xs text-muted-foreground">tentativas</p>
+              <p className="text-xs text-muted-foreground">{UI_LABELS.failed_logins.description}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">IPs Bloqueados</CardTitle>
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                {UI_LABELS.blocked_ips.label}
+                <HelpTooltip term="ip_blocklist" />
+              </CardTitle>
               <Shield className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{metrics?.blocked_ips || 0}</div>
-              <p className="text-xs text-muted-foreground">ativos</p>
+              <p className="text-xs text-muted-foreground">{UI_LABELS.blocked_ips.description}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Eventos Críticos</CardTitle>
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                {UI_LABELS.critical_events.label}
+                <HelpTooltip term="alerta" />
+              </CardTitle>
               <AlertTriangle className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">{metrics?.critical_events || 0}</div>
-              <p className="text-xs text-muted-foreground">no período</p>
+              <p className="text-xs text-muted-foreground">{UI_LABELS.critical_events.description}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Replay Attempts</CardTitle>
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                {UI_LABELS.replay_attempts.label}
+                <HelpTooltip term="replay" />
+              </CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{metrics?.replay_attempts || 0}</div>
-              <p className="text-xs text-muted-foreground">detectados</p>
+              <p className="text-xs text-muted-foreground">{UI_LABELS.replay_attempts.description}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Agentes Offline</CardTitle>
+              <CardTitle className="text-sm font-medium flex items-center gap-1">
+                {UI_LABELS.agents_offline.label}
+                <HelpTooltip term="heartbeat" />
+              </CardTitle>
               <TrendingDown className="h-4 w-4 text-warning" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{metrics?.agents_offline || 0}</div>
-              <p className="text-xs text-muted-foreground">&gt; 1h sem heartbeat</p>
+              <p className="text-xs text-muted-foreground">{UI_LABELS.agents_offline.description}</p>
             </CardContent>
           </Card>
         </div>
@@ -334,8 +399,8 @@ export default function SecurityMonitoring() {
         {/* Event Timeline Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Timeline de Eventos</CardTitle>
-            <CardDescription>Eventos de segurança por hora</CardDescription>
+            <CardTitle>{UI_LABELS.charts.events_timeline}</CardTitle>
+            <CardDescription>Eventos de segurança detectados e bloqueados automaticamente</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
@@ -356,7 +421,7 @@ export default function SecurityMonitoring() {
                   stackId="1" 
                   stroke="hsl(var(--primary))" 
                   fill="hsl(var(--primary) / 0.3)" 
-                  name="Total Eventos"
+                  name={UI_LABELS.charts.events_count}
                 />
                 <Area 
                   type="monotone" 
@@ -364,7 +429,7 @@ export default function SecurityMonitoring() {
                   stackId="2" 
                   stroke="hsl(var(--destructive))" 
                   fill="hsl(var(--destructive) / 0.3)" 
-                  name="Bloqueados"
+                  name={UI_LABELS.charts.blocked_count}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -375,18 +440,18 @@ export default function SecurityMonitoring() {
           {/* Recent Security Events */}
           <Card>
             <CardHeader>
-              <CardTitle>Eventos Recentes</CardTitle>
-              <CardDescription>Últimos eventos de segurança detectados</CardDescription>
+              <CardTitle>O que aconteceu recentemente</CardTitle>
+              <CardDescription>Eventos de segurança detectados pelo sistema</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="max-h-[400px] overflow-y-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Severidade</TableHead>
-                      <TableHead>IP</TableHead>
-                      <TableHead>Hora</TableHead>
+                      <TableHead>O que foi</TableHead>
+                      <TableHead>Importância</TableHead>
+                      <TableHead>Origem</TableHead>
+                      <TableHead>Quando</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -399,9 +464,9 @@ export default function SecurityMonitoring() {
                         <TableCell colSpan={4} className="text-center py-8">
                           <div className="flex flex-col items-center gap-2">
                             <Shield className="h-10 w-10 text-success/50" />
-                            <p className="font-medium text-success">🎉 Nenhuma ameaça detectada!</p>
+                            <p className="font-medium text-success">{UI_LABELS.empty_states.no_threats.title}</p>
                             <p className="text-sm text-muted-foreground">
-                              Seu sistema está seguro no período selecionado.
+                              {UI_LABELS.empty_states.no_threats.description}
                             </p>
                           </div>
                         </TableCell>
@@ -409,8 +474,8 @@ export default function SecurityMonitoring() {
                     ) : (
                       recentEvents?.slice(0, 10).map((event) => (
                         <TableRow key={event.id}>
-                          <TableCell className="font-mono text-xs">
-                            {event.attack_type}
+                          <TableCell className="text-sm">
+                            {getAttackTypeLabel(event.attack_type)}
                           </TableCell>
                           <TableCell>{getSeverityBadge(event.severity)}</TableCell>
                           <TableCell className="font-mono text-xs">
@@ -431,15 +496,18 @@ export default function SecurityMonitoring() {
           {/* Blocked IPs */}
           <Card>
             <CardHeader>
-              <CardTitle>IPs Bloqueados</CardTitle>
-              <CardDescription>Endereços IP atualmente bloqueados</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                {UI_LABELS.blocked_ips.label}
+                <HelpTooltip term="ip_blocklist" />
+              </CardTitle>
+              <CardDescription>Origens bloqueadas por comportamento suspeito</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="max-h-[400px] overflow-y-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>IP</TableHead>
+                      <TableHead>Origem</TableHead>
                       <TableHead>Motivo</TableHead>
                       <TableHead>Expira</TableHead>
                       <TableHead></TableHead>
@@ -452,9 +520,9 @@ export default function SecurityMonitoring() {
                       </TableRow>
                     ) : blockedIPs?.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center text-muted-foreground">
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
                           <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          Nenhum IP bloqueado
+                          {UI_LABELS.empty_states.no_blocked_ips.description}
                         </TableCell>
                       </TableRow>
                     ) : (

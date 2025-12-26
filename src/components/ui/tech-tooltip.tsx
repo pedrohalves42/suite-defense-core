@@ -30,13 +30,20 @@ const techTerms: Record<string, string> = {
   // Segurança
   "cve": "Identificador único de vulnerabilidades de segurança conhecidas mundialmente.",
   "score de risco": "Pontuação de 0 a 100 que indica o nível de risco do computador.",
-  "vulnerabilidade": "Falha de segurança que pode ser explorada por atacantes.",
+  "vulnerabilidade": "Falha de segurança em um programa que pode ser explorada por hackers.",
   "ameaça": "Software malicioso ou atividade suspeita detectada.",
   "malware": "Software malicioso projetado para danificar ou acessar sistemas sem autorização.",
   "ransomware": "Tipo de malware que bloqueia arquivos e exige pagamento para liberá-los.",
   "phishing": "Tentativa de roubar informações através de sites ou emails falsos.",
   "severidade": "Nível de gravidade: Crítica (urgente), Alta (importante), Média (atenção) ou Baixa.",
   "antivírus atualizado": "Proteção com definições de vírus recentes (menos de 7 dias).",
+  
+  // Security Monitoring terms
+  "rate_limit": "Proteção que bloqueia acessos muito frequentes (pode indicar ataque automatizado).",
+  "failed_login": "Tentativa de entrar no sistema com senha incorreta.",
+  "ip_blocklist": "Lista de origens de internet bloqueadas por comportamento suspeito.",
+  "alerta": "Notificação sobre evento de segurança que pode precisar de atenção.",
+  "replay": "Tentativa de reutilizar uma credencial antiga para acessar o sistema.",
   
   // Infraestrutura
   "endpoint": "Dispositivo final como computador, notebook ou servidor que precisa de proteção.",
