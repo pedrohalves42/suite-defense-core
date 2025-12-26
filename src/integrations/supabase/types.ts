@@ -3814,7 +3814,7 @@ export type Database = {
           output: Json | null
           parent_job_id: string | null
           payload: Json | null
-          payload_hash: string | null
+          payload_hash: string
           priority: number | null
           recurrence_pattern: string | null
           scheduled_at: string | null
@@ -3843,7 +3843,7 @@ export type Database = {
           output?: Json | null
           parent_job_id?: string | null
           payload?: Json | null
-          payload_hash?: string | null
+          payload_hash: string
           priority?: number | null
           recurrence_pattern?: string | null
           scheduled_at?: string | null
@@ -3872,7 +3872,7 @@ export type Database = {
           output?: Json | null
           parent_job_id?: string | null
           payload?: Json | null
-          payload_hash?: string | null
+          payload_hash?: string
           priority?: number | null
           recurrence_pattern?: string | null
           scheduled_at?: string | null
@@ -8271,6 +8271,15 @@ export type Database = {
           is_blocked: boolean
         }[]
       }
+      check_execution_orphans: {
+        Args: never
+        Returns: {
+          affected_job_ids: string[]
+          null_payload_hash_count: number
+          orphan_count: number
+          residual_execution_id_count: number
+        }[]
+      }
       check_installation_failure_rate: {
         Args: {
           p_hours_back?: number
@@ -8614,7 +8623,7 @@ export type Database = {
           output: Json | null
           parent_job_id: string | null
           payload: Json | null
-          payload_hash: string | null
+          payload_hash: string
           priority: number | null
           recurrence_pattern: string | null
           scheduled_at: string | null
