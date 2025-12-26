@@ -215,6 +215,10 @@ Deno.serve(async (req) => {
     const nonce = payload.nonce
     const result_signature = payload.result_signature
     const signature_algorithm = payload.signature_algorithm
+    // v4.1.9: Hash chain fields
+    const execution_hash = payload.execution_hash
+    const previous_execution_hash = payload.previous_execution_hash
+    const execution_index = payload.execution_index
 
     // P2.1 FIX: Normalizar execution_id - remover prefixo "exec-" se presente
     // Agentes enviam "exec-<uuid>", mas o banco usa UUID puro
@@ -294,7 +298,11 @@ Deno.serve(async (req) => {
       // FASE 4: Auditoria
       execution_id: execution_id || 'NOT_PROVIDED',
       nonce: nonce || 'NOT_PROVIDED',
-      has_signature: !!result_signature
+      has_signature: !!result_signature,
+      // v4.1.9: Hash chain
+      execution_hash: execution_hash || 'NOT_PROVIDED',
+      execution_index: execution_index ?? 'NOT_PROVIDED',
+      has_previous_hash: !!previous_execution_hash
     })
 
     // Buscar o job - CORRIGIDO: usar 'type' não 'job_type'
@@ -791,7 +799,11 @@ Deno.serve(async (req) => {
         execution_id,
         status,
         has_signature: !!result_signature,
-        signature_verified: signatureVerified
+        signature_verified: signatureVerified,
+        // v4.1.9: Hash chain fields
+        execution_hash: execution_hash || 'NOT_PROVIDED',
+        execution_index: execution_index ?? 'NOT_PROVIDED',
+        has_previous_hash: !!previous_execution_hash
       })
       
       const { data: execResult, error: execError } = await supabase
@@ -806,7 +818,11 @@ Deno.serve(async (req) => {
           p_error_message: error_message ? sanitizeErrorMessage(error_message) : null,
           p_execution_time_seconds: execution_time_seconds || null,
           p_result_signature: result_signature || null,
-          p_signature_verified: signatureVerified
+          p_signature_verified: signatureVerified,
+          // v4.1.9: Hash chain fields
+          p_execution_hash: execution_hash || null,
+          p_previous_execution_hash: previous_execution_hash || null,
+          p_execution_index: execution_index ?? null
         })
       
       if (execError) {
@@ -825,7 +841,9 @@ Deno.serve(async (req) => {
           ...execResult,
           job_id,
           execution_id,
-          agent: agent.agent_name
+          agent: agent.agent_name,
+          // v4.1.9: Hash chain confirmation
+          execution_hash: execution_hash ? execution_hash.substring(0, 16) + '...' : 'NOT_PROVIDED'
         })
       } else if (execResult?.error) {
         console.warn('[submit-job-result] [AUDIT_TRAIL] [P2.1] Execution finalization failed:', {
