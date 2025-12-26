@@ -528,7 +528,7 @@ Deno.serve(async (req) => {
           
           if (Array.isArray(softwareList) && softwareList.length > 0) {
             // Prepare records for UPSERT - SSA-007: Sanitizar campos de texto
-            const softwareRecords = softwareList.map((sw: Record<string, unknown>) => ({
+            const rawRecords = softwareList.map((sw: Record<string, unknown>) => ({
               tenant_id: agent.tenant_id,
               agent_id: job.agent_id,
               name: sanitizeForStorage(sw.name || sw.Name || sw.DisplayName || 'Unknown', 255),
@@ -538,6 +538,14 @@ Deno.serve(async (req) => {
               risk_level: sanitizeForStorage(sw.risk_level || sw.RiskLevel || 'unknown', 20).toLowerCase(),
               last_seen_at: new Date().toISOString()
             }))
+            
+            // FIX: Deduplicate records before upsert to avoid "ON CONFLICT DO UPDATE command cannot affect row a second time" error
+            // Key: agent_id|name|version
+            const softwareRecords = Array.from(
+              new Map(rawRecords.map(r => [`${r.agent_id}|${r.name}|${r.version}`, r])).values()
+            )
+            
+            console.log(`[submit-job-result] Deduplicated software records: ${rawRecords.length} -> ${softwareRecords.length}`)
             
             // UPSERT em batches - evita race condition e duplicate key errors
             const batchSize = 100

@@ -117,60 +117,90 @@ Deno.serve(async (req) => {
     }
 
     const parentIds = parentJobs.map(j => j.id);
+    const BATCH_SIZE = 100; // Process in batches to avoid payload limits
+    let totalDeleted = 0;
 
-    // Step 0.1: Delete job_executions that reference these jobs (FK constraint)
-    const { error: execDeleteError } = await supabase
-      .from('job_executions')
-      .delete()
-      .in('job_id', parentIds);
+    logger.info('[cleanup-jobs] Starting batched deletion', {
+      requestId,
+      totalJobs: parentIds.length,
+      batchSize: BATCH_SIZE
+    });
 
-    if (execDeleteError) {
-      logger.warn('[cleanup-jobs] Failed to delete job executions', { 
-        requestId, 
-        error: execDeleteError.message 
-      });
+    // Process in batches
+    for (let i = 0; i < parentIds.length; i += BATCH_SIZE) {
+      const batch = parentIds.slice(i, i + BATCH_SIZE);
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+      const totalBatches = Math.ceil(parentIds.length / BATCH_SIZE);
+
+      // Step 0.1: Delete job_executions for this batch (FK constraint)
+      const { error: execDeleteError } = await supabase
+        .from('job_executions')
+        .delete()
+        .in('job_id', batch);
+
+      if (execDeleteError) {
+        logger.warn('[cleanup-jobs] Failed to delete job executions in batch', { 
+          requestId, 
+          batchNum,
+          error: execDeleteError.message 
+        });
+      }
+
+      // Step 0.2: Delete generated_reports for this batch (FK constraint)
+      const { error: reportsDeleteError } = await supabase
+        .from('generated_reports')
+        .delete()
+        .in('job_id', batch);
+
+      if (reportsDeleteError) {
+        logger.warn('[cleanup-jobs] Failed to delete generated reports in batch', { 
+          requestId, 
+          batchNum,
+          error: reportsDeleteError.message 
+        });
+      }
+
+      // Step 1: Delete child jobs for this batch (jobs that reference these parents)
+      const { error: childDeleteError } = await supabase
+        .from('jobs')
+        .delete()
+        .in('parent_job_id', batch);
+
+      if (childDeleteError) {
+        logger.warn('[cleanup-jobs] Failed to delete child jobs in batch', { 
+          requestId, 
+          batchNum,
+          error: childDeleteError.message 
+        });
+      }
+
+      // Step 2: Delete the parent jobs in this batch
+      const { data: deletedJobs, error: deleteError } = await supabase
+        .from('jobs')
+        .delete()
+        .in('id', batch)
+        .select('id');
+
+      if (deleteError) {
+        logger.error('[cleanup-jobs] Delete failed in batch', { 
+          requestId, 
+          batchNum,
+          error: deleteError.message 
+        });
+        // Continue with next batch instead of failing completely
+      } else {
+        totalDeleted += deletedJobs?.length || 0;
+        logger.info('[cleanup-jobs] Batch completed', {
+          requestId,
+          batchNum,
+          totalBatches,
+          batchDeleted: deletedJobs?.length || 0,
+          runningTotal: totalDeleted
+        });
+      }
     }
 
-    // Step 0.2: Delete generated_reports that reference these jobs (FK constraint)
-    const { error: reportsDeleteError } = await supabase
-      .from('generated_reports')
-      .delete()
-      .in('job_id', parentIds);
-
-    if (reportsDeleteError) {
-      logger.warn('[cleanup-jobs] Failed to delete generated reports', { 
-        requestId, 
-        error: reportsDeleteError.message 
-      });
-    }
-
-    // Step 1: Delete child jobs first (jobs that reference these parents)
-    const { error: childDeleteError } = await supabase
-      .from('jobs')
-      .delete()
-      .in('parent_job_id', parentIds);
-
-    if (childDeleteError) {
-      logger.warn('[cleanup-jobs] Failed to delete child jobs', { requestId, error: childDeleteError.message });
-      // Continue anyway - CASCADE should handle it now
-    }
-
-    // Step 2: Delete the parent jobs
-    const { data: deletedJobs, error: deleteError } = await supabase
-      .from('jobs')
-      .delete()
-      .in('id', parentIds)
-      .select('id');
-
-    if (deleteError) {
-      logger.error('[cleanup-jobs] Delete failed', { requestId, error: deleteError.message });
-      return new Response(
-        JSON.stringify({ error: 'Failed to delete jobs', details: deleteError.message, requestId }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const deletedCount = deletedJobs?.length || 0;
+    const deletedCount = totalDeleted;
 
     logger.success('[cleanup-jobs] Cleanup completed', {
       requestId,
