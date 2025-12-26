@@ -38,7 +38,7 @@ export default function ApprovalRequests() {
   const submitApproval = useSubmitApproval();
 
   const handleApprove = (requestId: string) => {
-    submitApproval.mutate({ requestId, approved: true });
+    submitApproval.mutate({ requestId, decision: 'approved' });
   };
 
   const openRejectDialog = (requestId: string) => {
@@ -51,7 +51,7 @@ export default function ApprovalRequests() {
     if (requestToReject) {
       submitApproval.mutate({ 
         requestId: requestToReject, 
-        approved: false, 
+        decision: 'rejected', 
         reason: rejectReason || undefined 
       });
       setRejectDialogOpen(false);
@@ -163,7 +163,7 @@ export default function ApprovalRequests() {
               {filteredPending.map((request, idx) => {
                 const severity = ACTION_TYPE_SEVERITY[request.action_type as keyof typeof ACTION_TYPE_SEVERITY] || 'low';
                 const timeRemaining = getTimeRemaining(request.expires_at);
-                const approvalProgress = (request.current_approvals / request.required_approvals) * 100;
+                const approvalProgress = (request.current_approvers / request.required_approvers) * 100;
                 const isSelected = selectedRequest === request.id;
 
                 return (
@@ -211,7 +211,7 @@ export default function ApprovalRequests() {
                             <div className="flex items-center gap-3 mb-2">
                               <Progress value={approvalProgress} className="h-2 flex-1 max-w-xs" />
                               <span className="text-sm font-medium">
-                                {request.current_approvals}/{request.required_approvals} aprovadores
+                                {request.current_approvers}/{request.required_approvers} aprovadores
                               </span>
                             </div>
 
@@ -250,9 +250,9 @@ export default function ApprovalRequests() {
                                     <div className="space-y-2">
                                       {selectedVotes.map((vote) => (
                                         <div key={vote.id} className="flex items-center justify-between text-xs">
-                                          <span className="font-mono">{vote.approver_id.slice(0, 8)}...</span>
-                                          <Badge variant={vote.approved ? 'default' : 'destructive'} className="text-xs">
-                                            {vote.approved ? 'Aprovou' : 'Rejeitou'}
+                                          <span className="font-mono">{vote.approved_by.slice(0, 8)}...</span>
+                                          <Badge variant={vote.decision === 'approved' ? 'default' : 'destructive'} className="text-xs">
+                                            {vote.decision === 'approved' ? 'Aprovou' : 'Rejeitou'}
                                           </Badge>
                                         </div>
                                       ))}

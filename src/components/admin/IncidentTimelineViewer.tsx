@@ -58,8 +58,8 @@ export function IncidentTimelineViewer({ incident, onClose }: IncidentTimelineVi
     });
   };
 
-  const events = (incident.events as TimelineEvent[]) || [];
-  const causalChains = (incident.causal_chains as { from: string; to: string; description: string }[]) || [];
+  const events = (incident.timeline_events as TimelineEvent[]) || [];
+  const causalChains = (incident.causal_chain as { from: string; to: string; relationship: string }[]) || [];
 
   const getEventIcon = (eventType: string) => {
     const iconName = EVENT_TYPE_ICONS[eventType as keyof typeof EVENT_TYPE_ICONS] || 'circle';
@@ -76,8 +76,8 @@ export function IncidentTimelineViewer({ incident, onClose }: IncidentTimelineVi
     }
   };
 
-  const findCausalLinks = (eventId: string) => {
-    return causalChains.filter(c => c.from === eventId || c.to === eventId);
+  const findCausalLinks = (sourceId: string) => {
+    return causalChains.filter(c => c.from === sourceId || c.to === sourceId);
   };
 
   const handleExportPDF = async () => {
@@ -100,9 +100,9 @@ export function IncidentTimelineViewer({ incident, onClose }: IncidentTimelineVi
             </div>
             <CardTitle className="text-base">Incidente #{incident.id.slice(0, 8)}</CardTitle>
             <CardDescription className="text-xs mt-1">
-              {format(new Date(incident.start_time), "dd/MM/yyyy HH:mm", { locale: ptBR })} - {' '}
-              {incident.end_time 
-                ? format(new Date(incident.end_time), "dd/MM/yyyy HH:mm", { locale: ptBR })
+              {format(new Date(incident.started_at), "dd/MM/yyyy HH:mm", { locale: ptBR })} - {' '}
+              {incident.resolved_at 
+                ? format(new Date(incident.resolved_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
                 : 'Em andamento'
               }
             </CardDescription>
@@ -121,10 +121,10 @@ export function IncidentTimelineViewer({ incident, onClose }: IncidentTimelineVi
         </div>
 
         {/* AI Narrative */}
-        {incident.ai_narrative && (
+        {incident.narrative_summary && (
           <div className="mt-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
             <p className="text-sm text-foreground leading-relaxed">
-              {incident.ai_narrative}
+              {incident.narrative_summary}
             </p>
           </div>
         )}
@@ -157,12 +157,13 @@ export function IncidentTimelineViewer({ incident, onClose }: IncidentTimelineVi
                 {events.map((event, idx) => {
                   const EventIcon = getEventIcon(event.event_type);
                   const severity = event.severity as keyof typeof SEVERITY_COLORS || 'info';
-                  const isExpanded = expandedEvents.has(event.id);
-                  const causalLinks = findCausalLinks(event.id);
+                  const eventKey = event.source_id || `event-${idx}`;
+                  const isExpanded = expandedEvents.has(eventKey);
+                  const causalLinks = findCausalLinks(event.source_id);
 
                   return (
                     <motion.div
-                      key={event.id}
+                      key={eventKey}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.05 }}
@@ -184,14 +185,14 @@ export function IncidentTimelineViewer({ incident, onClose }: IncidentTimelineVi
                               <div 
                                 key={linkIdx}
                                 className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"
-                                title={link.description}
+                                title={link.relationship}
                               />
                             ))}
                           </div>
                         </div>
                       )}
 
-                      <Collapsible open={isExpanded} onOpenChange={() => toggleEvent(event.id)}>
+                      <Collapsible open={isExpanded} onOpenChange={() => toggleEvent(eventKey)}>
                         <CollapsibleTrigger className="w-full text-left">
                           <div className={cn(
                             "p-3 rounded-lg border transition-colors cursor-pointer",
@@ -207,15 +208,11 @@ export function IncidentTimelineViewer({ incident, onClose }: IncidentTimelineVi
                                     {EVENT_TYPE_LABELS[event.event_type as keyof typeof EVENT_TYPE_LABELS] || event.event_type}
                                   </Badge>
                                   <span className="text-xs text-muted-foreground">
-                                    {format(new Date(event.timestamp), "HH:mm:ss", { locale: ptBR })}
+                                    {format(new Date(event.event_time), "HH:mm:ss", { locale: ptBR })}
                                   </span>
                                 </div>
                                 <p className="text-sm font-medium line-clamp-2">{event.description}</p>
-                                {event.agent_id && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    Agente: {event.agent_id.slice(0, 8)}...
-                                  </p>
-                                )}
+                                <p className="text-xs text-muted-foreground mt-1">{event.title}</p>
                               </div>
                               <ChevronDown className={cn(
                                 "h-4 w-4 text-muted-foreground transition-transform shrink-0",
@@ -228,9 +225,9 @@ export function IncidentTimelineViewer({ incident, onClose }: IncidentTimelineVi
                         <CollapsibleContent>
                           <div className="mt-2 p-3 rounded-lg bg-muted/30 border border-border/50 text-sm">
                             {/* Event Details */}
-                            {event.details && typeof event.details === 'object' && (
+                            {event.data && typeof event.data === 'object' && (
                               <div className="space-y-2">
-                                {Object.entries(event.details).map(([key, value]) => (
+                                {Object.entries(event.data).map(([key, value]) => (
                                   <div key={key} className="flex items-start gap-2">
                                     <span className="text-xs text-muted-foreground min-w-[100px]">{key}:</span>
                                     <span className="text-xs break-all">
@@ -249,7 +246,7 @@ export function IncidentTimelineViewer({ incident, onClose }: IncidentTimelineVi
                                   {causalLinks.map((link, linkIdx) => (
                                     <div key={linkIdx} className="flex items-center gap-2 text-xs">
                                       <ArrowRight className="h-3 w-3 text-primary" />
-                                      <span>{link.description}</span>
+                                      <span>{link.relationship}</span>
                                     </div>
                                   ))}
                                 </div>

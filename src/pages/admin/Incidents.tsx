@@ -61,7 +61,7 @@ export default function Incidents() {
       return (
         incident.id.toLowerCase().includes(query) ||
         incident.agent_id?.toLowerCase().includes(query) ||
-        incident.ai_narrative?.toLowerCase().includes(query)
+        incident.narrative_summary?.toLowerCase().includes(query)
       );
     }
     return true;
@@ -248,19 +248,19 @@ export default function Incidents() {
                         </span>
                       </div>
 
-                      {incident.ai_narrative && (
+                      {incident.narrative_summary && (
                         <p className="text-sm text-foreground line-clamp-2 mb-2">
-                          {incident.ai_narrative}
+                          {incident.narrative_summary}
                         </p>
                       )}
 
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                         <span>
-                          Início: {format(new Date(incident.start_time), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          Início: {format(new Date(incident.started_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                         </span>
-                        {incident.end_time && (
+                        {incident.resolved_at && (
                           <span>
-                            Fim: {format(new Date(incident.end_time), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            Fim: {format(new Date(incident.resolved_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                           </span>
                         )}
                         {incident.agent_id && (
@@ -269,7 +269,7 @@ export default function Incidents() {
                           </span>
                         )}
                         <span>
-                          {((incident.events as any[]) || []).length} eventos
+                          {(incident.timeline_events || []).length} eventos
                         </span>
                       </div>
                     </div>
