@@ -350,6 +350,31 @@ export default function AgentHealthMonitor() {
               >
                 Limpar Tudo
               </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={async () => {
+                  if (!confirm('Limpar TODO o histórico de tarefas? Isso inclui tarefas completadas, falhas e canceladas.')) return;
+                  setIsCleaningJobs(true);
+                  try {
+                    const { data, error } = await supabase.functions.invoke('cleanup-jobs', {
+                      body: { status: ['completed', 'failed', 'cancelled', 'delivered'], older_than_days: 0 }
+                    });
+                    if (error) throw error;
+                    toast.success(`${data.deleted_count} tarefas removidas. Histórico zerado!`);
+                    refetchJobStats();
+                  } catch (error) {
+                    console.error('Cleanup error:', error);
+                    toast.error('Erro ao limpar histórico');
+                  } finally {
+                    setIsCleaningJobs(false);
+                  }
+                }}
+                disabled={isCleaningJobs}
+                className="text-muted-foreground"
+              >
+                Zerar Histórico
+              </Button>
             </div>
           </CardContent>
         </Card>

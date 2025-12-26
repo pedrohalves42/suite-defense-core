@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { AdminPageLayout } from '@/components/AdminPageLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ export default function AgentGroups() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddAgentsOpen, setIsAddAgentsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [createSearchTerm, setCreateSearchTerm] = useState('');
   
   // Form state
   const [groupName, setGroupName] = useState('');
@@ -33,16 +35,27 @@ export default function AgentGroups() {
   
   // Selected agents for batch add
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
+  // Selected agents for creation
+  const [createSelectedAgentIds, setCreateSelectedAgentIds] = useState<string[]>([]);
 
   const selectedGroup = groups.find(g => g.id === selectedGroupId);
   const { members, isLoading: membersLoading, addAgents, removeAgent } = useAgentGroupMembers(selectedGroupId);
   const { agents: availableAgents, isLoading: availableLoading } = useAvailableAgents(selectedGroupId);
+  // All agents for creation dialog
+  const { agents: allAgents, isLoading: allAgentsLoading } = useAvailableAgents(null);
 
   const handleCreateGroup = async () => {
     if (!groupName.trim()) return;
-    await createGroup.mutateAsync({ name: groupName, description: groupDescription || undefined });
+    const newGroup = await createGroup.mutateAsync({ name: groupName, description: groupDescription || undefined });
+    // If agents were selected, add them to the new group
+    if (createSelectedAgentIds.length > 0 && newGroup?.id) {
+      const inserts = createSelectedAgentIds.map(agent_id => ({ agent_id, group_id: newGroup.id }));
+      await supabase.from('agents_groups').insert(inserts);
+    }
     setGroupName('');
     setGroupDescription('');
+    setCreateSelectedAgentIds([]);
+    setCreateSearchTerm('');
     setIsCreateOpen(false);
   };
 
@@ -82,6 +95,23 @@ export default function AgentGroups() {
     );
   });
 
+  const filteredAllAgents = allAgents.filter(agent => {
+    const search = createSearchTerm.toLowerCase();
+    return (
+      agent.agent_name?.toLowerCase().includes(search) ||
+      agent.display_name?.toLowerCase().includes(search) ||
+      agent.hostname?.toLowerCase().includes(search)
+    );
+  });
+
+  const toggleCreateAgentSelection = (agentId: string) => {
+    setCreateSelectedAgentIds(prev => 
+      prev.includes(agentId) 
+        ? prev.filter(id => id !== agentId)
+        : [...prev, agentId]
+    );
+  };
+
   const toggleAgentSelection = (agentId: string) => {
     setSelectedAgentIds(prev => 
       prev.includes(agentId) 
@@ -114,18 +144,26 @@ export default function AgentGroups() {
               <CardTitle className="text-base">Grupos</CardTitle>
               <CardDescription>{groups.length} grupos criados</CardDescription>
             </div>
-            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <Dialog open={isCreateOpen} onOpenChange={(open) => {
+              setIsCreateOpen(open);
+              if (!open) {
+                setCreateSelectedAgentIds([]);
+                setCreateSearchTerm('');
+                setGroupName('');
+                setGroupDescription('');
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button size="sm">
                   <Plus className="h-4 w-4 mr-1" />
                   Novo
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Criar Grupo</DialogTitle>
                   <DialogDescription>
-                    Crie um novo grupo para organizar computadores
+                    Crie um novo grupo e adicione computadores
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
@@ -145,13 +183,73 @@ export default function AgentGroups() {
                       placeholder="Descreva o propósito deste grupo..."
                     />
                   </div>
+                  
+                  <Separator />
+                  
+                  <div className="space-y-2">
+                    <Label className="flex items-center justify-between">
+                      <span>Adicionar Computadores (opcional)</span>
+                      {createSelectedAgentIds.length > 0 && (
+                        <Badge variant="secondary">{createSelectedAgentIds.length} selecionados</Badge>
+                      )}
+                    </Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        value={createSearchTerm}
+                        onChange={(e) => setCreateSearchTerm(e.target.value)}
+                        placeholder="Buscar computador..."
+                        className="pl-9"
+                      />
+                    </div>
+                    <ScrollArea className="h-[200px] border rounded-lg">
+                      {allAgentsLoading ? (
+                        <div className="p-4 text-center text-muted-foreground">Carregando...</div>
+                      ) : filteredAllAgents.length === 0 ? (
+                        <div className="p-4 text-center text-muted-foreground">
+                          {createSearchTerm ? 'Nenhum computador encontrado' : 'Nenhum computador disponível'}
+                        </div>
+                      ) : (
+                        <div className="p-2 space-y-1">
+                          {filteredAllAgents.map((agent) => (
+                            <div
+                              key={agent.id}
+                              className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                                createSelectedAgentIds.includes(agent.id)
+                                  ? 'bg-primary/10 border border-primary'
+                                  : 'hover:bg-muted/50'
+                              }`}
+                              onClick={() => toggleCreateAgentSelection(agent.id)}
+                            >
+                              <Checkbox 
+                                checked={createSelectedAgentIds.includes(agent.id)}
+                                onCheckedChange={() => toggleCreateAgentSelection(agent.id)}
+                              />
+                              <Monitor className="h-4 w-4 text-muted-foreground" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">
+                                  {agent.display_name || agent.agent_name}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {agent.hostname}
+                                </p>
+                              </div>
+                              {getStatusBadge(agent.status)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
                     Cancelar
                   </Button>
                   <Button onClick={handleCreateGroup} disabled={createGroup.isPending || !groupName.trim()}>
-                    Criar Grupo
+                    {createSelectedAgentIds.length > 0 
+                      ? `Criar com ${createSelectedAgentIds.length} PC${createSelectedAgentIds.length > 1 ? 's' : ''}` 
+                      : 'Criar Grupo'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
