@@ -5,6 +5,7 @@ import { useWebActivity } from '@/hooks/useWebActivity';
 import { useBlockedWebsites } from '@/hooks/useBlockedWebsites';
 import { useBlockedAttempts } from '@/hooks/useBlockedAttempts';
 import ThreatIntelligenceLookup from '@/components/admin/ThreatIntelligenceLookup';
+import { BlockedSitesStats } from '@/components/admin/BlockedSitesStats';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   AlertCircle, 
   Globe, 
@@ -25,7 +27,8 @@ import {
   Eye,
   Shield,
   RefreshCw,
-  ShieldX
+  ShieldX,
+  BarChart3
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatBrazilDateTime } from '@/lib/date-utils';
@@ -53,12 +56,17 @@ export default function WebActivity() {
   const [blockReason, setBlockReason] = useState('');
   const [threatTarget, setThreatTarget] = useState('');
   const threatSectionRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<string>('activity');
   
   const { data: activity, isLoading, error } = useWebActivity(selectedAgent, !!selectedAgent);
   const { blockedWebsites, blockWebsite, unblockWebsite, isBlocked } = useBlockedWebsites();
-  const { attempts: blockedAttempts, todayStats: blockedStats, isLoading: attemptsLoading } = useBlockedAttempts({ 
-    agentId: selectedAgent || undefined 
+  const { attempts: blockedAttempts, todayStats: blockedStats, stats: fullStats, isLoading: attemptsLoading } = useBlockedAttempts({ 
+    agentId: selectedAgent || undefined,
+    limit: 500
   });
+  
+  // Global stats (all agents)
+  const { stats: globalStats } = useBlockedAttempts({ limit: 1000 });
 
   // Enrich activity with categories
   const enrichedActivity = useMemo(() => {
@@ -165,22 +173,41 @@ export default function WebActivity() {
       description="Visualize e gerencie domínios acessados pelos agentes"
     >
       <div className="space-y-6">
-        {/* Agent Selector */}
-        <Card className="border-l-4 border-l-info">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              Selecionar Computador
-            </CardTitle>
-            <CardDescription>Escolha um computador para visualizar atividade web</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AgentSelector value={selectedAgent} onValueChange={setSelectedAgent} />
-          </CardContent>
-        </Card>
+        {/* Tabs for Activity vs Stats */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="activity" className="gap-2">
+              <Globe className="h-4 w-4" />
+              Atividade Web
+            </TabsTrigger>
+            <TabsTrigger value="stats" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Dashboard de Bloqueios
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="stats" className="mt-6">
+            {/* Global Blocked Sites Statistics Dashboard */}
+            <BlockedSitesStats stats={globalStats} />
+          </TabsContent>
+          
+          <TabsContent value="activity" className="mt-6 space-y-6">
+            {/* Agent Selector */}
+            <Card className="border-l-4 border-l-info">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Selecionar Computador
+                </CardTitle>
+                <CardDescription>Escolha um computador para visualizar atividade web</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AgentSelector value={selectedAgent} onValueChange={setSelectedAgent} />
+              </CardContent>
+            </Card>
 
-        {selectedAgent && (
-          <>
+            {selectedAgent && (
+              <>
             {/* Summary Cards */}
             <div className="grid gap-4 md:grid-cols-4">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -626,8 +653,9 @@ export default function WebActivity() {
             )}
           </>
         )}
+          </TabsContent>
+        </Tabs>
       </div>
-
       {/* Block Site Dialog */}
       <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
         <DialogContent>
