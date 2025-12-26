@@ -3113,6 +3113,7 @@ export type Database = {
           blocked_by: string | null
           created_at: string | null
           domain_pattern: string
+          group_id: string | null
           id: string
           is_active: boolean | null
           reason: string | null
@@ -3123,6 +3124,7 @@ export type Database = {
           blocked_by?: string | null
           created_at?: string | null
           domain_pattern: string
+          group_id?: string | null
           id?: string
           is_active?: boolean | null
           reason?: string | null
@@ -3133,6 +3135,7 @@ export type Database = {
           blocked_by?: string | null
           created_at?: string | null
           domain_pattern?: string
+          group_id?: string | null
           id?: string
           is_active?: boolean | null
           reason?: string | null
@@ -3145,6 +3148,13 @@ export type Database = {
             columns: ["blocked_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_websites_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "agent_groups"
             referencedColumns: ["id"]
           },
           {
