@@ -108,6 +108,7 @@ export const AppSidebar = () => {
     { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics', section: 'monitoring' },
     
     // === SEGURANÇA ===
+    { icon: Users, label: 'Grupos de Computadores', to: '/admin/agent-groups', section: 'security' },
     { icon: ShieldCheck, label: 'Políticas', to: '/admin/security-policies', section: 'security' },
     { icon: Shield, label: 'Central de Segurança', to: '/admin/security-monitoring', section: 'security' },
     { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory', section: 'security' },
