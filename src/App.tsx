@@ -145,7 +145,7 @@ const App = () => (
             
             {/* Protected Routes with AppLayout */}
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard" element={<ServerDashboard />} />
               <Route path="/jobs" element={<JobCreator />} />
               <Route path="/installer" element={<AgentInstaller />} />
               <Route path="/virus-scans" element={<VirusScans />} />
