@@ -23,6 +23,16 @@ interface PlaybookAction {
   risk_level: string;
 }
 
+interface RiskAnalysis {
+  risk_score: number;
+  threshold: number;
+  should_auto_execute: boolean;
+  has_destructive_actions: boolean;
+  require_approval: boolean;
+  is_enabled: boolean;
+  decision_reason: string;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -116,6 +126,25 @@ serve(async (req) => {
       });
     }
 
+    // ✅ FASE 2: Motor de Risco - Calcular risk score via RPC
+    const { data: riskData, error: riskError } = await supabase.rpc('should_auto_execute_playbook', {
+      p_playbook_id: playbook.id,
+      p_event_type: trigger_type,
+      p_context: context
+    });
+
+    const riskAnalysis: RiskAnalysis = riskError ? {
+      risk_score: 0.5,
+      threshold: 0.8,
+      should_auto_execute: false,
+      has_destructive_actions: false,
+      require_approval: playbook.require_approval,
+      is_enabled: playbook.is_enabled,
+      decision_reason: 'risk_calculation_failed'
+    } : riskData as RiskAnalysis;
+
+    console.log(`[evaluate-playbook-triggers] Risk analysis: score=${riskAnalysis.risk_score}, auto_execute=${riskAnalysis.should_auto_execute}, reason=${riskAnalysis.decision_reason}`);
+
     // Buscar informações do agente se fornecido
     let agentInfo = null;
     if (agent_id) {
@@ -154,7 +183,11 @@ serve(async (req) => {
         risk_level: action.risk_level,
       }));
 
-    // Criar execução pendente COM SNAPSHOTS
+    // Determinar status inicial e se deve auto-executar
+    const shouldAutoExecute = riskAnalysis.should_auto_execute;
+    const triggeredBy = shouldAutoExecute ? 'risk_engine' : 'trigger';
+
+    // Criar execução pendente COM SNAPSHOTS e dados de risco
     const { data: execution, error: execError } = await supabase
       .from('playbook_executions')
       .insert({
@@ -166,11 +199,16 @@ serve(async (req) => {
           ...context,
           agent_info: agentInfo,
           evaluated_at: new Date().toISOString(),
+          risk_analysis: riskAnalysis, // ✅ Incluir análise de risco no contexto
         },
         // ✅ IMUTÁVEL: Snapshots congelados no momento do trigger
         playbook_snapshot: playbookSnapshot,
         actions_snapshot: actionsSnapshot,
-        status: playbook.require_approval ? 'pending' : 'in_progress',
+        status: shouldAutoExecute ? 'in_progress' : 'pending',
+        // ✅ FASE 2: Novos campos de rastreio
+        auto_executed: shouldAutoExecute,
+        risk_score: riskAnalysis.risk_score,
+        triggered_by: triggeredBy,
       })
       .select('id')
       .single();
@@ -180,11 +218,11 @@ serve(async (req) => {
       throw execError;
     }
 
-    console.log(`[evaluate-playbook-triggers] Created execution ${execution.id} with immutable snapshots (v${playbook.version})`);
+    console.log(`[evaluate-playbook-triggers] Created execution ${execution.id} with immutable snapshots (v${playbook.version}), auto_executed=${shouldAutoExecute}, risk_score=${riskAnalysis.risk_score}`);
 
-    // Se não requer aprovação, executar automaticamente
-    if (!playbook.require_approval) {
-      console.log(`[evaluate-playbook-triggers] Auto-executing playbook ${playbook.name}`);
+    // Se deve auto-executar (baseado no motor de risco), executar automaticamente
+    if (shouldAutoExecute) {
+      console.log(`[evaluate-playbook-triggers] Risk-based auto-execution: ${playbook.name} (score: ${riskAnalysis.risk_score}, threshold: ${riskAnalysis.threshold})`);
       
       try {
         const executeUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/execute-playbook-action`;
@@ -201,7 +239,7 @@ serve(async (req) => {
       }
     }
 
-    // Log de segurança
+    // Log de segurança com informações de risco
     await supabase.from('security_logs').insert({
       tenant_id,
       ip_address: 'system',
@@ -218,6 +256,15 @@ serve(async (req) => {
         agent_id,
         require_approval: playbook.require_approval,
         snapshots_created: true,
+        // ✅ FASE 2: Adicionar dados de risco ao log
+        risk_analysis: {
+          risk_score: riskAnalysis.risk_score,
+          threshold: riskAnalysis.threshold,
+          decision_reason: riskAnalysis.decision_reason,
+          has_destructive_actions: riskAnalysis.has_destructive_actions,
+        },
+        auto_executed: shouldAutoExecute,
+        triggered_by: triggeredBy,
       },
     });
 
@@ -234,6 +281,10 @@ serve(async (req) => {
       },
       agent_info: agentInfo,
       snapshots_created: true,
+      // ✅ FASE 2: Incluir dados de risco na resposta
+      risk_analysis: riskAnalysis,
+      auto_executed: shouldAutoExecute,
+      triggered_by: triggeredBy,
       execution_time_ms: Date.now() - startTime,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
