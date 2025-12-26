@@ -221,6 +221,22 @@ export default function WebActivity() {
               </CardContent>
             </Card>
 
+            {!selectedAgent && (
+              <Card className="border-l-4 border-l-muted">
+                <CardContent className="py-12">
+                  <div className="text-center space-y-3">
+                    <Globe className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                    <div>
+                      <h3 className="font-medium text-lg">Selecione um computador</h3>
+                      <p className="text-muted-foreground text-sm">
+                        Escolha um computador acima para visualizar a atividade de navegação web.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {selectedAgent && (
               <>
             {/* Summary Cards */}
