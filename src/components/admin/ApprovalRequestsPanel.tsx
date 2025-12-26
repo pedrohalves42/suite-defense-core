@@ -53,11 +53,11 @@ export function ApprovalRequestsPanel({
   const hasMore = (requests?.length || 0) > maxItems;
 
   const handleApprove = (requestId: string) => {
-    submitApproval.mutate({ requestId, approved: true });
+    submitApproval.mutate({ requestId, decision: 'approved' });
   };
 
   const handleReject = (requestId: string, reason?: string) => {
-    submitApproval.mutate({ requestId, approved: false, reason });
+    submitApproval.mutate({ requestId, decision: 'rejected', reason });
   };
 
   const getTimeRemaining = (expiresAt: string) => {
@@ -125,7 +125,7 @@ export function ApprovalRequestsPanel({
             {pendingRequests.map((request, idx) => {
               const severity = ACTION_TYPE_SEVERITY[request.action_type as keyof typeof ACTION_TYPE_SEVERITY] || 'low';
               const timeRemaining = getTimeRemaining(request.expires_at);
-              const approvalProgress = (request.current_approvals / request.required_approvals) * 100;
+              const approvalProgress = (request.current_approvers / request.required_approvers) * 100;
 
               return (
                 <motion.div
@@ -168,7 +168,7 @@ export function ApprovalRequestsPanel({
                       <div className="flex items-center gap-2 mb-2">
                         <Progress value={approvalProgress} className="h-1.5 flex-1" />
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {request.current_approvals}/{request.required_approvals}
+                          {request.current_approvers}/{request.required_approvers}
                         </span>
                       </div>
 

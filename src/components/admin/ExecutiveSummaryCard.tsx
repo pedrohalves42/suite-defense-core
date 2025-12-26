@@ -45,7 +45,7 @@ export function ExecutiveSummaryCard() {
             Gere um resumo executivo com delta de risco, ameaças bloqueadas e custo evitado estimado.
           </p>
           <Button 
-            onClick={() => generateReport.mutate()}
+            onClick={() => generateReport.mutate(new Date().toISOString().split('T')[0])}
             disabled={generateReport.isPending}
           >
             {generateReport.isPending ? (
@@ -65,7 +65,7 @@ export function ExecutiveSummaryCard() {
     );
   }
 
-  const deltaInfo = getDeltaInfo(riskDelta.risk_delta);
+  const deltaInfo = getDeltaInfo(riskDelta.delta);
   const DeltaIcon = deltaInfo.icon === 'up' ? TrendingUp : 
                     deltaInfo.icon === 'down' ? TrendingDown : Minus;
 
@@ -90,7 +90,7 @@ export function ExecutiveSummaryCard() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => generateReport.mutate()}
+              onClick={() => generateReport.mutate(new Date().toISOString().split('T')[0])}
               disabled={generateReport.isPending}
             >
               <RefreshCw className={cn("h-4 w-4", generateReport.isPending && "animate-spin")} />
@@ -132,8 +132,8 @@ export function ExecutiveSummaryCard() {
                   deltaInfo.color === 'red' && "text-red-600",
                   deltaInfo.color === 'neutral' && "text-foreground"
                 )}>
-                  {riskDelta.risk_delta !== null ? (
-                    riskDelta.risk_delta > 0 ? `+${riskDelta.risk_delta}` : riskDelta.risk_delta
+                  {riskDelta.delta !== null ? (
+                    riskDelta.delta > 0 ? `+${riskDelta.delta}` : riskDelta.delta
                   ) : '—'}
                 </span>
                 <Badge variant="secondary" className="text-xs">
@@ -153,13 +153,13 @@ export function ExecutiveSummaryCard() {
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold text-orange-600">
-                  {riskDelta.threats_blocked_count ?? 0}
+                  {riskDelta.threats_blocked ?? 0}
                 </span>
                 <span className="text-xs text-muted-foreground">hoje</span>
               </div>
               {riskDelta.key_events && riskDelta.key_events.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                  {riskDelta.key_events[0]}
+                  {riskDelta.key_events[0].description}
                 </p>
               )}
             </div>
@@ -189,7 +189,7 @@ export function ExecutiveSummaryCard() {
                 {riskDelta.key_events.slice(0, 3).map((event, idx) => (
                   <li key={idx} className="text-xs text-muted-foreground flex items-start gap-2">
                     <span className="text-primary">•</span>
-                    {event}
+                    {event.description}
                   </li>
                 ))}
               </ul>
