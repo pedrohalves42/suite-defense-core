@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
         .from('software_inventory')
         .select('*')
         .eq('tenant_id', tenant_id)
-        .order('collected_at', { ascending: false })
+        .order('last_seen_at', { ascending: false })
         .limit(100)
       
       if (agent_id) softwareQuery.eq('agent_id', agent_id)
