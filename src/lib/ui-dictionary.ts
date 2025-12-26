@@ -106,6 +106,43 @@ export const UI_LABELS = {
     }
   },
 
+  // Dashboard humanized terms
+  dashboard: {
+    security_score: {
+      title: 'Nota de Segurança',
+      description: 'Essa nota mostra o quanto seus computadores estão protegidos',
+      calculating: 'Calculando...',
+      not_calculated: 'Nota ainda não calculada',
+      calculate_prompt: 'Clique para verificar a proteção da sua empresa'
+    },
+    protection_level: {
+      title: 'Nível de Proteção',
+      description: 'Mostra se sua empresa está seguindo as melhores práticas de segurança'
+    },
+    software_origin: {
+      title: 'Origem dos Programas',
+      description: 'Verifica se os programas instalados são originais e seguros'
+    },
+    active_licenses: {
+      title: 'Licenças Ativas',
+      description: 'Cada computador precisa de uma licença para ser protegido'
+    },
+    abuse_protection: {
+      title: 'Proteção contra Abusos',
+      description: 'Bloqueia tentativas suspeitas de acesso'
+    }
+  },
+
+  // Job status humanized
+  job_status: {
+    completed: { label: '✅ Concluído', description: 'Tarefa executada com sucesso' },
+    failed: { label: '❌ Erro', description: 'Tarefa falhou por um problema' },
+    failed_timeout: { label: '⏱️ Expirou', description: 'Tarefa não executada porque o computador estava desligado' },
+    delivered: { label: '🔄 Em andamento', description: 'Tarefa sendo executada' },
+    queued: { label: '⏳ Aguardando', description: 'Tarefa na fila' },
+    cancelled: { label: '🚫 Cancelado', description: 'Tarefa cancelada' }
+  },
+
   // Empty states with encouraging messages
   empty_states: {
     no_threats: {

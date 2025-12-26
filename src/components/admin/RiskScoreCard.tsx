@@ -40,20 +40,20 @@ export function RiskScoreCard() {
       <Card className="border-2 border-dashed border-muted-foreground/30">
         <CardContent className="py-6 text-center">
           <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Risk Score não calculado</h3>
+          <h3 className="text-lg font-medium mb-2">Nota de Segurança</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Calcule o nível de risco da sua empresa com base em todos os fatores de segurança.
+            Clique para verificar o nível de proteção da sua empresa.
           </p>
           <Button onClick={() => recalculate()} disabled={isRecalculating}>
             {isRecalculating ? (
               <>
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                Calculando...
+                Verificando...
               </>
             ) : (
               <>
                 <Shield className="h-4 w-4 mr-2" />
-                Calcular Risk Score
+                Verificar Proteção
               </>
             )}
           </Button>
@@ -136,11 +136,11 @@ export function RiskScoreCard() {
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Esse score resume a saúde de segurança da sua empresa
+                  Essa nota mostra o quanto seus computadores estão protegidos
                 </p>
                 {riskScore.previous_score !== null && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Score anterior: {riskScore.previous_score}/100
+                    Nota anterior: {riskScore.previous_score}/100
                   </p>
                 )}
               </div>
