@@ -5,6 +5,7 @@ import { useWebActivity } from '@/hooks/useWebActivity';
 import { useBlockedWebsites } from '@/hooks/useBlockedWebsites';
 import { useBlockedAttempts } from '@/hooks/useBlockedAttempts';
 import { useBlockedAttemptsRealtime } from '@/hooks/useBlockedAttemptsRealtime';
+import { useAgentGroups } from '@/hooks/useAgentGroups';
 import ThreatIntelligenceLookup from '@/components/admin/ThreatIntelligenceLookup';
 import { BlockedSitesStats } from '@/components/admin/BlockedSitesStats';
 import { AgentSyncStatusCard } from '@/components/admin/AgentSyncStatusCard';
@@ -17,6 +18,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
 import { 
   AlertCircle, 
   Globe, 
@@ -30,7 +32,8 @@ import {
   Shield,
   RefreshCw,
   ShieldX,
-  BarChart3
+  BarChart3,
+  Users
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatBrazilDateTime } from '@/lib/date-utils';
@@ -56,12 +59,14 @@ export default function WebActivity() {
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [domainToBlock, setDomainToBlock] = useState('');
   const [blockReason, setBlockReason] = useState('');
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [threatTarget, setThreatTarget] = useState('');
   const threatSectionRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<string>('activity');
   
   const { data: activity, isLoading, error } = useWebActivity(selectedAgent, !!selectedAgent);
   const { blockedWebsites, blockWebsite, unblockWebsite, isBlocked } = useBlockedWebsites();
+  const { groups } = useAgentGroups();
   const { attempts: blockedAttempts, todayStats: blockedStats, stats: fullStats, isLoading: attemptsLoading } = useBlockedAttempts({ 
     agentId: selectedAgent || undefined,
     limit: 500
@@ -137,6 +142,7 @@ export default function WebActivity() {
   const handleBlockSite = (domain: string) => {
     setDomainToBlock(domain);
     setBlockReason('');
+    setSelectedGroupId(null);
     setBlockDialogOpen(true);
   };
 
@@ -151,6 +157,7 @@ export default function WebActivity() {
     await blockWebsite.mutateAsync({
       domain_pattern: domainToBlock,
       reason: blockReason || undefined,
+      group_id: selectedGroupId,
     });
     setBlockDialogOpen(false);
   };
@@ -673,12 +680,14 @@ export default function WebActivity() {
               Bloquear Site
             </DialogTitle>
             <DialogDescription>
-              O domínio será bloqueado via arquivo hosts em todos os agentes do seu tenant.
+              {selectedGroupId 
+                ? 'O domínio será bloqueado apenas para os computadores do grupo selecionado.'
+                : 'O domínio será bloqueado em todos os computadores.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium">Domínio</label>
+              <Label className="text-sm font-medium">Domínio</Label>
               <Input 
                 value={domainToBlock} 
                 onChange={(e) => setDomainToBlock(e.target.value)}
@@ -689,7 +698,39 @@ export default function WebActivity() {
               </p>
             </div>
             <div>
-              <label className="text-sm font-medium">Motivo (opcional)</label>
+              <Label className="text-sm font-medium">Aplicar a</Label>
+              <Select 
+                value={selectedGroupId || 'all'} 
+                onValueChange={(value) => setSelectedGroupId(value === 'all' ? null : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o escopo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Todos os computadores
+                    </div>
+                  </SelectItem>
+                  {groups?.map((group) => (
+                    <SelectItem key={group.id} value={group.id}>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        {group.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {selectedGroupId 
+                  ? 'Apenas computadores deste grupo serão afetados'
+                  : 'Todos os computadores do tenant receberão este bloqueio'}
+              </p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Motivo (opcional)</Label>
               <Textarea
                 value={blockReason}
                 onChange={(e) => setBlockReason(e.target.value)}

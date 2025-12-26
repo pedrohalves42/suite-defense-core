@@ -11,11 +11,13 @@ export interface BlockedWebsite {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  group_id: string | null;
 }
 
 interface BlockWebsiteParams {
   domain_pattern: string;
   reason?: string;
+  group_id?: string | null; // If null, applies to all agents; if set, applies only to specified group
   autoSync?: boolean; // Auto-sync with online agents after blocking
 }
 
@@ -45,17 +47,23 @@ export function useBlockedWebsites() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('blocked_websites')
-        .select('*')
+        .select(`
+          *,
+          agent_groups:group_id (
+            id,
+            name
+          )
+        `)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as BlockedWebsite[];
+      return data as (BlockedWebsite & { agent_groups: { id: string; name: string } | null })[];
     },
   });
 
   const blockWebsite = useMutation({
-    mutationFn: async ({ domain_pattern, reason, autoSync = true }: BlockWebsiteParams) => {
+    mutationFn: async ({ domain_pattern, reason, group_id = null, autoSync = true }: BlockWebsiteParams) => {
       // Get current user's tenant_id
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user?.id) throw new Error('User not authenticated');
@@ -70,13 +78,20 @@ export function useBlockedWebsites() {
 
       const normalizedDomain = domain_pattern.toLowerCase().trim();
 
-      // Check if already exists (active or inactive)
-      const { data: existing } = await supabase
+      // Check if already exists (active or inactive) with same group
+      let existingQuery = supabase
         .from('blocked_websites')
         .select('id, is_active')
         .eq('tenant_id', userRole.tenant_id)
-        .eq('domain_pattern', normalizedDomain)
-        .maybeSingle();
+        .eq('domain_pattern', normalizedDomain);
+      
+      if (group_id) {
+        existingQuery = existingQuery.eq('group_id', group_id);
+      } else {
+        existingQuery = existingQuery.is('group_id', null);
+      }
+      
+      const { data: existing } = await existingQuery.maybeSingle();
 
       let result;
       if (existing) {
@@ -105,6 +120,7 @@ export function useBlockedWebsites() {
             reason: reason || null,
             blocked_by: userData.user.id,
             is_active: true,
+            group_id: group_id || null,
           })
           .select()
           .single();

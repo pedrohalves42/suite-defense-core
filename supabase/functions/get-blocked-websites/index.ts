@@ -80,12 +80,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fetch blocked websites for this tenant
-    const { data: blockedSites, error: blockedError } = await supabase
+    // Fetch agent's groups for group-based blocking
+    const { data: agentGroups } = await supabase
+      .from('agents_groups')
+      .select('group_id')
+      .eq('agent_id', agent.id);
+
+    const groupIds = agentGroups?.map(g => g.group_id) || [];
+    logger.info(`Agent ${agent.agent_name} belongs to ${groupIds.length} groups`);
+
+    // Fetch blocked websites for this tenant (global + agent's groups)
+    let blockedQuery = supabase
       .from('blocked_websites')
-      .select('domain_pattern, reason')
+      .select('domain_pattern, reason, group_id')
       .eq('tenant_id', agent.tenant_id)
       .eq('is_active', true);
+
+    // Fetch all active blocked sites - we'll filter in code for group logic
+    const { data: blockedSites, error: blockedError } = await blockedQuery;
 
     if (blockedError) {
       logger.error('Failed to fetch blocked websites', blockedError);
@@ -113,14 +125,20 @@ Deno.serve(async (req) => {
     // Build blocked_websites array with domain_pattern (format expected by agent)
     const blockedWebsites: Array<{ domain_pattern: string; reason: string | null }> = [];
     
-    // From blocked_websites table
+    // From blocked_websites table (filter by group: global OR agent's groups)
     if (blockedSites) {
       for (const site of blockedSites) {
         if (site.domain_pattern) {
-          blockedWebsites.push({
-            domain_pattern: site.domain_pattern,
-            reason: site.reason
-          });
+          // Include if: global (no group_id) OR agent belongs to this group
+          const isGlobal = !site.group_id;
+          const isInAgentGroup = site.group_id && groupIds.includes(site.group_id);
+          
+          if (isGlobal || isInAgentGroup) {
+            blockedWebsites.push({
+              domain_pattern: site.domain_pattern,
+              reason: site.reason
+            });
+          }
         }
       }
     }
