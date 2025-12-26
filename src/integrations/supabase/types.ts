@@ -4693,6 +4693,7 @@ export type Database = {
           agent_id: string | null
           auto_executed: boolean | null
           completed_at: string | null
+          dry_run: boolean | null
           evidence_ids: string[] | null
           executed_by: string | null
           id: string
@@ -4715,6 +4716,7 @@ export type Database = {
           agent_id?: string | null
           auto_executed?: boolean | null
           completed_at?: string | null
+          dry_run?: boolean | null
           evidence_ids?: string[] | null
           executed_by?: string | null
           id?: string
@@ -4737,6 +4739,7 @@ export type Database = {
           agent_id?: string | null
           auto_executed?: boolean | null
           completed_at?: string | null
+          dry_run?: boolean | null
           evidence_ids?: string[] | null
           executed_by?: string | null
           id?: string
@@ -5195,6 +5198,128 @@ export type Database = {
           },
           {
             foreignKeyName: "reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      risk_decision_log: {
+        Row: {
+          agent_id: string | null
+          context: Json | null
+          created_at: string
+          decision: string
+          decision_reason: string | null
+          dry_run: boolean | null
+          event_type: string
+          id: string
+          playbook_execution_id: string | null
+          playbook_id: string | null
+          playbook_name: string | null
+          risk_score: number
+          tenant_id: string
+          threshold: number
+        }
+        Insert: {
+          agent_id?: string | null
+          context?: Json | null
+          created_at?: string
+          decision: string
+          decision_reason?: string | null
+          dry_run?: boolean | null
+          event_type: string
+          id?: string
+          playbook_execution_id?: string | null
+          playbook_id?: string | null
+          playbook_name?: string | null
+          risk_score: number
+          tenant_id: string
+          threshold: number
+        }
+        Update: {
+          agent_id?: string | null
+          context?: Json | null
+          created_at?: string
+          decision?: string
+          decision_reason?: string | null
+          dry_run?: boolean | null
+          event_type?: string
+          id?: string
+          playbook_execution_id?: string | null
+          playbook_id?: string | null
+          playbook_name?: string | null
+          risk_score?: number
+          tenant_id?: string
+          threshold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_decision_log_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_decision_log_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_decision_log_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_decision_log_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_decision_log_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "risk_decision_log_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_decision_log_playbook_execution_id_fkey"
+            columns: ["playbook_execution_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_decision_log_playbook_id_fkey"
+            columns: ["playbook_id"]
+            isOneToOne: false
+            referencedRelation: "playbooks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_decision_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_decision_log_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_system_operations_summary"
@@ -6545,6 +6670,7 @@ export type Database = {
           created_at: string
           dns_local_filter_enabled: boolean | null
           enable_auto_quarantine: boolean | null
+          enable_dry_run_mode: boolean | null
           enable_email_alerts: boolean | null
           enable_webhook_alerts: boolean | null
           id: string
@@ -6563,6 +6689,7 @@ export type Database = {
           created_at?: string
           dns_local_filter_enabled?: boolean | null
           enable_auto_quarantine?: boolean | null
+          enable_dry_run_mode?: boolean | null
           enable_email_alerts?: boolean | null
           enable_webhook_alerts?: boolean | null
           id?: string
@@ -6581,6 +6708,7 @@ export type Database = {
           created_at?: string
           dns_local_filter_enabled?: boolean | null
           enable_auto_quarantine?: boolean | null
+          enable_dry_run_mode?: boolean | null
           enable_email_alerts?: boolean | null
           enable_webhook_alerts?: boolean | null
           id?: string
