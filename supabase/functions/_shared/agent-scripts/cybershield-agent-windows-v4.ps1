@@ -1,14 +1,22 @@
 <#
-    CyberShield Agent - Windows v4.1.8
+    CyberShield Agent - Windows v4.1.9
+    
+    v4.1.9: HASH CHAIN - Cryptographic Ledger
+    - NEW: Compute-ExecutionHash function for canonical execution hash
+    - NEW: Hash chain fields (execution_hash, previous_execution_hash, execution_index)
+    - NEW: execution_hash included in signed payload
+    - SECURITY: Immutable append-only ledger per agent
+    - SECURITY: Tamper detection via chain breaks
     
     v4.1.8: PROOF OF EXECUTION (PoE) - Result Signing
-    - NEW: ECDSA P-256 keypair generation (New-SigningKeyPair)
-    - NEW: Public key registration (Register-SigningKey)
-    - NEW: Result signature (Sign-ExecutionResult)
-    - NEW: Output hash computation (Compute-OutputHash)
-    - NEW: Signing keypair persistence in C:\CyberShield\keys\
-    - NEW: submit-job-result includes result_signature, signature_algorithm, output_hash
-    - NEW: Key rotation via heartbeat response (rotate_key=true)
+    - ECDSA P-256 keypair generation (New-SigningKeyPair)
+    - Public key registration (Register-SigningKey)
+    - Result signature (Sign-ExecutionResult)
+    - Output hash computation (Compute-OutputHash)
+    - Signing keypair persistence in C:\CyberShield\keys\
+    - submit-job-result includes result_signature, signature_algorithm, output_hash
+    - Key rotation via heartbeat response (rotate_key=true)
+    - SECURITY: Bidirectional trust - backend signs jobs, agent signs results
     - SECURITY: Bidirectional trust - backend signs jobs, agent signs results
     
     v4.1.7: PHASE 1 - PROCESS CONTROL
@@ -97,7 +105,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.1.8"
+    [string]$AgentVersion = "v4.1.9"
 )
 
 $ErrorActionPreference = "Stop"
@@ -541,13 +549,82 @@ function Compute-OutputHash {
     }
 }
 
+# ============================================
+#  v4.1.9: EXECUTION HASH CHAIN
+# ============================================
+function Compute-ExecutionHash {
+    <#
+    .SYNOPSIS
+        Computes SHA256 hash of execution for cryptographic ledger
+    .DESCRIPTION
+        Creates a canonical hash that chains to previous execution.
+        This enables tamper detection and immutable audit trail.
+        Canonical format includes: execution_id, agent_id, execution_index,
+        previous_execution_hash, job_id, nonce, output_hash, status
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ExecutionId,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$AgentId,
+        
+        [Parameter(Mandatory = $true)]
+        [int64]$ExecutionIndex,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$PreviousExecutionHash = "",
+        
+        [Parameter(Mandatory = $true)]
+        [string]$JobId,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$Nonce,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$OutputHash,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$Status
+    )
+    
+    try {
+        # Build canonical payload (alphabetically sorted keys for deterministic serialization)
+        $canonical = [ordered]@{
+            agent_id = $AgentId
+            execution_id = $ExecutionId
+            execution_index = $ExecutionIndex
+            job_id = $JobId
+            nonce = $Nonce
+            output_hash = $OutputHash
+            previous_execution_hash = $PreviousExecutionHash
+            status = $Status
+        }
+        $payloadJson = $canonical | ConvertTo-Json -Compress
+        
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($payloadJson)
+        $hashBytes = $sha256.ComputeHash($bytes)
+        $executionHash = [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+        
+        Write-Log "[HASH_CHAIN] Computed execution hash for index $ExecutionIndex (prev=$($PreviousExecutionHash.Substring(0, [Math]::Min(16, $PreviousExecutionHash.Length)))...)" "DEBUG"
+        
+        return $executionHash
+    }
+    catch {
+        Write-Log "[HASH_CHAIN] Error computing execution hash: $($_.Exception.Message)" "ERROR"
+        return ""
+    }
+}
+
 function Sign-ExecutionResult {
     <#
     .SYNOPSIS
         Signs the execution result with ECDSA P-256
     .DESCRIPTION
         Creates canonical payload and signs with agent's private key.
-        Canonical format: {"execution_id":"...","job_id":"...","nonce":"...","output_hash":"...","status":"..."}
+        v4.1.9: Now includes execution_hash in the signed payload for hash chain integrity.
+        Canonical format: {"execution_hash":"...","execution_id":"...","job_id":"...","nonce":"...","output_hash":"...","status":"..."}
     #>
     param(
         [Parameter(Mandatory = $true)]
@@ -566,12 +643,18 @@ function Sign-ExecutionResult {
         [string]$Status,
         
         [Parameter(Mandatory = $true)]
-        [string]$PrivateKeyBase64
+        [string]$PrivateKeyBase64,
+        
+        # v4.1.9: Hash chain field
+        [Parameter(Mandatory = $false)]
+        [string]$ExecutionHash = ""
     )
     
     try {
-        # Build canonical payload (sorted keys for deterministic serialization)
+        # Build canonical payload (alphabetically sorted keys for deterministic serialization)
+        # v4.1.9: Include execution_hash in the signed payload
         $canonical = [ordered]@{
+            execution_hash = $ExecutionHash
             execution_id = $ExecutionId
             job_id = $JobId
             nonce = $Nonce
@@ -580,7 +663,7 @@ function Sign-ExecutionResult {
         }
         $payloadJson = $canonical | ConvertTo-Json -Compress
         
-        Write-Log "[SIGNING] Signing result for job $JobId (exec=$($ExecutionId.Substring(0, 8))...)" "DEBUG"
+        Write-Log "[SIGNING] Signing result for job $JobId (exec=$($ExecutionId.Substring(0, 8))..., chain=$($ExecutionHash.Length -gt 0))" "DEBUG"
         
         # Import private key
         $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
@@ -593,7 +676,7 @@ function Sign-ExecutionResult {
         $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
         $signatureBase64 = [Convert]::ToBase64String($signatureBytes)
         
-        Write-Log "[SIGNING] Result signed successfully" "DEBUG"
+        Write-Log "[SIGNING] Result signed successfully (includes hash chain: $($ExecutionHash.Length -gt 0))" "DEBUG"
         return $signatureBase64
     }
     catch {
@@ -2718,7 +2801,7 @@ function Send-SystemMetrics {
 }
 
 # ============================================
-#  SUBMIT JOB RESULT (v4.1.8: PoE Signing)
+#  SUBMIT JOB RESULT (v4.1.9: Hash Chain)
 # ============================================
 function Submit-JobResult {
     param(
@@ -2746,13 +2829,41 @@ function Submit-JobResult {
         
         # v4.1.8: PoE fields
         [Parameter()]
-        [string]$Nonce = ""
+        [string]$Nonce = "",
+        
+        # v4.1.9: Hash chain fields
+        [Parameter()]
+        [string]$AgentId = "",
+        
+        [Parameter()]
+        [int64]$ExecutionIndex = 0,
+        
+        [Parameter()]
+        [string]$PreviousExecutionHash = ""
     )
 
     # v4.1.8: Compute output hash
     $outputHash = Compute-OutputHash -Output $Output
     
-    # v4.1.8: Sign the result if signing keypair is available
+    # v4.1.9: Compute execution hash for chain
+    $executionHash = ""
+    if ($Nonce -and $ExecutionId -and $AgentId) {
+        $executionHash = Compute-ExecutionHash `
+            -ExecutionId $ExecutionId `
+            -AgentId $AgentId `
+            -ExecutionIndex $ExecutionIndex `
+            -PreviousExecutionHash $PreviousExecutionHash `
+            -JobId $JobId `
+            -Nonce $Nonce `
+            -OutputHash $outputHash `
+            -Status $Status
+        
+        if ($executionHash) {
+            Write-Log "[HASH_CHAIN] Execution hash computed: $($executionHash.Substring(0, 16))..." "DEBUG"
+        }
+    }
+    
+    # v4.1.9: Sign the result including execution_hash
     $resultSignature = $null
     $signatureAlgorithm = $null
     
@@ -2763,11 +2874,12 @@ function Submit-JobResult {
             -Nonce $Nonce `
             -OutputHash $outputHash `
             -Status $Status `
-            -PrivateKeyBase64 $Global:SigningKeyPair.PrivateKey
+            -PrivateKeyBase64 $Global:SigningKeyPair.PrivateKey `
+            -ExecutionHash $executionHash
         
         if ($resultSignature) {
             $signatureAlgorithm = "ECDSA-P256-SHA256"
-            Write-Log "[JOB] Result signed (hash=$($outputHash.Substring(0, 16))...)" "DEBUG"
+            Write-Log "[JOB] Result signed with hash chain (output=$($outputHash.Substring(0, 16))..., exec=$($executionHash.Substring(0, [Math]::Min(16, $executionHash.Length)))...)" "DEBUG"
         }
     } elseif (-not $Nonce) {
         Write-Log "[JOB] No nonce provided - result will be unsigned" "DEBUG"
@@ -2776,24 +2888,28 @@ function Submit-JobResult {
     }
 
     $body = @{
-        job_id                 = $JobId
-        status                 = $Status
-        output                 = $Output
-        error_message          = $ErrorMessage
-        execution_time_seconds = $ExecutionTimeSeconds
-        started_at             = $StartedAt
-        agent_name             = $Global:AgentName
-        agent_version          = $Global:AgentVersion
-        execution_id           = $ExecutionId
+        job_id                    = $JobId
+        status                    = $Status
+        output                    = $Output
+        error_message             = $ErrorMessage
+        execution_time_seconds    = $ExecutionTimeSeconds
+        started_at                = $StartedAt
+        agent_name                = $Global:AgentName
+        agent_version             = $Global:AgentVersion
+        execution_id              = $ExecutionId
         # v4.1.8: PoE fields
-        nonce                  = $Nonce
-        output_hash            = $outputHash
-        result_signature       = $resultSignature
-        signature_algorithm    = $signatureAlgorithm
+        nonce                     = $Nonce
+        output_hash               = $outputHash
+        result_signature          = $resultSignature
+        signature_algorithm       = $signatureAlgorithm
+        # v4.1.9: Hash chain fields
+        execution_hash            = $executionHash
+        previous_execution_hash   = $PreviousExecutionHash
+        execution_index           = $ExecutionIndex
     }
 
-    $signedStatus = if ($resultSignature) { "signed" } else { "unsigned" }
-    Write-Log "[JOB] Enviando resultado para job $JobId (status=$Status, exec_id=$ExecutionId, $signedStatus)" "INFO"
+    $signedStatus = if ($resultSignature) { "signed+chained" } else { "unsigned" }
+    Write-Log "[JOB] Enviando resultado para job $JobId (status=$Status, exec_id=$ExecutionId, idx=$ExecutionIndex, $signedStatus)" "INFO"
 
     try {
         $result = Invoke-SecureRequest `
@@ -2803,7 +2919,7 @@ function Submit-JobResult {
             -TimeoutSec 30
 
         if ($result.Success -and $result.StatusCode -eq 200) {
-            Write-Log "[JOB] Resultado enviado com sucesso" "SUCCESS"
+            Write-Log "[JOB] Resultado enviado com sucesso (chain idx=$ExecutionIndex)" "SUCCESS"
             return $true
         } else {
             Write-Log "[JOB] Falha ao enviar resultado: $($result.StatusCode)" "ERROR"
@@ -2817,7 +2933,7 @@ function Submit-JobResult {
 }
 
 # ============================================
-#  EXECUTE JOB (IDEMPOTENTE COM EXECUTION_ID) - v4.1.8: PoE
+#  EXECUTE JOB (IDEMPOTENTE COM EXECUTION_ID) - v4.1.9: Hash Chain
 # ============================================
 function Execute-Job {
     param(
@@ -2863,19 +2979,26 @@ function Execute-Job {
     $executionId = if ($Job.execution_id) { $Job.execution_id } else { "exec-$(New-Guid)" }
     # v4.1.8: Capture nonce from claim for result signing
     $nonce = if ($Job.nonce) { $Job.nonce } else { "" }
+    # v4.1.9: Capture hash chain fields from claim
+    $agentId = if ($Job.agent_id) { $Job.agent_id } else { "" }
+    $executionIndex = if ($Job.execution_index) { [int64]$Job.execution_index } else { 0 }
+    $previousExecutionHash = if ($Job.previous_execution_hash) { $Job.previous_execution_hash } else { "" }
+    
     $startTime = Get-Date
 
-    Write-Log "[JOB] Executando job $jobId (type=$jobType, exec_id=$executionId, nonce=$($nonce.Length) chars)" "INFO"
+    Write-Log "[JOB] Executando job $jobId (type=$jobType, exec_id=$executionId, idx=$executionIndex, nonce=$($nonce.Length) chars)" "INFO"
 
     # Registrar inicio da execucao
     Add-EvidenceEntry -Type "job_execution" -Data @{
         job_id = $jobId
         job_type = $jobType
         execution_id = $executionId
+        execution_index = $executionIndex
         phase = "started"
         state = Get-AgentState
         signature_verified = $true
         has_nonce = (-not [string]::IsNullOrEmpty($nonce))
+        has_chain_context = (-not [string]::IsNullOrEmpty($previousExecutionHash) -or $executionIndex -gt 0)
     } -Severity "info"
 
     try {
@@ -2985,12 +3108,13 @@ function Execute-Job {
             job_id = $jobId
             job_type = $jobType
             execution_id = $executionId
+            execution_index = $executionIndex
             phase = "completed"
             execution_time_seconds = $execTime
             state = Get-AgentState
         } -Severity "info"
 
-        # v4.1.8: Pass nonce for result signing
+        # v4.1.9: Pass hash chain fields for result signing
         Submit-JobResult `
             -JobId $jobId `
             -Status "completed" `
@@ -2998,7 +3122,10 @@ function Execute-Job {
             -ExecutionTimeSeconds $execTime `
             -StartedAt $startTimeISO `
             -ExecutionId $executionId `
-            -Nonce $nonce
+            -Nonce $nonce `
+            -AgentId $agentId `
+            -ExecutionIndex $executionIndex `
+            -PreviousExecutionHash $previousExecutionHash
     }
     catch {
         $err = "Erro ao executar job $jobId`: $($_.Exception.Message)"
@@ -3012,13 +3139,14 @@ function Execute-Job {
             job_id = $jobId
             job_type = $jobType
             execution_id = $executionId
+            execution_index = $executionIndex
             phase = "failed"
             error = $_.Exception.Message
             execution_time_seconds = $execTime
             state = Get-AgentState
         } -Severity "error"
 
-        # v4.1.8: Pass nonce for result signing
+        # v4.1.9: Pass hash chain fields for result signing
         Submit-JobResult `
             -JobId $jobId `
             -Status "failed" `
@@ -3026,7 +3154,10 @@ function Execute-Job {
             -ExecutionTimeSeconds $execTime `
             -StartedAt $startTimeISO `
             -ExecutionId $executionId `
-            -Nonce $nonce
+            -Nonce $nonce `
+            -AgentId $agentId `
+            -ExecutionIndex $executionIndex `
+            -PreviousExecutionHash $previousExecutionHash
         
         # Considerar transicao para DEGRADED se muitas falhas
         if ($Global:AgentState.ErrorCount -ge 3) {
