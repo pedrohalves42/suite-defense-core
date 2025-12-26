@@ -36,6 +36,8 @@ export async function verifyResultSignature(
     nonce: string
     outputHash: string
     status: string
+    // v4.1.9: Hash chain field
+    executionHash?: string
   },
   signatureBase64: string,
   signatureAlgorithm: string = 'ECDSA-P256-SHA256'
@@ -50,6 +52,7 @@ export async function verifyResultSignature(
       jobId: payload.jobId,
       executionId: payload.executionId,
       algorithm: signatureAlgorithm,
+      hasExecutionHash: !!payload.executionHash,
       payloadPreview: canonicalPayload.substring(0, 100) + '...'
     })
 
@@ -130,6 +133,7 @@ export async function verifyResultSignature(
 /**
  * Builds the canonical payload string that the agent should have signed
  * Format: JSON with sorted keys for deterministic serialization
+ * v4.1.9: Now includes execution_hash for hash chain support
  */
 function buildCanonicalPayload(payload: {
   jobId: string
@@ -137,9 +141,12 @@ function buildCanonicalPayload(payload: {
   nonce: string
   outputHash: string
   status: string
+  executionHash?: string
 }): string {
   // Create a deterministic JSON representation
+  // v4.1.9: Include execution_hash in canonical payload (alphabetically sorted)
   const canonicalObj = {
+    execution_hash: payload.executionHash || '',
     execution_id: payload.executionId,
     job_id: payload.jobId,
     nonce: payload.nonce,

@@ -721,7 +721,9 @@ Deno.serve(async (req) => {
             executionId: execution_id,
             nonce: nonce,
             outputHash: outputHash || '',
-            status: status
+            status: status,
+            // v4.1.9: Include execution_hash in signature verification
+            executionHash: execution_hash || ''
           },
           result_signature,
           signature_algorithm || 'ECDSA-P256-SHA256'
