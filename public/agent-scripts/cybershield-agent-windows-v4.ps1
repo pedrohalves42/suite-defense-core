@@ -1,20 +1,22 @@
 <#
-    CyberShield Agent - Windows v4.1.7
+    CyberShield Agent - Windows v4.1.8
+    
+    v4.1.8: PROOF OF EXECUTION (PoE) - Result Signing
+    - NEW: ECDSA P-256 keypair generation (New-SigningKeyPair)
+    - NEW: Public key registration (Register-SigningKey)
+    - NEW: Result signature (Sign-ExecutionResult)
+    - NEW: Output hash computation (Compute-OutputHash)
+    - NEW: Signing keypair persistence in C:\CyberShield\keys\
+    - NEW: submit-job-result includes result_signature, signature_algorithm, output_hash
+    - NEW: Key rotation via heartbeat response (rotate_key=true)
+    - SECURITY: Bidirectional trust - backend signs jobs, agent signs results
     
     v4.1.7: PHASE 1 - PROCESS CONTROL
-    - NEW: kill_process handler - Terminate processes by name
-    - NEW: stop_service handler - Stop Windows services  
-    - NEW: disable_service handler - Stop + disable startup type
-    - SECURITY: Protected processes/services lists (defense in depth)
-    - SECURITY: Agent-side validation prevents killing critical system processes
+    - kill_process, stop_service, disable_service handlers
+    - Protected processes/services lists (defense in depth)
     
     v4.1.6: CAPABILITY-BASED SECURITY + VERSION TRUTH
-    - Ed25519 capability detection (Test-Ed25519Support)
-    - Audit-only mode for PowerShell 5.1 without Ed25519 support
-    - Fixed hardcoded version strings (all use $Global:AgentVersion)
-    - Agent Self-Test (Invoke-AgentSelfTest) at startup
-    - Post-update version validation
-    - Capability flags in heartbeat (ed25519_supported, signature_mode)
+    - Ed25519 capability detection, audit-only mode for PS 5.1
     
     v4.1.5: Fix ParserError - orphan catch block causing ExitCode 1
     v4.1.4: Fix MissingCatchOrFinally in Verify-Ed25519Signature
@@ -95,7 +97,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.1.7"
+    [string]$AgentVersion = "v4.1.8"
 )
 
 $ErrorActionPreference = "Stop"
@@ -276,6 +278,355 @@ function Test-Ed25519Support {
 # v4.1.6: Global capability flags
 $Global:Ed25519Supported = Test-Ed25519Support
 $Global:StrictSignatureMode = $Global:Ed25519Supported
+
+# v4.1.8: Global signing keypair (initialized at bootstrap)
+$Global:SigningKeyPair = $null
+
+# ============================================
+#  v4.1.8: ECDSA P-256 RESULT SIGNING
+# ============================================
+# Proof of Execution (PoE) - Agents sign results with ECDSA P-256
+# Backend verifies signature to ensure result authenticity
+# Keys stored securely in C:\CyberShield\keys\
+
+$Global:SigningKeysDir = Join-Path $Global:BaseDir "keys"
+
+function New-SigningKeyPair {
+    <#
+    .SYNOPSIS
+        Generates a new ECDSA P-256 keypair for result signing
+    .DESCRIPTION
+        Uses .NET ECDsa to generate P-256 keypair.
+        Returns hashtable with PublicKey (Base64 SPKI), PrivateKey (Base64 PKCS8), Fingerprint (SHA256 hex)
+    #>
+    try {
+        Write-Log "[SIGNING] Generating new ECDSA P-256 keypair..." "INFO"
+        
+        $ecdsa = [System.Security.Cryptography.ECDsa]::Create([System.Security.Cryptography.ECCurve]::NamedCurves.nistP256)
+        
+        # Export keys
+        $publicKeyBytes = $ecdsa.ExportSubjectPublicKeyInfo()
+        $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
+        
+        $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+        $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
+        
+        # Calculate fingerprint (SHA256 of public key)
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        $fingerprintBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($publicKeyBase64))
+        $fingerprint = [BitConverter]::ToString($fingerprintBytes).Replace("-", "").ToLower()
+        
+        Write-Log "[SIGNING] Generated keypair with fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
+        
+        return @{
+            PublicKey = $publicKeyBase64
+            PrivateKey = $privateKeyBase64
+            Fingerprint = $fingerprint
+            Algorithm = "ECDSA-P256-SHA256"
+            GeneratedAt = (Get-Date).ToUniversalTime().ToString("o")
+        }
+    }
+    catch {
+        Write-Log "[SIGNING] Error generating keypair: $($_.Exception.Message)" "ERROR"
+        return $null
+    }
+}
+
+function Save-SigningKeyPair {
+    <#
+    .SYNOPSIS
+        Persists signing keypair to secure storage
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$KeyPair
+    )
+    
+    try {
+        # Create keys directory if not exists
+        if (-not (Test-Path $Global:SigningKeysDir)) {
+            New-Item -ItemType Directory -Path $Global:SigningKeysDir -Force | Out-Null
+        }
+        
+        # Set restrictive ACL on directory (SYSTEM and Administrators only)
+        $acl = Get-Acl $Global:SigningKeysDir
+        $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance
+        
+        $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "NT AUTHORITY\SYSTEM", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
+        )
+        $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "BUILTIN\Administrators", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
+        )
+        
+        $acl.AddAccessRule($systemRule)
+        $acl.AddAccessRule($adminRule)
+        Set-Acl $Global:SigningKeysDir $acl -ErrorAction SilentlyContinue
+        
+        # Save private key
+        $privKeyPath = Join-Path $Global:SigningKeysDir "signing_key.priv"
+        $KeyPair.PrivateKey | Out-File -FilePath $privKeyPath -Encoding UTF8 -Force
+        
+        # Save public key
+        $pubKeyPath = Join-Path $Global:SigningKeysDir "signing_key.pub"
+        $KeyPair.PublicKey | Out-File -FilePath $pubKeyPath -Encoding UTF8 -Force
+        
+        # Save metadata
+        $metaPath = Join-Path $Global:SigningKeysDir "signing_key.meta"
+        @{
+            fingerprint = $KeyPair.Fingerprint
+            algorithm = $KeyPair.Algorithm
+            generated_at = $KeyPair.GeneratedAt
+            version = 1
+        } | ConvertTo-Json | Out-File -FilePath $metaPath -Encoding UTF8 -Force
+        
+        Write-Log "[SIGNING] Keypair saved to $Global:SigningKeysDir" "INFO"
+        return $true
+    }
+    catch {
+        Write-Log "[SIGNING] Error saving keypair: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
+function Load-SigningKeyPair {
+    <#
+    .SYNOPSIS
+        Loads existing signing keypair from storage
+    #>
+    try {
+        $privKeyPath = Join-Path $Global:SigningKeysDir "signing_key.priv"
+        $pubKeyPath = Join-Path $Global:SigningKeysDir "signing_key.pub"
+        $metaPath = Join-Path $Global:SigningKeysDir "signing_key.meta"
+        
+        if (-not (Test-Path $privKeyPath) -or -not (Test-Path $pubKeyPath) -or -not (Test-Path $metaPath)) {
+            return $null
+        }
+        
+        $privateKey = Get-Content $privKeyPath -Raw -Encoding UTF8
+        $publicKey = Get-Content $pubKeyPath -Raw -Encoding UTF8
+        $metadata = Get-Content $metaPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        
+        return @{
+            PublicKey = $publicKey.Trim()
+            PrivateKey = $privateKey.Trim()
+            Fingerprint = $metadata.fingerprint
+            Algorithm = $metadata.algorithm
+            GeneratedAt = $metadata.generated_at
+            Version = $metadata.version
+        }
+    }
+    catch {
+        Write-Log "[SIGNING] Error loading keypair: $($_.Exception.Message)" "WARN"
+        return $null
+    }
+}
+
+function Register-SigningKey {
+    <#
+    .SYNOPSIS
+        Registers the public key with the backend
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PublicKey,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$Fingerprint,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$Algorithm = "ECDSA-P256-SHA256"
+    )
+    
+    try {
+        Write-Log "[SIGNING] Registering public key with backend..." "INFO"
+        
+        $body = @{
+            public_key = $PublicKey
+            key_fingerprint = $Fingerprint
+            algorithm = $Algorithm
+        }
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/register-agent-key" `
+            -Method "POST" `
+            -Body $body `
+            -TimeoutSec 30
+        
+        if ($result.Success -and ($result.StatusCode -eq 200 -or $result.StatusCode -eq 201)) {
+            $response = $result.Content | ConvertFrom-Json
+            Write-Log "[SIGNING] Key registered successfully (version=$($response.version))" "SUCCESS"
+            
+            Add-EvidenceEntry -Type "key_registration" -Data @{
+                fingerprint = $Fingerprint.Substring(0, 16) + "..."
+                version = $response.version
+                algorithm = $Algorithm
+            } -Severity "info"
+            
+            return @{ success = $true; version = $response.version; key_id = $response.key_id }
+        } else {
+            Write-Log "[SIGNING] Key registration failed: HTTP $($result.StatusCode)" "ERROR"
+            return @{ success = $false; error = "HTTP $($result.StatusCode)" }
+        }
+    }
+    catch {
+        Write-Log "[SIGNING] Error registering key: $($_.Exception.Message)" "ERROR"
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+function Get-SigningKeyPair {
+    <#
+    .SYNOPSIS
+        Gets the signing keypair, generating and registering if needed
+    #>
+    # Try to load existing keypair
+    $keyPair = Load-SigningKeyPair
+    
+    if ($null -ne $keyPair) {
+        Write-Log "[SIGNING] Loaded existing keypair (fingerprint=$($keyPair.Fingerprint.Substring(0, 16))...)" "INFO"
+        return $keyPair
+    }
+    
+    # Generate new keypair
+    $keyPair = New-SigningKeyPair
+    if ($null -eq $keyPair) {
+        Write-Log "[SIGNING] Failed to generate signing keypair" "ERROR"
+        return $null
+    }
+    
+    # Save to disk
+    $saved = Save-SigningKeyPair -KeyPair $keyPair
+    if (-not $saved) {
+        Write-Log "[SIGNING] Failed to save keypair (continuing with ephemeral key)" "WARN"
+    }
+    
+    # Register with backend
+    $regResult = Register-SigningKey -PublicKey $keyPair.PublicKey -Fingerprint $keyPair.Fingerprint
+    if (-not $regResult.success) {
+        Write-Log "[SIGNING] Failed to register key with backend (will retry later)" "WARN"
+    }
+    
+    return $keyPair
+}
+
+function Compute-OutputHash {
+    <#
+    .SYNOPSIS
+        Computes SHA256 hash of job output
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        $Output
+    )
+    
+    try {
+        $content = ""
+        if ($null -eq $Output -or $Output -eq "") {
+            $content = ""
+        } elseif ($Output -is [string]) {
+            $content = $Output
+        } else {
+            $content = $Output | ConvertTo-Json -Compress -Depth 10
+        }
+        
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($content)
+        $hashBytes = $sha256.ComputeHash($bytes)
+        return [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+    }
+    catch {
+        Write-Log "[SIGNING] Error computing output hash: $($_.Exception.Message)" "WARN"
+        return ""
+    }
+}
+
+function Sign-ExecutionResult {
+    <#
+    .SYNOPSIS
+        Signs the execution result with ECDSA P-256
+    .DESCRIPTION
+        Creates canonical payload and signs with agent's private key.
+        Canonical format: {"execution_id":"...","job_id":"...","nonce":"...","output_hash":"...","status":"..."}
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ExecutionId,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$JobId,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$Nonce,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$OutputHash,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$Status,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$PrivateKeyBase64
+    )
+    
+    try {
+        # Build canonical payload (sorted keys for deterministic serialization)
+        $canonical = [ordered]@{
+            execution_id = $ExecutionId
+            job_id = $JobId
+            nonce = $Nonce
+            output_hash = $OutputHash
+            status = $Status
+        }
+        $payloadJson = $canonical | ConvertTo-Json -Compress
+        
+        Write-Log "[SIGNING] Signing result for job $JobId (exec=$($ExecutionId.Substring(0, 8))...)" "DEBUG"
+        
+        # Import private key
+        $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
+        $privateKeyBytes = [Convert]::FromBase64String($PrivateKeyBase64)
+        $bytesRead = 0
+        $ecdsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$bytesRead)
+        
+        # Sign the payload
+        $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($payloadJson)
+        $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+        $signatureBase64 = [Convert]::ToBase64String($signatureBytes)
+        
+        Write-Log "[SIGNING] Result signed successfully" "DEBUG"
+        return $signatureBase64
+    }
+    catch {
+        Write-Log "[SIGNING] Error signing result: $($_.Exception.Message)" "ERROR"
+        return $null
+    }
+}
+
+function Initialize-SigningKeyPair {
+    <#
+    .SYNOPSIS
+        Initializes the signing keypair at agent startup
+    #>
+    try {
+        $Global:SigningKeyPair = Get-SigningKeyPair
+        
+        if ($null -eq $Global:SigningKeyPair) {
+            Write-Log "[SIGNING] WARNING: Could not initialize signing keypair - results will be unsigned" "WARN"
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "signing_key_unavailable"
+                reason = "Failed to generate or load ECDSA keypair"
+            } -Severity "warning"
+            return $false
+        }
+        
+        Write-Log "[SIGNING] Signing keypair initialized (fingerprint=$($Global:SigningKeyPair.Fingerprint.Substring(0, 16))...)" "SUCCESS"
+        return $true
+    }
+    catch {
+        Write-Log "[SIGNING] Error initializing signing keypair: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
 
 # ============================================
 #  v4.1.6: AGENT SELF-TEST
@@ -2072,28 +2423,38 @@ function Send-Heartbeat {
         if ($result.Success -and $result.StatusCode -eq 200) {
             Write-Log "[HEARTBEAT] OK (200)" "SUCCESS"
             
-            # FASE VIKTOR: Processar force_update no response do heartbeat
-            # Isso bypassa o job system e funciona com QUALQUER versao de agente
             try {
                 $response = $result.Body | ConvertFrom-Json
                 
+                # v4.1.8: Handle key rotation request
+                if ($response.rotate_key -eq $true) {
+                    Write-Log "[SIGNING] Backend requested key rotation!" "WARN"
+                    
+                    $newKeyPair = New-SigningKeyPair
+                    if ($null -ne $newKeyPair) {
+                        $regResult = Register-SigningKey -PublicKey $newKeyPair.PublicKey -Fingerprint $newKeyPair.Fingerprint
+                        if ($regResult.success) {
+                            Save-SigningKeyPair -KeyPair $newKeyPair
+                            $Global:SigningKeyPair = $newKeyPair
+                            Write-Log "[SIGNING] Key rotation completed successfully" "SUCCESS"
+                        }
+                    }
+                }
+                
+                # FASE VIKTOR: Processar force_update no response do heartbeat
                 if ($response.force_update -eq $true) {
                     Write-Log "[FORCE UPDATE] Update forcado detectado via heartbeat!" "WARN"
                     Write-Log "[FORCE UPDATE] Target version: $($response.target_version)" "INFO"
                     
-                    # Aplicar force update imediatamente
                     $updateResult = Apply-ForcedUpdate -Response $response
                     
                     if ($updateResult.success) {
-                        # Se chegou aqui, agente vai reiniciar - nao retorna
                         return $true
                     } else {
                         Write-Log "[FORCE UPDATE] Falha ao aplicar: $($updateResult.error)" "ERROR"
-                        # Continua operando normalmente mesmo com falha no force update
                     }
                 }
             } catch {
-                # Erro ao processar response nao deve quebrar o heartbeat
                 Write-Log "[HEARTBEAT] Erro ao processar response: $($_.Exception.Message)" "WARN"
             }
             
@@ -2357,7 +2718,7 @@ function Send-SystemMetrics {
 }
 
 # ============================================
-#  SUBMIT JOB RESULT
+#  SUBMIT JOB RESULT (v4.1.8: PoE Signing)
 # ============================================
 function Submit-JobResult {
     param(
@@ -2381,8 +2742,38 @@ function Submit-JobResult {
         [string]$StartedAt = "",
         
         [Parameter()]
-        [string]$ExecutionId = ""
+        [string]$ExecutionId = "",
+        
+        # v4.1.8: PoE fields
+        [Parameter()]
+        [string]$Nonce = ""
     )
+
+    # v4.1.8: Compute output hash
+    $outputHash = Compute-OutputHash -Output $Output
+    
+    # v4.1.8: Sign the result if signing keypair is available
+    $resultSignature = $null
+    $signatureAlgorithm = $null
+    
+    if ($null -ne $Global:SigningKeyPair -and $Global:SigningKeyPair.PrivateKey -and $Nonce) {
+        $resultSignature = Sign-ExecutionResult `
+            -ExecutionId $ExecutionId `
+            -JobId $JobId `
+            -Nonce $Nonce `
+            -OutputHash $outputHash `
+            -Status $Status `
+            -PrivateKeyBase64 $Global:SigningKeyPair.PrivateKey
+        
+        if ($resultSignature) {
+            $signatureAlgorithm = "ECDSA-P256-SHA256"
+            Write-Log "[JOB] Result signed (hash=$($outputHash.Substring(0, 16))...)" "DEBUG"
+        }
+    } elseif (-not $Nonce) {
+        Write-Log "[JOB] No nonce provided - result will be unsigned" "DEBUG"
+    } elseif ($null -eq $Global:SigningKeyPair) {
+        Write-Log "[JOB] No signing keypair - result will be unsigned" "WARN"
+    }
 
     $body = @{
         job_id                 = $JobId
@@ -2394,9 +2785,15 @@ function Submit-JobResult {
         agent_name             = $Global:AgentName
         agent_version          = $Global:AgentVersion
         execution_id           = $ExecutionId
+        # v4.1.8: PoE fields
+        nonce                  = $Nonce
+        output_hash            = $outputHash
+        result_signature       = $resultSignature
+        signature_algorithm    = $signatureAlgorithm
     }
 
-    Write-Log "[JOB] Enviando resultado para job $JobId (status=$Status, exec_id=$ExecutionId)" "INFO"
+    $signedStatus = if ($resultSignature) { "signed" } else { "unsigned" }
+    Write-Log "[JOB] Enviando resultado para job $JobId (status=$Status, exec_id=$ExecutionId, $signedStatus)" "INFO"
 
     try {
         $result = Invoke-SecureRequest `
@@ -2420,7 +2817,7 @@ function Submit-JobResult {
 }
 
 # ============================================
-#  EXECUTE JOB (IDEMPOTENTE COM EXECUTION_ID)
+#  EXECUTE JOB (IDEMPOTENTE COM EXECUTION_ID) - v4.1.8: PoE
 # ============================================
 function Execute-Job {
     param(
@@ -2446,7 +2843,7 @@ function Execute-Job {
     # SSA-004: Verify job signature BEFORE execution
     $signatureValid = Verify-JobSignature -Job $Job
     if (-not $signatureValid) {
-        Write-Log "[SECURITY] ❌ BLOCKED: Job $($Job.id) rejected due to invalid/missing signature" "ERROR"
+        Write-Log "[SECURITY] BLOCKED: Job $($Job.id) rejected due to invalid/missing signature" "ERROR"
         
         # Submit rejection result to backend
         Submit-JobResult `
@@ -2462,10 +2859,13 @@ function Execute-Job {
 
     $jobId = $Job.id
     $jobType = $Job.type
-    $executionId = "exec-$(New-Guid)"
+    # v4.1.8: Use execution_id from claim if provided, otherwise generate locally
+    $executionId = if ($Job.execution_id) { $Job.execution_id } else { "exec-$(New-Guid)" }
+    # v4.1.8: Capture nonce from claim for result signing
+    $nonce = if ($Job.nonce) { $Job.nonce } else { "" }
     $startTime = Get-Date
 
-    Write-Log "[JOB] Executando job $jobId (type=$jobType, exec_id=$executionId)" "INFO"
+    Write-Log "[JOB] Executando job $jobId (type=$jobType, exec_id=$executionId, nonce=$($nonce.Length) chars)" "INFO"
 
     # Registrar inicio da execucao
     Add-EvidenceEntry -Type "job_execution" -Data @{
@@ -2475,6 +2875,7 @@ function Execute-Job {
         phase = "started"
         state = Get-AgentState
         signature_verified = $true
+        has_nonce = (-not [string]::IsNullOrEmpty($nonce))
     } -Severity "info"
 
     try {
@@ -2589,13 +2990,15 @@ function Execute-Job {
             state = Get-AgentState
         } -Severity "info"
 
+        # v4.1.8: Pass nonce for result signing
         Submit-JobResult `
             -JobId $jobId `
             -Status "completed" `
             -Output $output `
             -ExecutionTimeSeconds $execTime `
             -StartedAt $startTimeISO `
-            -ExecutionId $executionId
+            -ExecutionId $executionId `
+            -Nonce $nonce
     }
     catch {
         $err = "Erro ao executar job $jobId`: $($_.Exception.Message)"
@@ -2615,13 +3018,15 @@ function Execute-Job {
             state = Get-AgentState
         } -Severity "error"
 
+        # v4.1.8: Pass nonce for result signing
         Submit-JobResult `
             -JobId $jobId `
             -Status "failed" `
             -ErrorMessage $err `
             -ExecutionTimeSeconds $execTime `
             -StartedAt $startTimeISO `
-            -ExecutionId $executionId
+            -ExecutionId $executionId `
+            -Nonce $nonce
         
         # Considerar transicao para DEGRADED se muitas falhas
         if ($Global:AgentState.ErrorCount -ge 3) {
@@ -4224,6 +4629,15 @@ function Poll-Jobs {
 # ============================================
 Invoke-BootstrapValidation
 
+# v4.1.8: Initialize signing keypair for PoE
+Write-Host "[BOOTSTRAP] Initializing signing keypair for Proof of Execution..." -ForegroundColor Cyan
+$signingKeyInitialized = Initialize-SigningKeyPair
+if ($signingKeyInitialized) {
+    Write-Host "[BOOTSTRAP] Signing keypair initialized successfully" -ForegroundColor Green
+} else {
+    Write-Host "[BOOTSTRAP] WARNING: Signing keypair not available - results will be unsigned" -ForegroundColor Yellow
+}
+
 # ============================================
 #  LOOP PRINCIPAL
 # ============================================
@@ -4233,6 +4647,7 @@ Write-Log "[INFO] ServerUrl: $Global:ServerUrl" "DEBUG"
 Write-Log "[INFO] AgentName: $Global:AgentName" "DEBUG"
 Write-Log "[INFO] Ed25519 Supported: $($Global:Ed25519Supported)" "DEBUG"
 Write-Log "[INFO] Signature Mode: $(if ($Global:StrictSignatureMode) { 'strict' } else { 'audit_only' })" "DEBUG"
+Write-Log "[INFO] Signing Key: $(if ($Global:SigningKeyPair) { $Global:SigningKeyPair.Fingerprint.Substring(0, 16) + '...' } else { 'NOT AVAILABLE' })" "DEBUG"
 Write-Log "============================================" "INFO"
 
 # Registrar inicio no Evidence Journal
@@ -4240,7 +4655,8 @@ Add-EvidenceEntry -Type "state_change" -Data @{
     event = "agent_started"
     version = $Global:AgentVersion
     hostname = $env:COMPUTERNAME
-    features = @("state_machine", "evidence_journal", "dns_filter", "policy_contract")
+    features = @("state_machine", "evidence_journal", "dns_filter", "policy_contract", "poe_signing")
+    signing_key_available = ($null -ne $Global:SigningKeyPair)
 } -StateBefore $null -StateAfter "BOOTSTRAP" -Severity "info"
 
 try {
