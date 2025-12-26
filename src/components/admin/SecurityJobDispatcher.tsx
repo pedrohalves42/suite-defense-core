@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Shield, Package, AlertTriangle, Activity, Loader2 } from "lucide-react";
+import { prepareJobForInsert } from "@/lib/job-utils";
 import {
   Select,
   SelectContent,
@@ -50,17 +51,19 @@ export function SecurityJobDispatcher({ agents }: { agents: Agent[] }) {
       if (!userRole) throw new Error("Tenant não encontrado");
 
       // Create job
+      const jobData = await prepareJobForInsert({
+        tenant_id: userRole.tenant_id,
+        agent_id: selectedAgentId,
+        agent_name: agent.agent_name,
+        type: jobType,
+        status: 'queued',
+        payload: {},
+        approved: true
+      });
+
       const { error } = await supabase
         .from('jobs')
-        .insert({
-          tenant_id: userRole.tenant_id,
-          agent_id: selectedAgentId,
-          agent_name: agent.agent_name,
-          type: jobType,
-          status: 'queued',
-          payload: {},
-          approved: true
-        });
+        .insert(jobData);
 
       if (error) throw error;
 

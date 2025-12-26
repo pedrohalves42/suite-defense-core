@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
+import { prepareJobForInsert } from "@/lib/job-utils";
 import { 
   FlaskConical, 
   Play, 
@@ -87,20 +88,22 @@ export default function JobTestRunner() {
       
       if (roleError || !roleData) throw new Error("Tenant não encontrado");
 
+      const jobData = await prepareJobForInsert({
+        agent_name: agent.agent_name,
+        tenant_id: roleData.tenant_id,
+        type: "integration_test_v3",
+        status: "queued",
+        approved: true,
+        payload: { 
+          test_id: crypto.randomUUID(),
+          created_at: new Date().toISOString(),
+          purpose: "validation_test"
+        }
+      });
+
       const { data, error } = await supabase
         .from("jobs")
-        .insert({
-          agent_name: agent.agent_name,
-          tenant_id: roleData.tenant_id,
-          type: "integration_test_v3",
-          status: "queued",
-          approved: true,
-          payload: { 
-            test_id: crypto.randomUUID(),
-            created_at: new Date().toISOString(),
-            purpose: "validation_test"
-          }
-        })
+        .insert(jobData)
         .select("id")
         .single();
       

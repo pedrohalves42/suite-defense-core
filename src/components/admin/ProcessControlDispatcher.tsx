@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { prepareJobForInsert } from "@/lib/job-utils";
 import { 
   Skull, 
   Square, 
@@ -169,17 +170,19 @@ export function ProcessControlDispatcher({ agents }: { agents: Agent[] }) {
         ? { process_name: targetName.trim() }
         : { service_name: targetName.trim() };
 
+      const jobData = await prepareJobForInsert({
+        tenant_id: userRole.tenant_id,
+        agent_id: selectedAgentId,
+        agent_name: agent.agent_name,
+        type: selectedJob.type,
+        status: 'queued',
+        payload,
+        approved: true,
+      });
+
       const { error } = await supabase
         .from('jobs')
-        .insert({
-          tenant_id: userRole.tenant_id,
-          agent_id: selectedAgentId,
-          agent_name: agent.agent_name,
-          type: selectedJob.type,
-          status: 'queued',
-          payload,
-          approved: true,
-        });
+        .insert(jobData);
 
       if (error) throw error;
 
