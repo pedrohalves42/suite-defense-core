@@ -1826,6 +1826,7 @@ export type Database = {
           hmac_secret: string
           hostname: string | null
           id: string
+          last_block_sync_at: string | null
           last_forced_update_applied: string | null
           last_heartbeat: string | null
           os_type: string | null
@@ -1853,6 +1854,7 @@ export type Database = {
           hmac_secret: string
           hostname?: string | null
           id?: string
+          last_block_sync_at?: string | null
           last_forced_update_applied?: string | null
           last_heartbeat?: string | null
           os_type?: string | null
@@ -1880,6 +1882,7 @@ export type Database = {
           hmac_secret?: string
           hostname?: string | null
           id?: string
+          last_block_sync_at?: string | null
           last_forced_update_applied?: string | null
           last_heartbeat?: string | null
           os_type?: string | null

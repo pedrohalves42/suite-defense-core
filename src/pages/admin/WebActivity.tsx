@@ -4,8 +4,10 @@ import { AgentSelector } from '@/components/AgentSelector';
 import { useWebActivity } from '@/hooks/useWebActivity';
 import { useBlockedWebsites } from '@/hooks/useBlockedWebsites';
 import { useBlockedAttempts } from '@/hooks/useBlockedAttempts';
+import { useBlockedAttemptsRealtime } from '@/hooks/useBlockedAttemptsRealtime';
 import ThreatIntelligenceLookup from '@/components/admin/ThreatIntelligenceLookup';
 import { BlockedSitesStats } from '@/components/admin/BlockedSitesStats';
+import { AgentSyncStatusCard } from '@/components/admin/AgentSyncStatusCard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -67,6 +69,9 @@ export default function WebActivity() {
   
   // Global stats (all agents)
   const { stats: globalStats } = useBlockedAttempts({ limit: 1000 });
+  
+  // Enable realtime notifications for blocked attempts
+  useBlockedAttemptsRealtime(true);
 
   // Enrich activity with categories
   const enrichedActivity = useMemo(() => {
@@ -186,9 +191,12 @@ export default function WebActivity() {
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="stats" className="mt-6">
+          <TabsContent value="stats" className="mt-6 space-y-6">
             {/* Global Blocked Sites Statistics Dashboard */}
             <BlockedSitesStats stats={globalStats} />
+            
+            {/* Agent Sync Status */}
+            <AgentSyncStatusCard />
           </TabsContent>
           
           <TabsContent value="activity" className="mt-6 space-y-6">
