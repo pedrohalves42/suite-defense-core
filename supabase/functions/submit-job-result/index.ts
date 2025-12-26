@@ -964,6 +964,18 @@ Deno.serve(async (req) => {
           hosts_modified: hostsModified
         })
       }
+      
+      // Update last_block_sync_at timestamp on agent for sync status tracking
+      const { error: syncUpdateError } = await supabase
+        .from('agents')
+        .update({ last_block_sync_at: new Date().toISOString() })
+        .eq('id', agent.id)
+      
+      if (syncUpdateError) {
+        console.error('[submit-job-result] Failed to update last_block_sync_at:', syncUpdateError)
+      } else {
+        console.log('[submit-job-result] Updated last_block_sync_at for agent:', agent.agent_name)
+      }
     }
 
     console.log('[submit-job-result] [ZERO_TRUST] Updating job with data:', {
