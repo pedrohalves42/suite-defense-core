@@ -338,19 +338,45 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { data: userRoles } = await supabase
+    // Try to get tenant from user_roles first
+    const { data: userRoles, error: rolesError } = await supabase
       .from('user_roles')
       .select('tenant_id, role, tenants(id, name)')
       .eq('user_id', user.id)
       .limit(1)
       .maybeSingle();
 
-    if (!userRoles) {
+    if (rolesError) {
+      console.error(`[generate-security-report] Error fetching user_roles: ${rolesError.message}`);
+    }
+
+    // If no user_roles found, try profiles table as fallback
+    let tenantId = userRoles?.tenant_id;
+    let tenantName = (userRoles?.tenants as any)?.name || 'Unknown';
+
+    if (!tenantId) {
+      console.log(`[generate-security-report] No user_roles for user_id: ${user.id}, trying profiles...`);
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('tenant_id, tenants(id, name)')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (profile?.tenant_id) {
+        tenantId = profile.tenant_id;
+        tenantName = (profile?.tenants as any)?.name || 'Unknown';
+        console.log(`[generate-security-report] Found tenant from profiles: ${tenantId}`);
+      }
+    }
+
+    if (!tenantId) {
       console.error(`[generate-security-report] No tenant found for user_id: ${user.id}`);
       return new Response(
         JSON.stringify({ 
-          error: 'Usuário não está associado a nenhum tenant. Contate o administrador.',
-          code: 'NO_TENANT'
+          error: 'Usuário não está associado a nenhuma empresa. Contate o administrador para ser adicionado.',
+          code: 'NO_TENANT',
+          user_id: user.id
         }), 
         { 
           status: 403, 
@@ -359,8 +385,8 @@ serve(async (req) => {
       );
     }
 
-    const tenantId = userRoles.tenant_id;
-    const tenantName = (userRoles.tenants as any)?.name || 'Unknown';
+    console.log(`[generate-security-report] Found tenant: ${tenantId} (${tenantName}) for user: ${user.id}`);
+
 
     const url = new URL(req.url);
     const format = url.searchParams.get('format') || 'json';

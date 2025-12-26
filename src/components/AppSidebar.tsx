@@ -102,36 +102,32 @@ export const AppSidebar = () => {
     // === OVERVIEW ===
     { icon: Home, label: 'Painel Principal', to: '/admin/dashboard', end: true, section: 'overview' },
     
-    // === MONITORAMENTO ===
+    // === MONITORAMENTO (consolidado: Tempo Real + Status + Diagnóstico) ===
     { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced', section: 'monitoring' },
-    { icon: Cpu, label: 'Status dos Computadores', to: '/admin/agent-health', section: 'monitoring' },
-    { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics', section: 'monitoring' },
+    { icon: Cpu, label: 'Meus Computadores', to: '/admin/agent-health', section: 'monitoring' },
     
-    // === SEGURANÇA ===
-    { icon: Users, label: 'Grupos de Computadores', to: '/admin/agent-groups', section: 'security' },
+    // === SEGURANÇA (consolidado: removido Central duplicada, Histórico + Timeline em um) ===
+    { icon: Users, label: 'Grupos', to: '/admin/agent-groups', section: 'security' },
     { icon: ShieldCheck, label: 'Políticas', to: '/admin/security-policies', section: 'security' },
-    { icon: Shield, label: 'Central de Segurança', to: '/admin/security-monitoring', section: 'security' },
+    { icon: Shield, label: 'Alertas', to: '/admin/security-monitoring', section: 'security' },
     { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory', section: 'security' },
     { icon: AlertTriangle, label: 'Vulnerabilidades', to: '/admin/vulnerabilities', section: 'security' },
     { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity', section: 'security' },
     { icon: Clock, label: 'Histórico', to: '/admin/agent-timeline', section: 'security' },
-    { icon: FileText, label: 'Laudos', to: '/admin/reports', section: 'security' },
-    { icon: ScrollText, label: 'Compliance', to: '/admin/compliance-timeline', section: 'security' },
+    { icon: FileText, label: 'Relatórios', to: '/admin/reports', section: 'security' },
     
-    // === INFRAESTRUTURA ===
+    // === INFRAESTRUTURA (para técnicos) ===
     { icon: Network, label: 'Instalações', to: '/admin/installations', section: 'infrastructure' },
     { icon: GitBranch, label: 'Releases', to: '/admin/agent-releases', section: 'infrastructure' },
-    { icon: Activity, label: 'Versões & Capabilities', to: '/admin/agent-versions', section: 'infrastructure' },
+    { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics', section: 'infrastructure' },
     { icon: Heart, label: 'Saúde do Sistema', to: '/admin/slo-dashboard', section: 'infrastructure' },
-    { icon: Gauge, label: 'Controle de Uso', to: '/admin/rate-limiting', section: 'infrastructure' },
     { icon: Inbox, label: 'Fila de Tarefas', to: '/admin/dead-letter-queue', section: 'infrastructure' },
-    { icon: Code, label: 'Documentação API', to: '/admin/api-docs', section: 'infrastructure' },
+    { icon: Code, label: 'API', to: '/admin/api-docs', section: 'infrastructure' },
     
     // === INTELIGÊNCIA ARTIFICIAL ===
     { icon: Brain, label: 'Insights', to: '/admin/ai-insights', section: 'ai' },
     { icon: CheckCircle, label: 'Ações', to: '/admin/ai-actions', section: 'ai' },
     { icon: BarChart3, label: 'Métricas', to: '/admin/ai-metrics', section: 'ai' },
-    { icon: Shield, label: 'Regras de IA', to: '/admin/ai-governance', section: 'ai' },
     
     // === GESTÃO ===
     { icon: Users, label: 'Equipe', to: '/admin/members', section: 'management' },
