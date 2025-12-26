@@ -135,11 +135,11 @@ export const IntegrityScoreCard = () => {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
             <StatusIcon className={cn("h-5 w-5", overallStatus.color)} />
-            Zero Trust Score
+            Verificação de Integridade
           </CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant={overallScore === 100 ? "default" : "secondary"} className="text-xs">
-              {overallScore === 100 ? '100% COMPLIANT' : 'PARTIAL'}
+              {overallScore === 100 ? 'Tudo Verificado ✓' : 'Atenção'}
             </Badge>
             <Button 
               variant="ghost" 
@@ -168,7 +168,7 @@ export const IntegrityScoreCard = () => {
               className="h-3"
             />
             <p className="text-xs text-muted-foreground">
-              {overallScore === 100 ? 'Sistema 100% Zero Trust - Nenhuma falha silenciosa possível' :
+              {overallScore === 100 ? 'Tudo funcionando corretamente - Nenhum problema detectado' :
                overallScore >= 80 ? 'Pequenas melhorias recomendadas' :
                overallScore >= 60 ? 'Atenção necessária' :
                'Ação imediata requerida'}
@@ -187,7 +187,7 @@ export const IntegrityScoreCard = () => {
                   supplyChainStatus.bg
                 )}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-medium text-muted-foreground">Supply Chain</span>
+                    <span className="text-[10px] font-medium text-muted-foreground">Origem</span>
                     {invalidReleases > 0 ? (
                       <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">
                         {invalidReleases}
@@ -203,10 +203,10 @@ export const IntegrityScoreCard = () => {
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs">
-                <p className="font-medium mb-1">Validação de Releases</p>
+                <p className="font-medium mb-1">Origem dos Programas</p>
                 <p className="text-xs text-muted-foreground">
-                  {metrics.valid_active_releases}/{metrics.active_releases} releases válidas.
-                  Thresholds: Windows ≥50kb, Linux/macOS ≥30kb + SHA256
+                  {metrics.valid_active_releases}/{metrics.active_releases} versões verificadas.
+                  Confirma que os programas são originais e seguros.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -221,7 +221,7 @@ export const IntegrityScoreCard = () => {
                   jobIntegrityStatus.bg
                 )}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-medium text-muted-foreground">Completed</span>
+                    <span className="text-[10px] font-medium text-muted-foreground">Concluídos</span>
                     {jobViolations > 0 ? (
                       <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">
                         {jobViolations}
@@ -237,10 +237,10 @@ export const IntegrityScoreCard = () => {
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs">
-                <p className="font-medium mb-1">Jobs Completed com Side Effects</p>
+                <p className="font-medium mb-1">Tarefas Concluídas</p>
                 <p className="text-xs text-muted-foreground">
-                  {metrics.valid_completed_jobs}/{metrics.completed_jobs} jobs geraram dados.
-                  Trigger impede completed sem side effects.
+                  {metrics.valid_completed_jobs}/{metrics.completed_jobs} tarefas geraram resultados.
+                  Confirma que as verificações foram executadas corretamente.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -255,7 +255,7 @@ export const IntegrityScoreCard = () => {
                   failedJobsStatus.bg
                 )}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-medium text-muted-foreground">Failed</span>
+                    <span className="text-[10px] font-medium text-muted-foreground">Com Erro</span>
                     {failedWithoutError > 0 ? (
                       <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">
                         {failedWithoutError}
@@ -271,10 +271,10 @@ export const IntegrityScoreCard = () => {
                 </div>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="max-w-xs">
-                <p className="font-medium mb-1">Jobs Failed com Error Message</p>
+                <p className="font-medium mb-1">Tarefas com Erro</p>
                 <p className="text-xs text-muted-foreground">
-                  {metrics.failed_with_error}/{metrics.failed_jobs} jobs failed têm explicação.
-                  Trigger impede failed sem error_message.
+                  {metrics.failed_with_error}/{metrics.failed_jobs} erros têm explicação.
+                  Mostra se os erros foram documentados para diagnóstico.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -288,17 +288,17 @@ export const IntegrityScoreCard = () => {
             <div className="space-y-1">
               {invalidReleases > 0 && (
                 <p className="text-warning-foreground">
-                  {invalidReleases} release(s) abaixo do threshold mínimo
+                  {invalidReleases} versão(ões) precisam de verificação
                 </p>
               )}
               {jobViolations > 0 && (
                 <p className="text-warning-foreground">
-                  {jobViolations} job(s) completed sem side effects
+                  {jobViolations} tarefa(s) concluídas sem resultado
                 </p>
               )}
               {failedWithoutError > 0 && (
                 <p className="text-warning-foreground">
-                  {failedWithoutError} job(s) failed sem error_message
+                  {failedWithoutError} erro(s) sem explicação
                 </p>
               )}
             </div>
