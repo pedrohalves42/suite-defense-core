@@ -42,7 +42,6 @@ const techTerms: Record<string, string> = {
   "rate_limit": "Proteção que bloqueia acessos muito frequentes (pode indicar ataque automatizado).",
   "failed_login": "Tentativa de entrar no sistema com senha incorreta.",
   "ip_blocklist": "Lista de origens de internet bloqueadas por comportamento suspeito.",
-  "alerta": "Notificação sobre evento de segurança que pode precisar de atenção.",
   "replay": "Tentativa de reutilizar uma credencial antiga para acessar o sistema.",
   
   // Infraestrutura
