@@ -654,11 +654,22 @@ export default function Settings() {
                 />
               </div>
 
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <Label>Quarentena Automatica</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Isolar automaticamente arquivos maliciosos detectados
+              <div className="flex items-center justify-between py-3 border-b">
+                <div className="flex-1 pr-4">
+                  <div className="flex items-center gap-2">
+                    <Label>Quarentena Automatica</Label>
+                    {settings.enable_auto_quarantine && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        Ativo
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Quando ativado, arquivos detectados como maliciosos pelo VirusTotal/Hybrid Analysis
+                    serao automaticamente movidos para quarentena sem intervencao manual.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Requer integracao com VirusTotal ou Hybrid Analysis configurada.
                   </p>
                 </div>
                 <Switch
@@ -666,6 +677,22 @@ export default function Settings() {
                   onCheckedChange={(checked) => setSettings({ ...settings, enable_auto_quarantine: checked })}
                   disabled={!canWrite}
                 />
+              </div>
+
+              <div className="flex items-center justify-between py-3">
+                <div className="flex-1 pr-4">
+                  <div className="flex items-center gap-2">
+                    <Label>Playbooks Automaticos</Label>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
+                      Configurado
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Playbooks de notificacao (Computador Offline, DNS Bloqueado) executam automaticamente
+                    sem necessidade de aprovacao manual.
+                  </p>
+                </div>
+                <Shield className="h-5 w-5 text-primary" />
               </div>
 
               {canWrite && (
