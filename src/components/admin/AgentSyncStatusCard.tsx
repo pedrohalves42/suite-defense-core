@@ -1,15 +1,38 @@
+import { useState } from 'react';
 import { useAgentSyncStatus } from '@/hooks/useAgentSyncStatus';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CheckCircle2, Clock, WifiOff, HelpCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Clock, WifiOff, HelpCircle, RefreshCw, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export function AgentSyncStatusCard() {
   const { agents, isLoading, stats, refetch } = useAgentSyncStatus();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSyncNow = async () => {
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-blocked-websites');
+      
+      if (error) throw error;
+      
+      toast.success(`Sincronização agendada para ${data?.jobsCreated || 0} computadores online`);
+      
+      // Refresh status after a short delay to show updated data
+      setTimeout(() => refetch(), 2000);
+    } catch (error: any) {
+      console.error('Sync error:', error);
+      toast.error(error.message || 'Erro ao sincronizar');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -67,10 +90,20 @@ export function AgentSyncStatusCard() {
             Última sincronização de sites bloqueados por agente
           </CardDescription>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="default" 
+            size="sm" 
+            onClick={handleSyncNow}
+            disabled={isSyncing || stats.synced + stats.pending === 0}
+          >
+            <Send className="h-4 w-4 mr-2" />
+            {isSyncing ? 'Sincronizando...' : 'Sincronizar Agora'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         {/* Summary Stats */}
