@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTenant } from '@/hooks/useTenant';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, CheckCircle, Loader2, Shield } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, Shield, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { logger } from '@/lib/logger';
 import { MFASettings } from '@/components/mfa/MFASettings';
@@ -29,6 +29,7 @@ interface TenantSettings {
   enable_email_alerts: boolean;
   enable_webhook_alerts: boolean;
   enable_auto_quarantine: boolean;
+  enable_dry_run_mode: boolean;
 }
 
 export default function Settings() {
@@ -49,6 +50,7 @@ export default function Settings() {
     enable_email_alerts: true,
     enable_webhook_alerts: false,
     enable_auto_quarantine: false,
+    enable_dry_run_mode: false,
   });
 
   const [virusTotalTestResult, setVirusTotalTestResult] = useState<{
@@ -679,7 +681,7 @@ export default function Settings() {
                 />
               </div>
 
-              <div className="flex items-center justify-between py-3">
+              <div className="flex items-center justify-between py-3 border-b">
                 <div className="flex-1 pr-4">
                   <div className="flex items-center gap-2">
                     <Label>Playbooks Automaticos</Label>
@@ -693,6 +695,36 @@ export default function Settings() {
                   </p>
                 </div>
                 <Shield className="h-5 w-5 text-primary" />
+              </div>
+
+              <div className="flex items-center justify-between py-3">
+                <div className="flex-1 pr-4">
+                  <div className="flex items-center gap-2">
+                    {settings.enable_dry_run_mode ? (
+                      <EyeOff className="h-5 w-5 text-amber-500" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-muted-foreground" />
+                    )}
+                    <Label>Shadow Mode (Dry Run)</Label>
+                    {settings.enable_dry_run_mode && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                        Ativo
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Quando ativado, playbooks sao avaliados mas <strong>nao executados automaticamente</strong>. 
+                    Ideal para testar regras do motor de risco sem impacto real.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Todas as decisoes serao logadas para auditoria em <code className="bg-muted px-1 rounded">risk_decision_log</code>.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.enable_dry_run_mode}
+                  onCheckedChange={(checked) => setSettings({ ...settings, enable_dry_run_mode: checked })}
+                  disabled={!canWrite}
+                />
               </div>
 
               {canWrite && (

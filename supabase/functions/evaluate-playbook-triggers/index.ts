@@ -33,6 +33,10 @@ interface RiskAnalysis {
   decision_reason: string;
 }
 
+interface TenantSettings {
+  enable_dry_run_mode: boolean;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -59,6 +63,19 @@ serve(async (req) => {
     }
 
     console.log(`[evaluate-playbook-triggers] Evaluating ${trigger_type} for tenant ${tenant_id}`);
+
+    // ✅ PHASE 3: Verificar se Shadow Mode (dry-run) está ativado para o tenant
+    const { data: tenantSettings } = await supabase
+      .from('tenant_settings')
+      .select('enable_dry_run_mode')
+      .eq('tenant_id', tenant_id)
+      .single();
+    
+    const isDryRun = (tenantSettings as TenantSettings)?.enable_dry_run_mode ?? false;
+    
+    if (isDryRun) {
+      console.log(`[evaluate-playbook-triggers] Shadow Mode ACTIVE for tenant ${tenant_id} - no auto-execution will occur`);
+    }
 
     // Buscar playbooks ativos que match o trigger
     const { data: playbooks, error: pbError } = await supabase
@@ -183,9 +200,19 @@ serve(async (req) => {
         risk_level: action.risk_level,
       }));
 
-    // Determinar status inicial e se deve auto-executar
-    const shouldAutoExecute = riskAnalysis.should_auto_execute;
-    const triggeredBy = shouldAutoExecute ? 'risk_engine' : 'trigger';
+    // ✅ PHASE 3: Em Shadow Mode, NUNCA auto-executar
+    const wouldAutoExecute = riskAnalysis.should_auto_execute;
+    const shouldAutoExecute = isDryRun ? false : wouldAutoExecute;
+    
+    // Determinar decisão para logging
+    let decision: 'auto_execute' | 'require_approval' | 'dry_run' = 'require_approval';
+    if (isDryRun) {
+      decision = 'dry_run';
+    } else if (shouldAutoExecute) {
+      decision = 'auto_execute';
+    }
+    
+    const triggeredBy = shouldAutoExecute ? 'risk_engine' : (isDryRun ? 'dry_run' : 'trigger');
 
     // Criar execução pendente COM SNAPSHOTS e dados de risco
     const { data: execution, error: execError } = await supabase
@@ -199,16 +226,18 @@ serve(async (req) => {
           ...context,
           agent_info: agentInfo,
           evaluated_at: new Date().toISOString(),
-          risk_analysis: riskAnalysis, // ✅ Incluir análise de risco no contexto
+          risk_analysis: riskAnalysis,
+          dry_run: isDryRun, // ✅ Incluir flag de dry_run no contexto
         },
         // ✅ IMUTÁVEL: Snapshots congelados no momento do trigger
         playbook_snapshot: playbookSnapshot,
         actions_snapshot: actionsSnapshot,
         status: shouldAutoExecute ? 'in_progress' : 'pending',
-        // ✅ FASE 2: Novos campos de rastreio
+        // ✅ FASE 2 + 3: Novos campos de rastreio
         auto_executed: shouldAutoExecute,
         risk_score: riskAnalysis.risk_score,
         triggered_by: triggeredBy,
+        dry_run: isDryRun, // ✅ PHASE 3: Marcar como dry_run
       })
       .select('id')
       .single();
@@ -218,9 +247,39 @@ serve(async (req) => {
       throw execError;
     }
 
-    console.log(`[evaluate-playbook-triggers] Created execution ${execution.id} with immutable snapshots (v${playbook.version}), auto_executed=${shouldAutoExecute}, risk_score=${riskAnalysis.risk_score}`);
+    console.log(`[evaluate-playbook-triggers] Created execution ${execution.id} with immutable snapshots (v${playbook.version}), auto_executed=${shouldAutoExecute}, risk_score=${riskAnalysis.risk_score}, dry_run=${isDryRun}`);
 
-    // Se deve auto-executar (baseado no motor de risco), executar automaticamente
+    // ✅ PHASE 3: Log decisão no risk_decision_log
+    const { error: logError } = await supabase
+      .from('risk_decision_log')
+      .insert({
+        playbook_execution_id: execution.id,
+        tenant_id,
+        event_type: trigger_type,
+        playbook_id: playbook.id,
+        playbook_name: playbook.name,
+        agent_id: agent_id || null,
+        risk_score: riskAnalysis.risk_score,
+        threshold: riskAnalysis.threshold,
+        decision,
+        decision_reason: isDryRun 
+          ? `Shadow Mode ativo - seria ${wouldAutoExecute ? 'auto_execute' : 'require_approval'} (${riskAnalysis.decision_reason})`
+          : riskAnalysis.decision_reason,
+        context: {
+          ...context,
+          agent_info: agentInfo,
+          has_destructive_actions: riskAnalysis.has_destructive_actions,
+          playbook_require_approval: playbook.require_approval,
+        },
+        dry_run: isDryRun,
+      });
+
+    if (logError) {
+      console.error('[evaluate-playbook-triggers] Error logging risk decision:', logError);
+      // Não falhar a operação por causa do log
+    }
+
+    // Se deve auto-executar (baseado no motor de risco E NÃO estiver em dry_run), executar automaticamente
     if (shouldAutoExecute) {
       console.log(`[evaluate-playbook-triggers] Risk-based auto-execution: ${playbook.name} (score: ${riskAnalysis.risk_score}, threshold: ${riskAnalysis.threshold})`);
       
@@ -237,6 +296,8 @@ serve(async (req) => {
       } catch (autoExecError) {
         console.error('[evaluate-playbook-triggers] Auto-execute error:', autoExecError);
       }
+    } else if (isDryRun && wouldAutoExecute) {
+      console.log(`[evaluate-playbook-triggers] DRY RUN: Would have auto-executed ${playbook.name} (score: ${riskAnalysis.risk_score}, threshold: ${riskAnalysis.threshold})`);
     }
 
     // Log de segurança com informações de risco
@@ -256,7 +317,7 @@ serve(async (req) => {
         agent_id,
         require_approval: playbook.require_approval,
         snapshots_created: true,
-        // ✅ FASE 2: Adicionar dados de risco ao log
+        // ✅ FASE 2 + 3: Adicionar dados de risco ao log
         risk_analysis: {
           risk_score: riskAnalysis.risk_score,
           threshold: riskAnalysis.threshold,
@@ -265,6 +326,8 @@ serve(async (req) => {
         },
         auto_executed: shouldAutoExecute,
         triggered_by: triggeredBy,
+        dry_run: isDryRun, // ✅ PHASE 3
+        would_auto_execute: wouldAutoExecute, // ✅ PHASE 3: O que teria acontecido
       },
     });
 
@@ -281,10 +344,13 @@ serve(async (req) => {
       },
       agent_info: agentInfo,
       snapshots_created: true,
-      // ✅ FASE 2: Incluir dados de risco na resposta
+      // ✅ FASE 2 + 3: Incluir dados de risco na resposta
       risk_analysis: riskAnalysis,
       auto_executed: shouldAutoExecute,
       triggered_by: triggeredBy,
+      // ✅ PHASE 3: Informações de Shadow Mode
+      dry_run: isDryRun,
+      would_auto_execute: wouldAutoExecute,
       execution_time_ms: Date.now() - startTime,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
