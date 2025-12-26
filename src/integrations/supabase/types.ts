@@ -367,6 +367,70 @@ export type Database = {
           },
         ]
       }
+      agent_execution_chain: {
+        Row: {
+          agent_id: string
+          last_execution_hash: string
+          last_execution_index: number
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          last_execution_hash?: string
+          last_execution_index?: number
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          last_execution_hash?: string
+          last_execution_index?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_execution_chain_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_execution_chain_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_execution_chain_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_execution_chain_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_execution_chain_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_execution_chain_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: true
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_group_policies: {
         Row: {
           assigned_at: string | null
@@ -783,11 +847,13 @@ export type Database = {
           agent_id: string
           algorithm: string
           created_at: string
+          expires_at: string | null
           id: string
           key_fingerprint: string
           public_key: string
           revoked_at: string | null
           revoked_reason: string | null
+          rotation_signaled_at: string | null
           valid_from: string
           version: number
         }
@@ -795,11 +861,13 @@ export type Database = {
           agent_id: string
           algorithm?: string
           created_at?: string
+          expires_at?: string | null
           id?: string
           key_fingerprint: string
           public_key: string
           revoked_at?: string | null
           revoked_reason?: string | null
+          rotation_signaled_at?: string | null
           valid_from?: string
           version?: number
         }
@@ -807,11 +875,13 @@ export type Database = {
           agent_id?: string
           algorithm?: string
           created_at?: string
+          expires_at?: string | null
           id?: string
           key_fingerprint?: string
           public_key?: string
           revoked_at?: string | null
           revoked_reason?: string | null
+          rotation_signaled_at?: string | null
           valid_from?: string
           version?: number
         }
@@ -3644,6 +3714,8 @@ export type Database = {
           claimed_at: string
           created_at: string
           error_message: string | null
+          execution_hash: string | null
+          execution_index: number | null
           execution_time_seconds: number | null
           exit_code: number | null
           finished_at: string | null
@@ -3653,6 +3725,7 @@ export type Database = {
           nonce: string
           output_hash: string | null
           payload_hash: string
+          previous_execution_hash: string | null
           result_signature: string | null
           signature_algorithm: string | null
           signature_verified: boolean | null
@@ -3667,6 +3740,8 @@ export type Database = {
           claimed_at?: string
           created_at?: string
           error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
           execution_time_seconds?: number | null
           exit_code?: number | null
           finished_at?: string | null
@@ -3676,6 +3751,7 @@ export type Database = {
           nonce?: string
           output_hash?: string | null
           payload_hash: string
+          previous_execution_hash?: string | null
           result_signature?: string | null
           signature_algorithm?: string | null
           signature_verified?: boolean | null
@@ -3690,6 +3766,8 @@ export type Database = {
           claimed_at?: string
           created_at?: string
           error_message?: string | null
+          execution_hash?: string | null
+          execution_index?: number | null
           execution_time_seconds?: number | null
           exit_code?: number | null
           finished_at?: string | null
@@ -3699,6 +3777,7 @@ export type Database = {
           nonce?: string
           output_hash?: string | null
           payload_hash?: string
+          previous_execution_hash?: string | null
           result_signature?: string | null
           signature_algorithm?: string | null
           signature_verified?: boolean | null
@@ -8280,6 +8359,13 @@ export type Database = {
           residual_execution_id_count: number
         }[]
       }
+      check_expired_agent_keys: {
+        Args: never
+        Returns: {
+          agents_affected: string[]
+          expired_count: number
+        }[]
+      }
       check_installation_failure_rate: {
         Args: {
           p_hours_back?: number
@@ -8326,6 +8412,20 @@ export type Database = {
               nonce: string
               payload: Json
               payload_hash: string
+            }[]
+          }
+        | {
+            Args: { p_agent_id: string; p_max_jobs?: number }
+            Returns: {
+              execution_id: string
+              execution_index: number
+              expires_at: string
+              job_id: string
+              job_type: string
+              nonce: string
+              payload: Json
+              payload_hash: string
+              previous_execution_hash: string
             }[]
           }
       cleanup_all_problematic_agents: {
@@ -8426,6 +8526,13 @@ export type Database = {
         Args: never
         Returns: {
           inserted_count: number
+        }[]
+      }
+      detect_chain_breaks: {
+        Args: never
+        Returns: {
+          affected_agents: string[]
+          break_count: number
         }[]
       }
       detect_duplicate_executions: {

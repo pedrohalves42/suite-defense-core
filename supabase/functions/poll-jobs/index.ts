@@ -203,6 +203,9 @@ Deno.serve(async (req) => {
       nonce: string           // Nonce único para esta execução
       payload_hash: string    // SHA256 do payload para verificação
       expires_at: string
+      // Hash Chain fields (P1.5)
+      execution_index: number | null
+      previous_execution_hash: string | null
     }
     
     // Buscar tenant_id do agente para a RPC
@@ -215,9 +218,7 @@ Deno.serve(async (req) => {
     const { data: jobs, error: jobsError } = await supabase
       .rpc('claim_jobs_for_agent', {
         p_agent_id: token.agent_id,
-        p_agent_name: agent.agent_name,
-        p_tenant_id: agentFullData?.tenant_id,
-        p_limit: 3
+        p_max_jobs: 3
       }) as { data: ClaimedJob[] | null, error: { message: string } | null }
 
     if (jobsError) {
@@ -322,6 +323,9 @@ Deno.serve(async (req) => {
         execution_id: j.execution_id,
         nonce: j.nonce,
         payload_hash: j.payload_hash,
+        // P1.5: Hash Chain context for agent
+        execution_index: j.execution_index,
+        previous_execution_hash: j.previous_execution_hash,
         ...signatureInfo
       }
     }))

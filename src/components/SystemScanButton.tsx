@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTenant } from "@/hooks/useTenant";
+import { prepareJobsForInsert } from "@/lib/job-utils";
 import {
   Dialog,
   DialogContent,
@@ -72,7 +73,8 @@ export function SystemScanButton() {
         status: "queued",
       }));
 
-      const { data, error } = await supabase.from("jobs").insert(jobs).select();
+      const jobsWithHash = await prepareJobsForInsert(jobs);
+      const { data, error } = await supabase.from("jobs").insert(jobsWithHash).select();
 
       if (error) throw error;
       return data;

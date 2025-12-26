@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, PlayCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { prepareJobsForInsert } from "@/lib/job-utils";
 
 interface AgentStatus {
   id: string;
@@ -222,9 +223,10 @@ export function DynamicValidationSystem() {
         };
       }).filter(Boolean);
 
+      const jobsWithHash = await prepareJobsForInsert(jobsToCreate);
       const { error } = await supabase
         .from('jobs')
-        .insert(jobsToCreate);
+        .insert(jobsWithHash);
 
       if (error) throw error;
 

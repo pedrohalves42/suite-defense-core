@@ -14,6 +14,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
+import { prepareJobForInsert } from '@/lib/job-utils';
 import { motion } from 'framer-motion';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 
@@ -76,14 +77,17 @@ export default function SoftwareInventory() {
       const agent = agents?.find(a => a.id === agentId);
       if (!agent) throw new Error('Agente não encontrado');
       
-      const { error } = await supabase.from('jobs').insert({
+      const jobData = await prepareJobForInsert({
         agent_id: agentId,           // UUID
         agent_name: agent.agent_name, // Correct name!
         type: 'software_inventory_collect',
         status: 'queued',
         tenant_id: tenant.id,
         approved: true,
+        payload: {},
       });
+
+      const { error } = await supabase.from('jobs').insert(jobData);
 
       if (error) throw error;
     },

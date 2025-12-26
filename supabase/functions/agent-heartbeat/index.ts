@@ -72,6 +72,48 @@ Deno.serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+    
+    // Check if agent needs key rotation (key expiring in < 72 hours)
+    let keyRotationNeeded = false
+    let keyRotationDeadline: string | null = null
+    
+    if (token?.agents) {
+      const agentId = (token.agents as any).id
+      const { data: signingKey } = await supabase
+        .from('agent_signing_keys')
+        .select('id, expires_at, rotation_signaled_at')
+        .eq('agent_id', agentId)
+        .is('revoked_at', null)
+        .order('version', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      
+      if (signingKey?.expires_at) {
+        const expiresAt = new Date(signingKey.expires_at)
+        const now = new Date()
+        const hoursUntilExpiry = (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60)
+        
+        // Signal rotation if < 72 hours until expiry
+        if (hoursUntilExpiry < 72 && hoursUntilExpiry > 0) {
+          keyRotationNeeded = true
+          keyRotationDeadline = signingKey.expires_at
+          
+          // Mark rotation as signaled (if not already)
+          if (!signingKey.rotation_signaled_at) {
+            await supabase
+              .from('agent_signing_keys')
+              .update({ rotation_signaled_at: new Date().toISOString() })
+              .eq('id', signingKey.id)
+            
+            logger.info('[PROXY] Key rotation signaled', { 
+              agentId, 
+              expiresAt: signingKey.expires_at,
+              hoursUntilExpiry: Math.round(hoursUntilExpiry)
+            })
+          }
+        }
+      }
+    }
 
     if (!token?.agents) {
       return new Response(
@@ -291,15 +333,27 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Standard response (no force_update)
+    // Standard response (no force_update) - include key rotation signal if needed
+    const response: Record<string, unknown> = { 
+      ok: true,
+      agent: agent.agent_name,
+      timestamp: new Date().toISOString(),
+      proxy: true,
+      message: 'Heartbeat received via legacy endpoint - please update agent to v4.0.7+'
+    };
+    
+    // Add key rotation signal if needed
+    if (keyRotationNeeded) {
+      response.rotate_key = true;
+      response.rotation_deadline = keyRotationDeadline;
+      logger.info('[PROXY] Key rotation signaled in response', { 
+        agentName: agent.agent_name, 
+        deadline: keyRotationDeadline 
+      });
+    }
+    
     return new Response(
-      JSON.stringify({ 
-        ok: true,
-        agent: agent.agent_name,
-        timestamp: new Date().toISOString(),
-        proxy: true,
-        message: 'Heartbeat received via legacy endpoint - please update agent to v4.0.7+'
-      }),
+      JSON.stringify(response),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200

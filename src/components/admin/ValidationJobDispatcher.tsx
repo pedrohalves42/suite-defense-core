@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Package, RefreshCw, Loader2, CheckCircle } from "lucide-react";
+import { prepareJobForInsert } from "@/lib/job-utils";
 
 export function ValidationJobDispatcher() {
   const [isCreatingJobs, setIsCreatingJobs] = useState(false);
@@ -39,17 +40,19 @@ export function ValidationJobDispatcher() {
         toast.error("Agente TESTEMIT não encontrado");
       } else {
         // Create software_inventory_collect job for TESTEMIT
+        const testemitJobData = await prepareJobForInsert({
+          tenant_id: userRole.tenant_id,
+          agent_id: testemitAgent.id,
+          agent_name: testemitAgent.agent_name,
+          type: 'software_inventory_collect',
+          status: 'queued',
+          payload: {},
+          approved: true
+        });
+
         const { error: testemitJobError } = await supabase
           .from('jobs')
-          .insert({
-            tenant_id: userRole.tenant_id,
-            agent_id: testemitAgent.id,
-            agent_name: testemitAgent.agent_name,
-            type: 'software_inventory_collect',
-            status: 'queued',
-            payload: {},
-            approved: true
-          });
+          .insert(testemitJobData);
 
         if (testemitJobError) {
           toast.error(`Erro ao criar job para TESTEMIT: ${testemitJobError.message}`);
@@ -71,20 +74,22 @@ export function ValidationJobDispatcher() {
         toast.error("Agente testepc2 não encontrado");
       } else {
         // Create update_agent job for testepc2
+        const testepc2JobData = await prepareJobForInsert({
+          tenant_id: userRole.tenant_id,
+          agent_id: testepc2Agent.id,
+          agent_name: testepc2Agent.agent_name,
+          type: 'update_agent',
+          status: 'queued',
+          payload: {
+            target_version: 'v3.10.9-PSCUSTOMOBJECT-FIX',
+            platform: 'windows'
+          },
+          approved: true
+        });
+
         const { error: updateJobError } = await supabase
           .from('jobs')
-          .insert({
-            tenant_id: userRole.tenant_id,
-            agent_id: testepc2Agent.id,
-            agent_name: testepc2Agent.agent_name,
-            type: 'update_agent',
-            status: 'queued',
-            payload: {
-              target_version: 'v3.10.9-PSCUSTOMOBJECT-FIX',
-              platform: 'windows'
-            },
-            approved: true
-          });
+          .insert(testepc2JobData);
 
         if (updateJobError) {
           toast.error(`Erro ao criar job para testepc2: ${updateJobError.message}`);

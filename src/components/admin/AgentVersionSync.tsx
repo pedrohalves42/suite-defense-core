@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { prepareJobForInsert } from "@/lib/job-utils";
 
 interface Agent {
   id: string;
@@ -76,16 +77,18 @@ export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
     mutationFn: async (agent: Agent) => {
       const targetVersion = getLatestVersionForAgent(agent);
       
+      const jobData = await prepareJobForInsert({
+        tenant_id: agent.tenant_id,
+        agent_name: agent.agent_name,
+        type: 'update_agent',
+        status: 'queued',
+        payload: { target_version: targetVersion, force: true },
+        approved: true
+      });
+      
       const { data, error } = await supabase
         .from('jobs')
-        .insert([{
-          tenant_id: agent.tenant_id,
-          agent_name: agent.agent_name,
-          type: 'update_agent',
-          status: 'queued',
-          payload: { target_version: targetVersion, force: true },
-          approved: true
-        }])
+        .insert([jobData])
         .select()
         .single();
 
