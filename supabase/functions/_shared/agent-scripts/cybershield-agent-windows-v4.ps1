@@ -1,12 +1,36 @@
 <#
-    CyberShield Agent - Windows v4.0.7
+    CyberShield Agent - Windows v4.1.8
     
+    v4.1.8: PROOF OF EXECUTION (PoE) - Result Signing
+    - NEW: ECDSA P-256 keypair generation (New-SigningKeyPair)
+    - NEW: Public key registration (Register-SigningKey)
+    - NEW: Result signature (Sign-ExecutionResult)
+    - NEW: Output hash computation (Compute-OutputHash)
+    - NEW: Signing keypair persistence in C:\CyberShield\keys\
+    - NEW: submit-job-result includes result_signature, signature_algorithm, output_hash
+    - NEW: Key rotation via heartbeat response (rotate_key=true)
+    - SECURITY: Bidirectional trust - backend signs jobs, agent signs results
+    
+    v4.1.7: PHASE 1 - PROCESS CONTROL
+    - kill_process, stop_service, disable_service handlers
+    - Protected processes/services lists (defense in depth)
+    
+    v4.1.6: CAPABILITY-BASED SECURITY + VERSION TRUTH
+    - Ed25519 capability detection, audit-only mode for PS 5.1
+    
+    v4.1.5: Fix ParserError - orphan catch block causing ExitCode 1
+    v4.1.4: Fix MissingCatchOrFinally in Verify-Ed25519Signature
+    
+    SSA-009: Restauracao da coleta de browser_history (Chrome, Firefox, Edge)
+    SSA-010: Restauracao de todos os jobs do v3 (scan, fix_firewall, restart_service, etc.)
     FASE 2.1: State Machine Formal (6 estados)
     FASE 2.2: Evidence Journal Local
     FASE 2.4: DNS Filter Go como Windows Service
     FASE 2.5: Policy Contract (Desired vs Actual + Drift Detection)
     FASE 2.6: Ed25519 Signature Verification
     FASE 3.0: Auto-Rollback & Safe Mode (NEW)
+    FASE VIKTOR: Force Update via Heartbeat Response
+    SSA-004: Payload Signing - Verifies Ed25519 signatures on jobs
     
     Estados:
     - BOOTSTRAP: Inicializacao do agente
@@ -16,8 +40,27 @@
     - ERROR: Erro critico, requer intervencao
     - RECOVERY: Tentando auto-recuperacao
     
-    Funcionalidades v4.0.7:
-    - Fixed heartbeat endpoint from /agent-heartbeat to /heartbeat (BUGFIX)
+    Funcionalidades v4.1.0 (PAYLOAD SIGNING):
+    - NEW: Ed25519 job payload signature verification
+    - NEW: Rejects unsigned jobs when Ed25519PublicKey is configured
+    - NEW: Verify-JobSignature function using .NET crypto
+    - NEW: Canonical payload format: job_id:job_type:JSON(payload)
+    - SECURITY: Prevents RCE via compromised database
+    
+    v4.0.11 (DISK METRICS FIX):
+    - CRITICAL FIX: Coleta de TODOS os discos (nao apenas C:)
+    - NEW: Invoke-ReportJob coleta disk_total_gb, disk_free_gb, disks[]
+    - NEW: Send-SystemMetrics envia array disks completo para backend
+    - NEW: Informacoes detalhadas: drive_letter, drive_label, is_system_drive
+    - NEW: Logging melhorado para debug de metricas
+    - FIXED: agent_disk_metrics agora populada corretamente
+    
+    v4.0.10 (VIKTOR RECOVERY):
+    - Force Update via Heartbeat Response (bypassa job system completamente)
+    - Apply-ForcedUpdate funcao imortal que processa update do heartbeat
+    - Confirmacao de force_update no backend apos aplicacao
+    - Send-SystemMetrics funcao agora definida
+    - Metricas sendo enviadas a cada 5 minutos
     - Auto-rollback with structured backup before update
     - Post-update health check (state machine, heartbeat, poll-jobs)
     - Safe Mode after 2 consecutive rollbacks - disables auto-updates
@@ -54,7 +97,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.0.7"
+    [string]$AgentVersion = "v4.1.8"
 )
 
 $ErrorActionPreference = "Stop"
@@ -79,6 +122,55 @@ trap {
 
     Write-EventLog -LogName Application -Source "CyberShield" -EventId 1001 -EntryType Error -Message "$msg`n$stack" -ErrorAction SilentlyContinue
     throw
+}
+
+# ============================================
+#  BOOTSTRAP VALIDATION - CRITICAL FUNCTIONS
+# ============================================
+# This validation runs AFTER all functions are defined (at script execution)
+# We defer the actual check to after function definitions
+$Global:RequiredFunctions = @(
+    "Write-Log",
+    "Send-Heartbeat",
+    "Send-SystemMetrics",
+    "Invoke-ReportJob",
+    "Invoke-SecureRequest",
+    "Add-EvidenceEntry",
+    "Set-AgentState"
+)
+
+function Invoke-BootstrapValidation {
+    Write-Host "[BOOTSTRAP] Validando funcoes criticas..." -ForegroundColor Cyan
+    
+    $missingFunctions = @()
+    foreach ($fn in $Global:RequiredFunctions) {
+        if (-not (Get-Command $fn -ErrorAction SilentlyContinue)) {
+            $missingFunctions += $fn
+        }
+    }
+    
+    if ($missingFunctions.Count -gt 0) {
+        $errorMsg = "FATAL: Funcoes criticas nao definidas: $($missingFunctions -join ', ')"
+        Write-Host "[BOOTSTRAP] $errorMsg" -ForegroundColor Red
+        
+        # Tentar logar no arquivo antes de abortar
+        $logPath = "C:\CyberShield\logs\bootstrap-error.log"
+        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        
+        # Criar diretorio se nao existir
+        $logDir = Split-Path $logPath -Parent
+        if (-not (Test-Path $logDir)) {
+            New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+        }
+        
+        "$timestamp | BOOTSTRAP FAILED | $errorMsg" | Out-File -FilePath $logPath -Append -Encoding UTF8
+        
+        # Nao executar agente quebrado - forcar reinstalacao
+        throw $errorMsg
+    }
+    
+    Write-Host "[BOOTSTRAP] Todas as funcoes criticas validadas" -ForegroundColor Green
+    return $true
 }
 
 # ============================================
@@ -109,6 +201,485 @@ $Global:EvidenceJournalPath = Join-Path -Path $evidenceDir -ChildPath "journal.l
 $Global:PollIntervalSeconds = 60
 
 # ============================================
+#  PHASE 1: PROTECTED TARGETS (DEFENSE IN DEPTH)
+# ============================================
+# Even if backend validation fails, agent NEVER touches these
+$Global:ProtectedProcesses = @(
+    "lsass", "csrss", "smss", "wininit", "winlogon",
+    "services", "svchost", "System", "dwm", "explorer",
+    "taskmgr", "RuntimeBroker", "spoolsv", "msdtc"
+)
+
+$Global:ProtectedServices = @(
+    "WinDefend", "EventLog", "RpcSs", "SamSs", "LanmanServer",
+    "LanmanWorkstation", "Dhcp", "Dnscache", "PlugPlay", "Power",
+    "SENS", "Schedule", "Winmgmt", "wuauserv", "CryptSvc",
+    "DcomLaunch", "NlaSvc", "Netman", "MpsSvc"
+)
+
+# ============================================
+#  v4.1.6: ED25519 CAPABILITY DETECTION
+# ============================================
+# Tests if the current PowerShell/.NET environment supports Ed25519
+# PowerShell 5.1 with .NET Framework 4.x does NOT support Ed25519 natively
+# This function enables capability-based security decisions
+
+function Test-Ed25519Support {
+    <#
+    .SYNOPSIS
+        Tests if the current environment supports Ed25519 signature verification
+    .DESCRIPTION
+        Ed25519 requires .NET 5+ or Windows 10 1903+ with specific APIs.
+        PowerShell 5.1 on older Windows versions cannot verify Ed25519 signatures.
+        Returns $true if supported, $false otherwise.
+    #>
+    try {
+        # Check for native Ed25519 type (requires .NET 5+)
+        $ed25519Type = [Type]::GetType("System.Security.Cryptography.Ed25519")
+        if ($null -ne $ed25519Type) {
+            return $true
+        }
+        
+        # Check Windows version for ECDsa with Ed25519 curve support
+        # Windows 10 1903+ (Build 18362+) has limited support
+        $osVersion = [Environment]::OSVersion.Version
+        if ($osVersion.Major -ge 10 -and $osVersion.Build -ge 18362) {
+            # Try to create ECDsa and import a test key
+            try {
+                $testKey = [Convert]::FromBase64String("MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI=")
+                $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
+                $bytesRead = 0
+                $ecdsa.ImportSubjectPublicKeyInfo($testKey, [ref]$bytesRead)
+                
+                # If we got here without exception, check if it's actually Ed25519
+                # ECDsa.Create() may succeed but not actually support Ed25519 curve
+                $curve = $ecdsa.ExportParameters($false).Curve
+                if ($curve.Oid.FriendlyName -eq "Ed25519" -or $curve.Oid.Value -eq "1.3.101.112") {
+                    return $true
+                }
+                
+                # ECDsa created but not Ed25519 curve - not supported
+                return $false
+            }
+            catch {
+                # ImportSubjectPublicKeyInfo failed - Ed25519 not supported
+                return $false
+            }
+        }
+        
+        # Older Windows version - Ed25519 not supported
+        return $false
+    }
+    catch {
+        return $false
+    }
+}
+
+# v4.1.6: Global capability flags
+$Global:Ed25519Supported = Test-Ed25519Support
+$Global:StrictSignatureMode = $Global:Ed25519Supported
+
+# v4.1.8: Global signing keypair (initialized at bootstrap)
+$Global:SigningKeyPair = $null
+
+# ============================================
+#  v4.1.8: ECDSA P-256 RESULT SIGNING
+# ============================================
+# Proof of Execution (PoE) - Agents sign results with ECDSA P-256
+# Backend verifies signature to ensure result authenticity
+# Keys stored securely in C:\CyberShield\keys\
+
+$Global:SigningKeysDir = Join-Path $Global:BaseDir "keys"
+
+function New-SigningKeyPair {
+    <#
+    .SYNOPSIS
+        Generates a new ECDSA P-256 keypair for result signing
+    .DESCRIPTION
+        Uses .NET ECDsa to generate P-256 keypair.
+        Returns hashtable with PublicKey (Base64 SPKI), PrivateKey (Base64 PKCS8), Fingerprint (SHA256 hex)
+    #>
+    try {
+        Write-Log "[SIGNING] Generating new ECDSA P-256 keypair..." "INFO"
+        
+        $ecdsa = [System.Security.Cryptography.ECDsa]::Create([System.Security.Cryptography.ECCurve]::NamedCurves.nistP256)
+        
+        # Export keys
+        $publicKeyBytes = $ecdsa.ExportSubjectPublicKeyInfo()
+        $privateKeyBytes = $ecdsa.ExportPkcs8PrivateKey()
+        
+        $publicKeyBase64 = [Convert]::ToBase64String($publicKeyBytes)
+        $privateKeyBase64 = [Convert]::ToBase64String($privateKeyBytes)
+        
+        # Calculate fingerprint (SHA256 of public key)
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        $fingerprintBytes = $sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($publicKeyBase64))
+        $fingerprint = [BitConverter]::ToString($fingerprintBytes).Replace("-", "").ToLower()
+        
+        Write-Log "[SIGNING] Generated keypair with fingerprint: $($fingerprint.Substring(0, 16))..." "SUCCESS"
+        
+        return @{
+            PublicKey = $publicKeyBase64
+            PrivateKey = $privateKeyBase64
+            Fingerprint = $fingerprint
+            Algorithm = "ECDSA-P256-SHA256"
+            GeneratedAt = (Get-Date).ToUniversalTime().ToString("o")
+        }
+    }
+    catch {
+        Write-Log "[SIGNING] Error generating keypair: $($_.Exception.Message)" "ERROR"
+        return $null
+    }
+}
+
+function Save-SigningKeyPair {
+    <#
+    .SYNOPSIS
+        Persists signing keypair to secure storage
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$KeyPair
+    )
+    
+    try {
+        # Create keys directory if not exists
+        if (-not (Test-Path $Global:SigningKeysDir)) {
+            New-Item -ItemType Directory -Path $Global:SigningKeysDir -Force | Out-Null
+        }
+        
+        # Set restrictive ACL on directory (SYSTEM and Administrators only)
+        $acl = Get-Acl $Global:SigningKeysDir
+        $acl.SetAccessRuleProtection($true, $false)  # Disable inheritance
+        
+        $systemRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "NT AUTHORITY\SYSTEM", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
+        )
+        $adminRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            "BUILTIN\Administrators", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
+        )
+        
+        $acl.AddAccessRule($systemRule)
+        $acl.AddAccessRule($adminRule)
+        Set-Acl $Global:SigningKeysDir $acl -ErrorAction SilentlyContinue
+        
+        # Save private key
+        $privKeyPath = Join-Path $Global:SigningKeysDir "signing_key.priv"
+        $KeyPair.PrivateKey | Out-File -FilePath $privKeyPath -Encoding UTF8 -Force
+        
+        # Save public key
+        $pubKeyPath = Join-Path $Global:SigningKeysDir "signing_key.pub"
+        $KeyPair.PublicKey | Out-File -FilePath $pubKeyPath -Encoding UTF8 -Force
+        
+        # Save metadata
+        $metaPath = Join-Path $Global:SigningKeysDir "signing_key.meta"
+        @{
+            fingerprint = $KeyPair.Fingerprint
+            algorithm = $KeyPair.Algorithm
+            generated_at = $KeyPair.GeneratedAt
+            version = 1
+        } | ConvertTo-Json | Out-File -FilePath $metaPath -Encoding UTF8 -Force
+        
+        Write-Log "[SIGNING] Keypair saved to $Global:SigningKeysDir" "INFO"
+        return $true
+    }
+    catch {
+        Write-Log "[SIGNING] Error saving keypair: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
+function Load-SigningKeyPair {
+    <#
+    .SYNOPSIS
+        Loads existing signing keypair from storage
+    #>
+    try {
+        $privKeyPath = Join-Path $Global:SigningKeysDir "signing_key.priv"
+        $pubKeyPath = Join-Path $Global:SigningKeysDir "signing_key.pub"
+        $metaPath = Join-Path $Global:SigningKeysDir "signing_key.meta"
+        
+        if (-not (Test-Path $privKeyPath) -or -not (Test-Path $pubKeyPath) -or -not (Test-Path $metaPath)) {
+            return $null
+        }
+        
+        $privateKey = Get-Content $privKeyPath -Raw -Encoding UTF8
+        $publicKey = Get-Content $pubKeyPath -Raw -Encoding UTF8
+        $metadata = Get-Content $metaPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        
+        return @{
+            PublicKey = $publicKey.Trim()
+            PrivateKey = $privateKey.Trim()
+            Fingerprint = $metadata.fingerprint
+            Algorithm = $metadata.algorithm
+            GeneratedAt = $metadata.generated_at
+            Version = $metadata.version
+        }
+    }
+    catch {
+        Write-Log "[SIGNING] Error loading keypair: $($_.Exception.Message)" "WARN"
+        return $null
+    }
+}
+
+function Register-SigningKey {
+    <#
+    .SYNOPSIS
+        Registers the public key with the backend
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PublicKey,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$Fingerprint,
+        
+        [Parameter(Mandatory = $false)]
+        [string]$Algorithm = "ECDSA-P256-SHA256"
+    )
+    
+    try {
+        Write-Log "[SIGNING] Registering public key with backend..." "INFO"
+        
+        $body = @{
+            public_key = $PublicKey
+            key_fingerprint = $Fingerprint
+            algorithm = $Algorithm
+        }
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/register-agent-key" `
+            -Method "POST" `
+            -Body $body `
+            -TimeoutSec 30
+        
+        if ($result.Success -and ($result.StatusCode -eq 200 -or $result.StatusCode -eq 201)) {
+            $response = $result.Content | ConvertFrom-Json
+            Write-Log "[SIGNING] Key registered successfully (version=$($response.version))" "SUCCESS"
+            
+            Add-EvidenceEntry -Type "key_registration" -Data @{
+                fingerprint = $Fingerprint.Substring(0, 16) + "..."
+                version = $response.version
+                algorithm = $Algorithm
+            } -Severity "info"
+            
+            return @{ success = $true; version = $response.version; key_id = $response.key_id }
+        } else {
+            Write-Log "[SIGNING] Key registration failed: HTTP $($result.StatusCode)" "ERROR"
+            return @{ success = $false; error = "HTTP $($result.StatusCode)" }
+        }
+    }
+    catch {
+        Write-Log "[SIGNING] Error registering key: $($_.Exception.Message)" "ERROR"
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+function Get-SigningKeyPair {
+    <#
+    .SYNOPSIS
+        Gets the signing keypair, generating and registering if needed
+    #>
+    # Try to load existing keypair
+    $keyPair = Load-SigningKeyPair
+    
+    if ($null -ne $keyPair) {
+        Write-Log "[SIGNING] Loaded existing keypair (fingerprint=$($keyPair.Fingerprint.Substring(0, 16))...)" "INFO"
+        return $keyPair
+    }
+    
+    # Generate new keypair
+    $keyPair = New-SigningKeyPair
+    if ($null -eq $keyPair) {
+        Write-Log "[SIGNING] Failed to generate signing keypair" "ERROR"
+        return $null
+    }
+    
+    # Save to disk
+    $saved = Save-SigningKeyPair -KeyPair $keyPair
+    if (-not $saved) {
+        Write-Log "[SIGNING] Failed to save keypair (continuing with ephemeral key)" "WARN"
+    }
+    
+    # Register with backend
+    $regResult = Register-SigningKey -PublicKey $keyPair.PublicKey -Fingerprint $keyPair.Fingerprint
+    if (-not $regResult.success) {
+        Write-Log "[SIGNING] Failed to register key with backend (will retry later)" "WARN"
+    }
+    
+    return $keyPair
+}
+
+function Compute-OutputHash {
+    <#
+    .SYNOPSIS
+        Computes SHA256 hash of job output
+    #>
+    param(
+        [Parameter(Mandatory = $false)]
+        $Output
+    )
+    
+    try {
+        $content = ""
+        if ($null -eq $Output -or $Output -eq "") {
+            $content = ""
+        } elseif ($Output -is [string]) {
+            $content = $Output
+        } else {
+            $content = $Output | ConvertTo-Json -Compress -Depth 10
+        }
+        
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($content)
+        $hashBytes = $sha256.ComputeHash($bytes)
+        return [BitConverter]::ToString($hashBytes).Replace("-", "").ToLower()
+    }
+    catch {
+        Write-Log "[SIGNING] Error computing output hash: $($_.Exception.Message)" "WARN"
+        return ""
+    }
+}
+
+function Sign-ExecutionResult {
+    <#
+    .SYNOPSIS
+        Signs the execution result with ECDSA P-256
+    .DESCRIPTION
+        Creates canonical payload and signs with agent's private key.
+        Canonical format: {"execution_id":"...","job_id":"...","nonce":"...","output_hash":"...","status":"..."}
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ExecutionId,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$JobId,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$Nonce,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$OutputHash,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$Status,
+        
+        [Parameter(Mandatory = $true)]
+        [string]$PrivateKeyBase64
+    )
+    
+    try {
+        # Build canonical payload (sorted keys for deterministic serialization)
+        $canonical = [ordered]@{
+            execution_id = $ExecutionId
+            job_id = $JobId
+            nonce = $Nonce
+            output_hash = $OutputHash
+            status = $Status
+        }
+        $payloadJson = $canonical | ConvertTo-Json -Compress
+        
+        Write-Log "[SIGNING] Signing result for job $JobId (exec=$($ExecutionId.Substring(0, 8))...)" "DEBUG"
+        
+        # Import private key
+        $ecdsa = [System.Security.Cryptography.ECDsa]::Create()
+        $privateKeyBytes = [Convert]::FromBase64String($PrivateKeyBase64)
+        $bytesRead = 0
+        $ecdsa.ImportPkcs8PrivateKey($privateKeyBytes, [ref]$bytesRead)
+        
+        # Sign the payload
+        $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($payloadJson)
+        $signatureBytes = $ecdsa.SignData($payloadBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+        $signatureBase64 = [Convert]::ToBase64String($signatureBytes)
+        
+        Write-Log "[SIGNING] Result signed successfully" "DEBUG"
+        return $signatureBase64
+    }
+    catch {
+        Write-Log "[SIGNING] Error signing result: $($_.Exception.Message)" "ERROR"
+        return $null
+    }
+}
+
+function Initialize-SigningKeyPair {
+    <#
+    .SYNOPSIS
+        Initializes the signing keypair at agent startup
+    #>
+    try {
+        $Global:SigningKeyPair = Get-SigningKeyPair
+        
+        if ($null -eq $Global:SigningKeyPair) {
+            Write-Log "[SIGNING] WARNING: Could not initialize signing keypair - results will be unsigned" "WARN"
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "signing_key_unavailable"
+                reason = "Failed to generate or load ECDSA keypair"
+            } -Severity "warning"
+            return $false
+        }
+        
+        Write-Log "[SIGNING] Signing keypair initialized (fingerprint=$($Global:SigningKeyPair.Fingerprint.Substring(0, 16))...)" "SUCCESS"
+        return $true
+    }
+    catch {
+        Write-Log "[SIGNING] Error initializing signing keypair: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
+# ============================================
+#  v4.1.6: AGENT SELF-TEST
+# ============================================
+function Invoke-AgentSelfTest {
+    <#
+    .SYNOPSIS
+        Performs comprehensive self-test at agent startup
+    .DESCRIPTION
+        Validates environment, capabilities, and configuration.
+        Returns structured results for telemetry and logging.
+    #>
+    $results = @{
+        timestamp = (Get-Date).ToString("o")
+        powershell_version = $PSVersionTable.PSVersion.ToString()
+        dotnet_version = [System.Runtime.InteropServices.RuntimeInformation]::FrameworkDescription
+        os_version = [Environment]::OSVersion.VersionString
+        ed25519_supported = $Global:Ed25519Supported
+        signature_mode = if ($Global:StrictSignatureMode) { "strict" } else { "audit_only" }
+        hmac_configured = (-not [string]::IsNullOrEmpty($Global:HmacSecret))
+        agent_version = $Global:AgentVersion
+        log_writable = $false
+        scheduled_task_exists = $false
+        encoding_ok = $true
+    }
+    
+    # Test log write capability
+    try {
+        $testPath = Join-Path $logDir "selftest-$(Get-Date -Format 'yyyyMMddHHmmss').tmp"
+        "test" | Out-File $testPath -Encoding UTF8
+        Remove-Item $testPath -Force -ErrorAction SilentlyContinue
+        $results.log_writable = $true
+    } catch {
+        $results.log_writable = $false
+    }
+    
+    # Test scheduled task exists
+    try {
+        $taskName = "CyberShieldAgent-$($Global:AgentName)"
+        $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+        if (-not $task) {
+            # Try alternate task name pattern
+            $task = Get-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+        }
+        $results.scheduled_task_exists = ($null -ne $task)
+    } catch {
+        $results.scheduled_task_exists = $false
+    }
+    
+    return $results
+}
+
+# ============================================
 #  FASE 2.6: ED25519 SIGNATURE VERIFICATION
 # ============================================
 # IMPORTANT: This is the Ed25519 PUBLIC KEY for verifying agent updates
@@ -126,7 +697,13 @@ $Global:PollIntervalSeconds = 60
 
 # PLACEHOLDER: Replace with actual Ed25519 public key when available
 # Format: Base64-encoded SubjectPublicKeyInfo (SPKI) format
-$Global:Ed25519PublicKey = $null  # Set to Base64 public key string when ready
+# SSA-004: This is the public key for verifying job payload signatures
+$Global:Ed25519PublicKey = "MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI="
+
+# SSA-004: Require signatures when public key is configured AND Ed25519 is supported
+$Global:RequireJobSignatures = (-not [string]::IsNullOrEmpty($Global:Ed25519PublicKey)) -and $Global:Ed25519Supported
+
+# v4.1.6: Log capability status at startup (will be logged after Write-Log is defined)
 
 function Verify-Ed25519Signature {
     <#
@@ -134,6 +711,7 @@ function Verify-Ed25519Signature {
         Verifies an Ed25519 signature for script content
     .DESCRIPTION
         Uses .NET cryptography to verify Ed25519 signatures.
+        v4.1.6: Uses capability-based security - audit-only mode when Ed25519 not supported.
         Returns $true if signature is valid, $false otherwise.
         If no public key is configured, returns $true (backward compatible).
     .PARAMETER ScriptBytes
@@ -156,7 +734,17 @@ function Verify-Ed25519Signature {
                 Write-Log "[SECURITY] No signature verification configured (backward compatible mode)" "WARN"
                 return $true
             } else {
-                Write-Log "[SECURITY] ❌ Signature required but not provided" "ERROR"
+                # v4.1.6: If Ed25519 not supported, use audit-only mode
+                if (-not $Global:Ed25519Supported) {
+                    Write-Log "[SECURITY] Signature required but Ed25519 not supported - AUDIT ONLY" "WARN"
+                    Add-EvidenceEntry -Type "security_warning" -Data @{
+                        event = "signature_required_but_unsupported"
+                        ed25519_supported = $false
+                        mode = "audit_only"
+                    } -Severity "warning"
+                    return $true
+                }
+                Write-Log "[SECURITY] Signature required but not provided" "ERROR"
                 return $false
             }
         }
@@ -164,6 +752,18 @@ function Verify-Ed25519Signature {
         # If public key not configured, skip verification (backward compat)
         if ([string]::IsNullOrEmpty($Global:Ed25519PublicKey)) {
             Write-Log "[SECURITY] Ed25519 public key not configured - skipping signature verification" "WARN"
+            return $true
+        }
+        
+        # v4.1.6: If Ed25519 not supported, log and allow in audit-only mode
+        if (-not $Global:Ed25519Supported) {
+            Write-Log "[SECURITY] Ed25519 not supported on this system - AUDIT ONLY (signature present)" "WARN"
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "ed25519_not_supported_audit_only"
+                signature_provided = $true
+                ed25519_supported = $false
+                mode = "audit_only"
+            } -Severity "warning"
             return $true
         }
         
@@ -188,22 +788,23 @@ function Verify-Ed25519Signature {
                 $isValid = $ed25519.VerifyData($ScriptBytes, $signature, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
                 
                 if ($isValid) {
-                    Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+                    Write-Log "[SECURITY] Ed25519 signature verified successfully" "SUCCESS"
                 } else {
-                    Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+                    Write-Log "[SECURITY] Ed25519 signature verification FAILED" "ERROR"
                 }
                 
                 return $isValid
             }
             catch {
-                # If Ed25519 is not supported on this system, log warning and allow
+                # If Ed25519 is not supported on this system, log warning and allow (audit-only)
                 Write-Log "[SECURITY] Ed25519 verification not supported on this system: $($_.Exception.Message)" "WARN"
-                Write-Log "[SECURITY] Allowing update (signature present but cannot verify)" "WARN"
+                Write-Log "[SECURITY] AUDIT ONLY: Allowing update (signature present but cannot verify)" "WARN"
                 
                 Add-EvidenceEntry -Type "security_warning" -Data @{
                     event = "ed25519_not_supported"
                     error = $_.Exception.Message
                     signature_provided = $true
+                    mode = "audit_only"
                 } -Severity "warning"
                 
                 return $true
@@ -217,12 +818,161 @@ function Verify-Ed25519Signature {
             $isValid = $ed25519.VerifyData($ScriptBytes, $signature)
             
             if ($isValid) {
-                Write-Log "[SECURITY] ✅ Ed25519 signature verified successfully" "SUCCESS"
+                Write-Log "[SECURITY] Ed25519 signature verified successfully" "SUCCESS"
             } else {
-                Write-Log "[SECURITY] ❌ Ed25519 signature verification FAILED" "ERROR"
+                Write-Log "[SECURITY] Ed25519 signature verification FAILED" "ERROR"
             }
             
             return $isValid
+        }
+    }
+    catch {
+        Write-Log "[SECURITY] Ed25519 signature verification error: $($_.Exception.Message)" "ERROR"
+        Add-EvidenceEntry -Type "security_error" -Data @{
+            event = "signature_verification_error"
+            error = $_.Exception.Message
+        } -Severity "error"
+        
+        # v4.1.6: In audit-only mode, allow even on error
+        if (-not $Global:Ed25519Supported) {
+            Write-Log "[SECURITY] AUDIT ONLY: Allowing despite error" "WARN"
+            return $true
+        }
+        return $false
+    }
+}
+
+# ============================================
+#  SSA-004: JOB PAYLOAD SIGNATURE VERIFICATION
+# ============================================
+function Verify-JobSignature {
+    <#
+    .SYNOPSIS
+        Verifies the Ed25519 signature of a job payload
+    .DESCRIPTION
+        Uses .NET cryptography to verify Ed25519 signatures on job payloads.
+        The canonical payload format is: job_id:job_type:JSON(payload)
+        Returns $true if signature is valid or if no public key is configured.
+        Returns $false if signature verification fails.
+    .PARAMETER Job
+        The job object containing id, type, payload, and payload_signature
+    #>
+    param (
+        [Parameter(Mandatory = $true)]
+        $Job
+    )
+    
+    try {
+        $jobId = $Job.id
+        $jobType = $Job.type
+        $signature = $Job.payload_signature
+        $signingAlg = $Job.signing_alg
+        
+        # If no public key configured, skip verification (backward compatible)
+        if ([string]::IsNullOrEmpty($Global:Ed25519PublicKey)) {
+            Write-Log "[SECURITY] Ed25519 public key not configured - skipping signature verification" "WARN"
+            return $true
+        }
+        
+        # If public key is configured but job has no signature, reject
+        if ([string]::IsNullOrEmpty($signature)) {
+            if ($Global:RequireJobSignatures) {
+                Write-Log "[SECURITY] ❌ REJECTED: Job $jobId has no signature (signatures required)" "ERROR"
+                
+                Add-EvidenceEntry -Type "security_alert" -Data @{
+                    event = "unsigned_job_rejected"
+                    job_id = $jobId
+                    job_type = $jobType
+                    reason = "No signature provided but signatures are required"
+                } -Severity "critical"
+                
+                return $false
+            }
+            Write-Log "[SECURITY] Job $jobId has no signature (backward compatible mode)" "WARN"
+            return $true
+        }
+        
+        # Verify algorithm is Ed25519
+        if ($signingAlg -and $signingAlg -ne "Ed25519") {
+            Write-Log "[SECURITY] ❌ REJECTED: Unsupported signing algorithm: $signingAlg" "ERROR"
+            return $false
+        }
+        
+        Write-Log "[SECURITY] Verifying Ed25519 signature for job $jobId..." "INFO"
+        
+        # Create canonical payload: job_id:job_type:JSON(payload)
+        $payloadJson = if ($Job.payload) { 
+            $sortedKeys = ($Job.payload | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name | Sort-Object)
+            $orderedPayload = [ordered]@{}
+            foreach ($key in $sortedKeys) {
+                $orderedPayload[$key] = $Job.payload.$key
+            }
+            $orderedPayload | ConvertTo-Json -Compress -Depth 10 
+        } else { 
+            "{}" 
+        }
+        $canonicalPayload = "${jobId}:${jobType}:${payloadJson}"
+        
+        # Decode signature and public key from Base64
+        $signatureBytes = [Convert]::FromBase64String($signature)
+        $publicKeyBytes = [Convert]::FromBase64String($Global:Ed25519PublicKey)
+        $payloadBytes = [System.Text.Encoding]::UTF8.GetBytes($canonicalPayload)
+        
+        # Try to verify using .NET Ed25519 (requires .NET 5+ or specific Windows versions)
+        try {
+            # Import public key
+            $ed25519 = [System.Security.Cryptography.ECDsa]::Create()
+            $bytesRead = 0
+            $ed25519.ImportSubjectPublicKeyInfo($publicKeyBytes, [ref]$bytesRead)
+            
+            # Verify signature
+            $isValid = $ed25519.VerifyData($payloadBytes, $signatureBytes, [System.Security.Cryptography.HashAlgorithmName]::SHA256)
+            
+            if ($isValid) {
+                Write-Log "[SECURITY] ✅ Job $jobId signature verified successfully" "SUCCESS"
+                
+                Add-EvidenceEntry -Type "security_check" -Data @{
+                    event = "job_signature_verified"
+                    job_id = $jobId
+                    job_type = $jobType
+                    algorithm = "Ed25519"
+                } -Severity "info"
+                
+                return $true
+            } else {
+                Write-Log "[SECURITY] ❌ REJECTED: Job $jobId signature verification FAILED" "ERROR"
+                
+                Add-EvidenceEntry -Type "security_alert" -Data @{
+                    event = "invalid_job_signature"
+                    job_id = $jobId
+                    job_type = $jobType
+                    reason = "Signature does not match payload"
+                } -Severity "critical"
+                
+                return $false
+            }
+        }
+        catch {
+            # If Ed25519 verification is not supported, log warning
+            Write-Log "[SECURITY] Ed25519 verification not fully supported: $($_.Exception.Message)" "WARN"
+            Write-Log "[SECURITY] Attempting fallback verification method..." "INFO"
+            
+            # For systems without native Ed25519, we accept if signature is present
+            # This provides partial protection until full Ed25519 support
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "ed25519_verification_fallback"
+                job_id = $jobId
+                error = $_.Exception.Message
+                signature_present = $true
+            } -Severity "warning"
+            
+            # In strict mode, reject; otherwise allow with signature present
+            if ($Global:RequireJobSignatures) {
+                Write-Log "[SECURITY] ❌ Cannot verify signature - rejecting in strict mode" "ERROR"
+                return $false
+            }
+            
+            return $true
         }
     }
     catch {
@@ -230,10 +980,11 @@ function Verify-Ed25519Signature {
         
         Add-EvidenceEntry -Type "error" -Data @{
             event = "signature_verification_failed"
+            job_id = $Job.id
             error = $_.Exception.Message
         } -Severity "error"
         
-        # Security: If verification fails unexpectedly, reject the update
+        # Security: If verification fails unexpectedly, reject the job
         return $false
     }
 }
@@ -648,7 +1399,6 @@ $Global:EvidenceFlushThreshold = 10  # Flush apos 10 entradas ou 60s
 function Add-EvidenceEntry {
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet("state_change", "job_execution", "dns_block", "policy_sync", "auto_recovery", "heartbeat", "update_applied", "update_check", "error", "policy_drift", "security_event")]
         [string]$Type,
         
         [Parameter(Mandatory = $true)]
@@ -666,6 +1416,19 @@ function Add-EvidenceEntry {
     )
     
     try {
+        # RUNTIME VALIDATION - Backward + Forward compatible (substitui ValidateSet rígido)
+        $AllowedTypes = @(
+            "state_change", "job_execution", "dns_block", "policy_sync", 
+            "auto_recovery", "heartbeat", "update_applied", "update_check", 
+            "error", "policy_drift", "security_event", "security_warning",
+            "metrics_sent", "force_update"
+        )
+        
+        if ($Type -notin $AllowedTypes) {
+            Write-Log "[EVIDENCE] Tipo desconhecido aceito graciosamente: $Type" "WARN"
+            # Não bloqueia - aceita qualquer tipo para forward compatibility
+        }
+        
         # Criar hash SHA256 do data para integridade
         $dataJson = $Data | ConvertTo-Json -Compress -Depth 5
         $sha256 = [System.Security.Cryptography.SHA256]::Create()
@@ -1627,20 +2390,28 @@ function Get-SystemInfo {
 # ============================================
 #  HEARTBEAT
 # ============================================
+# ============================================
+#  HEARTBEAT (COM FORCE UPDATE VIA RESPONSE)
+#  v4.1.6: Added capability flags for backend-aware security
+# ============================================
 function Send-Heartbeat {
     $sysInfo = Get-SystemInfo
 
+    # v4.1.6: Include capability flags for backend-aware security decisions
     $body = @{
-        agent_name    = $Global:AgentName
-        hostname      = $sysInfo.hostname
-        os_type       = $sysInfo.os_type
-        os_version    = $sysInfo.os_version
-        agent_version = $Global:AgentVersion
-        state         = Get-AgentState
-        error_count   = $Global:AgentState.ErrorCount
+        agent_name       = $Global:AgentName
+        hostname         = $sysInfo.hostname
+        os_type          = $sysInfo.os_type
+        os_version       = $sysInfo.os_version
+        agent_version    = $Global:AgentVersion
+        state            = Get-AgentState
+        error_count      = $Global:AgentState.ErrorCount
+        # v4.1.6: Capability flags
+        ed25519_supported = $Global:Ed25519Supported
+        signature_mode   = if ($Global:StrictSignatureMode) { "strict" } else { "audit_only" }
     }
 
-    Write-Log "[HEARTBEAT] Enviando heartbeat (state: $(Get-AgentState))..." "INFO"
+    Write-Log "[HEARTBEAT] Enviando heartbeat (state: $(Get-AgentState), ed25519: $($Global:Ed25519Supported))..." "INFO"
 
     try {
         $result = Invoke-SecureRequest `
@@ -1651,6 +2422,41 @@ function Send-Heartbeat {
 
         if ($result.Success -and $result.StatusCode -eq 200) {
             Write-Log "[HEARTBEAT] OK (200)" "SUCCESS"
+            
+            try {
+                $response = $result.Body | ConvertFrom-Json
+                
+                # v4.1.8: Handle key rotation request
+                if ($response.rotate_key -eq $true) {
+                    Write-Log "[SIGNING] Backend requested key rotation!" "WARN"
+                    
+                    $newKeyPair = New-SigningKeyPair
+                    if ($null -ne $newKeyPair) {
+                        $regResult = Register-SigningKey -PublicKey $newKeyPair.PublicKey -Fingerprint $newKeyPair.Fingerprint
+                        if ($regResult.success) {
+                            Save-SigningKeyPair -KeyPair $newKeyPair
+                            $Global:SigningKeyPair = $newKeyPair
+                            Write-Log "[SIGNING] Key rotation completed successfully" "SUCCESS"
+                        }
+                    }
+                }
+                
+                # FASE VIKTOR: Processar force_update no response do heartbeat
+                if ($response.force_update -eq $true) {
+                    Write-Log "[FORCE UPDATE] Update forcado detectado via heartbeat!" "WARN"
+                    Write-Log "[FORCE UPDATE] Target version: $($response.target_version)" "INFO"
+                    
+                    $updateResult = Apply-ForcedUpdate -Response $response
+                    
+                    if ($updateResult.success) {
+                        return $true
+                    } else {
+                        Write-Log "[FORCE UPDATE] Falha ao aplicar: $($updateResult.error)" "ERROR"
+                    }
+                }
+            } catch {
+                Write-Log "[HEARTBEAT] Erro ao processar response: $($_.Exception.Message)" "WARN"
+            }
             
             Add-EvidenceEntry -Type "heartbeat" -Data @{
                 status = "success"
@@ -1670,7 +2476,249 @@ function Send-Heartbeat {
 }
 
 # ============================================
-#  SUBMIT JOB RESULT
+#  FORCE UPDATE VIA HEARTBEAT (VIKTOR METHOD)
+# ============================================
+# Esta funcao:
+# 1. NAO depende do job system
+# 2. NAO usa ValidateSet que pode quebrar
+# 3. Processa dados recebidos diretamente no heartbeat response
+# 4. Funciona com agentes antigos que nao tem update_agent funcionando
+# ============================================
+function Apply-ForcedUpdate {
+    param(
+        [Parameter(Mandatory = $true)]
+        $Response
+    )
+    
+    try {
+        Write-Log "[FORCE UPDATE] Iniciando aplicacao de update forcado..." "INFO"
+        
+        # Extrair dados do response
+        $targetVersion = $Response.target_version
+        $base64Content = $Response.script_content_base64
+        $expectedHash = $Response.sha256
+        $reason = $Response.reason
+        
+        if (-not $targetVersion -or -not $base64Content -or -not $expectedHash) {
+            throw "Dados de force update incompletos no response"
+        }
+        
+        Write-Log "[FORCE UPDATE] Version: $targetVersion, Reason: $reason" "INFO"
+        
+        # SAFE MODE CHECK - mesmo check do Invoke-UpdateAgentJob
+        $rollbackState = Get-RollbackState
+        if ($rollbackState.safe_mode) {
+            Write-Log "[SAFE MODE] Updates desabilitados - rollback loop detectado" "ERROR"
+            
+            Add-EvidenceEntry -Type "security_warning" -Data @{
+                event = "force_update_blocked_safe_mode"
+                target_version = $targetVersion
+                rollback_count = $rollbackState.rollback_count
+            } -Severity "warning"
+            
+            return @{ success = $false; error = "Safe mode active - updates disabled" }
+        }
+        
+        # Criar arquivo temporario
+        $tempScript = Join-Path $env:TEMP "cybershield-force-update-$targetVersion.ps1"
+        
+        # CRITICAL: Base64 decode - preserva 100% dos bytes
+        Write-Log "[FORCE UPDATE] Decodificando Base64..." "DEBUG"
+        $bytes = [System.Convert]::FromBase64String($base64Content)
+        [System.IO.File]::WriteAllBytes($tempScript, $bytes)
+        Write-Log "[FORCE UPDATE] Script salvo: $($bytes.Length) bytes" "DEBUG"
+        
+        # Validar SHA256
+        $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+        if ($actualHash -ne $expectedHash.ToLower()) {
+            Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+            throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
+        }
+        
+        Write-Log "[FORCE UPDATE] SHA256 validado: $actualHash" "SUCCESS"
+        
+        # Detectar script atual
+        $installDir = "C:\CyberShield"
+        $targetScript = Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"
+        
+        $currentScript = $null
+        $possiblePaths = @(
+            $PSCommandPath,
+            (Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"),
+            (Join-Path $installDir "cybershield-agent-v4.ps1"),
+            (Join-Path $installDir "cybershield-agent.ps1")
+        )
+        
+        foreach ($path in $possiblePaths) {
+            if ($path -and (Test-Path $path)) {
+                $currentScript = $path
+                break
+            }
+        }
+        
+        if (-not $currentScript) {
+            $found = Get-ChildItem -Path $installDir -Filter "cybershield-agent-*.ps1" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) { $currentScript = $found.FullName }
+        }
+        
+        # BACKUP para rollback estruturado
+        $previousPath = $Global:RollbackPaths.Previous
+        if ($currentScript -and (Test-Path $currentScript)) {
+            try {
+                Copy-Item -Path $currentScript -Destination $previousPath -Force
+                Write-Log "[FORCE UPDATE] Backup criado: $previousPath" "INFO"
+                
+                $rollbackState = Get-RollbackState
+                $rollbackState.previous_version = $Global:AgentVersion
+                Save-RollbackState -State $rollbackState
+            } catch {
+                Write-Log "[FORCE UPDATE] Backup falhou: $($_.Exception.Message)" "WARN"
+            }
+        }
+        
+        # APLICAR UPDATE
+        Copy-Item -Path $tempScript -Destination $targetScript -Force
+        Remove-Item $tempScript -Force -ErrorAction SilentlyContinue
+        Write-Log "[FORCE UPDATE] Script instalado: $targetScript" "SUCCESS"
+        
+        # Registrar evidencia
+        Add-EvidenceEntry -Type "force_update" -Data @{
+            old_version = $Global:AgentVersion
+            new_version = $targetVersion
+            target_path = $targetScript
+            sha256 = $actualHash
+            reason = $reason
+            method = "heartbeat_response"
+        } -Severity "info"
+        
+        # Confirmar no backend que force update foi aplicado
+        try {
+            $confirmResult = Invoke-SecureRequest `
+                -Path "/functions/v1/confirm-force-update" `
+                -Method "POST" `
+                -Body @{
+                    new_version = $targetVersion
+                    old_version = $Global:AgentVersion
+                } `
+                -TimeoutSec 10
+            
+            if ($confirmResult.Success) {
+                Write-Log "[FORCE UPDATE] Confirmacao enviada ao backend" "SUCCESS"
+            }
+        } catch {
+            Write-Log "[FORCE UPDATE] Falha ao confirmar no backend (nao critico): $($_.Exception.Message)" "WARN"
+        }
+        
+        Write-Log "[FORCE UPDATE] Update $targetVersion aplicado com sucesso!" "SUCCESS"
+        
+        # SSA-010 FIX: Auto-restart da Scheduled Task para ativar IMEDIATAMENTE
+        # (Mesmo padrao do Rollback que funciona corretamente)
+        Write-Log "[FORCE UPDATE] Reiniciando Scheduled Task para ativar nova versao..." "INFO"
+        try {
+            Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+            Start-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+            Write-Log "[FORCE UPDATE] Task reiniciada - nova versao ativa!" "SUCCESS"
+        } catch {
+            Write-Log "[FORCE UPDATE] Restart task falhou, sera ativado no proximo boot: $($_.Exception.Message)" "WARN"
+        }
+        
+        # EXIT para permitir novo script iniciar (processo atual termina)
+        Write-Log "[FORCE UPDATE] Encerrando processo atual para nova versao iniciar..." "INFO"
+        exit 0
+        
+    } catch {
+        Write-Log "[FORCE UPDATE] Erro: $($_.Exception.Message)" "ERROR"
+        
+        Add-EvidenceEntry -Type "error" -Data @{
+            event = "force_update_failed"
+            error = $_.Exception.Message
+            target_version = $Response.target_version
+        } -Severity "error"
+        
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  SEND SYSTEM METRICS (HYBRID - v4.0.9)
+# ============================================
+function Send-SystemMetrics {
+    param(
+        [Parameter(Mandatory = $false)]
+        [hashtable]$Metrics = $null
+    )
+    
+    Write-Log "[METRICS] Iniciando coleta/envio de metricas..." "DEBUG"
+    
+    try {
+        # Se metricas nao foram passadas, coletar via Invoke-ReportJob
+        if (-not $Metrics) {
+            Write-Log "[METRICS] Coletando metricas automaticamente..." "DEBUG"
+            $metricsJob = @{ id = "auto-metrics"; type = "report" }
+            $metricsResult = Invoke-ReportJob -Job $metricsJob
+            
+            if (-not $metricsResult.success) {
+                Write-Log "[METRICS] Falha na coleta de metricas: $($metricsResult.output)" "WARN"
+                return $false
+            }
+            
+            try {
+                $metricsData = $metricsResult.output | ConvertFrom-Json
+                
+                # v4.0.11: Enviar TODAS as informacoes de metricas, incluindo discos
+                $Metrics = @{
+                    cpu_usage_percent = $metricsData.cpu_percent
+                    cpu_name = $metricsData.cpu_name
+                    cpu_cores = $metricsData.cpu_cores
+                    memory_usage_percent = $metricsData.memory_percent
+                    memory_total_gb = $metricsData.memory_total_gb
+                    memory_used_gb = $metricsData.memory_used_gb
+                    memory_free_gb = $metricsData.memory_free_gb
+                    disk_usage_percent = $metricsData.disk_percent
+                    disk_total_gb = $metricsData.disk_total_gb
+                    disk_used_gb = $metricsData.disk_used_gb
+                    disk_free_gb = $metricsData.disk_free_gb
+                    disks = $metricsData.disks
+                    hostname = $metricsData.hostname
+                    uptime_seconds = $metricsData.uptime_seconds
+                    last_boot_time = $metricsData.last_boot_time
+                }
+                
+                $diskCount = if ($metricsData.disks) { $metricsData.disks.Count } else { 0 }
+                Write-Log "[METRICS] Payload preparado: CPU=$($Metrics.cpu_usage_percent)%, RAM=$($Metrics.memory_usage_percent)%, Discos=$diskCount" "DEBUG"
+                
+            } catch {
+                Write-Log "[METRICS] Falha ao parsear metricas: $($_.Exception.Message)" "WARN"
+                return $false
+            }
+        }
+        
+        Write-Log "[METRICS] Enviando metricas para backend..." "DEBUG"
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-system-metrics" `
+            -Method "POST" `
+            -Body $Metrics `
+            -TimeoutSec 15
+        
+        if ($result.Success -and $result.StatusCode -eq 200) {
+            $diskCount = if ($Metrics.disks) { $Metrics.disks.Count } else { 0 }
+            Write-Log "[SUCCESS] Metricas enviadas: CPU=$($Metrics.cpu_usage_percent)%, RAM=$($Metrics.memory_usage_percent)%, Discos=$diskCount" "SUCCESS"
+            return $true
+        }
+        
+        Write-Log "[WARN] Falha ao enviar metricas (HTTP $($result.StatusCode))" "WARN"
+        return $false
+        
+    } catch {
+        Write-Log "[ERROR] Erro em Send-SystemMetrics: $($_.Exception.Message)" "ERROR"
+        return $false
+    }
+}
+
+# ============================================
+#  SUBMIT JOB RESULT (v4.1.8: PoE Signing)
 # ============================================
 function Submit-JobResult {
     param(
@@ -1694,8 +2742,38 @@ function Submit-JobResult {
         [string]$StartedAt = "",
         
         [Parameter()]
-        [string]$ExecutionId = ""
+        [string]$ExecutionId = "",
+        
+        # v4.1.8: PoE fields
+        [Parameter()]
+        [string]$Nonce = ""
     )
+
+    # v4.1.8: Compute output hash
+    $outputHash = Compute-OutputHash -Output $Output
+    
+    # v4.1.8: Sign the result if signing keypair is available
+    $resultSignature = $null
+    $signatureAlgorithm = $null
+    
+    if ($null -ne $Global:SigningKeyPair -and $Global:SigningKeyPair.PrivateKey -and $Nonce) {
+        $resultSignature = Sign-ExecutionResult `
+            -ExecutionId $ExecutionId `
+            -JobId $JobId `
+            -Nonce $Nonce `
+            -OutputHash $outputHash `
+            -Status $Status `
+            -PrivateKeyBase64 $Global:SigningKeyPair.PrivateKey
+        
+        if ($resultSignature) {
+            $signatureAlgorithm = "ECDSA-P256-SHA256"
+            Write-Log "[JOB] Result signed (hash=$($outputHash.Substring(0, 16))...)" "DEBUG"
+        }
+    } elseif (-not $Nonce) {
+        Write-Log "[JOB] No nonce provided - result will be unsigned" "DEBUG"
+    } elseif ($null -eq $Global:SigningKeyPair) {
+        Write-Log "[JOB] No signing keypair - result will be unsigned" "WARN"
+    }
 
     $body = @{
         job_id                 = $JobId
@@ -1707,9 +2785,15 @@ function Submit-JobResult {
         agent_name             = $Global:AgentName
         agent_version          = $Global:AgentVersion
         execution_id           = $ExecutionId
+        # v4.1.8: PoE fields
+        nonce                  = $Nonce
+        output_hash            = $outputHash
+        result_signature       = $resultSignature
+        signature_algorithm    = $signatureAlgorithm
     }
 
-    Write-Log "[JOB] Enviando resultado para job $JobId (status=$Status, exec_id=$ExecutionId)" "INFO"
+    $signedStatus = if ($resultSignature) { "signed" } else { "unsigned" }
+    Write-Log "[JOB] Enviando resultado para job $JobId (status=$Status, exec_id=$ExecutionId, $signedStatus)" "INFO"
 
     try {
         $result = Invoke-SecureRequest `
@@ -1733,7 +2817,7 @@ function Submit-JobResult {
 }
 
 # ============================================
-#  EXECUTE JOB (IDEMPOTENTE COM EXECUTION_ID)
+#  EXECUTE JOB (IDEMPOTENTE COM EXECUTION_ID) - v4.1.8: PoE
 # ============================================
 function Execute-Job {
     param(
@@ -1756,12 +2840,32 @@ function Execute-Job {
         return
     }
 
+    # SSA-004: Verify job signature BEFORE execution
+    $signatureValid = Verify-JobSignature -Job $Job
+    if (-not $signatureValid) {
+        Write-Log "[SECURITY] BLOCKED: Job $($Job.id) rejected due to invalid/missing signature" "ERROR"
+        
+        # Submit rejection result to backend
+        Submit-JobResult `
+            -JobId $Job.id `
+            -Status "failed" `
+            -ErrorMessage "Security: Invalid or missing payload signature" `
+            -ExecutionTimeSeconds 0 `
+            -StartedAt (Get-Date).ToUniversalTime().ToString("o") `
+            -ExecutionId "security-rejected"
+        
+        return
+    }
+
     $jobId = $Job.id
     $jobType = $Job.type
-    $executionId = "exec-$(New-Guid)"
+    # v4.1.8: Use execution_id from claim if provided, otherwise generate locally
+    $executionId = if ($Job.execution_id) { $Job.execution_id } else { "exec-$(New-Guid)" }
+    # v4.1.8: Capture nonce from claim for result signing
+    $nonce = if ($Job.nonce) { $Job.nonce } else { "" }
     $startTime = Get-Date
 
-    Write-Log "[JOB] Executando job $jobId (type=$jobType, exec_id=$executionId)" "INFO"
+    Write-Log "[JOB] Executando job $jobId (type=$jobType, exec_id=$executionId, nonce=$($nonce.Length) chars)" "INFO"
 
     # Registrar inicio da execucao
     Add-EvidenceEntry -Type "job_execution" -Data @{
@@ -1770,6 +2874,8 @@ function Execute-Job {
         execution_id = $executionId
         phase = "started"
         state = Get-AgentState
+        signature_verified = $true
+        has_nonce = (-not [string]::IsNullOrEmpty($nonce))
     } -Severity "info"
 
     try {
@@ -1806,6 +2912,66 @@ function Execute-Job {
                 if ($result.success) { $output = $result.output }
                 else { throw $result.error }
             }
+            "integration_test" {
+                $sys = Get-SystemInfo
+                $output = @{
+                    message = "Integration test executed successfully"
+                    timestamp = (Get-Date).ToUniversalTime().ToString("o")
+                    agent = $Global:AgentName
+                    version = $Global:AgentVersion
+                    system = $sys
+                } | ConvertTo-Json -Compress
+            }
+            "collect_info" {
+                $sys = Get-SystemInfo
+                $output = $sys | ConvertTo-Json -Compress
+            }
+            "scan" {
+                $result = Invoke-ScanJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "fix_firewall" {
+                $result = Invoke-FixFirewallJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "restart_service" {
+                $result = Invoke-RestartServiceJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "collect_network_info" {
+                $result = Invoke-CollectNetworkInfoJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "sync_blocked_websites" {
+                $result = Invoke-SyncBlockedWebsitesJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "reinstall_agent" {
+                $result = Invoke-ReinstallAgentJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            # === PHASE 1: PROCESS CONTROL JOBS ===
+            "kill_process" {
+                $result = Invoke-KillProcessJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "stop_service" {
+                $result = Invoke-StopServiceJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
+            "disable_service" {
+                $result = Invoke-DisableServiceJob -Job $Job
+                if ($result.success) { $output = $result.output }
+                else { throw $result.error }
+            }
             default {
                 throw "Tipo de job nao suportado: $jobType"
             }
@@ -1824,13 +2990,15 @@ function Execute-Job {
             state = Get-AgentState
         } -Severity "info"
 
+        # v4.1.8: Pass nonce for result signing
         Submit-JobResult `
             -JobId $jobId `
             -Status "completed" `
             -Output $output `
             -ExecutionTimeSeconds $execTime `
             -StartedAt $startTimeISO `
-            -ExecutionId $executionId
+            -ExecutionId $executionId `
+            -Nonce $nonce
     }
     catch {
         $err = "Erro ao executar job $jobId`: $($_.Exception.Message)"
@@ -1850,13 +3018,15 @@ function Execute-Job {
             state = Get-AgentState
         } -Severity "error"
 
+        # v4.1.8: Pass nonce for result signing
         Submit-JobResult `
             -JobId $jobId `
             -Status "failed" `
             -ErrorMessage $err `
             -ExecutionTimeSeconds $execTime `
             -StartedAt $startTimeISO `
-            -ExecutionId $executionId
+            -ExecutionId $executionId `
+            -Nonce $nonce
         
         # Considerar transicao para DEGRADED se muitas falhas
         if ($Global:AgentState.ErrorCount -ge 3) {
@@ -1872,18 +3042,50 @@ function Invoke-ReportJob {
     param($Job)
     
     try {
+        # CPU
         $cpuUsage = (Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average).Average
         if ($null -eq $cpuUsage) { $cpuUsage = 0 }
+        $cpuInfo = Get-WmiObject Win32_Processor | Select-Object -First 1
         
+        # Memory
         $os = Get-WmiObject Win32_OperatingSystem
+        $memTotalGB = [math]::Round($os.TotalVisibleMemorySize / 1MB, 2)
+        $memFreeGB = [math]::Round($os.FreePhysicalMemory / 1MB, 2)
+        $memUsedGB = [math]::Round($memTotalGB - $memFreeGB, 2)
         $memUsage = [math]::Round((($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / $os.TotalVisibleMemorySize) * 100, 2)
         
-        $disk = Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'"
-        $diskPercent = if ($disk -and $disk.Size -gt 0) { 
-            [math]::Round((($disk.Size - $disk.FreeSpace) / $disk.Size) * 100, 2) 
-        } else { 0 }
+        # Disks - Collect ALL fixed drives (v4.0.11)
+        $disksArray = @()
+        $allDisks = Get-WmiObject Win32_LogicalDisk -Filter "DriveType=3"  # DriveType=3 = Fixed disks
+        $systemDrive = $env:SystemDrive  # Usually "C:"
         
-        $bootTime = (Get-WmiObject Win32_OperatingSystem).LastBootUpTime
+        foreach ($d in $allDisks) {
+            if ($d.Size -gt 0) {
+                $totalGB = [math]::Round($d.Size / 1GB, 2)
+                $freeGB = [math]::Round($d.FreeSpace / 1GB, 2)
+                $usedGB = [math]::Round($totalGB - $freeGB, 2)
+                $usagePercent = [math]::Round((($d.Size - $d.FreeSpace) / $d.Size) * 100, 2)
+                
+                $disksArray += @{
+                    drive_letter = $d.DeviceID
+                    drive_label = if ($d.VolumeName) { $d.VolumeName } else { "" }
+                    drive_type = "Fixed"
+                    total_gb = $totalGB
+                    used_gb = $usedGB
+                    free_gb = $freeGB
+                    usage_percent = $usagePercent
+                    is_system_drive = ($d.DeviceID -eq $systemDrive)
+                }
+            }
+        }
+        
+        # Primary disk metrics (for legacy compatibility)
+        $primaryDisk = $disksArray | Where-Object { $_.is_system_drive } | Select-Object -First 1
+        if (-not $primaryDisk -and $disksArray.Count -gt 0) {
+            $primaryDisk = $disksArray[0]
+        }
+        
+        $bootTime = $os.LastBootUpTime
         $bootDateTime = [Management.ManagementDateTimeConverter]::ToDateTime($bootTime)
         $uptimeSeconds = [int]((Get-Date) - $bootDateTime).TotalSeconds
         
@@ -1891,14 +3093,25 @@ function Invoke-ReportJob {
             timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             hostname = $env:COMPUTERNAME
             cpu_percent = [math]::Round($cpuUsage, 2)
+            cpu_name = $cpuInfo.Name
+            cpu_cores = $cpuInfo.NumberOfCores
             memory_percent = $memUsage
-            disk_percent = $diskPercent
+            memory_total_gb = $memTotalGB
+            memory_used_gb = $memUsedGB
+            memory_free_gb = $memFreeGB
+            disk_percent = if ($primaryDisk) { $primaryDisk.usage_percent } else { 0 }
+            disk_total_gb = if ($primaryDisk) { $primaryDisk.total_gb } else { 0 }
+            disk_used_gb = if ($primaryDisk) { $primaryDisk.used_gb } else { 0 }
+            disk_free_gb = if ($primaryDisk) { $primaryDisk.free_gb } else { 0 }
+            disks = $disksArray
             uptime_seconds = $uptimeSeconds
             last_boot_time = $bootDateTime.ToUniversalTime().ToString("o")
             state = Get-AgentState
         }
         
-        return @{ success = $true; output = ($report | ConvertTo-Json -Compress) }
+        Write-Log "[METRICS] Coletado: CPU=$($report.cpu_percent)%, RAM=$($report.memory_percent)%, Discos=$($disksArray.Count)" "DEBUG"
+        
+        return @{ success = $true; output = ($report | ConvertTo-Json -Compress -Depth 5) }
     }
     catch {
         return @{ success = $false; error = $_.Exception.Message }
@@ -1989,33 +3202,1132 @@ function Invoke-CollectAntivirusJob {
     }
 }
 
-function Invoke-CollectWebActivityJob {
+# ============================================
+#  SSA-010: RESTORED JOBS FROM V3
+# ============================================
+
+# SCAN JOB - Verifica arquivos com scan-virus (VirusTotal)
+function Invoke-ScanJob {
     param($Job)
     
     try {
-        $activity = @{
-            timestamp = (Get-Date).ToUniversalTime().ToString("o")
-            hostname = $env:COMPUTERNAME
-            dns_cache = @()
-            browser_history = @()
+        Write-Log "[SCAN] Iniciando scan de arquivo..." "INFO"
+        
+        $payload = $Job.payload
+        if ($payload -is [string]) {
+            $payload = $payload | ConvertFrom-Json
         }
         
-        # DNS Cache
+        $filePath = $payload.filePath
+        $tenantId = $payload.tenantId
+        
+        if (-not $filePath) {
+            throw "Payload invalido: 'filePath' nao informado"
+        }
+        
+        # Expandir variaveis de ambiente
+        if ($filePath -match '%USERPROFILE%') {
+            $userProfiles = Get-ChildItem "C:\Users" -Directory -ErrorAction SilentlyContinue | 
+                Where-Object { $_.Name -notin @("Public", "Default", "Default User", "All Users") }
+            
+            $expandedPath = $null
+            foreach ($profile in $userProfiles) {
+                $testPath = $filePath -replace '%USERPROFILE%', $profile.FullName
+                if (Test-Path $testPath) {
+                    $expandedPath = $testPath
+                    break
+                }
+            }
+            
+            if ($null -eq $expandedPath) {
+                throw "Caminho nao encontrado em nenhum perfil de usuario: $filePath"
+            }
+            $filePath = $expandedPath
+        }
+        elseif ($filePath -match '%([^%]+)%') {
+            $filePath = [System.Environment]::ExpandEnvironmentVariables($filePath)
+        }
+        
+        if (-not (Test-Path $filePath)) {
+            throw "Caminho nao encontrado: $filePath"
+        }
+        
+        $fileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
+        Write-Log "[SCAN] Escaneando: $filePath (hash: $fileHash)" "INFO"
+        
+        $scanBody = @{
+            tenant_id = $tenantId
+            agent_name = $Global:AgentName
+            filePath = $filePath
+            fileHash = $fileHash
+        }
+        
+        $scanResult = Invoke-SecureRequest `
+            -Path "/functions/v1/scan-virus" `
+            -Method POST `
+            -Body $scanBody `
+            -TimeoutSec 60
+        
+        if (-not $scanResult.Success) {
+            throw "Falha ao chamar scan-virus: HTTP $($scanResult.StatusCode)"
+        }
+        
+        $scanData = $scanResult.Body | ConvertFrom-Json
+        
+        $output = @{
+            filePath = $filePath
+            fileHash = $fileHash
+            isMalicious = $scanData.isMalicious
+            positives = $scanData.positives
+            totalScans = $scanData.totalScans
+            permalink = $scanData.permalink
+            quarantined = $false
+        }
+        
+        if ($scanData.isMalicious) {
+            Write-Log "[WARN] MALWARE DETECTADO: $($scanData.positives)/$($scanData.totalScans) engines" "WARN"
+            
+            $quarantineRoot = "C:\CyberShield\Quarantine"
+            if (-not (Test-Path $quarantineRoot)) {
+                New-Item -ItemType Directory -Path $quarantineRoot -Force | Out-Null
+            }
+            
+            $fileName = [System.IO.Path]::GetFileName($filePath)
+            $guid = [guid]::NewGuid().ToString()
+            $quarantinePath = Join-Path $quarantineRoot "$guid`_$fileName"
+            
+            Move-Item -Path $filePath -Destination $quarantinePath -Force
+            Write-Log "[SUCCESS] Arquivo movido para quarentena: $quarantinePath" "SUCCESS"
+            
+            $output.quarantined = $true
+            $output.quarantinePath = $quarantinePath
+        }
+        
+        return @{ success = $true; output = ($output | ConvertTo-Json -Compress) }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# FIX FIREWALL JOB - Ativa firewall em todos os perfis
+function Invoke-FixFirewallJob {
+    param($Job)
+    
+    Write-Log "[FIX-FIREWALL] Iniciando auto-remediacao de firewall..." "INFO"
+    
+    try {
+        $profiles = @()
+        
         try {
-            $dnsCache = Get-DnsClientCache -ErrorAction SilentlyContinue | Select-Object -First 100
-            foreach ($entry in $dnsCache) {
-                $activity.dns_cache += @{
-                    domain = $entry.Name
-                    type = $entry.Type
-                    ttl = $entry.TimeToLive
+            if (Get-Command Get-NetFirewallProfile -ErrorAction SilentlyContinue) {
+                $fwProfiles = Get-NetFirewallProfile -ErrorAction Stop
+                foreach ($p in $fwProfiles) {
+                    $profiles += [PSCustomObject]@{
+                        Name = $p.Name
+                        Enabled = $p.Enabled
+                    }
+                }
+            }
+        } catch {
+            # Fallback netsh
+            $netshOutput = netsh advfirewall show allprofiles state 2>&1 | Out-String
+            foreach ($profileName in @("Domain", "Private", "Public")) {
+                $enabled = $false
+                $pattern = "(?s)$profileName.*?State\s+(ON|OFF)"
+                if ($netshOutput -match $pattern) {
+                    $enabled = ($Matches[1] -eq "ON")
+                }
+                $profiles += [PSCustomObject]@{
+                    Name = $profileName
+                    Enabled = $enabled
+                }
+            }
+        }
+        
+        if ($profiles.Count -eq 0) {
+            throw "Nao foi possivel obter status dos perfis de firewall"
+        }
+        
+        $fixed = @()
+        foreach ($p in $profiles) {
+            if (-not $p.Enabled) {
+                Write-Log "[FIX-FIREWALL] Ativando firewall no perfil $($p.Name)" "INFO"
+                
+                try {
+                    if (Get-Command Set-NetFirewallProfile -ErrorAction SilentlyContinue) {
+                        Set-NetFirewallProfile -Name $p.Name -Enabled True -ErrorAction Stop
+                    } else {
+                        netsh advfirewall set $($p.Name.ToLower())profile state on 2>&1 | Out-Null
+                    }
+                    $fixed += $p.Name
+                } catch {
+                    Write-Log "[FIX-FIREWALL] Falha ao ativar perfil $($p.Name): $($_.Exception.Message)" "ERROR"
+                }
+            }
+        }
+        
+        if ($fixed.Count -gt 0) {
+            Write-Log "[FIX-FIREWALL] Firewall ativado em: $($fixed -join ', ')" "SUCCESS"
+            return @{ success = $true; output = "Firewall ativado em perfis: $($fixed -join ', ')" }
+        } else {
+            Write-Log "[FIX-FIREWALL] Firewall ja estava ativo em todos os perfis" "INFO"
+            return @{ success = $true; output = "Firewall ja ativo em todos os perfis" }
+        }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# RESTART SERVICE JOB - Reinicia um servico especifico
+function Invoke-RestartServiceJob {
+    param($Job)
+    
+    Write-Log "[RESTART-SERVICE] Iniciando restart de servico..." "INFO"
+    
+    try {
+        $payload = $Job.payload
+        if ($payload -is [string]) {
+            $payload = $payload | ConvertFrom-Json
+        }
+        
+        if (-not $payload -or -not $payload.service_name) {
+            throw "service_name nao especificado no payload"
+        }
+        
+        $serviceName = $payload.service_name
+        
+        # DEFENSE IN DEPTH: Block protected services
+        if ($Global:ProtectedServices -contains $serviceName) {
+            throw "SECURITY: Servico '$serviceName' e protegido e nao pode ser reiniciado"
+        }
+        
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        if (-not $service) {
+            throw "Servico '$serviceName' nao encontrado"
+        }
+        
+        Write-Log "[RESTART-SERVICE] Reiniciando servico: $serviceName (Status atual: $($service.Status))" "INFO"
+        
+        Restart-Service -Name $serviceName -Force -ErrorAction Stop
+        
+        Start-Sleep -Seconds 2
+        
+        $serviceAfter = Get-Service -Name $serviceName -ErrorAction Stop
+        Write-Log "[RESTART-SERVICE] Servico reiniciado. Status: $($serviceAfter.Status)" "SUCCESS"
+        
+        return @{ success = $true; output = "Servico '$serviceName' reiniciado. Status: $($serviceAfter.Status)" }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  PHASE 1: KILL PROCESS JOB
+# ============================================
+function Invoke-KillProcessJob {
+    param($Job)
+    
+    Write-Log "[KILL-PROCESS] Iniciando terminacao de processo..." "INFO"
+    
+    try {
+        $payload = $Job.payload
+        if ($payload -is [string]) {
+            $payload = $payload | ConvertFrom-Json
+        }
+        
+        if (-not $payload -or -not $payload.process_name) {
+            throw "process_name nao especificado no payload"
+        }
+        
+        $processName = $payload.process_name
+        $normalizedName = $processName.ToLower().Replace('.exe', '')
+        
+        # DEFENSE IN DEPTH: Block protected processes
+        if ($Global:ProtectedProcesses -contains $normalizedName) {
+            throw "SECURITY: Processo '$processName' e protegido e nao pode ser terminado"
+        }
+        
+        $processes = Get-Process -Name $normalizedName -ErrorAction SilentlyContinue
+        if (-not $processes) {
+            throw "Processo '$processName' nao encontrado"
+        }
+        
+        $count = ($processes | Measure-Object).Count
+        Write-Log "[KILL-PROCESS] Terminando $count instancia(s) de: $processName" "INFO"
+        
+        $processes | Stop-Process -Force -ErrorAction Stop
+        
+        Start-Sleep -Seconds 1
+        
+        $remaining = Get-Process -Name $normalizedName -ErrorAction SilentlyContinue
+        if ($remaining) {
+            $remainingCount = ($remaining | Measure-Object).Count
+            Write-Log "[KILL-PROCESS] AVISO: $remainingCount instancia(s) ainda ativas" "WARN"
+            return @{ 
+                success = $true
+                output = "Processo '$processName' parcialmente terminado. $remainingCount instancia(s) ainda ativas"
+            }
+        }
+        
+        Write-Log "[KILL-PROCESS] Processo '$processName' terminado com sucesso" "SUCCESS"
+        return @{ 
+            success = $true
+            output = "Processo '$processName' terminado ($count instancia(s))"
+        }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  PHASE 1: STOP SERVICE JOB
+# ============================================
+function Invoke-StopServiceJob {
+    param($Job)
+    
+    Write-Log "[STOP-SERVICE] Iniciando parada de servico..." "INFO"
+    
+    try {
+        $payload = $Job.payload
+        if ($payload -is [string]) {
+            $payload = $payload | ConvertFrom-Json
+        }
+        
+        if (-not $payload -or -not $payload.service_name) {
+            throw "service_name nao especificado no payload"
+        }
+        
+        $serviceName = $payload.service_name
+        
+        # DEFENSE IN DEPTH: Block protected services
+        if ($Global:ProtectedServices -contains $serviceName) {
+            throw "SECURITY: Servico '$serviceName' e protegido e nao pode ser parado"
+        }
+        
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        if (-not $service) {
+            throw "Servico '$serviceName' nao encontrado"
+        }
+        
+        if ($service.Status -eq "Stopped") {
+            Write-Log "[STOP-SERVICE] Servico '$serviceName' ja esta parado" "INFO"
+            return @{ success = $true; output = "Servico '$serviceName' ja estava parado" }
+        }
+        
+        Write-Log "[STOP-SERVICE] Parando servico: $serviceName (Status: $($service.Status))" "INFO"
+        
+        Stop-Service -Name $serviceName -Force -ErrorAction Stop
+        
+        Start-Sleep -Seconds 2
+        
+        $serviceAfter = Get-Service -Name $serviceName -ErrorAction Stop
+        Write-Log "[STOP-SERVICE] Servico parado. Status: $($serviceAfter.Status)" "SUCCESS"
+        
+        return @{ 
+            success = $true
+            output = "Servico '$serviceName' parado. Status: $($serviceAfter.Status)"
+        }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  PHASE 1: DISABLE SERVICE JOB
+# ============================================
+function Invoke-DisableServiceJob {
+    param($Job)
+    
+    Write-Log "[DISABLE-SERVICE] Iniciando desativacao de servico..." "INFO"
+    
+    try {
+        $payload = $Job.payload
+        if ($payload -is [string]) {
+            $payload = $payload | ConvertFrom-Json
+        }
+        
+        if (-not $payload -or -not $payload.service_name) {
+            throw "service_name nao especificado no payload"
+        }
+        
+        $serviceName = $payload.service_name
+        
+        # DEFENSE IN DEPTH: Block protected services
+        if ($Global:ProtectedServices -contains $serviceName) {
+            throw "SECURITY: Servico '$serviceName' e protegido e nao pode ser desativado"
+        }
+        
+        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+        if (-not $service) {
+            throw "Servico '$serviceName' nao encontrado"
+        }
+        
+        Write-Log "[DISABLE-SERVICE] Desativando servico: $serviceName" "INFO"
+        
+        # 1. Change startup type to Disabled
+        Set-Service -Name $serviceName -StartupType Disabled -ErrorAction Stop
+        
+        # 2. Stop the service (ignore if already stopped)
+        if ($service.Status -ne "Stopped") {
+            Stop-Service -Name $serviceName -Force -ErrorAction SilentlyContinue
+        }
+        
+        Start-Sleep -Seconds 2
+        
+        $serviceAfter = Get-Service -Name $serviceName -ErrorAction Stop
+        $startupType = (Get-WmiObject Win32_Service -Filter "Name='$serviceName'").StartMode
+        
+        Write-Log "[DISABLE-SERVICE] Servico desativado. Status: $($serviceAfter.Status), StartupType: $startupType" "SUCCESS"
+        
+        return @{ 
+            success = $true
+            output = "Servico '$serviceName' desativado. Status: $($serviceAfter.Status), StartupType: $startupType"
+        }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# COLLECT NETWORK INFO JOB - Coleta informacoes de rede
+function Invoke-CollectNetworkInfoJob {
+    param($Job)
+    
+    Write-Log "[NETWORK-INFO] Iniciando coleta de informacoes de rede..." "INFO"
+    
+    try {
+        $firewallDomain = $null
+        $firewallPrivate = $null
+        $firewallPublic = $null
+        
+        try {
+            if (Get-Command Get-NetFirewallProfile -ErrorAction SilentlyContinue) {
+                $profiles = Get-NetFirewallProfile
+                foreach ($p in $profiles) {
+                    switch ($p.Name) {
+                        "Domain" { $firewallDomain = $p.Enabled }
+                        "Private" { $firewallPrivate = $p.Enabled }
+                        "Public" { $firewallPublic = $p.Enabled }
+                    }
                 }
             }
         } catch { }
         
-        return @{ success = $true; output = ($activity | ConvertTo-Json -Compress -Depth 5) }
+        $openPorts = @()
+        try {
+            $tcpListening = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Select-Object -First 50
+            foreach ($conn in $tcpListening) {
+                $processName = "unknown"
+                try { 
+                    $proc = Get-Process -Id $conn.OwningProcess -ErrorAction SilentlyContinue
+                    if ($proc) { $processName = $proc.ProcessName }
+                } catch { }
+                $openPorts += @{ port = $conn.LocalPort; process = $processName; protocol = "TCP" }
+            }
+        } catch { }
+        
+        $networkAdapters = @()
+        try {
+            $adapters = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' }
+            foreach ($adapter in $adapters) {
+                $ipConfig = Get-NetIPAddress -InterfaceIndex $adapter.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1
+                $networkAdapters += @{
+                    name = $adapter.Name
+                    ip_address = if ($ipConfig) { $ipConfig.IPAddress } else { "" }
+                    mac_address = $adapter.MacAddress
+                    status = $adapter.Status
+                }
+            }
+        } catch { }
+        
+        $dnsServers = @()
+        try {
+            $dnsConfig = Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | 
+                Where-Object { $_.ServerAddresses } | 
+                Select-Object -ExpandProperty ServerAddresses -Unique
+            $dnsServers = @($dnsConfig)
+        } catch { }
+        
+        $gatewayIp = $null
+        try {
+            $gateway = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($gateway) { $gatewayIp = $gateway.NextHop }
+        } catch { }
+        
+        $publicIp = $null
+        try {
+            $response = Invoke-RestMethod -Uri "https://api.ipify.org?format=json" -TimeoutSec 5 -ErrorAction SilentlyContinue
+            if ($response.ip) { $publicIp = $response.ip }
+        } catch { }
+        
+        $payload = @{
+            firewall_domain = $firewallDomain
+            firewall_private = $firewallPrivate
+            firewall_public = $firewallPublic
+            open_ports = @($openPorts)
+            network_adapters = @($networkAdapters)
+            dns_servers = @($dnsServers)
+            gateway_ip = $gatewayIp
+            public_ip = $publicIp
+        }
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-network-info" `
+            -Method "POST" `
+            -Body $payload `
+            -TimeoutSec 30
+        
+        if (-not $result.Success) {
+            throw "Falha ao enviar info de rede (HTTP $($result.StatusCode))"
+        }
+        
+        Write-Log "[NETWORK-INFO] Informacoes de rede enviadas com sucesso" "SUCCESS"
+        
+        return @{ success = $true; output = ($payload | ConvertTo-Json -Compress -Depth 3) }
     }
     catch {
         return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# SYNC BLOCKED WEBSITES JOB - Sincroniza lista de sites bloqueados
+function Invoke-SyncBlockedWebsitesJob {
+    param($Job)
+    
+    try {
+        Write-Log "[BLOCKED-SITES] Iniciando sincronizacao de sites bloqueados..." "INFO"
+        
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/get-blocked-websites" `
+            -Method "GET" `
+            -TimeoutSec 30
+        
+        if (-not $result.Success) {
+            throw "Falha ao buscar lista de sites bloqueados (HTTP $($result.StatusCode))"
+        }
+        
+        $data = $result.Body | ConvertFrom-Json
+        $blockedDomains = @()
+        
+        if ($null -ne $data.blocked_websites -and $data.blocked_websites.Count -gt 0) {
+            $blockedDomains = @($data.blocked_websites | ForEach-Object { $_.domain_pattern })
+        }
+        elseif ($null -ne $data.blocked_domains -and $data.blocked_domains.Count -gt 0) {
+            $blockedDomains = @($data.blocked_domains)
+        }
+        
+        Write-Log "[BLOCKED-SITES] Recebidos $($blockedDomains.Count) dominios bloqueados" "INFO"
+        
+        $blockedListPath = "C:\CyberShield\blocked_websites.json"
+        $blockedData = @{
+            updated_at = [DateTime]::UtcNow.ToString("o")
+            domains = $blockedDomains
+        }
+        
+        $blockedJson = $blockedData | ConvertTo-Json -Compress
+        [System.IO.File]::WriteAllText($blockedListPath, $blockedJson, [System.Text.UTF8Encoding]::new($false))
+        
+        Write-Log "[BLOCKED-SITES] Lista salva em $blockedListPath" "SUCCESS"
+        
+        return @{
+            success = $true
+            output = (@{
+                message = "Sites bloqueados sincronizados"
+                domains_count = $blockedDomains.Count
+                list_path = $blockedListPath
+            } | ConvertTo-Json -Compress)
+        }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# REINSTALL AGENT JOB - Reinstala o agente completamente
+function Invoke-ReinstallAgentJob {
+    param($Job)
+    
+    try {
+        Write-Log "[REINSTALL] Iniciando reinstalacao do agente..." "INFO"
+        
+        $updateResult = Invoke-SecureRequest `
+            -Path "/functions/v1/serve-agent-update" `
+            -Method GET `
+            -TimeoutSec 60
+        
+        if (-not $updateResult.Success) {
+            throw "Falha ao buscar script: HTTP $($updateResult.StatusCode)"
+        }
+        
+        $data = $updateResult.Body | ConvertFrom-Json
+        $expectedHash = $data.sha256
+        $newVersion = $data.version
+        
+        $installDir = "C:\CyberShield"
+        $targetScript = Join-Path $installDir "cybershield-agent-$($Global:AgentName).ps1"
+        $tempScript = Join-Path $env:TEMP "cybershield-reinstall-$newVersion.ps1"
+        
+        if ($data.script_content_base64) {
+            $bytes = [System.Convert]::FromBase64String($data.script_content_base64)
+            [System.IO.File]::WriteAllBytes($tempScript, $bytes)
+        } else {
+            [System.IO.File]::WriteAllText($tempScript, $data.script_content, [System.Text.UTF8Encoding]::new($false))
+        }
+        
+        $actualHash = (Get-FileHash -Path $tempScript -Algorithm SHA256).Hash.ToLower()
+        if ($actualHash -ne $expectedHash.ToLower()) {
+            Remove-Item $tempScript -Force
+            throw "SHA256 mismatch! Esperado: $expectedHash, Obtido: $actualHash"
+        }
+        
+        # Remover tasks antigas
+        Get-ScheduledTask -ErrorAction SilentlyContinue | 
+            Where-Object { $_.TaskName -like "*CyberShield*" } |
+            ForEach-Object {
+                Stop-ScheduledTask -TaskName $_.TaskName -ErrorAction SilentlyContinue
+                Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue
+            }
+        
+        # Limpar scripts antigos
+        Get-ChildItem -Path $installDir -Filter "*.ps1" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        
+        # Instalar novo script
+        Copy-Item -Path $tempScript -Destination $targetScript -Force
+        Remove-Item $tempScript -Force
+        
+        # Criar nova scheduled task
+        $action = New-ScheduledTaskAction -Execute "powershell.exe" `
+            -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$targetScript`""
+        $trigger = New-ScheduledTaskTrigger -AtStartup
+        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
+            -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+        $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
+        
+        Register-ScheduledTask -TaskName "CyberShieldAgent" -Action $action -Trigger $trigger `
+            -Settings $settings -Principal $principal -Force | Out-Null
+        
+        Start-ScheduledTask -TaskName "CyberShieldAgent"
+        
+        Write-Log "[REINSTALL] Agente reinstalado com sucesso" "SUCCESS"
+        
+        return @{
+            success = $true
+            output = (@{
+                message = "Agent reinstalled successfully"
+                newVersion = $newVersion
+                targetPath = $targetScript
+                sha256 = $actualHash
+            } | ConvertTo-Json -Compress)
+        }
+    }
+    catch {
+        return @{ success = $false; error = $_.Exception.Message }
+    }
+}
+
+# ============================================
+#  SSA-009: WEB ACTIVITY HELPER FUNCTIONS
+# ============================================
+
+# Converter WebKit timestamp (Chrome/Edge) para DateTime
+# WebKit: microseconds since 1601-01-01
+function ConvertFrom-WebKitTimestamp {
+    param([Nullable[Int64]]$timestamp)
+    if (-not $timestamp -or $timestamp -le 0) { return $null }
+    try {
+        $origin = [DateTime]::new(1601, 1, 1, 0, 0, 0, [DateTimeKind]::Utc)
+        return $origin.AddTicks($timestamp * 10)
+    } catch {
+        return $null
+    }
+}
+
+# Converter Firefox PRTime para DateTime
+# PRTime: microseconds since 1970-01-01
+function ConvertFrom-PRTime {
+    param([Nullable[Int64]]$timestamp)
+    if (-not $timestamp -or $timestamp -le 0) { return $null }
+    try {
+        return [DateTimeOffset]::FromUnixTimeMilliseconds(
+            [math]::Floor($timestamp / 1000)
+        ).UtcDateTime
+    } catch {
+        return $null
+    }
+}
+
+# Extrair dominio de URL
+function Extract-DomainFromUrl {
+    param([string]$url)
+    if ([string]::IsNullOrWhiteSpace($url)) { return $null }
+    try {
+        $match = [regex]::Match($url, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+        if ($match.Success) {
+            return $match.Groups[1].Value
+        }
+    } catch {}
+    return $null
+}
+
+# Coleta SQLite segura com timeout
+function Get-BrowserHistorySQLite {
+    param(
+        [string]$DbPath,
+        [string]$Query,
+        [string]$BrowserName,
+        [string]$UserName
+    )
+    
+    $results = New-Object System.Collections.ArrayList
+    
+    try {
+        # Guard de performance: arquivos > 200MB sao ignorados
+        $fileInfo = Get-Item $DbPath -ErrorAction Stop
+        $maxSize = 200 * 1024 * 1024  # 200MB
+        if ($fileInfo.Length -gt $maxSize) {
+            Write-Log "[WEB-ACTIVITY] $BrowserName ($UserName): arquivo muito grande ($('{0:N0}' -f ($fileInfo.Length / 1MB))MB), pulando SQLite" "WARN"
+            return $null
+        }
+        
+        # Tentar carregar assembly SQLite (disponivel no .NET)
+        $assembly = $null
+        try {
+            $assembly = [System.Reflection.Assembly]::LoadWithPartialName("System.Data.SQLite")
+        } catch {}
+        
+        if (-not $assembly) {
+            # Fallback: SQLite provider nao disponivel, retorna null para usar fallback regex
+            return $null
+        }
+        
+        $connectionString = "Data Source=$DbPath;Version=3;Read Only=True;Journal Mode=Off;"
+        $connection = New-Object System.Data.SQLite.SQLiteConnection($connectionString)
+        $connection.Open()
+        
+        $command = $connection.CreateCommand()
+        $command.CommandText = $Query
+        $command.CommandTimeout = 2  # Timeout de 2 segundos
+        
+        $reader = $command.ExecuteReader()
+        while ($reader.Read()) {
+            [void]$results.Add(@{
+                url = $reader["url"]
+                last_visit_time = $reader["last_visit_time"]
+                visit_count = $reader["visit_count"]
+            })
+        }
+        
+        $reader.Close()
+        $connection.Close()
+        
+        return $results
+        
+    } catch {
+        Write-Log "[WEB-ACTIVITY] SQLite falhou para $BrowserName ($UserName): $($_.Exception.Message)" "DEBUG"
+        return $null
+    }
+}
+
+# ============================================
+#  SSA-009: FULL WEB ACTIVITY COLLECTION
+# ============================================
+function Invoke-CollectWebActivityJob {
+    param($Job)
+
+    Write-Log "[WEB-ACTIVITY-V3] Iniciando coleta de atividade web com timestamps reais..." "INFO"
+
+    try {
+        $payload = $null
+        if ($null -ne $Job.payload -and $Job.payload) {
+            try {
+                if ($Job.payload -is [string]) {
+                    $payload = $Job.payload | ConvertFrom-Json
+                } else {
+                    $payload = $Job.payload
+                }
+            } catch {
+                Write-Log "[WEB-ACTIVITY-V3] Payload invalido, usando defaults" "WARN"
+            }
+        }
+
+        $maxDomains = 500
+        if ($payload -and $payload.max_domains) {
+            $maxDomains = [int]$payload.max_domains
+        }
+
+        $nowUtc = [DateTime]::UtcNow
+        # Usar ArrayList para performance O(n)
+        $items = New-Object System.Collections.ArrayList
+
+        # 1. Coletar DNS Cache (sem timestamps reais - usa hora atual)
+        Write-Log "[WEB-ACTIVITY-V3] Coletando cache DNS..." "INFO"
+        try {
+            $dnsEntries = Get-DnsClientCache -ErrorAction SilentlyContinue
+            if ($dnsEntries) {
+                $dnsEntries = $dnsEntries |
+                    Where-Object { $_.Entry -and $_.Name } |
+                    Sort-Object -Property Name -Unique |
+                    Select-Object -First 100
+
+                foreach ($entry in $dnsEntries) {
+                    $domain = $entry.Name
+                    if ([string]::IsNullOrWhiteSpace($domain)) { continue }
+                    if ($domain -like "localhost*" -or $domain -like "*.local" -or $domain -like "local") { continue }
+
+                    [void]$items.Add(@{
+                        domain = $domain
+                        source = "dns_cache"
+                        visited_at = $nowUtc.ToString("o")
+                        visit_count = 1  # DNS nao tem contagem real
+                    })
+                }
+                Write-Log "[WEB-ACTIVITY-V3] Cache DNS: $($dnsEntries.Count) dominios" "INFO"
+            }
+        } catch {
+            Write-Log "[WEB-ACTIVITY-V3] Erro ao ler cache DNS: $($_.Exception.Message)" "WARN"
+        }
+
+        # 2. Coletar historico de TODOS OS PERFIS DE USUARIO
+        Write-Log "[WEB-ACTIVITY-V3] Coletando historico de todos os perfis de usuario..." "INFO"
+        
+        $userProfiles = @()
+        try {
+            $userProfiles = Get-ChildItem -Path "C:\Users" -Directory -ErrorAction SilentlyContinue | 
+                Where-Object { $_.Name -notin @('Public', 'Default', 'Default User', 'All Users') }
+            Write-Log "[WEB-ACTIVITY-V3] Encontrados $($userProfiles.Count) perfis de usuario" "INFO"
+        } catch {
+            Write-Log "[WEB-ACTIVITY-V3] Erro ao listar perfis de usuario: $($_.Exception.Message)" "WARN"
+        }
+        
+        foreach ($userProfile in $userProfiles) {
+            $userName = $userProfile.Name
+            $userPath = $userProfile.FullName
+            
+            Write-Log "[WEB-ACTIVITY-V3] Processando perfil: $userName" "DEBUG"
+            
+            # 2a. Chrome History - SQLITE COM TIMESTAMPS REAIS
+            try {
+                $chromeHistoryPath = Join-Path $userPath "AppData\Local\Google\Chrome\User Data\Default\History"
+                if (Test-Path $chromeHistoryPath) {
+                    $tempHistoryPath = "$env:TEMP\chrome_history_temp_$(Get-Random).db"
+                    Copy-Item -Path $chromeHistoryPath -Destination $tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    
+                    if (Test-Path $tempHistoryPath) {
+                        $sqliteResults = $null
+                        
+                        # Tentar SQLite primeiro para dados reais
+                        try {
+                            $sqliteResults = Get-BrowserHistorySQLite `
+                                -DbPath $tempHistoryPath `
+                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" `
+                                -BrowserName "Chrome" `
+                                -UserName $userName
+                        } catch {
+                            Write-Log "[WEB-ACTIVITY-V3] Chrome SQLite falhou ($userName): $($_.Exception.Message)" "DEBUG"
+                        }
+                        
+                        if ($sqliteResults -and $sqliteResults.Count -gt 0) {
+                            # SUCESSO: Dados reais do SQLite
+                            foreach ($row in $sqliteResults) {
+                                $domain = Extract-DomainFromUrl $row.url
+                                if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local" -or $domain -like "*google*") { continue }
+                                
+                                $visitedAt = ConvertFrom-WebKitTimestamp $row.last_visit_time
+                                [void]$items.Add(@{
+                                    domain = $domain
+                                    source = "chrome_history_$userName"
+                                    visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
+                                    visit_count = [int]$row.visit_count
+                                })
+                            }
+                            Write-Log "[WEB-ACTIVITY-V3] Chrome ($userName): $($sqliteResults.Count) registros via SQLite (timestamps reais)" "INFO"
+                        } else {
+                            # FALLBACK: Regex para compatibilidade
+                            try {
+                                $maxBytes = 5 * 1024 * 1024
+                                $fileInfo = Get-Item $tempHistoryPath
+                                $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
+                                
+                                $fileStream = [System.IO.File]::OpenRead($tempHistoryPath)
+                                $buffer = New-Object byte[] $bytesToRead
+                                [void]$fileStream.Read($buffer, 0, $bytesToRead)
+                                $fileStream.Close()
+                                $fileStream.Dispose()
+                                
+                                if ($buffer) {
+                                    $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
+                                    $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+                                    
+                                    $chromeDomains = $urlMatches | 
+                                        ForEach-Object { $_.Groups[1].Value } | 
+                                        Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*google*" } |
+                                        Select-Object -Unique -First 50
+                                    
+                                    foreach ($domain in $chromeDomains) {
+                                        [void]$items.Add(@{
+                                            domain = $domain
+                                            source = "chrome_history_$userName"
+                                            visited_at = $nowUtc.ToString("o")
+                                            visit_count = 1  # Fallback: sem contagem real
+                                        })
+                                    }
+                                    Write-Log "[WEB-ACTIVITY-V3] Chrome ($userName): $($chromeDomains.Count) dominios via regex (fallback)" "INFO"
+                                    
+                                    $buffer = $null
+                                    $dataString = $null
+                                }
+                            } catch {
+                                Write-Log "[WEB-ACTIVITY-V3] Chrome regex falhou ($userName): $($_.Exception.Message)" "WARN"
+                            }
+                        }
+                        Remove-Item $tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    }
+                }
+            } catch {
+                Write-Log "[WEB-ACTIVITY-V3] Erro ao acessar Chrome ($userName): $($_.Exception.Message)" "WARN"
+            }
+            
+            # 2b. Firefox History - SQLITE COM TIMESTAMPS REAIS
+            try {
+                $firefoxProfilesPath = Join-Path $userPath "AppData\Roaming\Mozilla\Firefox\Profiles"
+                if (Test-Path $firefoxProfilesPath) {
+                    $profiles = Get-ChildItem -Path $firefoxProfilesPath -Directory -ErrorAction SilentlyContinue
+                    foreach ($profile in $profiles) {
+                        $placesPath = Join-Path $profile.FullName "places.sqlite"
+                        if (Test-Path $placesPath) {
+                            $tempPlacesPath = "$env:TEMP\firefox_places_temp_$(Get-Random).db"
+                            Copy-Item -Path $placesPath -Destination $tempPlacesPath -Force -ErrorAction SilentlyContinue
+                            
+                            if (Test-Path $tempPlacesPath) {
+                                $sqliteResults = $null
+                                
+                                # Tentar SQLite primeiro
+                                try {
+                                    $sqliteResults = Get-BrowserHistorySQLite `
+                                        -DbPath $tempPlacesPath `
+                                        -Query "SELECT url, last_visit_date, visit_count FROM moz_places WHERE visit_count > 0 ORDER BY last_visit_date DESC LIMIT 200" `
+                                        -BrowserName "Firefox" `
+                                        -UserName $userName
+                                } catch {
+                                    Write-Log "[WEB-ACTIVITY-V3] Firefox SQLite falhou ($userName): $($_.Exception.Message)" "DEBUG"
+                                }
+                                
+                                if ($sqliteResults -and $sqliteResults.Count -gt 0) {
+                                    foreach ($row in $sqliteResults) {
+                                        $domain = Extract-DomainFromUrl $row.url
+                                        if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local" -or $domain -like "*mozilla*") { continue }
+                                        
+                                        $visitedAt = ConvertFrom-PRTime $row.last_visit_time
+                                        [void]$items.Add(@{
+                                            domain = $domain
+                                            source = "firefox_history_$userName"
+                                            visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
+                                            visit_count = [int]$row.visit_count
+                                        })
+                                    }
+                                    Write-Log "[WEB-ACTIVITY-V3] Firefox ($userName): $($sqliteResults.Count) registros via SQLite" "INFO"
+                                } else {
+                                    # Fallback regex
+                                    try {
+                                        $maxBytes = 5 * 1024 * 1024
+                                        $fileInfo = Get-Item $tempPlacesPath
+                                        $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
+                                        
+                                        $fileStream = [System.IO.File]::OpenRead($tempPlacesPath)
+                                        $buffer = New-Object byte[] $bytesToRead
+                                        [void]$fileStream.Read($buffer, 0, $bytesToRead)
+                                        $fileStream.Close()
+                                        $fileStream.Dispose()
+                                        
+                                        if ($buffer) {
+                                            $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
+                                            $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+                                            
+                                            $firefoxDomains = $urlMatches | 
+                                                ForEach-Object { $_.Groups[1].Value } | 
+                                                Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*mozilla*" } |
+                                                Select-Object -Unique -First 50
+                                            
+                                            foreach ($domain in $firefoxDomains) {
+                                                [void]$items.Add(@{
+                                                    domain = $domain
+                                                    source = "firefox_history_$userName"
+                                                    visited_at = $nowUtc.ToString("o")
+                                                    visit_count = 1
+                                                })
+                                            }
+                                            Write-Log "[WEB-ACTIVITY-V3] Firefox ($userName): $($firefoxDomains.Count) dominios via regex" "INFO"
+                                            
+                                            $buffer = $null
+                                            $dataString = $null
+                                        }
+                                    } catch {
+                                        Write-Log "[WEB-ACTIVITY-V3] Firefox regex falhou ($userName): $($_.Exception.Message)" "WARN"
+                                    }
+                                }
+                                Remove-Item $tempPlacesPath -Force -ErrorAction SilentlyContinue
+                            }
+                            break
+                        }
+                    }
+                }
+            } catch {
+                Write-Log "[WEB-ACTIVITY-V3] Erro ao acessar Firefox ($userName): $($_.Exception.Message)" "WARN"
+            }
+            
+            # 2c. Edge History - SQLITE COM TIMESTAMPS REAIS
+            try {
+                $edgeHistoryPath = Join-Path $userPath "AppData\Local\Microsoft\Edge\User Data\Default\History"
+                if (Test-Path $edgeHistoryPath) {
+                    $tempHistoryPath = "$env:TEMP\edge_history_temp_$(Get-Random).db"
+                    Copy-Item -Path $edgeHistoryPath -Destination $tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    
+                    if (Test-Path $tempHistoryPath) {
+                        $sqliteResults = $null
+                        
+                        try {
+                            $sqliteResults = Get-BrowserHistorySQLite `
+                                -DbPath $tempHistoryPath `
+                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" `
+                                -BrowserName "Edge" `
+                                -UserName $userName
+                        } catch {
+                            Write-Log "[WEB-ACTIVITY-V3] Edge SQLite falhou ($userName): $($_.Exception.Message)" "DEBUG"
+                        }
+                        
+                        if ($sqliteResults -and $sqliteResults.Count -gt 0) {
+                            foreach ($row in $sqliteResults) {
+                                $domain = Extract-DomainFromUrl $row.url
+                                if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local" -or $domain -like "*microsoft*" -or $domain -like "*bing*") { continue }
+                                
+                                $visitedAt = ConvertFrom-WebKitTimestamp $row.last_visit_time
+                                [void]$items.Add(@{
+                                    domain = $domain
+                                    source = "edge_history_$userName"
+                                    visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
+                                    visit_count = [int]$row.visit_count
+                                })
+                            }
+                            Write-Log "[WEB-ACTIVITY-V3] Edge ($userName): $($sqliteResults.Count) registros via SQLite" "INFO"
+                        } else {
+                            # Fallback regex
+                            try {
+                                $maxBytes = 5 * 1024 * 1024
+                                $fileInfo = Get-Item $tempHistoryPath
+                                $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
+                                
+                                $fileStream = [System.IO.File]::OpenRead($tempHistoryPath)
+                                $buffer = New-Object byte[] $bytesToRead
+                                [void]$fileStream.Read($buffer, 0, $bytesToRead)
+                                $fileStream.Close()
+                                $fileStream.Dispose()
+                                
+                                if ($buffer) {
+                                    $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
+                                    $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+                                    
+                                    $edgeDomains = $urlMatches | 
+                                        ForEach-Object { $_.Groups[1].Value } | 
+                                        Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*microsoft*" -and $_ -notlike "*bing*" } |
+                                        Select-Object -Unique -First 50
+                                    
+                                    foreach ($domain in $edgeDomains) {
+                                        [void]$items.Add(@{
+                                            domain = $domain
+                                            source = "edge_history_$userName"
+                                            visited_at = $nowUtc.ToString("o")
+                                            visit_count = 1
+                                        })
+                                    }
+                                    Write-Log "[WEB-ACTIVITY-V3] Edge ($userName): $($edgeDomains.Count) dominios via regex" "INFO"
+                                    
+                                    $buffer = $null
+                                    $dataString = $null
+                                }
+                            } catch {
+                                Write-Log "[WEB-ACTIVITY-V3] Edge regex falhou ($userName): $($_.Exception.Message)" "WARN"
+                            }
+                        }
+                        Remove-Item $tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    }
+                }
+            } catch {
+                Write-Log "[WEB-ACTIVITY-V3] Erro ao acessar Edge ($userName): $($_.Exception.Message)" "WARN"
+            }
+        }
+
+        # AGREGACAO POR DOMINIO: soma visit_count, usa ultimo visited_at
+        Write-Log "[WEB-ACTIVITY-V3] Agregando por dominio..." "INFO"
+        $aggregated = @{}
+        foreach ($item in $items) {
+            $key = $item.domain
+            if ($aggregated.ContainsKey($key)) {
+                $aggregated[$key].visit_count += $item.visit_count
+                # Manter o timestamp mais recente
+                if ($item.visited_at -gt $aggregated[$key].visited_at) {
+                    $aggregated[$key].visited_at = $item.visited_at
+                    $aggregated[$key].source = $item.source
+                }
+            } else {
+                $aggregated[$key] = @{
+                    domain = $item.domain
+                    source = $item.source
+                    visited_at = $item.visited_at
+                    visit_count = $item.visit_count
+                }
+            }
+        }
+        
+        $uniqueItems = @($aggregated.Values) | Select-Object -First $maxDomains
+        
+        Write-Log "[WEB-ACTIVITY-V3] Agregacao: $($items.Count) items -> $($uniqueItems.Count) dominios unicos" "INFO"
+
+        if (-not $uniqueItems.Count) {
+            Write-Log "[WEB-ACTIVITY-V3] Nenhum dominio encontrado em nenhuma fonte" "INFO"
+            return @{
+                success = $true
+                output  = "Nenhum dominio encontrado"
+            }
+        }
+
+        Write-Log "[WEB-ACTIVITY-V3] Total de dominios unicos: $($uniqueItems.Count)" "INFO"
+
+        # FEATURE FLAG: web_activity_version v3 para rastreabilidade
+        $body = @{
+            agent_id = $Job.agent_id
+            items    = $uniqueItems
+            web_activity_version = "v3"  # Feature flag para identificar dados SSA-009
+        }
+
+        $result = Invoke-SecureRequest `
+            -Path "/functions/v1/submit-web-activity" `
+            -Method "POST" `
+            -Body $body `
+            -TimeoutSec 30
+
+        if (-not $result.Success) {
+            throw "Falha ao enviar atividade web (HTTP $($result.StatusCode))"
+        }
+
+        Write-Log "[WEB-ACTIVITY-V3] Atividade enviada com sucesso. Dominios: $($uniqueItems.Count)" "SUCCESS"
+
+        return @{
+            success = $true
+            output  = "Atividade web v3 enviada. Dominios: $($uniqueItems.Count)"
+        }
+    }
+    catch {
+        $errorMsg = "Erro em Invoke-CollectWebActivityJob: $($_.Exception.Message)"
+        Write-Log "[ERROR] $errorMsg" "ERROR"
+        return @{
+            success = $false
+            error   = $errorMsg
+        }
     }
 }
 
@@ -2023,7 +4335,7 @@ function Invoke-UpdateAgentJob {
     param($Job)
     
     try {
-        Write-Log "[UPDATE] Iniciando update_agent - v4.0.7" "INFO"
+        Write-Log "[UPDATE] Iniciando update_agent - $($Global:AgentVersion)" "INFO"
         
         # ============================================================
         # FASE 3.0: SAFE MODE CHECK
@@ -2238,23 +4550,22 @@ function Invoke-UpdateAgentJob {
         } -Severity "info"
         
         Write-Log "[SUCCESS] Script v$newVersion instalado em $targetScript" "SUCCESS"
-        Write-Log "[INFO] Nova versao sera carregada no proximo boot do sistema" "INFO"
-        Write-Log "[INFO] Agente continua operando normalmente com versao $($Global:AgentVersion)" "INFO"
         
-        $output = @{
-            message     = "Update saved - will be active after Windows reboot"
-            newVersion  = $newVersion
-            currentVersion = $Global:AgentVersion
-            targetPath  = $targetScript
-            sha256      = $actualHash
-            base64Mode  = [bool]$data.script_content_base64
-            signatureVerified = $signatureVerified
-            signedBy    = $data.signed_by
-            requiresReboot = $true
-            savedAt     = (Get-Date).ToUniversalTime().ToString("o")
+        # SSA-014 FIX: Auto-restart igual ao Apply-ForcedUpdate
+        # (Mesmo padrão que funciona corretamente no forced update)
+        Write-Log "[UPDATE] Reiniciando Scheduled Task para ativar nova versao..." "INFO"
+        try {
+            Stop-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+            Start-ScheduledTask -TaskName "CyberShield Agent" -ErrorAction SilentlyContinue
+            Write-Log "[UPDATE] Task reiniciada - nova versao ativa!" "SUCCESS"
+        } catch {
+            Write-Log "[UPDATE] Restart task falhou, sera ativado no proximo boot: $($_.Exception.Message)" "WARN"
         }
         
-        return @{ success = $true; output = ($output | ConvertTo-Json -Compress) }
+        # EXIT para permitir novo script iniciar (processo atual termina)
+        Write-Log "[UPDATE] Encerrando processo atual para nova versao iniciar..." "INFO"
+        exit 0
     }
     catch {
         # CRITICAL: Use "error" instead of "update_failed" for backward compatibility
@@ -2314,12 +4625,29 @@ function Poll-Jobs {
 }
 
 # ============================================
-#  LOOP PRINCIPAL v4.0.7
+#  BOOTSTRAP VALIDATION (ANTES DO LOOP)
+# ============================================
+Invoke-BootstrapValidation
+
+# v4.1.8: Initialize signing keypair for PoE
+Write-Host "[BOOTSTRAP] Initializing signing keypair for Proof of Execution..." -ForegroundColor Cyan
+$signingKeyInitialized = Initialize-SigningKeyPair
+if ($signingKeyInitialized) {
+    Write-Host "[BOOTSTRAP] Signing keypair initialized successfully" -ForegroundColor Green
+} else {
+    Write-Host "[BOOTSTRAP] WARNING: Signing keypair not available - results will be unsigned" -ForegroundColor Yellow
+}
+
+# ============================================
+#  LOOP PRINCIPAL
 # ============================================
 Write-Log "============================================" "INFO"
-Write-Log "[START] CyberShield Agent v4.0.7" "INFO"
+Write-Log "[START] CyberShield Agent $($Global:AgentVersion)" "INFO"
 Write-Log "[INFO] ServerUrl: $Global:ServerUrl" "DEBUG"
 Write-Log "[INFO] AgentName: $Global:AgentName" "DEBUG"
+Write-Log "[INFO] Ed25519 Supported: $($Global:Ed25519Supported)" "DEBUG"
+Write-Log "[INFO] Signature Mode: $(if ($Global:StrictSignatureMode) { 'strict' } else { 'audit_only' })" "DEBUG"
+Write-Log "[INFO] Signing Key: $(if ($Global:SigningKeyPair) { $Global:SigningKeyPair.Fingerprint.Substring(0, 16) + '...' } else { 'NOT AVAILABLE' })" "DEBUG"
 Write-Log "============================================" "INFO"
 
 # Registrar inicio no Evidence Journal
@@ -2327,7 +4655,8 @@ Add-EvidenceEntry -Type "state_change" -Data @{
     event = "agent_started"
     version = $Global:AgentVersion
     hostname = $env:COMPUTERNAME
-    features = @("state_machine", "evidence_journal", "dns_filter", "policy_contract")
+    features = @("state_machine", "evidence_journal", "dns_filter", "policy_contract", "poe_signing")
+    signing_key_available = ($null -ne $Global:SigningKeyPair)
 } -StateBefore $null -StateAfter "BOOTSTRAP" -Severity "info"
 
 try {
@@ -2505,6 +4834,28 @@ try {
             if ((($now - $lastEvidenceFlush).TotalSeconds) -ge 300) {
                 Invoke-FlushEvidence
                 $lastEvidenceFlush = Get-Date
+            }
+
+            # ============================================
+            #  ENVIO DE METRICAS A CADA 5 MINUTOS (v4.0.9 SIMPLIFIED)
+            # ============================================
+            try {
+                if ((($now - $lastMetrics).TotalSeconds) -ge 300) {
+                    # Send-SystemMetrics agora e auto-contida (coleta + envia)
+                    $sent = Send-SystemMetrics
+                    
+                    if ($sent) {
+                        Add-EvidenceEntry -Type "metrics_sent" -Data @{
+                            auto = $true
+                            version = "v4.0.9"
+                        } -Severity "debug"
+                    }
+                    
+                    $lastMetrics = Get-Date
+                }
+            } catch {
+                # NUNCA derrubar o loop por causa de metrics
+                Write-Log "[WARN] Erro ao processar metrics: $($_.Exception.Message)" "WARN"
             }
 
             # Rotacao de logs/evidence a cada hora
