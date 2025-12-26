@@ -3058,6 +3058,42 @@ export type Database = {
           },
         ]
       }
+      event_risk_scoring: {
+        Row: {
+          auto_action_threshold: number | null
+          created_at: string | null
+          description: string | null
+          event_type: string
+          id: string
+          is_active: boolean | null
+          risk_multipliers: Json | null
+          severity_base: number
+          updated_at: string | null
+        }
+        Insert: {
+          auto_action_threshold?: number | null
+          created_at?: string | null
+          description?: string | null
+          event_type: string
+          id?: string
+          is_active?: boolean | null
+          risk_multipliers?: Json | null
+          severity_base: number
+          updated_at?: string | null
+        }
+        Update: {
+          auto_action_threshold?: number | null
+          created_at?: string | null
+          description?: string | null
+          event_type?: string
+          id?: string
+          is_active?: boolean | null
+          risk_multipliers?: Json | null
+          severity_base?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       failed_jobs_dlq: {
         Row: {
           agent_id: string | null
@@ -4655,6 +4691,7 @@ export type Database = {
           actions_snapshot: Json | null
           actions_taken: Json | null
           agent_id: string | null
+          auto_executed: boolean | null
           completed_at: string | null
           evidence_ids: string[] | null
           executed_by: string | null
@@ -4663,17 +4700,20 @@ export type Database = {
           notes: string | null
           playbook_id: string | null
           playbook_snapshot: Json | null
+          risk_score: number | null
           status: string | null
           tenant_id: string
           trigger_context: Json | null
           trigger_event_id: string | null
           trigger_source: string | null
           triggered_at: string | null
+          triggered_by: string | null
         }
         Insert: {
           actions_snapshot?: Json | null
           actions_taken?: Json | null
           agent_id?: string | null
+          auto_executed?: boolean | null
           completed_at?: string | null
           evidence_ids?: string[] | null
           executed_by?: string | null
@@ -4682,17 +4722,20 @@ export type Database = {
           notes?: string | null
           playbook_id?: string | null
           playbook_snapshot?: Json | null
+          risk_score?: number | null
           status?: string | null
           tenant_id: string
           trigger_context?: Json | null
           trigger_event_id?: string | null
           trigger_source?: string | null
           triggered_at?: string | null
+          triggered_by?: string | null
         }
         Update: {
           actions_snapshot?: Json | null
           actions_taken?: Json | null
           agent_id?: string | null
+          auto_executed?: boolean | null
           completed_at?: string | null
           evidence_ids?: string[] | null
           executed_by?: string | null
@@ -4701,12 +4744,14 @@ export type Database = {
           notes?: string | null
           playbook_id?: string | null
           playbook_snapshot?: Json | null
+          risk_score?: number | null
           status?: string | null
           tenant_id?: string
           trigger_context?: Json | null
           trigger_event_id?: string | null
           trigger_source?: string | null
           triggered_at?: string | null
+          triggered_by?: string | null
         }
         Relationships: [
           {
@@ -8317,6 +8362,10 @@ export type Database = {
           job_ids: string[]
         }[]
       }
+      calculate_event_risk: {
+        Args: { p_context: Json; p_event_type: string }
+        Returns: number
+      }
       calculate_next_run: {
         Args: { from_time?: string; pattern: string }
         Returns: string
@@ -8849,6 +8898,14 @@ export type Database = {
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
       revoke_agent_signing_key: {
         Args: { p_key_id: string; p_reason?: string }
+        Returns: boolean
+      }
+      should_auto_execute_playbook: {
+        Args: { p_context: Json; p_event_type: string; p_playbook_id: string }
+        Returns: Json
+      }
+      should_auto_quarantine: {
+        Args: { p_context: Json; p_tenant_id: string }
         Returns: boolean
       }
       submit_agent_evidence: {
