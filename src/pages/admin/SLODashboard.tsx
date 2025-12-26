@@ -3,10 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { HelpTooltip } from "@/components/ui/tech-tooltip";
+import { BlastRadiusPoliciesCard } from "@/components/slo/BlastRadiusPoliciesCard";
+import { ForensicSnapshotsCard } from "@/components/slo/ForensicSnapshotsCard";
 import { 
   Activity, 
   CheckCircle, 
@@ -19,7 +22,8 @@ import {
   TrendingUp,
   Shield,
   RefreshCw,
-  Info
+  Info,
+  Camera
 } from "lucide-react";
 
 interface SLOMetrics {
@@ -509,6 +513,12 @@ export default function SLODashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Blast Radius & Forensic Snapshots */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <BlastRadiusPoliciesCard />
+        <ForensicSnapshotsCard />
       </div>
 
       {/* Seção de Ajuda */}
