@@ -34,23 +34,30 @@ export default function AgentHealthMonitor() {
     refetchInterval: 30000,
   });
 
-  // Fetch job statistics
+  // Fetch job statistics - EXCLUDE timeouts from failure count
   const { data: jobStats, refetch: refetchJobStats } = useQuery({
     queryKey: ['job-stats', tenant?.id],
     queryFn: async () => {
-      if (!tenant?.id) return { failed: 0, delivered: 0, total: 0 };
+      if (!tenant?.id) return { failed: 0, delivered: 0, total: 0, timeoutCount: 0, realFailedCount: 0 };
       
       const { data, error } = await supabase
         .from('jobs')
-        .select('status', { count: 'exact' })
+        .select('status, error_message')
         .eq('tenant_id', tenant.id);
       
       if (error) throw error;
       
-      const failed = data.filter(j => j.status === 'failed').length;
+      const failed = data.filter(j => j.status === 'failed');
       const delivered = data.filter(j => j.status === 'delivered').length;
       
-      return { failed, delivered, total: data.length };
+      // Separate real failures from timeouts (computer offline)
+      const timeoutPatterns = ['Auto-cleanup', 'Timeout:', 'timeout', 'exceeded', 'expired', 'queued job exceeded'];
+      const isTimeout = (msg: string | null) => msg && timeoutPatterns.some(p => msg.toLowerCase().includes(p.toLowerCase()));
+      
+      const timeoutCount = failed.filter(j => isTimeout(j.error_message)).length;
+      const realFailedCount = failed.length - timeoutCount;
+      
+      return { failed: failed.length, delivered, total: data.length, timeoutCount, realFailedCount };
     },
     enabled: !!tenant?.id,
     refetchInterval: 60000,
@@ -292,8 +299,8 @@ export default function AgentHealthMonitor() {
         </Card>
       )}
 
-      {/* Job Cleanup (only show if there are jobs to clean) */}
-      {jobStats && (jobStats.failed > 0 || jobStats.delivered > 0) && (
+      {/* Job Cleanup - Humanized messages */}
+      {jobStats && (jobStats.realFailedCount > 0 || jobStats.delivered > 0 || jobStats.timeoutCount > 0) && (
         <Card className="border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -305,11 +312,27 @@ export default function AgentHealthMonitor() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground mb-3">
-              <span className="font-semibold text-red-600">{jobStats.failed} com falha</span>
-              {' • '}
-              <span className="font-semibold text-yellow-600">{jobStats.delivered} aguardando</span>
-            </p>
+            <div className="space-y-2 mb-3">
+              {jobStats.realFailedCount > 0 && (
+                <p className="text-sm flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-red-500" />
+                  <span className="font-semibold text-red-600">{jobStats.realFailedCount} com erro real</span>
+                  <span className="text-muted-foreground">- precisam de atenção</span>
+                </p>
+              )}
+              {jobStats.timeoutCount > 0 && (
+                <p className="text-sm flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-gray-500" />
+                  <span className="text-muted-foreground">{jobStats.timeoutCount} expiraram (computador desligado)</span>
+                </p>
+              )}
+              {jobStats.delivered > 0 && (
+                <p className="text-sm flex items-center gap-2">
+                  <Wifi className="h-4 w-4 text-yellow-500" />
+                  <span className="font-semibold text-yellow-600">{jobStats.delivered} aguardando</span>
+                </p>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               <Button 
                 variant="destructive" 

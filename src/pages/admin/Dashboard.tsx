@@ -85,22 +85,35 @@ export default function Dashboard() {
     enabled: !!tenant?.id,
   });
 
-  // Fetch jobs stats
+  // Fetch jobs stats - EXCLUDE timeouts from failure count
   const { data: jobsStats } = useQuery({
     queryKey: ['dashboard-jobs-stats', tenant?.id],
     queryFn: async () => {
-      if (!tenant?.id) return { total: 0, success: 0, rate: 0 };
+      if (!tenant?.id) return { total: 0, success: 0, rate: 0, timeoutCount: 0, realFailedCount: 0 };
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
-        .from('jobs_normalized')
-        .select('normalized_status')
+        .from('jobs')
+        .select('status, error_message')
         .eq('tenant_id', tenant.id)
         .gte('created_at', oneDayAgo);
       if (error) throw error;
+      
       const total = data?.length || 0;
-      const success = data?.filter(j => j.normalized_status === 'completed').length || 0;
-      const rate = total > 0 ? Math.round((success / total) * 100) : 100;
-      return { total, success, rate };
+      const completed = data?.filter(j => j.status === 'completed').length || 0;
+      
+      // Separate real failures from timeouts (computer offline)
+      const timeoutPatterns = ['Auto-cleanup', 'Timeout:', 'timeout', 'exceeded', 'expired', 'queued job exceeded'];
+      const isTimeout = (msg: string | null) => msg && timeoutPatterns.some(p => msg.toLowerCase().includes(p.toLowerCase()));
+      
+      const failed = data?.filter(j => j.status === 'failed') || [];
+      const timeoutCount = failed.filter(j => isTimeout(j.error_message)).length;
+      const realFailedCount = failed.length - timeoutCount;
+      
+      // Rate based on REAL executed jobs (excluding timeouts)
+      const relevantTotal = completed + realFailedCount;
+      const rate = relevantTotal > 0 ? Math.round((completed / relevantTotal) * 100) : 100;
+      
+      return { total, success: completed, rate, timeoutCount, realFailedCount };
     },
     enabled: !!tenant?.id,
   });
@@ -431,14 +444,26 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Taxa de sucesso</span>
+                    <span className="text-sm">Funcionamento</span>
                   </div>
                 </div>
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className={cn("text-xl font-bold", (jobsStats?.rate || 100) >= 90 ? "text-green-600" : "text-orange-600")}>
-                    {jobsStats?.rate || 100}%
-                  </span>
-                  <span className="text-sm text-muted-foreground">{jobsStats?.total || 0} tarefas hoje</span>
+                <div className="mt-2 flex flex-col gap-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className={cn("text-xl font-bold", (jobsStats?.rate || 100) >= 90 ? "text-green-600" : "text-orange-600")}>
+                      {jobsStats?.rate || 100}%
+                    </span>
+                    <span className="text-sm text-muted-foreground">funcionando</span>
+                  </div>
+                  {(jobsStats?.timeoutCount || 0) > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      ⏱️ {jobsStats?.timeoutCount} expiradas (PC desligado)
+                    </span>
+                  )}
+                  {(jobsStats?.realFailedCount || 0) > 0 && (
+                    <span className="text-xs text-red-500">
+                      ❌ {jobsStats?.realFailedCount} com erro real
+                    </span>
+                  )}
                 </div>
               </div>
             </CardContent>
