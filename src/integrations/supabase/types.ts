@@ -7599,6 +7599,72 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_events: {
+        Row: {
+          addon_quantity: number | null
+          created_at: string | null
+          created_by: string | null
+          effective_at: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          new_devices: number | null
+          new_plan: string | null
+          old_devices: number | null
+          old_plan: string | null
+          stripe_event_id: string | null
+          stripe_subscription_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          addon_quantity?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          effective_at?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          new_devices?: number | null
+          new_plan?: string | null
+          old_devices?: number | null
+          old_plan?: string | null
+          stripe_event_id?: string | null
+          stripe_subscription_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          addon_quantity?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          effective_at?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          new_devices?: number | null
+          new_plan?: string | null
+          old_devices?: number | null
+          old_plan?: string | null
+          stripe_event_id?: string | null
+          stripe_subscription_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           billing_period: string | null
@@ -7606,6 +7672,8 @@ export type Database = {
           discount_pct: number | null
           id: string
           is_active: boolean | null
+          is_public: boolean | null
+          is_sales_only: boolean | null
           max_agents: number | null
           max_devices: number | null
           max_scans_per_month: number | null
@@ -7622,6 +7690,8 @@ export type Database = {
           discount_pct?: number | null
           id?: string
           is_active?: boolean | null
+          is_public?: boolean | null
+          is_sales_only?: boolean | null
           max_agents?: number | null
           max_devices?: number | null
           max_scans_per_month?: number | null
@@ -7638,6 +7708,8 @@ export type Database = {
           discount_pct?: number | null
           id?: string
           is_active?: boolean | null
+          is_public?: boolean | null
+          is_sales_only?: boolean | null
           max_agents?: number | null
           max_devices?: number | null
           max_scans_per_month?: number | null

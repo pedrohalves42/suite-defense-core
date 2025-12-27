@@ -45,20 +45,23 @@ Deno.serve(async (req) => {
     if (!tenantId) throw new Error("Tenant not found");
     logStep("Tenant found", { tenantId });
 
-    // Get current subscription
+    // Get current subscription with V4 fields
     const { data: subscription } = await supabaseClient
       .from("tenant_subscriptions")
       .select(`
         stripe_subscription_id,
         stripe_customer_id,
         device_quantity,
+        addon_devices,
+        is_legacy,
         status,
         trial_end,
         current_period_end,
         plan_id,
         subscription_plans!inner (
           name,
-          stripe_price_id
+          stripe_price_id,
+          max_devices
         )
       `)
       .eq("tenant_id", tenantId)
@@ -70,22 +73,41 @@ Deno.serve(async (req) => {
       subscription_plans: {
         name: string;
         stripe_price_id: string | null;
+        max_devices: number | null;
       };
     };
 
     const typedSubscription = subscription as SubscriptionWithPlan | null;
+    
+    // V4: Calculate base_devices from plan config
+    const getBaseDevicesForPlan = (planName: string): number => {
+      const planBaseDevices: Record<string, number> = {
+        'starter_compliance': 10,
+        'business': 30,
+        'scale': 100,
+        'enterprise': 1000,
+        'pro': 50,
+        'starter': 10,
+        'free': 3,
+      };
+      return planBaseDevices[planName] || 10;
+    };
 
     // Check if it's Enterprise/Custom/Pro plan (without Stripe)
     if (!typedSubscription?.stripe_subscription_id) {
       const planName = typedSubscription?.subscription_plans?.name || "free";
+      const isLegacy = typedSubscription?.is_legacy || false;
+      const baseDevices = getBaseDevicesForPlan(planName);
+      const addonDevices = typedSubscription?.addon_devices || 0;
       
       // If Enterprise, Custom, or Pro plan, return local data
       if (planName === 'enterprise' || planName === 'custom' || planName === 'pro') {
-        logStep("Manual plan detected - DETAILED", { 
+        logStep("Manual plan detected - V4", { 
           planName,
           tenantId,
           deviceQuantity: typedSubscription?.device_quantity,
-          status: typedSubscription?.status
+          status: typedSubscription?.status,
+          isLegacy,
         });
         
         // Get features from database
@@ -105,12 +127,16 @@ Deno.serve(async (req) => {
 
         return new Response(
           JSON.stringify({
-            subscribed: true, // Enterprise is always subscribed
+            subscribed: true,
             plan_name: planName,
+            is_legacy: isLegacy, // V4
+            base_devices: baseDevices, // V4
+            addon_devices: addonDevices, // V4
+            total_devices: baseDevices + addonDevices, // V4
             device_quantity: typedSubscription?.device_quantity || 0,
             status: typedSubscription?.status || 'active',
             trial_end: null,
-            current_period_end: null, // No period for Enterprise
+            current_period_end: null,
             features: featuresMap,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
@@ -123,6 +149,10 @@ Deno.serve(async (req) => {
         JSON.stringify({
           subscribed: false,
           plan_name: "free",
+          is_legacy: false, // V4
+          base_devices: 3, // V4
+          addon_devices: 0, // V4
+          total_devices: 3, // V4
           device_quantity: 0,
           status: "inactive",
         }),
@@ -137,28 +167,47 @@ Deno.serve(async (req) => {
     const stripeSubscription = await stripe.subscriptions.retrieve(typedSubscription.stripe_subscription_id);
     logStep("Fetched Stripe subscription", { status: stripeSubscription.status });
 
-    // Get quantity from line items
-    const quantity = stripeSubscription.items.data[0]?.quantity || 1;
+    // V4: Process ALL line items to get base and addon devices
+    const ADDON_PRICE_IDS = [
+      'price_1Sj53iCfJUj9L8duCCU8qSN2', // starter addon
+      'price_1Sj542CfJUj9L8duKIjH3eOk', // business addon
+    ];
+    
+    let addonDevicesFromStripe = 0;
+    for (const item of stripeSubscription.items.data) {
+      if (ADDON_PRICE_IDS.includes(item.price.id)) {
+        addonDevicesFromStripe += item.quantity || 0;
+      }
+    }
+    
+    const planName = typedSubscription.subscription_plans.name;
+    const baseDevices = getBaseDevicesForPlan(planName);
+    const totalDevices = baseDevices + addonDevicesFromStripe;
+    const isLegacy = typedSubscription.is_legacy || false;
+    
+    logStep("V4 device breakdown", { baseDevices, addonDevicesFromStripe, totalDevices, isLegacy });
+    
     const status = stripeSubscription.status;
     const trialEnd = stripeSubscription.trial_end ? new Date(stripeSubscription.trial_end * 1000).toISOString() : null;
     const currentPeriodEnd = new Date(stripeSubscription.current_period_end * 1000).toISOString();
 
-    // Update local subscription
+    // Update local subscription with V4 fields
     await supabaseClient
       .from("tenant_subscriptions")
       .update({
-        device_quantity: quantity,
+        device_quantity: totalDevices,
+        addon_devices: addonDevicesFromStripe, // V4
         status: status,
         trial_end: trialEnd,
         current_period_end: currentPeriodEnd,
       })
       .eq("tenant_id", tenantId);
 
-    // Sync features
+    // Sync features with total devices
     await supabaseClient.rpc("ensure_tenant_features", {
       p_tenant_id: tenantId,
-      p_plan_name: typedSubscription.subscription_plans.name,
-      p_device_quantity: quantity,
+      p_plan_name: planName,
+      p_device_quantity: totalDevices,
     });
 
     logStep("Subscription synced successfully");
@@ -181,8 +230,12 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         subscribed: ["active", "trialing"].includes(status),
-        plan_name: typedSubscription.subscription_plans.name,
-        device_quantity: quantity,
+        plan_name: planName,
+        is_legacy: isLegacy, // V4
+        base_devices: baseDevices, // V4
+        addon_devices: addonDevicesFromStripe, // V4
+        total_devices: totalDevices, // V4
+        device_quantity: totalDevices,
         status: status,
         trial_end: trialEnd,
         current_period_end: currentPeriodEnd,
