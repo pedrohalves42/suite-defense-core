@@ -77,6 +77,7 @@ import SystemHealth from "./pages/admin/SystemHealth";
 import SoftwareInventory from "./pages/admin/SoftwareInventory";
 import VulnerabilityFindings from "./pages/admin/VulnerabilityFindings";
 import WebActivity from "./pages/admin/WebActivity";
+import DNSFilter from "./pages/admin/DNSFilter";
 import AgentTimeline from "./pages/admin/AgentTimeline";
 import AgentReleases from "./pages/admin/AgentReleases";
 import AgentVersionMonitor from "./pages/admin/AgentVersionMonitor";
@@ -183,6 +184,7 @@ const App = () => (
                 <Route path="software-inventory" element={<SoftwareInventory />} />
                 <Route path="vulnerabilities" element={<VulnerabilityFindings />} />
                 <Route path="web-activity" element={<WebActivity />} />
+                <Route path="dns-filter" element={<DNSFilter />} />
                 <Route path="agent-timeline" element={<AgentTimeline />} />
                 <Route path="agent-releases" element={<AgentReleases />} />
                 <Route path="agent-versions" element={<AgentVersionMonitor />} />
