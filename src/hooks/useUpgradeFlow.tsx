@@ -1,8 +1,13 @@
 import { useState, useCallback, useMemo } from "react";
 import { useTenant } from "./useTenant";
 import { useTenantFeatures } from "./useTenantFeatures";
+import { 
+  PLAN_CONFIG, 
+  isLegacyPlan, 
+  type ActivePlan 
+} from "@/constants/plans";
 
-type PlanType = "starter" | "business" | "enterprise";
+type PlanType = "starter_compliance" | "business" | "enterprise";
 
 interface UpgradeFlowState {
   showModal: boolean;
@@ -10,22 +15,22 @@ interface UpgradeFlowState {
   featureName: string | undefined;
 }
 
-// Limites por plano (V4 Pricing)
+// V4 Plan limits derived from PLAN_CONFIG
 const PLAN_LIMITS: Record<PlanType, {
   baseDevices: number;
   maxDevices: number;
   features: string[];
   lockedFeatures: string[];
 }> = {
-  starter: {
-    baseDevices: 10,
-    maxDevices: 50,
+  starter_compliance: {
+    baseDevices: PLAN_CONFIG.starter_compliance.baseDevices,
+    maxDevices: PLAN_CONFIG.starter_compliance.maxDevices,
     features: ["monitoring", "inventory", "antivirus_status", "vulnerability_detection", "dashboard"],
     lockedFeatures: ["advanced_scans", "custom_reports", "analytics", "extended_history"],
   },
   business: {
-    baseDevices: 30,
-    maxDevices: 200,
+    baseDevices: PLAN_CONFIG.business.baseDevices,
+    maxDevices: PLAN_CONFIG.business.maxDevices,
     features: ["monitoring", "inventory", "antivirus_status", "vulnerability_detection", "dashboard", "advanced_scans", "custom_reports", "analytics", "extended_history"],
     lockedFeatures: [],
   },
@@ -47,26 +52,30 @@ export const useUpgradeFlow = () => {
     featureName: undefined,
   });
 
-  // Obter plano atual - por enquanto usar starter como default
-  // TODO: Integrar com tenant_subscriptions quando disponível
-  const currentPlan: PlanType = useMemo(() => {
-    // Aqui integraria com o tenant subscription
-    return "starter";
+  // Get current plan from tenant subscription
+  const { currentPlan, isLegacy } = useMemo(() => {
+    // TODO: Integrate with tenant_subscriptions when available
+    // For now, default to starter_compliance
+    const planName = "starter_compliance";
+    return {
+      currentPlan: planName as PlanType,
+      isLegacy: isLegacyPlan(planName),
+    };
   }, [tenant]);
   
   const planLimits = PLAN_LIMITS[currentPlan];
 
-  // Verificar se está próximo do limite de dispositivos
+  // Check device quota
   const deviceQuota = getFeatureQuota("max_devices");
   const isNearDeviceLimit = deviceQuota.limit ? (deviceQuota.used / deviceQuota.limit) >= 0.8 : false;
   const hasReachedDeviceLimit = deviceQuota.limit ? deviceQuota.used >= deviceQuota.limit : false;
 
-  // Verificar se uma feature está bloqueada
+  // Check if a feature is locked
   const isFeatureLocked = useCallback((featureKey: string): boolean => {
     return planLimits.lockedFeatures.includes(featureKey);
   }, [planLimits]);
 
-  // Abrir modal por limite de dispositivos
+  // Trigger upgrade modal for device limit
   const triggerDeviceLimitUpgrade = useCallback(() => {
     setState({
       showModal: true,
@@ -75,7 +84,7 @@ export const useUpgradeFlow = () => {
     });
   }, []);
 
-  // Abrir modal por feature bloqueada
+  // Trigger upgrade modal for locked feature
   const triggerFeatureLockUpgrade = useCallback((featureName: string) => {
     setState({
       showModal: true,
@@ -84,7 +93,7 @@ export const useUpgradeFlow = () => {
     });
   }, []);
 
-  // Abrir modal por risco crítico
+  // Trigger upgrade modal for critical risk
   const triggerCriticalRiskUpgrade = useCallback(() => {
     setState({
       showModal: true,
@@ -93,7 +102,7 @@ export const useUpgradeFlow = () => {
     });
   }, []);
 
-  // Fechar modal
+  // Close modal
   const closeModal = useCallback(() => {
     setState({
       showModal: false,
@@ -102,14 +111,13 @@ export const useUpgradeFlow = () => {
     });
   }, []);
 
-  // Verificar se deve mostrar upgrade automaticamente
+  // Check and auto-trigger upgrade
   const checkAndTriggerUpgrade = useCallback((context: {
     type: "add_device" | "access_feature" | "critical_risk";
     featureName?: string;
   }): boolean => {
-    const plan = currentPlan as PlanType;
-    if (plan === "business" || plan === "enterprise") {
-      return false; // Já está no plano máximo ou enterprise
+    if (currentPlan === "business" || currentPlan === "enterprise") {
+      return false; // Already on max or enterprise plan
     }
 
     switch (context.type) {
@@ -126,7 +134,7 @@ export const useUpgradeFlow = () => {
         }
         break;
       case "critical_risk":
-        if (plan === "starter") {
+        if (currentPlan === "starter_compliance") {
           triggerCriticalRiskUpgrade();
           return true;
         }
@@ -136,18 +144,19 @@ export const useUpgradeFlow = () => {
   }, [currentPlan, hasReachedDeviceLimit, isFeatureLocked, triggerDeviceLimitUpgrade, triggerFeatureLockUpgrade, triggerCriticalRiskUpgrade]);
 
   return {
-    // Estado
+    // State
     showModal: state.showModal,
     triggerReason: state.triggerReason,
     featureName: state.featureName,
     
-    // Info do plano
+    // Plan info
     currentPlan,
+    isLegacy,
     planLimits,
     isNearDeviceLimit,
     hasReachedDeviceLimit,
     
-    // Ações
+    // Actions
     isFeatureLocked,
     triggerDeviceLimitUpgrade,
     triggerFeatureLockUpgrade,
