@@ -18,6 +18,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState } from 'react';
+import { AgentStatusBadges } from '@/components/agents/AgentStatusBadges';
+import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 interface ProblematicAgent {
   id: string | null;
@@ -34,6 +37,13 @@ interface ProblematicAgent {
   token_count: number | null;
   has_active_token: boolean | null;
   pending_jobs_count: number | null;
+  // Rules Engine status fields
+  is_throttled?: boolean | null;
+  throttle_reason?: string | null;
+  is_isolated?: boolean | null;
+  isolation_reason?: string | null;
+  safe_mode_entered_at?: string | null;
+  safe_mode_reason?: string | null;
 }
 
 export default function ProblematicAgentsManager() {
@@ -194,12 +204,24 @@ export default function ProblematicAgentsManager() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2">
+                      <CardTitle className="flex items-center gap-2 flex-wrap">
                         {agent.agent_name ?? 'Unknown'}
                         <Badge variant={issueInfo.variant}>
                           <IssueIcon className="mr-1 h-3 w-3" />
                           {issueInfo.label}
                         </Badge>
+                        {/* Rules Engine Status Badges */}
+                        <TooltipProvider>
+                          <AgentStatusBadges
+                            isThrottled={agent.is_throttled}
+                            isIsolated={agent.is_isolated}
+                            isInSafeMode={!!agent.safe_mode_entered_at}
+                            throttleReason={agent.throttle_reason}
+                            isolationReason={agent.isolation_reason}
+                            safeModeReason={agent.safe_mode_reason}
+                            compact
+                          />
+                        </TooltipProvider>
                       </CardTitle>
                       <CardDescription className="mt-2 space-y-1">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -213,7 +235,7 @@ export default function ProblematicAgentsManager() {
                       </CardDescription>
                     </div>
                     
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2">
                       <Button
                         size="sm"
                         variant="outline"
@@ -226,6 +248,15 @@ export default function ProblematicAgentsManager() {
                         <RotateCcw className="mr-2 h-4 w-4" />
                         Limpar
                       </Button>
+                      {/* Quick Actions for throttled/isolated agents */}
+                      {agent.id && (agent.is_throttled || agent.is_isolated) && (
+                        <AgentQuickActions
+                          agentId={agent.id}
+                          agentName={agent.agent_name ?? 'Unknown'}
+                          isThrottled={agent.is_throttled}
+                          isIsolated={agent.is_isolated}
+                        />
+                      )}
                     </div>
                   </div>
                 </CardHeader>

@@ -13,6 +13,9 @@ import { cn } from "@/lib/utils";
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getOsIcon } from '@/lib/os-utils';
+import { AgentStatusBadges } from '@/components/agents/AgentStatusBadges';
+import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
+import { TooltipProvider as TooltipProviderWrapper } from '@/components/ui/tooltip';
 
 export default function AgentHealthMonitor() {
   const { tenant } = useTenant();
@@ -408,11 +411,16 @@ export default function AgentHealthMonitor() {
                       ? `Há ${Math.floor(secondsSinceHeartbeat / 3600)} h`
                       : `Há ${Math.floor(secondsSinceHeartbeat / 86400)} dias`;
 
+                const hasSpecialStatus = agent.is_throttled || agent.is_isolated || agent.is_in_safe_mode;
+
                 return (
                   <div 
                     key={agent.agent_name + idx}
                     className={cn(
                       "p-4 rounded-lg border transition-all hover:shadow-md",
+                      agent.is_isolated ? "border-red-300 bg-red-50/50 dark:bg-red-950/20" :
+                      agent.is_throttled ? "border-amber-300 bg-amber-50/50 dark:bg-amber-950/20" :
+                      agent.is_in_safe_mode ? "border-orange-300 bg-orange-50/50 dark:bg-orange-950/20" :
                       isOnline ? "border-green-200 bg-green-50/50 dark:bg-green-950/20" : "border-gray-200 bg-gray-50/50 dark:bg-gray-950/20"
                     )}
                   >
@@ -424,16 +432,34 @@ export default function AgentHealthMonitor() {
                           <p className="text-xs text-muted-foreground">{agent.hostname || 'N/A'}</p>
                         </div>
                       </div>
-                      <Badge variant={isOnline ? "default" : "secondary"} className={cn(
-                        isOnline ? "bg-green-500" : ""
-                      )}>
-                        {isOnline ? (
-                          <><Wifi className="w-3 h-3 mr-1" /> Online</>
-                        ) : (
-                          <><WifiOff className="w-3 h-3 mr-1" /> Offline</>
-                        )}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={isOnline ? "default" : "secondary"} className={cn(
+                          isOnline ? "bg-green-500" : ""
+                        )}>
+                          {isOnline ? (
+                            <><Wifi className="w-3 h-3 mr-1" /> Online</>
+                          ) : (
+                            <><WifiOff className="w-3 h-3 mr-1" /> Offline</>
+                          )}
+                        </Badge>
+                      </div>
                     </div>
+
+                    {/* Rules Engine Status Badges */}
+                    {hasSpecialStatus && (
+                      <div className="mt-2">
+                        <TooltipProviderWrapper>
+                          <AgentStatusBadges
+                            isThrottled={agent.is_throttled}
+                            isIsolated={agent.is_isolated}
+                            isInSafeMode={agent.is_in_safe_mode}
+                            throttleReason={agent.throttle_reason}
+                            isolationReason={agent.isolation_reason}
+                            safeModeReason={agent.safe_mode_reason}
+                          />
+                        </TooltipProviderWrapper>
+                      </div>
+                    )}
                     
                     {/* Agent info */}
                     <div className="mt-3 space-y-1 text-xs text-muted-foreground">
@@ -446,6 +472,18 @@ export default function AgentHealthMonitor() {
                       <Clock className="w-3 h-3" />
                       {agent.last_heartbeat ? lastSeenText : 'Nunca conectado'}
                     </p>
+
+                    {/* Quick Actions for special states */}
+                    {hasSpecialStatus && agent.id && (
+                      <div className="mt-3 pt-3 border-t">
+                        <AgentQuickActions
+                          agentId={agent.id}
+                          agentName={agent.agent_name}
+                          isThrottled={agent.is_throttled}
+                          isIsolated={agent.is_isolated}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
