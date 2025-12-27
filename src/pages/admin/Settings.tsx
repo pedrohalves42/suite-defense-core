@@ -282,32 +282,32 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold">Configuracoes</h2>
-        <p className="text-muted-foreground">Gerencie as configuracoes do seu tenant</p>
+        <h2 className="text-3xl font-bold">Configurações</h2>
+        <p className="text-muted-foreground">Gerencie as configurações da sua empresa</p>
       </div>
 
-      <Tabs defaultValue="tenant" className="w-full">
+      <Tabs defaultValue="empresa" className="w-full">
         <TabsList>
-          <TabsTrigger value="tenant">Tenant</TabsTrigger>
+          <TabsTrigger value="empresa">Sua Empresa</TabsTrigger>
           <TabsTrigger value="security" className="flex items-center gap-1">
             <Shield className="h-4 w-4" />
             Segurança
           </TabsTrigger>
-          <TabsTrigger value="alerts">Alertas</TabsTrigger>
-          <TabsTrigger value="integrations">Integracoes</TabsTrigger>
-          <TabsTrigger value="features">Features</TabsTrigger>
+          <TabsTrigger value="alerts">Notificações</TabsTrigger>
+          <TabsTrigger value="integrations">Conexões</TabsTrigger>
+          <TabsTrigger value="features">Funcionalidades</TabsTrigger>
         </TabsList>
 
-        {/* Tenant Info Tab */}
-        <TabsContent value="tenant" className="space-y-4">
+        {/* Empresa Info Tab */}
+        <TabsContent value="empresa" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Informacoes do Tenant</CardTitle>
-              <CardDescription>Configure as informacoes basicas do tenant</CardDescription>
+              <CardTitle>Dados da Empresa</CardTitle>
+              <CardDescription>Configure as informações básicas da sua empresa</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label>Nome do Tenant</Label>
+                <Label>Nome da Empresa</Label>
                 <Input 
                   value={tenantName || tenant?.name || ''}
                   onChange={(e) => setTenantName(e.target.value)}
@@ -347,8 +347,8 @@ export default function Settings() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Informacoes do Sistema</CardTitle>
-              <CardDescription>Detalhes tecnicos do tenant</CardDescription>
+              <CardTitle>Informações do Sistema</CardTitle>
+              <CardDescription>Detalhes técnicos da sua empresa</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex justify-between py-2 border-b">
@@ -367,8 +367,8 @@ export default function Settings() {
         <TabsContent value="alerts" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Configuracoes de Alertas</CardTitle>
-              <CardDescription>Configure emails, webhooks e limiares de alerta</CardDescription>
+              <CardTitle>Configurações de Notificações</CardTitle>
+              <CardDescription>Configure emails, webhooks e limites para alertas</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
