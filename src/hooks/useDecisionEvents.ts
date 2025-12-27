@@ -16,6 +16,20 @@ export interface DecisionEvent {
     heartbeat_age_seconds?: number;
     agent_version?: string;
     detected_at?: string;
+    // Throttle evidence
+    request_count?: number;
+    error_count?: number;
+    error_rate?: number;
+    new_poll_interval?: number;
+    // Isolate evidence
+    event_count?: number;
+    event_types?: string[];
+    // Version block evidence
+    version?: string;
+    platform?: string;
+    total_agents?: number;
+    failed_agents?: number;
+    failure_rate?: number;
     [key: string]: unknown;
   };
   actions_executed: Array<{
