@@ -26,11 +26,27 @@ const RULE_ICONS: Record<string, React.ReactNode> = {
   'UPDATE_BLOCK_004': <Ban className="h-5 w-5 text-purple-500" />,
 };
 
+const RULE_NAMES: Record<string, string> = {
+  'SAFE_MODE_RULE_001': 'Proteção contra Erros Repetidos',
+  'AGENT_THROTTLE_002': 'Limitador de Velocidade',
+  'AGENT_ISOLATE_003': 'Isolamento de Emergência',
+  'UPDATE_BLOCK_004': 'Bloqueio de Versões Problemáticas',
+};
+
 const RULE_DESCRIPTIONS: Record<string, string> = {
-  'SAFE_MODE_RULE_001': 'Detecta agentes com falhas repetidas no mesmo erro e os coloca em safe mode automaticamente',
-  'AGENT_THROTTLE_002': 'Aplica rate limiting em agentes com alta taxa de erros para reduzir carga no sistema',
-  'AGENT_ISOLATE_003': 'Isola agentes com eventos de segurança graves, bloqueando comandos remotos',
-  'UPDATE_BLOCK_004': 'Bloqueia versões de agentes com alta taxa de falha global para evitar propagação',
+  'SAFE_MODE_RULE_001': 'Quando um computador tem o mesmo problema várias vezes, ele entra automaticamente em modo de proteção para evitar mais erros',
+  'AGENT_THROTTLE_002': 'Reduz a velocidade de comunicação de computadores com muitos erros para proteger o sistema',
+  'AGENT_ISOLATE_003': 'Isola computadores com problemas graves de segurança, impedindo que recebam comandos remotos',
+  'UPDATE_BLOCK_004': 'Bloqueia atualizações problemáticas para evitar que mais computadores sejam afetados',
+};
+
+const PARAM_LABELS: Record<string, string> = {
+  'threshold': 'Limite de erros',
+  'window_minutes': 'Janela de tempo (min)',
+  'cooldown_minutes': 'Tempo de espera (min)',
+  'max_retries': 'Tentativas máximas',
+  'isolation_duration_hours': 'Duração do isolamento (h)',
+  'block_percentage': 'Porcentagem para bloqueio',
 };
 
 export default function RulesManagement() {
@@ -105,8 +121,8 @@ export default function RulesManagement() {
                   <div className="flex items-center gap-3">
                     {RULE_ICONS[rule.code] || <ShieldAlert className="h-5 w-5" />}
                     <div>
-                      <CardTitle className="text-base">{rule.code}</CardTitle>
-                      <CardDescription className="text-xs">{rule.description}</CardDescription>
+                      <CardTitle className="text-base">{RULE_NAMES[rule.code] || rule.code}</CardTitle>
+                      <CardDescription className="text-xs">{rule.code}</CardDescription>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -136,11 +152,11 @@ export default function RulesManagement() {
                 
                 {definition && (
                   <div className="bg-muted/50 rounded-md p-3 space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground">Parâmetros:</p>
+                    <p className="text-xs font-medium text-muted-foreground">Configurações:</p>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {Object.entries(definition).map(([key, value]) => (
                         <div key={key} className="flex justify-between">
-                          <span className="text-muted-foreground">{key}:</span>
+                          <span className="text-muted-foreground">{PARAM_LABELS[key] || key}:</span>
                           <span className="font-mono">{String(value)}</span>
                         </div>
                       ))}

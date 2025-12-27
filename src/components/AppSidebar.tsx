@@ -131,6 +131,7 @@ export const AppSidebar = () => {
     { icon: CheckCircle, label: 'Ações', to: '/admin/ai-actions', section: 'ai' },
     { icon: BarChart3, label: 'Métricas', to: '/admin/ai-metrics', section: 'ai' },
     { icon: Scale, label: 'Decisões', to: '/admin/decision-audit', section: 'ai' },
+    { icon: Settings, label: 'Regras Automáticas', to: '/admin/rules-management', section: 'ai' },
     
     // === GESTÃO ===
     { icon: Users, label: 'Equipe', to: '/admin/members', section: 'management' },

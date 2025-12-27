@@ -152,8 +152,8 @@ export default function AgentReleases() {
       {/* Header */}
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Agent Releases</h1>
-          <p className="text-muted-foreground">Gerenciar versões de agentes e auto-update</p>
+          <h1 className="text-3xl font-bold">Versões do Programa</h1>
+          <p className="text-muted-foreground">Gerencie as versões instaladas nos computadores</p>
         </div>
         <div className="flex gap-2">
           <Button 
@@ -164,7 +164,7 @@ export default function AgentReleases() {
             className="gap-1"
           >
             {isSigningReleases ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldCheck className="h-3 w-3" />}
-            Assinar Releases
+            Validar Segurança
           </Button>
           <Button 
             onClick={handleForceUpdateCheck}
@@ -172,7 +172,7 @@ export default function AgentReleases() {
             variant="outline"
             size="sm"
           >
-            {isProcessingUpdates ? "Processando..." : "Forçar Atualização"}
+            {isProcessingUpdates ? "Processando..." : "Atualizar Computadores"}
           </Button>
         </div>
       </div>
@@ -236,7 +236,7 @@ export default function AgentReleases() {
 
       {/* Releases List */}
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Releases Registradas</h2>
+        <h2 className="text-xl font-semibold">Versões Disponíveis</h2>
         <div className="grid gap-4">
           {releases.map((release, idx) => {
             const sizeKB = Math.round(release.script_content.length / 1024);
@@ -292,7 +292,7 @@ export default function AgentReleases() {
                           disabled={validatingHash === release.id}
                           className="text-xs h-7"
                         >
-                          {validatingHash === release.id ? 'Validando...' : 'Validar SHA256'}
+                          {validatingHash === release.id ? 'Verificando...' : 'Verificar Integridade'}
                         </Button>
                         <Badge variant={isValid ? "outline" : "destructive"} className="text-xs">
                           {sizeKB}KB {!isValid && '(Placeholder)'}
