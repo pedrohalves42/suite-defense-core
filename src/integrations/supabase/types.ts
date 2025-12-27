@@ -1826,12 +1826,17 @@ export type Database = {
           hmac_secret: string
           hostname: string | null
           id: string
+          is_isolated: boolean | null
+          is_throttled: boolean | null
+          isolated_at: string | null
+          isolation_reason: string | null
           last_block_sync_at: string | null
           last_forced_update_applied: string | null
           last_heartbeat: string | null
           os_type: string | null
           os_version: string | null
           payload_hash: string | null
+          poll_interval_seconds: number | null
           result_key_fingerprint: string | null
           result_key_registered_at: string | null
           result_public_key: string | null
@@ -1840,6 +1845,8 @@ export type Database = {
           signature_mode: string | null
           status: string
           tenant_id: string
+          throttle_reason: string | null
+          throttled_at: string | null
         }
         Insert: {
           agent_mode?: string | null
@@ -1854,12 +1861,17 @@ export type Database = {
           hmac_secret: string
           hostname?: string | null
           id?: string
+          is_isolated?: boolean | null
+          is_throttled?: boolean | null
+          isolated_at?: string | null
+          isolation_reason?: string | null
           last_block_sync_at?: string | null
           last_forced_update_applied?: string | null
           last_heartbeat?: string | null
           os_type?: string | null
           os_version?: string | null
           payload_hash?: string | null
+          poll_interval_seconds?: number | null
           result_key_fingerprint?: string | null
           result_key_registered_at?: string | null
           result_public_key?: string | null
@@ -1868,6 +1880,8 @@ export type Database = {
           signature_mode?: string | null
           status?: string
           tenant_id: string
+          throttle_reason?: string | null
+          throttled_at?: string | null
         }
         Update: {
           agent_mode?: string | null
@@ -1882,12 +1896,17 @@ export type Database = {
           hmac_secret?: string
           hostname?: string | null
           id?: string
+          is_isolated?: boolean | null
+          is_throttled?: boolean | null
+          isolated_at?: string | null
+          isolation_reason?: string | null
           last_block_sync_at?: string | null
           last_forced_update_applied?: string | null
           last_heartbeat?: string | null
           os_type?: string | null
           os_version?: string | null
           payload_hash?: string | null
+          poll_interval_seconds?: number | null
           result_key_fingerprint?: string | null
           result_key_registered_at?: string | null
           result_public_key?: string | null
@@ -1896,6 +1915,8 @@ export type Database = {
           signature_mode?: string | null
           status?: string
           tenant_id?: string
+          throttle_reason?: string | null
+          throttled_at?: string | null
         }
         Relationships: [
           {
