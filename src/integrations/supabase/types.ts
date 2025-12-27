@@ -9376,6 +9376,13 @@ export type Database = {
         }
         Returns: Json
       }
+      auto_acknowledge_old_insights: {
+        Args: never
+        Returns: {
+          acknowledged_count: number
+          insight_ids: string[]
+        }[]
+      }
       auto_cancel_zombie_jobs: {
         Args: never
         Returns: {
@@ -9715,6 +9722,10 @@ export type Database = {
           seconds_since_heartbeat: number
           total_jobs_24h: number
         }[]
+      }
+      get_critical_insights_count: {
+        Args: { p_tenant_id: string }
+        Returns: number
       }
       get_enrollment_key_full: { Args: { p_key_id: string }; Returns: string }
       get_installation_health_status: {
