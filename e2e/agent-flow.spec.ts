@@ -12,7 +12,7 @@ function generateHmac(secret: string, body: string, timestamp: string, nonce: st
   return crypto.createHmac('sha256', secret).update(payload).digest('hex');
 }
 
-test.describe('Agent Flow E2E', () => {
+test.describe.serial('Agent Flow E2E', () => {
   let authToken: string;
   let enrollmentKey: string;
   let agentToken: string;

@@ -9,7 +9,7 @@ import { TEST_CONFIG } from './test-config';
  *         Simular Instalacao → Heartbeat → Metricas → Jobs
  */
 
-test.describe('Complete Agent Lifecycle Flow', () => {
+test.describe.serial('Complete Agent Lifecycle Flow', () => {
   const baseUrl = process.env.VITE_SUPABASE_URL!;
   const testEmail = `test-agent-${Date.now()}@test.local`;
   const testPassword = TEST_CONFIG.credentials.password;
