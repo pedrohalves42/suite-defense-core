@@ -7,8 +7,20 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load test environment variables
+// Load environment variables in correct order:
+// 1. First load .env (main Supabase/Vite variables)
+// 2. Then load .env.test (test-specific overrides)
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 dotenv.config({ path: path.resolve(__dirname, '.env.test') });
+
+// Validate required environment variables
+const requiredEnvVars = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'];
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.warn(`⚠️ Warning: Missing environment variables: ${missingVars.join(', ')}`);
+  console.warn('   Make sure .env and .env.test files exist and contain required variables.');
+}
 
 /**
  * Playwright Configuration for E2E Tests
