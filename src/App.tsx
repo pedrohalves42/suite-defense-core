@@ -100,6 +100,7 @@ import VerificarLaudo from "./pages/VerificarLaudo";
 import RiskScore from "./pages/admin/RiskScore";
 import Playbooks from "./pages/admin/Playbooks";
 import DecisionAudit from "./pages/admin/DecisionAudit";
+import RulesManagement from "./pages/admin/RulesManagement";
 import {
   ClientDashboard, 
   ClientComputers, 
@@ -202,6 +203,7 @@ const App = () => (
                 <Route path="risk-score" element={<RiskScore />} />
                 <Route path="playbooks" element={<Playbooks />} />
                 <Route path="decision-audit" element={<DecisionAudit />} />
+                <Route path="rules-management" element={<RulesManagement />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}

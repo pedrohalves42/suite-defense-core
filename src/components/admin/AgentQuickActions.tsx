@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Trash2, Key, Stethoscope, Loader2 } from 'lucide-react';
+import { Trash2, Key, Stethoscope, Loader2, Clock, ShieldOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -15,17 +15,27 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
+import { useAgentActions } from '@/hooks/useAgentActions';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface AgentQuickActionsProps {
   agentId: string;
   agentName: string;
+  isThrottled?: boolean | null;
+  isIsolated?: boolean | null;
 }
 
-export function AgentQuickActions({ agentId, agentName }: AgentQuickActionsProps) {
+export function AgentQuickActions({ 
+  agentId, 
+  agentName,
+  isThrottled,
+  isIsolated,
+}: AgentQuickActionsProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const { removeThrottle, removeIsolation } = useAgentActions();
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
@@ -56,6 +66,46 @@ export function AgentQuickActions({ agentId, agentName }: AgentQuickActionsProps
   return (
     <>
       <div className="flex items-center gap-1">
+        {isThrottled && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removeThrottle.mutate(agentId)}
+                disabled={removeThrottle.isPending}
+                className="text-amber-600 hover:text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/20"
+              >
+                {removeThrottle.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Clock className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Remover Throttle</TooltipContent>
+          </Tooltip>
+        )}
+        {isIsolated && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removeIsolation.mutate(agentId)}
+                disabled={removeIsolation.isPending}
+                className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/20"
+              >
+                {removeIsolation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ShieldOff className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Remover Isolamento</TooltipContent>
+          </Tooltip>
+        )}
         <Button
           variant="ghost"
           size="sm"
