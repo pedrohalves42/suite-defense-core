@@ -120,6 +120,14 @@ Deno.serve(async (req) => {
             }
             break;
             
+          case 'AGENT_IMPRODUTIVE_005':
+            const improdutiveResult = await processImprodutiveRule(supabase, rule);
+            if (improdutiveResult.processed_count > 0) {
+              allResults.push(improdutiveResult);
+              totalActions += improdutiveResult.processed_count;
+            }
+            break;
+            
           default:
             console.log(`[rules-engine] Unknown rule code: ${rule.code}, skipping`);
         }
@@ -495,6 +503,106 @@ async function processVersionBlockRule(supabase: any, rule: any): Promise<RuleRe
     });
 
     console.log(`[UPDATE_BLOCK_004] Blocked version ${candidate.version} for ${candidate.platform}`);
+  }
+
+  return { rule_code: rule.code, processed_count: agents.length, agents };
+}
+
+// =============================================================
+// AGENT_IMPRODUTIVE_005: Throttle de agentes improdutivos
+// =============================================================
+async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleResult> {
+  const params = rule.definition?.parameters || { 
+    poll_interval_seconds: 300,
+    auto_revert_after_hours: 2
+  };
+
+  console.log(`[AGENT_IMPRODUTIVE_005] Detecting improdutive agents`);
+
+  // Usar RPC que detecta agentes improdutivos
+  const { data: candidates, error } = await supabase
+    .rpc('detect_improdutive_agents');
+
+  if (error) {
+    console.error('[AGENT_IMPRODUTIVE_005] Detection error:', error);
+    throw error;
+  }
+
+  console.log(`[AGENT_IMPRODUTIVE_005] Found ${candidates?.length || 0} improdutive agents`);
+
+  const agents: RuleResult['agents'] = [];
+
+  for (const candidate of candidates || []) {
+    const actionsExecuted: ActionExecuted[] = [];
+
+    // Apply throttle (ação reversível)
+    const { error: throttleError } = await supabase
+      .rpc('apply_agent_throttle', {
+        p_agent_id: candidate.agent_id,
+        p_poll_interval_seconds: params.poll_interval_seconds,
+        p_reason: `Improdutivo: ${candidate.stale_queued_jobs || 0} jobs parados, ${Math.round(candidate.minutes_since_execution || 0)}min sem execução`
+      });
+
+    if (throttleError) {
+      console.error(`[AGENT_IMPRODUTIVE_005] Error throttling ${candidate.agent_name}:`, throttleError);
+      actionsExecuted.push({ type: 'APPLY_THROTTLE', success: false, error: throttleError.message });
+      continue;
+    }
+
+    actionsExecuted.push({ type: 'APPLY_THROTTLE', success: true });
+
+    // Create AI Insight para visibilidade
+    const { error: insightError } = await supabase.from('ai_insights').insert({
+      tenant_id: candidate.tenant_id,
+      title: `Agente improdutivo: ${candidate.agent_name}`,
+      description: `O agente está online mas não processa jobs há ${Math.round(candidate.minutes_since_execution || 0)} minutos. Foi aplicado throttle automático (poll interval: ${params.poll_interval_seconds}s) que será revertido automaticamente em ${params.auto_revert_after_hours}h.`,
+      severity: 'medium',
+      insight_type: 'agent_improdutive',
+      evidence: {
+        health_status: candidate.health_status,
+        stale_queued_jobs: candidate.stale_queued_jobs,
+        pending_jobs: candidate.pending_jobs,
+        minutes_since_execution: candidate.minutes_since_execution
+      },
+      recommendation: 'Verifique se o agente está com problemas de conectividade ou se há bloqueios no sistema.',
+      acknowledged: false
+    });
+
+    actionsExecuted.push({ 
+      type: 'CREATE_AI_INSIGHT', 
+      success: !insightError,
+      error: insightError?.message 
+    });
+
+    // Record decision event (auditoria completa)
+    await supabase.from('decision_events').insert({
+      tenant_id: candidate.tenant_id,
+      rule_code: rule.code,
+      agent_id: candidate.agent_id,
+      agent_name: candidate.agent_name,
+      action: 'THROTTLE',
+      evidence: {
+        health_status: candidate.health_status,
+        minutes_since_heartbeat: candidate.minutes_since_heartbeat,
+        minutes_since_execution: candidate.minutes_since_execution,
+        stale_queued_jobs: candidate.stale_queued_jobs,
+        pending_jobs: candidate.pending_jobs,
+        new_poll_interval: params.poll_interval_seconds,
+        auto_revert_scheduled: true,
+        auto_revert_after_hours: params.auto_revert_after_hours,
+        detected_at: new Date().toISOString()
+      },
+      actions_executed: actionsExecuted
+    });
+
+    agents.push({
+      agent_id: candidate.agent_id,
+      agent_name: candidate.agent_name,
+      action: 'THROTTLE',
+      reason: `Improdutivo: ${candidate.stale_queued_jobs || 0} jobs parados, ${Math.round(candidate.minutes_since_execution || 0)}min sem execução`
+    });
+
+    console.log(`[AGENT_IMPRODUTIVE_005] Throttled improdutive agent ${candidate.agent_name}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };

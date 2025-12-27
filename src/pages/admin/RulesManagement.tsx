@@ -24,6 +24,7 @@ const RULE_ICONS: Record<string, React.ReactNode> = {
   'AGENT_THROTTLE_002': <Clock className="h-5 w-5 text-amber-500" />,
   'AGENT_ISOLATE_003': <ShieldOff className="h-5 w-5 text-red-500" />,
   'UPDATE_BLOCK_004': <Ban className="h-5 w-5 text-purple-500" />,
+  'AGENT_IMPRODUTIVE_005': <AlertTriangle className="h-5 w-5 text-yellow-500" />,
 };
 
 const RULE_NAMES: Record<string, string> = {
@@ -31,6 +32,7 @@ const RULE_NAMES: Record<string, string> = {
   'AGENT_THROTTLE_002': 'Limitador de Velocidade',
   'AGENT_ISOLATE_003': 'Isolamento de Emergência',
   'UPDATE_BLOCK_004': 'Bloqueio de Versões Problemáticas',
+  'AGENT_IMPRODUTIVE_005': 'Detecção de Agentes Improdutivos',
 };
 
 const RULE_DESCRIPTIONS: Record<string, string> = {
@@ -38,6 +40,7 @@ const RULE_DESCRIPTIONS: Record<string, string> = {
   'AGENT_THROTTLE_002': 'Reduz a velocidade de comunicação de computadores com muitos erros para proteger o sistema',
   'AGENT_ISOLATE_003': 'Isola computadores com problemas graves de segurança, impedindo que recebam comandos remotos',
   'UPDATE_BLOCK_004': 'Bloqueia atualizações problemáticas para evitar que mais computadores sejam afetados',
+  'AGENT_IMPRODUTIVE_005': 'Reduz automaticamente a velocidade de agentes online mas que não processam jobs, liberando recursos do sistema. Auto-reverte após 2 horas.',
 };
 
 const PARAM_LABELS: Record<string, string> = {

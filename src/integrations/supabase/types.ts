@@ -10196,6 +10196,19 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      detect_improdutive_agents: {
+        Args: never
+        Returns: {
+          agent_id: string
+          agent_name: string
+          health_status: string
+          minutes_since_execution: number
+          minutes_since_heartbeat: number
+          pending_jobs: number
+          stale_queued_jobs: number
+          tenant_id: string
+        }[]
+      }
       detect_isolation_candidates: {
         Args: {
           p_suspicious_events_count?: number
