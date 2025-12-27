@@ -4,10 +4,10 @@
  */
 
 export const TEST_CONFIG = {
-  // Test credentials - use environment variables or defaults
+  // Test credentials - use environment variables from .env.test
   credentials: {
-    email: process.env.E2E_TEST_EMAIL || 'admin@test.com',
-    password: process.env.E2E_TEST_PASSWORD || 'Test123!@#',
+    email: process.env.TEST_ADMIN_EMAIL || 'admin@test.com',
+    password: process.env.TEST_ADMIN_PASSWORD || 'Test123!@#',
   },
   
   // Timeouts
