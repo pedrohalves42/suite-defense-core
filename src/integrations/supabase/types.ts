@@ -9533,6 +9533,27 @@ export type Database = {
           rows_inserted: number
         }[]
       }
+      apply_agent_isolation: {
+        Args: { p_agent_id: string; p_reason?: string }
+        Returns: boolean
+      }
+      apply_agent_throttle: {
+        Args: {
+          p_agent_id: string
+          p_poll_interval_seconds?: number
+          p_reason?: string
+        }
+        Returns: boolean
+      }
+      apply_version_block: {
+        Args: {
+          p_blocked_by?: string
+          p_platform: string
+          p_reason?: string
+          p_version: string
+        }
+        Returns: boolean
+      }
       authorize_agent_recovery: {
         Args: {
           p_agent_id: string
@@ -9818,6 +9839,45 @@ export type Database = {
           job_id: string
           last_claimed_at: string
           tenant_id: string
+        }[]
+      }
+      detect_isolation_candidates: {
+        Args: {
+          p_suspicious_events_count?: number
+          p_time_window_minutes?: number
+        }
+        Returns: {
+          agent_id: string
+          agent_name: string
+          event_count: number
+          event_types: string[]
+          tenant_id: string
+        }[]
+      }
+      detect_throttle_candidates: {
+        Args: { p_requests_per_minute?: number; p_time_window_minutes?: number }
+        Returns: {
+          agent_id: string
+          agent_name: string
+          error_count: number
+          error_rate: number
+          request_count: number
+          tenant_id: string
+        }[]
+      }
+      detect_version_block_candidates: {
+        Args: {
+          p_affected_agents_count?: number
+          p_failure_rate_percent?: number
+          p_time_window_hours?: number
+        }
+        Returns: {
+          failed_agents: number
+          failure_rate: number
+          platform: string
+          total_agents: number
+          version: string
+          version_id: string
         }[]
       }
       diagnose_agent: { Args: { p_agent_name: string }; Returns: Json }
@@ -10139,6 +10199,8 @@ export type Database = {
           version: number
         }[]
       }
+      remove_agent_isolation: { Args: { p_agent_id: string }; Returns: boolean }
+      remove_agent_throttle: { Args: { p_agent_id: string }; Returns: boolean }
       reprocess_job_outputs: {
         Args: { p_hours_back?: number }
         Returns: {

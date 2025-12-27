@@ -44,6 +44,16 @@ export function DecisionEventDrawer({ event, open, onOpenChange }: DecisionEvent
         return FileCode;
       case 'SEND_NOTIFICATION':
         return Server;
+      case 'APPLY_THROTTLE':
+        return Clock;
+      case 'APPLY_ISOLATION':
+        return Shield;
+      case 'CANCEL_PENDING_JOBS':
+        return XCircle;
+      case 'CREATE_SECURITY_EVENT':
+        return AlertTriangle;
+      case 'BLOCK_VERSION':
+        return XCircle;
       default:
         return Hash;
     }
@@ -61,6 +71,16 @@ export function DecisionEventDrawer({ event, open, onOpenChange }: DecisionEvent
         return 'Snapshot Forense';
       case 'SEND_NOTIFICATION':
         return 'Enviar Notificação';
+      case 'APPLY_THROTTLE':
+        return 'Aplicar Throttle';
+      case 'APPLY_ISOLATION':
+        return 'Aplicar Isolamento';
+      case 'CANCEL_PENDING_JOBS':
+        return 'Cancelar Jobs Pendentes';
+      case 'CREATE_SECURITY_EVENT':
+        return 'Criar Evento de Segurança';
+      case 'BLOCK_VERSION':
+        return 'Bloquear Versão';
       default:
         return type;
     }
@@ -92,7 +112,12 @@ export function DecisionEventDrawer({ event, open, onOpenChange }: DecisionEvent
               
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Ação</span>
-                <Badge variant="destructive">{event.action}</Badge>
+                <Badge variant={
+                  ['ENTER_SAFE_MODE', 'ISOLATE'].includes(event.action) ? 'destructive' :
+                  event.action === 'THROTTLE' ? 'secondary' : 'outline'
+                }>
+                  {event.action}
+                </Badge>
               </div>
               
               <div className="flex items-center justify-between">

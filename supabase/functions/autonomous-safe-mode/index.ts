@@ -5,18 +5,23 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-internal-secret',
 };
 
-interface SafeModeResult {
-  success: boolean;
+interface RuleResult {
+  rule_code: string;
   processed_count: number;
   agents: Array<{
     agent_id: string;
     agent_name: string;
+    action: string;
     reason: string;
-    failure_count: number;
-    error_signature: string;
   }>;
+}
+
+interface EngineResult {
+  success: boolean;
+  rules_evaluated: number;
+  total_actions: number;
+  results: RuleResult[];
   executed_at: string;
-  rule_code: string;
 }
 
 interface ActionExecuted {
@@ -45,7 +50,7 @@ Deno.serve(async (req) => {
     if (!isScheduledCall && !isInternalCall) {
       const authHeader = req.headers.get('Authorization');
       if (!authHeader) {
-        console.log('[autonomous-safe-mode] Unauthorized: No auth header');
+        console.log('[rules-engine] Unauthorized: No auth header');
         return new Response(
           JSON.stringify({ error: 'Unauthorized' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -58,220 +63,80 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('[autonomous-safe-mode] Starting Rules Engine evaluation...');
+    console.log('[rules-engine] Starting multi-rule evaluation...');
 
-    // 1. Fetch the SAFE_MODE rule from decision_rules table
-    const { data: rule, error: ruleError } = await supabase
+    // Fetch all enabled rules
+    const { data: rules, error: rulesError } = await supabase
       .from('decision_rules')
       .select('*')
-      .eq('code', 'SAFE_MODE_RULE_001')
       .eq('is_enabled', true)
-      .single();
+      .order('code');
 
-    // Extract conditions from rule or use defaults
-    const conditions = rule?.definition?.conditions || {
-      time_window_minutes: 10,
-      min_failures: 3,
-      heartbeat_max_age_seconds: 300
-    };
-
-    const timeWindowMinutes = conditions.time_window_minutes || 10;
-    const minFailures = conditions.min_failures || 3;
-    const ruleCode = rule?.code || 'SAFE_MODE_RULE_001';
-
-    console.log(`[autonomous-safe-mode] Using rule: ${ruleCode}, conditions:`, conditions);
-
-    // 2. Detectar agentes com padrão de falhas
-    const { data: agentsWithFailures, error: detectError } = await supabase
-      .rpc('detect_critical_failure_pattern', { 
-        p_window_minutes: timeWindowMinutes, 
-        p_min_failures: minFailures 
-      });
-
-    if (detectError) {
-      console.error('[autonomous-safe-mode] Error detecting failure patterns:', detectError);
-      throw detectError;
+    if (rulesError) {
+      console.error('[rules-engine] Error fetching rules:', rulesError);
+      throw rulesError;
     }
 
-    console.log(`[autonomous-safe-mode] Found ${agentsWithFailures?.length || 0} agents with critical failure patterns`);
+    console.log(`[rules-engine] Found ${rules?.length || 0} enabled rules`);
 
-    // 3. Processar cada agente
-    const results: Array<{ 
-      agent_id: string; 
-      agent_name: string; 
-      success: boolean; 
-      reason?: string;
-      failure_count: number;
-      error_signature: string;
-    }> = [];
-    let processedCount = 0;
+    const allResults: RuleResult[] = [];
+    let totalActions = 0;
 
-    for (const agent of agentsWithFailures || []) {
-      // Verificar se heartbeat está ativo (redundante, mas segurança extra)
-      if (!agent.heartbeat_active) {
-        console.log(`[autonomous-safe-mode] Skipping ${agent.agent_name}: heartbeat not active`);
-        continue;
-      }
-
-      console.log(`[autonomous-safe-mode] Processing agent ${agent.agent_name}: ${agent.failure_count} failures of type "${agent.failure_type}"`);
-
-      const actionsExecuted: ActionExecuted[] = [];
-
-      // 3a. Chamar função de entrada em SAFE_MODE
-      const { data: entryResult, error: entryError } = await supabase
-        .rpc('enter_autonomous_safe_mode', {
-          p_agent_id: agent.agent_id,
-          p_reason: `Detecção automática: ${agent.failure_count} falhas do tipo "${agent.failure_type}" em ${timeWindowMinutes} minutos`,
-          p_failure_type: agent.failure_type,
-          p_failure_count: agent.failure_count
-        });
-
-      if (entryError) {
-        console.error(`[autonomous-safe-mode] Error entering SAFE_MODE for ${agent.agent_name}:`, entryError);
-        actionsExecuted.push({ type: 'ENTER_SAFE_MODE', success: false, error: entryError.message });
-        results.push({
-          agent_id: agent.agent_id,
-          agent_name: agent.agent_name,
-          success: false,
-          reason: entryError.message,
-          failure_count: agent.failure_count,
-          error_signature: agent.failure_type
-        });
-        continue;
-      }
-
-      console.log(`[autonomous-safe-mode] Agent ${agent.agent_name} entered SAFE_MODE successfully`);
-      actionsExecuted.push({ 
-        type: 'ENTER_SAFE_MODE', 
-        success: true, 
-        id: entryResult?.safe_mode_event_id 
-      });
-
-      // AI Insight is created by enter_autonomous_safe_mode
-      actionsExecuted.push({ 
-        type: 'CREATE_AI_INSIGHT', 
-        success: true, 
-        id: entryResult?.insight_id 
-      });
-
-      // System Alert is created by enter_autonomous_safe_mode
-      actionsExecuted.push({ 
-        type: 'CREATE_SYSTEM_ALERT', 
-        success: true, 
-        id: entryResult?.alert_id 
-      });
-
-      // 3b. Trigger forensic snapshot job
-      const { data: snapshotJob, error: snapshotError } = await supabase
-        .from('jobs')
-        .insert({
-          tenant_id: agent.tenant_id,
-          agent_id: agent.agent_id,
-          job_type: 'forensic_snapshot',
-          priority: 'high',
-          status: 'pending',
-          payload: {
-            triggered_by: 'autonomous_safe_mode',
-            rule_code: ruleCode,
-            failure_pattern: {
-              error_signature: agent.failure_type,
-              failure_count: agent.failure_count
-            }
-          }
-        })
-        .select('id')
-        .single();
-
-      if (snapshotError) {
-        console.warn(`[autonomous-safe-mode] Failed to create forensic snapshot job:`, snapshotError);
-        actionsExecuted.push({ type: 'FORENSIC_SNAPSHOT', success: false, error: snapshotError.message });
-      } else {
-        console.log(`[autonomous-safe-mode] Forensic snapshot job created: ${snapshotJob?.id}`);
-        actionsExecuted.push({ type: 'FORENSIC_SNAPSHOT', success: true, id: snapshotJob?.id });
-      }
-
-      // 3c. Enviar notificação
+    // Process each rule
+    for (const rule of rules || []) {
+      console.log(`[rules-engine] Evaluating rule: ${rule.code}`);
+      
       try {
-        const notifyResult = await supabase.functions.invoke('dispatch-notification', {
-          body: {
-            tenant_id: agent.tenant_id,
-            notification_type: 'safe_mode_auto',
-            title: `SAFE_MODE Automático: ${agent.agent_name}`,
-            message: `O agente ${agent.agent_name} entrou automaticamente em SAFE_MODE após ${agent.failure_count} falhas do tipo "${agent.failure_type}".`,
-            severity: 'critical',
-            data: {
-              agent_id: agent.agent_id,
-              agent_name: agent.agent_name,
-              failure_type: agent.failure_type,
-              failure_count: agent.failure_count,
-              rule_code: ruleCode
+        switch (rule.code) {
+          case 'SAFE_MODE_RULE_001':
+            const safeModeResult = await processSafeModeRule(supabase, rule);
+            if (safeModeResult.processed_count > 0) {
+              allResults.push(safeModeResult);
+              totalActions += safeModeResult.processed_count;
             }
-          }
-        });
-        actionsExecuted.push({ 
-          type: 'SEND_NOTIFICATION', 
-          success: !notifyResult.error,
-          error: notifyResult.error?.message
-        });
-      } catch (notifyError) {
-        console.warn(`[autonomous-safe-mode] Failed to send notification for ${agent.agent_name}:`, notifyError);
-        actionsExecuted.push({ type: 'SEND_NOTIFICATION', success: false, error: String(notifyError) });
+            break;
+            
+          case 'AGENT_THROTTLE_002':
+            const throttleResult = await processThrottleRule(supabase, rule);
+            if (throttleResult.processed_count > 0) {
+              allResults.push(throttleResult);
+              totalActions += throttleResult.processed_count;
+            }
+            break;
+            
+          case 'AGENT_ISOLATE_003':
+            const isolateResult = await processIsolateRule(supabase, rule);
+            if (isolateResult.processed_count > 0) {
+              allResults.push(isolateResult);
+              totalActions += isolateResult.processed_count;
+            }
+            break;
+            
+          case 'UPDATE_BLOCK_004':
+            const blockResult = await processVersionBlockRule(supabase, rule);
+            if (blockResult.processed_count > 0) {
+              allResults.push(blockResult);
+              totalActions += blockResult.processed_count;
+            }
+            break;
+            
+          default:
+            console.log(`[rules-engine] Unknown rule code: ${rule.code}, skipping`);
+        }
+      } catch (ruleError) {
+        console.error(`[rules-engine] Error processing rule ${rule.code}:`, ruleError);
       }
-
-      // 4. Record decision event in decision_events table
-      const evidence = {
-        error_signature: agent.failure_type,
-        failure_count: agent.failure_count,
-        time_window_minutes: timeWindowMinutes,
-        heartbeat_age_seconds: agent.heartbeat_age_seconds || 0,
-        agent_version: agent.agent_version,
-        detected_at: new Date().toISOString()
-      };
-
-      const { error: eventError } = await supabase
-        .from('decision_events')
-        .insert({
-          tenant_id: agent.tenant_id,
-          rule_code: ruleCode,
-          agent_id: agent.agent_id,
-          agent_name: agent.agent_name,
-          action: 'ENTER_SAFE_MODE',
-          evidence: evidence,
-          actions_executed: actionsExecuted
-        });
-
-      if (eventError) {
-        console.error(`[autonomous-safe-mode] Failed to record decision event:`, eventError);
-      } else {
-        console.log(`[autonomous-safe-mode] Decision event recorded for agent ${agent.agent_name}`);
-      }
-
-      results.push({
-        agent_id: agent.agent_id,
-        agent_name: agent.agent_name,
-        success: true,
-        reason: entryResult?.reason,
-        failure_count: agent.failure_count,
-        error_signature: agent.failure_type
-      });
-      processedCount++;
     }
 
-    const response: SafeModeResult = {
+    const response: EngineResult = {
       success: true,
-      processed_count: processedCount,
-      agents: results.filter(r => r.success).map(r => ({
-        agent_id: r.agent_id,
-        agent_name: r.agent_name,
-        reason: r.reason || '',
-        failure_count: r.failure_count,
-        error_signature: r.error_signature
-      })),
-      executed_at: new Date().toISOString(),
-      rule_code: ruleCode
+      rules_evaluated: rules?.length || 0,
+      total_actions: totalActions,
+      results: allResults,
+      executed_at: new Date().toISOString()
     };
 
-    console.log(`[autonomous-safe-mode] Completed. Processed ${processedCount} agents.`);
+    console.log(`[rules-engine] Completed. Evaluated ${rules?.length || 0} rules, executed ${totalActions} actions.`);
 
     return new Response(
       JSON.stringify(response),
@@ -279,7 +144,7 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[autonomous-safe-mode] Fatal error:', error);
+    console.error('[rules-engine] Fatal error:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
@@ -289,3 +154,348 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+// ============= RULE PROCESSORS =============
+
+async function processSafeModeRule(supabase: any, rule: any): Promise<RuleResult> {
+  const conditions = rule.definition?.conditions || {
+    time_window_minutes: 10,
+    min_failures: 3,
+    heartbeat_max_age_seconds: 300
+  };
+
+  const timeWindowMinutes = conditions.time_window_minutes || 10;
+  const minFailures = conditions.min_failures || 3;
+
+  console.log(`[SAFE_MODE_RULE_001] Detecting failure patterns (window: ${timeWindowMinutes}min, threshold: ${minFailures})`);
+
+  // Detect agents with critical failure patterns
+  const { data: agentsWithFailures, error: detectError } = await supabase
+    .rpc('detect_critical_failure_pattern', { 
+      p_window_minutes: timeWindowMinutes, 
+      p_min_failures: minFailures 
+    });
+
+  if (detectError) {
+    console.error('[SAFE_MODE_RULE_001] Error detecting failure patterns:', detectError);
+    throw detectError;
+  }
+
+  console.log(`[SAFE_MODE_RULE_001] Found ${agentsWithFailures?.length || 0} candidates`);
+
+  const agents: RuleResult['agents'] = [];
+
+  for (const agent of agentsWithFailures || []) {
+    if (!agent.heartbeat_active) continue;
+
+    const actionsExecuted: ActionExecuted[] = [];
+
+    // Enter SAFE_MODE
+    const { data: entryResult, error: entryError } = await supabase
+      .rpc('enter_autonomous_safe_mode', {
+        p_agent_id: agent.agent_id,
+        p_reason: `Detecção automática: ${agent.failure_count} falhas do tipo "${agent.failure_type}" em ${timeWindowMinutes} minutos`,
+        p_failure_type: agent.failure_type,
+        p_failure_count: agent.failure_count
+      });
+
+    if (entryError) {
+      console.error(`[SAFE_MODE_RULE_001] Error for ${agent.agent_name}:`, entryError);
+      continue;
+    }
+
+    actionsExecuted.push({ type: 'ENTER_SAFE_MODE', success: true, id: entryResult?.safe_mode_event_id });
+    actionsExecuted.push({ type: 'CREATE_AI_INSIGHT', success: true, id: entryResult?.insight_id });
+    actionsExecuted.push({ type: 'CREATE_SYSTEM_ALERT', success: true, id: entryResult?.alert_id });
+
+    // Create forensic snapshot job
+    const { data: snapshotJob, error: snapshotError } = await supabase
+      .from('jobs')
+      .insert({
+        tenant_id: agent.tenant_id,
+        agent_id: agent.agent_id,
+        agent_name: agent.agent_name,
+        type: 'forensic_snapshot',
+        status: 'queued',
+        approved: true,
+        payload: {
+          triggered_by: 'autonomous_safe_mode',
+          rule_code: rule.code,
+          failure_pattern: { error_signature: agent.failure_type, failure_count: agent.failure_count }
+        }
+      })
+      .select('id')
+      .single();
+
+    actionsExecuted.push({ 
+      type: 'FORENSIC_SNAPSHOT', 
+      success: !snapshotError, 
+      id: snapshotJob?.id,
+      error: snapshotError?.message 
+    });
+
+    // Send notification
+    try {
+      await supabase.functions.invoke('dispatch-notification', {
+        body: {
+          tenant_id: agent.tenant_id,
+          notification_type: 'safe_mode_auto',
+          title: `SAFE_MODE Automático: ${agent.agent_name}`,
+          message: `O agente ${agent.agent_name} entrou automaticamente em SAFE_MODE após ${agent.failure_count} falhas.`,
+          severity: 'critical',
+          data: { agent_id: agent.agent_id, agent_name: agent.agent_name, rule_code: rule.code }
+        }
+      });
+      actionsExecuted.push({ type: 'SEND_NOTIFICATION', success: true });
+    } catch (e) {
+      actionsExecuted.push({ type: 'SEND_NOTIFICATION', success: false, error: String(e) });
+    }
+
+    // Record decision event
+    await supabase.from('decision_events').insert({
+      tenant_id: agent.tenant_id,
+      rule_code: rule.code,
+      agent_id: agent.agent_id,
+      agent_name: agent.agent_name,
+      action: 'ENTER_SAFE_MODE',
+      evidence: {
+        error_signature: agent.failure_type,
+        failure_count: agent.failure_count,
+        time_window_minutes: timeWindowMinutes,
+        agent_version: agent.agent_version,
+        detected_at: new Date().toISOString()
+      },
+      actions_executed: actionsExecuted
+    });
+
+    agents.push({
+      agent_id: agent.agent_id,
+      agent_name: agent.agent_name,
+      action: 'ENTER_SAFE_MODE',
+      reason: `${agent.failure_count} falhas do tipo "${agent.failure_type}"`
+    });
+  }
+
+  return { rule_code: rule.code, processed_count: agents.length, agents };
+}
+
+async function processThrottleRule(supabase: any, rule: any): Promise<RuleResult> {
+  const conditions = rule.definition?.conditions || {
+    requests_per_minute: 60,
+    error_rate_percent: 50,
+    time_window_minutes: 5
+  };
+  const params = rule.definition?.parameters || { poll_interval_seconds: 300 };
+
+  console.log(`[AGENT_THROTTLE_002] Detecting throttle candidates`);
+
+  const { data: candidates, error } = await supabase
+    .rpc('detect_throttle_candidates', {
+      p_requests_per_minute: conditions.requests_per_minute,
+      p_time_window_minutes: conditions.time_window_minutes
+    });
+
+  if (error) {
+    console.error('[AGENT_THROTTLE_002] Detection error:', error);
+    throw error;
+  }
+
+  console.log(`[AGENT_THROTTLE_002] Found ${candidates?.length || 0} candidates`);
+
+  const agents: RuleResult['agents'] = [];
+
+  for (const candidate of candidates || []) {
+    const actionsExecuted: ActionExecuted[] = [];
+
+    // Apply throttle
+    const { error: throttleError } = await supabase
+      .rpc('apply_agent_throttle', {
+        p_agent_id: candidate.agent_id,
+        p_poll_interval_seconds: params.poll_interval_seconds,
+        p_reason: `Alta taxa de requisições: ${candidate.request_count} requests, ${candidate.error_rate}% erros`
+      });
+
+    if (throttleError) {
+      console.error(`[AGENT_THROTTLE_002] Error throttling ${candidate.agent_name}:`, throttleError);
+      continue;
+    }
+
+    actionsExecuted.push({ type: 'APPLY_THROTTLE', success: true });
+
+    // Record decision event
+    await supabase.from('decision_events').insert({
+      tenant_id: candidate.tenant_id,
+      rule_code: rule.code,
+      agent_id: candidate.agent_id,
+      agent_name: candidate.agent_name,
+      action: 'THROTTLE',
+      evidence: {
+        request_count: candidate.request_count,
+        error_count: candidate.error_count,
+        error_rate: candidate.error_rate,
+        new_poll_interval: params.poll_interval_seconds,
+        detected_at: new Date().toISOString()
+      },
+      actions_executed: actionsExecuted
+    });
+
+    agents.push({
+      agent_id: candidate.agent_id,
+      agent_name: candidate.agent_name,
+      action: 'THROTTLE',
+      reason: `${candidate.request_count} requests, ${candidate.error_rate}% taxa de erro`
+    });
+
+    console.log(`[AGENT_THROTTLE_002] Throttled agent ${candidate.agent_name}`);
+  }
+
+  return { rule_code: rule.code, processed_count: agents.length, agents };
+}
+
+async function processIsolateRule(supabase: any, rule: any): Promise<RuleResult> {
+  const conditions = rule.definition?.conditions || {
+    suspicious_events_count: 5,
+    time_window_minutes: 10
+  };
+
+  console.log(`[AGENT_ISOLATE_003] Detecting isolation candidates`);
+
+  const { data: candidates, error } = await supabase
+    .rpc('detect_isolation_candidates', {
+      p_suspicious_events_count: conditions.suspicious_events_count,
+      p_time_window_minutes: conditions.time_window_minutes
+    });
+
+  if (error) {
+    console.error('[AGENT_ISOLATE_003] Detection error:', error);
+    throw error;
+  }
+
+  console.log(`[AGENT_ISOLATE_003] Found ${candidates?.length || 0} candidates`);
+
+  const agents: RuleResult['agents'] = [];
+
+  for (const candidate of candidates || []) {
+    const actionsExecuted: ActionExecuted[] = [];
+
+    // Apply isolation
+    const { error: isolateError } = await supabase
+      .rpc('apply_agent_isolation', {
+        p_agent_id: candidate.agent_id,
+        p_reason: `Ameaça de segurança: ${candidate.event_count} eventos suspeitos detectados`
+      });
+
+    if (isolateError) {
+      console.error(`[AGENT_ISOLATE_003] Error isolating ${candidate.agent_name}:`, isolateError);
+      continue;
+    }
+
+    actionsExecuted.push({ type: 'APPLY_ISOLATION', success: true });
+    actionsExecuted.push({ type: 'CANCEL_PENDING_JOBS', success: true });
+
+    // Create security event
+    await supabase.from('security_events').insert({
+      tenant_id: candidate.tenant_id,
+      agent_id: candidate.agent_id,
+      agent_name: candidate.agent_name,
+      event_type: 'agent_isolated',
+      severity: 'critical',
+      title: `Agente Isolado: ${candidate.agent_name}`,
+      description: `Agente isolado automaticamente devido a ${candidate.event_count} eventos de segurança suspeitos.`,
+      status: 'open',
+      data: {
+        rule_code: rule.code,
+        event_types: candidate.event_types,
+        event_count: candidate.event_count
+      }
+    });
+
+    actionsExecuted.push({ type: 'CREATE_SECURITY_EVENT', success: true });
+
+    // Record decision event
+    await supabase.from('decision_events').insert({
+      tenant_id: candidate.tenant_id,
+      rule_code: rule.code,
+      agent_id: candidate.agent_id,
+      agent_name: candidate.agent_name,
+      action: 'ISOLATE',
+      evidence: {
+        event_count: candidate.event_count,
+        event_types: candidate.event_types,
+        detected_at: new Date().toISOString()
+      },
+      actions_executed: actionsExecuted
+    });
+
+    agents.push({
+      agent_id: candidate.agent_id,
+      agent_name: candidate.agent_name,
+      action: 'ISOLATE',
+      reason: `${candidate.event_count} eventos de segurança suspeitos`
+    });
+
+    console.log(`[AGENT_ISOLATE_003] Isolated agent ${candidate.agent_name}`);
+  }
+
+  return { rule_code: rule.code, processed_count: agents.length, agents };
+}
+
+async function processVersionBlockRule(supabase: any, rule: any): Promise<RuleResult> {
+  const conditions = rule.definition?.conditions || {
+    failure_rate_percent: 30,
+    affected_agents_count: 3,
+    time_window_hours: 24
+  };
+
+  console.log(`[UPDATE_BLOCK_004] Detecting problematic versions`);
+
+  const { data: candidates, error } = await supabase
+    .rpc('detect_version_block_candidates', {
+      p_failure_rate_percent: conditions.failure_rate_percent,
+      p_affected_agents_count: conditions.affected_agents_count,
+      p_time_window_hours: conditions.time_window_hours
+    });
+
+  if (error) {
+    console.error('[UPDATE_BLOCK_004] Detection error:', error);
+    throw error;
+  }
+
+  console.log(`[UPDATE_BLOCK_004] Found ${candidates?.length || 0} problematic versions`);
+
+  const agents: RuleResult['agents'] = [];
+
+  for (const candidate of candidates || []) {
+    const actionsExecuted: ActionExecuted[] = [];
+
+    // Block the version
+    const { error: blockError } = await supabase
+      .rpc('apply_version_block', {
+        p_version: candidate.version,
+        p_platform: candidate.platform,
+        p_reason: `Alta taxa de falhas: ${candidate.failure_rate}% em ${candidate.total_agents} agentes`,
+        p_blocked_by: 'rules_engine'
+      });
+
+    if (blockError) {
+      console.error(`[UPDATE_BLOCK_004] Error blocking version ${candidate.version}:`, blockError);
+      continue;
+    }
+
+    actionsExecuted.push({ type: 'BLOCK_VERSION', success: true });
+
+    // Note: decision_events requires tenant_id, so we skip recording for global version blocks
+    // These are logged via agent_versions.blocked_* columns instead
+
+    agents.push({
+      agent_id: candidate.version_id || 'N/A',
+      agent_name: `${candidate.version} (${candidate.platform})`,
+      action: 'BLOCK_VERSION',
+      reason: `${candidate.failure_rate}% taxa de falha em ${candidate.total_agents} agentes`
+    });
+
+    console.log(`[UPDATE_BLOCK_004] Blocked version ${candidate.version} for ${candidate.platform}`);
+  }
+
+  return { rule_code: rule.code, processed_count: agents.length, agents };
+}

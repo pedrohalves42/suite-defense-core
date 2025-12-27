@@ -90,14 +90,32 @@ export default function DecisionAudit() {
     toast.success('Exportação concluída');
   };
 
-  const getActionBadgeVariant = (action: string) => {
+  const getActionBadgeVariant = (action: string): "default" | "destructive" | "outline" | "secondary" => {
     switch (action) {
       case 'ENTER_SAFE_MODE':
+      case 'ISOLATE':
         return 'destructive';
-      case 'CREATE_AI_INSIGHT':
+      case 'THROTTLE':
         return 'secondary';
-      default:
+      case 'BLOCK_VERSION':
         return 'outline';
+      default:
+        return 'default';
+    }
+  };
+
+  const getActionLabel = (action: string) => {
+    switch (action) {
+      case 'ENTER_SAFE_MODE':
+        return 'SAFE_MODE';
+      case 'THROTTLE':
+        return 'THROTTLE';
+      case 'ISOLATE':
+        return 'ISOLATE';
+      case 'BLOCK_VERSION':
+        return 'BLOCK';
+      default:
+        return action;
     }
   };
 
@@ -160,9 +178,9 @@ export default function DecisionAudit() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">SAFE_MODE Ativado</p>
+                <p className="text-sm text-muted-foreground">Ações Críticas</p>
                 <p className="text-2xl font-bold text-destructive">
-                  {events?.filter(e => e.action === 'ENTER_SAFE_MODE').length || 0}
+                  {events?.filter(e => ['ENTER_SAFE_MODE', 'ISOLATE', 'BLOCK_VERSION'].includes(e.action)).length || 0}
                 </p>
               </div>
               <Shield className="h-8 w-8 text-destructive" />
@@ -290,7 +308,7 @@ export default function DecisionAudit() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={getActionBadgeVariant(event.action)}>
-                        {event.action}
+                        {getActionLabel(event.action)}
                       </Badge>
                     </TableCell>
                     <TableCell>
