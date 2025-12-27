@@ -3371,6 +3371,132 @@ export type Database = {
         }
         Relationships: []
       }
+      decision_events: {
+        Row: {
+          action: string
+          actions_executed: Json | null
+          agent_id: string | null
+          agent_name: string | null
+          created_at: string
+          evidence: Json
+          id: string
+          rule_code: string
+          tenant_id: string
+        }
+        Insert: {
+          action: string
+          actions_executed?: Json | null
+          agent_id?: string | null
+          agent_name?: string | null
+          created_at?: string
+          evidence?: Json
+          id?: string
+          rule_code: string
+          tenant_id: string
+        }
+        Update: {
+          action?: string
+          actions_executed?: Json | null
+          agent_id?: string | null
+          agent_name?: string | null
+          created_at?: string
+          evidence?: Json
+          id?: string
+          rule_code?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decision_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "decision_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "decision_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "decision_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "decision_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "decision_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "decision_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "decision_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      decision_rules: {
+        Row: {
+          code: string
+          created_at: string
+          definition: Json
+          description: string
+          id: string
+          is_enabled: boolean
+          scope: string
+          updated_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          definition?: Json
+          description: string
+          id?: string
+          is_enabled?: boolean
+          scope?: string
+          updated_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          definition?: Json
+          description?: string
+          id?: string
+          is_enabled?: boolean
+          scope?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       edge_function_metrics: {
         Row: {
           created_at: string
