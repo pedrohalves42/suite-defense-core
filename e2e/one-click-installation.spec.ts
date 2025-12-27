@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { loginAsAdmin } from './helpers/auth';
+import { TEST_CONFIG } from './test-config';
 
 /**
  * E2E Tests for One-Click Agent Installation
@@ -10,20 +12,9 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('One-Click Agent Installation', () => {
-  const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL || 'admin@test.com';
-  const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'test123456';
-
   test.beforeEach(async ({ page }) => {
-    // Navigate to login page
-    await page.goto('/login');
-    
-    // Login as admin
-    await page.fill('input[type="email"]', ADMIN_EMAIL);
-    await page.fill('input[type="password"]', ADMIN_PASSWORD);
-    await page.click('button[type="submit"]');
-    
-    // Wait for navigation to complete
-    await page.waitForURL(/\/dashboard|\/admin/, { timeout: 10000 });
+    const success = await loginAsAdmin(page);
+    expect(success).toBe(true);
   });
 
   test('Admin can access agent installer page', async ({ page }) => {

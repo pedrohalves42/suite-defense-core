@@ -1,13 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { loginAsAdmin } from './helpers/auth';
 
 test.describe('Agent Name Validation', () => {
   test.beforeEach(async ({ page }) => {
-    // Login como admin
-    await page.goto('/login');
-    await page.fill('[name="email"]', process.env.ADMIN_EMAIL || 'admin@test.com');
-    await page.fill('[name="password"]', process.env.ADMIN_PASSWORD || 'Test123!');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/admin/**', { timeout: 10000 });
+    const success = await loginAsAdmin(page);
+    expect(success).toBe(true);
     
     // Navegar para instalador
     await page.goto('/admin/agent-installer');

@@ -1,17 +1,14 @@
 import { test, expect } from '@playwright/test';
+import { loginAsAdmin } from './helpers/auth';
+import { TEST_CONFIG } from './test-config';
 
 test.describe('Agent Health Monitor Dashboard', () => {
   test.beforeEach(async ({ page }) => {
-    // Login as admin
-    await page.goto('/login');
-    await page.fill('input[type="email"]', 'admin@test.com');
-    await page.fill('input[type="password"]', 'Test123!@#');
-    await page.click('button[type="submit"]');
-    
-    await page.waitForURL('**/admin/**');
+    const success = await loginAsAdmin(page);
+    expect(success).toBe(true);
     
     // Navigate to Agent Health Monitor
-    await page.goto('/admin/agent-health-monitor');
+    await page.goto(TEST_CONFIG.routes.agentHealth);
     await page.waitForLoadState('networkidle');
   });
 

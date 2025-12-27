@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 import crypto from 'crypto';
+import { hasRequiredEnvVars } from './helpers/backend-client';
+import { TEST_CONFIG } from './test-config';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://iavbnmduxpxhwubqrzzn.supabase.co';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || '***REMOVED***';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '***REMOVED***';
 
 // Helper para gerar HMAC
 function generateHmac(secret: string, body: string, timestamp: string, nonce: string): string {
@@ -23,15 +25,20 @@ test.describe('Agent Flow E2E', () => {
   });
 
   test('1. Admin login e gerar enrollment key', async ({ request }) => {
-    // Login como admin
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
+    // Login como admin using TEST_CONFIG
     const loginResponse = await request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
       },
       data: {
-        email: process.env.TEST_ADMIN_EMAIL || 'pedrohalves42@gmail.com',
-        password: process.env.TEST_ADMIN_PASSWORD || 'Test1234!',
+        email: TEST_CONFIG.credentials.email,
+        password: TEST_CONFIG.credentials.password,
       },
     });
 
@@ -60,6 +67,11 @@ test.describe('Agent Flow E2E', () => {
   });
 
   test('2. Agent enrollment', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const enrollResponse = await request.post(`${SUPABASE_URL}/functions/v1/enroll-agent`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -87,6 +99,11 @@ test.describe('Agent Flow E2E', () => {
   });
 
   test('3. Agent heartbeat', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const timestamp = Date.now().toString();
     const nonce = crypto.randomUUID();
     const body = JSON.stringify({ status: 'active' });
@@ -109,6 +126,11 @@ test.describe('Agent Flow E2E', () => {
   });
 
   test('4. Admin criar job para o agent', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const createJobResponse = await request.post(`${SUPABASE_URL}/functions/v1/create-job`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -131,6 +153,11 @@ test.describe('Agent Flow E2E', () => {
   });
 
   test('5. Agent poll-jobs (buscar jobs pendentes)', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const timestamp = Date.now().toString();
     const nonce = crypto.randomUUID();
     const body = '';
@@ -158,6 +185,11 @@ test.describe('Agent Flow E2E', () => {
   });
 
   test('6. Agent acknowledge job (ack-job)', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const timestamp = Date.now().toString();
     const nonce = crypto.randomUUID();
     const body = '';
@@ -180,6 +212,11 @@ test.describe('Agent Flow E2E', () => {
   });
 
   test('7. Admin verificar job concluido', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const listJobsResponse = await request.post(`${SUPABASE_URL}/functions/v1/list-jobs`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -201,6 +238,11 @@ test.describe('Agent Flow E2E', () => {
   });
 
   test('8. Rate limiting validation', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     // Tentar fazer multiplos heartbeats rapidamente
     const promises = [];
     for (let i = 0; i < 5; i++) {
@@ -231,6 +273,11 @@ test.describe('Agent Flow E2E', () => {
   });
 
   test('9. Invalid token validation', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const timestamp = Date.now().toString();
     const nonce = crypto.randomUUID();
     const body = JSON.stringify({ status: 'active' });
@@ -251,6 +298,11 @@ test.describe('Agent Flow E2E', () => {
   });
 
   test('10. Invalid HMAC validation', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const timestamp = Date.now().toString();
     const nonce = crypto.randomUUID();
     const body = JSON.stringify({ status: 'active' });

@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { loginAsAdmin } from './helpers/auth';
+import { TEST_CONFIG } from './test-config';
 
 /**
  * E2E Tests for Super Admin Tenant Management
@@ -10,8 +12,9 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Super Admin - Tenant Management', () => {
-  const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || 'pedrohalves42@gmail.com';
-  const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || 'test123456';
+  // Super admin credentials from env
+  const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || TEST_CONFIG.credentials.email;
+  const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || TEST_CONFIG.credentials.password;
 
   test.beforeEach(async ({ page }) => {
     // Navigate to login page
@@ -202,10 +205,10 @@ test.describe('Super Admin - Tenant Management', () => {
     await page.goto('/');
     await page.click('button:has-text("Sair")').catch(() => {});
     
-    // Login as regular admin (not super admin)
+    // Login as regular admin (not super admin) using TEST_CONFIG
     await page.goto('/login');
-    await page.fill('input[type="email"]', 'admin@test.com');
-    await page.fill('input[type="password"]', 'test123456');
+    await page.fill('input[type="email"]', TEST_CONFIG.credentials.email);
+    await page.fill('input[type="password"]', TEST_CONFIG.credentials.password);
     await page.click('button[type="submit"]');
     
     // Try to access super admin page

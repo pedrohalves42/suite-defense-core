@@ -1,13 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { loginAsAdmin } from './helpers/auth';
 
 test.describe('Installation Health Card', () => {
   test.beforeEach(async ({ page }) => {
-    // Login como admin
-    await page.goto('/login');
-    await page.fill('input[type="email"]', 'admin@test.com');
-    await page.fill('input[type="password"]', 'test123456');
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/admin/agent-health', { timeout: 10000 });
+    const success = await loginAsAdmin(page);
+    expect(success).toBe(true);
+    await page.goto('/admin/agent-health');
+    await page.waitForLoadState('networkidle');
   });
 
   test('should display Installation Health card with metrics', async ({ page }) => {
