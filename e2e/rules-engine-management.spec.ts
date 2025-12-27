@@ -16,20 +16,20 @@ test.describe('Rules Engine Management', () => {
   });
 
   test('should display rules management page with title', async ({ page }) => {
-    await expect(page.locator('text=Configuração de Regras de Decisão')).toBeVisible();
-    await expect(page.locator('text=Configure as regras que o motor de decisão')).toBeVisible();
+    await expect(page.locator('text=Gerenciamento de Regras')).toBeVisible();
+    await expect(page.locator('text=Configure as regras do motor de decisão automática')).toBeVisible();
   });
 
   test('should display rules with humanized names in Portuguese', async ({ page }) => {
     // Wait for rules to load
     await page.waitForTimeout(1000);
     
-    // Check for humanized rule names (not technical codes)
+    // Check for humanized rule names based on RULE_NAMES in RulesManagement.tsx
     const ruleNames = [
-      'Throttle por Falhas Consecutivas',
-      'Isolamento por Taxa de Erro',
-      'Auto-Recuperação de Agentes',
-      'Bloqueio de Versão'
+      'Proteção contra Erros Repetidos',
+      'Limitador de Velocidade',
+      'Isolamento de Emergência',
+      'Bloqueio de Versões Problemáticas'
     ];
     
     for (const ruleName of ruleNames) {
@@ -44,12 +44,12 @@ test.describe('Rules Engine Management', () => {
   test('should show rule descriptions in Portuguese', async ({ page }) => {
     await page.waitForTimeout(1000);
     
-    // Check for humanized descriptions
+    // Check for humanized descriptions based on RULE_DESCRIPTIONS
     const descriptions = [
-      'Limita a velocidade de comunicação de agentes',
-      'Isola automaticamente agentes',
-      'Recupera automaticamente agentes',
-      'Bloqueia versões do agente'
+      'entra automaticamente em modo de proteção',
+      'Reduz a velocidade de comunicação',
+      'Isola computadores com problemas graves',
+      'Bloqueia atualizações problemáticas'
     ];
     
     for (const desc of descriptions) {
@@ -87,7 +87,7 @@ test.describe('Rules Engine Management', () => {
       await page.waitForTimeout(500);
       
       // Check for toast notification
-      const toast = page.locator('text=/Regra|atualizada|ativada|desativada/i');
+      const toast = page.locator('[data-sonner-toast]');
       if (await toast.isVisible().catch(() => false)) {
         await expect(toast).toBeVisible();
       }
@@ -117,14 +117,14 @@ test.describe('Rules Engine Management', () => {
   test('should display rule parameters with humanized labels', async ({ page }) => {
     await page.waitForTimeout(1000);
     
-    // Check for humanized parameter labels
+    // Check for humanized parameter labels based on PARAM_LABELS
     const paramLabels = [
-      'Máximo de Falhas',
-      'Janela de Tempo',
-      'Duração do Throttle',
-      'Taxa Máxima de Erro',
-      'Tempo de Isolamento',
-      'Tempo de Inatividade'
+      'Limite de erros',
+      'Janela de tempo',
+      'Tempo de espera',
+      'Tentativas máximas',
+      'Duração do isolamento',
+      'Porcentagem para bloqueio'
     ];
     
     for (const label of paramLabels) {
@@ -161,7 +161,7 @@ test.describe('Rules Engine Management', () => {
       await page.waitForTimeout(500);
       
       // Page should still show rules after refresh
-      await expect(page.locator('text=Configuração de Regras de Decisão')).toBeVisible();
+      await expect(page.locator('text=Gerenciamento de Regras')).toBeVisible();
     }
   });
 });
