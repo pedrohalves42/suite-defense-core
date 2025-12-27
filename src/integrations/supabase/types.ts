@@ -1667,9 +1667,13 @@ export type Database = {
       }
       agent_versions: {
         Row: {
+          blocked_at: string | null
+          blocked_by: string | null
+          blocked_reason: string | null
           created_at: string | null
           download_url: string
           id: string
+          is_blocked: boolean | null
           is_latest: boolean | null
           platform: string
           release_notes: string | null
@@ -1678,9 +1682,13 @@ export type Database = {
           version: string
         }
         Insert: {
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           created_at?: string | null
           download_url: string
           id?: string
+          is_blocked?: boolean | null
           is_latest?: boolean | null
           platform: string
           release_notes?: string | null
@@ -1689,9 +1697,13 @@ export type Database = {
           version: string
         }
         Update: {
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           created_at?: string | null
           download_url?: string
           id?: string
+          is_blocked?: boolean | null
           is_latest?: boolean | null
           platform?: string
           release_notes?: string | null
@@ -6673,9 +6685,11 @@ export type Database = {
       security_events: {
         Row: {
           agent_id: string | null
+          agent_name: string | null
           created_at: string
           data: Json | null
           description: string | null
+          event_type: string | null
           id: string
           policy_id: string | null
           rule_id: string | null
@@ -6687,9 +6701,11 @@ export type Database = {
         }
         Insert: {
           agent_id?: string | null
+          agent_name?: string | null
           created_at?: string
           data?: Json | null
           description?: string | null
+          event_type?: string | null
           id?: string
           policy_id?: string | null
           rule_id?: string | null
@@ -6701,9 +6717,11 @@ export type Database = {
         }
         Update: {
           agent_id?: string | null
+          agent_name?: string | null
           created_at?: string
           data?: Json | null
           description?: string | null
+          event_type?: string | null
           id?: string
           policy_id?: string | null
           rule_id?: string | null
