@@ -68,7 +68,7 @@ const Landing = () => {
     }
   };
 
-  // Cálculo baseado em tiers híbridos (base + adicional por dispositivo)
+  // Cálculo baseado no novo pricing B2B V4
   const calculateTier = (devices: number): {
     price: number;
     plan: string;
@@ -105,18 +105,18 @@ const Landing = () => {
       isEnterprise: false
     };
 
-    // Starter: R$ 150 base (5 disp) + R$ 20/adicional (máx 30)
-    if (devices <= 30) {
-      const basePrice = 150;
-      const baseDevices = 5;
-      const pricePerExtra = 20;
+    // Starter Compliance: R$ 249 base (10 disp) + R$ 29/adicional (máx 50)
+    if (devices <= 50) {
+      const basePrice = 249;
+      const baseDevices = 10;
+      const pricePerExtra = 29;
       const extraDevices = Math.max(0, devices - baseDevices);
       const extraPrice = extraDevices * pricePerExtra;
       return {
         price: basePrice + extraPrice,
-        plan: 'Starter',
+        plan: 'Starter Compliance',
         baseDevices,
-        maxDevices: 30,
+        maxDevices: 50,
         basePrice,
         extraDevices,
         extraPrice,
@@ -125,11 +125,11 @@ const Landing = () => {
       };
     }
 
-    // Business: R$ 450 base (25 disp) + R$ 18/adicional (máx 200)
+    // Business: R$ 599 base (30 disp) + R$ 24/adicional (máx 200)
     if (devices <= 200) {
-      const basePrice = 450;
-      const baseDevices = 25;
-      const pricePerExtra = 18;
+      const basePrice = 599;
+      const baseDevices = 30;
+      const pricePerExtra = 24;
       const extraDevices = Math.max(0, devices - baseDevices);
       const extraPrice = extraDevices * pricePerExtra;
       return {
@@ -757,29 +757,25 @@ const Landing = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* Starter */}
+            {/* Starter Compliance */}
             <div className="group relative p-8 rounded-2xl border-2 border-border hover:border-primary/50 transition-all duration-300 bg-card/50 backdrop-blur-sm hover:scale-105 hover:shadow-lg">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="relative flex items-center gap-2 mb-4">
                 <div className="p-2 bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
                   <Zap className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-2xl font-bold">Starter</h3>
+                <h3 className="text-2xl font-bold">Starter Compliance</h3>
               </div>
               <div className="relative mb-2">
-                <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">R$ 150</span>
+                <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">R$ 249</span>
                 <span className="text-muted-foreground">/mês</span>
               </div>
               <p className="relative text-xs text-muted-foreground mb-4">
-                Base: 5 dispositivos • +R$ 20/dispositivo adicional<br />
-                <span className="font-medium text-primary">Até 30 dispositivos</span>
+                Base: 10 dispositivos • +R$ 29/dispositivo adicional<br />
+                <span className="font-medium text-primary">Até 50 dispositivos</span>
               </p>
-              <p className="relative text-sm text-muted-foreground mb-6">Para empresas em crescimento</p>
+              <p className="relative text-sm text-muted-foreground mb-6">Compliance básico para PMEs em crescimento</p>
               <ul className="relative space-y-3 mb-8">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">Visibilidade total de todos os computadores</span>
-                </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
                   <span className="text-sm">Monitoramento em tempo real</span>
@@ -790,7 +786,15 @@ const Landing = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">Alertas de riscos críticos</span>
+                  <span className="text-sm">Status de antivírus</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">Detecção de vulnerabilidades</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">Dashboard centralizado</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
@@ -804,7 +808,7 @@ const Landing = () => {
               </Button>
             </div>
 
-            {/* Business */}
+            {/* Business - RECOMENDADO */}
             <div className="relative p-8 rounded-2xl scale-105 shadow-2xl backdrop-blur-xl border-2 transition-all duration-300 hover:scale-110 bg-gradient-to-br from-primary via-primary/90 to-accent text-primary-foreground border-primary">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground px-4 py-1.5 rounded-full text-sm font-bold shadow-lg animate-pulse-glow">
                 RECOMENDADO
@@ -816,11 +820,11 @@ const Landing = () => {
                 <h3 className="text-2xl font-bold">Business</h3>
               </div>
               <div className="mb-2">
-                <span className="text-3xl font-bold">R$ 450</span>
+                <span className="text-3xl font-bold">R$ 599</span>
                 <span className="opacity-90">/mês</span>
               </div>
               <p className="text-xs opacity-80 mb-4">
-                Base: 25 dispositivos • +R$ 18/dispositivo adicional<br />
+                Base: 30 dispositivos • +R$ 24/dispositivo adicional<br />
                 <span className="font-medium">Até 200 dispositivos</span>
               </p>
               <p className="text-sm opacity-90 mb-6">Para empresas que não podem parar nem errar</p>
@@ -831,19 +835,23 @@ const Landing = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">Evidência auditável de tudo</span>
+                  <span className="text-sm font-semibold">Scans avançados ilimitados</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">Relatórios para compliance (LGPD)</span>
+                  <span className="text-sm font-semibold">Relatórios customizados</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <span className="text-sm font-semibold">Analytics avançado de riscos</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                  <span className="text-sm">Evidências e histórico estendido</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
                   <span className="text-sm">Suporte prioritário</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                  <span className="text-sm">Analytics avançado de riscos</span>
                 </li>
               </ul>
               <Button variant="outline" className="w-full bg-white/20 hover:bg-white/30 border-white/30" asChild>
@@ -853,19 +861,19 @@ const Landing = () => {
               </Button>
             </div>
 
-            {/* Enterprise */}
+            {/* Enterprise / MSP */}
             <div className="group relative p-8 rounded-2xl border-2 border-border hover:border-primary/50 transition-all duration-300 bg-card/50 backdrop-blur-sm hover:scale-105 hover:shadow-lg">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="relative flex items-center gap-2 mb-4">
                 <div className="p-2 bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
                   <ShieldCheck className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="text-2xl font-bold">Enterprise</h3>
+                <h3 className="text-2xl font-bold">Enterprise / MSP</h3>
               </div>
               <div className="relative mb-6">
                 <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Sob consulta</span>
               </div>
-              <p className="relative text-sm text-muted-foreground mb-6">Para empresas com risco jurídico, regulatório ou escala</p>
+              <p className="relative text-sm text-muted-foreground mb-6">Para empresas +200 dispositivos ou MSPs</p>
               <ul className="relative space-y-3 mb-8">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
@@ -873,20 +881,28 @@ const Landing = () => {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">Suporte dedicado 24/7</span>
+                  <span className="text-sm font-semibold">Suporte dedicado 24/7</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">Consultoria personalizada</span>
+                  <span className="text-sm font-semibold">SLA formal garantido</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                  <span className="text-sm">SLA garantido e onboarding dedicado</span>
+                  <span className="text-sm">Onboarding dedicado</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">Multi-tenant para MSPs</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  <span className="text-sm">Descontos por volume (até 35%)</span>
                 </li>
               </ul>
               <Button variant="outline" className="relative w-full group-hover:bg-primary/10 transition-colors" asChild>
                 <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
-                  Fale Conosco
+                  Falar com especialista
                 </a>
               </Button>
             </div>
