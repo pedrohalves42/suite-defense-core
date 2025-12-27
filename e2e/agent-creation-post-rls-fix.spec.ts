@@ -1,12 +1,19 @@
 import { test, expect } from '@playwright/test';
+import { hasRequiredEnvVars } from './helpers/backend-client';
+import { TEST_CONFIG } from './test-config';
 
 test.describe('Agent Creation After RLS Fix', () => {
   const baseUrl = process.env.VITE_SUPABASE_URL!;
-  const anonKey = process.env.VITE_SUPABASE_ANON_KEY!;
+  const anonKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY!;
   let authToken: string;
   let tenantId: string;
 
   test.beforeAll(async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     // Login como admin
     const loginResponse = await request.post(`${baseUrl}/auth/v1/token?grant_type=password`, {
       headers: {
@@ -14,8 +21,8 @@ test.describe('Agent Creation After RLS Fix', () => {
         'Content-Type': 'application/json',
       },
       data: {
-        email: 'admin@example.com',
-        password: 'admin123',
+        email: TEST_CONFIG.credentials.email,
+        password: TEST_CONFIG.credentials.password,
       },
     });
 
@@ -37,6 +44,11 @@ test.describe('Agent Creation After RLS Fix', () => {
   });
 
   test('should generate agent installer successfully with multiple user roles', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const agentName = `TEST-AGENT-RLS-${Date.now()}`;
 
     console.log('[Test] Generating installer for agent:', agentName);
@@ -116,6 +128,11 @@ test.describe('Agent Creation After RLS Fix', () => {
   });
 
   test('should track installation event successfully', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const agentName = `TEST-AGENT-INSTALL-${Date.now()}`;
 
     // Gerar instalador
@@ -170,6 +187,11 @@ test.describe('Agent Creation After RLS Fix', () => {
   });
 
   test('should handle get-agent-dashboard-data with multiple roles correctly', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     // Chamar a funcao que estava falhando antes da correcao
     const dashboardResponse = await request.post(`${baseUrl}/functions/v1/get-agent-dashboard-data`, {
       headers: {

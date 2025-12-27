@@ -11,8 +11,8 @@ import { TEST_CONFIG } from './test-config';
 
 test.describe('Complete Agent Lifecycle Flow', () => {
   const baseUrl = process.env.VITE_SUPABASE_URL!;
-  const testEmail = `test-agent-${Date.now()}@example.com`;
-  const testPassword = 'Test123!@#$';
+  const testEmail = `test-agent-${Date.now()}@test.local`;
+  const testPassword = TEST_CONFIG.credentials.password;
   let authToken: string;
   let enrollmentKey: string;
   let agentToken: string;

@@ -1,12 +1,19 @@
 import { test, expect } from '@playwright/test';
+import { hasRequiredEnvVars } from './helpers/backend-client';
+import { TEST_CONFIG } from './test-config';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://iavbnmduxpxhwubqrzzn.supabase.co';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || '***REMOVED***';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY!;
 
 test.describe('Input Validation Security Tests', () => {
   let authToken: string;
 
   test.beforeAll(async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     // Login como admin
     const loginResponse = await request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       headers: {
@@ -14,8 +21,8 @@ test.describe('Input Validation Security Tests', () => {
         'Content-Type': 'application/json',
       },
       data: {
-        email: process.env.TEST_ADMIN_EMAIL || 'pedrohalves42@gmail.com',
-        password: process.env.TEST_ADMIN_PASSWORD || 'Test1234!',
+        email: TEST_CONFIG.credentials.email,
+        password: TEST_CONFIG.credentials.password,
       },
     });
 
@@ -25,6 +32,11 @@ test.describe('Input Validation Security Tests', () => {
 
   test.describe('Agent Name Validation', () => {
     test('1. Reject SQL injection attempts', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const maliciousNames = [
         "'; DROP TABLE agents; --",
         "admin' OR '1'='1",
@@ -51,6 +63,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('2. Reject path traversal attempts', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const maliciousNames = [
         '../../../etc/passwd',
         '..\\..\\windows\\system32',
@@ -74,6 +91,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('3. Reject control characters', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const maliciousNames = [
         'agent\x00name',
         'test\x1Bname',
@@ -97,6 +119,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('4. Reject reserved names', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const reservedNames = ['admin', 'root', 'system', 'null', 'undefined'];
 
       for (const reservedName of reservedNames) {
@@ -117,6 +144,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('5. Reject excessive repetition', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const response = await request.post(`${SUPABASE_URL}/functions/v1/auto-generate-enrollment`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -133,6 +165,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('6. Reject names too short or too long', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const invalidLengths = [
         'ab', // Too short (< 3)
         'a'.repeat(65), // Too long (> 64)
@@ -154,6 +191,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('7. Reject invalid start/end characters', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const invalidNames = [
         '-agent', // Starts with hyphen
         'agent-', // Ends with hyphen
@@ -177,6 +219,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('8. Accept valid agent names', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const validNames = [
         'agent-01',
         'my_agent',
@@ -205,6 +252,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('9. Reject comment characters', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const maliciousNames = [
         'agent--comment',
         'agent/*comment*/',
@@ -228,6 +280,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('10. Reject XSS attempts', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const xssAttempts = [
         '<script>alert(1)</script>',
         '"><script>alert(1)</script>',
@@ -253,6 +310,11 @@ test.describe('Input Validation Security Tests', () => {
 
   test.describe('Edge Cases', () => {
     test('1. Reject empty string', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const response = await request.post(`${SUPABASE_URL}/functions/v1/auto-generate-enrollment`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -266,6 +328,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('2. Reject whitespace only', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const response = await request.post(`${SUPABASE_URL}/functions/v1/auto-generate-enrollment`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -279,6 +346,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('3. Trim whitespace from valid names', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const response = await request.post(`${SUPABASE_URL}/functions/v1/auto-generate-enrollment`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -294,6 +366,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('4. Reject missing agentName field', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const response = await request.post(`${SUPABASE_URL}/functions/v1/auto-generate-enrollment`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -307,6 +384,11 @@ test.describe('Input Validation Security Tests', () => {
     });
 
     test('5. Reject null agentName', async ({ request }) => {
+      if (!hasRequiredEnvVars()) {
+        test.skip();
+        return;
+      }
+
       const response = await request.post(`${SUPABASE_URL}/functions/v1/auto-generate-enrollment`, {
         headers: {
           'Authorization': `Bearer ${authToken}`,

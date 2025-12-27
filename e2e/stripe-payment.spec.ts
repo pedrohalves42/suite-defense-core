@@ -1,27 +1,34 @@
 import { test, expect } from '@playwright/test';
+import { hasRequiredEnvVars } from './helpers/backend-client';
+import { TEST_CONFIG } from './test-config';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://iavbnmduxpxhwubqrzzn.supabase.co';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || '***REMOVED***';
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY!;
 
 test.describe('Stripe Payment Flow E2E', () => {
   let authToken: string;
-  let userEmail: string;
   let checkoutUrl: string;
-  let stripeCustomerId: string;
 
   test.beforeAll(async () => {
-    userEmail = process.env.TEST_ADMIN_EMAIL || 'pedrohalves42@gmail.com';
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+    }
   });
 
   test('1. Admin login', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const loginResponse = await request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
       },
       data: {
-        email: userEmail,
-        password: process.env.TEST_ADMIN_PASSWORD || 'Test1234!',
+        email: TEST_CONFIG.credentials.email,
+        password: TEST_CONFIG.credentials.password,
       },
     });
 
@@ -32,6 +39,11 @@ test.describe('Stripe Payment Flow E2E', () => {
   });
 
   test('2. Check initial subscription status', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const checkResponse = await request.post(`${SUPABASE_URL}/functions/v1/check-subscription`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -47,6 +59,11 @@ test.describe('Stripe Payment Flow E2E', () => {
   });
 
   test('3. Create checkout session - Starter plan (1 device)', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const checkoutResponse = await request.post(`${SUPABASE_URL}/functions/v1/create-checkout`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -68,10 +85,20 @@ test.describe('Stripe Payment Flow E2E', () => {
   });
 
   test('4. Verify checkout URL structure', async () => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     expect(checkoutUrl).toMatch(/^https:\/\/checkout\.stripe\.com\/c\/pay\/.+$/);
   });
 
   test('5. Simulate Stripe webhook - subscription.created', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     // Simular webhook do Stripe
     const webhookPayload = {
       id: `evt_test_${Date.now()}`,
@@ -116,6 +143,11 @@ test.describe('Stripe Payment Flow E2E', () => {
   });
 
   test('6. Create checkout session - Pro plan (5 devices)', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const checkoutResponse = await request.post(`${SUPABASE_URL}/functions/v1/create-checkout`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -135,6 +167,11 @@ test.describe('Stripe Payment Flow E2E', () => {
   });
 
   test('7. Test invalid plan name', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const checkoutResponse = await request.post(`${SUPABASE_URL}/functions/v1/create-checkout`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -151,6 +188,11 @@ test.describe('Stripe Payment Flow E2E', () => {
   });
 
   test('8. Test device quantity limits - Starter plan', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     // Tentar criar checkout com mais dispositivos que o permitido
     const checkoutResponse = await request.post(`${SUPABASE_URL}/functions/v1/create-checkout`, {
       headers: {
@@ -170,6 +212,11 @@ test.describe('Stripe Payment Flow E2E', () => {
   });
 
   test('9. Test device quantity limits - Pro plan', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const checkoutResponse = await request.post(`${SUPABASE_URL}/functions/v1/create-checkout`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -186,6 +233,11 @@ test.describe('Stripe Payment Flow E2E', () => {
   });
 
   test('10. Test unauthenticated checkout attempt', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const checkoutResponse = await request.post(`${SUPABASE_URL}/functions/v1/create-checkout`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -201,6 +253,11 @@ test.describe('Stripe Payment Flow E2E', () => {
   });
 
   test('11. Access customer portal', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const portalResponse = await request.post(`${SUPABASE_URL}/functions/v1/customer-portal`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
@@ -221,6 +278,11 @@ test.describe('Stripe Payment Flow E2E', () => {
   });
 
   test('12. Verify subscription features - Starter', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     // Verificar features do plano Starter
     const featuresResponse = await request.get(`${SUPABASE_URL}/rest/v1/tenant_features?select=*`, {
       headers: {
@@ -241,6 +303,11 @@ test.describe('Stripe Payment Flow E2E', () => {
   });
 
   test('13. Sync Stripe subscriptions', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const syncResponse = await request.post(`${SUPABASE_URL}/functions/v1/sync-stripe-subscriptions`, {
       headers: {
         'Authorization': `Bearer ${authToken}`,
