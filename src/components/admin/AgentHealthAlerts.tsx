@@ -63,15 +63,15 @@ function getSeverityBadgeVariant(severity: string) {
 function getHealthStatusIcon(status: string) {
   switch (status) {
     case 'not_polling_jobs':
-      return <Clock className="h-4 w-4" />;
+      return <Clock className="h-4 w-4 text-amber-500" />;
     case 'not_executing_jobs':
-      return <Zap className="h-4 w-4" />;
+      return <Zap className="h-4 w-4 text-orange-500" />;
     case 'execution_stale':
-      return <Activity className="h-4 w-4" />;
+      return <Activity className="h-4 w-4 text-red-500" />;
     case 'safe_mode':
-      return <Server className="h-4 w-4" />;
+      return <Server className="h-4 w-4 text-blue-500" />;
     default:
-      return <AlertTriangle className="h-4 w-4" />;
+      return <AlertTriangle className="h-4 w-4 text-muted-foreground" />;
   }
 }
 
@@ -185,7 +185,7 @@ function AlertCard({ alert, onResolve, isResolving }: AlertCardProps) {
               {getSeverityIcon(alert.severity)}
               <div>
                 <CardTitle className="text-base font-medium">
-                  {alert.message}
+                  {alert.title || alert.message}
                 </CardTitle>
                 <CardDescription className="text-xs">
                   {formatDistanceToNow(new Date(alert.created_at), { 
