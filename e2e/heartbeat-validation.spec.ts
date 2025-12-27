@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { getAdminBackendClient, hasRequiredEnvVars } from './helpers/backend-client';
+import { TEST_CONFIG } from './test-config';
 
 /**
  * FASE 2: Teste de Validacao de Heartbeat
@@ -14,15 +16,20 @@ test.describe('Heartbeat Validation Tests', () => {
   let agentName: string;
 
   test.beforeAll(async ({ request }) => {
-    // Login
+    if (!hasRequiredEnvVars()) {
+      console.log('[SKIP] Missing required environment variables');
+      return;
+    }
+
+    // Login using TEST_CONFIG credentials
     const loginResponse = await request.post(`${baseUrl}/auth/v1/token?grant_type=password`, {
       headers: {
         'Content-Type': 'application/json',
-        'apikey': process.env.VITE_SUPABASE_ANON_KEY!,
+        'apikey': process.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
       },
       data: {
-        email: process.env.TEST_ADMIN_EMAIL || 'pedrohalves42@gmail.com',
-        password: process.env.TEST_ADMIN_PASSWORD || 'Senha123!',
+        email: TEST_CONFIG.credentials.email,
+        password: TEST_CONFIG.credentials.password,
       },
     });
 
@@ -48,6 +55,11 @@ test.describe('Heartbeat Validation Tests', () => {
   });
 
   test('should accept valid heartbeat with HMAC', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const timestamp = Date.now();
     const nonce = crypto.randomUUID();
     const bodyJson = JSON.stringify({
@@ -75,6 +87,11 @@ test.describe('Heartbeat Validation Tests', () => {
   });
 
   test('should reject heartbeat without agent token', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const timestamp = Date.now();
     const nonce = crypto.randomUUID();
 
@@ -91,6 +108,11 @@ test.describe('Heartbeat Validation Tests', () => {
   });
 
   test('should reject heartbeat with invalid agent token', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const timestamp = Date.now();
     const nonce = crypto.randomUUID();
 
@@ -109,6 +131,11 @@ test.describe('Heartbeat Validation Tests', () => {
   });
 
   test('should update last_heartbeat timestamp', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const timestamp = Date.now();
     const nonce = crypto.randomUUID();
     const bodyJson = JSON.stringify({
@@ -137,7 +164,7 @@ test.describe('Heartbeat Validation Tests', () => {
       headers: {
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json',
-        'apikey': process.env.VITE_SUPABASE_ANON_KEY!,
+        'apikey': process.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
       },
       data: {},
     });
@@ -147,6 +174,11 @@ test.describe('Heartbeat Validation Tests', () => {
   });
 
   test('should handle multiple rapid heartbeats (rate limiting)', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const promises = [];
 
     for (let i = 0; i < 5; i++) {

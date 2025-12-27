@@ -1,16 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { loginAsAdmin } from './helpers/auth';
+import { TEST_CONFIG } from './test-config';
 
 test.describe('Multiple Roles Validation', () => {
-  const testEmail = process.env.TEST_ADMIN_EMAIL || 'admin@test.com';
-  const testPassword = process.env.TEST_ADMIN_PASSWORD || 'TestPassword123!';
-
   test.beforeEach(async ({ page }) => {
-    // Login
-    await page.goto('/login');
-    await page.fill('input[type="email"]', testEmail);
-    await page.fill('input[type="password"]', testPassword);
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/admin/dashboard', { timeout: 10000 });
+    const success = await loginAsAdmin(page);
+    expect(success).toBe(true);
   });
 
   test('should handle user with multiple roles - Members page', async ({ page }) => {
@@ -126,7 +121,7 @@ test.describe('Multiple Roles Validation', () => {
     await page.waitForTimeout(3000);
 
     // Should not show error in console
-    const errors = [];
+    const errors: string[] = [];
     page.on('console', msg => {
       if (msg.type() === 'error') {
         errors.push(msg.text());

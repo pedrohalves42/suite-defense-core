@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { hasRequiredEnvVars } from './helpers/backend-client';
+import { TEST_CONFIG } from './test-config';
 
 /**
  * FASE 2: Teste E2E Completo do Fluxo de Agentes
  * 
- * Valida: Signup ? Login ? Gerar Enrollment ? Download Installer ? 
- *         Simular Instalacao ? Heartbeat ? Metricas ? Jobs
+ * Valida: Signup → Login → Gerar Enrollment → Download Installer → 
+ *         Simular Instalacao → Heartbeat → Metricas → Jobs
  */
 
 test.describe('Complete Agent Lifecycle Flow', () => {
@@ -18,11 +20,16 @@ test.describe('Complete Agent Lifecycle Flow', () => {
   let agentName: string;
 
   test('1. Signup and Login', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     // Signup
     const signupResponse = await request.post(`${baseUrl}/auth/v1/signup`, {
       headers: {
         'Content-Type': 'application/json',
-        'apikey': process.env.VITE_SUPABASE_ANON_KEY!,
+        'apikey': process.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
       },
       data: {
         email: testEmail,
@@ -36,7 +43,7 @@ test.describe('Complete Agent Lifecycle Flow', () => {
     const loginResponse = await request.post(`${baseUrl}/auth/v1/token?grant_type=password`, {
       headers: {
         'Content-Type': 'application/json',
-        'apikey': process.env.VITE_SUPABASE_ANON_KEY!,
+        'apikey': process.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
       },
       data: {
         email: testEmail,
@@ -51,6 +58,11 @@ test.describe('Complete Agent Lifecycle Flow', () => {
   });
 
   test('2. Generate Enrollment Key and Credentials', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     agentName = `test-agent-${Date.now()}`;
 
     const response = await request.post(`${baseUrl}/functions/v1/auto-generate-enrollment`, {
@@ -77,6 +89,11 @@ test.describe('Complete Agent Lifecycle Flow', () => {
   });
 
   test('3. Download Installer via serve-installer', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const response = await request.get(`${baseUrl}/functions/v1/serve-installer/${enrollmentKey}`);
 
     expect(response.ok()).toBeTruthy();
@@ -90,6 +107,11 @@ test.describe('Complete Agent Lifecycle Flow', () => {
   });
 
   test('4. Simulate Agent Heartbeat', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     // Aguardar 2s para simular instalacao
     await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -121,6 +143,11 @@ test.describe('Complete Agent Lifecycle Flow', () => {
   });
 
   test('5. Submit System Metrics', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const timestamp = Date.now();
     const nonce = Math.random().toString(36).substring(7);
     const bodyJson = JSON.stringify({
@@ -155,6 +182,11 @@ test.describe('Complete Agent Lifecycle Flow', () => {
   });
 
   test('6. Create and Poll Job', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     // Criar job
     const createJobResponse = await request.post(`${baseUrl}/functions/v1/create-job`, {
       headers: {
@@ -194,6 +226,11 @@ test.describe('Complete Agent Lifecycle Flow', () => {
   });
 
   test('7. Acknowledge Job', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     // Criar job para testar ACK
     const createJobResponse = await request.post(`${baseUrl}/functions/v1/create-job`, {
       headers: {

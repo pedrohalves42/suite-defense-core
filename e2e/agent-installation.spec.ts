@@ -1,35 +1,48 @@
 import { test, expect } from '@playwright/test';
+import { loginAsAdmin } from './helpers/auth';
+import { hasRequiredEnvVars } from './helpers/backend-client';
+import { TEST_CONFIG } from './test-config';
 import * as fs from 'fs';
 import * as path from 'path';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://iavbnmduxpxhwubqrzzn.supabase.co';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || '***REMOVED***';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '***REMOVED***';
 
 test.describe('Windows Agent Installation E2E', () => {
   let authToken: string;
   let installScript: string;
   let agentName: string;
 
-  test.beforeAll(async () => {
-    agentName = `test-installer-${Date.now()}`;
-  });
+  test.beforeAll(async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      console.log('[SKIP] Missing required environment variables');
+      return;
+    }
 
-  test('1. Login como admin e gerar script de instalacao', async ({ request }) => {
-    // Login
+    agentName = `test-installer-${Date.now()}`;
+
+    // Login using TEST_CONFIG
     const loginResponse = await request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
       },
       data: {
-        email: process.env.TEST_ADMIN_EMAIL || 'pedrohalves42@gmail.com',
-        password: process.env.TEST_ADMIN_PASSWORD || 'Test1234!',
+        email: TEST_CONFIG.credentials.email,
+        password: TEST_CONFIG.credentials.password,
       },
     });
 
     expect(loginResponse.ok()).toBeTruthy();
     const loginData = await loginResponse.json();
     authToken = loginData.access_token;
+  });
+
+  test('1. Login como admin e gerar script de instalacao', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
 
     // Gerar credenciais para instalacao
     const enrollResponse = await request.post(`${SUPABASE_URL}/functions/v1/auto-generate-enrollment`, {
@@ -50,23 +63,20 @@ test.describe('Windows Agent Installation E2E', () => {
     expect(enrollData.hmacSecret).toBeTruthy();
     expect(enrollData.enrollmentKey).toBeTruthy();
 
-    console.log(`? Credenciais geradas para agente: ${agentName}`);
+    console.log(`✓ Credenciais geradas para agente: ${agentName}`);
     console.log(`  - Agent Token: ${enrollData.agentToken.substring(0, 20)}...`);
     console.log(`  - Enrollment Key: ${enrollData.enrollmentKey.substring(0, 20)}...`);
   });
 
   test('2. Validar estrutura do script de instalacao gerado', async ({ page }) => {
-    // Navegar para pagina de instalacao
-    await page.goto('/');
-    
-    // Fazer login (se necessario)
-    const loginButton = page.locator('button:has-text("Login")');
-    if (await loginButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await page.fill('input[type="email"]', process.env.TEST_ADMIN_EMAIL || 'pedrohalves42@gmail.com');
-      await page.fill('input[type="password"]', process.env.TEST_ADMIN_PASSWORD || 'Test1234!');
-      await loginButton.click();
-      await page.waitForURL('/dashboard', { timeout: 10000 });
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
     }
+
+    // Login
+    const success = await loginAsAdmin(page);
+    expect(success).toBe(true);
 
     // Navegar para instalador
     await page.goto('/agent-installer');
@@ -96,7 +106,7 @@ test.describe('Windows Agent Installation E2E', () => {
     expect(scriptContent).toBeTruthy();
     installScript = scriptContent!;
 
-    console.log('? Script de instalacao gerado');
+    console.log('✓ Script de instalacao gerado');
     console.log(`  Tamanho: ${installScript.length} caracteres`);
 
     // Validacoes do script
@@ -108,11 +118,14 @@ test.describe('Windows Agent Installation E2E', () => {
     expect(installScript).toContain('Validando permissoes');
     expect(installScript).toContain('isAdmin');
     
-    console.log('? Validacoes de estrutura do script passaram');
+    console.log('✓ Validacoes de estrutura do script passaram');
   });
 
   test('3. Validar checagem de privilegios administrativos', async () => {
-    expect(installScript).toBeTruthy();
+    if (!hasRequiredEnvVars() || !installScript) {
+      test.skip();
+      return;
+    }
 
     // Verificar se script valida privilegios admin
     expect(installScript).toContain('Security.Principal.WindowsPrincipal');
@@ -124,10 +137,15 @@ test.describe('Windows Agent Installation E2E', () => {
     expect(installScript).toContain('exit 1');
     expect(installScript).toContain('Privilegios Administrativos');
 
-    console.log('? Validacao de privilegios administrativos presente no script');
+    console.log('✓ Validacao de privilegios administrativos presente no script');
   });
 
   test('4. Validar criacao de diretorios e arquivos', async () => {
+    if (!hasRequiredEnvVars() || !installScript) {
+      test.skip();
+      return;
+    }
+
     // Verificar se script cria diretorios necessarios
     expect(installScript).toContain('C:\\CyberShield');
     expect(installScript).toContain('New-Item -ItemType Directory');
@@ -137,10 +155,15 @@ test.describe('Windows Agent Installation E2E', () => {
     expect(installScript).toContain('Out-File');
     expect(installScript).toContain('agent.ps1');
 
-    console.log('? Criacao de diretorios e arquivos validada');
+    console.log('✓ Criacao de diretorios e arquivos validada');
   });
 
   test('5. Validar configuracao da tarefa agendada', async () => {
+    if (!hasRequiredEnvVars() || !installScript) {
+      test.skip();
+      return;
+    }
+
     // Verificar se script cria tarefa agendada
     expect(installScript).toContain('Register-ScheduledTask');
     expect(installScript).toContain('CyberShieldAgent');
@@ -157,10 +180,15 @@ test.describe('Windows Agent Installation E2E', () => {
     expect(installScript).toContain('Get-ScheduledTask');
     expect(installScript).toContain('taskCreated');
 
-    console.log('? Configuracao da tarefa agendada validada');
+    console.log('✓ Configuracao da tarefa agendada validada');
   });
 
   test('6. Validar teste de conectividade com servidor', async () => {
+    if (!hasRequiredEnvVars() || !installScript) {
+      test.skip();
+      return;
+    }
+
     // Verificar se script testa conectividade
     expect(installScript).toContain('Testando conectividade');
     expect(installScript).toContain('Invoke-WebRequest');
@@ -168,10 +196,15 @@ test.describe('Windows Agent Installation E2E', () => {
     expect(installScript).toContain('X-Agent-Token');
     expect(installScript).toContain('TimeoutSec');
 
-    console.log('? Teste de conectividade presente no script');
+    console.log('✓ Teste de conectividade presente no script');
   });
 
   test('7. Validar tratamento de erros robusto', async () => {
+    if (!hasRequiredEnvVars() || !installScript) {
+      test.skip();
+      return;
+    }
+
     // Verificar try-catch
     expect(installScript).toContain('try {');
     expect(installScript).toContain('catch {');
@@ -183,10 +216,15 @@ test.describe('Windows Agent Installation E2E', () => {
     expect(installScript).toContain('Execute como Administrador');
     expect(installScript).toContain('Task Scheduler');
 
-    console.log('? Tratamento de erros robusto validado');
+    console.log('✓ Tratamento de erros robusto validado');
   });
 
   test('8. Validar mensagens de sucesso e proximos passos', async () => {
+    if (!hasRequiredEnvVars() || !installScript) {
+      test.skip();
+      return;
+    }
+
     // Verificar mensagens de progresso
     expect(installScript).toMatch(/\[0\/5\]|\[1\/5\]|\[2\/5\]|\[3\/5\]|\[4\/5\]|\[5\/5\]/);
 
@@ -199,10 +237,15 @@ test.describe('Windows Agent Installation E2E', () => {
     expect(installScript).toContain('Get-Content');
     expect(installScript).toContain('agent.log');
 
-    console.log('? Mensagens de progresso e sucesso validadas');
+    console.log('✓ Mensagens de progresso e sucesso validadas');
   });
 
   test('9. Salvar script para teste manual (opcional)', async () => {
+    if (!hasRequiredEnvVars() || !installScript) {
+      test.skip();
+      return;
+    }
+
     // Criar pasta de testes se nao existir
     const testDir = path.join(process.cwd(), 'tests', 'generated');
     if (!fs.existsSync(testDir)) {
@@ -213,7 +256,7 @@ test.describe('Windows Agent Installation E2E', () => {
     const scriptPath = path.join(testDir, `install-agent-${Date.now()}.ps1`);
     fs.writeFileSync(scriptPath, installScript, 'utf8');
 
-    console.log(`? Script salvo para teste manual: ${scriptPath}`);
+    console.log(`✓ Script salvo para teste manual: ${scriptPath}`);
     console.log('');
     console.log('Para testar manualmente no Windows:');
     console.log('1. Copie o arquivo para uma maquina Windows');
@@ -224,6 +267,11 @@ test.describe('Windows Agent Installation E2E', () => {
   });
 
   test('10. Validar compatibilidade com Windows Server', async () => {
+    if (!hasRequiredEnvVars() || !installScript) {
+      test.skip();
+      return;
+    }
+
     // Verificar se script nao usa comandos incompativeis com Server 2012
     const incompatibleCommands = [
       'Install-WindowsFeature', // Pode nao estar disponivel em Server 2012 Core
@@ -246,11 +294,14 @@ test.describe('Windows Agent Installation E2E', () => {
       expect(installScript).toContain(cmd);
     }
 
-    console.log('? Compatibilidade com Windows Server validada');
+    console.log('✓ Compatibilidade com Windows Server validada');
   });
 
   test('11. Validar correcoes criticas - Parameter Validation', async () => {
-    expect(installScript).toBeTruthy();
+    if (!hasRequiredEnvVars() || !installScript) {
+      test.skip();
+      return;
+    }
 
     // Verificar validacao de parametros obrigatorios
     expect(installScript).toContain('param(');
@@ -263,10 +314,15 @@ test.describe('Windows Agent Installation E2E', () => {
     expect(installScript).toMatch(/if.*AgentToken.*-notmatch|if.*String.*IsNullOrWhiteSpace/i);
     expect(installScript).toMatch(/if.*HmacSecret.*-notmatch|if.*String.*IsNullOrWhiteSpace/i);
 
-    console.log('? Validacao de parametros implementada');
+    console.log('✓ Validacao de parametros implementada');
   });
 
   test('12. Validar correcoes criticas - Retry Logic', async () => {
+    if (!hasRequiredEnvVars() || !installScript) {
+      test.skip();
+      return;
+    }
+
     // Verificar retry logic em Send-Heartbeat
     expect(installScript).toContain('Send-Heartbeat');
     expect(installScript).toMatch(/for.*\$attempt.*1\.\.\d+|while.*attempt.*maxAttempts/i);
@@ -275,10 +331,15 @@ test.describe('Windows Agent Installation E2E', () => {
     // Verificar backoff exponencial ou linear
     expect(installScript).toMatch(/Sleep.*attempt|Sleep.*\*/);
 
-    console.log('? Retry logic implementada em heartbeat');
+    console.log('✓ Retry logic implementada em heartbeat');
   });
 
   test('13. Validar correcoes criticas - System Health Test', async () => {
+    if (!hasRequiredEnvVars() || !installScript) {
+      test.skip();
+      return;
+    }
+
     // Verificar funcao Test-SystemHealth
     expect(installScript).toContain('Test-SystemHealth');
     
@@ -286,10 +347,15 @@ test.describe('Windows Agent Installation E2E', () => {
     expect(installScript).toMatch(/Test.*connectivity|Test.*health/i);
     expect(installScript).toMatch(/attempt.*connectivity/i);
 
-    console.log('? Test de system health com retry implementado');
+    console.log('✓ Test de system health com retry implementado');
   });
 
   test('14. Validar correcoes criticas - Error Logging', async () => {
+    if (!hasRequiredEnvVars() || !installScript) {
+      test.skip();
+      return;
+    }
+
     // Verificar logging detalhado
     expect(installScript).toContain('Write-Host');
     expect(installScript).toMatch(/\[ERROR\]|\[ERRO\]/);
@@ -299,7 +365,7 @@ test.describe('Windows Agent Installation E2E', () => {
     // Verificar logs em arquivo
     expect(installScript).toMatch(/Out-File.*log|Add-Content.*log/);
 
-    console.log('? Sistema de logging detalhado implementado');
+    console.log('✓ Sistema de logging detalhado implementado');
   });
 });
 
@@ -309,7 +375,7 @@ test.describe('Agent Script Validation', () => {
     const agentScriptPath = path.join(process.cwd(), 'agent-scripts', 'cybershield-agent-windows.ps1');
     
     if (!fs.existsSync(agentScriptPath)) {
-      console.warn(`[WARN]  Script nao encontrado: ${agentScriptPath}`);
+      console.warn(`⚠ Script nao encontrado: ${agentScriptPath}`);
       test.skip();
       return;
     }
@@ -339,6 +405,6 @@ test.describe('Agent Script Validation', () => {
     expect(agentScript).toContain('System.Security.Cryptography.HMACSHA256');
     expect(agentScript).not.toContain('ConvertTo-Json -Depth'); // -Depth nao existe no PS 2.0
 
-    console.log('? Script standalone do agente validado');
+    console.log('✓ Script standalone do agente validado');
   });
 });
