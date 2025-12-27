@@ -8341,12 +8341,20 @@ export type Database = {
           health_status: string | null
           hostname: string | null
           id: string | null
+          is_isolated: boolean | null
+          is_throttled: boolean | null
+          isolated_at: string | null
+          isolation_reason: string | null
           last_heartbeat: string | null
           os_type: string | null
           os_version: string | null
+          safe_mode_entered_at: string | null
+          safe_mode_reason: string | null
           seconds_since_heartbeat: number | null
           status: string | null
           tenant_id: string | null
+          throttle_reason: string | null
+          throttled_at: string | null
         }
         Insert: {
           agent_name?: string | null
@@ -8355,12 +8363,20 @@ export type Database = {
           health_status?: never
           hostname?: string | null
           id?: string | null
+          is_isolated?: boolean | null
+          is_throttled?: boolean | null
+          isolated_at?: string | null
+          isolation_reason?: string | null
           last_heartbeat?: string | null
           os_type?: string | null
           os_version?: string | null
+          safe_mode_entered_at?: string | null
+          safe_mode_reason?: string | null
           seconds_since_heartbeat?: never
           status?: string | null
           tenant_id?: string | null
+          throttle_reason?: string | null
+          throttled_at?: string | null
         }
         Update: {
           agent_name?: string | null
@@ -8369,12 +8385,20 @@ export type Database = {
           health_status?: never
           hostname?: string | null
           id?: string | null
+          is_isolated?: boolean | null
+          is_throttled?: boolean | null
+          isolated_at?: string | null
+          isolation_reason?: string | null
           last_heartbeat?: string | null
           os_type?: string | null
           os_version?: string | null
+          safe_mode_entered_at?: string | null
+          safe_mode_reason?: string | null
           seconds_since_heartbeat?: never
           status?: string | null
           tenant_id?: string | null
+          throttle_reason?: string | null
+          throttled_at?: string | null
         }
         Relationships: [
           {
@@ -9960,15 +9984,21 @@ export type Database = {
         Returns: {
           agent_name: string
           agent_version: string
-          failed_jobs_24h: number
-          failure_rate_pct: number
+          enrolled_at: string
           health_status: string
           hostname: string
+          id: string
+          is_in_safe_mode: boolean
+          is_isolated: boolean
+          is_throttled: boolean
+          isolation_reason: string
           last_heartbeat: string
           os_type: string
           os_version: string
+          safe_mode_reason: string
           seconds_since_heartbeat: number
-          total_jobs_24h: number
+          status: string
+          throttle_reason: string
         }[]
       }
       get_critical_insights_count: {
