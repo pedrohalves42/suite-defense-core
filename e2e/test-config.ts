@@ -23,9 +23,12 @@ export const TEST_CONFIG = {
     login: '/login',
     dashboard: '/admin/dashboard',
     agentHealth: '/admin/agent-health-monitor',
+    dnsFilter: '/admin/dns-filter',
+    blockedWebsites: '/admin/blocked-websites',
     rulesManagement: '/admin/rules-management',
     agentReleases: '/admin/agent-releases',
     problematicAgents: '/admin/problematic-agents',
+    installer: '/installer',
   },
   
   // Expected texts (Portuguese - humanized)
@@ -68,6 +71,36 @@ export const TEST_CONFIG = {
     // Empty states
     emptyNoRules: 'Nenhuma regra configurada',
     emptyNoAgents: 'Nenhum computador encontrado',
+    
+    // DNS Filter
+    dnsFilterTitle: 'DNS Filter',
+    dnsFilterEnabled: 'Habilitado',
+    dnsFilterDisabled: 'Desabilitado',
+    dnsFilterInstallAll: 'Instalar em Todos',
+    dnsFilterSyncAll: 'Sincronizar Todos',
+    dnsFilterProtected: 'Protegido',
+    dnsFilterNotInstalled: 'Não instalado',
+  },
+  
+  // Data-testid selectors
+  selectors: {
+    // DNS Filter
+    dnsFilterToggle: '[data-testid="dns-filter-toggle"]',
+    dnsFilterInstallAll: '[data-testid="dns-filter-install-all"]',
+    dnsFilterSyncAll: '[data-testid="dns-filter-sync-all"]',
+    dnsFilterRefresh: '[data-testid="dns-filter-refresh"]',
+    dnsFilterAgentList: '[data-testid="dns-filter-agent-list"]',
+    dnsFilterAgentRow: '[data-testid="dns-filter-agent-row"]',
+    
+    // Agent Installer
+    agentNameInput: '[data-testid="agent-name-input"]',
+    generateCommandBtn: '[data-testid="generate-command-btn"]',
+    installCommand: '[data-testid="install-command"]',
+    validationSuccess: '[data-testid="validation-success"]',
+    validationError: '[data-testid="validation-error"]',
+    platformWindows: '[data-testid="platform-windows"]',
+    platformLinux: '[data-testid="platform-linux"]',
+    platformMacos: '[data-testid="platform-macos"]',
   },
 };
 
