@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, Package, Search, RefreshCw, ShieldCheck, ShieldAlert, ShieldX, Shield } from 'lucide-react';
+import { AlertCircle, Package, Search, RefreshCw, ShieldCheck, ShieldAlert, ShieldX, Shield, Eye } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
@@ -116,6 +116,14 @@ export default function SoftwareInventory() {
       description="Veja todos os programas instalados nos seus computadores protegidos"
     >
       <div className="space-y-6">
+        {/* Observation Label */}
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="gap-1 text-xs border-amber-500/50 text-amber-600 dark:text-amber-400">
+            <Eye className="h-3 w-3" />
+            Modo Observação — Não bloqueia instalação de software
+          </Badge>
+        </div>
+
         {/* Agent Selector */}
         <Card className="border-l-4 border-l-primary">
           <CardHeader>

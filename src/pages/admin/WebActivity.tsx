@@ -185,6 +185,14 @@ export default function WebActivity() {
       description="Visualize e gerencie domínios acessados pelos agentes"
     >
       <div className="space-y-6">
+        {/* Observation Label */}
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="gap-1 text-xs border-amber-500/50 text-amber-600 dark:text-amber-400">
+            <Eye className="h-3 w-3" />
+            Modo Registro — Acessos são registrados, bloqueio requer configuração manual
+          </Badge>
+        </div>
+
         {/* Tabs for Activity vs Stats */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full max-w-md grid-cols-2">
