@@ -2,9 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Heart, AlertCircle, Server, Clock, Trash2, CheckCircle, XCircle, Wifi, WifiOff } from "lucide-react";
+import { Activity, Heart, AlertCircle, Server, Clock, Trash2, CheckCircle, XCircle, Wifi, WifiOff, Shield, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ErrorState } from "@/components/ErrorState";
@@ -16,12 +16,16 @@ import { getOsIcon } from '@/lib/os-utils';
 import { AgentStatusBadges } from '@/components/agents/AgentStatusBadges';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { TooltipProvider as TooltipProviderWrapper } from '@/components/ui/tooltip';
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+type StatusFilter = 'all' | 'problems' | 'protected' | 'offline';
 
 export default function AgentHealthMonitor() {
   const { tenant } = useTenant();
   const [liveHeartbeats, setLiveHeartbeats] = useState<number>(0);
   const [recentHeartbeats, setRecentHeartbeats] = useState<string[]>([]);
   const [isCleaningJobs, setIsCleaningJobs] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   // Fetch agent health metrics using RPC
   const { data: agentsHealth = [], isLoading, isError, error: errorData, refetch } = useQuery({
@@ -165,15 +169,31 @@ export default function AgentHealthMonitor() {
       if (agent.health_status === 'critical') acc.critical++;
       if (agent.health_status === 'offline') acc.offline++;
       if (agent.health_status === 'never_connected') acc.never_connected++;
+      if (agent.is_throttled || agent.is_isolated || agent.is_in_safe_mode) acc.withProblems++;
+      if (agent.is_in_safe_mode) acc.protected++;
       return acc;
     },
-    { healthy: 0, critical: 0, offline: 0, never_connected: 0 }
+    { healthy: 0, critical: 0, offline: 0, never_connected: 0, withProblems: 0, protected: 0 }
   );
 
   const totalAgents = agentsHealth.length || 0;
   const healthPercentage = totalAgents > 0 
     ? Math.round((counts.healthy / totalAgents) * 100)
     : 0;
+
+  // Filter agents based on selected status
+  const filteredAgents = useMemo(() => {
+    switch (statusFilter) {
+      case 'problems':
+        return agentsHealth.filter(a => a.is_throttled || a.is_isolated || a.is_in_safe_mode);
+      case 'protected':
+        return agentsHealth.filter(a => a.is_in_safe_mode);
+      case 'offline':
+        return agentsHealth.filter(a => a.health_status === 'offline' || a.health_status === 'never_connected');
+      default:
+        return agentsHealth;
+    }
+  }, [agentsHealth, statusFilter]);
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -383,24 +403,78 @@ export default function AgentHealthMonitor() {
         </Card>
       )}
 
-      {/* Agent List */}
+      {/* Agent List with Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Server className="h-5 w-5" />
-            Todos os Computadores ({totalAgents})
-          </CardTitle>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5" />
+              Computadores
+            </CardTitle>
+            
+            {/* Status Filter Tabs */}
+            <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)} className="w-full sm:w-auto">
+              <TabsList className="grid grid-cols-4 w-full sm:w-auto">
+                <TabsTrigger value="all" className="text-xs sm:text-sm">
+                  Todos
+                  <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-[10px]">{totalAgents}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="problems" className="text-xs sm:text-sm">
+                  <ShieldAlert className="h-3 w-3 mr-1 hidden sm:inline" />
+                  Problemas
+                  {counts.withProblems > 0 && (
+                    <Badge variant="destructive" className="ml-1.5 px-1.5 py-0 text-[10px]">{counts.withProblems}</Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="protected" className="text-xs sm:text-sm">
+                  <Shield className="h-3 w-3 mr-1 hidden sm:inline" />
+                  Protegidos
+                  {counts.protected > 0 && (
+                    <Badge className="ml-1.5 px-1.5 py-0 text-[10px] bg-orange-500">{counts.protected}</Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="offline" className="text-xs sm:text-sm">
+                  <WifiOff className="h-3 w-3 mr-1 hidden sm:inline" />
+                  Offline
+                  {(counts.offline + counts.never_connected) > 0 && (
+                    <Badge variant="secondary" className="ml-1.5 px-1.5 py-0 text-[10px]">{counts.offline + counts.never_connected}</Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </CardHeader>
         <CardContent>
-          {totalAgents === 0 ? (
+          {filteredAgents.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Server className="h-12 w-12 mx-auto mb-3 opacity-50" />
-              <p>Nenhum computador cadastrado ainda</p>
-              <p className="text-sm">Instale o agente em seus computadores para começar</p>
+              {statusFilter === 'all' ? (
+                <>
+                  <p>Nenhum computador cadastrado ainda</p>
+                  <p className="text-sm">Instale o agente em seus computadores para começar</p>
+                </>
+              ) : statusFilter === 'problems' ? (
+                <>
+                  <CheckCircle className="h-12 w-12 mx-auto mb-3 text-green-500 opacity-70" />
+                  <p className="text-green-600">Nenhum computador com problemas</p>
+                  <p className="text-sm">Todos estão funcionando normalmente</p>
+                </>
+              ) : statusFilter === 'protected' ? (
+                <>
+                  <Shield className="h-12 w-12 mx-auto mb-3 text-orange-500 opacity-70" />
+                  <p>Nenhum computador em modo protegido</p>
+                  <p className="text-sm">Isso é bom! Significa que não houve erros graves</p>
+                </>
+              ) : (
+                <>
+                  <Wifi className="h-12 w-12 mx-auto mb-3 text-green-500 opacity-70" />
+                  <p className="text-green-600">Todos os computadores estão online</p>
+                </>
+              )}
             </div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {agentsHealth.map((agent, idx) => {
+              {filteredAgents.map((agent, idx) => {
                 const isOnline = agent.health_status === 'healthy' || agent.health_status === 'critical';
                 const secondsSinceHeartbeat = agent.seconds_since_heartbeat || 0;
                 const lastSeenText = secondsSinceHeartbeat < 60 
