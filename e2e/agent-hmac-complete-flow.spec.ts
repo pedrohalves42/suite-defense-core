@@ -68,7 +68,7 @@ function generateHmacSecret(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
-test.describe('Agent HMAC Complete Flow', () => {
+test.describe.serial('Agent HMAC Complete Flow', () => {
   // Store credentials across tests
   let agentToken: string;
   let hmacSecret: string;
