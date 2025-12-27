@@ -1,20 +1,22 @@
 import { test, expect } from '@playwright/test';
+import { loginAsAdmin } from './helpers/auth';
+import { hasRequiredEnvVars } from './helpers/backend-client';
+import { TEST_CONFIG } from './test-config';
 
 test.describe('Stripe Checkout Flow', () => {
-  const testEmail = process.env.TEST_ADMIN_EMAIL || 'admin@test.com';
-  const testPassword = process.env.TEST_ADMIN_PASSWORD || 'TestPassword123!';
+  test.beforeAll(async () => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+    }
+  });
 
   test.beforeEach(async ({ page }) => {
-    // Login
-    await page.goto('/login');
-    await page.fill('input[type="email"]', testEmail);
-    await page.fill('input[type="password"]', testPassword);
-    await page.click('button[type="submit"]');
-    await page.waitForURL('/admin/dashboard', { timeout: 10000 });
+    const success = await loginAsAdmin(page);
+    expect(success).toBe(true);
   });
 
   test('should display plans correctly on PlanUpgradeNew page', async ({ page }) => {
-    await page.goto('/admin/plan-upgrade-new');
+    await page.goto(TEST_CONFIG.routes.planUpgrade);
     
     // Wait for page to load
     await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
@@ -33,7 +35,7 @@ test.describe('Stripe Checkout Flow', () => {
   });
 
   test('should update device quantity and recalculate price', async ({ page }) => {
-    await page.goto('/admin/plan-upgrade-new');
+    await page.goto(TEST_CONFIG.routes.planUpgrade);
     await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Find Starter plan device input
@@ -50,7 +52,7 @@ test.describe('Stripe Checkout Flow', () => {
   });
 
   test('should create checkout session for Starter plan', async ({ page, context }) => {
-    await page.goto('/admin/plan-upgrade-new');
+    await page.goto(TEST_CONFIG.routes.planUpgrade);
     await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Track navigation
@@ -82,7 +84,7 @@ test.describe('Stripe Checkout Flow', () => {
   });
 
   test('should open customer portal for existing subscription', async ({ page }) => {
-    await page.goto('/admin/plan-upgrade-new');
+    await page.goto(TEST_CONFIG.routes.planUpgrade);
     await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Check if user has existing subscription
@@ -109,7 +111,7 @@ test.describe('Stripe Checkout Flow', () => {
   });
 
   test('should show current subscription details', async ({ page }) => {
-    await page.goto('/admin/plan-upgrade-new');
+    await page.goto(TEST_CONFIG.routes.planUpgrade);
     await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Check for subscription card
@@ -161,7 +163,7 @@ test.describe('Stripe Checkout Flow', () => {
   });
 
   test('should enforce device quantity limits', async ({ page }) => {
-    await page.goto('/admin/plan-upgrade-new');
+    await page.goto(TEST_CONFIG.routes.planUpgrade);
     await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Find Starter plan (max 30 devices)
@@ -178,7 +180,7 @@ test.describe('Stripe Checkout Flow', () => {
   });
 
   test('should show correct features for each plan', async ({ page }) => {
-    await page.goto('/admin/plan-upgrade-new');
+    await page.goto(TEST_CONFIG.routes.planUpgrade);
     await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Starter plan features
@@ -193,11 +195,11 @@ test.describe('Stripe Checkout Flow', () => {
   });
 
   test('should handle errors gracefully', async ({ page }) => {
-    await page.goto('/admin/plan-upgrade-new');
+    await page.goto(TEST_CONFIG.routes.planUpgrade);
     await page.waitForSelector('h1:has-text("Planos e Precos")', { timeout: 10000 });
 
     // Monitor console for errors
-    const errors = [];
+    const errors: string[] = [];
     page.on('console', msg => {
       if (msg.type() === 'error') {
         errors.push(msg.text());

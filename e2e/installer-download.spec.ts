@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { hasRequiredEnvVars } from './helpers/backend-client';
+import { TEST_CONFIG } from './test-config';
 
 /**
  * FASE 2: Teste de Download de Instaladores
@@ -12,15 +14,20 @@ test.describe('Installer Download Tests', () => {
   let authToken: string;
 
   test.beforeAll(async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     // Login como admin
     const loginResponse = await request.post(`${baseUrl}/auth/v1/token?grant_type=password`, {
       headers: {
         'Content-Type': 'application/json',
-        'apikey': process.env.VITE_SUPABASE_ANON_KEY!,
+        'apikey': process.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
       },
       data: {
-        email: process.env.TEST_ADMIN_EMAIL || 'pedrohalves42@gmail.com',
-        password: process.env.TEST_ADMIN_PASSWORD || 'Senha123!',
+        email: TEST_CONFIG.credentials.email,
+        password: TEST_CONFIG.credentials.password,
       },
     });
 
@@ -30,6 +37,11 @@ test.describe('Installer Download Tests', () => {
   });
 
   test('should generate valid Windows installer', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const agentName = `test-windows-${Date.now()}`;
 
     // Gerar enrollment
@@ -62,6 +74,11 @@ test.describe('Installer Download Tests', () => {
   });
 
   test('should generate valid Linux installer', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const agentName = `test-linux-${Date.now()}`;
 
     // Gerar enrollment
@@ -94,6 +111,11 @@ test.describe('Installer Download Tests', () => {
   });
 
   test('should reject expired enrollment key', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const invalidKey = 'expired-key-12345';
 
     const response = await request.get(`${baseUrl}/functions/v1/serve-installer/${invalidKey}`);

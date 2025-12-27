@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { loginAsAdmin, navigateWithAuth } from './helpers/auth';
+import { TEST_CONFIG } from './test-config';
 
 /**
  * E2E Tests for Admin Access Control
@@ -10,19 +12,9 @@ import { test, expect } from '@playwright/test';
  */
 
 test.describe('Admin Access Control', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to login page
-    await page.goto('/login');
-  });
-
   test('Admin user sees Administracao section and can access admin routes', async ({ page }) => {
-    // Login as admin
-    await page.fill('input[type="email"]', process.env.TEST_ADMIN_EMAIL || 'admin@test.com');
-    await page.fill('input[type="password"]', process.env.TEST_ADMIN_PASSWORD || 'admin123');
-    await page.click('button[type="submit"]');
-
-    // Wait for navigation to dashboard
-    await page.waitForURL('**/dashboard');
+    const success = await loginAsAdmin(page);
+    expect(success).toBe(true);
 
     // Verify "Administracao" section is visible in sidebar
     const adminSection = page.locator('text=Administracao');
@@ -45,9 +37,19 @@ test.describe('Admin Access Control', () => {
   });
 
   test('Non-admin user does not see Administracao section', async ({ page }) => {
-    // Login as regular user
-    await page.fill('input[type="email"]', process.env.TEST_USER_EMAIL || 'user@test.com');
-    await page.fill('input[type="password"]', process.env.TEST_USER_PASSWORD || 'user123');
+    // This test requires a non-admin user
+    // For now, skip if no viewer credentials configured
+    const viewerEmail = process.env.TEST_USER_EMAIL;
+    const viewerPassword = process.env.TEST_USER_PASSWORD;
+    
+    if (!viewerEmail || !viewerPassword) {
+      test.skip();
+      return;
+    }
+    
+    await page.goto('/login');
+    await page.fill('input[type="email"]', viewerEmail);
+    await page.fill('input[type="password"]', viewerPassword);
     await page.click('button[type="submit"]');
 
     // Wait for navigation to dashboard
@@ -59,9 +61,18 @@ test.describe('Admin Access Control', () => {
   });
 
   test('Non-admin user is redirected from admin routes', async ({ page }) => {
-    // Login as regular user
-    await page.fill('input[type="email"]', process.env.TEST_USER_EMAIL || 'user@test.com');
-    await page.fill('input[type="password"]', process.env.TEST_USER_PASSWORD || 'user123');
+    // This test requires a non-admin user
+    const viewerEmail = process.env.TEST_USER_EMAIL;
+    const viewerPassword = process.env.TEST_USER_PASSWORD;
+    
+    if (!viewerEmail || !viewerPassword) {
+      test.skip();
+      return;
+    }
+    
+    await page.goto('/login');
+    await page.fill('input[type="email"]', viewerEmail);
+    await page.fill('input[type="password"]', viewerPassword);
     await page.click('button[type="submit"]');
 
     // Wait for navigation to dashboard
@@ -79,13 +90,8 @@ test.describe('Admin Access Control', () => {
   });
 
   test('Admin navigation menu items work correctly', async ({ page }) => {
-    // Login as admin
-    await page.fill('input[type="email"]', process.env.TEST_ADMIN_EMAIL || 'admin@test.com');
-    await page.fill('input[type="password"]', process.env.TEST_ADMIN_PASSWORD || 'admin123');
-    await page.click('button[type="submit"]');
-
-    // Wait for dashboard
-    await page.waitForURL('**/dashboard');
+    const success = await loginAsAdmin(page);
+    expect(success).toBe(true);
 
     // Find and click "Usuarios" in admin section
     await page.locator('aside').locator('text=Usuarios').click();

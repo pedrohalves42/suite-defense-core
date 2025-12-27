@@ -1,8 +1,10 @@
 import { test, expect } from '@playwright/test';
 import crypto from 'crypto';
+import { hasRequiredEnvVars } from './helpers/backend-client';
+import { TEST_CONFIG } from './test-config';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://iavbnmduxpxhwubqrzzn.supabase.co';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || '***REMOVED***';
+const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '***REMOVED***';
 
 const CONCURRENT_AGENTS = 10;
 const POLL_ITERATIONS = 5;
@@ -23,15 +25,20 @@ test.describe('Load Testing - Multiple Agents', () => {
   let agents: AgentCredentials[] = [];
 
   test.beforeAll(async ({ request }) => {
-    // Login como admin
+    if (!hasRequiredEnvVars()) {
+      console.log('[SKIP] Missing required environment variables');
+      return;
+    }
+
+    // Login como admin using TEST_CONFIG
     const loginResponse = await request.post(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Content-Type': 'application/json',
       },
       data: {
-        email: process.env.TEST_ADMIN_EMAIL || 'pedrohalves42@gmail.com',
-        password: process.env.TEST_ADMIN_PASSWORD || 'Test1234!',
+        email: TEST_CONFIG.credentials.email,
+        password: TEST_CONFIG.credentials.password,
       },
     });
 
@@ -40,6 +47,11 @@ test.describe('Load Testing - Multiple Agents', () => {
   });
 
   test('1. Setup - Enroll multiple agents', async ({ request }) => {
+    if (!hasRequiredEnvVars()) {
+      test.skip();
+      return;
+    }
+
     const enrollmentPromises = [];
 
     for (let i = 0; i < CONCURRENT_AGENTS; i++) {
@@ -86,10 +98,15 @@ test.describe('Load Testing - Multiple Agents', () => {
 
     agents = await Promise.all(enrollmentPromises);
     expect(agents.length).toBe(CONCURRENT_AGENTS);
-    console.log(`? ${CONCURRENT_AGENTS} agents enrolled successfully`);
+    console.log(`✓ ${CONCURRENT_AGENTS} agents enrolled successfully`);
   });
 
   test('2. Load Test - Concurrent heartbeats', async ({ request }) => {
+    if (!hasRequiredEnvVars() || agents.length === 0) {
+      test.skip();
+      return;
+    }
+
     const startTime = Date.now();
     const heartbeatPromises = [];
 
@@ -129,6 +146,11 @@ test.describe('Load Testing - Multiple Agents', () => {
   });
 
   test('3. Load Test - Sequential poll-jobs', async ({ request }) => {
+    if (!hasRequiredEnvVars() || agents.length === 0) {
+      test.skip();
+      return;
+    }
+
     // Criar jobs para todos os agents
     const jobCreationPromises = agents.map(agent => 
       request.post(`${SUPABASE_URL}/functions/v1/create-job`, {
@@ -196,6 +218,11 @@ test.describe('Load Testing - Multiple Agents', () => {
   });
 
   test('4. Load Test - Mixed operations', async ({ request }) => {
+    if (!hasRequiredEnvVars() || agents.length === 0) {
+      test.skip();
+      return;
+    }
+
     const startTime = Date.now();
     const operations = [];
 
@@ -267,6 +294,11 @@ test.describe('Load Testing - Multiple Agents', () => {
   });
 
   test('5. Performance - Response time analysis', async ({ request }) => {
+    if (!hasRequiredEnvVars() || agents.length === 0) {
+      test.skip();
+      return;
+    }
+
     const responseTimes = [];
 
     for (const agent of agents) {
@@ -302,6 +334,11 @@ test.describe('Load Testing - Multiple Agents', () => {
   });
 
   test('6. Load Test - Concurrent system metrics submission', async ({ request }) => {
+    if (!hasRequiredEnvVars() || agents.length === 0) {
+      test.skip();
+      return;
+    }
+
     const startTime = Date.now();
     const metricsPromises = [];
 
@@ -348,6 +385,11 @@ test.describe('Load Testing - Multiple Agents', () => {
   });
 
   test('7. Sustained Load - Heartbeats + Metrics over 30 seconds', async ({ request }) => {
+    if (!hasRequiredEnvVars() || agents.length === 0) {
+      test.skip();
+      return;
+    }
+
     console.log(`\n=== Sustained Load Test (30s) ===`);
     const testDuration = 30000; // 30 seconds
     const intervalMs = 2000; // Every 2 seconds

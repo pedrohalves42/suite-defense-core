@@ -1,15 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { loginAsAdmin } from './helpers/auth';
 
 test.describe('Installation Pipeline Monitor Dashboard', () => {
   test.beforeEach(async ({ page }) => {
-    // Login as admin
-    await page.goto('/login');
-    await page.fill('input[type="email"]', 'admin@test.com');
-    await page.fill('input[type="password"]', 'Test123!@#');
-    await page.click('button[type="submit"]');
-    
-    // Wait for redirect
-    await page.waitForURL('**/admin/**');
+    const success = await loginAsAdmin(page);
+    expect(success).toBe(true);
     
     // Navigate to Installation Pipeline Monitor
     await page.goto('/admin/installation-pipeline');

@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
-import * as crypto from 'crypto';
-import * as fs from 'fs';
-import * as path from 'path';
+import { loginAsAdmin } from './helpers/auth';
+import { TEST_CONFIG } from './test-config';
 
 /**
  * FASE 3.2: Teste E2E Completo do Fluxo do Instalador
@@ -16,19 +15,11 @@ import * as path from 'path';
  */
 
 test.describe('Fluxo completo do instalador do agente', () => {
-  const TEST_ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL || 'pedrohalves42@gmail.com';
-  const TEST_ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD || 'Test1234!';
   const TEST_AGENT_NAME = `test-complete-flow-${Date.now()}`;
 
   test.beforeEach(async ({ page }) => {
-    // Login como admin
-    await page.goto('/login');
-    await page.fill('input[type="email"]', TEST_ADMIN_EMAIL);
-    await page.fill('input[type="password"]', TEST_ADMIN_PASSWORD);
-    await page.click('button[type="submit"]');
-    
-    // Aguardar redirecionamento
-    await page.waitForURL('**/agent-installer', { timeout: 10000 });
+    const success = await loginAsAdmin(page);
+    expect(success).toBe(true);
   });
 
   test('Gerar instalador Windows e validar conteudo completo', async ({ page }) => {
