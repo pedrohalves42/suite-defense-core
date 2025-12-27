@@ -498,6 +498,10 @@ verify_jwt = true
 [functions.evaluate-playbook-triggers]
 verify_jwt = false
 
+# === Subscription Management V4 ===
+[functions.manage-subscription]
+verify_jwt = true
+
 [functions.execute-playbook-action]
 verify_jwt = true
 

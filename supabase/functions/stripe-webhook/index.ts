@@ -129,7 +129,37 @@ Deno.serve(async (request) => {
         console.log(`[STRIPE-WEBHOOK] Processing subscription: ${subscription.id}`);
 
         const customerId = subscription.customer as string;
-        const quantity = subscription.items.data[0]?.quantity || 1;
+        
+        // V4: Process ALL line items to separate base plan from addons
+        let baseDevices = 0;
+        let addonDevices = 0;
+        let basePriceId: string | null = null;
+        
+        // Known addon price IDs (V4)
+        const ADDON_PRICE_IDS = [
+          'price_1Sj53iCfJUj9L8duCCU8qSN2', // starter addon
+          'price_1Sj542CfJUj9L8duKIjH3eOk', // business addon
+        ];
+        
+        for (const item of subscription.items.data) {
+          const priceId = item.price.id;
+          const quantity = item.quantity || 1;
+          
+          if (ADDON_PRICE_IDS.includes(priceId)) {
+            // This is an addon - quantity IS the number of extra devices
+            addonDevices += quantity;
+            console.log(`[STRIPE-WEBHOOK] Addon detected: ${priceId}, quantity: ${quantity}`);
+          } else {
+            // This is the base plan
+            basePriceId = priceId;
+            baseDevices = quantity; // Usually 1 for base plan
+            console.log(`[STRIPE-WEBHOOK] Base plan detected: ${priceId}, quantity: ${quantity}`);
+          }
+        }
+        
+        const totalDevices = baseDevices + addonDevices;
+        console.log(`[STRIPE-WEBHOOK] Device breakdown: base=${baseDevices}, addon=${addonDevices}, total=${totalDevices}`);
+
         const status = subscription.status;
         const trialEnd = subscription.trial_end 
           ? new Date(subscription.trial_end * 1000).toISOString() 
@@ -147,13 +177,14 @@ Deno.serve(async (request) => {
           break;
         }
 
-        // Update subscription
+        // Update subscription with V4 fields
         const { error: updateError } = await supabase
           .from("tenant_subscriptions")
           .update({
             stripe_subscription_id: subscription.id,
             status: status,
-            device_quantity: quantity,
+            device_quantity: totalDevices, // Total devices
+            addon_devices: addonDevices, // V4: Separate addon count
             trial_end: trialEnd,
             current_period_end: currentPeriodEnd,
             updated_at: new Date().toISOString(),
@@ -165,16 +196,33 @@ Deno.serve(async (request) => {
         } else {
           console.log(`[STRIPE-WEBHOOK] Subscription updated for tenant: ${tenantSub.tenant_id}`);
           
+          // Log subscription event for audit
+          const eventType = event.type === "customer.subscription.created" ? "subscription_created" : "subscription_updated";
+          await supabase.from("subscription_events").insert({
+            tenant_id: tenantSub.tenant_id,
+            event_type: eventType,
+            new_devices: totalDevices,
+            addon_quantity: addonDevices,
+            stripe_event_id: event.id,
+            stripe_subscription_id: subscription.id,
+            metadata: {
+              base_devices: baseDevices,
+              addon_devices: addonDevices,
+              base_price_id: basePriceId,
+              status: status,
+            },
+          });
+          
           // Get plan name for feature sync
           const planName = metadata?.plan_name;
           const maxDevices = metadata?.max_devices ? parseInt(metadata.max_devices) : null;
 
           if (planName) {
-            // Sync tenant features
+            // Sync tenant features with total devices
             await supabase.rpc("ensure_tenant_features", {
               p_tenant_id: tenantSub.tenant_id,
               p_plan_name: planName,
-              p_device_quantity: maxDevices || quantity,
+              p_device_quantity: maxDevices || totalDevices,
             });
           } else if (tenantSub.plan_id) {
             // Fallback: get plan from DB
@@ -188,7 +236,7 @@ Deno.serve(async (request) => {
               await supabase.rpc("ensure_tenant_features", {
                 p_tenant_id: tenantSub.tenant_id,
                 p_plan_name: plan.name,
-                p_device_quantity: plan.max_devices || quantity,
+                p_device_quantity: plan.max_devices || totalDevices,
               });
             }
           }
