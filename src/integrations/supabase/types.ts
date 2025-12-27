@@ -10642,12 +10642,11 @@ export type Database = {
       validate_agent_release_integrity: {
         Args: never
         Returns: {
-          is_latest: boolean
+          channel: string
           is_valid: boolean
-          issue: string
           platform: string
-          script_size: number
-          sha256: string
+          release_id: string
+          validation_notes: string
           version: string
         }[]
       }

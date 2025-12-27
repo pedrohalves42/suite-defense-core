@@ -27,6 +27,7 @@ const RULE_ICONS: Record<string, React.ReactNode> = {
   'UPDATE_BLOCK_004': <Ban className="h-5 w-5 text-purple-500" />,
   'AGENT_IMPRODUTIVE_005': <AlertTriangle className="h-5 w-5 text-yellow-500" />,
   'AUTO_REVERT_THROTTLE_006': <RefreshCcw className="h-5 w-5 text-green-500" />,
+  'SILENT_FAILURE_007': <AlertTriangle className="h-5 w-5 text-red-600" />,
 };
 
 const RULE_NAMES: Record<string, string> = {
@@ -36,6 +37,7 @@ const RULE_NAMES: Record<string, string> = {
   'UPDATE_BLOCK_004': 'Bloqueio de Versões Problemáticas',
   'AGENT_IMPRODUTIVE_005': 'Detecção de Agentes Improdutivos',
   'AUTO_REVERT_THROTTLE_006': 'Auto-Reversão de Throttle',
+  'SILENT_FAILURE_007': 'Detector de Falhas Silenciosas',
 };
 
 const RULE_DESCRIPTIONS: Record<string, string> = {
@@ -45,6 +47,7 @@ const RULE_DESCRIPTIONS: Record<string, string> = {
   'UPDATE_BLOCK_004': 'Bloqueia atualizações problemáticas para evitar que mais computadores sejam afetados',
   'AGENT_IMPRODUTIVE_005': 'Reduz automaticamente a velocidade de agentes online mas que não processam jobs, liberando recursos do sistema. Auto-reverte após 2 horas.',
   'AUTO_REVERT_THROTTLE_006': 'Remove throttle automaticamente após período de resfriamento (2h). Desativada por padrão - ativar apenas quando o sistema de auto-revert estiver pronto.',
+  'SILENT_FAILURE_007': 'Detecta jobs que completaram sem produzir dados esperados. Cria alertas P0 para violações de integridade do pipeline (Zero Trust).',
 };
 
 const PARAM_LABELS: Record<string, string> = {
