@@ -18,8 +18,14 @@ import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// Dynamic imports for jsPDF to avoid SSR/build issues
+const loadJsPDF = async () => {
+  const [jsPDFModule, autoTableModule] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable')
+  ]);
+  return { jsPDF: jsPDFModule.default, autoTable: autoTableModule.default };
+};
 
 interface EvidenceLog {
   id: string;
@@ -183,7 +189,8 @@ const ComplianceTimeline: React.FC = () => {
   };
 
   // Export to PDF
-  const exportPDF = () => {
+  const exportPDF = async () => {
+    const { jsPDF, autoTable } = await loadJsPDF();
     const doc = new jsPDF();
     
     // Header
