@@ -38,25 +38,33 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate internal secret for scheduled calls
-    const internalSecret = req.headers.get('x-internal-secret');
-    const expectedSecret = Deno.env.get('INTERNAL_SECRET');
-    
-    // Allow if internal secret matches OR if called via cron (no auth needed for scheduled)
-    const isScheduledCall = req.headers.get('x-cron-trigger') === 'true';
-    const isInternalCall = internalSecret && internalSecret === expectedSecret;
-    
-    // For non-scheduled calls, require JWT auth
-    if (!isScheduledCall && !isInternalCall) {
-      const authHeader = req.headers.get('Authorization');
-      if (!authHeader) {
-        console.log('[rules-engine] Unauthorized: No auth header');
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    // Parse body to check source
+    let body: { source?: string } = {};
+    try {
+      body = await req.json();
+    } catch {
+      // Empty body is fine for cron calls
     }
+
+    // Validate origin - accept if:
+    // 1. source === 'cron' (scheduled pg_cron call)
+    // 2. Has valid internal secret header
+    // 3. Has valid JWT auth header
+    const internalSecret = req.headers.get('x-internal-secret');
+    const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+    const isCronCall = body.source === 'cron';
+    const isInternalCall = internalSecret && internalSecret === expectedSecret;
+    const authHeader = req.headers.get('Authorization');
+    
+    if (!isCronCall && !isInternalCall && !authHeader) {
+      console.log('[autonomous-safe-mode] Unauthorized: No valid origin');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[autonomous-safe-mode] Authorized call from: ${isCronCall ? 'cron' : isInternalCall ? 'internal' : 'jwt'}`);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

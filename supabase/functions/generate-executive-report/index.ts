@@ -122,11 +122,38 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Parse request body
+    let body: { tenantId?: string; date?: string; source?: string } = {};
+    try {
+      body = await req.json();
+    } catch {
+      // Empty body is fine for cron calls
+    }
+
+    // Validate origin - accept if:
+    // 1. source === 'cron' (scheduled pg_cron call)
+    // 2. Has valid internal secret header
+    // 3. Has valid JWT auth header
+    const internalSecret = req.headers.get('x-internal-secret');
+    const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+    const isCronCall = body.source === 'cron';
+    const isInternalCall = internalSecret && internalSecret === expectedSecret;
+    const authHeader = req.headers.get('Authorization');
+    
+    if (!isCronCall && !isInternalCall && !authHeader) {
+      console.log('[generate-executive-report] Unauthorized: No valid origin');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[generate-executive-report] Authorized call from: ${isCronCall ? 'cron' : isInternalCall ? 'internal' : 'jwt'}`);
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     
-    // Parse request
-    const { tenantId, date } = await req.json().catch(() => ({}));
-    const targetDate = date || new Date().toISOString().split('T')[0];
+    const tenantId = body.tenantId;
+    const targetDate = body.date || new Date().toISOString().split('T')[0];
 
     // If tenantId provided, generate for specific tenant
     // Otherwise, generate for all tenants (cron job mode)
