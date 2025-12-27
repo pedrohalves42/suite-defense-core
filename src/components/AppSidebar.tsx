@@ -10,6 +10,7 @@ import {
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { useCriticalInsights } from '@/hooks/useCriticalInsights';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -31,6 +32,7 @@ interface MenuItem {
 export const AppSidebar = () => {
   const { isAdmin } = useIsAdmin();
   const { isSuperAdmin } = useSuperAdmin();
+  const { data: criticalInsightsCount = 0 } = useCriticalInsights();
   const location = useLocation();
   
   const [collapsed, setCollapsed] = useState(() => {
@@ -125,7 +127,7 @@ export const AppSidebar = () => {
     { icon: Code, label: 'API', to: '/admin/api-docs', section: 'infrastructure' },
     
     // === INTELIGÊNCIA ARTIFICIAL ===
-    { icon: Brain, label: 'Insights', to: '/admin/ai-insights', section: 'ai' },
+    { icon: Brain, label: 'Insights', to: '/admin/ai-insights', section: 'ai', badge: criticalInsightsCount },
     { icon: CheckCircle, label: 'Ações', to: '/admin/ai-actions', section: 'ai' },
     { icon: BarChart3, label: 'Métricas', to: '/admin/ai-metrics', section: 'ai' },
     
