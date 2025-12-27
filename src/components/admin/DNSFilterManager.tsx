@@ -117,7 +117,7 @@ export function DNSFilterManager() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="dns-filter-manager">
       {/* Feature Toggle Card */}
       <Card className="border-l-4 border-l-primary">
         <CardHeader>
@@ -137,6 +137,7 @@ export function DNSFilterManager() {
               </Label>
               <Switch
                 id="dns-filter-toggle"
+                data-testid="dns-filter-toggle"
                 checked={isEnabled}
                 onCheckedChange={(checked) => enableDNSFilter.mutate(checked)}
                 disabled={enableDNSFilter.isPending}
@@ -147,7 +148,7 @@ export function DNSFilterManager() {
       </Card>
 
       {!isEnabled && (
-        <Alert>
+        <Alert data-testid="dns-filter-disabled-alert">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>DNS Filter desabilitado</AlertTitle>
           <AlertDescription>
@@ -166,8 +167,8 @@ export function DNSFilterManager() {
             className="space-y-6"
           >
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card>
+            <div className="grid gap-4 md:grid-cols-4" data-testid="dns-filter-stats">
+              <Card data-testid="dns-filter-stats-online">
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-primary/10">
@@ -181,7 +182,7 @@ export function DNSFilterManager() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card data-testid="dns-filter-stats-installed">
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-success/10">
@@ -195,7 +196,7 @@ export function DNSFilterManager() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card data-testid="dns-filter-stats-pending">
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-warning/10">
@@ -209,7 +210,7 @@ export function DNSFilterManager() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card data-testid="dns-filter-stats-synced">
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-info/10">
@@ -234,6 +235,7 @@ export function DNSFilterManager() {
                       variant="outline"
                       size="sm"
                       onClick={() => refetch()}
+                      data-testid="dns-filter-refresh"
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Atualizar
@@ -243,6 +245,7 @@ export function DNSFilterManager() {
                       size="sm"
                       onClick={() => setupAllAgents.mutate()}
                       disabled={setupAllAgents.isPending || stats.onlineAgents === stats.installedCount}
+                      data-testid="dns-filter-install-all"
                     >
                       <Download className="h-4 w-4 mr-2" />
                       {setupAllAgents.isPending ? 'Instalando...' : 'Instalar em Todos'}
@@ -252,6 +255,7 @@ export function DNSFilterManager() {
                       size="sm"
                       onClick={() => syncBlockedWebsites.mutate(undefined)}
                       disabled={syncBlockedWebsites.isPending || stats.onlineAgents === 0}
+                      data-testid="dns-filter-sync-all"
                     >
                       <Send className="h-4 w-4 mr-2" />
                       {syncBlockedWebsites.isPending ? 'Sincronizando...' : 'Sincronizar Todos'}
@@ -261,6 +265,7 @@ export function DNSFilterManager() {
                       size="sm"
                       onClick={() => collectDNSBlocks.mutate(undefined)}
                       disabled={collectDNSBlocks.isPending || stats.onlineAgents === 0}
+                      data-testid="dns-filter-collect-events"
                     >
                       <Database className="h-4 w-4 mr-2" />
                       {collectDNSBlocks.isPending ? 'Coletando...' : 'Coletar Eventos'}
@@ -301,11 +306,12 @@ export function DNSFilterManager() {
                 )}
 
                 {/* Agent List */}
-                <div className="border rounded-lg">
+                <div className="border rounded-lg" data-testid="dns-filter-agent-list">
                   <div className="flex items-center gap-3 p-3 border-b bg-muted/50">
                     <Checkbox
                       checked={selectedAgents.size === agentStatuses.length && agentStatuses.length > 0}
                       onCheckedChange={handleSelectAll}
+                      data-testid="dns-filter-select-all"
                     />
                     <span className="text-sm font-medium">Selecionar todos</span>
                   </div>
@@ -314,6 +320,7 @@ export function DNSFilterManager() {
                       {agentStatuses.map(agent => (
                         <div
                           key={agent.agentId}
+                          data-testid="dns-filter-agent-row"
                           className="flex items-center justify-between p-3 hover:bg-accent/50 transition-colors"
                         >
                           <div className="flex items-center gap-3">
@@ -349,7 +356,7 @@ export function DNSFilterManager() {
                         </div>
                       ))}
                       {agentStatuses.length === 0 && (
-                        <div className="text-center py-8 text-muted-foreground">
+                        <div className="text-center py-8 text-muted-foreground" data-testid="dns-filter-empty-state">
                           Nenhum computador encontrado
                         </div>
                       )}

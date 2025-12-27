@@ -1207,6 +1207,7 @@ const AgentInstaller = () => {
             <div className="relative">
               <Input
                 id="agentName"
+                data-testid="agent-name-input"
                 placeholder="ex: servidor-web-01"
                 value={agentName}
                 onChange={(e) => setAgentName(e.target.value)}
@@ -1214,13 +1215,16 @@ const AgentInstaller = () => {
                 className={agentNameError && agentNameError.startsWith('[ERROR] ') ? 'border-red-500' : ''}
               />
               {isCheckingName && (
-                <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
+                <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" data-testid="name-checking-spinner" />
               )}
             </div>
             {agentNameError && (
-              <p className={`text-sm mt-1 ${
-                agentNameError.startsWith('[OK] ') ? 'text-green-600' : 'text-red-600'
-              }`}>
+              <p 
+                data-testid={agentNameError.startsWith('[OK] ') ? 'validation-success' : 'validation-error'}
+                className={`text-sm mt-1 ${
+                  agentNameError.startsWith('[OK] ') ? 'text-green-600' : 'text-red-600'
+                }`}
+              >
                 {agentNameError}
               </p>
             )}
@@ -1228,17 +1232,17 @@ const AgentInstaller = () => {
 
           <div className="space-y-2">
             <Label>Plataforma</Label>
-            <RadioGroup value={platform} onValueChange={(v: any) => setPlatform(v)} disabled={isGenerating || exeBuildStatus === 'building'}>
+            <RadioGroup value={platform} onValueChange={(v: any) => setPlatform(v)} disabled={isGenerating || exeBuildStatus === 'building'} data-testid="platform-selector">
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="windows" id="windows" />
+                <RadioGroupItem value="windows" id="windows" data-testid="platform-windows" />
                 <Label htmlFor="windows" className="cursor-pointer">Windows (PowerShell)</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="linux" id="linux" />
+                <RadioGroupItem value="linux" id="linux" data-testid="platform-linux" />
                 <Label htmlFor="linux" className="cursor-pointer">Linux (Bash)</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="macos" id="macos" />
+                <RadioGroupItem value="macos" id="macos" data-testid="platform-macos" />
                 <Label htmlFor="macos" className="cursor-pointer flex items-center gap-2">
                   <span>?</span> macOS (Bash)
                 </Label>
@@ -1337,6 +1341,7 @@ const AgentInstaller = () => {
                 onClick={generateCopyPasteCommand} 
                 disabled={!isNameValid || isGenerating || circuitBreakerOpen}
                 className="w-full"
+                data-testid="generate-command-btn"
               >
                 {isGenerating ? (
                   <>
@@ -1352,11 +1357,11 @@ const AgentInstaller = () => {
               </Button>
 
               {installCommand && (
-                <div className="space-y-2">
+                <div className="space-y-2" data-testid="install-command-container">
                   <Label>Comando de Instalacao</Label>
                   <div className="flex gap-2">
-                    <Input value={installCommand} readOnly className="font-mono text-xs" />
-                    <Button onClick={copyToClipboard} variant="outline" size="icon">
+                    <Input value={installCommand} readOnly className="font-mono text-xs" data-testid="install-command" />
+                    <Button onClick={copyToClipboard} variant="outline" size="icon" data-testid="copy-command-btn">
                       <Copy className="h-4 w-4" />
                     </Button>
                   </div>
