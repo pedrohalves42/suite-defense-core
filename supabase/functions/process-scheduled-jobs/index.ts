@@ -56,9 +56,13 @@ Deno.serve(async (req) => {
     }
 
     // 2. Process recurring jobs that are due
+    // IMPROVEMENT: Join with agents to check if agent is online (heartbeat within last 30 min)
     const { data: recurringJobs, error: recurringError } = await supabase
       .from('jobs')
-      .select('*')
+      .select(`
+        *,
+        agent:agents!jobs_agent_id_fkey(id, last_heartbeat, status)
+      `)
       .eq('is_recurring', true)
       .eq('approved', true)
       .not('next_run_at', 'is', null)
@@ -72,9 +76,38 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Found ${recurringJobs?.length || 0} recurring jobs to process`);
 
+    let skippedOfflineCount = 0;
+    
     if (recurringJobs && recurringJobs.length > 0) {
       for (const recurringJob of recurringJobs) {
         try {
+          // IMPROVEMENT: Skip jobs for offline agents
+          const agent = recurringJob.agent;
+          const isOnline = agent && 
+            agent.status === 'active' && 
+            agent.last_heartbeat && 
+            new Date(agent.last_heartbeat) > new Date(Date.now() - 30 * 60 * 1000); // 30 min
+          
+          if (!isOnline) {
+            skippedOfflineCount++;
+            console.log(`[${requestId}] Skipping recurring job ${recurringJob.id} - agent offline:`, {
+              agent_name: recurringJob.agent_name,
+              last_heartbeat: agent?.last_heartbeat || 'never',
+              status: agent?.status || 'unknown'
+            });
+            
+            // Still update next_run_at to avoid infinite retries
+            const { data: nextRunData } = await supabase.rpc('calculate_next_run', { 
+              pattern: recurringJob.recurrence_pattern,
+              from_time: now
+            });
+            
+            if (nextRunData) {
+              await supabase.from('jobs').update({ next_run_at: nextRunData }).eq('id', recurringJob.id);
+            }
+            continue;
+          }
+
           // Calculate next run time
           const { data: nextRunData, error: nextRunError } = await supabase
             .rpc('calculate_next_run', { 
@@ -92,6 +125,7 @@ Deno.serve(async (req) => {
             .from('jobs')
             .insert({
               agent_name: recurringJob.agent_name,
+              agent_id: recurringJob.agent_id,
               type: recurringJob.type,
               payload: recurringJob.payload,
               status: 'queued',
@@ -127,11 +161,14 @@ Deno.serve(async (req) => {
         }
       }
     }
+    
+    console.log(`[${requestId}] Skipped ${skippedOfflineCount} jobs for offline agents`);
 
     const result = {
       success: true,
       processedScheduled: processedCount,
       createdRecurring: createdRecurringCount,
+      skippedOffline: skippedOfflineCount,
       timestamp: now
     };
 
