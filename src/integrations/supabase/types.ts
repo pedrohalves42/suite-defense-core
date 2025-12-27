@@ -9667,45 +9667,25 @@ export type Database = {
         }
         Returns: string
       }
-      finalize_job_execution:
-        | {
-            Args: {
-              p_agent_id: string
-              p_claimed_at: string
-              p_error_message?: string
-              p_execution_hash?: string
-              p_execution_id: string
-              p_execution_index?: number
-              p_exit_code?: number
-              p_job_id: string
-              p_output_hash?: string
-              p_previous_execution_hash?: string
-              p_result_signature?: string
-              p_signature_verified?: boolean
-              p_started_at: string
-              p_status: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_agent_id: string
-              p_error_message?: string
-              p_execution_hash?: string
-              p_execution_id: string
-              p_execution_index?: number
-              p_execution_time_seconds?: number
-              p_finished_at?: string
-              p_job_id: string
-              p_output_hash?: string
-              p_previous_execution_hash?: string
-              p_result_signature?: string
-              p_signature_verified?: boolean
-              p_started_at?: string
-              p_status: string
-            }
-            Returns: Json
-          }
+      finalize_job_execution: {
+        Args: {
+          p_agent_id: string
+          p_error_message?: string
+          p_execution_hash?: string
+          p_execution_id: string
+          p_execution_index?: number
+          p_execution_time_seconds?: number
+          p_finished_at?: string
+          p_job_id: string
+          p_output_hash?: string
+          p_previous_execution_hash?: string
+          p_result_signature?: string
+          p_signature_verified?: boolean
+          p_started_at?: string
+          p_status: string
+        }
+        Returns: Json
+      }
       get_agent_disk_details: {
         Args: { p_agent_id: string }
         Returns: {
