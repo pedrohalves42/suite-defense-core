@@ -10233,6 +10233,17 @@ export type Database = {
           tenant_id: string
         }[]
       }
+      detect_throttle_revert_candidates: {
+        Args: never
+        Returns: {
+          agent_id: string
+          agent_name: string
+          minutes_since_execution: number
+          pending_jobs: number
+          tenant_id: string
+          throttled_at: string
+        }[]
+      }
       detect_version_block_candidates: {
         Args: {
           p_affected_agents_count?: number

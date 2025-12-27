@@ -120,7 +120,7 @@ export function useAgentActions() {
     onSuccess: (data) => {
       toast({
         title: 'Motor de regras executado',
-        description: `Processadas ${data?.rules_processed || 0} regras`,
+        description: `Processadas ${data?.rules_evaluated || 0} regras, ${data?.total_actions || 0} ações`,
       });
       queryClient.invalidateQueries({ queryKey: ['decision-events'] });
       queryClient.invalidateQueries({ queryKey: ['agents'] });

@@ -127,6 +127,14 @@ Deno.serve(async (req) => {
               totalActions += improdutiveResult.processed_count;
             }
             break;
+
+          case 'AUTO_REVERT_THROTTLE_006':
+            const revertResult = await processAutoRevertThrottle(supabase, rule);
+            if (revertResult.processed_count > 0) {
+              allResults.push(revertResult);
+              totalActions += revertResult.processed_count;
+            }
+            break;
             
           default:
             console.log(`[rules-engine] Unknown rule code: ${rule.code}, skipping`);
@@ -603,6 +611,94 @@ async function processImprodutiveRule(supabase: any, rule: any): Promise<RuleRes
     });
 
     console.log(`[AGENT_IMPRODUTIVE_005] Throttled improdutive agent ${candidate.agent_name}`);
+  }
+
+  return { rule_code: rule.code, processed_count: agents.length, agents };
+}
+
+// =============================================================
+// AUTO_REVERT_THROTTLE_006: Remove throttle após estabilização
+// =============================================================
+async function processAutoRevertThrottle(supabase: any, rule: any): Promise<RuleResult> {
+  console.log('[AUTO_REVERT_THROTTLE_006] Checking revert candidates');
+
+  const { data: candidates, error } = await supabase
+    .rpc('detect_throttle_revert_candidates');
+
+  if (error) {
+    console.error('[AUTO_REVERT_THROTTLE_006] Detection error:', error);
+    throw error;
+  }
+
+  console.log(`[AUTO_REVERT_THROTTLE_006] Found ${candidates?.length || 0} revert candidates`);
+
+  const agents: RuleResult['agents'] = [];
+
+  for (const candidate of candidates || []) {
+    const actionsExecuted: ActionExecuted[] = [];
+
+    // Remove throttle
+    const { error: revertError } = await supabase
+      .rpc('remove_agent_throttle', {
+        p_agent_id: candidate.agent_id
+      });
+
+    if (revertError) {
+      console.error(`[AUTO_REVERT_THROTTLE_006] Error reverting ${candidate.agent_name}:`, revertError);
+      actionsExecuted.push({ type: 'REMOVE_THROTTLE', success: false, error: revertError.message });
+      continue;
+    }
+
+    actionsExecuted.push({ type: 'REMOVE_THROTTLE', success: true });
+
+    // Create AI Insight
+    const { error: insightError } = await supabase.from('ai_insights').insert({
+      tenant_id: candidate.tenant_id,
+      title: `Throttle removido: ${candidate.agent_name}`,
+      description: `O agente voltou a executar jobs normalmente (última execução: ${Math.round(candidate.minutes_since_execution || 0)}min, pending: ${candidate.pending_jobs}) e teve o throttle removido automaticamente após cooldown de 2h.`,
+      severity: 'low',
+      insight_type: 'agent_recovered',
+      evidence: {
+        throttled_at: candidate.throttled_at,
+        minutes_since_execution: candidate.minutes_since_execution,
+        pending_jobs: candidate.pending_jobs,
+        reverted_at: new Date().toISOString()
+      },
+      recommendation: 'Nenhuma ação necessária. O agente está operando normalmente.',
+      acknowledged: false
+    });
+
+    actionsExecuted.push({ 
+      type: 'CREATE_AI_INSIGHT', 
+      success: !insightError,
+      error: insightError?.message 
+    });
+
+    // Record decision event
+    await supabase.from('decision_events').insert({
+      tenant_id: candidate.tenant_id,
+      rule_code: rule.code,
+      agent_id: candidate.agent_id,
+      agent_name: candidate.agent_name,
+      action: 'REMOVE_THROTTLE',
+      evidence: {
+        throttled_at: candidate.throttled_at,
+        minutes_since_execution: candidate.minutes_since_execution,
+        pending_jobs: candidate.pending_jobs,
+        cooldown_hours: 2,
+        reverted_at: new Date().toISOString()
+      },
+      actions_executed: actionsExecuted
+    });
+
+    agents.push({
+      agent_id: candidate.agent_id,
+      agent_name: candidate.agent_name,
+      action: 'REMOVE_THROTTLE',
+      reason: 'Estabilização confirmada após cooldown de 2h'
+    });
+
+    console.log(`[AUTO_REVERT_THROTTLE_006] Reverted throttle for ${candidate.agent_name}`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
