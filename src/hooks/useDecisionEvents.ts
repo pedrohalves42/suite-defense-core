@@ -30,6 +30,14 @@ export interface DecisionEvent {
     total_agents?: number;
     failed_agents?: number;
     failure_rate?: number;
+    // Improdutive agent evidence (AGENT_IMPRODUTIVE_005)
+    health_status?: string;
+    minutes_since_heartbeat?: number;
+    minutes_since_execution?: number;
+    stale_queued_jobs?: number;
+    pending_jobs?: number;
+    auto_revert_scheduled?: boolean;
+    auto_revert_after_hours?: number;
     [key: string]: unknown;
   };
   actions_executed: Array<{
