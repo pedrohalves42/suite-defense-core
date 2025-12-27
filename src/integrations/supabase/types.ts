@@ -9630,6 +9630,20 @@ export type Database = {
           break_count: number
         }[]
       }
+      detect_critical_failure_pattern: {
+        Args: { p_min_failures?: number; p_window_minutes?: number }
+        Returns: {
+          agent_id: string
+          agent_name: string
+          failure_count: number
+          failure_type: string
+          first_failure: string
+          heartbeat_active: boolean
+          last_failure: string
+          last_heartbeat: string
+          tenant_id: string
+        }[]
+      }
       detect_duplicate_executions: {
         Args: { p_hours_back?: number }
         Returns: {
@@ -9664,6 +9678,15 @@ export type Database = {
           p_tenant_id: string
         }
         Returns: undefined
+      }
+      enter_autonomous_safe_mode: {
+        Args: {
+          p_agent_id: string
+          p_failure_count: number
+          p_failure_type: string
+          p_reason: string
+        }
+        Returns: Json
       }
       evaluate_playbook_trigger: {
         Args: {
@@ -9922,6 +9945,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      process_autonomous_safe_mode: { Args: never; Returns: Json }
       process_safe_mode_entry: {
         Args: {
           p_agent_id: string

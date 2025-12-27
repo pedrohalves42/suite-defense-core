@@ -521,3 +521,8 @@ verify_jwt = true
 # === P1: Agent Key Registration (public key rotation) ===
 [functions.register-agent-key]
 verify_jwt = false
+
+# === FASE 1: Autonomous SAFE_MODE (every 2 minutes) ===
+[functions.autonomous-safe-mode]
+verify_jwt = false
+schedule = "*/2 * * * *"
