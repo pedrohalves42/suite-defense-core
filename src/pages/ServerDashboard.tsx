@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
-import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings, BarChart3, PieChart, LineChart, CheckCircle2, XCircle, Info } from "lucide-react";
+import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings, BarChart3, PieChart, LineChart, CheckCircle2, XCircle, Info, Package } from "lucide-react";
+import { EvidenceBundleExport } from "@/components/admin/EvidenceBundleExport";
 import { IntegrityScoreCard } from "@/components/integrity/IntegrityScoreCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -991,10 +992,14 @@ const ServerDashboard = () => {
 
         {/* Tabs - Detalhes */}
         <Tabs defaultValue="agents" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-secondary">
+          <TabsList className="grid w-full grid-cols-5 bg-secondary">
             <TabsTrigger value="agents">Computadores</TabsTrigger>
             <TabsTrigger value="jobs">Tarefas</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
+            <TabsTrigger value="evidence" className="gap-1">
+              <Package className="h-3 w-3" />
+              Evidências
+            </TabsTrigger>
             <TabsTrigger value="security">Segurança</TabsTrigger>
           </TabsList>
 
@@ -1199,6 +1204,23 @@ const ServerDashboard = () => {
                     ))}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="evidence" className="mt-4">
+            <Card className="bg-gradient-card border-primary/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5" />
+                  Pacote de Evidências
+                </CardTitle>
+                <CardDescription>
+                  Exporte bundles de evidências criptograficamente verificáveis para auditoria
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <EvidenceBundleExport />
               </CardContent>
             </Card>
           </TabsContent>
