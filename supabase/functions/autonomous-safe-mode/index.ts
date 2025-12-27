@@ -135,6 +135,14 @@ Deno.serve(async (req) => {
               totalActions += revertResult.processed_count;
             }
             break;
+
+          case 'SILENT_FAILURE_007':
+            const silentResult = await processSilentFailureDetection(supabase, rule);
+            if (silentResult.processed_count > 0) {
+              allResults.push(silentResult);
+              totalActions += silentResult.processed_count;
+            }
+            break;
             
           default:
             console.log(`[rules-engine] Unknown rule code: ${rule.code}, skipping`);
@@ -699,6 +707,119 @@ async function processAutoRevertThrottle(supabase: any, rule: any): Promise<Rule
     });
 
     console.log(`[AUTO_REVERT_THROTTLE_006] Reverted throttle for ${candidate.agent_name}`);
+  }
+
+  return { rule_code: rule.code, processed_count: agents.length, agents };
+}
+
+// =============================================================
+// SILENT_FAILURE_007: Detecta jobs completed sem dados esperados
+// Framework: DETECÇÃO + BLOQUEIO + PROVA AUTOMÁTICA
+// =============================================================
+async function processSilentFailureDetection(supabase: any, rule: any): Promise<RuleResult> {
+  console.log('[SILENT_FAILURE_007] Detecting silent job failures');
+
+  const { data: failures, error } = await supabase
+    .rpc('detect_silent_job_failures');
+
+  if (error) {
+    console.error('[SILENT_FAILURE_007] Detection error:', error);
+    throw error;
+  }
+
+  console.log(`[SILENT_FAILURE_007] Found ${failures?.length || 0} silent failures`);
+
+  const agents: RuleResult['agents'] = [];
+  const processedTenants = new Map<string, typeof failures>();
+
+  // Agrupar por tenant para evitar alertas duplicados
+  for (const failure of failures || []) {
+    const existing = processedTenants.get(failure.tenant_id) || [];
+    existing.push(failure);
+    processedTenants.set(failure.tenant_id, existing);
+  }
+
+  for (const [tenantId, tenantFailures] of processedTenants) {
+    const actionsExecuted: ActionExecuted[] = [];
+
+    // Criar alerta P0
+    const { error: alertError } = await supabase.from('system_alerts').insert({
+      tenant_id: tenantId,
+      alert_type: 'job_integrity_violation',
+      severity: 'critical',
+      message: `${tenantFailures.length} jobs marcados como completed SEM efeito colateral real detectados`,
+      data: {
+        violations: tenantFailures.map((f: any) => ({
+          job_id: f.job_id,
+          job_type: f.job_type,
+          agent_id: f.agent_id,
+          agent_name: f.agent_name,
+          completed_at: f.completed_at,
+          violation_type: f.violation_type
+        })),
+        detected_at: new Date().toISOString(),
+        rule_code: rule.code
+      },
+      resolved: false
+    });
+
+    actionsExecuted.push({ 
+      type: 'CREATE_SYSTEM_ALERT', 
+      success: !alertError,
+      error: alertError?.message 
+    });
+
+    // Criar AI Insight
+    const firstFailure = tenantFailures[0];
+    const { error: insightError } = await supabase.from('ai_insights').insert({
+      tenant_id: tenantId,
+      title: `Falhas silenciosas detectadas: ${tenantFailures.length} jobs`,
+      description: `Jobs do tipo ${tenantFailures.map((f: any) => f.job_type).join(', ')} foram marcados como completed mas não produziram dados esperados. Isso indica uma possível falha no pipeline ou dados corrompidos.`,
+      severity: 'high',
+      insight_type: 'integrity_violation',
+      evidence: {
+        job_count: tenantFailures.length,
+        job_types: [...new Set(tenantFailures.map((f: any) => f.job_type))],
+        sample_job_id: firstFailure.job_id,
+        detected_at: new Date().toISOString()
+      },
+      recommendation: 'Investigar logs do submit-job-result. Verificar se os agentes estão enviando dados corretamente. Considerar re-executar os jobs afetados.',
+      acknowledged: false
+    });
+
+    actionsExecuted.push({ 
+      type: 'CREATE_AI_INSIGHT', 
+      success: !insightError,
+      error: insightError?.message 
+    });
+
+    // Record decision event para cada failure
+    for (const failure of tenantFailures) {
+      await supabase.from('decision_events').insert({
+        tenant_id: tenantId,
+        rule_code: rule.code,
+        agent_id: failure.agent_id,
+        agent_name: failure.agent_name || 'Unknown',
+        action: 'DETECT_SILENT_FAILURE',
+        evidence: {
+          job_id: failure.job_id,
+          job_type: failure.job_type,
+          completed_at: failure.completed_at,
+          violation_type: failure.violation_type,
+          detected_at: new Date().toISOString()
+        },
+        actions_executed: actionsExecuted
+      });
+
+      agents.push({
+        agent_id: failure.agent_id,
+        agent_name: failure.agent_name || 'Unknown',
+        action: 'DETECT_SILENT_FAILURE',
+        reason: `Job ${failure.job_type} (${failure.job_id}) completed sem dados`
+      });
+    }
+
+    console.log(`[SILENT_FAILURE_007] Created alerts for tenant ${tenantId} with ${tenantFailures.length} violations`);
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
