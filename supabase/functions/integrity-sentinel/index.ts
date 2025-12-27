@@ -18,6 +18,34 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
 
+  // Parse request body
+  let body: { source?: string } = {};
+  try {
+    body = await req.json();
+  } catch {
+    // Empty body is fine for cron calls
+  }
+
+  // Validate origin - accept if:
+  // 1. source === 'cron' (scheduled pg_cron call)
+  // 2. Has valid internal secret header
+  // 3. Has valid JWT auth header
+  const internalSecret = req.headers.get('x-internal-secret');
+  const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+  const isCronCall = body.source === 'cron';
+  const isInternalCall = internalSecret && internalSecret === expectedSecret;
+  const authHeader = req.headers.get('Authorization');
+  
+  if (!isCronCall && !isInternalCall && !authHeader) {
+    console.log('[integrity-sentinel] Unauthorized: No valid origin');
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  console.log(`[integrity-sentinel] Authorized call from: ${isCronCall ? 'cron' : isInternalCall ? 'internal' : 'jwt'}`);
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!

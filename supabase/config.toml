@@ -472,10 +472,10 @@ verify_jwt = true
 [functions.sync-release-from-repo]
 verify_jwt = false
 
-# === Zero Trust Integrity Sentinel (every 5 minutes) ===
+# === Zero Trust Integrity Sentinel (every 15 minutes) ===
 [functions.integrity-sentinel]
 verify_jwt = false
-schedule = "*/5 * * * *"
+schedule = "*/15 * * * *"
 
 # === Chaos Test (Zero Trust Validation) ===
 [functions.chaos-test]
@@ -522,12 +522,17 @@ verify_jwt = true
 [functions.register-agent-key]
 verify_jwt = false
 
-# === FASE 1: Autonomous SAFE_MODE (every 2 minutes) ===
+# === FASE 1: Autonomous SAFE_MODE (every 15 minutes) ===
 [functions.autonomous-safe-mode]
 verify_jwt = false
-schedule = "*/2 * * * *"
+schedule = "*/15 * * * *"
 
 # === Watchdog Non-Execution Detection (every 15 minutes) ===
 [functions.watchdog-non-execution]
 verify_jwt = false
 schedule = "*/15 * * * *"
+
+# === Executive Report Generator (daily at 6:00 UTC) ===
+[functions.generate-executive-report]
+verify_jwt = false
+schedule = "0 6 * * *"
