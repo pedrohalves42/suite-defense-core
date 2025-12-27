@@ -526,3 +526,8 @@ verify_jwt = false
 [functions.autonomous-safe-mode]
 verify_jwt = false
 schedule = "*/2 * * * *"
+
+# === Watchdog Non-Execution Detection (every 15 minutes) ===
+[functions.watchdog-non-execution]
+verify_jwt = false
+schedule = "*/15 * * * *"
