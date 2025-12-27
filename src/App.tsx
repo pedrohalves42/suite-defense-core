@@ -99,6 +99,7 @@ import ComplianceTimeline from "./pages/admin/ComplianceTimeline";
 import VerificarLaudo from "./pages/VerificarLaudo";
 import RiskScore from "./pages/admin/RiskScore";
 import Playbooks from "./pages/admin/Playbooks";
+import DecisionAudit from "./pages/admin/DecisionAudit";
 import {
   ClientDashboard, 
   ClientComputers, 
@@ -200,6 +201,7 @@ const App = () => (
                 <Route path="compliance-timeline" element={<ComplianceTimeline />} />
                 <Route path="risk-score" element={<RiskScore />} />
                 <Route path="playbooks" element={<Playbooks />} />
+                <Route path="decision-audit" element={<DecisionAudit />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
