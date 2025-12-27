@@ -9597,6 +9597,21 @@ export type Database = {
           },
         ]
       }
+      v_pipeline_health_metrics: {
+        Row: {
+          completed_jobs: number | null
+          completed_with_data: number | null
+          failed_jobs: number | null
+          hour: string | null
+          in_progress_jobs: number | null
+          queued_jobs: number | null
+          silent_failures: number | null
+          success_rate: number | null
+          total_jobs: number | null
+          type: string | null
+        }
+        Relationships: []
+      }
       v_problematic_agents: {
         Row: {
           agent_name: string | null
