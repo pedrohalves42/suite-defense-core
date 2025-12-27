@@ -134,21 +134,24 @@ export default function ProblematicAgentsManager() {
     switch (issueType) {
       case 'never_connected':
         return {
-          label: 'Nunca Conectou',
+          label: 'Aguardando conexão',
           variant: 'destructive' as const,
           icon: AlertCircle,
+          description: 'Este computador foi cadastrado mas ainda não se conectou',
         };
       case 'stale_heartbeat':
         return {
-          label: 'Heartbeat Antigo',
+          label: 'Sem comunicação recente',
           variant: 'outline' as const,
           icon: AlertTriangle,
+          description: 'O computador não envia sinais há mais tempo que o esperado',
         };
       default:
         return {
           label: 'OK',
           variant: 'default' as const,
           icon: CheckCircle,
+          description: 'Funcionando normalmente',
         };
     }
   };
@@ -157,9 +160,9 @@ export default function ProblematicAgentsManager() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Agentes Problematicos</h1>
+          <h1 className="text-3xl font-bold">Computadores com Problemas</h1>
           <p className="text-muted-foreground mt-1">
-            Agentes em estado pending sem heartbeat ha mais de 10 minutos
+            Computadores que precisam de atenção ou reinstalação
           </p>
         </div>
         
@@ -186,9 +189,9 @@ export default function ProblematicAgentsManager() {
           <CardContent className="py-8">
             <div className="flex flex-col items-center gap-2">
               <CheckCircle className="h-12 w-12 text-green-600" />
-              <p className="text-lg font-semibold">Nenhum agente problematico encontrado</p>
+              <p className="text-lg font-semibold">Tudo certo!</p>
               <p className="text-sm text-muted-foreground">
-                Todos os agentes estao funcionando corretamente
+                Todos os computadores estão funcionando normalmente
               </p>
             </div>
           </CardContent>
@@ -225,12 +228,12 @@ export default function ProblematicAgentsManager() {
                       </CardTitle>
                       <CardDescription className="mt-2 space-y-1">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                          <span>Status: <strong>{agent.status ?? 'N/A'}</strong></span>
-                          <span>Tokens: <strong>{agent.token_count ?? 0}</strong> (ativos: {agent.has_active_token ? 'sim' : 'não'})</span>
-                          <span>Inscrito: {agent.enrolled_at ? formatBrazilDateTime(agent.enrolled_at, 'datetime') : 'N/A'}</span>
-                          <span>Tempo decorrido: <strong>{agent.minutes_since_enrollment ? Math.floor(agent.minutes_since_enrollment) : 0}min</strong></span>
-                          <span>Jobs pendentes: <strong>{agent.pending_jobs_count ?? 0}</strong></span>
-                          <span>Ultimo heartbeat: <strong>{agent.last_heartbeat ? formatBrazilDateTime(agent.last_heartbeat, 'short') : 'Nunca'}</strong></span>
+                          <span>Situação: <strong>{agent.status === 'pending' ? 'Aguardando' : agent.status === 'active' ? 'Ativo' : agent.status ?? 'N/A'}</strong></span>
+                          <span>Credenciais: <strong>{agent.token_count ?? 0}</strong> ({agent.has_active_token ? 'válida' : 'inválida'})</span>
+                          <span>Cadastrado em: {agent.enrolled_at ? formatBrazilDateTime(agent.enrolled_at, 'datetime') : 'N/A'}</span>
+                          <span>Tempo desde cadastro: <strong>{agent.minutes_since_enrollment ? Math.floor(agent.minutes_since_enrollment) : 0} minutos</strong></span>
+                          <span>Tarefas pendentes: <strong>{agent.pending_jobs_count ?? 0}</strong></span>
+                          <span>Última comunicação: <strong>{agent.last_heartbeat ? formatBrazilDateTime(agent.last_heartbeat, 'short') : 'Nunca'}</strong></span>
                         </div>
                       </CardDescription>
                     </div>
@@ -263,14 +266,14 @@ export default function ProblematicAgentsManager() {
                 
                 {(agent.pending_jobs_count ?? 0) > 0 && (
                   <CardContent>
-                    <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                    <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded">
                       <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
                       <div className="text-sm">
-                        <p className="font-semibold text-yellow-900">
-                          {agent.pending_jobs_count} job{(agent.pending_jobs_count ?? 0) > 1 ? 's' : ''} pendente{(agent.pending_jobs_count ?? 0) > 1 ? 's' : ''}
+                        <p className="font-semibold text-yellow-900 dark:text-yellow-200">
+                          {agent.pending_jobs_count} tarefa{(agent.pending_jobs_count ?? 0) > 1 ? 's' : ''} pendente{(agent.pending_jobs_count ?? 0) > 1 ? 's' : ''}
                         </p>
-                        <p className="text-yellow-700">
-                          Estes jobs serao removidos durante a limpeza
+                        <p className="text-yellow-700 dark:text-yellow-400">
+                          Estas tarefas serão canceladas durante a limpeza
                         </p>
                       </div>
                     </div>
@@ -286,16 +289,16 @@ export default function ProblematicAgentsManager() {
       <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Limpar agente {selectedAgent?.agent_name ?? 'Unknown'}?</AlertDialogTitle>
+            <AlertDialogTitle>Resetar computador {selectedAgent?.agent_name ?? 'Unknown'}?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>Esta acao ira:</p>
+              <p>Esta ação irá:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Invalidar todos os tokens ativos ({selectedAgent?.token_count ?? 0})</li>
-                <li>Remover jobs pendentes ({selectedAgent?.pending_jobs_count ?? 0})</li>
-                <li>Resetar o status do agente para "pending"</li>
+                <li>Invalidar as credenciais atuais ({selectedAgent?.token_count ?? 0})</li>
+                <li>Cancelar tarefas pendentes ({selectedAgent?.pending_jobs_count ?? 0})</li>
+                <li>Preparar o computador para nova instalação</li>
               </ul>
               <p className="font-semibold mt-3">
-                Apos a limpeza, voce precisara regenerar as credenciais e reinstalar o agente.
+                Após o reset, você precisará reinstalar o programa neste computador.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -305,7 +308,7 @@ export default function ProblematicAgentsManager() {
               onClick={() => selectedAgent?.id && cleanupAgent.mutate(selectedAgent.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Limpar Agente
+              Confirmar Reset
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -315,19 +318,19 @@ export default function ProblematicAgentsManager() {
       <AlertDialog open={showCleanupAllDialog} onOpenChange={setShowCleanupAllDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Limpar todos os agentes problematicos?</AlertDialogTitle>
+            <AlertDialogTitle>Resetar todos os computadores com problema?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>Esta acao ira limpar <strong>{agents?.length || 0} agentes</strong>:</p>
+              <p>Esta ação irá resetar <strong>{agents?.length || 0} computadores</strong>:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Invalidar todos os tokens ativos</li>
-                <li>Remover todos os jobs pendentes</li>
-                <li>Resetar status de todos os agentes</li>
+                <li>Invalidar todas as credenciais</li>
+                <li>Cancelar todas as tarefas pendentes</li>
+                <li>Preparar os computadores para nova instalação</li>
               </ul>
               <p className="font-semibold mt-3 text-destructive">
-                [WARN] ? Esta e uma operacao em massa. Use com cautela!
+                ⚠️ Esta é uma operação em massa. Use com cautela!
               </p>
               <p className="text-sm">
-                Apos a limpeza, voce precisara regenerar credenciais e reinstalar cada agente individualmente.
+                Após o reset, você precisará reinstalar o programa em cada computador individualmente.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -337,7 +340,7 @@ export default function ProblematicAgentsManager() {
               onClick={() => cleanupAllAgents.mutate()}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Confirmar Limpeza em Massa
+              Confirmar Reset em Massa
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

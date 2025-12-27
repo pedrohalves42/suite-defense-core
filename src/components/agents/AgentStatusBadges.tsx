@@ -52,12 +52,14 @@ export function AgentStatusBadges({
             className="gap-1 text-xs border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-400"
           >
             <Clock className="h-3 w-3" />
-            {!compact && 'Throttled'}
+            {!compact && 'Velocidade Limitada'}
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
-          <p className="font-medium">Agente com Rate Limit</p>
-          {throttleReason && <p className="text-xs text-muted-foreground">{throttleReason}</p>}
+          <p className="font-medium">Comunicação reduzida temporariamente</p>
+          <p className="text-xs text-muted-foreground">
+            {throttleReason || 'O computador está enviando menos dados para proteger o sistema'}
+          </p>
         </TooltipContent>
       </Tooltip>
     );
@@ -72,12 +74,14 @@ export function AgentStatusBadges({
             className="gap-1 text-xs border-orange-500 bg-orange-500/10 text-orange-700 dark:text-orange-400"
           >
             <AlertTriangle className="h-3 w-3" />
-            {!compact && 'Safe Mode'}
+            {!compact && 'Modo Protegido'}
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
-          <p className="font-medium">Agente em Safe Mode</p>
-          {safeModeReason && <p className="text-xs text-muted-foreground">{safeModeReason}</p>}
+          <p className="font-medium">Proteção ativada automaticamente</p>
+          <p className="text-xs text-muted-foreground">
+            {safeModeReason || 'O computador detectou problemas e entrou em modo de segurança'}
+          </p>
         </TooltipContent>
       </Tooltip>
     );
