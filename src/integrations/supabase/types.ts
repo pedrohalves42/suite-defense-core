@@ -7557,6 +7557,48 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_plan_mapping: {
+        Row: {
+          base_devices: number | null
+          billing_interval: string | null
+          created_at: string | null
+          currency: string | null
+          id: string
+          logical_plan: string
+          plan_type: string
+          price_cents: number
+          stripe_price_id: string
+          stripe_product_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          base_devices?: number | null
+          billing_interval?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          logical_plan: string
+          plan_type: string
+          price_cents: number
+          stripe_price_id: string
+          stripe_product_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          base_devices?: number | null
+          billing_interval?: string | null
+          created_at?: string | null
+          currency?: string | null
+          id?: string
+          logical_plan?: string
+          plan_type?: string
+          price_cents?: number
+          stripe_price_id?: string
+          stripe_product_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       subscription_plans: {
         Row: {
           billing_period: string | null
@@ -8052,10 +8094,12 @@ export type Database = {
       }
       tenant_subscriptions: {
         Row: {
+          addon_devices: number | null
           created_at: string
           current_period_end: string | null
           device_quantity: number | null
           id: string
+          is_legacy: boolean | null
           plan_id: string
           status: string | null
           stripe_customer_id: string | null
@@ -8065,10 +8109,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          addon_devices?: number | null
           created_at?: string
           current_period_end?: string | null
           device_quantity?: number | null
           id?: string
+          is_legacy?: boolean | null
           plan_id: string
           status?: string | null
           stripe_customer_id?: string | null
@@ -8078,10 +8124,12 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          addon_devices?: number | null
           created_at?: string
           current_period_end?: string | null
           device_quantity?: number | null
           id?: string
+          is_legacy?: boolean | null
           plan_id?: string
           status?: string | null
           stripe_customer_id?: string | null
@@ -9892,6 +9940,36 @@ export type Database = {
           total_agents?: never
         }
         Relationships: []
+      }
+      v_tenant_plan_status: {
+        Row: {
+          addon_devices: number | null
+          base_devices: number | null
+          current_period_end: string | null
+          is_legacy: boolean | null
+          plan_name: string | null
+          status: string | null
+          stripe_subscription_id: string | null
+          subscription_id: string | null
+          tenant_id: string | null
+          total_devices: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
     }
     Functions: {
