@@ -48,50 +48,35 @@ export function ComplianceReportGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportPayload, setReportPayload] = useState<ComplianceReportPayload | null>(null);
 
-  // Fetch compliance report from backend
+  // Fetch compliance report from backend - using generate-compliance-report directly
   const fetchComplianceReport = async (template: ComplianceTemplate) => {
     const { data: session } = await supabase.auth.getSession();
     if (!session?.session?.access_token) {
       throw new Error("Não autenticado");
     }
 
-    const response = await supabase.functions.invoke("generate-security-report", {
-      body: {},
-      headers: {
-        Authorization: `Bearer ${session.session.access_token}`,
+    // Calculate period (last 30 days)
+    const periodEnd = new Date().toISOString();
+    const periodStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase.functions.invoke("generate-compliance-report", {
+      body: {
+        template,
+        period_start: periodStart,
+        period_end: periodEnd,
       },
     });
 
-    // Use URL params approach
-    const { data, error } = await supabase.functions.invoke("generate-security-report", {
-      body: null,
-    });
-
-    if (error) throw error;
-
-    // Fetch with compliance format
-    const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-security-report`);
-    url.searchParams.set("format", "compliance");
-    url.searchParams.set("template", template);
-
-    const res = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${session.session.access_token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || "Erro ao gerar relatório");
+    if (error) {
+      console.error("Edge function error:", error);
+      throw new Error(error.message || "Erro ao gerar relatório");
     }
 
-    const result = await res.json();
-    if (!result.success || !result.payload) {
-      throw new Error("Payload inválido");
+    if (!data?.success || !data?.payload) {
+      throw new Error(data?.error || "Payload inválido");
     }
 
-    return result.payload as ComplianceReportPayload;
+    return data.payload as ComplianceReportPayload;
   };
 
   const handleGenerateReport = async () => {
