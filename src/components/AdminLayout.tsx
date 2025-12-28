@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 import { logger } from '@/lib/logger';
 import { OutdatedAgentsBanner } from '@/components/OutdatedAgentsBanner';
+import { TenantSelector } from '@/components/TenantSelector';
 
 export const AdminLayout = () => {
   const { isAdmin, loading } = useIsAdmin();
@@ -43,6 +44,12 @@ export const AdminLayout = () => {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {/* Header with Tenant Selector */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-bold text-foreground">Painel Administrativo</h1>
+        <TenantSelector />
+      </div>
+      
       <OutdatedAgentsBanner />
       <Outlet />
     </div>
