@@ -12,9 +12,9 @@ import { TEST_CONFIG } from './test-config';
  */
 
 test.describe('Super Admin - Tenant Management', () => {
-  // Super admin credentials from env
-  const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || TEST_CONFIG.credentials.email;
-  const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || TEST_CONFIG.credentials.password;
+  // Super admin credentials from env - use standard env vars
+  const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL || process.env.TEST_ADMIN_EMAIL || TEST_CONFIG.credentials.email;
+  const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD || process.env.TEST_ADMIN_PASSWORD || TEST_CONFIG.credentials.password;
 
   test.beforeEach(async ({ page }) => {
     // Navigate to login page
