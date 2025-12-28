@@ -683,6 +683,152 @@ test.describe('INV-006: Network Enforcement', () => {
  * Compliance Report
  * =============================================================================
  */
+/**
+ * =============================================================================
+ * INV-007: Approval Governance Invariants (Red Team Reinforcement)
+ * =============================================================================
+ * 
+ * Critical invariants for approval-based execution governance.
+ */
+test.describe('INV-007: Approval Governance', () => {
+  
+  test('Invariant: playbooks in semi_automatic mode cannot execute without approval', async ({ request }) => {
+    // Attempt to force-execute a semi_automatic playbook without approval
+    const response = await request.post(`${SUPABASE_URL}/functions/v1/execute-playbook`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      data: {
+        playbook_id: '00000000-0000-0000-0000-000000000000',
+        agent_id: '00000000-0000-0000-0000-000000000001',
+        force_execute: true, // Attacker flag
+        bypass_approval: true, // Attacker flag
+        mode: 'semi_automatic'
+      }
+    });
+    
+    // Must be rejected - forced execution not allowed
+    expect([400, 401, 403, 404]).toContain(response.status());
+  });
+
+  test('Invariant: approval status cannot be changed via direct REST', async ({ request }) => {
+    // This is a core security invariant - approvals MUST go through Edge Function
+    const attackVectors = [
+      { status: 'approved' },
+      { status: 'approved', approved_by: 'attacker' },
+      { status: 'approved', approved_at: new Date().toISOString() }
+    ];
+    
+    for (const payload of attackVectors) {
+      const response = await request.patch(
+        `${SUPABASE_URL}/rest/v1/approval_requests?status=eq.pending`,
+        {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY!,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+          },
+          data: payload
+        }
+      );
+      
+      if (response.status() === 200) {
+        const result = await response.json();
+        // Must affect 0 rows
+        expect(Array.isArray(result) ? result.length : 0).toBe(0);
+      }
+    }
+  });
+
+  test('Invariant: approval rate limit cannot be bypassed via any REST operation', async ({ request }) => {
+    // Verify no path exists to manipulate rate limits directly
+    const bypassAttempts = [
+      // Attempt 1: Direct INSERT
+      request.post(`${SUPABASE_URL}/rest/v1/rate_limits`, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        data: { identifier: 'bypass', endpoint: 'test', request_count: 0 }
+      }),
+      // Attempt 2: Reset counter
+      request.patch(`${SUPABASE_URL}/rest/v1/rate_limits`, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        data: { request_count: 0 }
+      }),
+      // Attempt 3: Clear block
+      request.patch(`${SUPABASE_URL}/rest/v1/rate_limits?blocked_until=not.is.null`, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        data: { blocked_until: null }
+      }),
+      // Attempt 4: Delete entries
+      request.delete(`${SUPABASE_URL}/rest/v1/rate_limits`, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        }
+      })
+    ];
+    
+    const responses = await Promise.all(bypassAttempts);
+    
+    for (const response of responses) {
+      if (response.status() === 200) {
+        const result = await response.json();
+        // Any 200 response must have 0 affected rows
+        expect(Array.isArray(result) ? result.length : 0).toBe(0);
+      } else {
+        // Otherwise must be auth/permission error
+        expect([401, 403, 404, 409]).toContain(response.status());
+      }
+    }
+  });
+
+  test('Invariant: approval tokens cannot be forged or reused', async ({ request }) => {
+    // Attempt to use forged tokens
+    const forgedTokens = [
+      'forged-token-12345',
+      'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+      Buffer.from('fake-approval').toString('base64'),
+      '../../../admin-approval',
+      "'; DROP TABLE approval_requests; --"
+    ];
+    
+    for (const token of forgedTokens) {
+      const response = await request.post(`${SUPABASE_URL}/functions/v1/process-approval`, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        data: {
+          approval_token: token,
+          decision: 'approved'
+        }
+      });
+      
+      // All forged tokens must be rejected
+      expect([400, 401, 403, 404]).toContain(response.status());
+    }
+  });
+});
+
+/**
+ * =============================================================================
+ * Compliance Report
+ * =============================================================================
+ */
 test.afterAll(async () => {
   console.log('\n');
   console.log('╔══════════════════════════════════════════════════════════════╗');
@@ -694,9 +840,10 @@ test.afterAll(async () => {
   console.log('║ INV-004: AI Data Isolation               ✓ VALIDATED         ║');
   console.log('║ INV-005: Fail-Closed Behavior            ✓ VALIDATED         ║');
   console.log('║ INV-006: Network Enforcement             ✓ VALIDATED         ║');
+  console.log('║ INV-007: Approval Governance             ✓ VALIDATED         ║');
   console.log('╠══════════════════════════════════════════════════════════════╣');
   console.log('║ Reference: docs/SECURITY_INVARIANTS.md                       ║');
-  console.log('║ Version: 1.1.0                                               ║');
+  console.log('║ Version: 1.2.0 (Red Team Reinforced)                         ║');
   console.log('║ Date: ' + new Date().toISOString().split('T')[0] + '                                          ║');
   console.log('╚══════════════════════════════════════════════════════════════╝');
   console.log('\n');

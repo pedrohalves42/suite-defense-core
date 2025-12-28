@@ -225,6 +225,139 @@ export function generateTestId(): string {
   return `e2e-test-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 }
 
+/**
+ * Creates a test approval request via Edge Function
+ */
+export async function createApprovalRequest(
+  authToken: string,
+  tenantId: string,
+  playbookId: string
+): Promise<{ success: boolean; approvalId?: string; error?: string }> {
+  const response = await callEdgeFunction({
+    functionName: 'evaluate-playbook-triggers',
+    method: 'POST',
+    authToken,
+    body: {
+      tenant_id: tenantId,
+      playbook_id: playbookId,
+      trigger_type: 'manual',
+      metadata: { source: 'e2e-test' }
+    }
+  });
+  
+  if (response.ok) {
+    const data = await response.json();
+    return { success: true, approvalId: data.approval_id };
+  }
+  
+  const error = await response.text();
+  return { success: false, error };
+}
+
+/**
+ * Verifies the status of an approval request directly from database
+ */
+export async function verifyApprovalStatus(
+  client: SupabaseClient,
+  approvalId: string
+): Promise<{ status: string | null; found: boolean }> {
+  const { data, error } = await client
+    .from('approval_requests')
+    .select('status')
+    .eq('id', approvalId)
+    .single();
+  
+  if (error || !data) {
+    return { status: null, found: false };
+  }
+  
+  return { status: data.status, found: true };
+}
+
+/**
+ * Processes an approval (approve/reject) via service role
+ * Used for testing rate limit reset behavior
+ */
+export async function processApproval(
+  client: SupabaseClient,
+  approvalId: string,
+  decision: 'approved' | 'rejected' | 'expired',
+  userId?: string
+): Promise<{ success: boolean; error?: string }> {
+  const updateData: Record<string, any> = {
+    status: decision,
+    updated_at: new Date().toISOString()
+  };
+  
+  if (decision === 'approved') {
+    updateData.approved_by = userId || '00000000-0000-0000-0000-000000000000';
+    updateData.approved_at = new Date().toISOString();
+  } else if (decision === 'rejected') {
+    updateData.rejected_by = userId;
+    updateData.rejected_at = new Date().toISOString();
+  }
+  
+  const { error } = await client
+    .from('approval_requests')
+    .update(updateData)
+    .eq('id', approvalId);
+  
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  
+  return { success: true };
+}
+
+/**
+ * Gets pending approval count for a tenant
+ */
+export async function getPendingApprovalCount(
+  client: SupabaseClient,
+  tenantId: string
+): Promise<number> {
+  const { count, error } = await client
+    .from('approval_requests')
+    .select('*', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .eq('status', 'pending');
+  
+  if (error) {
+    console.error('Error counting pending approvals:', error);
+    return -1;
+  }
+  
+  return count || 0;
+}
+
+/**
+ * Validates that a database record was not modified
+ */
+export async function verifyRecordUnchanged(
+  client: SupabaseClient,
+  table: string,
+  recordId: string,
+  expectedValues: Record<string, any>
+): Promise<{ unchanged: boolean; currentValues?: Record<string, any> }> {
+  const { data, error } = await client
+    .from(table)
+    .select('*')
+    .eq('id', recordId)
+    .single();
+  
+  if (error || !data) {
+    return { unchanged: true }; // Record not found = not modified
+  }
+  
+  for (const [key, expectedValue] of Object.entries(expectedValues)) {
+    if (data[key] !== expectedValue) {
+      return { unchanged: false, currentValues: data };
+    }
+  }
+  
+  return { unchanged: true, currentValues: data };
+}
+
 export default {
   createUnauthenticatedClient,
   createAuthenticatedClient,
@@ -240,4 +373,9 @@ export default {
   hasSecurityTestEnvVars,
   getTestTenantId,
   generateTestId,
+  createApprovalRequest,
+  verifyApprovalStatus,
+  processApproval,
+  getPendingApprovalCount,
+  verifyRecordUnchanged,
 };
