@@ -5975,6 +5975,7 @@ export type Database = {
           cooldown_minutes: number | null
           created_at: string | null
           description: string | null
+          execution_mode: string | null
           id: string
           is_enabled: boolean | null
           is_system: boolean | null
@@ -5991,6 +5992,7 @@ export type Database = {
           cooldown_minutes?: number | null
           created_at?: string | null
           description?: string | null
+          execution_mode?: string | null
           id?: string
           is_enabled?: boolean | null
           is_system?: boolean | null
@@ -6007,6 +6009,7 @@ export type Database = {
           cooldown_minutes?: number | null
           created_at?: string | null
           description?: string | null
+          execution_mode?: string | null
           id?: string
           is_enabled?: boolean | null
           is_system?: boolean | null
@@ -8607,6 +8610,66 @@ export type Database = {
           },
           {
             foreignKeyName: "vuln_findings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      web_access_policies: {
+        Row: {
+          action: string
+          applied_at: string | null
+          created_at: string | null
+          created_by: string | null
+          domain: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          reason: string | null
+          source: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          action: string
+          applied_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          domain: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          reason?: string | null
+          source?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          action?: string
+          applied_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          domain?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          reason?: string | null
+          source?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "web_access_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "web_access_policies_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_system_operations_summary"

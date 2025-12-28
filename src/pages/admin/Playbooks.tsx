@@ -17,7 +17,10 @@ import {
   Play,
   Shield,
   Zap,
+  Info,
+  Eye,
 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   usePlaybooks,
   usePendingPlaybookExecutions,
@@ -37,6 +40,12 @@ const TRIGGER_TYPE_LABELS: Record<string, string> = {
   job_failed: 'Job Falhou',
   integrity_low: 'Integridade Baixa',
   manual: 'Manual',
+  suspicious_web_activity: 'Navegação Suspeita',
+  vulnerability_critical: 'Vulnerabilidade Crítica',
+  vulnerability_high: 'Vulnerabilidade Alta',
+  multiple_malicious_access: 'Múltiplos Acessos Maliciosos',
+  suspicious_process: 'Processo Suspeito',
+  unauthorized_service: 'Serviço Não Autorizado',
 };
 
 const TRIGGER_TYPE_ICONS: Record<string, typeof Bell> = {
@@ -45,6 +54,30 @@ const TRIGGER_TYPE_ICONS: Record<string, typeof Bell> = {
   job_failed: AlertTriangle,
   integrity_low: Lock,
   manual: Play,
+  suspicious_web_activity: Shield,
+  vulnerability_critical: AlertTriangle,
+  vulnerability_high: AlertTriangle,
+  multiple_malicious_access: Shield,
+  suspicious_process: AlertTriangle,
+  unauthorized_service: Lock,
+};
+
+const EXECUTION_MODE_LABELS: Record<string, { label: string; color: string; description: string }> = {
+  assistive: { 
+    label: 'Assistivo', 
+    color: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+    description: 'Recomenda ações, não executa automaticamente'
+  },
+  semi_automatic: { 
+    label: 'Semi-automático', 
+    color: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30',
+    description: 'Executa com aprovação prévia'
+  },
+  automatic: { 
+    label: 'Automático', 
+    color: 'bg-green-500/10 text-green-600 border-green-500/30',
+    description: 'Executa automaticamente'
+  },
 };
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -147,7 +180,16 @@ export default function Playbooks() {
           </TabsContent>
 
           {/* Tab: Playbooks */}
-          <TabsContent value="playbooks" className="mt-6">
+          <TabsContent value="playbooks" className="mt-6 space-y-4">
+            {/* Non-destructive notice */}
+            <Alert className="bg-blue-500/10 border-blue-500/30">
+              <Eye className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-700 dark:text-blue-400">
+                <strong>Modo Assistivo:</strong> Estes playbooks NÃO executam ações destrutivas automaticamente. 
+                Eles recomendam ações que você pode aprovar, executar ou ignorar com segurança.
+              </AlertDescription>
+            </Alert>
+            
             <div className="grid gap-4 md:grid-cols-2">
               {loadingPlaybooks ? (
                 <>
@@ -211,10 +253,20 @@ export default function Playbooks() {
                           {playbook.description}
                         </p>
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="outline">
                               {playbook.actions?.length || 0} ações
                             </Badge>
+                            {/* Execution Mode Badge */}
+                            {(() => {
+                              const mode = (playbook as any).execution_mode || 'assistive';
+                              const modeInfo = EXECUTION_MODE_LABELS[mode] || EXECUTION_MODE_LABELS.assistive;
+                              return (
+                                <Badge variant="outline" className={modeInfo.color} title={modeInfo.description}>
+                                  {modeInfo.label}
+                                </Badge>
+                              );
+                            })()}
                             {playbook.require_approval && (
                               <Badge variant="outline" className="text-yellow-500 border-yellow-500/30">
                                 Requer aprovação

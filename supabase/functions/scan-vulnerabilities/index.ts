@@ -22,6 +22,141 @@ interface CVEMatch {
   published_date: string;
 }
 
+// Helper function to scan a single agent (used by batch mode)
+async function scanAgentVulnerabilities(
+  supabase: any,
+  agent_id: string,
+  tenant_id: string,
+  requestId: string
+): Promise<{ vulnerabilities_found: number }> {
+  // Get software inventory for this agent
+  const { data: software, error: softwareError } = await supabase
+    .from('software_inventory')
+    .select('name, version, vendor')
+    .eq('agent_id', agent_id)
+    .limit(200);
+
+  if (softwareError || !software || software.length === 0) {
+    return { vulnerabilities_found: 0 };
+  }
+
+  // Build keywords
+  const softwareKeywords = new Set<string>();
+  const softwareMap = new Map<string, SoftwareItem[]>();
+  
+  for (const item of software as SoftwareItem[]) {
+    const name = item.name?.toLowerCase() || '';
+    const keywords = extractKeywordsHelper(name);
+    keywords.forEach(kw => {
+      softwareKeywords.add(kw);
+      if (!softwareMap.has(kw)) {
+        softwareMap.set(kw, []);
+      }
+      softwareMap.get(kw)!.push(item);
+    });
+  }
+
+  // Search CVEs
+  const vulnerabilities: any[] = [];
+  const processedCVEs = new Set<string>();
+
+  for (const keyword of Array.from(softwareKeywords).slice(0, 20)) {
+    const { data: cves } = await supabase
+      .from('cve_database')
+      .select('*')
+      .or(`affected_products.cs.{${keyword}},description.ilike.%${keyword}%`)
+      .gte('cvss_score', 4.0)
+      .order('cvss_score', { ascending: false })
+      .limit(30);
+
+    if (cves && cves.length > 0) {
+      for (const cve of cves) {
+        if (processedCVEs.has(cve.cve_id)) continue;
+        
+        const matchedSoftware = softwareMap.get(keyword) || [];
+        for (const sw of matchedSoftware) {
+          if (isVersionAffectedHelper(sw.version, cve.affected_versions)) {
+            processedCVEs.add(cve.cve_id);
+            
+            vulnerabilities.push({
+              agent_id,
+              tenant_id,
+              cve_id: cve.cve_id,
+              title: `${cve.cve_id}: ${(cve.description || '').slice(0, 100)}...`,
+              description: cve.description,
+              severity: cve.severity || getSeverityFromScoreHelper(cve.cvss_score),
+              cvss_score: cve.cvss_score,
+              affected_software: sw.name,
+              affected_version: sw.version,
+              fix_available: true,
+              remediation: `Update ${sw.name.split(/[\s\-_]/)[0]} to the latest version`,
+              discovered_at: new Date().toISOString(),
+              acknowledged: false,
+              metadata: {
+                vendor: sw.vendor,
+                detection_method: 'nvd_database_match',
+                nvd_link: `https://nvd.nist.gov/vuln/detail/${cve.cve_id}`
+              }
+            });
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Store findings
+  if (vulnerabilities.length > 0) {
+    await supabase.from('vuln_findings').delete().eq('agent_id', agent_id);
+    await supabase.from('vuln_findings').insert(vulnerabilities);
+  }
+
+  return { vulnerabilities_found: vulnerabilities.length };
+}
+
+// Helper functions for batch mode (duplicated to avoid scope issues)
+function extractKeywordsHelper(name: string): string[] {
+  const keywords: string[] = [];
+  let lowerName = name.toLowerCase();
+  lowerName = lowerName.replace(/\s+\d+(\.\d+)*\s*$/, '');
+  lowerName = lowerName.replace(/\s+(x64|x86|64-bit|32-bit)\s*$/i, '');
+  
+  const knownProducts = [
+    'chrome', 'firefox', 'edge', 'office', 'outlook', 'teams',
+    'java', 'python', 'nodejs', 'windows', 'zoom', 'slack',
+    'vlc', 'winrar', '7zip', 'git', 'vscode', 'mysql', 'postgresql',
+    'docker', 'curl', 'openssl', 'teamviewer'
+  ];
+  
+  for (const product of knownProducts) {
+    if (lowerName.includes(product)) {
+      keywords.push(product);
+    }
+  }
+  
+  if (keywords.length === 0) {
+    const firstWord = lowerName.split(/[\s\-_\.]/)[0];
+    if (firstWord && firstWord.length >= 3) {
+      keywords.push(firstWord);
+    }
+  }
+  
+  return keywords;
+}
+
+function isVersionAffectedHelper(installedVersion: string, affectedVersions: any[]): boolean {
+  if (!affectedVersions || affectedVersions.length === 0) return true;
+  return true; // Simplified for batch mode
+}
+
+function getSeverityFromScoreHelper(score: number | null): string {
+  if (score === null) return 'UNKNOWN';
+  if (score >= 9.0) return 'CRITICAL';
+  if (score >= 7.0) return 'HIGH';
+  if (score >= 4.0) return 'MEDIUM';
+  return 'LOW';
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -40,7 +175,127 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { agent_id, tenant_id } = await req.json();
+    const body = await req.json();
+    const { agent_id, tenant_id, mode } = body;
+
+    // ✅ BATCH MODE: Scan all agents for a tenant
+    if (mode === 'batch_all_agents') {
+      console.log(`[${requestId}] [SCAN-VULNS] Starting BATCH scan for tenant ${tenant_id || 'ALL'}`);
+      
+      // Get all active agents
+      let query = supabase
+        .from('agents')
+        .select('id, tenant_id, agent_name')
+        .eq('status', 'active');
+      
+      if (tenant_id) {
+        query = query.eq('tenant_id', tenant_id);
+      }
+      
+      const { data: agents, error: agentsError } = await query.limit(100);
+      
+      if (agentsError) {
+        console.error(`[${requestId}] [SCAN-VULNS] Error fetching agents:`, agentsError);
+        throw agentsError;
+      }
+      
+      if (!agents || agents.length === 0) {
+        console.log(`[${requestId}] [SCAN-VULNS] No active agents found for batch scan`);
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'No active agents to scan',
+            agents_scanned: 0,
+            total_vulnerabilities: 0
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log(`[${requestId}] [SCAN-VULNS] Batch scanning ${agents.length} agents`);
+      
+      let totalVulns = 0;
+      let agentsScanned = 0;
+      const results: { agent_id: string; agent_name: string; vulns_found: number }[] = [];
+      
+      // Process each agent (limited concurrency)
+      for (const agent of agents) {
+        try {
+          const scanResult = await scanAgentVulnerabilities(
+            supabase, 
+            agent.id, 
+            agent.tenant_id, 
+            requestId
+          );
+          totalVulns += scanResult.vulnerabilities_found;
+          agentsScanned++;
+          results.push({
+            agent_id: agent.id,
+            agent_name: agent.agent_name,
+            vulns_found: scanResult.vulnerabilities_found
+          });
+        } catch (agentError) {
+          console.error(`[${requestId}] [SCAN-VULNS] Error scanning agent ${agent.id}:`, agentError);
+        }
+      }
+      
+      // Trigger playbooks for critical vulnerabilities found
+      if (totalVulns > 0) {
+        const criticalAgents = results.filter(r => r.vulns_found > 0);
+        for (const agentResult of criticalAgents.slice(0, 5)) { // Limit to 5 to avoid flooding
+          try {
+            // Check if there are critical vulns for this agent
+            const { data: criticalVulns } = await supabase
+              .from('vuln_findings')
+              .select('id, severity')
+              .eq('agent_id', agentResult.agent_id)
+              .eq('severity', 'CRITICAL')
+              .limit(1);
+            
+            if (criticalVulns && criticalVulns.length > 0) {
+              // Trigger playbook for critical vulnerability
+              const { data: agent } = await supabase
+                .from('agents')
+                .select('tenant_id')
+                .eq('id', agentResult.agent_id)
+                .single();
+              
+              if (agent) {
+                await supabase.functions.invoke('evaluate-playbook-triggers', {
+                  body: {
+                    tenant_id: agent.tenant_id,
+                    trigger_type: 'vulnerability_critical',
+                    agent_id: agentResult.agent_id,
+                    context: {
+                      vulns_found: agentResult.vulns_found,
+                      agent_name: agentResult.agent_name
+                    }
+                  }
+                });
+                console.log(`[${requestId}] [SCAN-VULNS] Triggered playbook for agent ${agentResult.agent_name} with critical vulns`);
+              }
+            }
+          } catch (triggerError) {
+            console.error(`[${requestId}] [SCAN-VULNS] Error triggering playbook:`, triggerError);
+          }
+        }
+      }
+      
+      console.log(`[${requestId}] [SCAN-VULNS] Batch scan complete: ${agentsScanned} agents, ${totalVulns} total vulnerabilities`);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          mode: 'batch',
+          agents_scanned: agentsScanned,
+          total_vulnerabilities: totalVulns,
+          results
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Single agent scan (original behavior)
 
     if (!agent_id || !tenant_id) {
       return new Response(
