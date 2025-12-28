@@ -123,7 +123,62 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[execute-playbook-action] Using immutable snapshot v${playbookSnapshot.version} with ${actionsSnapshot.length} actions`);
+    // ✅ AJUSTE 3: Enforcement de execution_mode - bloquear ações destrutivas em modo assistivo
+    const executionMode = (playbookSnapshot.execution_mode as string) || 'assistive';
+    const DESTRUCTIVE_ACTIONS = [
+      'isolate_agent', 'isolate', 
+      'uninstall_software', 
+      'block_ip', 
+      'kill_process', 
+      'stop_service', 
+      'disable_service',
+      'revoke_token'
+    ];
+
+    if (executionMode === 'assistive') {
+      const destructiveActions = actionsSnapshot.filter(a => 
+        DESTRUCTIVE_ACTIONS.includes(a.action_type)
+      );
+      
+      if (destructiveActions.length > 0) {
+        console.log(`[execute-playbook-action] BLOCKED: Destructive actions in assistive mode`);
+        
+        // Registrar tentativa bloqueada no audit log
+        await supabase.from('audit_logs').insert({
+          user_id: user.id,
+          tenant_id: execution.tenant_id,
+          action: 'blocked_destructive_action',
+          resource_type: 'playbook_execution',
+          resource_id: execution_id,
+          success: false,
+          details: {
+            playbook_name: playbookSnapshot.name,
+            playbook_version: playbookSnapshot.version,
+            execution_mode: executionMode,
+            blocked_actions: destructiveActions.map(a => ({
+              action_type: a.action_type,
+              label: a.label,
+            })),
+            reason: 'Assistive mode does not allow destructive actions',
+          },
+        });
+
+        return new Response(JSON.stringify({ 
+          error: 'Cannot execute destructive actions in assistive mode',
+          execution_mode: executionMode,
+          blocked_actions: destructiveActions.map(a => ({
+            action_type: a.action_type,
+            label: a.label,
+          })),
+          allowed_modes: ['semi_automatic', 'automatic'],
+        }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    console.log(`[execute-playbook-action] Using immutable snapshot v${playbookSnapshot.version} with ${actionsSnapshot.length} actions (mode: ${executionMode})`);
 
     // Atualizar status para in_progress
     await supabase
