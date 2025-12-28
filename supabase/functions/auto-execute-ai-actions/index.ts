@@ -128,18 +128,31 @@ Deno.serve(async (req) => {
         switch (action.action_type) {
           case 'create_system_alert': {
             const payload = action.action_payload as any
+            // Mapear para tipos de alerta válidos
+            const validAlertTypes = [
+              'agent_offline', 'high_cpu', 'high_memory', 'high_disk', 
+              'job_failed', 'security_threat', 'memory_warning',
+              'ai_insight_alert', 'blocked_access_pattern', 'job_integrity_violation',
+              'safe_mode_auto', 'agent_divergent', 'progressive_degradation'
+            ]
+            let alertType = payload.alert_type || 'ai_insight_alert'
+            if (!validAlertTypes.includes(alertType)) {
+              alertType = 'ai_insight_alert'
+            }
+            
             const { data: alert, error: alertError } = await supabase
               .from('system_alerts')
               .insert({
                 tenant_id: action.tenant_id,
-                alert_type: payload.alert_type || 'ai_generated',
+                alert_type: alertType,
                 severity: payload.severity || 'info',
-                title: (payload.message || 'AI Alert').slice(0, 80),
-                message: payload.message || 'AI-generated alert',
+                title: (payload.title || payload.message || 'AI Alert').slice(0, 80),
+                message: payload.message || payload.title || 'AI-generated alert',
                 details: {
                   insight_id: action.insight_id,
                   auto_executed: true,
-                  source: 'auto-execute-ai-actions'
+                  source: 'auto-execute-ai-actions',
+                  original_payload: payload
                 }
               })
               .select()
