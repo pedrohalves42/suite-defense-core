@@ -15,8 +15,8 @@ import crypto from 'crypto';
  * 7. Job result submission
  */
 
-const BASE_URL = process.env.SUPABASE_URL || 'https://iavbnmduxpxhwubqrzzn.supabase.co';
-const ANON_KEY = process.env.SUPABASE_ANON_KEY || '***REMOVED***';
+const BASE_URL = process.env.VITE_SUPABASE_URL!;
+const ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY!;
 
 // Test user credentials - use unique email per run
 const TEST_EMAIL = `e2e-enrollment-${Date.now()}@test.cybershield.local`;

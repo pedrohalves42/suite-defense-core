@@ -29,6 +29,11 @@ export const TEST_CONFIG = {
     agentReleases: '/admin/agent-releases',
     problematicAgents: '/admin/problematic-agents',
     installer: '/installer',
+    agentInstaller: '/agent-installer',
+    planUpgrade: '/admin/plan-upgrade',
+    installationAnalytics: '/admin/installation-analytics',
+    installationLogs: '/admin/installation-logs',
+    installationPipeline: '/admin/installation-pipeline',
   },
   
   // Expected texts (Portuguese - humanized)
