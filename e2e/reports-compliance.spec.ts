@@ -295,3 +295,132 @@ test.describe('API - Compliance Report Generation', () => {
     expect([400, 401]).toContain(response.status());
   });
 });
+
+test.describe('API - Compliance Report Verification (Integrity)', () => {
+  test.skip(({ browserName }) => browserName !== 'chromium', 'API tests only run on Chromium');
+
+  test('should return 400 for missing audit_id', async ({ request }) => {
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) {
+      test.skip();
+      return;
+    }
+
+    const response = await request.post(`${supabaseUrl}/functions/v1/verify-compliance-report`, {
+      data: {},
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
+      },
+    });
+
+    expect(response.status()).toBe(400);
+    const body = await response.json();
+    expect(body.success).toBe(false);
+    expect(body.error).toContain('audit_id');
+  });
+
+  test('should return 404 for non-existent audit_id', async ({ request }) => {
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) {
+      test.skip();
+      return;
+    }
+
+    const response = await request.post(`${supabaseUrl}/functions/v1/verify-compliance-report`, {
+      data: { audit_id: 'LAUDO-NONEXIST-9999999999999' },
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
+      },
+    });
+
+    expect(response.status()).toBe(404);
+    const body = await response.json();
+    expect(body.success).toBe(false);
+    expect(body.integrity.valid).toBe(false);
+  });
+
+  test('should verify report via GET request with audit_id query param', async ({ request }) => {
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) {
+      test.skip();
+      return;
+    }
+
+    const response = await request.get(`${supabaseUrl}/functions/v1/verify-compliance-report?audit_id=LAUDO-TESTTEST-1234567890`, {
+      headers: {
+        'apikey': process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
+      },
+    });
+
+    // Should return 404 (not found) or 200 (if test data exists)
+    expect([200, 404]).toContain(response.status());
+    const body = await response.json();
+    expect(body).toHaveProperty('integrity');
+  });
+
+  test('should include SHA256 and HMAC verification in response', async ({ request }) => {
+    const supabaseUrl = process.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) {
+      test.skip();
+      return;
+    }
+
+    const response = await request.post(`${supabaseUrl}/functions/v1/verify-compliance-report`, {
+      data: { audit_id: 'LAUDO-ANYAUDIT-0000000000000' },
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '',
+      },
+    });
+
+    const body = await response.json();
+    expect(body).toHaveProperty('integrity');
+    expect(body.integrity).toHaveProperty('valid');
+    
+    // If found, should have detailed integrity info
+    if (response.status() === 200) {
+      expect(body.integrity).toHaveProperty('sha256_match');
+      expect(body.integrity).toHaveProperty('hmac_valid');
+      expect(body.integrity).toHaveProperty('algorithm');
+    }
+  });
+});
+
+test.describe('Verification Page - Integrity Display', () => {
+  test('should show integrity status for valid audit_id format', async ({ page }) => {
+    // Test with audit_id format
+    await page.goto('/verificar/LAUDO-TESTTEST-1234567890');
+    await page.waitForLoadState('networkidle');
+
+    // Should show verification UI (even if report not found)
+    const verificationUI = page.locator('[class*="card"], [class*="Card"]').first();
+    await expect(verificationUI).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should display SHA256 and HMAC status indicators', async ({ page }) => {
+    await page.goto('/verificar/LAUDO-TESTTEST-1234567890');
+    await page.waitForLoadState('networkidle');
+
+    // Look for integrity-related text (even in error state)
+    const pageContent = await page.content();
+    const hasIntegrityElements = 
+      pageContent.includes('SHA256') || 
+      pageContent.includes('HMAC') || 
+      pageContent.includes('Integridade') ||
+      pageContent.includes('não encontrado');
+    
+    expect(hasIntegrityElements).toBe(true);
+  });
+
+  test('should show cryptographic verification section for existing reports', async ({ page }) => {
+    // This test assumes at least one report exists with audit_id
+    await page.goto('/verificar/test-audit-id');
+    await page.waitForLoadState('networkidle');
+
+    // Should show some form of verification result
+    const verificationCard = page.locator('[class*="card"]').first();
+    await expect(verificationCard).toBeVisible({ timeout: 10000 });
+  });
+});

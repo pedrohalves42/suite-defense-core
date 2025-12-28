@@ -3109,6 +3109,56 @@ export type Database = {
           },
         ]
       }
+      audit_report_verifications: {
+        Row: {
+          audit_id: string
+          created_at: string | null
+          hmac_valid: boolean
+          id: string
+          report_id: string | null
+          sha256_match: boolean
+          verification_details: Json | null
+          verification_ip: string | null
+          verification_method: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          audit_id: string
+          created_at?: string | null
+          hmac_valid: boolean
+          id?: string
+          report_id?: string | null
+          sha256_match: boolean
+          verification_details?: Json | null
+          verification_ip?: string | null
+          verification_method?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          audit_id?: string
+          created_at?: string | null
+          hmac_valid?: boolean
+          id?: string
+          report_id?: string | null
+          sha256_match?: boolean
+          verification_details?: Json | null
+          verification_ip?: string | null
+          verification_method?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_report_verifications_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "generated_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blast_radius_policies: {
         Row: {
           action_type: string
@@ -4305,6 +4355,7 @@ export type Database = {
         Row: {
           agent_id: string | null
           agent_name: string | null
+          audit_id: string | null
           commercial_priority: string | null
           commercial_summary: string | null
           contacted_at: string | null
@@ -4313,6 +4364,7 @@ export type Database = {
           file_path: string | null
           file_url: string | null
           follow_up_at: string | null
+          hmac_signature: string | null
           id: string
           job_id: string | null
           next_action: string | null
@@ -4321,15 +4373,19 @@ export type Database = {
           risk_level: string | null
           risk_score: number | null
           sales_status: string | null
+          sha256: string | null
           statistics: Json | null
           status: string | null
           tenant_id: string
           title: string
           triggered_by: string | null
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           agent_id?: string | null
           agent_name?: string | null
+          audit_id?: string | null
           commercial_priority?: string | null
           commercial_summary?: string | null
           contacted_at?: string | null
@@ -4338,6 +4394,7 @@ export type Database = {
           file_path?: string | null
           file_url?: string | null
           follow_up_at?: string | null
+          hmac_signature?: string | null
           id?: string
           job_id?: string | null
           next_action?: string | null
@@ -4346,15 +4403,19 @@ export type Database = {
           risk_level?: string | null
           risk_score?: number | null
           sales_status?: string | null
+          sha256?: string | null
           statistics?: Json | null
           status?: string | null
           tenant_id: string
           title: string
           triggered_by?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           agent_id?: string | null
           agent_name?: string | null
+          audit_id?: string | null
           commercial_priority?: string | null
           commercial_summary?: string | null
           contacted_at?: string | null
@@ -4363,6 +4424,7 @@ export type Database = {
           file_path?: string | null
           file_url?: string | null
           follow_up_at?: string | null
+          hmac_signature?: string | null
           id?: string
           job_id?: string | null
           next_action?: string | null
@@ -4371,11 +4433,14 @@ export type Database = {
           risk_level?: string | null
           risk_score?: number | null
           sales_status?: string | null
+          sha256?: string | null
           statistics?: Json | null
           status?: string | null
           tenant_id?: string
           title?: string
           triggered_by?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
