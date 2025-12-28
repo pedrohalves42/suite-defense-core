@@ -19,6 +19,7 @@ import { useLocation } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
+import { SidebarTenantSelector } from '@/components/SidebarTenantSelector';
 
 interface MenuItem {
   icon: any;
@@ -361,6 +362,11 @@ export const AppSidebar = () => {
             </Tooltip>
           </div>
         )}
+
+        {/* Tenant Selector */}
+        <div className="border-b border-border">
+          <SidebarTenantSelector collapsed={collapsed} />
+        </div>
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-2 px-2">
