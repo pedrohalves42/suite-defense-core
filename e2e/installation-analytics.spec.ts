@@ -9,7 +9,7 @@ test.describe('Installation Analytics', () => {
     const loginResponse = await request.post(`${process.env.VITE_SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       headers: {
         'Content-Type': 'application/json',
-        'apikey': process.env.VITE_SUPABASE_ANON_KEY!,
+        'apikey': process.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
       },
       data: {
         email: process.env.TEST_ADMIN_EMAIL,

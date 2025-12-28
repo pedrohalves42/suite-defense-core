@@ -1,164 +1,170 @@
-# E2E Test Suite - Complete Documentation
+# E2E Test Suite Documentation
 
-## Overview
-
-Este documento lista todos os testes E2E do sistema, suas dependências e como executá-los.
+Complete documentation for the CyberShield E2E test suite.
 
 ## Environment Variables
 
-Todas os testes E2E usam as seguintes variáveis de ambiente padronizadas:
+Required environment variables (set in `.env.test` or `.env`):
 
 ```bash
-# Required for all tests
+# Supabase Configuration
 VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=eyJ...
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 
-# Optional - Test credentials
+# Test User Credentials
 TEST_ADMIN_EMAIL=admin@test.com
 TEST_ADMIN_PASSWORD=Test123!@#
-
-# Super Admin tests
-SUPER_ADMIN_EMAIL=super@cybershield.test
-SUPER_ADMIN_PASSWORD=SuperSecure123!@#
+TEST_SUPER_ADMIN_EMAIL=super@cybershield.test
+TEST_SUPER_ADMIN_PASSWORD=SuperAdmin123!
+TEST_OPERATOR_EMAIL=operator@cybershield.test
+TEST_OPERATOR_PASSWORD=Operator123!
 ```
 
 ## Test Categories
 
-### 🔴 P0: Core Security Tests (Blocking)
+### P0 - Core Security Tests (Critical)
+| File | Description |
+|------|-------------|
+| `red-team-security.spec.ts` | Red team attack vectors (SQLi, XSS, IDOR, privilege escalation) |
+| `security-invariants.spec.ts` | SOC2/ISO 27001 security invariants |
+| `rls-cross-tenant-isolation.spec.ts` | Multi-tenant RLS isolation |
 
-| File | Description | Priority |
-|------|-------------|----------|
-| `security-invariants.spec.ts` | Security invariants that must NEVER be violated | P0 |
-| `red-team-security.spec.ts` | Red Team adversarial attack tests | P0 |
-| `rls-cross-tenant-isolation.spec.ts` | RLS and cross-tenant isolation | P0 |
+### P1 - Privilege & Access Control
+| File | Description |
+|------|-------------|
+| `super-admin-privilege-escalation.spec.ts` | Privilege escalation prevention |
+| `super-admin-tenant-management.spec.ts` | Tenant management security |
+| `admin-access.spec.ts` | Admin access controls |
+| `update-user-role.spec.ts` | Role update validation |
+| `multiple-roles-validation.spec.ts` | Multiple roles handling |
 
-### 🟠 P1: Privilege & Access Control
+### P2 - Agent Security & Flow
+| File | Description |
+|------|-------------|
+| `agent-hmac-complete-flow.spec.ts` | HMAC authentication flow |
+| `complete-agent-flow.spec.ts` | Complete agent lifecycle |
+| `complete-enrollment-flow.spec.ts` | Enrollment → job flow |
+| `agent-creation-post-rls-fix.spec.ts` | Agent creation after RLS fix |
 
-| File | Description | Priority |
-|------|-------------|----------|
-| `super-admin-privilege-escalation.spec.ts` | Super Admin privilege escalation prevention | P1 |
-| `super-admin-tenant-management.spec.ts` | Super Admin tenant management | P1 |
-| `admin-access.spec.ts` | Admin access control | P1 |
+### P3 - Installer & Validation
+| File | Description |
+|------|-------------|
+| `complete-installer-flow.spec.ts` | Complete installer flow |
+| `one-click-installation.spec.ts` | One-click installation |
+| `linux-agent-installation.spec.ts` | Linux agent installation |
+| `macos-agent-installation.spec.ts` | macOS agent installation |
+| `installer-token-validation.spec.ts` | Token validation |
+| `ps1-sha256-validation.spec.ts` | PowerShell SHA256 validation |
+| `input-validation.spec.ts` | Input validation security |
+| `agent-name-validation.spec.ts` | Agent name validation |
 
-### 🟡 P2: Agent Security
+### P4 - Dashboard & Features
+| File | Description |
+|------|-------------|
+| `dashboard-agent-health.spec.ts` | Agent health dashboard |
+| `dashboard-installation-logs.spec.ts` | Installation logs explorer |
+| `dashboard-installation-pipeline.spec.ts` | Installation pipeline monitor |
+| `agent-status-badges.spec.ts` | Status badge display |
+| `agent-health-filters.spec.ts` | Health monitor filters |
+| `agent-quick-actions.spec.ts` | Quick action buttons |
+| `agent-scheduled-task-parameters.spec.ts` | Scheduled task params |
 
-| File | Description | Priority |
-|------|-------------|----------|
-| `agent-hmac-improvements.spec.ts` | Agent HMAC authentication | P2 |
-| `agent-creation-post-rls-fix.spec.ts` | Agent creation with RLS | P2 |
-| `input-validation.spec.ts` | Input validation and sanitization | P2 |
-| `agent-name-validation.spec.ts` | Agent name validation | P2 |
+### P4 - Feature Tests
+| File | Description |
+|------|-------------|
+| `dns-filter.spec.ts` | DNS filter functionality |
+| `rules-engine-management.spec.ts` | Rules engine management |
+| `process-control.spec.ts` | Process control features |
+| `ai-actions.spec.ts` | AI-powered actions |
+| `member-limits.spec.ts` | Member limit enforcement |
 
-### 🟢 P3: Functional Tests
+### P4 - Payment & Analytics
+| File | Description |
+|------|-------------|
+| `stripe-checkout-flow.spec.ts` | Stripe checkout flow |
+| `stripe-payment.spec.ts` | Stripe payment handling |
+| `installation-analytics.spec.ts` | Installation analytics |
+| `installation-health.spec.ts` | Installation health metrics |
 
-| File | Description | Priority |
-|------|-------------|----------|
-| `dashboard-agent-health.spec.ts` | Agent health dashboard | P3 |
-| `dashboard-installation-logs.spec.ts` | Installation logs dashboard | P3 |
-| `dashboard-installation-pipeline.spec.ts` | Installation pipeline dashboard | P3 |
-| `agent-health-filters.spec.ts` | Agent health filters | P3 |
-| `agent-status-badges.spec.ts` | Agent status badges | P3 |
-| `rules-engine-management.spec.ts` | Rules engine management | P3 |
-| `dns-filter.spec.ts` | DNS filter functionality | P3 |
-
-### 🔵 P4: Agent Installation Flow
-
-| File | Description | Priority |
-|------|-------------|----------|
-| `complete-agent-flow.spec.ts` | Complete agent flow | P4 |
-| `complete-enrollment-flow.spec.ts` | Complete enrollment flow | P4 |
-| `complete-installer-flow.spec.ts` | Complete installer flow | P4 |
-| `agent-installation.spec.ts` | Agent installation | P4 |
-| `one-click-installation.spec.ts` | One-click installation | P4 |
-| `installer-download.spec.ts` | Installer download | P4 |
-| `linux-agent-installation.spec.ts` | Linux agent installation | P4 |
-| `macos-agent-installation.spec.ts` | macOS agent installation | P4 |
+### Other Tests
+| File | Description |
+|------|-------------|
+| `humanized-language.spec.ts` | Humanized Portuguese language |
+| `load-test.spec.ts` | Performance/load testing |
 
 ## Running Tests
 
-### Quick Commands
+### Using the Unified Script
 
 ```bash
-# Run all security tests (recommended for CI/CD)
-./e2e/run-all-security-tests.sh --full
+# Make script executable
+chmod +x e2e/run-all-e2e-tests.sh
 
-# Run only core security tests (fast)
-./e2e/run-all-security-tests.sh --fast
+# Run all tests
+./e2e/run-all-e2e-tests.sh --all
 
-# Run Red Team tests
-./e2e/run-all-security-tests.sh --red-team
+# Run by category
+./e2e/run-all-e2e-tests.sh --security
+./e2e/run-all-e2e-tests.sh --agent
+./e2e/run-all-e2e-tests.sh --installer
+./e2e/run-all-e2e-tests.sh --dashboard
+./e2e/run-all-e2e-tests.sh --payment
+./e2e/run-all-e2e-tests.sh --validation
+./e2e/run-all-e2e-tests.sh --hmac
+./e2e/run-all-e2e-tests.sh --admin
+./e2e/run-all-e2e-tests.sh --features
 
-# Run invariant tests
-./e2e/run-all-security-tests.sh --invariants
+# Quick smoke test
+./e2e/run-all-e2e-tests.sh --smoke
 
-# Run RLS tests
-./e2e/run-all-security-tests.sh --rls
-
-# Run Super Admin tests
-./e2e/run-all-security-tests.sh --super-admin
+# With options
+./e2e/run-all-e2e-tests.sh --security --html       # HTML report
+./e2e/run-all-e2e-tests.sh --agent --headed        # Visible browser
+./e2e/run-all-e2e-tests.sh --all --workers=8       # 8 parallel workers
+./e2e/run-all-e2e-tests.sh --list                  # List all tests
 ```
 
-### Individual Tests
+### Using Playwright Directly
 
 ```bash
-# Run specific test file
-npx playwright test e2e/security-invariants.spec.ts
-
-# Run with debug mode
-npx playwright test e2e/red-team-security.spec.ts --debug
-
-# Run with headed browser
-npx playwright test e2e/admin-access.spec.ts --headed
-
-# Run with specific reporter
-npx playwright test e2e/rls-cross-tenant-isolation.spec.ts --reporter=html
-```
-
-### Run All Tests
-
-```bash
-# All E2E tests
+# Run all tests
 npx playwright test e2e/
 
-# All security tests (glob pattern)
-npx playwright test e2e/*security*.spec.ts e2e/*rls*.spec.ts
+# Run specific category
+npx playwright test e2e/*security*.spec.ts
+npx playwright test e2e/*agent*.spec.ts
+npx playwright test e2e/*dashboard*.spec.ts
 
-# Generate coverage report
-npx playwright test e2e/ --reporter=html && npx playwright show-report
+# Run single file
+npx playwright test e2e/red-team-security.spec.ts
+
+# With options
+npx playwright test e2e/ --headed --debug
+npx playwright test e2e/ --reporter=html
+npx playwright test e2e/ --workers=4 --retries=2
+
+# List all tests
+npx playwright test e2e/ --list
+
+# View report
+npx playwright show-report
 ```
 
 ## Test Dependencies
 
 ### Required Test Users
 
-For Super Admin tests, the following users must exist in the database:
+| Role | Email | Purpose |
+|------|-------|---------|
+| Super Admin | `super@cybershield.test` | Privilege escalation tests |
+| Admin | `admin@test.com` | General admin tests |
+| Operator | `operator@cybershield.test` | Limited access tests |
 
-```typescript
-// e2e/super-admin-privilege-escalation.spec.ts
-const SUPER_ADMIN_USER = {
-  email: 'super@cybershield.test',
-  password: 'SuperSecure123!@#',
-  role: 'super_admin'
-};
+### Database Setup
 
-const REGULAR_ADMIN_USER = {
-  email: 'admin@cybershield.test',
-  password: 'AdminSecure123!@#',
-  role: 'admin'
-};
-
-const OPERATOR_USER = {
-  email: 'operator@cybershield.test',
-  password: 'OperatorSecure123!@#',
-  role: 'operator'
-};
-```
-
-### Setup Test Users
-
-```bash
-# Run the setup script
-npx ts-node tests/setup-security-test-users.ts
+```sql
+-- Create test users (run in Supabase SQL Editor)
+-- See tests/setup-security-test-users.ts for complete setup
 ```
 
 ## CI/CD Integration
@@ -166,24 +172,33 @@ npx ts-node tests/setup-security-test-users.ts
 ### GitHub Actions
 
 ```yaml
-# .github/workflows/security-tests.yml
-name: Security E2E Tests
+name: E2E Tests
 on: [push, pull_request]
 
 jobs:
-  security-tests:
+  e2e-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm ci
-      - run: npx playwright install --with-deps
-      - run: ./e2e/run-all-security-tests.sh --full
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+        
+      - name: Run E2E tests
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          TEST_ADMIN_EMAIL: ${{ secrets.TEST_ADMIN_EMAIL }}
+          TEST_ADMIN_PASSWORD: ${{ secrets.TEST_ADMIN_PASSWORD }}
+        run: npx playwright test e2e/ --reporter=github
+        
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -195,48 +210,49 @@ jobs:
 
 | Control | Test File | SOC2 | ISO 27001 |
 |---------|-----------|------|-----------|
-| Cross-Tenant Isolation | `rls-cross-tenant-isolation.spec.ts` | ✅ | ✅ |
-| Privilege Escalation Prevention | `super-admin-privilege-escalation.spec.ts` | ✅ | ✅ |
-| Authentication Bypass | `security-invariants.spec.ts` | ✅ | ✅ |
-| SQL Injection Prevention | `red-team-security.spec.ts` | ✅ | ✅ |
-| Rate Limiting | `red-team-security.spec.ts` | ✅ | ✅ |
-| HMAC Validation | `agent-hmac-improvements.spec.ts` | ✅ | ✅ |
-| Input Validation | `input-validation.spec.ts` | ✅ | ✅ |
+| Access Control | `admin-access.spec.ts` | CC6.1 | A.9.2 |
+| Data Isolation | `rls-cross-tenant-isolation.spec.ts` | CC6.1 | A.9.4 |
+| Input Validation | `input-validation.spec.ts` | CC6.6 | A.14.2 |
+| Authentication | `agent-hmac-complete-flow.spec.ts` | CC6.1 | A.9.4 |
+| Privilege Escalation | `super-admin-privilege-escalation.spec.ts` | CC6.1 | A.9.2 |
+| Injection Prevention | `red-team-security.spec.ts` | CC6.6 | A.14.2 |
 
 ## Removed Redundant Tests
 
-The following files were removed as they were redundant:
+The following files were removed due to redundancy:
 
-- ❌ `rls-multi-tenant.spec.ts` - Covered by `rls-cross-tenant-isolation.spec.ts`
-- ❌ `comprehensive-security-audit.spec.ts` - Covered by `security-invariants.spec.ts` and `red-team-security.spec.ts`
+| Removed File | Reason | Covered By |
+|--------------|--------|------------|
+| `rls-multi-tenant.spec.ts` | Duplicate coverage | `rls-cross-tenant-isolation.spec.ts` |
+| `comprehensive-security-audit.spec.ts` | 90% overlap | `security-invariants.spec.ts` |
+| `agent-flow.spec.ts` | 90% overlap | `complete-agent-flow.spec.ts` |
+| `installer-download.spec.ts` | 80% overlap | `complete-installer-flow.spec.ts` |
+| `serve-installer.spec.ts` | 70% overlap | Other installer tests |
+| `heartbeat-validation.spec.ts` | 90% overlap | `agent-hmac-complete-flow.spec.ts` |
+| `agent-hmac-improvements.spec.ts` | 85% overlap | `agent-hmac-complete-flow.spec.ts` |
 
 ## Troubleshooting
 
 ### Tests Skipped
-
-If tests are being skipped, check:
-
-1. Environment variables are set correctly
-2. Supabase project is running
-3. Test users exist in the database
+- Ensure test users exist in database
+- Check environment variables are set correctly
+- Verify Supabase project is running
 
 ### Authentication Failures
-
 ```bash
-# Check if test users exist
-npx ts-node -e "
-const { createClient } = require('@supabase/supabase-js');
-const client = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_PUBLISHABLE_KEY);
-client.auth.signInWithPassword({
-  email: 'admin@test.com',
-  password: 'Test123!@#'
-}).then(console.log);
-"
+# Debug authentication
+DEBUG=pw:api npx playwright test e2e/admin-access.spec.ts --headed
 ```
 
 ### Timeout Issues
-
 ```bash
-# Increase timeout for slow connections
-npx playwright test e2e/security-invariants.spec.ts --timeout=120000
+# Increase timeout
+npx playwright test e2e/ --timeout=120000
+```
+
+### View Test Results
+```bash
+# Generate and view HTML report
+npx playwright test e2e/ --reporter=html
+npx playwright show-report
 ```
