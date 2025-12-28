@@ -197,7 +197,7 @@ async function generateTenantReport(
     .eq("tenant_id", tenantId);
 
   const { data: vulnStats } = await supabase
-    .from("vulnerability_findings")
+    .from("vuln_findings")
     .select("severity")
     .eq("tenant_id", tenantId);
 

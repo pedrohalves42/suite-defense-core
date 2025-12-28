@@ -102,6 +102,12 @@ const VerificarLaudo: React.FC = () => {
     return 'Baixo Risco';
   };
 
+  const truncateHash = (hash: string | null, length: number = 16) => {
+    if (!hash) return 'N/A';
+    if (hash.length <= length * 2) return hash;
+    return `${hash.substring(0, length)}...${hash.substring(hash.length - length)}`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
