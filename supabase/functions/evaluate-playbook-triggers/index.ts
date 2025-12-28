@@ -8,7 +8,18 @@ const corsHeaders = {
 
 interface TriggerEvent {
   tenant_id: string;
-  trigger_type: 'agent_offline' | 'dns_blocked' | 'job_failed' | 'integrity_low' | 'manual';
+  trigger_type: 
+    | 'agent_offline' 
+    | 'dns_blocked' 
+    | 'job_failed' 
+    | 'integrity_low' 
+    | 'manual'
+    | 'suspicious_web_activity'
+    | 'vulnerability_critical'
+    | 'vulnerability_high'
+    | 'multiple_malicious_access'
+    | 'suspicious_process'
+    | 'unauthorized_service';
   agent_id?: string;
   context?: Record<string, unknown>;
 }
@@ -401,6 +412,51 @@ function evaluateConditions(
       const threshold = (conditions.integrity_threshold as number) || 80;
       const currentScore = (context.integrity_score as number) || 100;
       return currentScore < threshold;
+    }
+
+    case 'suspicious_web_activity': {
+      const minRiskScore = (conditions.min_risk_score as number) || 70;
+      const riskScore = (context.risk_score as number) || 0;
+      const categories = (conditions.categories as string[]) || [];
+      const domain_category = (context.domain_category as string) || '';
+      
+      if (categories.length > 0 && domain_category) {
+        return riskScore >= minRiskScore && categories.includes(domain_category);
+      }
+      return riskScore >= minRiskScore;
+    }
+
+    case 'vulnerability_critical': {
+      const minCvss = (conditions.min_cvss as number) || 9.0;
+      const cvssScore = (context.cvss_score as number) || 0;
+      const vulnsFound = (context.vulns_found as number) || 0;
+      return cvssScore >= minCvss || vulnsFound > 0;
+    }
+
+    case 'vulnerability_high': {
+      const minCvss = (conditions.min_cvss as number) || 7.0;
+      const maxCvss = (conditions.max_cvss as number) || 8.9;
+      const cvssScore = (context.cvss_score as number) || 0;
+      return cvssScore >= minCvss && cvssScore <= maxCvss;
+    }
+
+    case 'multiple_malicious_access': {
+      const minCount = (conditions.min_count as number) || 3;
+      const accessCount = (context.access_count as number) || 0;
+      return accessCount >= minCount;
+    }
+
+    case 'suspicious_process': {
+      const processReputation = (context.process_reputation as string) || '';
+      const requiredReputation = (conditions.process_reputation as string) || 'malicious';
+      return processReputation === requiredReputation;
+    }
+
+    case 'unauthorized_service': {
+      const authorized = (context.authorized as boolean) ?? true;
+      const serviceState = (context.service_state as string) || '';
+      const requiredState = (conditions.service_state as string) || 'running';
+      return !authorized && serviceState === requiredState;
     }
 
     case 'manual':
