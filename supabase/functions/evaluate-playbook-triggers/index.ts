@@ -195,6 +195,7 @@ serve(async (req) => {
       version: playbook.version,
       require_approval: playbook.require_approval,
       cooldown_minutes: cooldownMinutes,
+      execution_mode: playbook.execution_mode || 'assistive', // ✅ AJUSTE 4: Incluir execution_mode no snapshot
       snapshot_created_at: new Date().toISOString(),
     };
 
