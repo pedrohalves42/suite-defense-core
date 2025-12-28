@@ -198,18 +198,28 @@ const ServerDashboard = () => {
       }
     }, 10000);
     
-    // Realtime subscription para agentes
+    // Realtime subscription para agentes do tenant atual
     const agentsChannel = supabase
-      .channel('agents-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'agents' }, () => {
+      .channel(`agents-changes-${tenant.id}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'agents',
+        filter: `tenant_id=eq.${tenant.id}`
+      }, () => {
         loadDashboardData();
       })
       .subscribe();
 
-    // Realtime subscription para jobs
+    // Realtime subscription para jobs do tenant atual
     const jobsChannel = supabase
-      .channel('jobs-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'jobs' }, () => {
+      .channel(`jobs-changes-${tenant.id}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'jobs',
+        filter: `tenant_id=eq.${tenant.id}`
+      }, () => {
         loadDashboardData();
       })
       .subscribe();
