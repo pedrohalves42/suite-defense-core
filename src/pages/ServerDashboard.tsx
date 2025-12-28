@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Shield, Server, Users, Briefcase, FileText, Download, Activity, TrendingUp, AlertCircle, Network, Zap, Clock, ShieldAlert, Key, Settings, BarChart3, PieChart, LineChart, CheckCircle2, XCircle, Info, Package } from "lucide-react";
 import { EvidenceBundleExport } from "@/components/admin/EvidenceBundleExport";
 import { IntegrityScoreCard } from "@/components/integrity/IntegrityScoreCard";
@@ -19,6 +19,7 @@ import { logger } from "@/lib/logger";
 import { getJobTypeLabel, getJobTypeLabelNoEmoji } from "@/lib/job-labels";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
+import { useTenant } from "@/hooks/useTenant";
 
 interface Agent {
   id: string;
@@ -113,6 +114,7 @@ const ServerDashboard = () => {
   const { showOnboarding, completeOnboarding, dismissFor7Days } = useOnboarding();
   const { isAdmin } = useIsAdmin();
   const { isOnline } = useOnlineStatus();
+  const { tenant, loading: tenantLoading } = useTenant();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
@@ -142,7 +144,49 @@ const ServerDashboard = () => {
     loadTenantNames();
   }, []);
 
+  const loadDashboardData = useCallback(async () => {
+    if (!tenant?.id) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const [agentsRes, jobsRes, reportsRes, tokensRes, rateLimitsRes, scansRes, logsRes] = await Promise.all([
+        supabase.from("agents_safe").select("*").eq("tenant_id", tenant.id).order("enrolled_at", { ascending: false }),
+        supabase.from("jobs").select("*").eq("tenant_id", tenant.id).order("created_at", { ascending: false }).limit(100),
+        supabase.from("reports").select("*").eq("tenant_id", tenant.id).order("created_at", { ascending: false }).limit(100),
+        supabase.from("agent_tokens").select("*, agents!inner(agent_name, tenant_id)").eq("agents.tenant_id", tenant.id).order("created_at", { ascending: false }),
+        supabase.from("rate_limits").select("*").order("last_request_at", { ascending: false }).limit(100),
+        supabase.from("virus_scans").select("*").eq("tenant_id", tenant.id).order("scanned_at", { ascending: false }).limit(100),
+        supabase.from("audit_logs").select("id, action, resource_type, created_at, success, user_id").order("created_at", { ascending: false }).limit(50),
+      ]);
+
+      if (agentsRes.data) {
+        setAgents(agentsRes.data);
+        const inactiveCount = agentsRes.data.filter(a => {
+          if (!a.last_heartbeat) return true;
+          const lastHeartbeat = new Date(a.last_heartbeat);
+          return (new Date().getTime() - lastHeartbeat.getTime()) > 5 * 60 * 1000;
+        }).length;
+        setAlerts(inactiveCount);
+      }
+      if (jobsRes.data) setJobs(jobsRes.data);
+      if (reportsRes.data) setReports(reportsRes.data);
+      if (tokensRes.data) setAgentTokens(tokensRes.data as AgentToken[]);
+      if (rateLimitsRes.data) setRateLimits(rateLimitsRes.data);
+      if (scansRes.data) setVirusScans(scansRes.data);
+      if (logsRes.data) setAuditLogs(logsRes.data);
+    } catch (error) {
+      logger.error("Erro ao carregar dados", error);
+      toast.error("Erro ao carregar dados do dashboard");
+    } finally {
+      setLoading(false);
+    }
+  }, [tenant?.id]);
+
   useEffect(() => {
+    if (!tenant?.id) return;
+    
     loadDashboardData();
     
     // Only poll when online
@@ -175,42 +219,7 @@ const ServerDashboard = () => {
       supabase.removeChannel(agentsChannel);
       supabase.removeChannel(jobsChannel);
     };
-  }, []);
-
-  const loadDashboardData = async () => {
-    try {
-      const [agentsRes, jobsRes, reportsRes, tokensRes, rateLimitsRes, scansRes, logsRes] = await Promise.all([
-        supabase.from("agents_safe").select("*").order("enrolled_at", { ascending: false }),
-        supabase.from("jobs").select("*").order("created_at", { ascending: false }).limit(100),
-        supabase.from("reports").select("*").order("created_at", { ascending: false }).limit(100),
-        supabase.from("agent_tokens").select("*, agents(agent_name)").order("created_at", { ascending: false }),
-        supabase.from("rate_limits").select("*").order("last_request_at", { ascending: false }).limit(100),
-        supabase.from("virus_scans").select("*").order("scanned_at", { ascending: false }).limit(100),
-        supabase.from("audit_logs").select("id, action, resource_type, created_at, success, user_id").order("created_at", { ascending: false }).limit(50),
-      ]);
-
-      if (agentsRes.data) {
-        setAgents(agentsRes.data);
-        const inactiveCount = agentsRes.data.filter(a => {
-          if (!a.last_heartbeat) return true;
-          const lastHeartbeat = new Date(a.last_heartbeat);
-          return (new Date().getTime() - lastHeartbeat.getTime()) > 5 * 60 * 1000;
-        }).length;
-        setAlerts(inactiveCount);
-      }
-      if (jobsRes.data) setJobs(jobsRes.data);
-      if (reportsRes.data) setReports(reportsRes.data);
-      if (tokensRes.data) setAgentTokens(tokensRes.data as AgentToken[]);
-      if (rateLimitsRes.data) setRateLimits(rateLimitsRes.data);
-      if (scansRes.data) setVirusScans(scansRes.data);
-      if (logsRes.data) setAuditLogs(logsRes.data);
-    } catch (error) {
-      logger.error("Erro ao carregar dados", error);
-      toast.error("Erro ao carregar dados do dashboard");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [tenant?.id, isOnline, loadDashboardData]);
 
   // Cálculo robusto de agentes online (FASE 1)
   const FIVE_MINUTES_MS = 5 * 60 * 1000;
@@ -409,6 +418,18 @@ const ServerDashboard = () => {
     ? ((activeAgents.length / agents.length) * 100).toFixed(0)
     : '0';
 
+  // Show loading while tenant is loading
+  if (tenantLoading || !tenant) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Server className="h-12 w-12 text-primary animate-pulse" />
+          <p className="text-muted-foreground">Carregando dados...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -421,7 +442,9 @@ const ServerDashboard = () => {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               Painel Principal
             </h1>
-            <p className="text-sm text-muted-foreground">Visão global do sistema</p>
+            <p className="text-sm text-muted-foreground">
+              {tenant.name} — Visão global do sistema
+            </p>
           </div>
         </div>
 
