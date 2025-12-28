@@ -348,6 +348,49 @@ serve(async (req) => {
             expires_at: expiresAt.toISOString(),
           },
         });
+
+        // Send email notification for semi_automatic playbook approval
+        try {
+          const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+          const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+          
+          await fetch(`${SUPABASE_URL}/functions/v1/send-security-notification`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Internal-Secret': INTERNAL_SECRET || '',
+            },
+            body: JSON.stringify({
+              channel: 'all',
+              alertType: 'playbook_approval_required',
+              severity: playbook.severity === 'critical' ? 'critical' : 'warning',
+              title: `🚨 Aprovação necessária: ${playbook.name}`,
+              message: `O playbook "${playbook.name}" foi disparado automaticamente e requer aprovação humana para executar ações destrutivas. Esta solicitação expira em 24 horas.`,
+              details: {
+                playbook_id: playbook.id,
+                playbook_name: playbook.name,
+                playbook_version: playbook.version,
+                execution_id: execution.id,
+                approval_request_id: approvalRequest?.id,
+                trigger_type,
+                agent_id,
+                agent_info: agentInfo,
+                expires_at: expiresAt.toISOString(),
+                actions: actionsSnapshot.map(a => ({
+                  type: a.action_type,
+                  label: a.label,
+                  risk: a.risk_level,
+                })),
+              },
+              tenantId: tenant_id,
+            }),
+          });
+          
+          console.log(`[evaluate-playbook-triggers] Email notification sent for approval request ${approvalRequest?.id}`);
+        } catch (notifyError) {
+          console.error('[evaluate-playbook-triggers] Failed to send email notification:', notifyError);
+          // Don't fail the operation if notification fails
+        }
       }
     }
     // Se deve auto-executar (baseado no motor de risco E NÃO estiver em dry_run), executar automaticamente
