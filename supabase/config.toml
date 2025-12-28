@@ -553,3 +553,8 @@ verify_jwt = false
 # === Compliance Report Verification (public - SOC2/ISO 27001) ===
 [functions.verify-compliance-report]
 verify_jwt = false
+
+# === Auto Execute AI Actions (every 30 minutes) ===
+[functions.auto-execute-ai-actions]
+verify_jwt = false
+schedule = "*/30 * * * *"
