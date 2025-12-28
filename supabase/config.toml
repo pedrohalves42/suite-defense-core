@@ -549,3 +549,7 @@ schedule = "0 23 * * 0"
 # === One-Click Approval via Token (public endpoint) ===
 [functions.approve-via-token]
 verify_jwt = false
+
+# === Compliance Report Verification (public - SOC2/ISO 27001) ===
+[functions.verify-compliance-report]
+verify_jwt = false

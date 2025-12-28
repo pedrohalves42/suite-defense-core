@@ -103,8 +103,13 @@ Deno.serve(async (req) => {
     const now = new Date();
     const auditId = `LAUDO-${crypto.randomUUID().slice(0, 8).toUpperCase()}-${now.getTime()}`;
 
-    // Generate HMAC secret for this tenant (use tenant_id as base)
-    const hmacSecret = Deno.env.get("COMPLIANCE_HMAC_SECRET") || tenantId;
+    // CRITICAL: Get HMAC secret from environment (required for SOC2/ISO compliance)
+    const hmacSecret = Deno.env.get("COMPLIANCE_HMAC_SECRET");
+    if (!hmacSecret) {
+      console.error("[generate-compliance-report] COMPLIANCE_HMAC_SECRET not configured!");
+      return new Response(JSON.stringify({ error: "Server configuration error: HMAC secret not configured" }), 
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // Prepare payload data for hashing (without sha256 and hmac_signature)
     const payloadForHash = JSON.stringify({
@@ -180,8 +185,39 @@ Deno.serve(async (req) => {
       generator: "CyberShield Compliance Engine v4",
     };
 
-    console.log(`[generate-compliance-report] Report ${auditId} generated for ${template} with SHA256: ${sha256Hash.substring(0, 16)}...`);
-    return new Response(JSON.stringify({ success: true, payload }), 
+    // PERSIST REPORT TO DATABASE with integrity fields
+    const { data: savedReport, error: saveError } = await supabase
+      .from("generated_reports")
+      .insert({
+        tenant_id: tenantId,
+        report_type: `compliance_${template.toLowerCase()}`,
+        title: `Relatório de Compliance ${template} - ${now.toLocaleDateString('pt-BR')}`,
+        risk_score: riskScore,
+        risk_level: riskLevel,
+        status: "generated",
+        expires_at: payload.valid_until,
+        audit_id: auditId,
+        sha256: sha256Hash,
+        hmac_signature: hmacSignature,
+        report_data: payload,
+      })
+      .select("id")
+      .single();
+
+    if (saveError) {
+      console.error("[generate-compliance-report] Failed to save report:", saveError);
+      return new Response(JSON.stringify({ error: "Failed to persist report" }), 
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    console.log(`[generate-compliance-report] Report ${auditId} generated and persisted with ID: ${savedReport.id}, SHA256: ${sha256Hash.substring(0, 16)}...`);
+    
+    return new Response(JSON.stringify({ 
+      success: true, 
+      payload,
+      report_id: savedReport.id,
+      audit_id: auditId,
+    }), 
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error) {
