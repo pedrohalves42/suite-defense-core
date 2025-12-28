@@ -56,6 +56,10 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const requestId = crypto.randomUUID().substring(0, 8);
+    console.log(`[verify-compliance-report][${requestId}] === INICIANDO VERIFICAÇÃO ===`);
+    console.log(`[verify-compliance-report][${requestId}] Method: ${req.method}`);
+    
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -66,18 +70,23 @@ Deno.serve(async (req) => {
     if (req.method === "GET") {
       const url = new URL(req.url);
       auditId = url.searchParams.get("audit_id");
+      console.log(`[verify-compliance-report][${requestId}] GET audit_id from query: ${auditId}`);
     } else if (req.method === "POST") {
       const body = await req.json();
       auditId = body.audit_id;
+      console.log(`[verify-compliance-report][${requestId}] POST audit_id from body: ${auditId}`);
     }
 
     if (!auditId) {
+      console.log(`[verify-compliance-report][${requestId}] ERROR: audit_id não fornecido`);
       return new Response(JSON.stringify({ 
         success: false, 
         error: "audit_id is required",
         integrity: { valid: false }
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
+    console.log(`[verify-compliance-report][${requestId}] Buscando relatório com audit_id: "${auditId}"`);
 
     // Fetch report by audit_id
     const { data: report, error: fetchError } = await supabase
@@ -86,15 +95,44 @@ Deno.serve(async (req) => {
       .eq("audit_id", auditId)
       .single();
 
+    console.log(`[verify-compliance-report][${requestId}] Resultado da busca:`, {
+      found: !!report,
+      error: fetchError?.message || null,
+      report_id: report?.id || null,
+      report_audit_id: report?.audit_id || null
+    });
+
     if (fetchError || !report) {
-      console.log(`[verify-compliance-report] Report not found for audit_id: ${auditId}`);
+      console.log(`[verify-compliance-report][${requestId}] ERRO: Relatório NÃO encontrado para audit_id: "${auditId}"`);
+      
+      // Lista os audit_ids existentes para debug
+      const { data: existingReports } = await supabase
+        .from("generated_reports")
+        .select("audit_id, created_at")
+        .order("created_at", { ascending: false })
+        .limit(5);
+      
+      console.log(`[verify-compliance-report][${requestId}] Últimos 5 audit_ids no banco:`, existingReports?.map(r => r.audit_id) || []);
+      
       return new Response(JSON.stringify({ 
         success: false, 
         error: "Relatório não encontrado",
         audit_id: auditId,
-        integrity: { valid: false }
+        integrity: { valid: false },
+        debug: {
+          searched_audit_id: auditId,
+          existing_audit_ids: existingReports?.map(r => r.audit_id) || []
+        }
       }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+    
+    console.log(`[verify-compliance-report][${requestId}] SUCESSO: Relatório encontrado!`, {
+      id: report.id,
+      audit_id: report.audit_id,
+      title: report.title,
+      has_sha256: !!report.sha256,
+      has_hmac: !!report.hmac_signature
+    });
 
     const typedReport = report as ReportData;
 
@@ -217,11 +255,13 @@ Deno.serve(async (req) => {
     }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (error) {
-    console.error("[verify-compliance-report] Error:", error);
+    console.error("[verify-compliance-report] ERROR CRÍTICO:", error);
+    console.error("[verify-compliance-report] Stack:", error instanceof Error ? error.stack : "N/A");
     return new Response(JSON.stringify({ 
       success: false, 
       error: "Internal server error",
-      integrity: { valid: false }
+      integrity: { valid: false },
+      debug: { message: error instanceof Error ? error.message : String(error) }
     }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
