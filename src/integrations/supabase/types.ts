@@ -2856,6 +2856,8 @@ export type Database = {
         Row: {
           action_payload: Json
           action_type: string
+          approval_token: string | null
+          approval_token_expires_at: string | null
           approved_at: string | null
           chain_id: string | null
           created_at: string
@@ -2874,6 +2876,8 @@ export type Database = {
         Insert: {
           action_payload?: Json
           action_type: string
+          approval_token?: string | null
+          approval_token_expires_at?: string | null
           approved_at?: string | null
           chain_id?: string | null
           created_at?: string
@@ -2892,6 +2896,8 @@ export type Database = {
         Update: {
           action_payload?: Json
           action_type?: string
+          approval_token?: string | null
+          approval_token_expires_at?: string | null
           approved_at?: string | null
           chain_id?: string | null
           created_at?: string
@@ -8670,6 +8676,57 @@ export type Database = {
           },
           {
             foreignKeyName: "web_access_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      weekly_security_reports: {
+        Row: {
+          created_at: string | null
+          executive_summary: string | null
+          generated_at: string | null
+          id: string
+          metrics: Json
+          sent_at: string | null
+          tenant_id: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          created_at?: string | null
+          executive_summary?: string | null
+          generated_at?: string | null
+          id?: string
+          metrics: Json
+          sent_at?: string | null
+          tenant_id: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          created_at?: string | null
+          executive_summary?: string | null
+          generated_at?: string | null
+          id?: string
+          metrics?: Json
+          sent_at?: string | null
+          tenant_id?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_security_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weekly_security_reports_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_system_operations_summary"
