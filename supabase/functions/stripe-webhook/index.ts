@@ -9,6 +9,13 @@ const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
 console.log("[STRIPE-WEBHOOK] Function initialized");
 
+// V4: UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(value: string | undefined | null): value is string {
+  return typeof value === 'string' && UUID_REGEX.test(value);
+}
+
 // Helper to find tenant by customer_id OR by metadata.tenant_id
 async function findTenantByCustomerOrMetadata(
   supabase: any,
@@ -28,7 +35,13 @@ async function findTenantByCustomerOrMetadata(
   }
 
   // Fallback: try by metadata.tenant_id (for first-time checkout)
+  // V4: Validate tenant_id is a valid UUID before using
   if (metadata?.tenant_id) {
+    if (!isValidUUID(metadata.tenant_id)) {
+      console.error(`[STRIPE-WEBHOOK] Invalid tenant_id format in metadata: ${metadata.tenant_id}`);
+      return null;
+    }
+    
     console.log(`[STRIPE-WEBHOOK] Trying fallback by metadata.tenant_id: ${metadata.tenant_id}`);
     
     const { data: tenantSubByMeta } = await supabase
