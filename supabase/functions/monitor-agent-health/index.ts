@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { shouldProcessAlertsForTenant } from '../_shared/business-hours.ts';
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -36,6 +37,10 @@ Deno.serve(async (req) => {
 
     const now = new Date();
     const offlineAgents = [];
+    const skippedAgents = [];
+
+    // Cache de verificação de horário por tenant para evitar queries repetidas
+    const tenantBusinessHoursCache: Record<string, { shouldProcess: boolean; reason: string }> = {};
 
     for (const agent of agents || []) {
       if (!agent.last_heartbeat) continue;
@@ -45,6 +50,23 @@ Deno.serve(async (req) => {
 
       // Agent offline for more than 5 minutes
       if (minutesSinceHeartbeat > 5) {
+        // Verificar horário de expediente do tenant (com cache)
+        if (!tenantBusinessHoursCache[agent.tenant_id]) {
+          tenantBusinessHoursCache[agent.tenant_id] = await shouldProcessAlertsForTenant(supabase, agent.tenant_id);
+        }
+        
+        const { shouldProcess, reason } = tenantBusinessHoursCache[agent.tenant_id];
+        
+        if (!shouldProcess) {
+          skippedAgents.push({
+            agent_name: agent.agent_name,
+            minutesOffline: Math.floor(minutesSinceHeartbeat),
+            reason
+          });
+          console.log(`[Monitor] Skipping offline check for ${agent.agent_name} - ${reason}`);
+          continue;
+        }
+
         offlineAgents.push({
           ...agent,
           minutesOffline: Math.floor(minutesSinceHeartbeat)
@@ -79,7 +101,7 @@ Deno.serve(async (req) => {
             body: {
               tenantId: agent.tenant_id,
               alertType: 'agent_offline',
-              subject: `[WARN] ? Agente Offline: ${agent.agent_name}`,
+              subject: `[WARN] Agente Offline: ${agent.agent_name}`,
               data: {
                 agentName: agent.agent_name,
                 minutesOffline: agent.minutesOffline,
@@ -101,7 +123,7 @@ Deno.serve(async (req) => {
 
     if (jobsError) throw jobsError;
 
-    // Send alerts for failed jobs
+    // Send alerts for failed jobs (respeitando horário de expediente)
     if (failedJobs && failedJobs.length > 0) {
       const jobsByTenant = failedJobs.reduce((acc, job) => {
         if (!acc[job.tenant_id]) acc[job.tenant_id] = [];
@@ -110,6 +132,18 @@ Deno.serve(async (req) => {
       }, {} as Record<string, any[]>);
 
       for (const [tenantId, jobs] of Object.entries(jobsByTenant) as [string, any[]][]) {
+        // Verificar horário de expediente do tenant
+        if (!tenantBusinessHoursCache[tenantId]) {
+          tenantBusinessHoursCache[tenantId] = await shouldProcessAlertsForTenant(supabase, tenantId);
+        }
+        
+        const { shouldProcess, reason } = tenantBusinessHoursCache[tenantId];
+        
+        if (!shouldProcess) {
+          console.log(`[Monitor] Skipping failed jobs alert for tenant ${tenantId} - ${reason}`);
+          continue;
+        }
+
         const { data: settings } = await supabase
           .from('tenant_settings')
           .select('*')
@@ -126,7 +160,7 @@ Deno.serve(async (req) => {
             body: {
               tenantId,
               alertType: 'jobs_failed',
-              subject: `[ERROR]  ${jobs.length} Job(s) Falharam`,
+              subject: `[ERROR] ${jobs.length} Job(s) Falharam`,
               data: {
                 failedCount: jobs.length,
                 jobs: jobs.map((j: any) => ({
@@ -146,6 +180,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         offlineAgents: offlineAgents.length,
+        skippedAgents: skippedAgents.length,
         failedJobs: failedJobs?.length || 0
       }),
       { headers: { 'Content-Type': 'application/json' } }

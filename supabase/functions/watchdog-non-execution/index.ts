@@ -16,6 +16,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.47.10';
 import { logger } from '../_shared/logger.ts';
+import { shouldProcessAlertsForTenant } from '../_shared/business-hours.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,8 +100,25 @@ Deno.serve(async (req) => {
     // Criar alertas para cada agente problemático
     const alertsCreated = [];
     const alertsSkipped = [];
+    const skippedDueToBusinessHours = [];
+
+    // Cache de verificação de horário por tenant
+    const tenantBusinessHoursCache: Record<string, { shouldProcess: boolean; reason: string }> = {};
 
     for (const agent of unhealthyAgents as AgentExecutionHealth[]) {
+      // Verificar horário de expediente do tenant
+      if (!tenantBusinessHoursCache[agent.tenant_id]) {
+        tenantBusinessHoursCache[agent.tenant_id] = await shouldProcessAlertsForTenant(supabase, agent.tenant_id);
+      }
+      
+      const { shouldProcess, reason } = tenantBusinessHoursCache[agent.tenant_id];
+      
+      if (!shouldProcess) {
+        skippedDueToBusinessHours.push(agent.agent_name);
+        logger.debug(`[${requestId}] Skipping ${agent.agent_name} - ${reason}`);
+        continue;
+      }
+
       // Verificar se já existe alerta recente (últimas 2 horas) para evitar spam
       const { data: existingAlert } = await supabase
         .from('system_alerts')
@@ -155,6 +173,10 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (skippedDueToBusinessHours.length > 0) {
+      logger.info(`[${requestId}] Skipped ${skippedDueToBusinessHours.length} agents due to business hours`);
+    }
+
     // Log de segurança para auditoria
     if (alertsCreated.length > 0) {
       await supabase.from('security_logs').insert({
@@ -171,7 +193,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    logger.info(`[${requestId}] Watchdog completed: ${alertsCreated.length} alerts created, ${alertsSkipped.length} skipped`);
+    logger.info(`[${requestId}] Watchdog completed: ${alertsCreated.length} alerts created, ${alertsSkipped.length} skipped, ${skippedDueToBusinessHours.length} outside business hours`);
 
     return new Response(
       JSON.stringify({
@@ -179,6 +201,7 @@ Deno.serve(async (req) => {
         problems_detected: unhealthyAgents.length,
         alerts_created: alertsCreated.length,
         alerts_skipped: alertsSkipped.length,
+        skipped_outside_business_hours: skippedDueToBusinessHours.length,
         problems_by_type: problemsByType,
         agents: alertsCreated,
         timestamp: new Date().toISOString(),

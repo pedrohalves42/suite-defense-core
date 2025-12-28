@@ -14,6 +14,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { shouldProcessAlertsForTenant } from '../_shared/business-hours.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -71,8 +72,25 @@ Deno.serve(async (req) => {
 
     const issues: IntegrityCheckResult[] = [];
     const alertsToCreate: any[] = [];
+    const skippedDueToBusinessHours: string[] = [];
+
+    // Cache de verificação de horário por tenant
+    const tenantBusinessHoursCache: Record<string, { shouldProcess: boolean; reason: string }> = {};
 
     for (const agent of problematicAgents || []) {
+      // Verificar horário de expediente do tenant
+      if (!tenantBusinessHoursCache[agent.tenant_id]) {
+        tenantBusinessHoursCache[agent.tenant_id] = await shouldProcessAlertsForTenant(supabase, agent.tenant_id);
+      }
+      
+      const { shouldProcess, reason } = tenantBusinessHoursCache[agent.tenant_id];
+      
+      if (!shouldProcess) {
+        skippedDueToBusinessHours.push(agent.agent_name);
+        console.log(`[${requestId}] Skipping integrity check for ${agent.agent_name} - ${reason}`);
+        continue;
+      }
+
       let issueType: IntegrityCheckResult['issue_type'];
       let minutesSinceHeartbeat: number | null = null;
 
@@ -152,6 +170,7 @@ Deno.serve(async (req) => {
     }
 
     // Atualizar status dos agentes com problemas graves para 'inactive'
+    // (apenas se dentro do horário de expediente)
     const agentsToDeactivate = issues
       .filter(i => i.minutes_since_heartbeat && i.minutes_since_heartbeat > 60)
       .map(i => i.agent_id);
@@ -185,8 +204,13 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (skippedDueToBusinessHours.length > 0) {
+      console.log(`[${requestId}] Skipped ${skippedDueToBusinessHours.length} agents due to business hours`);
+    }
+
     const summary = {
       total_checked: problematicAgents?.length || 0,
+      skipped_outside_business_hours: skippedDueToBusinessHours.length,
       removed_after_reboot: issues.filter(i => i.issue_type === 'removed_after_reboot').length,
       stale_after_active: issues.filter(i => i.issue_type === 'stale_after_active').length,
       never_connected: issues.filter(i => i.issue_type === 'never_connected').length,
