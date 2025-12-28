@@ -24,8 +24,12 @@ export default function TestComplianceGenerator() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generateAllReports = async () => {
-    if (!tenant?.id) return;
+    if (!tenant?.id) {
+      console.error("No tenant found for current user");
+      return;
+    }
     
+    console.log("Generating reports for tenant:", tenant.id, tenant.name);
     setIsGenerating(true);
     setReports(TEMPLATES.map(t => ({ template: t, audit_id: "", sha256: "", hmac_signature: "", status: "pending" })));
 

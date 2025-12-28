@@ -62,8 +62,14 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { data: userRole } = await supabase.from("user_roles").select("tenant_id, tenants(name)").eq("user_id", user.id).single();
+    const { data: userRole, error: roleError } = await supabase.from("user_roles").select("tenant_id, tenants(name)").eq("user_id", user.id).limit(1).maybeSingle();
+    if (roleError) {
+      console.error("[generate-compliance-report] Error fetching user role:", roleError);
+      return new Response(JSON.stringify({ error: "Error fetching user role" }), 
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     if (!userRole) {
+      console.error("[generate-compliance-report] User not associated with any tenant:", user.id);
       return new Response(JSON.stringify({ error: "User not associated with tenant" }), 
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
