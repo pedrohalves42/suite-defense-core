@@ -6,6 +6,8 @@ interface CleanupRequest {
   status?: string[];
   older_than_days?: number;
   agent_name?: string;
+  only_undelivered?: boolean;
+  require_no_executions?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -58,7 +60,13 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const body: CleanupRequest = await req.json();
-    const { status = ['failed', 'delivered'], older_than_days = 7, agent_name } = body;
+    const { 
+      status = ['failed', 'delivered'], 
+      older_than_days = 7, 
+      agent_name,
+      only_undelivered = true,
+      require_no_executions = true
+    } = body;
 
     logger.info('[cleanup-jobs] Cleanup requested', {
       requestId,
@@ -66,7 +74,9 @@ Deno.serve(async (req) => {
       tenantId: userRole.tenant_id,
       status,
       older_than_days,
-      agent_name
+      agent_name,
+      only_undelivered,
+      require_no_executions
     });
 
     // Build cutoff date
@@ -75,7 +85,7 @@ Deno.serve(async (req) => {
       cutoffDate.setDate(cutoffDate.getDate() - older_than_days);
     }
 
-    // First, get IDs of jobs matching the criteria (to delete children first)
+    // First, get IDs of jobs matching the criteria
     let parentQuery = supabase
       .from('jobs')
       .select('id')
@@ -91,6 +101,11 @@ Deno.serve(async (req) => {
 
     if (agent_name) {
       parentQuery = parentQuery.eq('agent_name', agent_name);
+    }
+
+    // SAFE FILTER: only jobs that were never delivered
+    if (only_undelivered) {
+      parentQuery = parentQuery.is('delivered_at', null);
     }
 
     const { data: parentJobs, error: parentQueryError } = await parentQuery;
@@ -109,15 +124,53 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: true,
           deleted_count: 0,
-          filters: { status, older_than_days, agent_name },
+          skipped_count: 0,
+          filters: { status, older_than_days, agent_name, only_undelivered, require_no_executions },
           requestId
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const parentIds = parentJobs.map(j => j.id);
-    const BATCH_SIZE = 100; // Process in batches to avoid payload limits
+    let parentIds = parentJobs.map(j => j.id);
+    let skippedCount = 0;
+
+    // SAFE FILTER: exclude jobs that have executions (to avoid audit immutable violation)
+    if (require_no_executions && parentIds.length > 0) {
+      const { data: jobsWithExecutions } = await supabase
+        .from('job_executions')
+        .select('job_id')
+        .in('job_id', parentIds);
+      
+      const jobsWithExecSet = new Set((jobsWithExecutions || []).map(e => e.job_id));
+      const originalCount = parentIds.length;
+      parentIds = parentIds.filter(id => !jobsWithExecSet.has(id));
+      skippedCount = originalCount - parentIds.length;
+      
+      logger.info('[cleanup-jobs] Filtered out jobs with executions', {
+        requestId,
+        originalCount,
+        afterFilter: parentIds.length,
+        skippedDueToExecutions: skippedCount
+      });
+    }
+
+    if (parentIds.length === 0) {
+      logger.info('[cleanup-jobs] All jobs have executions, cannot delete', { requestId, skippedCount });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          deleted_count: 0,
+          skipped_count: skippedCount,
+          skipped_reason: 'Jobs com execuções recentes não podem ser removidos (política de auditoria)',
+          filters: { status, older_than_days, agent_name, only_undelivered, require_no_executions },
+          requestId
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const BATCH_SIZE = 100;
     let totalDeleted = 0;
 
     logger.info('[cleanup-jobs] Starting batched deletion', {
@@ -132,21 +185,7 @@ Deno.serve(async (req) => {
       const batchNum = Math.floor(i / BATCH_SIZE) + 1;
       const totalBatches = Math.ceil(parentIds.length / BATCH_SIZE);
 
-      // Step 0.1: Delete job_executions for this batch (FK constraint)
-      const { error: execDeleteError } = await supabase
-        .from('job_executions')
-        .delete()
-        .in('job_id', batch);
-
-      if (execDeleteError) {
-        logger.warn('[cleanup-jobs] Failed to delete job executions in batch', { 
-          requestId, 
-          batchNum,
-          error: execDeleteError.message 
-        });
-      }
-
-      // Step 0.2: Delete generated_reports for this batch (FK constraint)
+      // Delete generated_reports for this batch (FK constraint)
       const { error: reportsDeleteError } = await supabase
         .from('generated_reports')
         .delete()
@@ -160,7 +199,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Step 1: Delete child jobs for this batch (jobs that reference these parents)
+      // Delete child jobs for this batch
       const { error: childDeleteError } = await supabase
         .from('jobs')
         .delete()
@@ -174,7 +213,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Step 2: Delete the parent jobs in this batch
+      // Delete the parent jobs in this batch
       const { data: deletedJobs, error: deleteError } = await supabase
         .from('jobs')
         .delete()
@@ -187,7 +226,6 @@ Deno.serve(async (req) => {
           batchNum,
           error: deleteError.message 
         });
-        // Continue with next batch instead of failing completely
       } else {
         totalDeleted += deletedJobs?.length || 0;
         logger.info('[cleanup-jobs] Batch completed', {
@@ -200,19 +238,20 @@ Deno.serve(async (req) => {
       }
     }
 
-    const deletedCount = totalDeleted;
-
     logger.success('[cleanup-jobs] Cleanup completed', {
       requestId,
-      deletedCount,
+      deletedCount: totalDeleted,
+      skippedCount,
       tenantId: userRole.tenant_id
     });
 
     return new Response(
       JSON.stringify({
         success: true,
-        deleted_count: deletedCount,
-        filters: { status, older_than_days, agent_name },
+        deleted_count: totalDeleted,
+        skipped_count: skippedCount,
+        skipped_reason: skippedCount > 0 ? 'Jobs com execuções não podem ser removidos (política de auditoria)' : null,
+        filters: { status, older_than_days, agent_name, only_undelivered, require_no_executions },
         requestId
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

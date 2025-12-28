@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, AlertTriangle, CheckCircle, Clock, XCircle, Loader2 } from 'lucide-react';
+import { Trash2, AlertTriangle, CheckCircle, Clock, XCircle, Loader2, Zap, ShieldAlert } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -47,8 +47,10 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
     preview,
     isLoadingPreview,
     executeCleanup,
+    executeQuickCleanup,
     isExecuting,
-    cleanupResult
+    cleanupResult,
+    resetCleanup
   } = useJobCleanup();
 
   const handleStatusToggle = (status: string, checked: boolean) => {
@@ -65,8 +67,17 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
     setFilters({ ...filters, older_than_days: parseInt(value) });
   };
 
+  const handleSafeFilterToggle = (field: 'only_undelivered' | 'require_no_executions', checked: boolean) => {
+    setConfirmed(false);
+    setFilters({ ...filters, [field]: checked });
+  };
+
   const handleExecute = async () => {
     executeCleanup();
+  };
+
+  const handleQuickCleanup = () => {
+    executeQuickCleanup();
   };
 
   // Reset state when dialog closes
@@ -75,6 +86,7 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
     if (!isOpen) {
       setConfirmed(false);
       if (cleanupResult) {
+        resetCleanup();
         onCleanupComplete?.();
       }
     }
@@ -99,7 +111,7 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
           Limpeza Avançada
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[550px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Trash2 className="h-5 w-5" />
@@ -111,6 +123,80 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Quick Cleanup Button */}
+          <div className="p-4 rounded-lg border border-primary/30 bg-primary/5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Limpeza Rápida</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Remove jobs falhados não entregues com mais de 24h (modo seguro).
+                </p>
+              </div>
+              <Button 
+                size="sm" 
+                onClick={handleQuickCleanup}
+                disabled={isExecuting}
+                className="shrink-0"
+              >
+                {isExecuting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Executar'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Safe Filters */}
+          <div className="space-y-3">
+            <Label className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+              Filtros de Segurança
+            </Label>
+            <div className="grid gap-3">
+              <div
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                  filters.only_undelivered 
+                    ? "border-success/50 bg-success/5" 
+                    : "border-border hover:border-warning/50"
+                )}
+                onClick={() => handleSafeFilterToggle('only_undelivered', !filters.only_undelivered)}
+              >
+                <Checkbox 
+                  checked={filters.only_undelivered}
+                  onCheckedChange={(checked) => handleSafeFilterToggle('only_undelivered', !!checked)}
+                />
+                <div>
+                  <span className="text-sm font-medium">Somente jobs não entregues</span>
+                  <p className="text-xs text-muted-foreground">
+                    Recomendado - Remove apenas jobs que nunca foram executados
+                  </p>
+                </div>
+              </div>
+
+              <div
+                className={cn(
+                  "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                  filters.require_no_executions 
+                    ? "border-success/50 bg-success/5" 
+                    : "border-border hover:border-warning/50"
+                )}
+                onClick={() => handleSafeFilterToggle('require_no_executions', !filters.require_no_executions)}
+              >
+                <Checkbox 
+                  checked={filters.require_no_executions}
+                  onCheckedChange={(checked) => handleSafeFilterToggle('require_no_executions', !!checked)}
+                />
+                <div>
+                  <span className="text-sm font-medium">Ignorar jobs com execuções</span>
+                  <p className="text-xs text-muted-foreground">
+                    Recomendado - Evita conflito com política de auditoria (30 dias)
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Status Selection */}
           <div className="space-y-3">
             <Label>Status dos Jobs</Label>
@@ -166,7 +252,7 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
             <Label>Preview da Limpeza</Label>
             <div className={cn(
               "p-4 rounded-lg border",
-              preview && preview.total > 0 
+              preview && preview.removable > 0 
                 ? "bg-destructive/5 border-destructive/30" 
                 : "bg-muted/50 border-border"
             )}>
@@ -177,17 +263,37 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
                 </div>
               ) : preview ? (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Jobs a serem removidos:</span>
-                    <span className={cn(
-                      "text-2xl font-bold",
-                      preview.total > 0 ? "text-destructive" : "text-muted-foreground"
+                  {/* Main counts */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-3 rounded-lg bg-background border">
+                      <div className="text-xs text-muted-foreground">Encontrados</div>
+                      <div className="text-xl font-bold">{preview.total.toLocaleString('pt-BR')}</div>
+                    </div>
+                    <div className={cn(
+                      "text-center p-3 rounded-lg border",
+                      preview.removable > 0 ? "bg-destructive/10 border-destructive/30" : "bg-background"
                     )}>
-                      {preview.total.toLocaleString('pt-BR')}
-                    </span>
+                      <div className="text-xs text-muted-foreground">Removíveis</div>
+                      <div className={cn(
+                        "text-xl font-bold",
+                        preview.removable > 0 ? "text-destructive" : "text-muted-foreground"
+                      )}>
+                        {preview.removable.toLocaleString('pt-BR')}
+                      </div>
+                    </div>
                   </div>
 
-                  {preview.total > 0 && (
+                  {/* Blocked warning */}
+                  {preview.blockedByExecutions > 0 && (
+                    <div className="flex items-center gap-2 p-2 rounded bg-warning/10 text-xs">
+                      <ShieldAlert className="h-4 w-4 text-warning shrink-0" />
+                      <span>
+                        {preview.blockedByExecutions} jobs têm execuções e não podem ser removidos (auditoria ~30 dias)
+                      </span>
+                    </div>
+                  )}
+
+                  {preview.removable > 0 && (
                     <>
                       {/* By Status */}
                       <div className="space-y-1">
@@ -223,9 +329,15 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
                     </>
                   )}
 
-                  {preview.total === 0 && (
+                  {preview.removable === 0 && preview.total === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-2">
                       Nenhum job encontrado com os filtros selecionados.
+                    </p>
+                  )}
+
+                  {preview.removable === 0 && preview.total > 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-2">
+                      Todos os {preview.total} jobs encontrados estão bloqueados por política de auditoria.
                     </p>
                   )}
                 </div>
@@ -238,7 +350,7 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
           </div>
 
           {/* Warning */}
-          {preview && preview.total > 0 && (
+          {preview && preview.removable > 0 && (
             <div className="flex items-start gap-3 p-3 bg-warning/10 border border-warning/30 rounded-lg">
               <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
               <div className="space-y-1">
@@ -262,12 +374,35 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
 
           {/* Success Message */}
           {cleanupResult && (
-            <div className="flex items-center gap-3 p-3 bg-success/10 border border-success/30 rounded-lg">
-              <CheckCircle className="h-5 w-5 text-success" />
+            <div className={cn(
+              "flex items-center gap-3 p-3 rounded-lg border",
+              cleanupResult.deleted_count > 0 
+                ? "bg-success/10 border-success/30" 
+                : "bg-warning/10 border-warning/30"
+            )}>
+              {cleanupResult.deleted_count > 0 ? (
+                <CheckCircle className="h-5 w-5 text-success" />
+              ) : (
+                <AlertTriangle className="h-5 w-5 text-warning" />
+              )}
               <div>
-                <p className="text-sm font-medium text-success">Limpeza concluída!</p>
+                <p className={cn(
+                  "text-sm font-medium",
+                  cleanupResult.deleted_count > 0 ? "text-success" : "text-warning"
+                )}>
+                  {cleanupResult.deleted_count > 0 
+                    ? 'Limpeza concluída!' 
+                    : 'Nenhum job removido'}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  {cleanupResult.deleted_count} jobs foram removidos com sucesso.
+                  {cleanupResult.deleted_count > 0 
+                    ? `${cleanupResult.deleted_count} jobs foram removidos com sucesso.`
+                    : cleanupResult.skipped_reason || 'Nenhum job corresponde aos filtros.'}
+                  {cleanupResult.skipped_count > 0 && cleanupResult.deleted_count > 0 && (
+                    <span className="block mt-1">
+                      {cleanupResult.skipped_count} jobs foram ignorados (política de auditoria).
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
@@ -285,7 +420,7 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
               disabled={
                 isExecuting || 
                 !preview || 
-                preview.total === 0 || 
+                preview.removable === 0 || 
                 filters.status.length === 0 ||
                 !confirmed
               }
@@ -299,7 +434,7 @@ export function JobCleanupDialog({ onCleanupComplete }: JobCleanupDialogProps) {
               ) : (
                 <>
                   <Trash2 className="h-4 w-4" />
-                  Limpar {preview?.total.toLocaleString('pt-BR') || 0} Jobs
+                  Limpar {preview?.removable.toLocaleString('pt-BR') || 0} Jobs
                 </>
               )}
             </Button>
