@@ -105,6 +105,7 @@ import Playbooks from "./pages/admin/Playbooks";
 import DecisionAudit from "./pages/admin/DecisionAudit";
 import RulesManagement from "./pages/admin/RulesManagement";
 import RealTimeSecurityDashboard from "./pages/admin/RealTimeSecurityDashboard";
+import AutonomyDashboard from "./pages/admin/AutonomyDashboard";
 import {
   ClientDashboard, 
   ClientComputers, 
@@ -213,6 +214,7 @@ const App = () => (
                 <Route path="decision-audit" element={<DecisionAudit />} />
                 <Route path="rules-management" element={<RulesManagement />} />
                 <Route path="realtime-security" element={<RealTimeSecurityDashboard />} />
+                <Route path="ai-autonomy" element={<AutonomyDashboard />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}

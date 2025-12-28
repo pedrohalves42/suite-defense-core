@@ -2223,6 +2223,7 @@ export type Database = {
           action_payload: Json
           action_type: string
           created_at: string
+          decision_event_id: string | null
           error_message: string | null
           executed_at: string | null
           executed_by: string | null
@@ -2236,6 +2237,7 @@ export type Database = {
           action_payload?: Json
           action_type: string
           created_at?: string
+          decision_event_id?: string | null
           error_message?: string | null
           executed_at?: string | null
           executed_by?: string | null
@@ -2249,6 +2251,7 @@ export type Database = {
           action_payload?: Json
           action_type?: string
           created_at?: string
+          decision_event_id?: string | null
           error_message?: string | null
           executed_at?: string | null
           executed_by?: string | null
@@ -2259,6 +2262,13 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_actions_decision_event_id_fkey"
+            columns: ["decision_event_id"]
+            isOneToOne: false
+            referencedRelation: "decision_events"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_actions_insight_id_fkey"
             columns: ["insight_id"]
@@ -4510,6 +4520,13 @@ export type Database = {
             foreignKeyName: "generated_reports_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "v_jobs_status_corrected"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "v_problematic_jobs"
             referencedColumns: ["id"]
           },
@@ -5080,6 +5097,13 @@ export type Database = {
             foreignKeyName: "job_executions_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "v_jobs_status_corrected"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_executions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "v_problematic_jobs"
             referencedColumns: ["id"]
           },
@@ -5277,6 +5301,13 @@ export type Database = {
             columns: ["parent_job_id"]
             isOneToOne: false
             referencedRelation: "jobs_normalized"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "v_jobs_status_corrected"
             referencedColumns: ["id"]
           },
           {
@@ -9643,6 +9674,13 @@ export type Database = {
             foreignKeyName: "jobs_parent_job_id_fkey"
             columns: ["parent_job_id"]
             isOneToOne: false
+            referencedRelation: "v_jobs_status_corrected"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
             referencedRelation: "v_problematic_jobs"
             referencedColumns: ["id"]
           },
@@ -10050,6 +10088,222 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_system_operations_summary"
             referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      v_jobs_status_corrected: {
+        Row: {
+          agent_id: string | null
+          agent_name: string | null
+          approved: boolean | null
+          completed_at: string | null
+          corrected_status: string | null
+          created_at: string | null
+          current_execution_id: string | null
+          delivered_at: string | null
+          delivery_attempts: number | null
+          error_message: string | null
+          execution_time_seconds: number | null
+          expires_at: string | null
+          finished_at: string | null
+          id: string | null
+          is_real_failure: boolean | null
+          is_recurring: boolean | null
+          last_run_at: string | null
+          next_run_at: string | null
+          output: Json | null
+          parent_job_id: string | null
+          payload: Json | null
+          payload_hash: string | null
+          priority: number | null
+          recurrence_pattern: string | null
+          scheduled_at: string | null
+          started_at: string | null
+          status: string | null
+          tenant_id: string | null
+          type: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name?: string | null
+          approved?: boolean | null
+          completed_at?: string | null
+          corrected_status?: never
+          created_at?: string | null
+          current_execution_id?: string | null
+          delivered_at?: string | null
+          delivery_attempts?: number | null
+          error_message?: string | null
+          execution_time_seconds?: number | null
+          expires_at?: string | null
+          finished_at?: string | null
+          id?: string | null
+          is_real_failure?: never
+          is_recurring?: boolean | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          output?: Json | null
+          parent_job_id?: string | null
+          payload?: Json | null
+          payload_hash?: string | null
+          priority?: number | null
+          recurrence_pattern?: string | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          type?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string | null
+          approved?: boolean | null
+          completed_at?: string | null
+          corrected_status?: never
+          created_at?: string | null
+          current_execution_id?: string | null
+          delivered_at?: string | null
+          delivery_attempts?: number | null
+          error_message?: string | null
+          execution_time_seconds?: number | null
+          expires_at?: string | null
+          finished_at?: string | null
+          id?: string | null
+          is_real_failure?: never
+          is_recurring?: boolean | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          output?: Json | null
+          parent_job_id?: string | null
+          payload?: Json | null
+          payload_hash?: string | null
+          priority?: number | null
+          recurrence_pattern?: string | null
+          scheduled_at?: string | null
+          started_at?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_current_execution_id_fkey"
+            columns: ["current_execution_id"]
+            isOneToOne: false
+            referencedRelation: "job_executions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs_normalized"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "v_jobs_status_corrected"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "v_stuck_jobs_report"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "jobs_tenant_id_fkey"
@@ -10873,9 +11127,22 @@ export type Database = {
           throttle_reason: string
         }[]
       }
+      get_autonomy_metrics: {
+        Args: { p_days?: number; p_tenant_id: string }
+        Returns: Json
+      }
       get_critical_insights_count: {
         Args: { p_tenant_id: string }
         Returns: number
+      }
+      get_decision_timeline: {
+        Args: {
+          p_agent_id?: string
+          p_limit?: number
+          p_rule_code?: string
+          p_tenant_id: string
+        }
+        Returns: Json
       }
       get_enrollment_key_full: { Args: { p_key_id: string }; Returns: string }
       get_installation_health_status: {
@@ -11168,6 +11435,10 @@ export type Database = {
           validation_notes: string
           version: string
         }[]
+      }
+      validate_audit_trail_integrity: {
+        Args: { p_tenant_id: string }
+        Returns: Json
       }
       validate_blast_radius: {
         Args: {
