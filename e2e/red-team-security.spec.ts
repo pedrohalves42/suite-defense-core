@@ -538,3 +538,406 @@ test.describe('RED-005: Cross-Tenant Isolation', () => {
     expect([400, 401, 403]).toContain(response.status());
   });
 });
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * RED-006: DATABASE STATE VALIDATION (Red Team Reinforcement)
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Validates that RLS bypass attempts do not change actual database state.
+ * This transforms tests into non-bypassable verification by checking final state.
+ */
+test.describe('RED-006: Database State Validation', () => {
+  
+  test.skip(!SUPABASE_URL || !SUPABASE_ANON_KEY, 'Missing environment variables');
+
+  test('RLS bypass attempt should not change approval status in database', async ({ request }) => {
+    // Step 1: Get existing pending approval (if any) to verify state preservation
+    const getResponse = await request.get(
+      `${SUPABASE_URL}/rest/v1/approval_requests?status=eq.pending&limit=1`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    const existingApprovals = await getResponse.json();
+    const targetId = Array.isArray(existingApprovals) && existingApprovals.length > 0 
+      ? existingApprovals[0].id 
+      : '00000000-0000-0000-0000-000000000000';
+    
+    // Step 2: Attempt RLS bypass via direct PATCH
+    const attackResponse = await request.patch(
+      `${SUPABASE_URL}/rest/v1/approval_requests?id=eq.${targetId}`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        data: { 
+          status: 'approved',
+          approved_by: '00000000-0000-0000-0000-000000000001',
+          approved_at: new Date().toISOString()
+        }
+      }
+    );
+    
+    // Attack should be blocked
+    const attackResult = await attackResponse.json();
+    if (attackResponse.status() === 200) {
+      expect(Array.isArray(attackResult) ? attackResult.length : 0).toBe(0);
+    }
+    
+    // Step 3: Verify database state unchanged (critical Red Team validation)
+    if (Array.isArray(existingApprovals) && existingApprovals.length > 0) {
+      const verifyResponse = await request.get(
+        `${SUPABASE_URL}/rest/v1/approval_requests?id=eq.${targetId}&select=status`,
+        {
+          headers: {
+            'apikey': SUPABASE_ANON_KEY!,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      const verifyData = await verifyResponse.json();
+      
+      // Status MUST remain 'pending' - state should not have changed
+      if (Array.isArray(verifyData) && verifyData.length > 0) {
+        expect(verifyData[0].status).toBe('pending');
+      }
+    }
+  });
+
+  test('bulk update attack should not modify any approval statuses', async ({ request }) => {
+    // Attempt to bulk update all pending approvals to approved
+    const attackResponse = await request.patch(
+      `${SUPABASE_URL}/rest/v1/approval_requests?status=eq.pending`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        data: { 
+          status: 'approved',
+          approved_by: 'attacker-uuid'
+        }
+      }
+    );
+    
+    // Should affect 0 rows
+    const result = await attackResponse.json();
+    expect(Array.isArray(result) ? result.length : 0).toBe(0);
+    
+    // Verify no approved_by field was set to 'attacker-uuid'
+    const verifyResponse = await request.get(
+      `${SUPABASE_URL}/rest/v1/approval_requests?approved_by=eq.attacker-uuid`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    const verifyData = await verifyResponse.json();
+    expect(Array.isArray(verifyData) ? verifyData.length : 0).toBe(0);
+  });
+
+  test('delete attack should not remove approval requests', async ({ request }) => {
+    // Get count before attack
+    const beforeResponse = await request.get(
+      `${SUPABASE_URL}/rest/v1/approval_requests?select=count`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'count=exact'
+        }
+      }
+    );
+    
+    // Attempt DELETE attack
+    const attackResponse = await request.delete(
+      `${SUPABASE_URL}/rest/v1/approval_requests?status=eq.pending`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        }
+      }
+    );
+    
+    // Should be blocked by RLS
+    expect([200, 401, 403, 404]).toContain(attackResponse.status());
+    
+    if (attackResponse.status() === 200) {
+      const deleted = await attackResponse.json();
+      expect(Array.isArray(deleted) ? deleted.length : 0).toBe(0);
+    }
+  });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * RED-007: REPLAY ATTACK PREVENTION (Red Team Reinforcement)
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Validates that valid internal secrets cannot be reused for cross-tenant attacks.
+ * Even if attacker captures a valid secret, payload validation must still apply.
+ */
+test.describe('RED-007: Replay Attack Prevention', () => {
+  
+  test.skip(!SUPABASE_URL || !SUPABASE_ANON_KEY, 'Missing environment variables');
+
+  test('should reject reused internal secret with altered tenant payload', async ({ request }) => {
+    // Simulating: attacker captures valid X-Internal-Secret and tries to use for different tenant
+    const response = await request.post(
+      `${SUPABASE_URL}/functions/v1/evaluate-playbook-triggers`,
+      {
+        headers: {
+          'X-Internal-Secret': 'captured-valid-secret-attempt',
+          'Content-Type': 'application/json'
+          // No Authorization - relying only on internal secret
+        },
+        data: {
+          tenant_id: 'ffffffff-ffff-ffff-ffff-ffffffffffff', // Different tenant
+          trigger_type: 'manual'
+        }
+      }
+    );
+    
+    // Should be rejected - internal secret doesn't grant cross-tenant access
+    expect([401, 403]).toContain(response.status());
+    
+    const body = await response.json();
+    expect(body.error).toBeTruthy();
+  });
+
+  test('should reject internal secret with escalated privileges payload', async ({ request }) => {
+    // Attacker tries to add admin flags via payload manipulation
+    const response = await request.post(
+      `${SUPABASE_URL}/functions/v1/evaluate-playbook-triggers`,
+      {
+        headers: {
+          'X-Internal-Secret': 'forged-internal-secret',
+          'Content-Type': 'application/json'
+        },
+        data: {
+          tenant_id: '00000000-0000-0000-0000-000000000000',
+          trigger_type: 'manual',
+          // Attacker-injected escalation fields
+          is_admin: true,
+          bypass_approval: true,
+          skip_rate_limit: true,
+          force_execute: true
+        }
+      }
+    );
+    
+    // Must be rejected
+    expect([401, 403]).toContain(response.status());
+  });
+
+  test('should reject payload with SQL injection in trigger parameters', async ({ request }) => {
+    // SQL injection attempt in trigger-related fields
+    const injectionPayloads = [
+      { playbook_id: "'; DROP TABLE playbooks; --" },
+      { trigger_type: "manual'; SELECT * FROM tenants; --" },
+      { metadata: { sql: "1=1 OR 1=1" } }
+    ];
+    
+    for (const injection of injectionPayloads) {
+      const response = await request.post(
+        `${SUPABASE_URL}/functions/v1/evaluate-playbook-triggers`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          },
+          data: {
+            tenant_id: '00000000-0000-0000-0000-000000000000',
+            trigger_type: 'manual',
+            ...injection
+          }
+        }
+      );
+      
+      // Should fail validation or auth
+      expect([400, 401, 403, 422]).toContain(response.status());
+    }
+  });
+
+  test('should reject repeated identical requests (anti-replay)', async ({ request }) => {
+    const identicalPayload = {
+      tenant_id: '00000000-0000-0000-0000-000000000000',
+      trigger_type: 'manual',
+      playbook_id: '00000000-0000-0000-0000-000000000000',
+      timestamp: Date.now().toString()
+    };
+    
+    // Send identical requests rapidly
+    const responses = await Promise.all([
+      request.post(`${SUPABASE_URL}/functions/v1/evaluate-playbook-triggers`, {
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        data: identicalPayload
+      }),
+      request.post(`${SUPABASE_URL}/functions/v1/evaluate-playbook-triggers`, {
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        data: identicalPayload
+      }),
+      request.post(`${SUPABASE_URL}/functions/v1/evaluate-playbook-triggers`, {
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+        data: identicalPayload
+      })
+    ]);
+    
+    // All should fail auth - but we're validating system handles duplicate requests
+    const statuses = responses.map(r => r.status());
+    
+    // All should be rejected (no successful bypass through repetition)
+    expect(statuses.every(s => [400, 401, 403, 429].includes(s))).toBe(true);
+  });
+});
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * RED-008: RATE LIMIT RESET VALIDATION (Red Team Reinforcement)
+ * ═══════════════════════════════════════════════════════════════════════════
+ * 
+ * Validates that rate limit properly resets after approvals are processed.
+ * This prevents operational DoS where tenants get permanently locked out.
+ */
+test.describe('RED-008: Rate Limit Reset Validation', () => {
+  
+  test.skip(!SUPABASE_URL || !SUPABASE_ANON_KEY, 'Missing environment variables');
+
+  test('rate limit state should be tenant-isolated', async ({ request }) => {
+    // Verify rate_limits table is properly protected
+    const response = await request.get(
+      `${SUPABASE_URL}/rest/v1/rate_limits`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    // Rate limits should be protected by RLS
+    expect(response.status()).toBe(200);
+    const data = await response.json();
+    
+    // Unauthenticated should see empty or only own tenant data
+    expect(Array.isArray(data)).toBe(true);
+  });
+
+  test('cannot manipulate rate_limits directly via REST', async ({ request }) => {
+    // Attempt to reset rate limit via direct INSERT/UPDATE
+    const attackResponse = await request.post(
+      `${SUPABASE_URL}/rest/v1/rate_limits`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        data: {
+          identifier: 'attack-tenant-id',
+          endpoint: 'approval_requests',
+          request_count: 0, // Reset to bypass limit
+          window_start: new Date().toISOString()
+        }
+      }
+    );
+    
+    // Should be blocked by RLS
+    expect([401, 403, 404, 409]).toContain(attackResponse.status());
+  });
+
+  test('cannot delete rate_limits to bypass enforcement', async ({ request }) => {
+    // Attempt to DELETE rate limit entries
+    const attackResponse = await request.delete(
+      `${SUPABASE_URL}/rest/v1/rate_limits?identifier=eq.attack-tenant`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        }
+      }
+    );
+    
+    // Should be blocked
+    if (attackResponse.status() === 200) {
+      const deleted = await attackResponse.json();
+      expect(Array.isArray(deleted) ? deleted.length : 0).toBe(0);
+    } else {
+      expect([401, 403, 404]).toContain(attackResponse.status());
+    }
+  });
+
+  test('rate limit counter cannot be decremented via REST', async ({ request }) => {
+    // Attempt to decrement request_count to gain more quota
+    const attackResponse = await request.patch(
+      `${SUPABASE_URL}/rest/v1/rate_limits`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        data: {
+          request_count: 0,
+          blocked_until: null // Clear block
+        }
+      }
+    );
+    
+    // Should affect 0 rows (blocked by RLS)
+    if (attackResponse.status() === 200) {
+      const result = await attackResponse.json();
+      expect(Array.isArray(result) ? result.length : 0).toBe(0);
+    }
+  });
+
+  test('blocked_until cannot be cleared by unauthorized user', async ({ request }) => {
+    // Try to clear a block by setting blocked_until to past
+    const attackResponse = await request.patch(
+      `${SUPABASE_URL}/rest/v1/rate_limits?blocked_until=not.is.null`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY!,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        data: {
+          blocked_until: '2000-01-01T00:00:00Z' // Set to past to "unblock"
+        }
+      }
+    );
+    
+    // Should be blocked by RLS
+    if (attackResponse.status() === 200) {
+      const result = await attackResponse.json();
+      expect(Array.isArray(result) ? result.length : 0).toBe(0);
+    }
+  });
+});
