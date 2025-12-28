@@ -151,6 +151,46 @@ Deno.serve(async (req) => {
               totalActions += silentResult.processed_count;
             }
             break;
+
+          case 'JOB_SLOW_008':
+            const slowJobResult = await processSlowJobsRule(supabase, rule);
+            if (slowJobResult.processed_count > 0) {
+              allResults.push(slowJobResult);
+              totalActions += slowJobResult.processed_count;
+            }
+            break;
+
+          case 'INSIGHT_IGNORED_009':
+            const ignoredResult = await processIgnoredInsightsRule(supabase, rule);
+            if (ignoredResult.processed_count > 0) {
+              allResults.push(ignoredResult);
+              totalActions += ignoredResult.processed_count;
+            }
+            break;
+
+          case 'BLOCKED_ACCESS_PATTERN_010':
+            const blockedAccessResult = await processBlockedAccessPatternRule(supabase, rule);
+            if (blockedAccessResult.processed_count > 0) {
+              allResults.push(blockedAccessResult);
+              totalActions += blockedAccessResult.processed_count;
+            }
+            break;
+
+          case 'AGENT_DIVERGENT_011':
+            const divergentResult = await processAgentDivergentRule(supabase, rule);
+            if (divergentResult.processed_count > 0) {
+              allResults.push(divergentResult);
+              totalActions += divergentResult.processed_count;
+            }
+            break;
+
+          case 'PROGRESSIVE_DEGRADATION_012':
+            const degradationResult = await processProgressiveDegradationRule(supabase, rule);
+            if (degradationResult.processed_count > 0) {
+              allResults.push(degradationResult);
+              totalActions += degradationResult.processed_count;
+            }
+            break;
             
           default:
             console.log(`[rules-engine] Unknown rule code: ${rule.code}, skipping`);
@@ -828,6 +868,530 @@ async function processSilentFailureDetection(supabase: any, rule: any): Promise<
     }
 
     console.log(`[SILENT_FAILURE_007] Created alerts for tenant ${tenantId} with ${tenantFailures.length} violations`);
+  }
+
+  return { rule_code: rule.code, processed_count: agents.length, agents };
+}
+
+// =============================================================
+// JOB_SLOW_008: Detecta jobs sistematicamente lentos
+// =============================================================
+async function processSlowJobsRule(supabase: any, rule: any): Promise<RuleResult> {
+  console.log('[JOB_SLOW_008] Detecting systematically slow jobs');
+
+  // Buscar jobs que consistentemente excedem o p95 de execução
+  const { data: slowJobs, error } = await supabase.rpc('detect_slow_jobs', {
+    p_time_window_hours: 24,
+    p_min_occurrences: 3
+  });
+
+  if (error) {
+    // RPC might not exist yet, use fallback query
+    console.log('[JOB_SLOW_008] RPC not available, using fallback query');
+    
+    const { data: fallbackData } = await supabase
+      .from('jobs')
+      .select('id, agent_id, agent_name, tenant_id, type, created_at, completed_at, delivered_at')
+      .eq('status', 'completed')
+      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .not('completed_at', 'is', null)
+      .not('delivered_at', 'is', null)
+      .limit(500);
+
+    // Calculate execution times and find slow patterns
+    const jobsByType = new Map<string, number[]>();
+    for (const job of fallbackData || []) {
+      const execTime = new Date(job.completed_at).getTime() - new Date(job.delivered_at).getTime();
+      if (!jobsByType.has(job.type)) {
+        jobsByType.set(job.type, []);
+      }
+      jobsByType.get(job.type)!.push(execTime);
+    }
+
+    // Find job types with consistently slow execution
+    const slowTypes: RuleResult['agents'] = [];
+    for (const [jobType, times] of jobsByType) {
+      if (times.length >= 3) {
+        const avg = times.reduce((a, b) => a + b, 0) / times.length;
+        const p95 = times.sort((a, b) => a - b)[Math.floor(times.length * 0.95)];
+        
+        // If average is > 5 minutes, consider it slow
+        if (avg > 5 * 60 * 1000) {
+          slowTypes.push({
+            agent_id: 'system',
+            agent_name: jobType,
+            action: 'CREATE_AI_INSIGHT',
+            reason: `Job type ${jobType} avg execution: ${Math.round(avg / 1000 / 60)}min`
+          });
+        }
+      }
+    }
+
+    if (slowTypes.length > 0) {
+      // Create insight for slow jobs
+      const firstTenant = fallbackData?.[0]?.tenant_id;
+      if (firstTenant) {
+        await supabase.from('ai_insights').insert({
+          tenant_id: firstTenant,
+          title: `Jobs sistematicamente lentos detectados`,
+          description: `${slowTypes.length} tipos de jobs estão consistentemente lentos: ${slowTypes.map(s => s.agent_name).join(', ')}`,
+          severity: 'medium',
+          insight_type: 'job_performance',
+          evidence: { slow_job_types: slowTypes },
+          recommendation: 'Considere otimizar os scripts dos jobs ou dividir em subtarefas menores.',
+          acknowledged: false
+        });
+      }
+    }
+
+    return { rule_code: rule.code, processed_count: slowTypes.length, agents: slowTypes };
+  }
+
+  console.log(`[JOB_SLOW_008] Found ${slowJobs?.length || 0} slow job patterns`);
+  return { rule_code: rule.code, processed_count: slowJobs?.length || 0, agents: [] };
+}
+
+// =============================================================
+// INSIGHT_IGNORED_009: Escala insights críticos ignorados
+// =============================================================
+async function processIgnoredInsightsRule(supabase: any, rule: any): Promise<RuleResult> {
+  console.log('[INSIGHT_IGNORED_009] Checking ignored critical insights');
+
+  // Buscar insights críticos não reconhecidos há mais de 72h
+  const cutoffDate = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+  
+  const { data: ignoredInsights, error } = await supabase
+    .from('ai_insights')
+    .select('id, tenant_id, title, severity, created_at')
+    .in('severity', ['critical', 'high'])
+    .eq('is_acknowledged', false)
+    .lt('created_at', cutoffDate)
+    .not('title', 'ilike', '%[ESCALADO]%')
+    .limit(50);
+
+  if (error) {
+    console.error('[INSIGHT_IGNORED_009] Query error:', error);
+    throw error;
+  }
+
+  console.log(`[INSIGHT_IGNORED_009] Found ${ignoredInsights?.length || 0} ignored insights`);
+
+  const agents: RuleResult['agents'] = [];
+
+  for (const insight of ignoredInsights || []) {
+    // Escalar o insight
+    const { error: updateError } = await supabase
+      .from('ai_insights')
+      .update({
+        severity: 'critical',
+        title: `[ESCALADO] ${insight.title}`,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', insight.id);
+
+    if (updateError) {
+      console.error(`[INSIGHT_IGNORED_009] Error escalating insight ${insight.id}:`, updateError);
+      continue;
+    }
+
+    // Record decision event
+    await supabase.from('decision_events').insert({
+      tenant_id: insight.tenant_id,
+      rule_code: rule.code,
+      action: 'ESCALATE_INSIGHT',
+      evidence: {
+        insight_id: insight.id,
+        original_severity: insight.severity,
+        original_created_at: insight.created_at,
+        escalated_at: new Date().toISOString(),
+        hours_ignored: Math.round((Date.now() - new Date(insight.created_at).getTime()) / (60 * 60 * 1000))
+      },
+      executed_actions: [{ type: 'ESCALATE_INSIGHT', success: true }]
+    });
+
+    agents.push({
+      agent_id: insight.id,
+      agent_name: insight.title.substring(0, 50),
+      action: 'ESCALATE_INSIGHT',
+      reason: `Ignorado por ${Math.round((Date.now() - new Date(insight.created_at).getTime()) / (60 * 60 * 1000))}h`
+    });
+
+    console.log(`[INSIGHT_IGNORED_009] Escalated insight: ${insight.title}`);
+  }
+
+  return { rule_code: rule.code, processed_count: agents.length, agents };
+}
+
+// =============================================================
+// BLOCKED_ACCESS_PATTERN_010: Detecta padrões suspeitos de acesso bloqueado
+// =============================================================
+async function processBlockedAccessPatternRule(supabase: any, rule: any): Promise<RuleResult> {
+  const conditions = rule.definition?.conditions || {
+    min_blocked_attempts: 10,
+    time_window_minutes: 30
+  };
+
+  console.log(`[BLOCKED_ACCESS_PATTERN_010] Detecting blocked access patterns`);
+
+  // Buscar agentes com muitas tentativas bloqueadas
+  const cutoffTime = new Date(Date.now() - conditions.time_window_minutes * 60 * 1000).toISOString();
+  
+  const { data: patterns, error } = await supabase
+    .from('blocked_access_attempts')
+    .select('agent_id, domain, blocked_by, tenant_id')
+    .gte('attempted_at', cutoffTime)
+    .limit(1000);
+
+  if (error) {
+    console.error('[BLOCKED_ACCESS_PATTERN_010] Query error:', error);
+    // Table might not exist, return empty
+    return { rule_code: rule.code, processed_count: 0, agents: [] };
+  }
+
+  // Agrupar por agente
+  const agentAttempts = new Map<string, { count: number; domains: Set<string>; tenant_id: string }>();
+  for (const attempt of patterns || []) {
+    if (!agentAttempts.has(attempt.agent_id)) {
+      agentAttempts.set(attempt.agent_id, { count: 0, domains: new Set(), tenant_id: attempt.tenant_id });
+    }
+    const agentData = agentAttempts.get(attempt.agent_id)!;
+    agentData.count++;
+    agentData.domains.add(attempt.domain);
+  }
+
+  // Filtrar agentes que excedem o threshold
+  const suspiciousAgents = Array.from(agentAttempts.entries())
+    .filter(([_, data]) => data.count >= conditions.min_blocked_attempts);
+
+  console.log(`[BLOCKED_ACCESS_PATTERN_010] Found ${suspiciousAgents.length} suspicious agents`);
+
+  const agents: RuleResult['agents'] = [];
+
+  for (const [agentId, data] of suspiciousAgents) {
+    // Buscar info do agente
+    const { data: agentInfo } = await supabase
+      .from('agents')
+      .select('agent_name')
+      .eq('id', agentId)
+      .single();
+
+    const agentName = agentInfo?.agent_name || agentId.substring(0, 8);
+
+    // Criar alerta crítico
+    await supabase.from('system_alerts').insert({
+      tenant_id: data.tenant_id,
+      agent_id: agentId,
+      alert_type: 'blocked_access_pattern',
+      severity: 'critical',
+      message: `Padrão suspeito: ${data.count} tentativas de acesso bloqueado em ${conditions.time_window_minutes}min`,
+      data: {
+        blocked_count: data.count,
+        unique_domains: data.domains.size,
+        sample_domains: Array.from(data.domains).slice(0, 5),
+        time_window_minutes: conditions.time_window_minutes
+      },
+      resolved: false
+    });
+
+    // Criar insight
+    await supabase.from('ai_insights').insert({
+      tenant_id: data.tenant_id,
+      title: `Padrão suspeito de navegação: ${agentName}`,
+      description: `O agente ${agentName} tentou acessar ${data.count} URLs bloqueadas em ${conditions.time_window_minutes} minutos, incluindo ${data.domains.size} domínios únicos.`,
+      severity: 'critical',
+      insight_type: 'security_threat',
+      evidence: {
+        blocked_attempts: data.count,
+        unique_domains: data.domains.size,
+        sample_domains: Array.from(data.domains).slice(0, 10)
+      },
+      recommendation: 'Investigar o comportamento do usuário. Considerar isolamento temporário do agente.',
+      acknowledged: false
+    });
+
+    // Record decision event
+    await supabase.from('decision_events').insert({
+      tenant_id: data.tenant_id,
+      rule_code: rule.code,
+      agent_id: agentId,
+      agent_name: agentName,
+      action: 'DETECT_BLOCKED_ACCESS_PATTERN',
+      evidence: {
+        blocked_count: data.count,
+        unique_domains: data.domains.size,
+        time_window_minutes: conditions.time_window_minutes,
+        detected_at: new Date().toISOString()
+      },
+      executed_actions: [
+        { type: 'CREATE_SYSTEM_ALERT', success: true },
+        { type: 'CREATE_AI_INSIGHT', success: true }
+      ]
+    });
+
+    agents.push({
+      agent_id: agentId,
+      agent_name: agentName,
+      action: 'DETECT_BLOCKED_ACCESS_PATTERN',
+      reason: `${data.count} tentativas bloqueadas em ${conditions.time_window_minutes}min`
+    });
+  }
+
+  return { rule_code: rule.code, processed_count: agents.length, agents };
+}
+
+// =============================================================
+// AGENT_DIVERGENT_011: Detecta agentes com métricas divergentes
+// =============================================================
+async function processAgentDivergentRule(supabase: any, rule: any): Promise<RuleResult> {
+  const conditions = rule.definition?.conditions || {
+    deviation_threshold_stddev: 2,
+    comparison_window_hours: 24
+  };
+
+  console.log('[AGENT_DIVERGENT_011] Detecting divergent agents');
+
+  // Buscar métricas recentes de todos os agentes
+  const cutoffTime = new Date(Date.now() - conditions.comparison_window_hours * 60 * 60 * 1000).toISOString();
+  
+  const { data: metrics, error } = await supabase
+    .from('agent_system_metrics')
+    .select('agent_id, tenant_id, cpu_usage_percent, memory_usage_percent')
+    .gte('collected_at', cutoffTime)
+    .limit(5000);
+
+  if (error) {
+    console.error('[AGENT_DIVERGENT_011] Query error:', error);
+    return { rule_code: rule.code, processed_count: 0, agents: [] };
+  }
+
+  // Calcular estatísticas por tenant
+  const tenantStats = new Map<string, { cpuValues: number[]; memValues: number[] }>();
+  const agentStats = new Map<string, { tenant_id: string; cpuValues: number[]; memValues: number[] }>();
+
+  for (const m of metrics || []) {
+    // Tenant stats
+    if (!tenantStats.has(m.tenant_id)) {
+      tenantStats.set(m.tenant_id, { cpuValues: [], memValues: [] });
+    }
+    const ts = tenantStats.get(m.tenant_id)!;
+    if (m.cpu_usage_percent != null) ts.cpuValues.push(m.cpu_usage_percent);
+    if (m.memory_usage_percent != null) ts.memValues.push(m.memory_usage_percent);
+
+    // Agent stats
+    if (!agentStats.has(m.agent_id)) {
+      agentStats.set(m.agent_id, { tenant_id: m.tenant_id, cpuValues: [], memValues: [] });
+    }
+    const as = agentStats.get(m.agent_id)!;
+    if (m.cpu_usage_percent != null) as.cpuValues.push(m.cpu_usage_percent);
+    if (m.memory_usage_percent != null) as.memValues.push(m.memory_usage_percent);
+  }
+
+  // Calcular média e desvio padrão por tenant
+  const calcStats = (values: number[]) => {
+    if (values.length === 0) return { mean: 0, stddev: 0 };
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+    return { mean, stddev: Math.sqrt(variance) };
+  };
+
+  const tenantCalcStats = new Map<string, { cpu: { mean: number; stddev: number }; mem: { mean: number; stddev: number } }>();
+  for (const [tenantId, stats] of tenantStats) {
+    tenantCalcStats.set(tenantId, {
+      cpu: calcStats(stats.cpuValues),
+      mem: calcStats(stats.memValues)
+    });
+  }
+
+  // Detectar agentes divergentes
+  const divergentAgents: { agent_id: string; tenant_id: string; cpuDeviation: number; memDeviation: number }[] = [];
+
+  for (const [agentId, stats] of agentStats) {
+    const tenantCalc = tenantCalcStats.get(stats.tenant_id);
+    if (!tenantCalc || tenantCalc.cpu.stddev === 0) continue;
+
+    const agentCpuMean = stats.cpuValues.length > 0 ? stats.cpuValues.reduce((a, b) => a + b, 0) / stats.cpuValues.length : 0;
+    const agentMemMean = stats.memValues.length > 0 ? stats.memValues.reduce((a, b) => a + b, 0) / stats.memValues.length : 0;
+
+    const cpuDeviation = Math.abs(agentCpuMean - tenantCalc.cpu.mean) / (tenantCalc.cpu.stddev || 1);
+    const memDeviation = Math.abs(agentMemMean - tenantCalc.mem.mean) / (tenantCalc.mem.stddev || 1);
+
+    if (cpuDeviation > conditions.deviation_threshold_stddev || memDeviation > conditions.deviation_threshold_stddev) {
+      divergentAgents.push({ agent_id: agentId, tenant_id: stats.tenant_id, cpuDeviation, memDeviation });
+    }
+  }
+
+  console.log(`[AGENT_DIVERGENT_011] Found ${divergentAgents.length} divergent agents`);
+
+  const agents: RuleResult['agents'] = [];
+
+  for (const divergent of divergentAgents.slice(0, 10)) {
+    // Buscar nome do agente
+    const { data: agentInfo } = await supabase
+      .from('agents')
+      .select('agent_name')
+      .eq('id', divergent.agent_id)
+      .single();
+
+    const agentName = agentInfo?.agent_name || divergent.agent_id.substring(0, 8);
+
+    // Criar insight
+    await supabase.from('ai_insights').insert({
+      tenant_id: divergent.tenant_id,
+      title: `Agente divergente: ${agentName}`,
+      description: `O agente ${agentName} apresenta métricas significativamente diferentes do grupo (CPU: ${divergent.cpuDeviation.toFixed(1)}σ, Memória: ${divergent.memDeviation.toFixed(1)}σ).`,
+      severity: 'medium',
+      insight_type: 'anomaly_detection',
+      evidence: {
+        cpu_deviation_stddev: divergent.cpuDeviation,
+        memory_deviation_stddev: divergent.memDeviation,
+        threshold_stddev: conditions.deviation_threshold_stddev
+      },
+      recommendation: 'Investigar processos em execução no agente. Pode indicar malware ou uso indevido.',
+      acknowledged: false
+    });
+
+    // Record decision event
+    await supabase.from('decision_events').insert({
+      tenant_id: divergent.tenant_id,
+      rule_code: rule.code,
+      agent_id: divergent.agent_id,
+      agent_name: agentName,
+      action: 'DETECT_DIVERGENT_AGENT',
+      evidence: {
+        cpu_deviation_stddev: divergent.cpuDeviation,
+        memory_deviation_stddev: divergent.memDeviation,
+        detected_at: new Date().toISOString()
+      },
+      executed_actions: [{ type: 'CREATE_AI_INSIGHT', success: true }]
+    });
+
+    agents.push({
+      agent_id: divergent.agent_id,
+      agent_name: agentName,
+      action: 'DETECT_DIVERGENT_AGENT',
+      reason: `CPU: ${divergent.cpuDeviation.toFixed(1)}σ, Mem: ${divergent.memDeviation.toFixed(1)}σ do grupo`
+    });
+  }
+
+  return { rule_code: rule.code, processed_count: agents.length, agents };
+}
+
+// =============================================================
+// PROGRESSIVE_DEGRADATION_012: Detecta tendência de degradação
+// =============================================================
+async function processProgressiveDegradationRule(supabase: any, rule: any): Promise<RuleResult> {
+  const conditions = rule.definition?.conditions || {
+    min_trend_duration_hours: 12,
+    degradation_threshold_percent: 20
+  };
+
+  console.log('[PROGRESSIVE_DEGRADATION_012] Detecting progressive degradation');
+
+  // Comparar métricas de 12h atrás com métricas recentes
+  const now = Date.now();
+  const oldCutoff = new Date(now - conditions.min_trend_duration_hours * 60 * 60 * 1000);
+  const midpoint = new Date(now - (conditions.min_trend_duration_hours / 2) * 60 * 60 * 1000);
+
+  // Buscar jobs e calcular success rate por período
+  const { data: oldJobs } = await supabase
+    .from('jobs')
+    .select('agent_id, tenant_id, status')
+    .gte('created_at', oldCutoff.toISOString())
+    .lt('created_at', midpoint.toISOString())
+    .limit(2000);
+
+  const { data: recentJobs } = await supabase
+    .from('jobs')
+    .select('agent_id, tenant_id, status')
+    .gte('created_at', midpoint.toISOString())
+    .limit(2000);
+
+  // Calcular success rate por agente
+  const calcSuccessRate = (jobs: any[]) => {
+    const agentRates = new Map<string, { success: number; total: number; tenant_id: string }>();
+    for (const job of jobs || []) {
+      if (!agentRates.has(job.agent_id)) {
+        agentRates.set(job.agent_id, { success: 0, total: 0, tenant_id: job.tenant_id });
+      }
+      const ar = agentRates.get(job.agent_id)!;
+      ar.total++;
+      if (job.status === 'completed') ar.success++;
+    }
+    return agentRates;
+  };
+
+  const oldRates = calcSuccessRate(oldJobs);
+  const recentRates = calcSuccessRate(recentJobs);
+
+  // Detectar agentes com degradação
+  const degradingAgents: { agent_id: string; tenant_id: string; oldRate: number; newRate: number; degradation: number }[] = [];
+
+  for (const [agentId, recent] of recentRates) {
+    const old = oldRates.get(agentId);
+    if (!old || old.total < 3 || recent.total < 3) continue;
+
+    const oldRate = (old.success / old.total) * 100;
+    const newRate = (recent.success / recent.total) * 100;
+    const degradation = oldRate - newRate;
+
+    if (degradation >= conditions.degradation_threshold_percent) {
+      degradingAgents.push({ agent_id: agentId, tenant_id: recent.tenant_id, oldRate, newRate, degradation });
+    }
+  }
+
+  console.log(`[PROGRESSIVE_DEGRADATION_012] Found ${degradingAgents.length} degrading agents`);
+
+  const agents: RuleResult['agents'] = [];
+
+  for (const degrading of degradingAgents.slice(0, 10)) {
+    // Buscar nome do agente
+    const { data: agentInfo } = await supabase
+      .from('agents')
+      .select('agent_name')
+      .eq('id', degrading.agent_id)
+      .single();
+
+    const agentName = agentInfo?.agent_name || degrading.agent_id.substring(0, 8);
+
+    // Criar insight
+    await supabase.from('ai_insights').insert({
+      tenant_id: degrading.tenant_id,
+      title: `Degradação progressiva: ${agentName}`,
+      description: `O agente ${agentName} apresenta queda de ${degrading.degradation.toFixed(1)}% na taxa de sucesso (de ${degrading.oldRate.toFixed(1)}% para ${degrading.newRate.toFixed(1)}%).`,
+      severity: 'high',
+      insight_type: 'prediction',
+      evidence: {
+        old_success_rate: degrading.oldRate,
+        new_success_rate: degrading.newRate,
+        degradation_percent: degrading.degradation,
+        trend_duration_hours: conditions.min_trend_duration_hours
+      },
+      recommendation: 'Investigar causa da degradação antes que se torne crítica. Verificar logs de erro e conectividade.',
+      acknowledged: false
+    });
+
+    // Record decision event
+    await supabase.from('decision_events').insert({
+      tenant_id: degrading.tenant_id,
+      rule_code: rule.code,
+      agent_id: degrading.agent_id,
+      agent_name: agentName,
+      action: 'DETECT_DEGRADATION',
+      evidence: {
+        old_success_rate: degrading.oldRate,
+        new_success_rate: degrading.newRate,
+        degradation_percent: degrading.degradation,
+        detected_at: new Date().toISOString()
+      },
+      executed_actions: [{ type: 'CREATE_AI_INSIGHT', success: true }]
+    });
+
+    agents.push({
+      agent_id: degrading.agent_id,
+      agent_name: agentName,
+      action: 'DETECT_DEGRADATION',
+      reason: `Taxa de sucesso caiu ${degrading.degradation.toFixed(1)}%`
+    });
   }
 
   return { rule_code: rule.code, processed_count: agents.length, agents };
