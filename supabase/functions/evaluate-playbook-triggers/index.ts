@@ -61,6 +61,27 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // ✅ P0 RED TEAM FIX: Validar origem da requisição
+    const internalSecret = req.headers.get('X-Internal-Secret');
+    const expectedSecret = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+    const authHeader = req.headers.get('Authorization');
+    
+    // Verificar se é chamada interna (cron) via secret
+    const isInternalCall = internalSecret && internalSecret === expectedSecret;
+    
+    // Se não é interno, exigir autenticação JWT
+    if (!isInternalCall) {
+      if (!authHeader) {
+        console.error('[SECURITY] evaluate-playbook-triggers called without auth or internal secret');
+        return new Response(JSON.stringify({ 
+          error: 'Unauthorized: Authentication required' 
+        }), { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
+    }
+
     const body: TriggerEvent = await req.json();
     const { tenant_id, trigger_type, agent_id, context = {} } = body;
 
@@ -73,7 +94,52 @@ serve(async (req) => {
       });
     }
 
-    console.log(`[evaluate-playbook-triggers] Evaluating ${trigger_type} for tenant ${tenant_id}`);
+    // ✅ P0 RED TEAM FIX: Se não é interno, validar que tenant_id pertence ao usuário
+    if (!isInternalCall && authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      
+      if (authError || !user) {
+        console.error('[SECURITY] Invalid JWT token in evaluate-playbook-triggers');
+        return new Response(JSON.stringify({ 
+          error: 'Invalid token' 
+        }), { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
+      
+      // Verificar se o usuário tem acesso ao tenant
+      const { data: userRole } = await supabase
+        .from('user_roles')
+        .select('tenant_id, role')
+        .eq('user_id', user.id)
+        .eq('tenant_id', tenant_id)
+        .maybeSingle();
+        
+      if (!userRole) {
+        console.error(`[SECURITY] User ${user.id} attempted to trigger playbook for unauthorized tenant ${tenant_id}`);
+        return new Response(JSON.stringify({ 
+          error: 'Access denied: You do not have access to this tenant' 
+        }), { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
+      
+      // Apenas admins podem disparar playbooks manualmente
+      if (!['admin', 'super_admin'].includes(userRole.role)) {
+        console.error(`[SECURITY] User ${user.id} with role ${userRole.role} attempted to trigger playbook`);
+        return new Response(JSON.stringify({ 
+          error: 'Forbidden: Only admins can trigger playbooks' 
+        }), { 
+          status: 403, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        });
+      }
+    }
+
+    console.log(`[evaluate-playbook-triggers] Evaluating ${trigger_type} for tenant ${tenant_id} (internal: ${isInternalCall})`);
 
     // ✅ PHASE 3: Verificar se Shadow Mode (dry-run) está ativado para o tenant
     const { data: tenantSettings } = await supabase
@@ -297,6 +363,47 @@ serve(async (req) => {
     if (executionMode === 'semi_automatic') {
       console.log(`[evaluate-playbook-triggers] SEMI_AUTOMATIC: Creating approval request for ${playbook.name}`);
       
+      // ✅ P1 RED TEAM FIX: Rate limit global de approvals pendentes por tenant
+      const MAX_PENDING_APPROVALS_PER_TENANT = 10;
+      
+      const { count: pendingCount, error: countError } = await supabase
+        .from('approval_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('tenant_id', tenant_id)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString());
+      
+      if (!countError && (pendingCount || 0) >= MAX_PENDING_APPROVALS_PER_TENANT) {
+        console.warn(`[SECURITY] Tenant ${tenant_id} exceeded pending approval limit (${pendingCount}/${MAX_PENDING_APPROVALS_PER_TENANT})`);
+        
+        // Registrar tentativa bloqueada no audit log
+        await supabase.from('audit_logs').insert({
+          tenant_id,
+          action: 'approval_rate_limit_exceeded',
+          resource_type: 'approval_request',
+          resource_id: execution.id,
+          success: false,
+          details: {
+            pending_count: pendingCount,
+            max_allowed: MAX_PENDING_APPROVALS_PER_TENANT,
+            trigger_type,
+            playbook_id: playbook.id,
+            playbook_name: playbook.name,
+            blocked: true,
+          },
+        });
+        
+        return new Response(JSON.stringify({
+          error: 'Too many pending approval requests',
+          message: `Maximum ${MAX_PENDING_APPROVALS_PER_TENANT} pending approvals allowed. Please approve or wait for existing requests to expire.`,
+          pending_count: pendingCount,
+          max_allowed: MAX_PENDING_APPROVALS_PER_TENANT,
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24); // 24h timeout
       
@@ -305,7 +412,8 @@ serve(async (req) => {
       const tokenExpiresAt = new Date();
       tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24); // Token também expira em 24h
       
-      console.log(`[evaluate-playbook-triggers] Generated approval token: ${approvalToken.substring(0, 8)}...`);
+      // ✅ P1 RED TEAM FIX: NÃO logar o token de aprovação (reduz entropia se logs vazarem)
+      console.log(`[evaluate-playbook-triggers] Generated secure approval token for execution ${execution.id}`);
       
       const { data: approvalRequest, error: approvalError } = await supabase
         .from('approval_requests')
