@@ -12,22 +12,50 @@ const logStep = (step: string, details?: any) => {
   console.log(`[MANAGE-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
-// V4 Plan configurations
-const PLAN_CONFIG = {
-  starter_compliance: {
-    basePriceId: 'price_1Sj531CfJUj9L8duz05lUe8H',
-    addonPriceId: 'price_1Sj53iCfJUj9L8duCCU8qSN2',
-    baseDevices: 10,
-  },
-  business: {
-    basePriceId: 'price_1Sj53TCfJUj9L8duQ40uRncf',
-    addonPriceId: 'price_1Sj542CfJUj9L8duKIjH3eOk',
-    baseDevices: 30,
-  },
-} as const;
-
 type Operation = 'upgrade' | 'add_devices' | 'downgrade' | 'cancel';
-type PlanName = keyof typeof PLAN_CONFIG;
+
+interface PlanConfig {
+  basePriceId: string;
+  addonPriceId: string;
+  baseDevices: number;
+}
+
+// V4: Fetch plan config from database
+async function getPlanConfig(supabase: any, planName: string): Promise<PlanConfig | null> {
+  const { data: mappings, error } = await supabase
+    .from("stripe_plan_mapping")
+    .select("plan_type, stripe_price_id, base_devices")
+    .eq("logical_plan", planName);
+  
+  if (error || !mappings || mappings.length === 0) {
+    logStep("No plan mapping found", { planName });
+    return null;
+  }
+  
+  const base = mappings.find((m: any) => m.plan_type === 'base');
+  const addon = mappings.find((m: any) => m.plan_type === 'addon');
+  
+  if (!base || !addon) {
+    logStep("Incomplete plan mapping", { planName, hasBase: !!base, hasAddon: !!addon });
+    return null;
+  }
+  
+  return {
+    basePriceId: base.stripe_price_id,
+    addonPriceId: addon.stripe_price_id,
+    baseDevices: base.base_devices,
+  };
+}
+
+// V4: Get all addon price IDs from database
+async function getAllAddonPriceIds(supabase: any): Promise<string[]> {
+  const { data } = await supabase
+    .from("stripe_plan_mapping")
+    .select("stripe_price_id")
+    .eq("plan_type", "addon");
+  
+  return data?.map((m: any) => m.stripe_price_id) || [];
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -60,7 +88,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const operation: Operation = body.operation;
-    const targetPlan: PlanName = body.target_plan;
+    const targetPlan: string = body.target_plan;
     const extraDevices: number = body.extra_devices || 0;
 
     logStep("Operation requested", { operation, targetPlan, extraDevices });
@@ -104,6 +132,10 @@ Deno.serve(async (req) => {
     }
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    
+    // V4: Get all addon price IDs from database for detection
+    const allAddonPriceIds = await getAllAddonPriceIds(supabase);
+    logStep("Loaded addon price IDs from DB", { count: allAddonPriceIds.length });
 
     let result: any = {};
 
@@ -113,11 +145,13 @@ Deno.serve(async (req) => {
           throw new Error("No active Stripe subscription to upgrade");
         }
 
-        if (!PLAN_CONFIG[targetPlan]) {
+        // V4: Get plan config from database
+        const newConfig = await getPlanConfig(supabase, targetPlan);
+        if (!newConfig) {
           throw new Error(`Invalid target plan: ${targetPlan}`);
         }
 
-        const newConfig = PLAN_CONFIG[targetPlan];
+        logStep("Target plan config", newConfig);
         
         // Get current subscription from Stripe
         const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
@@ -127,7 +161,7 @@ Deno.serve(async (req) => {
         
         // Mark current base item for replacement
         for (const item of stripeSubscription.items.data) {
-          const isAddon = Object.values(PLAN_CONFIG).some(c => c.addonPriceId === item.price.id);
+          const isAddon = allAddonPriceIds.includes(item.price.id);
           if (!isAddon) {
             // Replace base plan
             items.push({
@@ -148,7 +182,7 @@ Deno.serve(async (req) => {
         // Add extra devices if requested
         if (extraDevices > 0) {
           const existingAddon = stripeSubscription.items.data.find(
-            (item: Stripe.SubscriptionItem) => Object.values(PLAN_CONFIG).some(c => c.addonPriceId === item.price.id)
+            (item: Stripe.SubscriptionItem) => allAddonPriceIds.includes(item.price.id)
           );
           
           if (existingAddon) {
@@ -209,8 +243,8 @@ Deno.serve(async (req) => {
           throw new Error("Must specify positive number of extra devices");
         }
 
-        // Determine addon price based on current plan
-        const planConfig = PLAN_CONFIG[currentPlan as PlanName];
+        // V4: Get plan config from database
+        const planConfig = await getPlanConfig(supabase, currentPlan);
         if (!planConfig) {
           throw new Error(`Cannot add devices to plan: ${currentPlan}`);
         }
@@ -269,7 +303,9 @@ Deno.serve(async (req) => {
           throw new Error("No active Stripe subscription");
         }
 
-        if (!PLAN_CONFIG[targetPlan]) {
+        // V4: Validate target plan exists
+        const targetConfig = await getPlanConfig(supabase, targetPlan);
+        if (!targetConfig) {
           throw new Error(`Invalid target plan: ${targetPlan}`);
         }
 
@@ -277,12 +313,26 @@ Deno.serve(async (req) => {
         const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
         const currentPeriodEnd = new Date(stripeSubscription.current_period_end * 1000);
 
-        // Cancel at period end
+        // Cancel at period end - webhook will handle creating new subscription
         await stripe.subscriptions.update(subscription.stripe_subscription_id, {
           cancel_at_period_end: true,
+          metadata: {
+            ...stripeSubscription.metadata,
+            pending_downgrade_to: targetPlan,
+            downgrade_effective_at: currentPeriodEnd.toISOString(),
+          },
         });
 
         logStep("Downgrade scheduled", { targetPlan, effectiveAt: currentPeriodEnd.toISOString() });
+
+        // Update local subscription with pending downgrade info
+        await supabase
+          .from("tenant_subscriptions")
+          .update({
+            pending_downgrade_to: targetPlan,
+            pending_downgrade_at: currentPeriodEnd.toISOString(),
+          })
+          .eq("tenant_id", tenantId);
 
         // Log event with scheduled date
         await supabase.from("subscription_events").insert({
@@ -295,6 +345,7 @@ Deno.serve(async (req) => {
           metadata: {
             scheduled_for: currentPeriodEnd.toISOString(),
             will_create_new_subscription: true,
+            target_base_devices: targetConfig.baseDevices,
           },
           created_by: userData.user.id,
         });
