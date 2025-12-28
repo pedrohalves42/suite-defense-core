@@ -62,24 +62,47 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { data: userRole, error: roleError } = await supabase.from("user_roles").select("tenant_id, tenants(name)").eq("user_id", user.id).limit(1).maybeSingle();
+    const { data: userRole, error: roleError } = await supabase
+      .from("user_roles")
+      .select("tenant_id")
+      .eq("user_id", user.id)
+      .limit(1)
+      .maybeSingle();
+
     if (roleError) {
       console.error("[generate-compliance-report] Error fetching user role:", roleError);
-      return new Response(JSON.stringify({ error: "Error fetching user role" }), 
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "Error fetching user role" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-    if (!userRole) {
+
+    if (!userRole?.tenant_id) {
       console.error("[generate-compliance-report] User not associated with any tenant:", user.id);
-      return new Response(JSON.stringify({ error: "User not associated with tenant" }), 
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "User not associated with tenant" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const tenantId = userRole.tenant_id;
-    const tenantData = userRole.tenants as unknown as { name: string } | null;
-    const tenantName = tenantData?.name ?? "Unknown";
+
+    // Buscar nome do tenant (sem embed, pois existem múltiplas FKs)
+    let tenantName = "Unknown";
+    const { data: tenantRow, error: tenantError } = await supabase
+      .from("tenants")
+      .select("name")
+      .eq("id", tenantId)
+      .maybeSingle();
+
+    if (tenantError) {
+      console.error("[generate-compliance-report] Error fetching tenant name:", tenantError);
+    } else if (tenantRow?.name) {
+      tenantName = tenantRow.name;
+    }
 
     const body = await req.json();
-    const template = body.template as string;
+    const template = (body.template ?? body.template_type) as string;
     const periodStart = body.period_start ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const periodEnd = body.period_end ?? new Date().toISOString();
 
