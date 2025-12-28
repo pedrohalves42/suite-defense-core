@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, FileText, Trash2, RefreshCw, Shield, Bug, Globe, HardDrive, MessageCircle, TrendingUp, TrendingDown, Minus, Phone, Mail, ExternalLink } from "lucide-react";
+import { Download, FileText, Trash2, RefreshCw, Shield, Bug, Globe, HardDrive, MessageCircle, TrendingUp, TrendingDown, Minus, Phone, Mail, ExternalLink, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatBrazilDateTime, formatRelativeTime } from "@/lib/date-utils";
 import { ScheduleConversationModal } from "./ScheduleConversationModal";
+import { useActiveTenant } from "@/hooks/useActiveTenant";
 
 interface GeneratedReport {
   id: string;

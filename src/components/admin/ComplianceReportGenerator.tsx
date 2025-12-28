@@ -586,16 +586,16 @@ export function ComplianceReportGenerator() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileCheck className="h-5 w-5" />
-            Gerador de Relatórios de Compliance
+            Gerador de Relatórios de Segurança
           </CardTitle>
           <CardDescription>
-            Gere relatórios com validade jurídica e criptográfica (SHA256 + HMAC)
+            Gere relatórios de compliance com análise de segurança da sua infraestrutura
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Template de Compliance</label>
+              <label className="text-sm font-medium mb-2 block">Tipo de Análise</label>
               <Select
                 value={selectedTemplate}
                 onValueChange={(v) => setSelectedTemplate(v as ComplianceTemplate)}
@@ -620,151 +620,274 @@ export function ComplianceReportGenerator() {
               ) : (
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
-              Gerar Relatório
+              Analisar Segurança
             </Button>
           </div>
 
-          {/* Template Info */}
+          {/* Template Info - Simplified */}
           <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
             <TemplateIcon className={`h-8 w-8 ${TEMPLATE_COLORS[selectedTemplate]}`} />
             <div>
               <h4 className="font-medium">{templateDef.name}</h4>
               <p className="text-sm text-muted-foreground">{templateDef.description}</p>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {templateDef.sections.map((s) => (
-                  <Badge key={s.id} variant="outline" className="text-xs">
-                    {s.title}
-                  </Badge>
-                ))}
-              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Report Preview */}
+      {/* Executive Summary Preview - User-friendly */}
       {reportPayload && (
-        <Card>
-          <CardHeader>
+        <Card className="border-2 border-primary/20">
+          <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Eye className="h-5 w-5" />
-                  Preview do Relatório
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {reportPayload.tenant_name}
+                  </Badge>
+                </div>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Resumo de Segurança
                 </CardTitle>
                 <CardDescription>
-                  {reportPayload.audit_id} • Gerado em {formatBrazilDateTime(reportPayload.generated_at, "full")} (UTC-3)
+                  Análise gerada em {formatBrazilDateTime(reportPayload.generated_at, "full")}
                 </CardDescription>
               </div>
-              <Button onClick={handleExportPDF} disabled={isGenerating}>
+              <Button onClick={handleExportPDF} disabled={isGenerating} size="lg">
                 {isGenerating ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : (
                   <Download className="h-4 w-4 mr-2" />
                 )}
-                Exportar PDF
+                Baixar Relatório PDF
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="hashes">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="hashes">Hashes</TabsTrigger>
-                <TabsTrigger value="invariants">Invariantes</TabsTrigger>
-                <TabsTrigger value="policies">Políticas</TabsTrigger>
-                <TabsTrigger value="sections">Seções</TabsTrigger>
-              </TabsList>
+          <CardContent className="pt-6">
+            {/* Risk Score - Visual and prominent */}
+            <div className="grid gap-6 md:grid-cols-3 mb-6">
+              <div className={`p-6 rounded-xl text-center ${
+                reportPayload.risk_level === 'BAIXO' ? 'bg-success/20 border-2 border-success' :
+                reportPayload.risk_level === 'MÉDIO' ? 'bg-warning/20 border-2 border-warning' :
+                reportPayload.risk_level === 'ALTO' ? 'bg-orange-500/20 border-2 border-orange-500' :
+                'bg-destructive/20 border-2 border-destructive'
+              }`}>
+                <div className="text-4xl font-bold mb-2">
+                  {reportPayload.risk_score}/100
+                </div>
+                <div className={`text-lg font-semibold ${
+                  reportPayload.risk_level === 'BAIXO' ? 'text-success' :
+                  reportPayload.risk_level === 'MÉDIO' ? 'text-warning' :
+                  reportPayload.risk_level === 'ALTO' ? 'text-orange-500' :
+                  'text-destructive'
+                }`}>
+                  Risco {reportPayload.risk_level}
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {reportPayload.risk_description}
+                </p>
+              </div>
 
-              <TabsContent value="hashes" className="space-y-4 pt-4">
-                <div className="grid gap-4">
-                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg space-y-2">
-                    <p className="text-sm font-medium text-green-800 dark:text-green-400">
-                      SHA256 - Verificação de Integridade
-                    </p>
-                    <HashBadge value={reportPayload.sha256} variant="sha256" truncateLength={32} />
-                    <p className="text-xs text-muted-foreground">
-                      Use este hash para verificar que o documento não foi alterado após a geração.
-                    </p>
+              {/* Key Stats */}
+              <div className="p-6 bg-card border rounded-xl">
+                <h4 className="font-semibold mb-4 text-foreground">Números Importantes</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Computadores Protegidos</span>
+                    <span className="font-bold text-lg">{reportPayload.statistics?.total_agents || 0}</span>
                   </div>
-
-                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg space-y-2">
-                    <p className="text-sm font-medium text-blue-800 dark:text-blue-400">
-                      HMAC-SHA256 - Assinatura Digital
-                    </p>
-                    <HashBadge value={reportPayload.hmac_signature} variant="hmac" truncateLength={32} />
-                    <p className="text-xs text-muted-foreground">
-                      Assinatura criptográfica que comprova a origem do documento.
-                    </p>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Problemas Críticos</span>
+                    <span className={`font-bold text-lg ${(reportPayload.statistics?.critical_vulnerabilities || 0) > 0 ? 'text-destructive' : 'text-success'}`}>
+                      {reportPayload.statistics?.critical_vulnerabilities || 0}
+                    </span>
                   </div>
-
-                  <Separator />
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Válido até:</span>
-                      <p className="font-medium">{formatBrazilDateTime(reportPayload.valid_until, "full")} (UTC-3)</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Versão do formato:</span>
-                      <p className="font-medium">{reportPayload.format_version}</p>
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Ameaças Detectadas</span>
+                    <span className={`font-bold text-lg ${(reportPayload.statistics?.threats_found || 0) > 0 ? 'text-warning' : 'text-success'}`}>
+                      {reportPayload.statistics?.threats_found || 0}
+                    </span>
                   </div>
                 </div>
-              </TabsContent>
+              </div>
 
-              <TabsContent value="invariants" className="pt-4">
+              {/* Controls Status */}
+              <div className="p-6 bg-card border rounded-xl">
+                <h4 className="font-semibold mb-4 text-foreground">Controles de Segurança</h4>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-4 text-sm">
-                    <Badge variant="default" className="bg-green-600">
-                      {reportPayload.invariants_summary.passed} Conformes
-                    </Badge>
-                    <Badge variant="destructive">
-                      {reportPayload.invariants_summary.failed} Não Conformes
-                    </Badge>
-                    <Badge variant="secondary">
-                      {reportPayload.invariants_summary.unknown} Pendentes
-                    </Badge>
+                  <div className="flex justify-between items-center">
+                    <span className="text-success flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4" /> Conformes
+                    </span>
+                    <span className="font-bold text-lg text-success">{reportPayload.invariants_summary.passed}</span>
                   </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-destructive flex items-center gap-2">
+                      <XCircle className="h-4 w-4" /> Não Conformes
+                    </span>
+                    <span className="font-bold text-lg text-destructive">{reportPayload.invariants_summary.failed}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" /> Pendentes
+                    </span>
+                    <span className="font-bold text-lg">{reportPayload.invariants_summary.unknown}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-                  <div className="space-y-2">
-                    {reportPayload.invariants.map((inv) => (
+            {/* Simple interpretation */}
+            <div className="p-4 bg-muted/30 rounded-lg mb-6">
+              <h4 className="font-semibold mb-2 text-foreground">O que isso significa?</h4>
+              <p className="text-foreground">
+                {reportPayload.risk_level === 'BAIXO' && (
+                  "Sua empresa está em boa situação de segurança. Os sistemas estão protegidos e funcionando corretamente. Continue mantendo as boas práticas."
+                )}
+                {reportPayload.risk_level === 'MÉDIO' && (
+                  "Sua empresa possui alguns pontos de atenção que merecem acompanhamento. Não há riscos críticos imediatos, mas recomendamos revisar as pendências."
+                )}
+                {(reportPayload.risk_level === 'ALTO' || reportPayload.risk_level === 'CRÍTICO') && (
+                  "Foram identificados pontos que precisam de atenção. Recomendamos revisar as vulnerabilidades encontradas e tomar ações corretivas."
+                )}
+              </p>
+            </div>
+
+            {/* Detailed tabs - but with friendlier labels */}
+            <Tabs defaultValue="resumo">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="resumo">Proteções</TabsTrigger>
+                <TabsTrigger value="recomendacoes">Recomendações</TabsTrigger>
+                <TabsTrigger value="politicas">Sites Bloqueados</TabsTrigger>
+                <TabsTrigger value="tecnico">Dados Técnicos</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="resumo" className="pt-4">
+                <div className="space-y-3">
+                  {reportPayload.invariants.map((inv) => {
+                    // User-friendly descriptions
+                    const friendlyNames: Record<string, { name: string; description: string }> = {
+                      "INV-001": { name: "Proteção de Dados", description: "Seus dados só podem ser acessados por pessoas autorizadas" },
+                      "INV-002": { name: "Comunicação Segura", description: "Os computadores usam assinatura digital para comunicação" },
+                      "INV-003": { name: "Isolamento de Dados", description: "Os dados da sua empresa estão separados de outras empresas" },
+                      "INV-004": { name: "Proteção de Senhas", description: "Senhas e credenciais não aparecem em logs do sistema" },
+                      "INV-005": { name: "Proteção Automática", description: "O sistema bloqueia automaticamente em caso de problemas" },
+                      "INV-006": { name: "Filtro de Sites", description: "Sites perigosos ou inadequados estão sendo bloqueados" },
+                    };
+                    const friendly = friendlyNames[inv.id] || { name: inv.name, description: inv.description };
+                    
+                    return (
                       <div
                         key={inv.id}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                        className="flex items-center justify-between p-4 bg-card border rounded-lg"
                       >
                         <div className="flex items-center gap-3">
                           {inv.status === "PASS" ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                            <div className="p-2 bg-success/20 rounded-full">
+                              <CheckCircle2 className="h-5 w-5 text-success" />
+                            </div>
                           ) : inv.status === "FAIL" ? (
-                            <XCircle className="h-5 w-5 text-red-600" />
+                            <div className="p-2 bg-destructive/20 rounded-full">
+                              <XCircle className="h-5 w-5 text-destructive" />
+                            </div>
                           ) : (
-                            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                            <div className="p-2 bg-warning/20 rounded-full">
+                              <AlertTriangle className="h-5 w-5 text-warning" />
+                            </div>
                           )}
                           <div>
-                            <p className="font-medium text-sm">{inv.id}: {inv.name}</p>
-                            <p className="text-xs text-muted-foreground">{inv.details}</p>
+                            <p className="font-medium text-foreground">{friendly.name}</p>
+                            <p className="text-sm text-muted-foreground">{friendly.description}</p>
                           </div>
                         </div>
-                        <code className="text-xs bg-muted px-2 py-1 rounded">
-                          {inv.evidence_hash.substring(0, 12)}...
-                        </code>
+                        <Badge variant={inv.status === "PASS" ? "default" : inv.status === "FAIL" ? "destructive" : "secondary"} className="text-sm">
+                          {inv.status === "PASS" ? "Ativo" : inv.status === "FAIL" ? "Atenção" : "Pendente"}
+                        </Badge>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
               </TabsContent>
 
-              <TabsContent value="policies" className="pt-4">
+              <TabsContent value="recomendacoes" className="pt-4">
+                <div className="space-y-3">
+                  {(() => {
+                    const recommendations: { icon: React.ReactNode; text: string; priority: string }[] = [];
+                    const criticalVulns = reportPayload.statistics?.critical_vulnerabilities || 0;
+                    const highVulns = reportPayload.statistics?.high_vulnerabilities || 0;
+                    const threats = reportPayload.statistics?.threats_found || 0;
+                    const failedInvariants = reportPayload.invariants.filter(i => i.status === "FAIL");
+
+                    if (criticalVulns > 0) {
+                      recommendations.push({
+                        icon: <XCircle className="h-5 w-5 text-destructive" />,
+                        text: `Corrigir ${criticalVulns} vulnerabilidade(s) crítica(s) com urgência`,
+                        priority: "Crítico"
+                      });
+                    }
+                    if (highVulns > 0) {
+                      recommendations.push({
+                        icon: <AlertTriangle className="h-5 w-5 text-orange-500" />,
+                        text: `Revisar e corrigir ${highVulns} vulnerabilidade(s) de alta severidade`,
+                        priority: "Alto"
+                      });
+                    }
+                    if (threats > 0) {
+                      recommendations.push({
+                        icon: <Shield className="h-5 w-5 text-warning" />,
+                        text: `Investigar ${threats} ameaça(s) detectada(s) pelo antivírus`,
+                        priority: "Médio"
+                      });
+                    }
+                    if (failedInvariants.length > 0) {
+                      recommendations.push({
+                        icon: <Lock className="h-5 w-5 text-warning" />,
+                        text: `Verificar ${failedInvariants.length} controle(s) de segurança não conforme(s)`,
+                        priority: "Médio"
+                      });
+                    }
+                    if (recommendations.length === 0) {
+                      recommendations.push({
+                        icon: <CheckCircle2 className="h-5 w-5 text-success" />,
+                        text: "Manter as boas práticas de segurança atuais",
+                        priority: "Baixo"
+                      });
+                    }
+
+                    return recommendations.map((rec, idx) => (
+                      <div key={idx} className="flex items-center gap-3 p-4 bg-card border rounded-lg">
+                        {rec.icon}
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">{rec.text}</p>
+                        </div>
+                        <Badge variant={
+                          rec.priority === "Crítico" ? "destructive" :
+                          rec.priority === "Alto" ? "default" :
+                          rec.priority === "Médio" ? "secondary" : "outline"
+                        }>
+                          {rec.priority}
+                        </Badge>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="politicas" className="pt-4">
                 {reportPayload.active_policies.length > 0 ? (
                   <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Sites e categorias bloqueadas para proteção dos usuários:
+                    </p>
                     {reportPayload.active_policies.map((policy) => (
                       <div
                         key={policy.id}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-card border rounded-lg"
                       >
                         <div>
-                          <p className="font-mono text-sm">{policy.domain_pattern}</p>
-                          <p className="text-xs text-muted-foreground">{policy.reason || "Sem motivo especificado"}</p>
+                          <p className="font-mono text-sm text-foreground">{policy.domain_pattern}</p>
+                          <p className="text-xs text-muted-foreground">{policy.reason || "Política de segurança"}</p>
                         </div>
                         <Badge variant={policy.is_active ? "default" : "secondary"}>
                           {policy.is_active ? "Ativo" : "Inativo"}
@@ -773,29 +896,55 @@ export function ComplianceReportGenerator() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    Nenhuma política de bloqueio configurada.
-                  </p>
+                  <div className="text-center py-8">
+                    <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">
+                      Nenhuma política de bloqueio configurada.
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Configure políticas de DNS para bloquear sites perigosos.
+                    </p>
+                  </div>
                 )}
               </TabsContent>
 
-              <TabsContent value="sections" className="pt-4">
-                <div className="space-y-3">
-                  {reportPayload.sections.map((section) => (
-                    <div
-                      key={section.id}
-                      className="p-4 bg-muted/50 rounded-lg"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">{section.title}</h4>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline">{section.record_count} registros</Badge>
-                          <Badge variant="secondary">{section.evidence_refs.length} evidências</Badge>
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{section.description}</p>
+              <TabsContent value="tecnico" className="space-y-4 pt-4">
+                <p className="text-sm text-muted-foreground">
+                  Dados técnicos para verificação de autenticidade do relatório.
+                </p>
+                <div className="grid gap-4">
+                  <div className="p-4 bg-success/10 border border-success/30 rounded-lg space-y-2">
+                    <p className="text-sm font-medium text-success">
+                      Código de Integridade (SHA256)
+                    </p>
+                    <HashBadge value={reportPayload.sha256} variant="sha256" truncateLength={32} />
+                    <p className="text-xs text-muted-foreground">
+                      Este código muda se o documento for alterado.
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-info/10 border border-info/30 rounded-lg space-y-2">
+                    <p className="text-sm font-medium text-info">
+                      Assinatura Digital (HMAC)
+                    </p>
+                    <HashBadge value={reportPayload.hmac_signature} variant="hmac" truncateLength={32} />
+                    <p className="text-xs text-muted-foreground">
+                      Comprova que o relatório foi gerado pelo sistema CyberShield.
+                    </p>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">ID do Relatório:</span>
+                      <p className="font-mono text-foreground">{reportPayload.audit_id}</p>
                     </div>
-                  ))}
+                    <div>
+                      <span className="text-muted-foreground">Válido até:</span>
+                      <p className="font-medium text-foreground">{formatBrazilDateTime(reportPayload.valid_until, "full")}</p>
+                    </div>
+                  </div>
                 </div>
               </TabsContent>
             </Tabs>
