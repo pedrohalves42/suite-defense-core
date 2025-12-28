@@ -11085,6 +11085,7 @@ export type Database = {
         Returns: Json
       }
       user_belongs_to_tenant: { Args: { _tenant_id: string }; Returns: boolean }
+      user_has_tenant_access: { Args: { _tenant_id: string }; Returns: boolean }
       validate_agent_release_integrity: {
         Args: never
         Returns: {
