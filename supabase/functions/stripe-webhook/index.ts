@@ -143,16 +143,19 @@ Deno.serve(async (request) => {
 
         const customerId = subscription.customer as string;
         
+        // V4: Get addon price IDs from database for accurate detection
+        const { data: addonMappings } = await supabase
+          .from("stripe_plan_mapping")
+          .select("stripe_price_id")
+          .eq("plan_type", "addon");
+        
+        const ADDON_PRICE_IDS = addonMappings?.map((m: any) => m.stripe_price_id) || [];
+        console.log(`[STRIPE-WEBHOOK] Loaded ${ADDON_PRICE_IDS.length} addon price IDs from DB`);
+        
         // V4: Process ALL line items to separate base plan from addons
         let baseDevices = 0;
         let addonDevices = 0;
         let basePriceId: string | null = null;
-        
-        // Known addon price IDs (V4)
-        const ADDON_PRICE_IDS = [
-          'price_1Sj53iCfJUj9L8duCCU8qSN2', // starter addon
-          'price_1Sj542CfJUj9L8duKIjH3eOk', // business addon
-        ];
         
         for (const item of subscription.items.data) {
           const priceId = item.price.id;
@@ -298,31 +301,114 @@ Deno.serve(async (request) => {
         const tenantSub = await findTenantByCustomerOrMetadata(supabase, customerId, metadata);
 
         if (tenantSub) {
-          const { data: freePlan } = await supabase
-            .from("subscription_plans")
-            .select("id")
-            .eq("name", "free")
+          // V4: Check if this was a scheduled downgrade
+          const { data: tenantSubscription } = await supabase
+            .from("tenant_subscriptions")
+            .select("pending_downgrade_to, stripe_customer_id")
+            .eq("tenant_id", tenantSub.tenant_id)
             .single();
+          
+          const pendingDowngradeTo = tenantSubscription?.pending_downgrade_to || metadata?.pending_downgrade_to;
+          
+          if (pendingDowngradeTo) {
+            console.log(`[STRIPE-WEBHOOK] Processing scheduled downgrade to: ${pendingDowngradeTo}`);
+            
+            // V4: Get target plan config from database
+            const { data: targetPlanMapping } = await supabase
+              .from("stripe_plan_mapping")
+              .select("stripe_price_id, base_devices")
+              .eq("logical_plan", pendingDowngradeTo)
+              .eq("plan_type", "base")
+              .single();
+            
+            if (targetPlanMapping && tenantSubscription?.stripe_customer_id) {
+              // Create new subscription with the downgraded plan
+              const newSubscription = await stripe.subscriptions.create({
+                customer: tenantSubscription.stripe_customer_id,
+                items: [{ price: targetPlanMapping.stripe_price_id }],
+                metadata: {
+                  tenant_id: tenantSub.tenant_id,
+                  plan_name: pendingDowngradeTo,
+                  max_devices: String(targetPlanMapping.base_devices),
+                },
+              });
+              
+              console.log(`[STRIPE-WEBHOOK] Created new subscription for downgrade: ${newSubscription.id}`);
+              
+              // Get plan ID
+              const { data: plan } = await supabase
+                .from("subscription_plans")
+                .select("id")
+                .eq("name", pendingDowngradeTo)
+                .single();
+              
+              // Update tenant subscription
+              await supabase
+                .from("tenant_subscriptions")
+                .update({
+                  stripe_subscription_id: newSubscription.id,
+                  plan_id: plan?.id,
+                  device_quantity: targetPlanMapping.base_devices,
+                  addon_devices: 0,
+                  status: newSubscription.status,
+                  pending_downgrade_to: null,
+                  pending_downgrade_at: null,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("tenant_id", tenantSub.tenant_id);
+              
+              // Sync features with new plan
+              await supabase.rpc("ensure_tenant_features", {
+                p_tenant_id: tenantSub.tenant_id,
+                p_plan_name: pendingDowngradeTo,
+                p_device_quantity: targetPlanMapping.base_devices,
+              });
+              
+              // Log event
+              await supabase.from("subscription_events").insert({
+                tenant_id: tenantSub.tenant_id,
+                event_type: "downgrade_completed",
+                new_plan: pendingDowngradeTo,
+                new_devices: targetPlanMapping.base_devices,
+                stripe_subscription_id: newSubscription.id,
+                stripe_event_id: event.id,
+              });
+              
+              console.log(`[STRIPE-WEBHOOK] Downgrade completed for tenant: ${tenantSub.tenant_id}`);
+            } else {
+              console.error(`[STRIPE-WEBHOOK] Could not find plan mapping for: ${pendingDowngradeTo}`);
+            }
+          } else {
+            // Normal cancellation - downgrade to free
+            const { data: freePlan } = await supabase
+              .from("subscription_plans")
+              .select("id")
+              .eq("name", "free")
+              .single();
 
-          if (freePlan) {
-            await supabase
-              .from("tenant_subscriptions")
-              .update({
-                plan_id: freePlan.id,
-                status: "canceled",
-                stripe_subscription_id: null,
-                device_quantity: 0,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("tenant_id", tenantSub.tenant_id);
+            if (freePlan) {
+              await supabase
+                .from("tenant_subscriptions")
+                .update({
+                  plan_id: freePlan.id,
+                  status: "canceled",
+                  stripe_subscription_id: null,
+                  device_quantity: 0,
+                  addon_devices: 0,
+                  pending_downgrade_to: null,
+                  pending_downgrade_at: null,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("tenant_id", tenantSub.tenant_id);
 
-            await supabase.rpc("ensure_tenant_features", {
-              p_tenant_id: tenantSub.tenant_id,
-              p_plan_name: "free",
-              p_device_quantity: 3,
-            });
+              await supabase.rpc("ensure_tenant_features", {
+                p_tenant_id: tenantSub.tenant_id,
+                p_plan_name: "free",
+                p_device_quantity: 3,
+              });
 
-            console.log(`[STRIPE-WEBHOOK] Downgraded to free plan: ${tenantSub.tenant_id}`);
+              console.log(`[STRIPE-WEBHOOK] Downgraded to free plan: ${tenantSub.tenant_id}`);
+            }
           }
         }
         break;

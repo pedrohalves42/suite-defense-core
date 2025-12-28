@@ -167,11 +167,14 @@ Deno.serve(async (req) => {
     const stripeSubscription = await stripe.subscriptions.retrieve(typedSubscription.stripe_subscription_id);
     logStep("Fetched Stripe subscription", { status: stripeSubscription.status });
 
-    // V4: Process ALL line items to get base and addon devices
-    const ADDON_PRICE_IDS = [
-      'price_1Sj53iCfJUj9L8duCCU8qSN2', // starter addon
-      'price_1Sj542CfJUj9L8duKIjH3eOk', // business addon
-    ];
+    // V4: Get addon price IDs from database
+    const { data: addonMappings } = await supabaseClient
+      .from("stripe_plan_mapping")
+      .select("stripe_price_id")
+      .eq("plan_type", "addon");
+    
+    const ADDON_PRICE_IDS = addonMappings?.map((m: any) => m.stripe_price_id) || [];
+    logStep("Loaded addon price IDs from DB", { count: ADDON_PRICE_IDS.length });
     
     let addonDevicesFromStripe = 0;
     for (const item of stripeSubscription.items.data) {
