@@ -197,6 +197,137 @@ export const UI_LABELS = {
     events_timeline: 'O que aconteceu nas últimas horas',
     events_count: 'Eventos detectados',
     blocked_count: 'Bloqueados automaticamente'
+  },
+
+  // ===== COMPLIANCE REPORT TRANSLATIONS =====
+  compliance: {
+    // Cryptographic verification - layman terms
+    verification: {
+      sha256_valid: 'Documento não foi alterado',
+      sha256_invalid: 'Documento pode ter sido modificado',
+      hmac_valid: 'Origem confirmada - documento autêntico',
+      hmac_invalid: 'Origem não verificada',
+      integrity_valid: 'Este documento é autêntico e não foi alterado',
+      integrity_invalid: 'Não foi possível confirmar a autenticidade',
+      expired: 'Este documento expirou',
+      valid: 'Documento válido e autêntico'
+    },
+
+    // Security invariants - layman terms
+    invariants: {
+      rls_active: 'Dados protegidos - só você pode vê-los',
+      hmac_auth: 'Comunicação criptografada entre computadores e servidor',
+      multi_tenant: 'Suas informações isoladas de outras empresas',
+      credential_masking: 'Senhas nunca são armazenadas visíveis',
+      fail_closed: 'Sistema se protege automaticamente em caso de problemas',
+      dns_filter: 'Sites perigosos são bloqueados automaticamente'
+    },
+
+    // Risk levels - layman terms
+    risk: {
+      MÍNIMO: {
+        label: 'Excelente',
+        emoji: '🟢',
+        description: 'Sua empresa está muito bem protegida',
+        action: 'Continue assim! Monitore regularmente.'
+      },
+      BAIXO: {
+        label: 'Bom',
+        emoji: '🟢',
+        description: 'Segurança adequada com pequenas melhorias possíveis',
+        action: 'Revise os pontos sugeridos quando puder.'
+      },
+      MÉDIO: {
+        label: 'Atenção',
+        emoji: '🟡',
+        description: 'Alguns pontos precisam de atenção',
+        action: 'Resolva os itens marcados esta semana.'
+      },
+      ALTO: {
+        label: 'Preocupante',
+        emoji: '🟠',
+        description: 'Problemas importantes identificados',
+        action: 'Ação recomendada nas próximas 48 horas.'
+      },
+      CRÍTICO: {
+        label: 'Urgente',
+        emoji: '🔴',
+        description: 'Situação crítica - ação imediata necessária',
+        action: 'Resolva os problemas críticos hoje.'
+      }
+    },
+
+    // Section explanations
+    sections: {
+      executive_summary: 'Resumo em linguagem simples do estado de segurança da sua empresa',
+      invariants: 'Verificações automáticas que garantem a proteção dos seus dados',
+      policies: 'Regras de bloqueio de sites e proteções configuradas',
+      statistics: 'Números e métricas do período analisado',
+      recommendations: 'Sugestões de melhorias para aumentar a segurança'
+    },
+
+    // Report status
+    status: {
+      generated: 'Relatório gerado com sucesso',
+      pending: 'Aguardando geração',
+      expired: 'Relatório expirado - gere um novo',
+      error: 'Erro na geração do relatório'
+    },
+
+    // Glossary terms for PDF
+    glossary: {
+      sha256: {
+        term: 'SHA256',
+        explanation: 'Uma "impressão digital" única do documento. Se qualquer letra mudar, essa impressão muda completamente, garantindo que o documento não foi alterado.'
+      },
+      hmac: {
+        term: 'HMAC-SHA256',
+        explanation: 'Uma assinatura digital que prova que o documento foi criado pelo sistema CyberShield e não por outra pessoa.'
+      },
+      rls: {
+        term: 'RLS (Row Level Security)',
+        explanation: 'Uma proteção no banco de dados que garante que cada empresa só veja seus próprios dados.'
+      },
+      tenant: {
+        term: 'Tenant',
+        explanation: 'Sua empresa dentro do sistema. Cada empresa é um "inquilino" separado com dados isolados.'
+      },
+      endpoint: {
+        term: 'Endpoint',
+        explanation: 'Um computador, notebook ou servidor que está sendo protegido pelo sistema.'
+      },
+      vulnerability: {
+        term: 'Vulnerabilidade',
+        explanation: 'Uma falha em um programa que pode ser usada por hackers para invadir seu sistema.'
+      },
+      antivirus: {
+        term: 'Antivírus',
+        explanation: 'Programa que protege seu computador contra vírus, malware e outras ameaças.'
+      },
+      compliance: {
+        term: 'Compliance',
+        explanation: 'Estar em conformidade com leis e normas de segurança (como LGPD).'
+      }
+    },
+
+    // Templates
+    templates: {
+      LGPD: {
+        name: 'LGPD - Lei Geral de Proteção de Dados',
+        description: 'Verifica se sua empresa está em conformidade com a lei brasileira de proteção de dados pessoais',
+        laymanDescription: 'Este relatório mostra como sua empresa protege as informações pessoais dos seus clientes e funcionários, conforme exigido pela lei brasileira.'
+      },
+      ISO_27001: {
+        name: 'ISO 27001 - Segurança da Informação',
+        description: 'Avaliação baseada no padrão internacional de gestão de segurança',
+        laymanDescription: 'Este relatório avalia sua segurança usando o padrão mais respeitado do mundo para proteção de informações.'
+      },
+      SOC2_LITE: {
+        name: 'SOC2-lite - Trust Services',
+        description: 'Critérios de confiança simplificados para serviços digitais',
+        laymanDescription: 'Este relatório verifica se seus sistemas são confiáveis, seguros e estão sempre disponíveis.'
+      }
+    }
   }
 };
 
@@ -217,4 +348,28 @@ export function formatTimeAgoFriendly(seconds: number): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)} ${UI_LABELS.time.minutes_ago}`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)} ${UI_LABELS.time.hours_ago}`;
   return `${Math.floor(seconds / 86400)} ${UI_LABELS.time.days_ago}`;
+}
+
+// Helper function to get compliance risk info
+export function getComplianceRiskInfo(riskLevel: string) {
+  const key = riskLevel as keyof typeof UI_LABELS.compliance.risk;
+  return UI_LABELS.compliance.risk[key] || UI_LABELS.compliance.risk.MÉDIO;
+}
+
+// Helper function to get verification message
+export function getVerificationMessage(sha256Valid: boolean, hmacValid: boolean): string {
+  if (sha256Valid && hmacValid) {
+    return UI_LABELS.compliance.verification.integrity_valid;
+  }
+  if (!sha256Valid) {
+    return UI_LABELS.compliance.verification.sha256_invalid;
+  }
+  return UI_LABELS.compliance.verification.hmac_invalid;
+}
+
+// Helper function to get glossary term explanation
+export function getGlossaryExplanation(term: string): string {
+  const glossary = UI_LABELS.compliance.glossary as Record<string, { term: string; explanation: string }>;
+  const entry = glossary[term.toLowerCase()];
+  return entry ? entry.explanation : '';
 }
