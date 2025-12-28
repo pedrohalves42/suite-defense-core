@@ -304,6 +304,29 @@ async function generateTenantReport(
 
   console.log(`Created report ${report.id} for tenant ${tenantId}`);
 
+  // Registrar execução na tabela report_executions
+  const { error: execError } = await supabase
+    .from("report_executions")
+    .insert({
+      tenant_id: tenantId,
+      scheduled_report_id: null, // Este é um relatório automático, não de agendamento específico
+      report_type: "full_security",
+      status: "completed",
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      metadata: {
+        trigger: triggerType,
+        report_id: report.id,
+        agents_count: agents.length,
+        risk_score: riskScore
+      }
+    });
+
+  if (execError) {
+    console.error("Error logging report execution:", execError);
+    // Não lançar erro, apenas logar - o relatório já foi criado
+  }
+
   // Queue notification if high priority
   if (commercialPriority === "high") {
     await supabase.from("notification_queue").insert({

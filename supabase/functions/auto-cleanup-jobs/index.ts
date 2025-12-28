@@ -17,6 +17,7 @@ interface CleanupResult {
   queued_cancelled: number
   delivered_failed: number
   total_cleaned: number
+  retried?: number
   tenants_affected: string[]
 }
 
@@ -54,16 +55,19 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     // Parse optional request body for custom thresholds
-    let queuedThresholdHours = 24
-    let deliveredThresholdHours = 1
+    // REDUZIDO: timeout de delivered de 1h para 30min para jobs mais responsivos
+    let queuedThresholdHours = 2 // Reduzido de 24h para 2h
+    let deliveredThresholdHours = 0.5 // Reduzido de 1h para 30min
     let targetTenantId: string | null = null
+    let enableRetry = true // Nova opção para re-agendar jobs falhos
 
     if (req.method === 'POST') {
       try {
         const body = await req.json()
-        queuedThresholdHours = body.queued_threshold_hours ?? 24
-        deliveredThresholdHours = body.delivered_threshold_hours ?? 1
+        queuedThresholdHours = body.queued_threshold_hours ?? 2
+        deliveredThresholdHours = body.delivered_threshold_hours ?? 0.5
         targetTenantId = body.tenant_id ?? null
+        enableRetry = body.enable_retry ?? true
       } catch {
         // Use defaults if body parsing fails
       }
@@ -131,10 +135,49 @@ Deno.serve(async (req) => {
     const allJobs = [...(cancelledJobs ?? []), ...(failedJobs ?? [])]
     const tenantsAffected = [...new Set(allJobs.map(j => j.tenant_id))]
 
+    // Step 3: Re-agendar jobs falhos para retry automático (apenas jobs recorrentes)
+    let retriedCount = 0
+    if (enableRetry && failedJobs && failedJobs.length > 0) {
+      for (const failedJob of failedJobs) {
+        const { data: originalJob } = await supabase
+          .from('jobs')
+          .select('type, agent_id, agent_name, tenant_id, payload, is_recurring')
+          .eq('id', failedJob.id)
+          .single()
+
+        // Só re-agendar jobs recorrentes
+        if (originalJob?.is_recurring && originalJob?.agent_id) {
+          const { error: retryError } = await supabase
+            .from('jobs')
+            .insert({
+              type: originalJob.type,
+              agent_id: originalJob.agent_id,
+              agent_name: originalJob.agent_name,
+              tenant_id: originalJob.tenant_id,
+              status: 'queued',
+              approved: true,
+              payload: {
+                ...originalJob.payload,
+                retry_of: failedJob.id,
+                retry_count: (originalJob.payload?.retry_count || 0) + 1
+              },
+              is_recurring: true,
+              parent_job_id: failedJob.id
+            })
+
+          if (!retryError) {
+            retriedCount++
+          }
+        }
+      }
+      console.log(`[${requestId}] Re-scheduled ${retriedCount} recurring jobs for retry`)
+    }
+
     const result: CleanupResult = {
       queued_cancelled: queuedCancelled,
       delivered_failed: deliveredFailed,
       total_cleaned: queuedCancelled + deliveredFailed,
+      retried: retriedCount,
       tenants_affected: tenantsAffected
     }
 
