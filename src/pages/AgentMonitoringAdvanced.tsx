@@ -111,34 +111,9 @@ export default function AgentMonitoringAdvanced() {
 
   useEffect(() => {
     fetchDashboardData();
-
-    const agentsChannel = supabase
-      .channel('agents-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'agents' }, () => {
-        fetchDashboardData();
-      })
-      .subscribe();
-
-    const metricsChannel = supabase
-      .channel('metrics-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'agent_system_metrics_partitioned' }, () => {
-        fetchDashboardData();
-      })
-      .subscribe();
-
-    const alertsChannel = supabase
-      .channel('alerts-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'system_alerts' }, () => {
-        fetchDashboardData();
-      })
-      .subscribe();
-
     const refreshInterval = setInterval(fetchDashboardData, 30000);
 
     return () => {
-      supabase.removeChannel(agentsChannel);
-      supabase.removeChannel(metricsChannel);
-      supabase.removeChannel(alertsChannel);
       clearInterval(refreshInterval);
     };
   }, []);

@@ -145,11 +145,20 @@ const JobCreator = () => {
 
   useEffect(() => {
     loadData();
+  }, [loadData]);
+
+  // Realtime subscription with tenant filter
+  useEffect(() => {
+    if (!tenant?.id) return;
     
-    // Realtime subscription
     const jobsChannel = supabase
-      .channel('jobs-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'jobs' }, () => {
+      .channel(`jobs-creator-${tenant.id}`)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'jobs',
+        filter: `tenant_id=eq.${tenant.id}`
+      }, () => {
         loadJobs();
       })
       .subscribe();
@@ -157,7 +166,7 @@ const JobCreator = () => {
     return () => {
       supabase.removeChannel(jobsChannel);
     };
-  }, [loadData, loadJobs]);
+  }, [tenant?.id, loadJobs]);
 
   const clearPendingJobs = useMutation({
     mutationFn: async () => {

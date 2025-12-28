@@ -147,20 +147,26 @@ const AgentMonitoring = () => {
     enabled: !!tenant?.id
   });
 
-  // Setup realtime subscriptions
+  // Setup realtime subscriptions - with tenant filter
   useEffect(() => {
     if (initialAgents) setAgents(initialAgents);
     if (initialJobs) setRecentJobs(initialJobs);
+  }, [initialAgents, initialJobs]);
 
-    // Subscribe to agents changes
+  // Separate effect for realtime with tenant dependency
+  useEffect(() => {
+    if (!tenant?.id) return;
+
+    // Subscribe to agents changes - filtered by tenant
     const agentsChannel = supabase
-      .channel('agents-realtime')
+      .channel(`agents-realtime-${tenant.id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'agents'
+          table: 'agents',
+          filter: `tenant_id=eq.${tenant.id}`
         },
         (payload) => {
           logger.debug('Agent change', { payload });
@@ -172,19 +178,21 @@ const AgentMonitoring = () => {
           } else if (payload.eventType === 'DELETE') {
             setAgents(prev => prev.filter(a => a.id !== payload.old.id));
           }
+          setLastUpdate(new Date());
         }
       )
       .subscribe();
 
-    // Subscribe to jobs changes
+    // Subscribe to jobs changes - filtered by tenant
     const jobsChannel = supabase
-      .channel('jobs-realtime')
+      .channel(`jobs-realtime-${tenant.id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'jobs'
+          table: 'jobs',
+          filter: `tenant_id=eq.${tenant.id}`
         },
         (payload) => {
           logger.debug('Job change', { payload });
@@ -194,6 +202,7 @@ const AgentMonitoring = () => {
           } else if (payload.eventType === 'UPDATE') {
             setRecentJobs(prev => prev.map(j => j.id === payload.new.id ? payload.new as Job : j));
           }
+          setLastUpdate(new Date());
         }
       )
       .subscribe();
@@ -202,7 +211,7 @@ const AgentMonitoring = () => {
       supabase.removeChannel(agentsChannel);
       supabase.removeChannel(jobsChannel);
     };
-  }, [initialAgents, initialJobs]);
+  }, [tenant?.id]);
 
   // Calculate metrics - using last_heartbeat for accurate online/offline status
   const totalAgents = agents.length;

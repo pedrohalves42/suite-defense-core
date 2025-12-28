@@ -3,16 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ShieldX } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTenant } from '@/hooks/useTenant';
 
 interface BlockedAttemptPayload {
   id: string;
   agent_name: string;
   domain: string;
   attempted_at: string;
+  tenant_id: string;
 }
 
 export function useBlockedAttemptsRealtime(enabled = true) {
   const queryClient = useQueryClient();
+  const { tenant } = useTenant();
   const lastNotificationRef = useRef<string | null>(null);
 
   const handleNewAttempt = useCallback((payload: { new: BlockedAttemptPayload }) => {
@@ -34,16 +37,17 @@ export function useBlockedAttemptsRealtime(enabled = true) {
   }, [queryClient]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !tenant?.id) return;
 
     const channel = supabase
-      .channel('blocked-attempts-realtime')
+      .channel(`blocked-attempts-${tenant.id}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'blocked_access_attempts',
+          filter: `tenant_id=eq.${tenant.id}`
         },
         handleNewAttempt
       )
@@ -54,5 +58,5 @@ export function useBlockedAttemptsRealtime(enabled = true) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [enabled, handleNewAttempt]);
+  }, [enabled, tenant?.id, handleNewAttempt]);
 }
