@@ -194,9 +194,9 @@ export default function Reports() {
       let jsPDFClass: any;
       let autoTable: any;
       try {
-        const jsPDFModule = await import('jspdf');
-        jsPDFClass = jsPDFModule.jsPDF;
-        const autoTableModule = await import('jspdf-autotable');
+        const jsPDFModule = await import(/* @vite-ignore */ 'jspdf');
+        jsPDFClass = jsPDFModule.jsPDF || jsPDFModule.default;
+        const autoTableModule = await import(/* @vite-ignore */ 'jspdf-autotable');
         autoTable = autoTableModule.default;
       } catch (importError) {
         console.error("Failed to import jsPDF:", importError);
@@ -463,9 +463,9 @@ export default function Reports() {
       const reportData = data as SecurityReport;
       
       // Dynamic imports
-      const jsPDFModule = await import('jspdf');
-      const jsPDFClass = jsPDFModule.jsPDF;
-      const autoTableModule = await import('jspdf-autotable');
+      const jsPDFModule = await import(/* @vite-ignore */ 'jspdf');
+      const jsPDFClass = jsPDFModule.jsPDF || jsPDFModule.default;
+      const autoTableModule = await import(/* @vite-ignore */ 'jspdf-autotable');
       const autoTable = autoTableModule.default;
       const QRCode = await import('qrcode');
       
