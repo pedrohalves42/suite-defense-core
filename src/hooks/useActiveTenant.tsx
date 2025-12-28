@@ -52,7 +52,7 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
         .select(`
           tenant_id,
           role,
-          tenant:tenants(*)
+          tenant:tenants!fk_user_roles_tenant(*)
         `)
         .eq('user_id', user.id);
 
