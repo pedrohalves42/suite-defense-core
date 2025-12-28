@@ -1,48 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { useActiveTenant } from './useActiveTenant';
 
-interface Tenant {
-  id: string;
-  name: string;
-  slug: string;
-  owner_user_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
+/**
+ * Hook that returns the currently active tenant.
+ * This is a wrapper around useActiveTenant for backwards compatibility.
+ * All 66+ files using this hook will now correctly use the selected tenant.
+ */
 export const useTenant = () => {
-  const { user } = useAuth();
-
-  const { data: tenant = null, isLoading: loading } = useQuery<Tenant | null>({
-    queryKey: ['tenant', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-
-      // Get user's tenant_id from user_roles (handle multiple roles)
-      const { data: userRole, error: roleError } = await supabase
-        .from('user_roles')
-        .select('tenant_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single();
-
-      if (roleError) throw roleError;
-      if (!userRole?.tenant_id) return null;
-
-      // Get tenant details
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('*')
-        .eq('id', userRole.tenant_id)
-        .maybeSingle();
-
-      if (tenantError) throw tenantError;
-      return tenantData;
-    },
-    enabled: !!user,
-    staleTime: 10 * 60 * 1000, // 10 minutes - tenant data rarely changes (APEX optimization)
-  });
-
-  return { tenant, loading };
+  const { activeTenant, loading } = useActiveTenant();
+  
+  return { 
+    tenant: activeTenant, 
+    loading 
+  };
 };
