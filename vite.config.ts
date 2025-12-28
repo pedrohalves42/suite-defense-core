@@ -16,4 +16,16 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    include: ['jspdf', 'jspdf-autotable'],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          pdf: ['jspdf', 'jspdf-autotable'],
+        },
+      },
+    },
+  },
 }));
