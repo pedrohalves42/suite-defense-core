@@ -19,17 +19,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { 
   FileText, Download, Loader2, Shield, CheckCircle2, XCircle, 
-  Lock, Scale, AlertTriangle, Eye, RefreshCw, FileCheck
+  Lock, Scale, AlertTriangle, Eye, RefreshCw, FileCheck, Building2,
+  Calendar, User, Clock, Monitor, Bug, Ban, Wifi
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatBrazilDateTime } from "@/lib/date-utils";
 import { HashBadge } from "@/components/ui/hash-badge";
+import { RiskGauge } from "@/components/ui/risk-gauge";
+import { ComplianceBadge } from "@/components/ui/compliance-badge";
+import { StatHighlight } from "@/components/ui/stat-highlight";
 import type { 
   ComplianceTemplate, 
   ComplianceReportPayload,
   SecurityInvariantStatus 
 } from "@/types/compliance-report";
 import { TEMPLATE_DEFINITIONS, SECURITY_INVARIANTS_DEFINITIONS } from "@/types/compliance-report";
+import { useActiveTenant } from "@/hooks/useActiveTenant";
 
 const TEMPLATE_ICONS: Record<ComplianceTemplate, typeof Shield> = {
   LGPD: Scale,
@@ -47,6 +52,7 @@ export function ComplianceReportGenerator() {
   const [selectedTemplate, setSelectedTemplate] = useState<ComplianceTemplate>("LGPD");
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportPayload, setReportPayload] = useState<ComplianceReportPayload | null>(null);
+  const { activeTenant } = useActiveTenant();
 
   // Fetch compliance report from backend - using generate-compliance-report directly
   const fetchComplianceReport = async (template: ComplianceTemplate) => {
@@ -635,26 +641,42 @@ export function ComplianceReportGenerator() {
         </CardContent>
       </Card>
 
-      {/* Executive Summary Preview - User-friendly */}
+      {/* Executive Summary Preview - User-friendly with Business Context */}
       {reportPayload && (
         <Card className="border-2 border-primary/20">
-          <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline" className="text-xs font-normal">
-                    {reportPayload.tenant_name}
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-accent/5 to-primary/10">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="space-y-2">
+                {/* Business Context - Company Name prominent */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="text-sm font-semibold flex items-center gap-1.5 px-3 py-1">
+                    <Building2 className="h-4 w-4" />
+                    {reportPayload.tenant_name || activeTenant?.name || "Sua Empresa"}
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {formatBrazilDateTime(reportPayload.period_start, "short")} - {formatBrazilDateTime(reportPayload.period_end, "short")}
                   </Badge>
                 </div>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Shield className="h-5 w-5 text-primary" />
-                  Resumo de Segurança
+                
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Shield className="h-6 w-6 text-primary" />
+                  Relatório de Segurança - {reportPayload.template_name}
                 </CardTitle>
-                <CardDescription>
-                  Análise gerada em {formatBrazilDateTime(reportPayload.generated_at, "full")}
+                
+                <CardDescription className="flex items-center gap-4 text-sm">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    Gerado em {formatBrazilDateTime(reportPayload.generated_at, "full")}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Válido até {formatBrazilDateTime(reportPayload.valid_until, "short")}
+                  </span>
                 </CardDescription>
               </div>
-              <Button onClick={handleExportPDF} disabled={isGenerating} size="lg">
+              
+              <Button onClick={handleExportPDF} disabled={isGenerating} size="lg" className="shrink-0">
                 {isGenerating ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : (
@@ -664,92 +686,105 @@ export function ComplianceReportGenerator() {
               </Button>
             </div>
           </CardHeader>
+          
           <CardContent className="pt-6">
-            {/* Risk Score - Visual and prominent */}
-            <div className="grid gap-6 md:grid-cols-3 mb-6">
-              <div className={`p-6 rounded-xl text-center ${
-                reportPayload.risk_level === 'BAIXO' ? 'bg-success/20 border-2 border-success' :
-                reportPayload.risk_level === 'MÉDIO' ? 'bg-warning/20 border-2 border-warning' :
-                reportPayload.risk_level === 'ALTO' ? 'bg-orange-500/20 border-2 border-orange-500' :
-                'bg-destructive/20 border-2 border-destructive'
-              }`}>
-                <div className="text-4xl font-bold mb-2">
-                  {reportPayload.risk_score}/100
-                </div>
-                <div className={`text-lg font-semibold ${
-                  reportPayload.risk_level === 'BAIXO' ? 'text-success' :
-                  reportPayload.risk_level === 'MÉDIO' ? 'text-warning' :
-                  reportPayload.risk_level === 'ALTO' ? 'text-orange-500' :
-                  'text-destructive'
-                }`}>
-                  Risco {reportPayload.risk_level}
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {reportPayload.risk_description}
+            {/* Compliance Status Badge + Risk Gauge side by side */}
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
+              {/* Risk Gauge - Visual and prominent */}
+              <div className="flex flex-col items-center justify-center p-6 bg-card border rounded-xl">
+                <RiskGauge 
+                  score={reportPayload.risk_score} 
+                  level={reportPayload.risk_level} 
+                  size="lg" 
+                />
+                <p className="text-xs text-muted-foreground text-center mt-3 max-w-[200px]">
+                  {(reportPayload as any).risk_layman_description || reportPayload.risk_description}
                 </p>
               </div>
 
-              {/* Key Stats */}
-              <div className="p-6 bg-card border rounded-xl">
-                <h4 className="font-semibold mb-4 text-foreground">Números Importantes</h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Computadores Protegidos</span>
-                    <span className="font-bold text-lg">{reportPayload.statistics?.total_agents || 0}</span>
+              {/* Compliance Badge */}
+              <div className="flex flex-col justify-center">
+                <ComplianceBadge 
+                  status={
+                    reportPayload.risk_score <= 20 ? "BOM" :
+                    reportPayload.risk_score <= 40 ? "ADEQUADO" :
+                    reportPayload.risk_score <= 60 ? "ATENÇÃO" : "CRÍTICO"
+                  } 
+                  size="lg"
+                  className="mb-4"
+                />
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Controles Conformes</span>
+                    <span className="font-bold text-success">{reportPayload.invariants_summary.passed}/{reportPayload.invariants.length}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Problemas Críticos</span>
-                    <span className={`font-bold text-lg ${(reportPayload.statistics?.critical_vulnerabilities || 0) > 0 ? 'text-destructive' : 'text-success'}`}>
-                      {reportPayload.statistics?.critical_vulnerabilities || 0}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Ameaças Detectadas</span>
-                    <span className={`font-bold text-lg ${(reportPayload.statistics?.threats_found || 0) > 0 ? 'text-warning' : 'text-success'}`}>
-                      {reportPayload.statistics?.threats_found || 0}
-                    </span>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-success transition-all duration-700" 
+                      style={{ width: `${(reportPayload.invariants_summary.passed / reportPayload.invariants.length) * 100}%` }}
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Controls Status */}
-              <div className="p-6 bg-card border rounded-xl">
-                <h4 className="font-semibold mb-4 text-foreground">Controles de Segurança</h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-success flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4" /> Conformes
-                    </span>
-                    <span className="font-bold text-lg text-success">{reportPayload.invariants_summary.passed}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-destructive flex items-center gap-2">
-                      <XCircle className="h-4 w-4" /> Não Conformes
-                    </span>
-                    <span className="font-bold text-lg text-destructive">{reportPayload.invariants_summary.failed}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" /> Pendentes
-                    </span>
-                    <span className="font-bold text-lg">{reportPayload.invariants_summary.unknown}</span>
-                  </div>
-                </div>
+              {/* Key Stats Grid */}
+              <div className="grid grid-cols-2 gap-2">
+                <StatHighlight 
+                  icon="computer" 
+                  label="Protegidos" 
+                  value={reportPayload.statistics?.total_agents || 0}
+                  status={(reportPayload.statistics?.total_agents || 0) > 0 ? "good" : "warning"}
+                  size="sm"
+                />
+                <StatHighlight 
+                  icon="alert" 
+                  label="Críticos" 
+                  value={reportPayload.statistics?.critical_vulnerabilities || 0}
+                  status={(reportPayload.statistics?.critical_vulnerabilities || 0) > 0 ? "critical" : "good"}
+                  size="sm"
+                />
+                <StatHighlight 
+                  icon="virus" 
+                  label="Ameaças" 
+                  value={(reportPayload.statistics?.threats_found || 0) > 0 ? reportPayload.statistics?.threats_found : "Nenhuma"}
+                  status={(reportPayload.statistics?.threats_found || 0) > 0 ? "critical" : "good"}
+                  size="sm"
+                />
+                <StatHighlight 
+                  icon="block" 
+                  label="Sites Bloq." 
+                  value={reportPayload.policies_count || reportPayload.active_policies.length || 0}
+                  status={(reportPayload.policies_count || reportPayload.active_policies.length || 0) > 0 ? "good" : "warning"}
+                  size="sm"
+                />
               </div>
             </div>
 
-            {/* Simple interpretation */}
-            <div className="p-4 bg-muted/30 rounded-lg mb-6">
-              <h4 className="font-semibold mb-2 text-foreground">O que isso significa?</h4>
-              <p className="text-foreground">
-                {reportPayload.risk_level === 'BAIXO' && (
-                  "Sua empresa está em boa situação de segurança. Os sistemas estão protegidos e funcionando corretamente. Continue mantendo as boas práticas."
+            {/* Executive Summary Message - Clear interpretation */}
+            <div className={`p-5 rounded-xl mb-6 ${
+              reportPayload.risk_level === 'BAIXO' || reportPayload.risk_level === 'MÍNIMO' ? 'bg-success/10 border-2 border-success/30' :
+              reportPayload.risk_level === 'MÉDIO' ? 'bg-warning/10 border-2 border-warning/30' :
+              'bg-destructive/10 border-2 border-destructive/30'
+            }`}>
+              <h4 className="font-semibold mb-2 text-foreground flex items-center gap-2">
+                {reportPayload.risk_level === 'BAIXO' || reportPayload.risk_level === 'MÍNIMO' ? (
+                  <CheckCircle2 className="h-5 w-5 text-success" />
+                ) : reportPayload.risk_level === 'MÉDIO' ? (
+                  <AlertTriangle className="h-5 w-5 text-warning" />
+                ) : (
+                  <XCircle className="h-5 w-5 text-destructive" />
                 )}
-                {reportPayload.risk_level === 'MÉDIO' && (
-                  "Sua empresa possui alguns pontos de atenção que merecem acompanhamento. Não há riscos críticos imediatos, mas recomendamos revisar as pendências."
-                )}
-                {(reportPayload.risk_level === 'ALTO' || reportPayload.risk_level === 'CRÍTICO') && (
-                  "Foram identificados pontos que precisam de atenção. Recomendamos revisar as vulnerabilidades encontradas e tomar ações corretivas."
+                O que isso significa para sua empresa?
+              </h4>
+              <p className="text-foreground leading-relaxed">
+                {(reportPayload as any).executive_summary?.overallMessage || (
+                  reportPayload.risk_level === 'BAIXO' || reportPayload.risk_level === 'MÍNIMO' ? (
+                    `A empresa "${reportPayload.tenant_name}" está em boa situação de segurança. Todos os sistemas estão protegidos e funcionando corretamente. Continue mantendo as boas práticas de segurança.`
+                  ) : reportPayload.risk_level === 'MÉDIO' ? (
+                    `A empresa "${reportPayload.tenant_name}" possui alguns pontos de atenção que merecem acompanhamento. Não há riscos críticos imediatos, mas recomendamos revisar as pendências listadas abaixo.`
+                  ) : (
+                    `A empresa "${reportPayload.tenant_name}" precisa de atenção urgente. Foram identificados ${reportPayload.statistics?.critical_vulnerabilities || 0} vulnerabilidades críticas que devem ser corrigidas imediatamente.`
+                  )
                 )}
               </p>
             </div>
@@ -811,66 +846,153 @@ export function ComplianceReportGenerator() {
               </TabsContent>
 
               <TabsContent value="recomendacoes" className="pt-4">
-                <div className="space-y-3">
-                  {(() => {
-                    const recommendations: { icon: React.ReactNode; text: string; priority: string }[] = [];
-                    const criticalVulns = reportPayload.statistics?.critical_vulnerabilities || 0;
-                    const highVulns = reportPayload.statistics?.high_vulnerabilities || 0;
-                    const threats = reportPayload.statistics?.threats_found || 0;
-                    const failedInvariants = reportPayload.invariants.filter(i => i.status === "FAIL");
-
-                    if (criticalVulns > 0) {
-                      recommendations.push({
-                        icon: <XCircle className="h-5 w-5 text-destructive" />,
-                        text: `Corrigir ${criticalVulns} vulnerabilidade(s) crítica(s) com urgência`,
-                        priority: "Crítico"
-                      });
-                    }
-                    if (highVulns > 0) {
-                      recommendations.push({
-                        icon: <AlertTriangle className="h-5 w-5 text-orange-500" />,
-                        text: `Revisar e corrigir ${highVulns} vulnerabilidade(s) de alta severidade`,
-                        priority: "Alto"
-                      });
-                    }
-                    if (threats > 0) {
-                      recommendations.push({
-                        icon: <Shield className="h-5 w-5 text-warning" />,
-                        text: `Investigar ${threats} ameaça(s) detectada(s) pelo antivírus`,
-                        priority: "Médio"
-                      });
-                    }
-                    if (failedInvariants.length > 0) {
-                      recommendations.push({
-                        icon: <Lock className="h-5 w-5 text-warning" />,
-                        text: `Verificar ${failedInvariants.length} controle(s) de segurança não conforme(s)`,
-                        priority: "Médio"
-                      });
-                    }
-                    if (recommendations.length === 0) {
-                      recommendations.push({
-                        icon: <CheckCircle2 className="h-5 w-5 text-success" />,
-                        text: "Manter as boas práticas de segurança atuais",
-                        priority: "Baixo"
-                      });
-                    }
-
-                    return recommendations.map((rec, idx) => (
-                      <div key={idx} className="flex items-center gap-3 p-4 bg-card border rounded-lg">
-                        {rec.icon}
-                        <div className="flex-1">
-                          <p className="font-medium text-foreground">{rec.text}</p>
+                <div className="space-y-4">
+                  {/* Actionable Recommendations from backend */}
+                  {(reportPayload as any).executive_summary?.recommendations?.length > 0 ? (
+                    <div className="space-y-3">
+                      <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                        Ações Recomendadas
+                      </h4>
+                      {(reportPayload as any).executive_summary.recommendations.map((rec: string, idx: number) => (
+                        <div key={idx} className="flex items-start gap-3 p-4 bg-card border rounded-lg">
+                          <div className={`p-1.5 rounded-full shrink-0 ${
+                            idx === 0 && (reportPayload.statistics?.critical_vulnerabilities || 0) > 0 
+                              ? 'bg-destructive/20' 
+                              : idx < 2 ? 'bg-warning/20' : 'bg-muted'
+                          }`}>
+                            <span className="font-bold text-xs w-5 h-5 flex items-center justify-center">
+                              {idx + 1}
+                            </span>
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-foreground">{rec}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {idx === 0 ? "Prioridade alta - resolver esta semana" : 
+                               idx === 1 ? "Prioridade média - resolver em 2 semanas" :
+                               "Melhoria contínua"}
+                            </p>
+                          </div>
+                          <Badge variant={
+                            idx === 0 && (reportPayload.statistics?.critical_vulnerabilities || 0) > 0 
+                              ? "destructive" 
+                              : idx < 2 ? "secondary" : "outline"
+                          } className="shrink-0">
+                            {idx === 0 ? "Urgente" : idx === 1 ? "Importante" : "Sugestão"}
+                          </Badge>
                         </div>
-                        <Badge variant={
-                          rec.priority === "Crítico" ? "destructive" :
-                          rec.priority === "Alto" ? "default" :
-                          rec.priority === "Médio" ? "secondary" : "outline"
-                        }>
-                          {rec.priority}
-                        </Badge>
-                      </div>
-                    ));
-                  })()}
+                      ))}
+                    </div>
+                  ) : (
+                    // Fallback to generated recommendations
+                    <div className="space-y-3">
+                      {(() => {
+                        const recommendations: { icon: React.ReactNode; text: string; priority: string; detail: string }[] = [];
+                        const criticalVulns = reportPayload.statistics?.critical_vulnerabilities || 0;
+                        const highVulns = reportPayload.statistics?.high_vulnerabilities || 0;
+                        const threats = reportPayload.statistics?.threats_found || 0;
+                        const offlineAgents = (reportPayload.statistics as any)?.offline_agents || 0;
+                        const avOutdated = (reportPayload.statistics as any)?.av_outdated || 0;
+                        const failedInvariants = reportPayload.invariants.filter(i => i.status === "FAIL");
+
+                        if (criticalVulns > 0) {
+                          recommendations.push({
+                            icon: <XCircle className="h-5 w-5 text-destructive" />,
+                            text: `Corrigir ${criticalVulns} vulnerabilidade(s) crítica(s)`,
+                            detail: "Atualizar softwares afetados ou aplicar patches de segurança",
+                            priority: "Urgente"
+                          });
+                        }
+                        if (highVulns > 0) {
+                          recommendations.push({
+                            icon: <AlertTriangle className="h-5 w-5 text-orange-500" />,
+                            text: `Revisar ${highVulns} vulnerabilidade(s) de alta severidade`,
+                            detail: "Avaliar impacto e planejar correções para esta semana",
+                            priority: "Alto"
+                          });
+                        }
+                        if (threats > 0) {
+                          recommendations.push({
+                            icon: <Bug className="h-5 w-5 text-warning" />,
+                            text: `Investigar ${threats} ameaça(s) detectada(s)`,
+                            detail: "Verificar relatórios do antivírus e isolar máquinas se necessário",
+                            priority: "Alto"
+                          });
+                        }
+                        if (offlineAgents > 0) {
+                          recommendations.push({
+                            icon: <Monitor className="h-5 w-5 text-muted-foreground" />,
+                            text: `Verificar ${offlineAgents} computador(es) offline`,
+                            detail: "Checar se estão desligados ou com problemas de conexão",
+                            priority: "Médio"
+                          });
+                        }
+                        if (avOutdated > 0) {
+                          recommendations.push({
+                            icon: <Shield className="h-5 w-5 text-warning" />,
+                            text: `Atualizar antivírus em ${avOutdated} computador(es)`,
+                            detail: "Definições de vírus desatualizadas reduzem a proteção",
+                            priority: "Médio"
+                          });
+                        }
+                        if (failedInvariants.length > 0) {
+                          recommendations.push({
+                            icon: <Lock className="h-5 w-5 text-warning" />,
+                            text: `Verificar ${failedInvariants.length} controle(s) de segurança`,
+                            detail: "Revisar configurações de proteção não conformes",
+                            priority: "Médio"
+                          });
+                        }
+                        if (recommendations.length === 0) {
+                          recommendations.push({
+                            icon: <CheckCircle2 className="h-5 w-5 text-success" />,
+                            text: "Parabéns! Sua segurança está em dia",
+                            detail: "Continue monitorando e mantendo as boas práticas",
+                            priority: "Sucesso"
+                          });
+                        }
+
+                        return recommendations.map((rec, idx) => (
+                          <div key={idx} className="flex items-start gap-3 p-4 bg-card border rounded-lg">
+                            <div className="p-2 bg-muted rounded-full shrink-0">
+                              {rec.icon}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-foreground">{rec.text}</p>
+                              <p className="text-sm text-muted-foreground mt-0.5">{rec.detail}</p>
+                            </div>
+                            <Badge variant={
+                              rec.priority === "Urgente" ? "destructive" :
+                              rec.priority === "Alto" ? "default" :
+                              rec.priority === "Médio" ? "secondary" :
+                              rec.priority === "Sucesso" ? "outline" : "outline"
+                            } className="shrink-0">
+                              {rec.priority}
+                            </Badge>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Next Steps */}
+                  <Separator className="my-4" />
+                  <div className="p-4 bg-muted/30 rounded-lg">
+                    <h4 className="font-semibold mb-2 text-sm">Próximos Passos</h4>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                        Baixe o PDF para registro e documentação
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                        Revise as recomendações com sua equipe de TI
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-primary shrink-0" />
+                        Próxima análise recomendada: {formatBrazilDateTime(reportPayload.valid_until, "short")}
+                      </li>
+                    </ul>
+                  </div>
                 </div>
               </TabsContent>
 
