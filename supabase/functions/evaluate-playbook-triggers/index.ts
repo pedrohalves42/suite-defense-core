@@ -291,8 +291,67 @@ serve(async (req) => {
       // Não falhar a operação por causa do log
     }
 
+    // ✅ SEMI_AUTOMATIC MODE: Criar approval_request com 24h timeout e 1 approver
+    const executionMode = playbook.execution_mode || 'assistive';
+    
+    if (executionMode === 'semi_automatic') {
+      console.log(`[evaluate-playbook-triggers] SEMI_AUTOMATIC: Creating approval request for ${playbook.name}`);
+      
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24); // 24h timeout
+      
+      const { data: approvalRequest, error: approvalError } = await supabase
+        .from('approval_requests')
+        .insert({
+          tenant_id,
+          playbook_execution_id: execution.id,
+          action_type: 'execute_playbook',
+          action_payload: {
+            playbook_id: playbook.id,
+            playbook_name: playbook.name,
+            playbook_version: playbook.version,
+            execution_id: execution.id,
+            actions: actionsSnapshot.map(a => ({
+              action_type: a.action_type,
+              label: a.label,
+              risk_level: a.risk_level,
+            })),
+            trigger_type,
+            agent_id,
+            agent_info: agentInfo,
+          },
+          requested_by: null, // Sistema
+          status: 'pending',
+          required_approvers: 1, // ✅ APENAS 1 CLIQUE para semi_automatic
+          expires_at: expiresAt.toISOString(),
+        })
+        .select('id')
+        .single();
+      
+      if (approvalError) {
+        console.error('[evaluate-playbook-triggers] Error creating approval request:', approvalError);
+      } else {
+        console.log(`[evaluate-playbook-triggers] Created approval request ${approvalRequest?.id} with 24h timeout`);
+        
+        // Create system alert to notify admins
+        await supabase.from('system_alerts').insert({
+          tenant_id,
+          agent_id: agent_id || null,
+          alert_type: 'playbook_approval_required',
+          severity: playbook.severity === 'critical' ? 'critical' : 'warning',
+          message: `Playbook "${playbook.name}" requer aprovação. Expira em 24h.`,
+          metadata: {
+            playbook_id: playbook.id,
+            playbook_name: playbook.name,
+            execution_id: execution.id,
+            approval_request_id: approvalRequest?.id,
+            expires_at: expiresAt.toISOString(),
+          },
+        });
+      }
+    }
     // Se deve auto-executar (baseado no motor de risco E NÃO estiver em dry_run), executar automaticamente
-    if (shouldAutoExecute) {
+    else if (shouldAutoExecute) {
       console.log(`[evaluate-playbook-triggers] Risk-based auto-execution: ${playbook.name} (score: ${riskAnalysis.risk_score}, threshold: ${riskAnalysis.threshold})`);
       
       try {
