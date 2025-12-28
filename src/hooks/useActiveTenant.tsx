@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { toast } from 'sonner';
 
 interface Tenant {
   id: string;
@@ -32,6 +33,7 @@ const ACTIVE_TENANT_KEY = 'cybershield_active_tenant_id';
 
 export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTenantId, setActiveTenantId] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem(ACTIVE_TENANT_KEY);
@@ -99,9 +101,19 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   }, [activeTenant?.id]);
 
   const setActiveTenant = useCallback((tenant: Tenant) => {
+    const previousTenantId = activeTenantId;
+    
     setActiveTenantId(tenant.id);
     localStorage.setItem(ACTIVE_TENANT_KEY, tenant.id);
-  }, []);
+    
+    // Invalidate all queries to force refetch with new tenant
+    if (previousTenantId !== tenant.id) {
+      queryClient.invalidateQueries();
+      toast.success(`Alterado para ${tenant.name}`, {
+        description: 'Dados atualizados para a nova empresa'
+      });
+    }
+  }, [activeTenantId, queryClient]);
 
   return (
     <ActiveTenantContext.Provider 
