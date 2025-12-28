@@ -135,6 +135,58 @@ serve(async (req) => {
       'revoke_token'
     ];
 
+    // ✅ SEMI_AUTOMATIC MODE: Verificar se há approval_request aprovado antes de executar
+    if (executionMode === 'semi_automatic') {
+      const { data: approvalRequest, error: approvalError } = await supabase
+        .from('approval_requests')
+        .select('id, status, expires_at, approved_by, approved_at')
+        .eq('playbook_execution_id', execution_id)
+        .eq('status', 'approved')
+        .single();
+
+      if (approvalError || !approvalRequest) {
+        // Check if there's a pending request
+        const { data: pendingRequest } = await supabase
+          .from('approval_requests')
+          .select('id, status, expires_at')
+          .eq('playbook_execution_id', execution_id)
+          .eq('status', 'pending')
+          .single();
+
+        console.log(`[execute-playbook-action] BLOCKED: Semi-automatic playbook requires approval`);
+        
+        await supabase.from('audit_logs').insert({
+          user_id: user.id,
+          tenant_id: execution.tenant_id,
+          action: 'blocked_semi_automatic_no_approval',
+          resource_type: 'playbook_execution',
+          resource_id: execution_id,
+          success: false,
+          details: {
+            playbook_name: playbookSnapshot.name,
+            playbook_version: playbookSnapshot.version,
+            execution_mode: executionMode,
+            reason: 'Semi-automatic playbook requires approval before execution',
+            pending_request_id: pendingRequest?.id || null,
+            pending_request_expires: pendingRequest?.expires_at || null,
+          },
+        });
+
+        return new Response(JSON.stringify({ 
+          error: 'Semi-automatic playbook requires approval before execution',
+          execution_mode: executionMode,
+          pending_approval: !!pendingRequest,
+          pending_request_id: pendingRequest?.id || null,
+          expires_at: pendingRequest?.expires_at || null,
+        }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log(`[execute-playbook-action] Semi-automatic approval verified: ${approvalRequest.id}`);
+    }
+
     if (executionMode === 'assistive') {
       const destructiveActions = actionsSnapshot.filter(a => 
         DESTRUCTIVE_ACTIONS.includes(a.action_type)
