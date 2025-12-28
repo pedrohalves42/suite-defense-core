@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Zap, Plus, Server, CheckCircle, XCircle, Clock, AlertCircle, Trash2, Sparkles } from "lucide-react";
+import { JobCleanupDialog } from "@/components/jobs/JobCleanupDialog";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -371,15 +372,18 @@ const JobCreator = () => {
             <p className="text-sm text-muted-foreground">Crie e gerencie tarefas para os computadores</p>
           </div>
         </div>
-        <Button
-          onClick={handleClearPendingJobs}
-          disabled={clearPendingJobs.isPending}
-          variant="outline"
-          className="gap-2"
-        >
-          <Trash2 className="h-4 w-4" />
-          {clearPendingJobs.isPending ? "Limpando..." : "Limpar Pendentes"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <JobCleanupDialog onCleanupComplete={loadJobs} />
+          <Button
+            onClick={handleClearPendingJobs}
+            disabled={clearPendingJobs.isPending}
+            variant="outline"
+            className="gap-2"
+          >
+            <Trash2 className="h-4 w-4" />
+            {clearPendingJobs.isPending ? "Limpando..." : "Limpar Pendentes"}
+          </Button>
+        </div>
       </div>
 
       {/* Estado Global */}
