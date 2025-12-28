@@ -141,17 +141,25 @@ Deno.serve(async (req) => {
 
     console.log(`[generate-compliance-report] Looking up tenant for user: ${user.id}`);
 
-    // Try to get tenant from user_roles first
-    const { data: userRole } = await supabase
-      .from("user_roles")
-      .select("tenant_id")
-      .eq("user_id", user.id)
-      .limit(1)
-      .maybeSingle();
+    const body = await req.json();
+    
+    // Accept explicit tenant_id from frontend (for multi-tenant support)
+    let tenantId = body.tenant_id;
+    let tenantName = "Empresa";
 
-    let tenantId = userRole?.tenant_id;
-    let tenantName = "Unknown";
+    // If no tenant_id provided, try to get from user_roles
+    if (!tenantId) {
+      const { data: userRole } = await supabase
+        .from("user_roles")
+        .select("tenant_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
 
+      tenantId = userRole?.tenant_id;
+    }
+
+    // Fallback to profile
     if (!tenantId) {
       const { data: profile } = await supabase
         .from("profiles")
@@ -185,7 +193,6 @@ Deno.serve(async (req) => {
 
     console.log(`[generate-compliance-report] Found tenant: ${tenantId} (${tenantName})`);
 
-    const body = await req.json();
     const template = (body.template ?? body.template_type) as string;
     const periodStart = body.period_start ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const periodEnd = body.period_end ?? new Date().toISOString();
