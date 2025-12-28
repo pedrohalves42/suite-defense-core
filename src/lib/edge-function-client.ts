@@ -38,7 +38,7 @@ export async function callEdgeFunction<T = any>(
       method,
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
-        'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY!,
+        'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
         'Content-Type': 'application/json',
       },
       body: payload ? JSON.stringify(payload) : undefined,
