@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, CheckCircle2, XCircle, FileText, ExternalLink } from "lucide-react";
 import { callEdgeFunction } from "@/lib/edge-function-client";
 import { Link } from "react-router-dom";
+import { useTenant } from "@/hooks/useTenant";
 
 interface GeneratedReport {
   template: string;
@@ -16,13 +17,15 @@ interface GeneratedReport {
 }
 
 const TEMPLATES = ["LGPD", "ISO_27001", "SOC2_LITE"] as const;
-const GENIAL_CRED_TENANT_ID = "2584d2cd-8b99-4ca7-a8e2-b61256e82b3e";
 
 export default function TestComplianceGenerator() {
+  const { tenant, loading: tenantLoading } = useTenant();
   const [reports, setReports] = useState<GeneratedReport[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generateAllReports = async () => {
+    if (!tenant?.id) return;
+    
     setIsGenerating(true);
     setReports(TEMPLATES.map(t => ({ template: t, audit_id: "", sha256: "", hmac_signature: "", status: "pending" })));
 
@@ -30,7 +33,7 @@ export default function TestComplianceGenerator() {
       const template = TEMPLATES[i];
       try {
         const result = await callEdgeFunction("generate-compliance-report", {
-          tenant_id: GENIAL_CRED_TENANT_ID,
+          tenant_id: tenant.id,
           template_type: template,
           generated_by: "test-automation",
         });
@@ -54,6 +57,14 @@ export default function TestComplianceGenerator() {
     setIsGenerating(false);
   };
 
+  if (tenantLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -65,14 +76,14 @@ export default function TestComplianceGenerator() {
             </CardTitle>
             <CardDescription>
               Gera automaticamente os 3 relatórios de compliance (LGPD, ISO 27001, SOC2-lite) 
-              para o tenant <strong>Genial Cred</strong> com hashes criptográficos.
+              para o seu tenant com hashes criptográficos.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-4">
               <Button 
                 onClick={generateAllReports} 
-                disabled={isGenerating}
+                disabled={isGenerating || !tenant?.id}
                 size="lg"
               >
                 {isGenerating ? (
@@ -85,7 +96,7 @@ export default function TestComplianceGenerator() {
                 )}
               </Button>
               <span className="text-sm text-muted-foreground">
-                Tenant: Genial Cred ({GENIAL_CRED_TENANT_ID.slice(0, 8)}...)
+                Tenant: {tenant?.name || "N/A"} ({tenant?.id?.slice(0, 8) || "..."}...)
               </span>
             </div>
 
