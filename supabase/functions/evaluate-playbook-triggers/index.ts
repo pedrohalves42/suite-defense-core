@@ -300,6 +300,13 @@ serve(async (req) => {
       const expiresAt = new Date();
       expiresAt.setHours(expiresAt.getHours() + 24); // 24h timeout
       
+      // ✅ ONE-CLICK APPROVAL: Gerar token seguro para aprovação via link direto
+      const approvalToken = `${crypto.randomUUID()}-${Date.now().toString(36)}`;
+      const tokenExpiresAt = new Date();
+      tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24); // Token também expira em 24h
+      
+      console.log(`[evaluate-playbook-triggers] Generated approval token: ${approvalToken.substring(0, 8)}...`);
+      
       const { data: approvalRequest, error: approvalError } = await supabase
         .from('approval_requests')
         .insert({
@@ -324,8 +331,11 @@ serve(async (req) => {
           status: 'pending',
           required_approvers: 1, // ✅ APENAS 1 CLIQUE para semi_automatic
           expires_at: expiresAt.toISOString(),
+          // ✅ ONE-CLICK APPROVAL: Token para aprovação via link
+          approval_token: approvalToken,
+          approval_token_expires_at: tokenExpiresAt.toISOString(),
         })
-        .select('id')
+        .select('id, approval_token')
         .single();
       
       if (approvalError) {
@@ -346,6 +356,8 @@ serve(async (req) => {
             execution_id: execution.id,
             approval_request_id: approvalRequest?.id,
             expires_at: expiresAt.toISOString(),
+            // ✅ ONE-CLICK: Incluir token no metadata (para debug, não expor)
+            has_approval_token: !!approvalRequest?.approval_token,
           },
         });
 
@@ -353,6 +365,10 @@ serve(async (req) => {
         try {
           const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
           const INTERNAL_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET');
+          
+          // ✅ ONE-CLICK APPROVAL: Construir URL de aprovação direta
+          const APP_URL = Deno.env.get('APP_URL') || 'https://cybershield.com.br';
+          const approvalUrl = `${SUPABASE_URL}/functions/v1/approve-via-token?token=${approvalRequest?.approval_token}`;
           
           await fetch(`${SUPABASE_URL}/functions/v1/send-security-notification`, {
             method: 'POST',
@@ -381,12 +397,15 @@ serve(async (req) => {
                   label: a.label,
                   risk: a.risk_level,
                 })),
+                // ✅ ONE-CLICK APPROVAL: Incluir URL de aprovação direta
+                approval_url: approvalUrl,
+                approval_token: approvalRequest?.approval_token,
               },
               tenantId: tenant_id,
             }),
           });
           
-          console.log(`[evaluate-playbook-triggers] Email notification sent for approval request ${approvalRequest?.id}`);
+          console.log(`[evaluate-playbook-triggers] Email notification sent with one-click approval link for request ${approvalRequest?.id}`);
         } catch (notifyError) {
           console.error('[evaluate-playbook-triggers] Failed to send email notification:', notifyError);
           // Don't fail the operation if notification fails

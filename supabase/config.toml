@@ -545,3 +545,7 @@ schedule = "0 6 * * *"
 [functions.generate-weekly-report]
 verify_jwt = false
 schedule = "0 23 * * 0"
+
+# === One-Click Approval via Token (public endpoint) ===
+[functions.approve-via-token]
+verify_jwt = false
