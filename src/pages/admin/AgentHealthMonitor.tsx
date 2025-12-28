@@ -136,6 +136,40 @@ export default function AgentHealthMonitor() {
     };
   }, [tenant?.id]);
 
+  // Calculate health counts from real data - MUST be before conditional returns
+  const counts = useMemo(() => agentsHealth.reduce(
+    (acc, agent) => {
+      if (agent.health_status === 'healthy') acc.healthy++;
+      if (agent.health_status === 'critical') acc.critical++;
+      if (agent.health_status === 'offline') acc.offline++;
+      if (agent.health_status === 'never_connected') acc.never_connected++;
+      if (agent.is_throttled || agent.is_isolated || agent.is_in_safe_mode) acc.withProblems++;
+      if (agent.is_in_safe_mode) acc.protected++;
+      return acc;
+    },
+    { healthy: 0, critical: 0, offline: 0, never_connected: 0, withProblems: 0, protected: 0 }
+  ), [agentsHealth]);
+
+  const totalAgents = agentsHealth.length || 0;
+  const healthPercentage = totalAgents > 0 
+    ? Math.round((counts.healthy / totalAgents) * 100)
+    : 0;
+
+  // Filter agents based on selected status - MUST be before conditional returns
+  const filteredAgents = useMemo(() => {
+    switch (statusFilter) {
+      case 'problems':
+        return agentsHealth.filter(a => a.is_throttled || a.is_isolated || a.is_in_safe_mode);
+      case 'protected':
+        return agentsHealth.filter(a => a.is_in_safe_mode);
+      case 'offline':
+        return agentsHealth.filter(a => a.health_status === 'offline' || a.health_status === 'never_connected');
+      default:
+        return agentsHealth;
+    }
+  }, [agentsHealth, statusFilter]);
+
+  // Conditional returns AFTER all hooks
   if (isLoading) {
     return (
       <div className="container mx-auto p-6 space-y-6">
@@ -161,39 +195,6 @@ export default function AgentHealthMonitor() {
       </div>
     );
   }
-
-  // Calculate health counts from real data
-  const counts = agentsHealth.reduce(
-    (acc, agent) => {
-      if (agent.health_status === 'healthy') acc.healthy++;
-      if (agent.health_status === 'critical') acc.critical++;
-      if (agent.health_status === 'offline') acc.offline++;
-      if (agent.health_status === 'never_connected') acc.never_connected++;
-      if (agent.is_throttled || agent.is_isolated || agent.is_in_safe_mode) acc.withProblems++;
-      if (agent.is_in_safe_mode) acc.protected++;
-      return acc;
-    },
-    { healthy: 0, critical: 0, offline: 0, never_connected: 0, withProblems: 0, protected: 0 }
-  );
-
-  const totalAgents = agentsHealth.length || 0;
-  const healthPercentage = totalAgents > 0 
-    ? Math.round((counts.healthy / totalAgents) * 100)
-    : 0;
-
-  // Filter agents based on selected status
-  const filteredAgents = useMemo(() => {
-    switch (statusFilter) {
-      case 'problems':
-        return agentsHealth.filter(a => a.is_throttled || a.is_isolated || a.is_in_safe_mode);
-      case 'protected':
-        return agentsHealth.filter(a => a.is_in_safe_mode);
-      case 'offline':
-        return agentsHealth.filter(a => a.health_status === 'offline' || a.health_status === 'never_connected');
-      default:
-        return agentsHealth;
-    }
-  }, [agentsHealth, statusFilter]);
 
   return (
     <div className="container mx-auto p-6 space-y-6">

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, FileText, Trash2, RefreshCw, Shield, Bug, Globe, HardDrive, MessageCircle, TrendingUp, TrendingDown, Minus, Phone, Mail } from "lucide-react";
+import { Download, FileText, Trash2, RefreshCw, Shield, Bug, Globe, HardDrive, MessageCircle, TrendingUp, TrendingDown, Minus, Phone, Mail, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { formatBrazilDateTime, formatRelativeTime } from "@/lib/date-utils";
 import { ScheduleConversationModal } from "./ScheduleConversationModal";
@@ -392,6 +392,15 @@ export function GeneratedReportsList() {
                         >
                           <Download className="h-4 w-4 mr-1" />
                           CSV
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(`/verificar/${(report as any).audit_id || report.id}`, '_blank')}
+                          title="Verificar autenticidade (abre em nova aba)"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Verificar
                         </Button>
                         <Button
                           variant="ghost"
