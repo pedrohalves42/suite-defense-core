@@ -8316,28 +8316,55 @@ export type Database = {
       }
       tenants: {
         Row: {
+          address: string | null
+          city: string | null
+          cnpj: string | null
+          company_name: string | null
+          contact_email: string | null
           created_at: string
           id: string
           name: string
           owner_user_id: string
+          phone: string | null
+          setup_completed: boolean | null
           slug: string
+          state: string | null
           updated_at: string
+          zip_code: string | null
         }
         Insert: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          company_name?: string | null
+          contact_email?: string | null
           created_at?: string
           id?: string
           name: string
           owner_user_id: string
+          phone?: string | null
+          setup_completed?: boolean | null
           slug: string
+          state?: string | null
           updated_at?: string
+          zip_code?: string | null
         }
         Update: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          company_name?: string | null
+          contact_email?: string | null
           created_at?: string
           id?: string
           name?: string
           owner_user_id?: string
+          phone?: string | null
+          setup_completed?: boolean | null
           slug?: string
+          state?: string | null
           updated_at?: string
+          zip_code?: string | null
         }
         Relationships: []
       }
