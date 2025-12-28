@@ -8172,6 +8172,8 @@ export type Database = {
           device_quantity: number | null
           id: string
           is_legacy: boolean | null
+          pending_downgrade_at: string | null
+          pending_downgrade_to: string | null
           plan_id: string
           status: string | null
           stripe_customer_id: string | null
@@ -8187,6 +8189,8 @@ export type Database = {
           device_quantity?: number | null
           id?: string
           is_legacy?: boolean | null
+          pending_downgrade_at?: string | null
+          pending_downgrade_to?: string | null
           plan_id: string
           status?: string | null
           stripe_customer_id?: string | null
@@ -8202,6 +8206,8 @@ export type Database = {
           device_quantity?: number | null
           id?: string
           is_legacy?: boolean | null
+          pending_downgrade_at?: string | null
+          pending_downgrade_to?: string | null
           plan_id?: string
           status?: string | null
           stripe_customer_id?: string | null
