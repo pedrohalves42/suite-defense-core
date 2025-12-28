@@ -10807,6 +10807,7 @@ export type Database = {
         }
         Returns: Json
       }
+      evaluate_decision_rules: { Args: never; Returns: Json }
       evaluate_playbook_trigger: {
         Args: {
           p_agent_id?: string
@@ -10835,6 +10836,7 @@ export type Database = {
         }
         Returns: Json
       }
+      generate_ai_actions_from_insights: { Args: never; Returns: Json }
       get_agent_disk_details: {
         Args: { p_agent_id: string }
         Returns: {
