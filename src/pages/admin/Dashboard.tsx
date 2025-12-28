@@ -18,6 +18,7 @@ import { getAgentStatusInfo } from '@/lib/agent-utils';
 import { toast } from 'sonner';
 import { RiskScoreCard } from '@/components/admin/RiskScoreCard';
 import { PlaybooksPendingWidget } from '@/components/admin/PlaybooksPendingWidget';
+import { CompactApprovalWidget } from '@/components/admin/CompactApprovalWidget';
 
 export default function Dashboard() {
   const { tenant } = useTenant();
@@ -268,6 +269,9 @@ export default function Dashboard() {
 
       {/* Playbooks Pending Widget */}
       <PlaybooksPendingWidget compact className="w-full" />
+
+      {/* Approval Requests Widget with Real-Time Countdown */}
+      <CompactApprovalWidget className="w-full" maxItems={3} />
 
       {/* Critical Alert Action (if any) */}
       {criticalAlerts > 0 && (

@@ -540,3 +540,8 @@ schedule = "*/15 * * * *"
 [functions.generate-executive-report]
 verify_jwt = false
 schedule = "0 6 * * *"
+
+# === Weekly Security Report (Sunday at 23:00 UTC) ===
+[functions.generate-weekly-report]
+verify_jwt = false
+schedule = "0 23 * * 0"
