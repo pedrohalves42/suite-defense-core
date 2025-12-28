@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   ShieldCheck, ShieldX, Calendar, Clock, AlertTriangle, CheckCircle, FileText, 
@@ -64,28 +64,32 @@ interface VerificationResponse {
 
 const VerificarLaudo: React.FC = () => {
   const { laudoId } = useParams<{ laudoId: string }>();
+  const [searchParams] = useSearchParams();
   const [verificationResult, setVerificationResult] = useState<VerificationResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Support both route param and query param
+  const actualLaudoId = laudoId || searchParams.get("id");
+
   useEffect(() => {
     const verifyReport = async () => {
-      if (!laudoId) {
+      if (!actualLaudoId) {
         setError('ID do laudo não fornecido');
         setLoading(false);
         return;
       }
 
       try {
-        // Determine if laudoId is a UUID or audit_id
-        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(laudoId);
+        // Determine if actualLaudoId is a UUID or audit_id
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(actualLaudoId);
         
         if (isUUID) {
           // Legacy: fetch by UUID and do basic verification
           const { data: reportData, error: reportError } = await supabase
             .from('generated_reports')
             .select('id, audit_id, title, risk_score, risk_level, status, created_at, expires_at, report_type, tenant_id, sha256, hmac_signature')
-            .eq('id', laudoId)
+            .eq('id', actualLaudoId)
             .maybeSingle();
 
           if (reportError || !reportData) {
@@ -146,7 +150,7 @@ const VerificarLaudo: React.FC = () => {
         } else {
           // New format: audit_id (e.g., LAUDO-XXXXXXXX-TIMESTAMP)
           const { data: funcData, error: funcError } = await supabase.functions.invoke('verify-compliance-report', {
-            body: { audit_id: laudoId }
+            body: { audit_id: actualLaudoId }
           });
 
           if (funcError) {
@@ -174,7 +178,7 @@ const VerificarLaudo: React.FC = () => {
     };
 
     verifyReport();
-  }, [laudoId]);
+  }, [actualLaudoId]);
 
   const isExpired = verificationResult?.report?.is_expired ?? false;
   const isIntegrityValid = verificationResult?.integrity?.valid ?? false;
@@ -398,7 +402,7 @@ const VerificarLaudo: React.FC = () => {
                 Este documento foi verificado criptograficamente pelo sistema CyberShield usando SHA-256 e HMAC-SHA256.
               </p>
               <p className="text-xs text-muted-foreground mt-2">
-                ID: <code className="bg-muted px-1 py-0.5 rounded text-[10px]">{verificationResult.audit_id || laudoId}</code>
+                ID: <code className="bg-muted px-1 py-0.5 rounded text-[10px]">{verificationResult.audit_id || actualLaudoId}</code>
               </p>
             </div>
 

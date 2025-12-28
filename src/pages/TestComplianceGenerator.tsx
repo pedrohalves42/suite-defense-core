@@ -267,7 +267,7 @@ export default function TestComplianceGenerator() {
                       </div>
                       {report.status === "success" && report.audit_id && (
                         <Link 
-                          to={`/verificar-laudo?id=${report.audit_id}`}
+                          to={`/verificar/${report.audit_id}`}
                           className="text-sm text-primary hover:underline flex items-center gap-1"
                         >
                           Verificar <ExternalLink className="h-3 w-3" />
