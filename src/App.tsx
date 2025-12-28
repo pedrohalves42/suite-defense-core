@@ -98,6 +98,7 @@ import SLODashboard from "./pages/admin/SLODashboard";
 import SystemOperations from "./pages/admin/SystemOperations";
 import ComplianceTimeline from "./pages/admin/ComplianceTimeline";
 import VerificarLaudo from "./pages/VerificarLaudo";
+import ApprovePage from "./pages/ApprovePage";
 import RiskScore from "./pages/admin/RiskScore";
 import Playbooks from "./pages/admin/Playbooks";
 import DecisionAudit from "./pages/admin/DecisionAudit";
@@ -138,6 +139,7 @@ const App = () => (
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/verificar/:laudoId" element={<VerificarLaudo />} />
+            <Route path="/approve" element={<ApprovePage />} />
             
             {/* Documentation Routes */}
             <Route path="/docs/exe-build" element={<ExeBuild />} />
