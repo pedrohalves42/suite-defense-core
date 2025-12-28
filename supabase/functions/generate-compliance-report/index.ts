@@ -62,6 +62,9 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    console.log(`[generate-compliance-report] Looking up tenant for user: ${user.id}, email: ${user.email}`);
+
+    // Try to get tenant from user_roles first
     const { data: userRole, error: roleError } = await supabase
       .from("user_roles")
       .select("tenant_id")
@@ -70,25 +73,45 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (roleError) {
-      console.error("[generate-compliance-report] Error fetching user role:", roleError);
-      return new Response(JSON.stringify({ error: "Error fetching user role" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.error("[generate-compliance-report] Error fetching user_roles:", roleError.message);
     }
 
-    if (!userRole?.tenant_id) {
-      console.error("[generate-compliance-report] User not associated with any tenant:", user.id);
-      return new Response(JSON.stringify({ error: "User not associated with tenant" }), {
+    // Get tenant_id from user_roles or fallback to profiles
+    let tenantId = userRole?.tenant_id;
+    let tenantName = "Unknown";
+
+    if (!tenantId) {
+      console.log(`[generate-compliance-report] No user_roles for user_id: ${user.id}, trying profiles...`);
+      
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      if (profileError) {
+        console.error("[generate-compliance-report] Error fetching profiles:", profileError.message);
+      }
+      
+      if (profile?.tenant_id) {
+        tenantId = profile.tenant_id;
+        console.log(`[generate-compliance-report] Found tenant from profiles: ${tenantId}`);
+      }
+    }
+
+    if (!tenantId) {
+      console.error(`[generate-compliance-report] No tenant found for user_id: ${user.id}`);
+      return new Response(JSON.stringify({ 
+        error: "Usuário não está associado a nenhuma empresa. Contate o administrador.",
+        code: "NO_TENANT",
+        user_id: user.id 
+      }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const tenantId = userRole.tenant_id;
-
-    // Buscar nome do tenant (sem embed, pois existem múltiplas FKs)
-    let tenantName = "Unknown";
+    // Fetch tenant name
     const { data: tenantRow, error: tenantError } = await supabase
       .from("tenants")
       .select("name")
@@ -96,10 +119,12 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (tenantError) {
-      console.error("[generate-compliance-report] Error fetching tenant name:", tenantError);
+      console.error("[generate-compliance-report] Error fetching tenant name:", tenantError.message);
     } else if (tenantRow?.name) {
       tenantName = tenantRow.name;
     }
+
+    console.log(`[generate-compliance-report] Found tenant: ${tenantId} (${tenantName}) for user: ${user.id}`);
 
     const body = await req.json();
     const template = (body.template ?? body.template_type) as string;
