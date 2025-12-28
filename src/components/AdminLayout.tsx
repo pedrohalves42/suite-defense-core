@@ -46,7 +46,7 @@ export const AdminLayout = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       {/* Tenant Setup Wizard - shows when tenant needs initial configuration */}
       <TenantSetupWizard open={needsSetup} />
 

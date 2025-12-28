@@ -172,7 +172,7 @@ export default function AgentHealthMonitor() {
   // Conditional returns AFTER all hooks
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-9 w-80" />
         <div className="grid gap-4 md:grid-cols-4">
           {[...Array(4)].map((_, i) => (
@@ -186,8 +186,8 @@ export default function AgentHealthMonitor() {
 
   if (isError) {
     return (
-      <div className="container mx-auto p-6">
-        <ErrorState 
+      <div>
+        <ErrorState
           error={errorData!} 
           onRetry={refetch}
           title="Erro ao carregar"
@@ -197,7 +197,7 @@ export default function AgentHealthMonitor() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
