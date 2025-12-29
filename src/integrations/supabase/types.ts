@@ -1920,6 +1920,7 @@ export type Database = {
           agent_mode: string | null
           agent_name: string
           agent_version: string | null
+          agent_version_code: number | null
           display_name: string | null
           ed25519_supported: boolean | null
           enrolled_at: string
@@ -1955,6 +1956,7 @@ export type Database = {
           agent_mode?: string | null
           agent_name: string
           agent_version?: string | null
+          agent_version_code?: number | null
           display_name?: string | null
           ed25519_supported?: boolean | null
           enrolled_at?: string
@@ -1990,6 +1992,7 @@ export type Database = {
           agent_mode?: string | null
           agent_name?: string
           agent_version?: string | null
+          agent_version_code?: number | null
           display_name?: string | null
           ed25519_supported?: boolean | null
           enrolled_at?: string
@@ -12017,6 +12020,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      parse_version_code: { Args: { version_text: string }; Returns: number }
       process_autonomous_safe_mode: { Args: never; Returns: Json }
       process_safe_mode_entry: {
         Args: {
