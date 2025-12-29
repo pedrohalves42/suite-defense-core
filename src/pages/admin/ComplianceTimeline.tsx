@@ -19,21 +19,13 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
 // Dynamic imports for jsPDF to avoid SSR/build issues
-let jsPDFInstance: typeof import('jspdf') | null = null;
-let autoTableInstance: typeof import('jspdf-autotable') | null = null;
-
 const loadJsPDF = async () => {
   try {
-    if (!jsPDFInstance) {
-      jsPDFInstance = await import('jspdf');
-    }
-    if (!autoTableInstance) {
-      autoTableInstance = await import('jspdf-autotable');
-    }
-    return { 
-      jsPDF: (jsPDFInstance as any).jsPDF || (jsPDFInstance as any).default, 
-      autoTable: (autoTableInstance as any).default 
-    };
+    const jsPDFModule = await import(/* @vite-ignore */ 'jspdf');
+    const jsPDFClass = jsPDFModule.jsPDF || jsPDFModule.default;
+    const autoTableModule = await import(/* @vite-ignore */ 'jspdf-autotable');
+    const autoTable = autoTableModule.default;
+    return { jsPDF: jsPDFClass, autoTable };
   } catch (error) {
     console.error('Failed to load jsPDF:', error);
     throw new Error('PDF generation is not available');
