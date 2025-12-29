@@ -1,13 +1,26 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { z } from 'https://esm.sh/zod@3.23.8';
 import { corsHeaders } from '../_shared/cors.ts';
+
+// Validation schema for IP address
+const IpAddressSchema = z.string()
+  .min(1, 'IP address is required')
+  .max(45, 'IP address too long') // IPv6 max length
+  .refine(ip => {
+    // IPv4 pattern
+    const ipv4Pattern = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    // IPv6 pattern (simplified)
+    const ipv6Pattern = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$/;
+    return ipv4Pattern.test(ip) || ipv6Pattern.test(ip) || ip === 'unknown';
+  }, 'Invalid IP address format');
 
 function extractIpAddress(req: Request): string {
   const cfConnectingIp = req.headers.get('cf-connecting-ip');
   const xRealIp = req.headers.get('x-real-ip');
   const xForwardedFor = req.headers.get('x-forwarded-for');
   
-  if (cfConnectingIp) return cfConnectingIp;
-  if (xRealIp) return xRealIp;
+  if (cfConnectingIp) return cfConnectingIp.trim();
+  if (xRealIp) return xRealIp.trim();
   if (xForwardedFor) return xForwardedFor.split(',')[0].trim();
   return 'unknown';
 }
@@ -23,9 +36,21 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const ipAddress = extractIpAddress(req);
+    const rawIpAddress = extractIpAddress(req);
+    
+    // Validate IP address
+    const ipValidation = IpAddressSchema.safeParse(rawIpAddress);
+    if (!ipValidation.success) {
+      console.warn('Invalid IP address format:', rawIpAddress);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    const ipAddress = ipValidation.data;
 
-    if (!ipAddress || ipAddress === 'unknown') {
+    if (ipAddress === 'unknown') {
       return new Response(
         JSON.stringify({ error: 'Unable to determine IP address' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -80,7 +105,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error checking failed logins:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'An error occurred. Please try again.' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
