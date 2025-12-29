@@ -48,11 +48,11 @@ interface AIInsightExplainerProps {
 
 // Map source tables to friendly names
 const SOURCE_TABLE_LABELS: Record<string, string> = {
-  agents: "Agentes",
+  agents: "Computadores",
   agent_system_metrics_partitioned: "Métricas do Sistema",
   agent_system_metrics: "Métricas do Sistema",
-  jobs: "Jobs/Tarefas",
-  v_problematic_jobs: "Jobs Problemáticos",
+  jobs: "Verificações",
+  v_problematic_jobs: "Verificações com Erro",
   system_alerts: "Alertas do Sistema",
   installation_analytics: "Analytics de Instalação",
   software_inventory: "Inventário de Software",
@@ -144,12 +144,12 @@ function formatEvidenceKey(key: string): string {
     failureRate: "Taxa de Falha",
     avgCpuUsage: "Uso Médio de CPU",
     avgMemoryUsage: "Uso Médio de Memória",
-    problematicJobsCount: "Jobs Problemáticos",
+    problematicJobsCount: "Verificações com Erro",
     criticalAlerts: "Alertas Críticos",
     warningAlerts: "Alertas de Aviso",
-    totalAgents: "Total de Agentes",
-    onlineAgents: "Agentes Online",
-    offlineAgents: "Agentes Offline",
+    totalAgents: "Total de Computadores",
+    onlineAgents: "Computadores Online",
+    offlineAgents: "Computadores Offline",
   };
   
   return labels[key] || key

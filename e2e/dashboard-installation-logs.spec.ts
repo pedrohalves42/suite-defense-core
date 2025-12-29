@@ -23,7 +23,7 @@ test.describe('Installation Logs Explorer Dashboard', () => {
 
   test('should filter by agent name', async ({ page }) => {
     // Try flexible input selectors
-    const agentNameInput = page.locator('input[placeholder*="nome"], input[placeholder*="Buscar"], input[placeholder*="agent"]').first();
+    const agentNameInput = page.locator('input[placeholder*="nome"], input[placeholder*="Buscar"], input[placeholder*="computador"]').first();
     if (await agentNameInput.isVisible().catch(() => false)) {
       await agentNameInput.fill('TEST-AGENT');
       await page.waitForTimeout(1000);
