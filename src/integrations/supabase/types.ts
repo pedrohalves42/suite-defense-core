@@ -3517,6 +3517,78 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_policies: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          content_hash: string | null
+          created_at: string
+          effective_date: string | null
+          file_path: string | null
+          id: string
+          owner: string | null
+          policy_code: string
+          policy_name: string
+          review_date: string | null
+          soc2_criteria: string[] | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          content_hash?: string | null
+          created_at?: string
+          effective_date?: string | null
+          file_path?: string | null
+          id?: string
+          owner?: string | null
+          policy_code: string
+          policy_name: string
+          review_date?: string | null
+          soc2_criteria?: string[] | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          version?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          content_hash?: string | null
+          created_at?: string
+          effective_date?: string | null
+          file_path?: string | null
+          id?: string
+          owner?: string | null
+          policy_code?: string
+          policy_name?: string
+          review_date?: string | null
+          soc2_criteria?: string[] | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compliance_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_policies_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       custom_trials: {
         Row: {
           company_name: string
@@ -7754,6 +7826,145 @@ export type Database = {
           },
         ]
       }
+      soc2_controls: {
+        Row: {
+          control_code: string
+          control_name: string
+          created_at: string
+          criteria_id: string
+          description: string | null
+          due_date: string | null
+          evidence_ref: string | null
+          evidence_type: string | null
+          gap_notes: string | null
+          id: string
+          owner: string | null
+          remediation_plan: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          control_code: string
+          control_name: string
+          created_at?: string
+          criteria_id: string
+          description?: string | null
+          due_date?: string | null
+          evidence_ref?: string | null
+          evidence_type?: string | null
+          gap_notes?: string | null
+          id?: string
+          owner?: string | null
+          remediation_plan?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          control_code?: string
+          control_name?: string
+          created_at?: string
+          criteria_id?: string
+          description?: string | null
+          due_date?: string | null
+          evidence_ref?: string | null
+          evidence_type?: string | null
+          gap_notes?: string | null
+          id?: string
+          owner?: string | null
+          remediation_plan?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soc2_controls_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "soc2_criteria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soc2_controls_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soc2_controls_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      soc2_criteria: {
+        Row: {
+          created_at: string
+          criteria_code: string
+          criteria_name: string
+          description: string | null
+          id: string
+          implementation_notes: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          criteria_code: string
+          criteria_name: string
+          description?: string | null
+          id?: string
+          implementation_notes?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          criteria_code?: string
+          criteria_name?: string
+          description?: string | null
+          id?: string
+          implementation_notes?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soc2_criteria_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soc2_criteria_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       software_inventory: {
         Row: {
           agent_id: string
@@ -8925,6 +9136,81 @@ export type Database = {
           },
           {
             foreignKeyName: "user_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      vendor_risk_registry: {
+        Row: {
+          compliance_certifications: string[] | null
+          contract_end_date: string | null
+          contract_start_date: string | null
+          created_at: string
+          criticality: string
+          data_shared: string[] | null
+          id: string
+          last_review_date: string | null
+          next_review_date: string | null
+          risk_notes: string | null
+          risk_score: number | null
+          services_provided: string[] | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          vendor_name: string
+          vendor_type: string
+        }
+        Insert: {
+          compliance_certifications?: string[] | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          created_at?: string
+          criticality?: string
+          data_shared?: string[] | null
+          id?: string
+          last_review_date?: string | null
+          next_review_date?: string | null
+          risk_notes?: string | null
+          risk_score?: number | null
+          services_provided?: string[] | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          vendor_name: string
+          vendor_type: string
+        }
+        Update: {
+          compliance_certifications?: string[] | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
+          created_at?: string
+          criticality?: string
+          data_shared?: string[] | null
+          id?: string
+          last_review_date?: string | null
+          next_review_date?: string | null
+          risk_notes?: string | null
+          risk_score?: number | null
+          services_provided?: string[] | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          vendor_name?: string
+          vendor_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_risk_registry_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_risk_registry_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_system_operations_summary"
@@ -10831,6 +11117,36 @@ export type Database = {
           },
           {
             foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      v_soc2_readiness: {
+        Row: {
+          criteria_code: string | null
+          criteria_name: string | null
+          criteria_readiness_score: number | null
+          criteria_status: string | null
+          implemented_controls: number | null
+          in_progress_controls: number | null
+          not_started_controls: number | null
+          tenant_id: string | null
+          total_controls: number | null
+          verified_controls: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soc2_criteria_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "soc2_criteria_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_system_operations_summary"
