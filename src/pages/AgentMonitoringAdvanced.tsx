@@ -10,6 +10,7 @@ import { logger } from '@/lib/logger';
 import { getOsDisplayName, getOsIcon } from '@/lib/os-utils';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
+import { useTenant } from '@/hooks/useTenant';
 
 interface AgentMetrics {
   id: string;
@@ -71,14 +72,18 @@ export default function AgentMonitoringAdvanced() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'offline'>('all');
+  const { tenant } = useTenant();
 
   const fetchDashboardData = async (showToast = false) => {
     try {
       if (showToast) setIsRefreshing(true);
+      if (!tenant?.id) return;
+      
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) return;
 
       const { data, error } = await supabase.functions.invoke('get-agent-dashboard-data', {
+        body: { tenant_id: tenant.id },
         headers: {
           Authorization: `Bearer ${session.session.access_token}`,
         },
@@ -110,13 +115,18 @@ export default function AgentMonitoringAdvanced() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
-    const refreshInterval = setInterval(fetchDashboardData, 30000);
+    if (tenant?.id) {
+      fetchDashboardData();
+    }
+  }, [tenant?.id]);
 
+  useEffect(() => {
+    if (!tenant?.id) return;
+    const refreshInterval = setInterval(fetchDashboardData, 30000);
     return () => {
       clearInterval(refreshInterval);
     };
-  }, []);
+  }, [tenant?.id]);
 
   const acknowledgeAlert = async (alertId: string) => {
     try {

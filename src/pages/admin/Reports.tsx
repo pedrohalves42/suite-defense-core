@@ -12,6 +12,7 @@ import { HelpTooltip } from "@/components/ui/tech-tooltip";
 import { GeneratedReportsList } from "@/components/admin/GeneratedReportsList";
 import { ComplianceReportGenerator } from "@/components/admin/ComplianceReportGenerator";
 import { formatBrazilDateTime } from "@/lib/date-utils";
+import { useTenant } from "@/hooks/useTenant";
 
 interface Agent {
   id: string;
@@ -79,19 +80,23 @@ interface SecurityReport {
 export default function Reports() {
   const [selectedAgent, setSelectedAgent] = useState<string>("all");
   const [isGenerating, setIsGenerating] = useState(false);
+  const { tenant } = useTenant();
 
   const { data: agents } = useQuery({
-    queryKey: ["agents"],
+    queryKey: ["agents", tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
       const { data, error } = await supabase
         .from("agents")
         .select("id, agent_name, status")
+        .eq("tenant_id", tenant.id)
         .eq("status", "active")
         .order("agent_name");
 
       if (error) throw error;
       return data as Agent[];
     },
+    enabled: !!tenant?.id,
   });
 
   const { data: report, refetch: refetchReport, isLoading: isLoadingReport } = useQuery({

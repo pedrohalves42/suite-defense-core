@@ -28,6 +28,7 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 import { UI_LABELS, getAttackTypeLabel, getSeverityInfo } from '@/lib/ui-dictionary';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion } from 'framer-motion';
+import { useTenant } from '@/hooks/useTenant';
 
 interface SecurityMetrics {
   rate_limit_breaches: number;
@@ -65,6 +66,7 @@ interface FailedLoginStat {
 
 export default function SecurityMonitoring() {
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('24h');
+  const { tenant } = useTenant();
   
   const getTimeRangeDate = useCallback(() => {
     const hours = timeRange === '1h' ? 1 : timeRange === '6h' ? 6 : timeRange === '24h' ? 24 : 168;
@@ -73,8 +75,9 @@ export default function SecurityMonitoring() {
 
   // Fetch security metrics
   const { data: metrics, isLoading: metricsLoading, refetch: refetchMetrics } = useQuery({
-    queryKey: ['security-metrics', timeRange],
+    queryKey: ['security-metrics', timeRange, tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return null;
       const since = getTimeRangeDate().toISOString();
       
       // Rate limit breaches
@@ -103,11 +106,12 @@ export default function SecurityMonitoring() {
         .gte('created_at', since)
         .in('severity', ['high', 'critical']);
 
-      // Offline agents
+      // Offline agents - filtered by tenant
       const offlineThreshold = subHours(new Date(), 1).toISOString();
       const { count: offlineAgents } = await supabase
         .from('agents')
         .select('*', { count: 'exact' })
+        .eq('tenant_id', tenant.id)
         .lt('last_heartbeat', offlineThreshold)
         .eq('status', 'active');
 
@@ -120,6 +124,7 @@ export default function SecurityMonitoring() {
         agents_offline: offlineAgents || 0,
       } as SecurityMetrics;
     },
+    enabled: !!tenant?.id,
     refetchInterval: 30000,
   });
 
