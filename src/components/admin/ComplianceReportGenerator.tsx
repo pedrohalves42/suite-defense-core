@@ -117,9 +117,9 @@ export function ComplianceReportGenerator() {
 
     setIsGenerating(true);
     try {
-      const jsPDFModule = await import("jspdf");
-      const jsPDFClass = jsPDFModule.jsPDF;
-      const autoTableModule = await import("jspdf-autotable");
+      const jsPDFModule = await import(/* @vite-ignore */ "jspdf");
+      const jsPDFClass = jsPDFModule.jsPDF || jsPDFModule.default;
+      const autoTableModule = await import(/* @vite-ignore */ "jspdf-autotable");
       const autoTable = autoTableModule.default;
 
       const doc = new jsPDFClass();
