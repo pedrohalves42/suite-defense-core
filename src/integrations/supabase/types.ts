@@ -10261,7 +10261,9 @@ export type Database = {
           alert_triggered: boolean | null
           ana_score: number | null
           avg_gap_30d: number | null
+          avg_gap_90d: number | null
           confidence_gap: number | null
+          consecutive_alerts: number | null
           consecutive_decrease: boolean | null
           created_at: string | null
           gap_change: number | null
@@ -10270,6 +10272,7 @@ export type Database = {
           id: string | null
           red_score: number | null
           tenant_id: string | null
+          trend_direction: string | null
         }
         Relationships: [
           {

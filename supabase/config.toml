@@ -562,3 +562,11 @@ schedule = "*/30 * * * *"
 # === AI System Audit (Ana Persona) ===
 [functions.ai-system-audit]
 verify_jwt = true
+
+# === AI Red Team Assessment (Adversarial) ===
+[functions.ai-red-team-assessment]
+verify_jwt = true
+
+# === AI Full Audit Orchestrator (Red → Ana → Gap) ===
+[functions.ai-full-audit]
+verify_jwt = true

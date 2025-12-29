@@ -30,8 +30,11 @@ export interface ConfidenceGapTrend {
   gap_delta: number | null;
   alert_triggered: boolean;
   avg_gap_30d: number | null;
+  avg_gap_90d: number | null;
   gap_change: number | null;
+  trend_direction: 'improving' | 'stable' | 'degrading' | null;
   consecutive_decrease: boolean;
+  consecutive_alerts: number | null;
 }
 
 export function useConfidenceGapHistory() {
