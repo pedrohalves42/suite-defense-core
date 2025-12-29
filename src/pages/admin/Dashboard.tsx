@@ -6,8 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTenant } from '@/hooks/useTenant';
 import { 
   Shield, Server, AlertTriangle, CheckCircle, WifiOff, 
-  ArrowRight, Brain, Activity, Bug, ShieldAlert, ChevronRight,
-  Clock, Lightbulb
+  ArrowRight, Brain, Bug, ShieldAlert, ChevronRight,
+  Lightbulb
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,9 +16,7 @@ import { cn } from '@/lib/utils';
 import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { getAgentStatusInfo } from '@/lib/agent-utils';
 import { toast } from 'sonner';
-import { RiskScoreCard } from '@/components/admin/RiskScoreCard';
-import { PlaybooksPendingWidget } from '@/components/admin/PlaybooksPendingWidget';
-import { CompactApprovalWidget } from '@/components/admin/CompactApprovalWidget';
+import { ProtectionTrendChart } from '@/components/admin/ProtectionTrendChart';
 
 export default function Dashboard() {
   const { tenant } = useTenant();
@@ -86,39 +84,6 @@ export default function Dashboard() {
     enabled: !!tenant?.id,
   });
 
-  // Fetch jobs stats - EXCLUDE timeouts from failure count
-  const { data: jobsStats } = useQuery({
-    queryKey: ['dashboard-jobs-stats', tenant?.id],
-    queryFn: async () => {
-      if (!tenant?.id) return { total: 0, success: 0, rate: 0, timeoutCount: 0, realFailedCount: 0 };
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('status, error_message')
-        .eq('tenant_id', tenant.id)
-        .gte('created_at', oneDayAgo);
-      if (error) throw error;
-      
-      const total = data?.length || 0;
-      const completed = data?.filter(j => j.status === 'completed').length || 0;
-      
-      // Separate real failures from timeouts (computer offline)
-      const timeoutPatterns = ['Auto-cleanup', 'Timeout:', 'timeout', 'exceeded', 'expired', 'queued job exceeded'];
-      const isTimeout = (msg: string | null) => msg && timeoutPatterns.some(p => msg.toLowerCase().includes(p.toLowerCase()));
-      
-      const failed = data?.filter(j => j.status === 'failed') || [];
-      const timeoutCount = failed.filter(j => isTimeout(j.error_message)).length;
-      const realFailedCount = failed.length - timeoutCount;
-      
-      // Rate based on REAL executed jobs (excluding timeouts)
-      const relevantTotal = completed + realFailedCount;
-      const rate = relevantTotal > 0 ? Math.round((completed / relevantTotal) * 100) : 100;
-      
-      return { total, success: completed, rate, timeoutCount, realFailedCount };
-    },
-    enabled: !!tenant?.id,
-  });
-
   // Fetch AI insights count
   const { data: insightsCount } = useQuery({
     queryKey: ['dashboard-insights', tenant?.id],
@@ -134,6 +99,7 @@ export default function Dashboard() {
     },
     enabled: !!tenant?.id,
   });
+
 
   // Acknowledge alerts mutation
   const acknowledgeAllMutation = useMutation({
@@ -156,17 +122,12 @@ export default function Dashboard() {
   const offlineAgents = (agents?.length || 0) - onlineAgents;
   const criticalAlerts = alerts?.filter(a => a.severity === 'critical' || a.severity === 'high').length || 0;
 
-  // Calculate security score (0-100)
+  // Calculate security score (0-100) - Simplified without jobsStats
   const calculateSecurityScore = () => {
     let score = 100;
     score -= Math.min(offlineAgents * 5, 25);
     score -= Math.min(criticalAlerts * 10, 30);
     score -= Math.min((vulnStats?.critical || 0) * 5, 25);
-    if (jobsStats?.rate && jobsStats.rate < 90) {
-      score -= 20;
-    } else if (jobsStats?.rate && jobsStats.rate < 95) {
-      score -= 10;
-    }
     return Math.max(0, score);
   };
 
@@ -316,14 +277,8 @@ export default function Dashboard() {
         </Card>
       </motion.div>
 
-      {/* 1️⃣ RISK SCORE CARD - Detalhes adicionais */}
-      <RiskScoreCard />
-
-      {/* Playbooks Pending Widget */}
-      <PlaybooksPendingWidget compact className="w-full" />
-
-      {/* Approval Requests Widget with Real-Time Countdown */}
-      <CompactApprovalWidget className="w-full" maxItems={3} />
+      {/* 📈 CAMADA 3: Gráfico de Tendência */}
+      <ProtectionTrendChart />
 
       {/* Critical Alert Action (if any) */}
       {criticalAlerts > 0 && (
@@ -377,7 +332,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {problems.slice(0, 4).map((item, idx) => {
+                  {problems.slice(0, 3).map((item, idx) => {
                     const Icon = item.icon;
                     return (
                       <Link
@@ -432,7 +387,7 @@ export default function Dashboard() {
           <Card className="h-full">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Activity className="h-4 w-4 text-muted-foreground" />
+                <Server className="h-4 w-4 text-muted-foreground" />
                 Resumo rápido
               </CardTitle>
             </CardHeader>
@@ -495,33 +450,22 @@ export default function Dashboard() {
                 </div>
               </Link>
 
-              {/* Taxa de Sucesso */}
-              <div className="p-3 rounded-lg bg-muted/30">
+              {/* Avisos da IA */}
+              <Link to="/admin/ai-insights" className="block p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Funcionamento</span>
+                    <Brain className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">Avisos da IA</span>
                   </div>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <div className="mt-2 flex flex-col gap-1">
-                  <div className="flex items-baseline gap-2">
-                    <span className={cn("text-xl font-bold", (jobsStats?.rate || 100) >= 90 ? "text-green-600" : "text-orange-600")}>
-                      {jobsStats?.rate || 100}%
-                    </span>
-                    <span className="text-sm text-muted-foreground">funcionando</span>
-                  </div>
-                  {(jobsStats?.timeoutCount || 0) > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      ⏱️ {jobsStats?.timeoutCount} expiradas (PC desligado)
-                    </span>
-                  )}
-                  {(jobsStats?.realFailedCount || 0) > 0 && (
-                    <span className="text-xs text-red-500">
-                      ❌ {jobsStats?.realFailedCount} com erro real
-                    </span>
-                  )}
+                <div className="mt-2 flex items-baseline gap-2">
+                  <span className={cn("text-lg font-bold", (insightsCount || 0) > 0 ? "text-blue-600" : "text-green-600")}>
+                    {insightsCount || 0}
+                  </span>
+                  <span className="text-sm text-muted-foreground">pendentes</span>
                 </div>
-              </div>
+              </Link>
             </CardContent>
           </Card>
         </motion.div>
