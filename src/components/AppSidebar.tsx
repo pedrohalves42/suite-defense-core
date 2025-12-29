@@ -90,13 +90,13 @@ export const AppSidebar = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Humanized menu items with differentiated icons
+  // Humanized menu items - LINGUAGEM LEIGA (sem termos técnicos)
   const menuItems = useMemo<MenuItem[]>(() => [
     { icon: Home, label: 'Início', to: '/dashboard', end: true },
     { icon: Activity, label: 'Tempo Real', to: '/monitoring' },
     { icon: Monitor, label: 'Meus Computadores', to: '/agents' },
-    { icon: ListTodo, label: 'Tarefas', to: '/jobs' },
-    { icon: ShieldCheck, label: 'Verificações', to: '/virus-scans' },
+    { icon: ListTodo, label: 'Verificações', to: '/jobs' },
+    { icon: ShieldCheck, label: 'Análises de Segurança', to: '/virus-scans' },
     { icon: AlertTriangle, label: 'Quarentena', to: '/quarantine' },
     { icon: Download, label: 'Instalador', to: '/installer' },
     { icon: FileDown, label: 'Exportar', to: '/export' },
@@ -104,42 +104,42 @@ export const AppSidebar = () => {
   ], []);
 
   const adminItems = useMemo<MenuItem[]>(() => [
-    // === OVERVIEW ===
+    // === VISÃO GERAL ===
     { icon: Home, label: 'Painel Principal', to: '/admin/dashboard', end: true, section: 'overview' },
     
-    // === MONITORAMENTO (consolidado: Tempo Real + Status + Diagnóstico) ===
+    // === MONITORAMENTO ===
     { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced', section: 'monitoring' },
-    { icon: Cpu, label: 'Meus Computadores', to: '/admin/agent-health', section: 'monitoring' },
+    { icon: Cpu, label: 'Computadores Protegidos', to: '/admin/agent-health', section: 'monitoring' },
     
-    // === SEGURANÇA (consolidado: removido Central duplicada, Histórico + Timeline em um) ===
+    // === SEGURANÇA ===
     { icon: Users, label: 'Grupos', to: '/admin/agent-groups', section: 'security' },
-    { icon: ShieldCheck, label: 'Políticas', to: '/admin/security-policies', section: 'security' },
-    { icon: Shield, label: 'Alertas', to: '/admin/security-monitoring', section: 'security' },
-    { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory', section: 'security' },
+    { icon: ShieldCheck, label: 'Políticas de Proteção', to: '/admin/security-policies', section: 'security' },
+    { icon: Shield, label: 'Alertas de Segurança', to: '/admin/security-monitoring', section: 'security' },
+    { icon: AppWindow, label: 'Programas Instalados', to: '/admin/software-inventory', section: 'security' },
     { icon: AlertTriangle, label: 'Vulnerabilidades', to: '/admin/vulnerabilities', section: 'security' },
     { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity', section: 'security' },
     { icon: Clock, label: 'Histórico', to: '/admin/agent-timeline', section: 'security' },
     { icon: FileText, label: 'Relatórios', to: '/admin/reports', section: 'security' },
     
-    // === CONFORMIDADE (para auditor / investidor) ===
+    // === CONFORMIDADE ===
     { icon: ClipboardCheck, label: 'Prontidão SOC 2', to: '/admin/soc2-compliance', section: 'compliance' },
-    { icon: ScrollText, label: 'Timeline de Compliance', to: '/admin/compliance-timeline', section: 'compliance' },
+    { icon: ScrollText, label: 'Timeline de Conformidade', to: '/admin/compliance-timeline', section: 'compliance' },
     { icon: FileCheck, label: 'Auditoria do Sistema', to: '/admin/system-audit', section: 'compliance' },
     
-    // === INFRAESTRUTURA (para técnicos) ===
+    // === INFRAESTRUTURA ===
     { icon: Network, label: 'Instalações', to: '/admin/installations', section: 'infrastructure' },
-    { icon: GitBranch, label: 'Releases', to: '/admin/agent-releases', section: 'infrastructure' },
+    { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases', section: 'infrastructure' },
     { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics', section: 'infrastructure' },
     { icon: Heart, label: 'Saúde do Sistema', to: '/admin/slo-dashboard', section: 'infrastructure' },
     { icon: Inbox, label: 'Fila de Tarefas', to: '/admin/dead-letter-queue', section: 'infrastructure' },
     { icon: Code, label: 'API', to: '/admin/api-docs', section: 'infrastructure' },
     
-    // === INTELIGÊNCIA ARTIFICIAL ===
-    { icon: Brain, label: 'Insights', to: '/admin/ai-insights', section: 'ai', badge: criticalInsightsCount },
-    { icon: CheckCircle, label: 'Ações', to: '/admin/ai-actions', section: 'ai' },
+    // === INTELIGÊNCIA (linguagem humana) ===
+    { icon: Brain, label: 'Avisos do Sistema', to: '/admin/ai-insights', section: 'ai', badge: criticalInsightsCount },
+    { icon: CheckCircle, label: 'Decisões Automáticas', to: '/admin/ai-actions', section: 'ai' },
     { icon: BarChart3, label: 'Métricas', to: '/admin/ai-metrics', section: 'ai' },
-    { icon: Scale, label: 'Decisões', to: '/admin/decision-audit', section: 'ai' },
-    { icon: Settings, label: 'Regras Automáticas', to: '/admin/rules-management', section: 'ai' },
+    { icon: Scale, label: 'Histórico de Decisões', to: '/admin/decision-audit', section: 'ai' },
+    { icon: Settings, label: 'Regras de Proteção', to: '/admin/rules-management', section: 'ai' },
     
     // === GESTÃO ===
     { icon: Users, label: 'Equipe', to: '/admin/members', section: 'management' },
@@ -150,7 +150,7 @@ export const AppSidebar = () => {
     // === FINANCEIRO ===
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade', section: 'billing' },
     { icon: Receipt, label: 'Assinaturas', to: '/admin/subscriptions', section: 'billing' },
-  ], []);
+  ], [criticalInsightsCount]);
 
   const superAdminItems = useMemo<MenuItem[]>(() => [
     { icon: Building2, label: 'Minha Empresa', to: '/admin/dashboard', end: false },

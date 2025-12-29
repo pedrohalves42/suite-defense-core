@@ -264,7 +264,59 @@ export default function Dashboard() {
         <p className="text-muted-foreground text-xs">Visão geral da proteção dos seus computadores</p>
       </div>
 
-      {/* 1️⃣ RISK SCORE CARD - Responde "Posso seguir tranquilo?" em 3 segundos */}
+      {/* 🔐 CARD PRINCIPAL DE STATUS - Responde "Estou protegido?" em 3 segundos */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <Card className={cn(
+          "border-2",
+          globalStatus.variant === 'success' && "bg-green-500/5 border-green-500/30",
+          globalStatus.variant === 'warning' && "bg-amber-500/5 border-amber-500/30",
+          globalStatus.variant === 'danger' && "bg-red-500/5 border-red-500/30"
+        )}>
+          <CardContent className="py-6">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "p-4 rounded-full",
+                globalStatus.variant === 'success' && "bg-green-500/10",
+                globalStatus.variant === 'warning' && "bg-amber-500/10",
+                globalStatus.variant === 'danger' && "bg-red-500/10"
+              )}>
+                <Shield className={cn(
+                  "h-10 w-10",
+                  globalStatus.variant === 'success' && "text-green-500",
+                  globalStatus.variant === 'warning' && "text-amber-500",
+                  globalStatus.variant === 'danger' && "text-red-500"
+                )} />
+              </div>
+              <div className="flex-1">
+                <h2 className={cn(
+                  "text-xl font-bold",
+                  globalStatus.variant === 'success' && "text-green-600 dark:text-green-400",
+                  globalStatus.variant === 'warning' && "text-amber-600 dark:text-amber-400",
+                  globalStatus.variant === 'danger' && "text-red-600 dark:text-red-400"
+                )}>
+                  {globalStatus.emoji} {globalStatus.title}
+                </h2>
+                <p className="text-muted-foreground mt-1">
+                  {globalStatus.description}
+                </p>
+              </div>
+              <div className="text-right">
+                <div className={cn(
+                  "text-3xl font-bold",
+                  securityScore >= 80 && "text-green-600",
+                  securityScore >= 60 && securityScore < 80 && "text-amber-600",
+                  securityScore < 60 && "text-red-600"
+                )}>
+                  {securityScore}%
+                </div>
+                <div className="text-xs text-muted-foreground">Nível de proteção</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* 1️⃣ RISK SCORE CARD - Detalhes adicionais */}
       <RiskScoreCard />
 
       {/* Playbooks Pending Widget */}
