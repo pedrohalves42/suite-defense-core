@@ -3038,6 +3038,86 @@ export type Database = {
           },
         ]
       }
+      audit_confidence_gaps: {
+        Row: {
+          alert_reason: string | null
+          alert_triggered: boolean | null
+          ana_score: number
+          audit_id: string | null
+          confidence_gap: number
+          created_at: string
+          dimension_gaps: Json | null
+          gap_delta: number | null
+          health_status: string
+          id: string
+          previous_gap: number | null
+          red_score: number
+          red_team_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          alert_reason?: string | null
+          alert_triggered?: boolean | null
+          ana_score: number
+          audit_id?: string | null
+          confidence_gap: number
+          created_at?: string
+          dimension_gaps?: Json | null
+          gap_delta?: number | null
+          health_status: string
+          id?: string
+          previous_gap?: number | null
+          red_score: number
+          red_team_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          alert_reason?: string | null
+          alert_triggered?: boolean | null
+          ana_score?: number
+          audit_id?: string | null
+          confidence_gap?: number
+          created_at?: string
+          dimension_gaps?: Json | null
+          gap_delta?: number | null
+          health_status?: string
+          id?: string
+          previous_gap?: number | null
+          red_score?: number
+          red_team_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_confidence_gaps_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "system_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_confidence_gaps_red_team_id_fkey"
+            columns: ["red_team_id"]
+            isOneToOne: false
+            referencedRelation: "red_team_assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_confidence_gaps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_confidence_gaps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -6406,6 +6486,99 @@ export type Database = {
         }
         Relationships: []
       }
+      red_team_assessments: {
+        Row: {
+          ai_model: string | null
+          ai_prompt_hash: string | null
+          ai_response_raw: Json | null
+          attack_vectors: Json
+          created_at: string
+          executive_threat_summary: string | null
+          id: string
+          metrics_snapshot: Json | null
+          recommended_hardening: Json | null
+          red_score: number
+          residual_risks: Json
+          tenant_id: string
+          threat_compliance_alignment: number | null
+          threat_cross_tenant_isolation: number | null
+          threat_evidence_proof: number | null
+          threat_governance: number | null
+          threat_human_oversight: number | null
+          threat_level: string
+          threat_market_trust: number | null
+          threat_operational_resilience: number | null
+          threat_system_identity: number | null
+          threat_transparency_explainability: number | null
+          worst_case_scenario: string | null
+        }
+        Insert: {
+          ai_model?: string | null
+          ai_prompt_hash?: string | null
+          ai_response_raw?: Json | null
+          attack_vectors?: Json
+          created_at?: string
+          executive_threat_summary?: string | null
+          id?: string
+          metrics_snapshot?: Json | null
+          recommended_hardening?: Json | null
+          red_score: number
+          residual_risks?: Json
+          tenant_id: string
+          threat_compliance_alignment?: number | null
+          threat_cross_tenant_isolation?: number | null
+          threat_evidence_proof?: number | null
+          threat_governance?: number | null
+          threat_human_oversight?: number | null
+          threat_level: string
+          threat_market_trust?: number | null
+          threat_operational_resilience?: number | null
+          threat_system_identity?: number | null
+          threat_transparency_explainability?: number | null
+          worst_case_scenario?: string | null
+        }
+        Update: {
+          ai_model?: string | null
+          ai_prompt_hash?: string | null
+          ai_response_raw?: Json | null
+          attack_vectors?: Json
+          created_at?: string
+          executive_threat_summary?: string | null
+          id?: string
+          metrics_snapshot?: Json | null
+          recommended_hardening?: Json | null
+          red_score?: number
+          residual_risks?: Json
+          tenant_id?: string
+          threat_compliance_alignment?: number | null
+          threat_cross_tenant_isolation?: number | null
+          threat_evidence_proof?: number | null
+          threat_governance?: number | null
+          threat_human_oversight?: number | null
+          threat_level?: string
+          threat_market_trust?: number | null
+          threat_operational_resilience?: number | null
+          threat_system_identity?: number | null
+          threat_transparency_explainability?: number | null
+          worst_case_scenario?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "red_team_assessments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "red_team_assessments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       report_executions: {
         Row: {
           completed_at: string | null
@@ -8032,7 +8205,9 @@ export type Database = {
           analysis_system_identity: string | null
           created_at: string
           created_by: string | null
+          evidence_basis: Json | null
           executive_summary: string | null
+          falsification_criteria: Json | null
           final_sentence: string | null
           id: string
           metrics_snapshot: Json | null
@@ -8064,7 +8239,9 @@ export type Database = {
           analysis_system_identity?: string | null
           created_at?: string
           created_by?: string | null
+          evidence_basis?: Json | null
           executive_summary?: string | null
+          falsification_criteria?: Json | null
           final_sentence?: string | null
           id?: string
           metrics_snapshot?: Json | null
@@ -8096,7 +8273,9 @@ export type Database = {
           analysis_system_identity?: string | null
           created_at?: string
           created_by?: string | null
+          evidence_basis?: Json | null
           executive_summary?: string | null
+          falsification_criteria?: Json | null
           final_sentence?: string | null
           id?: string
           metrics_snapshot?: Json | null
@@ -10077,6 +10256,38 @@ export type Database = {
           },
         ]
       }
+      v_confidence_gap_trend: {
+        Row: {
+          alert_triggered: boolean | null
+          ana_score: number | null
+          avg_gap_30d: number | null
+          confidence_gap: number | null
+          consecutive_decrease: boolean | null
+          created_at: string | null
+          gap_change: number | null
+          gap_delta: number | null
+          health_status: string | null
+          id: string | null
+          red_score: number | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_confidence_gaps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_confidence_gaps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_edge_function_stats: {
         Row: {
           avg_latency_ms: number | null
@@ -10813,6 +11024,38 @@ export type Database = {
           cancelled_count: number
           job_ids: string[]
         }[]
+      }
+      calculate_confidence_gap: {
+        Args: {
+          p_ana_score: number
+          p_audit_id: string
+          p_dimension_gaps?: Json
+          p_red_score: number
+          p_red_team_id: string
+          p_tenant_id: string
+        }
+        Returns: {
+          alert_reason: string | null
+          alert_triggered: boolean | null
+          ana_score: number
+          audit_id: string | null
+          confidence_gap: number
+          created_at: string
+          dimension_gaps: Json | null
+          gap_delta: number | null
+          health_status: string
+          id: string
+          previous_gap: number | null
+          red_score: number
+          red_team_id: string | null
+          tenant_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "audit_confidence_gaps"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       calculate_event_risk: {
         Args: { p_context: Json; p_event_type: string }

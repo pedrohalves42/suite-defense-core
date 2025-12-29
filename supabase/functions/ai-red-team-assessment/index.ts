@@ -35,6 +35,15 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Parse request body for optional ana_summary
+    let anaSummary = '';
+    try {
+      const body = await req.json();
+      anaSummary = body.ana_summary || '';
+    } catch {
+      // No body or invalid JSON - that's fine
+    }
+
     // Get user from token
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
@@ -61,25 +70,25 @@ serve(async (req) => {
     }
 
     const tenantId = userRole.tenant_id;
-    console.log(`[ai-system-audit] Starting audit for tenant ${tenantId}`);
+    console.log(`[ai-red-team-assessment] Starting Red Team assessment for tenant ${tenantId}`);
 
-    // Get prompts from registry (versioned, hashed)
-    const personaPrompt = await AIPromptRegistry.getPromptWithMetadata('ana-auditor-persona');
-    const analysisTemplate = await AIPromptRegistry.getPromptWithMetadata('ana-analysis-template');
+    // Get prompts from registry
+    const personaPrompt = await AIPromptRegistry.getPromptWithMetadata('red-team-persona');
+    const analysisTemplate = await AIPromptRegistry.getPromptWithMetadata('red-team-analysis-template');
 
     if (!personaPrompt || !analysisTemplate) {
-      console.error('Failed to load prompts from registry');
+      console.error('Failed to load Red Team prompts from registry');
       return new Response(
         JSON.stringify({ error: 'Prompt configuration error' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Log prompt usage for audit trail
-    logPromptUsage('ana-auditor-persona', personaPrompt.hash, tenantId, 'ai-system-audit');
-    logPromptUsage('ana-analysis-template', analysisTemplate.hash, tenantId, 'ai-system-audit');
+    // Log prompt usage
+    logPromptUsage('red-team-persona', personaPrompt.hash, tenantId, 'ai-red-team-assessment');
+    logPromptUsage('red-team-analysis-template', analysisTemplate.hash, tenantId, 'ai-red-team-assessment');
 
-    // Get raw metrics using the RPC function
+    // Get raw metrics
     const { data: metrics, error: metricsError } = await supabase
       .rpc('get_audit_raw_metrics', { p_tenant_id: tenantId });
 
@@ -91,12 +100,31 @@ serve(async (req) => {
       );
     }
 
-    console.log('[ai-system-audit] Metrics collected:', JSON.stringify(metrics));
+    // If no ana_summary provided, try to get the latest audit
+    if (!anaSummary) {
+      const { data: latestAudit } = await supabase
+        .from('system_audits')
+        .select('executive_summary, recommendation, overall_score')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-    // Build analysis prompt with metrics
-    const analysisPrompt = analysisTemplate.content.replace('{metrics}', JSON.stringify(metrics, null, 2));
+      if (latestAudit) {
+        anaSummary = `Score: ${latestAudit.overall_score}/100. Recommendation: ${latestAudit.recommendation}. Summary: ${latestAudit.executive_summary}`;
+      } else {
+        anaSummary = 'Nenhuma auditoria anterior disponível.';
+      }
+    }
 
-    // Call Lovable AI for analysis
+    console.log('[ai-red-team-assessment] Metrics collected, Ana summary available');
+
+    // Build analysis prompt
+    let analysisPrompt = analysisTemplate.content
+      .replace('{metrics}', JSON.stringify(metrics, null, 2))
+      .replace('{ana_summary}', anaSummary);
+
+    // Call Lovable AI
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -148,7 +176,7 @@ serve(async (req) => {
       );
     }
 
-    // Parse AI response (handle markdown code blocks)
+    // Parse AI response
     let analysisResult;
     try {
       let jsonContent = aiContent;
@@ -166,65 +194,47 @@ serve(async (req) => {
       );
     }
 
-    // Create combined prompt hash for reproducibility
     const combinedPromptHash = `${personaPrompt.hash.slice(0, 8)}-${analysisTemplate.hash.slice(0, 8)}`;
 
-    // Map new dimension names to old column names for backward compatibility
-    const dimensionMapping: Record<string, { scoreCol: string; analysisCol: string }> = {
-      'system_identity': { scoreCol: 'score_system_identity', analysisCol: 'analysis_system_identity' },
-      'governance': { scoreCol: 'score_control_vs_monitor', analysisCol: 'analysis_control_vs_monitor' },
-      'evidence_proof': { scoreCol: 'score_evidence_proof', analysisCol: 'analysis_evidence_proof' },
-      'human_oversight': { scoreCol: 'score_maturity', analysisCol: 'analysis_maturity' },
-      'operational_resilience': { scoreCol: 'score_failure_handling', analysisCol: 'analysis_failure_handling' },
-      'cross_tenant_isolation': { scoreCol: 'score_limitations', analysisCol: 'analysis_limitations' },
-      'transparency_explainability': { scoreCol: 'score_operational_trust', analysisCol: 'analysis_operational_trust' },
-      'compliance_alignment': { scoreCol: 'score_market_value', analysisCol: 'analysis_market_value' },
-      'market_trust': { scoreCol: 'score_simplicity', analysisCol: 'analysis_simplicity' },
-    };
-
-    // Build insert object dynamically
-    const insertData: Record<string, any> = {
-      tenant_id: tenantId,
-      created_by: user.id,
-      overall_score: analysisResult.overall_score,
-      executive_summary: analysisResult.executive_summary,
-      final_sentence: analysisResult.final_sentence,
-      recommendation: analysisResult.recommendation,
-      metrics_snapshot: metrics,
-      ai_model: 'google/gemini-2.5-flash',
-      prompt_hash: combinedPromptHash,
-      tokens_used: tokensUsed,
-      evidence_basis: analysisResult.evidence_basis || [],
-      falsification_criteria: analysisResult.falsification_criteria || [],
-    };
-
-    // Map dimension scores and analyses
-    for (const [dimKey, mapping] of Object.entries(dimensionMapping)) {
-      const dim = analysisResult.dimensions?.[dimKey];
-      if (dim) {
-        insertData[mapping.scoreCol] = dim.score;
-        insertData[mapping.analysisCol] = dim.analysis;
-      }
-    }
-
-    // Save audit result to database
-    const { data: savedAudit, error: saveError } = await supabase
-      .from('system_audits')
-      .insert(insertData)
+    // Save Red Team assessment to database
+    const { data: savedAssessment, error: saveError } = await supabase
+      .from('red_team_assessments')
+      .insert({
+        tenant_id: tenantId,
+        threat_level: analysisResult.threat_level || 'medium',
+        red_score: analysisResult.red_score || 50,
+        attack_vectors: analysisResult.attack_vectors || [],
+        residual_risks: analysisResult.residual_risks || [],
+        threat_system_identity: analysisResult.dimension_threats?.system_identity,
+        threat_governance: analysisResult.dimension_threats?.governance,
+        threat_evidence_proof: analysisResult.dimension_threats?.evidence_proof,
+        threat_human_oversight: analysisResult.dimension_threats?.human_oversight,
+        threat_operational_resilience: analysisResult.dimension_threats?.operational_resilience,
+        threat_cross_tenant_isolation: analysisResult.dimension_threats?.cross_tenant_isolation,
+        threat_transparency_explainability: analysisResult.dimension_threats?.transparency_explainability,
+        threat_compliance_alignment: analysisResult.dimension_threats?.compliance_alignment,
+        threat_market_trust: analysisResult.dimension_threats?.market_trust,
+        executive_threat_summary: analysisResult.executive_threat_summary,
+        worst_case_scenario: analysisResult.worst_case_scenario,
+        recommended_hardening: analysisResult.recommended_hardening || [],
+        ai_model: 'google/gemini-2.5-flash',
+        ai_prompt_hash: combinedPromptHash,
+        ai_response_raw: analysisResult,
+        metrics_snapshot: metrics,
+      })
       .select()
       .single();
 
     if (saveError) {
-      console.error('Error saving audit:', saveError);
-      // Return result anyway, just log the save error
+      console.error('Error saving Red Team assessment:', saveError);
     }
 
-    console.log(`[ai-system-audit] Audit completed. Score: ${analysisResult.overall_score}, Recommendation: ${analysisResult.recommendation}`);
+    console.log(`[ai-red-team-assessment] Assessment completed. Threat level: ${analysisResult.threat_level}, Red score: ${analysisResult.red_score}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        audit_id: savedAudit?.id,
+        assessment_id: savedAssessment?.id,
         prompt_versions: {
           persona: personaPrompt.version,
           template: analysisTemplate.version,
@@ -241,7 +251,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[ai-system-audit] Error:', error);
+    console.error('[ai-red-team-assessment] Error:', error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
