@@ -335,18 +335,25 @@ function Update-ScheduledTask {
     $arguments = "-ExecutionPolicy Bypass -NoProfile -WindowStyle Hidden -File `"$agentScript`" -ServerUrl `"$ServerUrl`" -AgentToken `"$AgentToken`" -HmacSecret `"$HmacSecret`" -AgentName `"$agentName`""
     
     $action = New-ScheduledTaskAction -Execute $psPath -Argument $arguments
-    $trigger = New-ScheduledTaskTrigger -AtStartup
+    
+    # CRITICAL FIX: Triggers duplos para auto-recovery
+    $triggers = @(
+        (New-ScheduledTaskTrigger -AtStartup),
+        (New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5))
+    )
+    
     $settings = New-ScheduledTaskSettingsSet `
         -AllowStartIfOnBatteries `
         -DontStopIfGoingOnBatteries `
         -StartWhenAvailable `
-        -RestartCount 3 `
+        -RestartCount 5 `
         -RestartInterval (New-TimeSpan -Minutes 1) `
-        -ExecutionTimeLimit (New-TimeSpan -Days 365)
+        -ExecutionTimeLimit (New-TimeSpan -Days 365) `
+        -MultipleInstances IgnoreNew
     
     $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
     
-    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
+    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $triggers -Settings $settings -Principal $principal -Force | Out-Null
     
     Write-MigrationLog "✓ Scheduled Task atualizada para v4" "SUCCESS"
     return $true
