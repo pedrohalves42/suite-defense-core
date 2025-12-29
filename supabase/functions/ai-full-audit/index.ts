@@ -57,21 +57,21 @@ serve(async (req) => {
       );
     }
 
-    // Get user's tenant
-    const { data: userRole } = await supabase
+    // Get user's tenant (supports users with multiple roles)
+    const { data: userRoles } = await supabase
       .from('user_roles')
       .select('tenant_id, role')
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_id', user.id);
 
-    if (!userRole || !['admin', 'super_admin'].includes(userRole.role)) {
+    const adminRole = userRoles?.find(r => ['admin', 'super_admin'].includes(r.role));
+    if (!adminRole) {
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const tenantId = userRole.tenant_id;
+    const tenantId = adminRole.tenant_id;
     console.log(`[ai-full-audit] Starting FULL audit for tenant ${tenantId} (Red → Ana → Gap)`);
 
     // Get metrics (shared between Red Team and Ana)

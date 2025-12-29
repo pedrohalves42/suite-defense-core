@@ -140,14 +140,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify super_admin role
+    // Verify super_admin role (supports users with multiple roles)
     const { data: roles } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_id', user.id);
 
-    if (!roles || roles.role !== 'super_admin') {
+    const isSuperAdmin = roles?.some(r => r.role === 'super_admin');
+    if (!isSuperAdmin) {
       return new Response(
         JSON.stringify({ error: 'Requires super_admin role' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
