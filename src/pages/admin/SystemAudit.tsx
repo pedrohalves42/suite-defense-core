@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Play, BarChart3, FileText, Clock, RefreshCw, Skull, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Loader2, Play, BarChart3, FileText, RefreshCw, Shield, TrendingUp, ShieldCheck } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import { 
   useAuditHistory, 
   useAuditById, 
@@ -91,14 +94,57 @@ export default function SystemAudit() {
     setActiveTab('overview');
   };
 
+  // Get global status based on audit scores
+  const getGlobalStatus = () => {
+    if (!currentAudit) {
+      return {
+        emoji: '⚪',
+        title: 'Sem dados',
+        description: 'Execute uma auditoria para ver o status do sistema.',
+        variant: 'neutral' as const
+      };
+    }
+    
+    const score = currentAudit.overall_score || 0;
+    const confidenceGap = latestConfidenceGap?.confidence_gap || 0;
+    
+    if (score >= 80 && confidenceGap >= 40) {
+      return {
+        emoji: '🟢',
+        title: 'Sistema saudável',
+        description: 'A análise indica que seu sistema está bem protegido.',
+        variant: 'success' as const
+      };
+    }
+    if (score >= 60 || confidenceGap >= 20) {
+      return {
+        emoji: '🟡',
+        title: 'Atenção recomendada',
+        description: 'Existem pontos de melhoria que merecem sua verificação.',
+        variant: 'warning' as const
+      };
+    }
+    return {
+      emoji: '🔴',
+      title: 'Ação necessária',
+      description: 'A análise encontrou vulnerabilidades que precisam ser corrigidas.',
+      variant: 'danger' as const
+    };
+  };
+
+  const globalStatus = getGlobalStatus();
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Auditoria do Sistema</h1>
-          <p className="text-muted-foreground">
-            Análise completa do CyberShield pela persona Ana, auditora especialista em SaaS
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            Verificação de Segurança
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Análise completa do sistema para garantir sua proteção
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -115,12 +161,12 @@ export default function SystemAudit() {
             {isRunning ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Ana...
+                Analisando...
               </>
             ) : (
               <>
                 <Play className="h-4 w-4 mr-2" />
-                Só Ana
+                Análise Rápida
               </>
             )}
           </Button>
@@ -128,17 +174,75 @@ export default function SystemAudit() {
             {isFullAuditRunning ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Auditoria Completa...
+                Verificação Completa...
               </>
             ) : (
               <>
-                <Skull className="h-4 w-4 mr-2" />
-                Auditoria Completa
+                <ShieldCheck className="h-4 w-4 mr-2" />
+                Verificação Completa
               </>
             )}
           </Button>
         </div>
       </div>
+
+      {/* 🔐 CAMADA 1: Status Global */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <Card className={cn(
+          "border-2",
+          globalStatus.variant === 'success' && "bg-green-500/5 border-green-500/30",
+          globalStatus.variant === 'warning' && "bg-amber-500/5 border-amber-500/30",
+          globalStatus.variant === 'danger' && "bg-red-500/5 border-red-500/30",
+          globalStatus.variant === 'neutral' && "bg-muted/50 border-border"
+        )}>
+          <CardContent className="py-6">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "p-4 rounded-full",
+                globalStatus.variant === 'success' && "bg-green-500/10",
+                globalStatus.variant === 'warning' && "bg-amber-500/10",
+                globalStatus.variant === 'danger' && "bg-red-500/10",
+                globalStatus.variant === 'neutral' && "bg-muted"
+              )}>
+                <Shield className={cn(
+                  "h-10 w-10",
+                  globalStatus.variant === 'success' && "text-green-500",
+                  globalStatus.variant === 'warning' && "text-amber-500",
+                  globalStatus.variant === 'danger' && "text-red-500",
+                  globalStatus.variant === 'neutral' && "text-muted-foreground"
+                )} />
+              </div>
+              <div className="flex-1">
+                <h2 className={cn(
+                  "text-xl font-bold",
+                  globalStatus.variant === 'success' && "text-green-600 dark:text-green-400",
+                  globalStatus.variant === 'warning' && "text-amber-600 dark:text-amber-400",
+                  globalStatus.variant === 'danger' && "text-red-600 dark:text-red-400",
+                  globalStatus.variant === 'neutral' && "text-muted-foreground"
+                )}>
+                  {globalStatus.emoji} {globalStatus.title}
+                </h2>
+                <p className="text-muted-foreground mt-1">
+                  {globalStatus.description}
+                </p>
+              </div>
+              {currentAudit && (
+                <div className="text-right">
+                  <div className={cn(
+                    "text-3xl font-bold",
+                    currentAudit.overall_score >= 80 && "text-green-600",
+                    currentAudit.overall_score >= 60 && currentAudit.overall_score < 80 && "text-amber-600",
+                    currentAudit.overall_score < 60 && "text-red-600"
+                  )}>
+                    {currentAudit.overall_score}%
+                  </div>
+                  <div className="text-xs text-muted-foreground">Pontuação geral</div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -156,9 +260,9 @@ export default function SystemAudit() {
           {!currentAudit ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <BarChart3 className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium">Nenhuma auditoria encontrada</h3>
+              <h3 className="text-lg font-medium">Nenhuma verificação encontrada</h3>
               <p className="text-muted-foreground mb-4">
-                Execute sua primeira auditoria para ver a análise completa do sistema
+                Execute sua primeira verificação para ver a análise completa do sistema
               </p>
               <Button onClick={handleRunFullAudit} disabled={anyAuditRunning}>
                 {anyAuditRunning ? (
@@ -168,46 +272,45 @@ export default function SystemAudit() {
                   </>
                 ) : (
                   <>
-                    <Skull className="h-4 w-4 mr-2" />
-                    Executar Primeira Auditoria
+                    <ShieldCheck className="h-4 w-4 mr-2" />
+                    Executar Primeira Verificação
                   </>
                 )}
               </Button>
             </div>
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-6">
+              {/* CAMADA 2: Tabs reduzidas de 6 para 4 - Linguagem humanizada */}
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview" className="gap-1 text-xs">
                   <BarChart3 className="h-4 w-4" />
                   <span className="hidden sm:inline">Visão Geral</span>
                 </TabsTrigger>
-                <TabsTrigger value="dimensions" className="gap-1 text-xs">
+                <TabsTrigger value="details" className="gap-1 text-xs">
                   <FileText className="h-4 w-4" />
-                  <span className="hidden sm:inline">Dimensões</span>
+                  <span className="hidden sm:inline">Detalhes</span>
                 </TabsTrigger>
-                <TabsTrigger value="executive" className="gap-1 text-xs">
-                  <Clock className="h-4 w-4" />
-                  <span className="hidden sm:inline">Executivo</span>
+                <TabsTrigger value="resistance" className="gap-1 text-xs">
+                  <Shield className="h-4 w-4" />
+                  <span className="hidden sm:inline">Teste de Resistência</span>
                 </TabsTrigger>
-                <TabsTrigger value="redteam" className="gap-1 text-xs">
-                  <Skull className="h-4 w-4" />
-                  <span className="hidden sm:inline">Red Team</span>
-                </TabsTrigger>
-                <TabsTrigger value="gap" className="gap-1 text-xs">
+                <TabsTrigger value="confidence" className="gap-1 text-xs">
                   <TrendingUp className="h-4 w-4" />
-                  <span className="hidden sm:inline">Gap</span>
-                </TabsTrigger>
-                <TabsTrigger value="falsification" className="gap-1 text-xs">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span className="hidden sm:inline">Falsificação</span>
+                  <span className="hidden sm:inline">Nível de Confiança</span>
                 </TabsTrigger>
               </TabsList>
 
+              {/* Visão Geral - combina radar + sumário executivo + verificação de consistência */}
               <TabsContent value="overview" className="space-y-6 mt-6">
                 <AuditRadarChart audit={currentAudit} previousAudit={previousAudit} />
+                <AuditExecutiveSummary audit={currentAudit} />
+                {falsificationCriteria.length > 0 && (
+                  <FalsificationCriteria criteria={falsificationCriteria} />
+                )}
               </TabsContent>
 
-              <TabsContent value="dimensions" className="mt-6">
+              {/* Detalhes - dimensões individuais */}
+              <TabsContent value="details" className="mt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Object.entries(currentAudit.dimensions).map(([key, dimension]) => (
                     <AuditDimensionCard 
@@ -220,20 +323,14 @@ export default function SystemAudit() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="executive" className="mt-6">
-                <AuditExecutiveSummary audit={currentAudit} />
-              </TabsContent>
-
-              <TabsContent value="redteam" className="mt-6">
+              {/* Teste de Resistência - Red Team humanizado */}
+              <TabsContent value="resistance" className="mt-6">
                 <RedTeamSummary assessment={latestRedTeam || null} />
               </TabsContent>
 
-              <TabsContent value="gap" className="mt-6">
+              {/* Nível de Confiança - Gap humanizado */}
+              <TabsContent value="confidence" className="mt-6">
                 <ConfidenceGapChart latestGap={latestConfidenceGap || null} trendData={confidenceGapTrend || []} />
-              </TabsContent>
-
-              <TabsContent value="falsification" className="mt-6">
-                <FalsificationCriteria criteria={falsificationCriteria} />
               </TabsContent>
             </Tabs>
           )}

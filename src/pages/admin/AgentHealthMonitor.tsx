@@ -24,7 +24,6 @@ export default function AgentHealthMonitor() {
   const { tenant } = useTenant();
   const [liveHeartbeats, setLiveHeartbeats] = useState<number>(0);
   const [recentHeartbeats, setRecentHeartbeats] = useState<string[]>([]);
-  const [isCleaningJobs, setIsCleaningJobs] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   // Fetch agent health metrics using RPC
@@ -40,35 +39,6 @@ export default function AgentHealthMonitor() {
     enabled: !!tenant?.id,
     refetchInterval: 30000,
   });
-
-  // Realtime subscription for heartbeats
-  useEffect(() => {
-    if (!tenant?.id) return;
-
-    const channel = supabase
-      .channel('agent-heartbeats')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'agents',
-          filter: `tenant_id=eq.${tenant.id}`
-        },
-        (payload: { new: { agent_name: string } }) => {
-          const agentName = payload.new.agent_name;
-          setLiveHeartbeats(prev => prev + 1);
-          setRecentHeartbeats(prev => [agentName, ...prev.slice(0, 4)]);
-          
-          toast.success(`✓ ${agentName} conectado`, { duration: 2000 });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [tenant?.id]);
 
   // Realtime subscription for heartbeats
   useEffect(() => {
