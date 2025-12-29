@@ -257,6 +257,17 @@ Deno.serve(async (req) => {
     // ========================================================
     // VIKTOR RECOVERY: Check for force_update and include in response
     // ========================================================
+    // Calcular se override está válido (não expirado) - buscar expires_at
+    const { data: overrideCheck } = await supabase
+      .from('agents')
+      .select('force_update_override_safe_mode_expires_at')
+      .eq('id', agent.id)
+      .single()
+    
+    const overrideValid = agent.force_update_override_safe_mode && 
+      (!overrideCheck?.force_update_override_safe_mode_expires_at || 
+       new Date(overrideCheck.force_update_override_safe_mode_expires_at) > new Date())
+
     if (agent.force_update_version && agent.force_update_version !== agent.agent_version) {
       logger.info('[PROXY] Force update pending', { 
         agentName: agent.agent_name,
@@ -320,7 +331,7 @@ Deno.serve(async (req) => {
             script_content_base64: base64Script,
             sha256: calculatedSha256,
             reason: agent.force_update_reason || 'System recovery update',
-            override_safe_mode: agent.force_update_override_safe_mode || false
+            override_safe_mode: overrideValid
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },

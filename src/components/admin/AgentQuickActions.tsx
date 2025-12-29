@@ -37,7 +37,7 @@ export function AgentQuickActions({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
-  const { removeThrottle, removeIsolation, resetSafeMode } = useAgentActions();
+  const { removeThrottle, removeIsolation, resetSafeMode, enableOverrideSafeMode } = useAgentActions();
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
@@ -109,24 +109,47 @@ export function AgentQuickActions({
           </Tooltip>
         )}
         {isInSafeMode && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => resetSafeMode.mutate(agentId)}
-                disabled={resetSafeMode.isPending}
-                className="text-orange-600 hover:text-orange-700 hover:bg-orange-100 dark:hover:bg-orange-900/20"
-              >
-                {resetSafeMode.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCcw className="h-4 w-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Reset Safe Mode</TooltipContent>
-          </Tooltip>
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => resetSafeMode.mutate(agentId)}
+                  disabled={resetSafeMode.isPending}
+                  className="text-orange-600 hover:text-orange-700 hover:bg-orange-100 dark:hover:bg-orange-900/20"
+                >
+                  {resetSafeMode.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCcw className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Reset Safe Mode (job)</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => enableOverrideSafeMode.mutate(agentId)}
+                  disabled={enableOverrideSafeMode.isPending}
+                  className="text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/20"
+                >
+                  {enableOverrideSafeMode.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ShieldOff className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="font-medium">Override Safe Mode (30 min)</p>
+                <p className="text-xs text-yellow-400">⚠️ Use apenas para recuperação de emergência</p>
+              </TooltipContent>
+            </Tooltip>
+          </>
         )}
         <Button
           variant="ghost"

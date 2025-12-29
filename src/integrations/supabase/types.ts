@@ -1926,6 +1926,7 @@ export type Database = {
           enrolled_at: string
           force_update_at: string | null
           force_update_override_safe_mode: boolean | null
+          force_update_override_safe_mode_expires_at: string | null
           force_update_reason: string | null
           force_update_version: string | null
           hmac_secret: string
@@ -1963,6 +1964,7 @@ export type Database = {
           enrolled_at?: string
           force_update_at?: string | null
           force_update_override_safe_mode?: boolean | null
+          force_update_override_safe_mode_expires_at?: string | null
           force_update_reason?: string | null
           force_update_version?: string | null
           hmac_secret: string
@@ -2000,6 +2002,7 @@ export type Database = {
           enrolled_at?: string
           force_update_at?: string | null
           force_update_override_safe_mode?: boolean | null
+          force_update_override_safe_mode_expires_at?: string | null
           force_update_reason?: string | null
           force_update_version?: string | null
           hmac_secret?: string

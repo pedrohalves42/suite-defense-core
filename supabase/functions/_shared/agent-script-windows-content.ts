@@ -796,6 +796,20 @@ function Invoke-ResetSafeModeJob {
         \$wasSafeMode = \$rollbackState.safe_mode
         \$previousRollbackCount = \$rollbackState.rollback_count
         
+        # IDEMPOTENCIA: Se safe mode ja estava desativado, apenas logar e retornar
+        if (-not \$wasSafeMode) {
+            Write-Log "[RESET-SAFE-MODE] Safe mode ja estava desativado - nenhuma acao necessaria" "INFO"
+            return @{ 
+                success = \$true
+                output = (@{
+                    previous_safe_mode = \$false
+                    previous_rollback_count = \$previousRollbackCount
+                    already_disabled = \$true
+                    message = "Safe mode was already disabled - no action taken"
+                } | ConvertTo-Json -Compress)
+            }
+        }
+        
         # Chamar funcao existente Reset-SafeMode
         \$resetResult = Reset-SafeMode -Reason "remote_job"
         
