@@ -948,33 +948,64 @@ Deno.serve(async (req) => {
       execution_id: execution_id || 'NOT_PROVIDED'
     })
 
-    // GOVERNANÇA: Validar contrato de sucesso para sync_blocked_websites
-    if (job.type === 'sync_blocked_websites' && status === 'completed' && output) {
-      const applyToHosts = outputData.apply_to_hosts === true
+    // GOVERNANÇA REAL: Validar enforcement de sync_blocked_websites
+    if (job.type === 'sync_blocked_websites' && status === 'completed') {
       const hostsModified = Number(outputData.hosts_modified) || 0
-      const blockedDomainsCount = Number(outputData.blocked_domains_count) || 0
+      const blockedDomainsCount = Number(outputData.blocked_domains_count) || Number(outputData.domains_count) || 0
+      const enforcementMethod = String(outputData.enforcement_method || 'none')
+      const dnsFilterRunning = outputData.dns_filter_running === true
       
-      if (applyToHosts && hostsModified === 0 && blockedDomainsCount > 0) {
+      console.log('[submit-job-result] [GOVERNANCE] sync_blocked_websites enforcement check:', {
+        job_id,
+        agent: agent.agent_name,
+        blocked_domains_count: blockedDomainsCount,
+        hosts_modified: hostsModified,
+        enforcement_method: enforcementMethod,
+        dns_filter_running: dnsFilterRunning
+      })
+      
+      // Verificar se houve enforcement REAL
+      const hasRealEnforcement = hostsModified > 0 || dnsFilterRunning
+      
+      if (blockedDomainsCount > 0 && !hasRealEnforcement) {
+        // Domínios para bloquear mas nenhum enforcement
         updateData.status = 'completed_with_warning'
-        updateData.error_message = `Bloqueio solicitado mas hosts_modified=0. ${blockedDomainsCount} domínios não foram aplicados ao arquivo hosts.`
-        console.warn('[submit-job-result] GOVERNANCE WARNING: sync_blocked_websites completed but hosts not modified', {
+        updateData.error_message = `${blockedDomainsCount} domínios para bloquear mas enforcement_method=${enforcementMethod}. Nenhuma modificação real aplicada.`
+        console.warn('[submit-job-result] [GOVERNANCE] ENFORCEMENT FALHOU: sites salvos mas nao bloqueados', {
           job_id,
           agent: agent.agent_name,
           blocked_domains_count: blockedDomainsCount,
-          hosts_modified: hostsModified
+          hosts_modified: hostsModified,
+          enforcement_method: enforcementMethod
+        })
+      } else if (blockedDomainsCount === 0) {
+        // Nenhum domínio para bloquear - isso é OK
+        console.log('[submit-job-result] [GOVERNANCE] Nenhum domínio para bloquear (lista vazia ou tenant sem bloqueios configurados)')
+      } else {
+        // Enforcement real confirmado
+        console.log('[submit-job-result] [GOVERNANCE] ENFORCEMENT CONFIRMADO:', {
+          job_id,
+          agent: agent.agent_name,
+          enforcement_method: enforcementMethod,
+          hosts_modified: hostsModified,
+          dns_filter_running: dnsFilterRunning
         })
       }
       
-      // Update last_block_sync_at timestamp on agent for sync status tracking
-      const { error: syncUpdateError } = await supabase
-        .from('agents')
-        .update({ last_block_sync_at: new Date().toISOString() })
-        .eq('id', agent.id)
-      
-      if (syncUpdateError) {
-        console.error('[submit-job-result] Failed to update last_block_sync_at:', syncUpdateError)
+      // Update last_block_sync_at SOMENTE se houve enforcement real
+      if (hasRealEnforcement || blockedDomainsCount === 0) {
+        const { error: syncUpdateError } = await supabase
+          .from('agents')
+          .update({ last_block_sync_at: new Date().toISOString() })
+          .eq('id', agent.id)
+        
+        if (syncUpdateError) {
+          console.error('[submit-job-result] Failed to update last_block_sync_at:', syncUpdateError)
+        } else {
+          console.log('[submit-job-result] Updated last_block_sync_at for agent:', agent.agent_name)
+        }
       } else {
-        console.log('[submit-job-result] Updated last_block_sync_at for agent:', agent.agent_name)
+        console.warn('[submit-job-result] [GOVERNANCE] last_block_sync_at NAO atualizado - enforcement nao confirmado')
       }
     }
 

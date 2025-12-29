@@ -1,13 +1,15 @@
 <#
-    CyberShield Agent - Windows v4.1.9
+    CyberShield Agent - Windows v4.2.0
+    
+    v4.2.0: REAL ENFORCEMENT - Website Blocking
+    - FIX: Invoke-SyncBlockedWebsitesJob now applies REAL blocking
+    - FIX: Saves to correct path (C:\ProgramData\CyberShield\blocked_websites.json)
+    - FIX: Uses correct JSON format for DNS Filter (blocked, version fields)
+    - NEW: Hosts file fallback with DNS cache flush (immediate blocking)
+    - NEW: Detailed output for backend governance validation
+    - NEW: enforcement_method field (dns_filter+hosts, hosts_file, none)
     
     v4.1.9: HASH CHAIN - Cryptographic Ledger
-    - NEW: Compute-ExecutionHash function for canonical execution hash
-    - NEW: Hash chain fields (execution_hash, previous_execution_hash, execution_index)
-    - NEW: execution_hash included in signed payload
-    - SECURITY: Immutable append-only ledger per agent
-    - SECURITY: Tamper detection via chain breaks
-    
     v4.1.8: PROOF OF EXECUTION (PoE) - Result Signing
     - ECDSA P-256 keypair generation (New-SigningKeyPair)
     - Public key registration (Register-SigningKey)
@@ -105,7 +107,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.1.9"
+    [string]$AgentVersion = "v4.2.0"
 )
 
 $ErrorActionPreference = "Stop"
