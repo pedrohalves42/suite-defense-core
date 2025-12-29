@@ -11787,6 +11787,7 @@ export type Database = {
           agent_name: string
           agent_version: string
           enrolled_at: string
+          has_critical_alerts: boolean
           health_status: string
           hostname: string
           id: string
