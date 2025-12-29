@@ -1919,6 +1919,9 @@ export type Database = {
         Row: {
           agent_mode: string | null
           agent_name: string
+          agent_state: string
+          agent_state_changed_at: string | null
+          agent_state_reason: string | null
           agent_version: string | null
           agent_version_code: number | null
           display_name: string | null
@@ -1957,6 +1960,9 @@ export type Database = {
         Insert: {
           agent_mode?: string | null
           agent_name: string
+          agent_state?: string
+          agent_state_changed_at?: string | null
+          agent_state_reason?: string | null
           agent_version?: string | null
           agent_version_code?: number | null
           display_name?: string | null
@@ -1995,6 +2001,9 @@ export type Database = {
         Update: {
           agent_mode?: string | null
           agent_name?: string
+          agent_state?: string
+          agent_state_changed_at?: string | null
+          agent_state_reason?: string | null
           agent_version?: string | null
           agent_version_code?: number | null
           display_name?: string | null
