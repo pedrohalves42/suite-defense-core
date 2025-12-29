@@ -5,7 +5,7 @@ import {
   Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, 
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Code, Heart, Search, Monitor, AppWindow, ListTodo, Receipt, GitBranch,
-  Download, Star, Building2, FileText, Cpu, Network, Percent
+  Download, Star, Building2, FileText, Cpu, Network, Percent, ClipboardCheck
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -118,6 +118,7 @@ export const AppSidebar = () => {
     { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity', section: 'security' },
     { icon: Clock, label: 'Histórico', to: '/admin/agent-timeline', section: 'security' },
     { icon: FileText, label: 'Relatórios', to: '/admin/reports', section: 'security' },
+    { icon: ClipboardCheck, label: 'Conformidade SOC 2', to: '/admin/soc2-compliance', section: 'security' },
     
     // === INFRAESTRUTURA (para técnicos) ===
     { icon: Network, label: 'Instalações', to: '/admin/installations', section: 'infrastructure' },

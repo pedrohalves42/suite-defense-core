@@ -107,6 +107,7 @@ import RulesManagement from "./pages/admin/RulesManagement";
 import RealTimeSecurityDashboard from "./pages/admin/RealTimeSecurityDashboard";
 import AutonomyDashboard from "./pages/admin/AutonomyDashboard";
 import SystemAudit from "./pages/admin/SystemAudit";
+import SOC2Dashboard from "./pages/admin/SOC2Dashboard";
 import {
   ClientDashboard, 
   ClientComputers, 
@@ -217,6 +218,7 @@ const App = () => (
                 <Route path="realtime-security" element={<RealTimeSecurityDashboard />} />
                 <Route path="ai-autonomy" element={<AutonomyDashboard />} />
                 <Route path="system-audit" element={<SystemAudit />} />
+                <Route path="soc2-compliance" element={<SOC2Dashboard />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
