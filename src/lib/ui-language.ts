@@ -10,6 +10,12 @@
  * 2. Sempre responder: O que aconteceu? É problema? Preciso agir?
  * 3. Mostrar efeito, nunca mecanismo
  * 4. Toda ação parece reversível e segura
+ * 
+ * USO:
+ * - t('agent') → 'computador'
+ * - menu('dashboard') → 'Painel Principal'
+ * - section('security') → 'Segurança'
+ * - sentence('computerOk') → 'Este computador está protegido.'
  */
 
 // ============================================
@@ -82,6 +88,9 @@ export const UI_DICTIONARY = {
   reject: 'rejeitar',
 } as const;
 
+// Tipo para chaves do dicionário
+export type UITermKey = keyof typeof UI_DICTIONARY;
+
 // ============================================
 // LABELS DE SEÇÕES DO MENU (HUMANIZADOS)
 // ============================================
@@ -97,6 +106,9 @@ export const MENU_SECTIONS = {
   billing: 'Financeiro',
   superAdmin: 'Super Admin',
 } as const;
+
+// Tipo para chaves de seções
+export type MenuSectionKey = keyof typeof MENU_SECTIONS;
 
 // ============================================
 // LABELS DE MENU HUMANIZADOS
@@ -160,6 +172,9 @@ export const MENU_LABELS = {
   subscriptions: 'Assinaturas',
 } as const;
 
+// Tipo para chaves de labels de menu
+export type MenuLabelKey = keyof typeof MENU_LABELS;
+
 // ============================================
 // MENSAGENS DE STATUS (AUTOEXPLICATIVAS)
 // ============================================
@@ -189,29 +204,94 @@ export const STATUS_MESSAGES = {
 } as const;
 
 // ============================================
-// HELPERS
+// FRASES COMPLETAS - PADRONIZADAS
+// ============================================
+
+export const UI_SENTENCES = {
+  // Status de computador
+  computerOk: 'Este computador está protegido.',
+  computerAttention: 'Este computador precisa de atenção.',
+  computerOffline: 'Este computador está desconectado.',
+  computerIsolated: 'Este computador foi isolado por segurança.',
+  
+  // Ações do sistema
+  systemActed: 'O sistema tomou uma ação automaticamente.',
+  actionReversible: 'Esta ação pode ser revertida a qualquer momento.',
+  actionApplied: 'Ação aplicada com sucesso.',
+  actionFailed: 'Não foi possível aplicar a ação.',
+  
+  // Orientação ao usuário
+  noActionNeeded: 'Você não precisa fazer nada agora.',
+  actionPending: 'Sua confirmação é necessária.',
+  reviewRecommended: 'Recomendamos revisar os detalhes abaixo.',
+  waitMoment: 'Aguarde um momento...',
+  
+  // Verificações
+  verificationSuccess: 'Verificação concluída com sucesso.',
+  verificationFailed: 'Não foi possível verificar este computador agora.',
+  verificationPending: 'Verificação em andamento...',
+  verificationScheduled: 'Verificação agendada.',
+  
+  // Segurança
+  threatBlocked: 'Ameaça bloqueada automaticamente.',
+  riskDetected: 'Comportamento de risco detectado.',
+  allClear: 'Nenhum problema encontrado.',
+  protectionActive: 'Proteção ativa.',
+  
+  // Erros amigáveis
+  tryAgain: 'Tente novamente em alguns minutos.',
+  contactSupport: 'Entre em contato com o suporte se o problema persistir.',
+  connectionLost: 'Conexão perdida. Reconectando...',
+  
+  // Confirmações
+  confirmAction: 'Tem certeza que deseja continuar?',
+  actionConfirmed: 'Ação confirmada.',
+  actionCancelled: 'Ação cancelada.',
+} as const;
+
+// Tipo para chaves de frases
+export type UISentenceKey = keyof typeof UI_SENTENCES;
+
+// ============================================
+// HELPERS TIPADOS
 // ============================================
 
 /**
  * Traduz um termo técnico para linguagem humana
+ * @example t('agent') → 'computador'
  */
-export const humanize = (term: keyof typeof UI_DICTIONARY): string => {
-  return UI_DICTIONARY[term] || term;
-};
+export function t(key: UITermKey): string {
+  return UI_DICTIONARY[key];
+}
 
 /**
- * Traduz um label de menu
+ * Retorna um label de menu
+ * @example menu('dashboard') → 'Painel Principal'
  */
-export const getMenuLabel = (key: keyof typeof MENU_LABELS): string => {
-  return MENU_LABELS[key] || key;
-};
+export function menu(key: MenuLabelKey): string {
+  return MENU_LABELS[key];
+}
 
 /**
- * Traduz uma seção de menu
+ * Retorna uma seção de menu
+ * @example section('security') → 'Segurança'
  */
-export const getSectionLabel = (key: keyof typeof MENU_SECTIONS): string => {
-  return MENU_SECTIONS[key] || key;
-};
+export function section(key: MenuSectionKey): string {
+  return MENU_SECTIONS[key];
+}
+
+/**
+ * Retorna uma frase completa padronizada
+ * @example sentence('computerOk') → 'Este computador está protegido.'
+ */
+export function sentence(key: UISentenceKey): string {
+  return UI_SENTENCES[key];
+}
+
+// Aliases para retrocompatibilidade
+export const humanize = t;
+export const getMenuLabel = menu;
+export const getSectionLabel = section;
 
 /**
  * Retorna a mensagem de status apropriada baseada no score de segurança
