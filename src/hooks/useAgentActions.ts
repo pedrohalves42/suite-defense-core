@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { prepareJobForInsert } from '@/lib/job-utils';
 
 export function useAgentActions() {
   const queryClient = useQueryClient();
@@ -134,11 +135,77 @@ export function useAgentActions() {
     },
   });
 
+  const resetSafeMode = useMutation({
+    mutationFn: async (agentId: string) => {
+      // Buscar agent_name e tenant_id
+      const { data: agent, error: agentError } = await supabase
+        .from('agents')
+        .select('agent_name, tenant_id')
+        .eq('id', agentId)
+        .single();
+      
+      if (agentError || !agent) throw new Error('Agente não encontrado');
+      
+      // Criar job reset_safe_mode
+      const job = await prepareJobForInsert({
+        agent_name: agent.agent_name,
+        type: 'reset_safe_mode',
+        payload: { triggered_by: 'admin_action', triggered_at: new Date().toISOString() },
+        tenant_id: agent.tenant_id,
+        approved: true,
+      });
+      
+      const { error } = await supabase.from('jobs').insert(job);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Job de reset enviado',
+        description: 'O safe mode será resetado no próximo heartbeat do agente',
+      });
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      queryClient.invalidateQueries({ queryKey: ['jobs'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro ao criar job de reset',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const enableOverrideSafeMode = useMutation({
+    mutationFn: async (agentId: string) => {
+      const { error } = await supabase
+        .from('agents')
+        .update({ force_update_override_safe_mode: true })
+        .eq('id', agentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Override habilitado',
+        description: 'O force_update agora irá ignorar o safe mode local',
+      });
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro ao habilitar override',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
   return {
     removeThrottle,
     removeIsolation,
     unblockVersion,
     toggleRule,
     executeRulesEngine,
+    resetSafeMode,
+    enableOverrideSafeMode,
   };
 }

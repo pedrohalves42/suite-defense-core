@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Trash2, Key, Stethoscope, Loader2, Clock, ShieldOff } from 'lucide-react';
+import { Trash2, Key, Stethoscope, Loader2, Clock, ShieldOff, RefreshCcw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -23,6 +23,7 @@ interface AgentQuickActionsProps {
   agentName: string;
   isThrottled?: boolean | null;
   isIsolated?: boolean | null;
+  isInSafeMode?: boolean | null;
 }
 
 export function AgentQuickActions({ 
@@ -30,12 +31,13 @@ export function AgentQuickActions({
   agentName,
   isThrottled,
   isIsolated,
+  isInSafeMode,
 }: AgentQuickActionsProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
-  const { removeThrottle, removeIsolation } = useAgentActions();
+  const { removeThrottle, removeIsolation, resetSafeMode } = useAgentActions();
 
   const cleanupMutation = useMutation({
     mutationFn: async () => {
@@ -104,6 +106,26 @@ export function AgentQuickActions({
               </Button>
             </TooltipTrigger>
             <TooltipContent>Remover Isolamento</TooltipContent>
+          </Tooltip>
+        )}
+        {isInSafeMode && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => resetSafeMode.mutate(agentId)}
+                disabled={resetSafeMode.isPending}
+                className="text-orange-600 hover:text-orange-700 hover:bg-orange-100 dark:hover:bg-orange-900/20"
+              >
+                {resetSafeMode.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCcw className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Reset Safe Mode</TooltipContent>
           </Tooltip>
         )}
         <Button

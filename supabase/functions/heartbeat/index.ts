@@ -214,7 +214,7 @@ Deno.serve(async (req) => {
     // ============================================================
     const { data: forceCheck } = await supabase
       .from('agents')
-      .select('force_update_version, force_update_reason')
+      .select('force_update_version, force_update_reason, force_update_override_safe_mode')
       .eq('id', agent.id)
       .single()
 
@@ -274,7 +274,8 @@ Deno.serve(async (req) => {
             target_version: release.version,
             script_content_base64: base64Script,
             sha256: calculatedSha256,
-            reason: forceCheck.force_update_reason || 'Forced update via backend'
+            reason: forceCheck.force_update_reason || 'Forced update via backend',
+            override_safe_mode: forceCheck.force_update_override_safe_mode || false
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
