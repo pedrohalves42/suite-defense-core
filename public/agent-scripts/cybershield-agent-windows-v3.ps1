@@ -39,7 +39,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v3.10.40-DNS-FILTER"
+    [string]$AgentVersion = "v3.10.41-AUTO-RECOVERY"
 )
 
 $ErrorActionPreference = "Stop"
@@ -2412,15 +2412,28 @@ function Execute-Job {
                     
                     Write-Log "[REINSTALL] Script instalado: $targetScript" "SUCCESS"
                     
-                    # Criar nova scheduled task
+                    # Criar nova scheduled task com AUTO-RECOVERY
                     $action = New-ScheduledTaskAction -Execute "powershell.exe" `
                         -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$targetScript`""
-                    $trigger = New-ScheduledTaskTrigger -AtStartup
-                    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-                        -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+                    
+                    # CRITICAL FIX v3.10.41: Triggers duplos para auto-recovery
+                    $triggers = @(
+                        (New-ScheduledTaskTrigger -AtStartup),
+                        (New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5))
+                    )
+                    
+                    $settings = New-ScheduledTaskSettingsSet `
+                        -AllowStartIfOnBatteries `
+                        -DontStopIfGoingOnBatteries `
+                        -StartWhenAvailable `
+                        -RestartCount 5 `
+                        -RestartInterval (New-TimeSpan -Minutes 1) `
+                        -ExecutionTimeLimit (New-TimeSpan -Days 365) `
+                        -MultipleInstances IgnoreNew
+                    
                     $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
                     
-                    Register-ScheduledTask -TaskName "CyberShieldAgent" -Action $action -Trigger $trigger `
+                    Register-ScheduledTask -TaskName "CyberShieldAgent" -Action $action -Trigger $triggers `
                         -Settings $settings -Principal $principal -Force | Out-Null
                     
                     Start-ScheduledTask -TaskName "CyberShieldAgent"
@@ -2746,5 +2759,20 @@ try {
 catch {
     Write-Log "[FATAL] Erro fatal no agente: $($_.Exception.Message)" "ERROR"
     Write-Log "Stack trace: $($_.ScriptStackTrace)" "ERROR"
-    exit 1
+    
+    # CRITICAL FIX v3.10.41: NAO fazer exit 1 - deixar RepetitionInterval reiniciar
+    Write-Log "[RECOVERY] Aguardando 30s antes de tentar auto-recovery..." "WARN"
+    Start-Sleep -Seconds 30
+    
+    try {
+        $taskInfo = Get-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
+        if ($taskInfo -and $taskInfo.State -ne "Running") {
+            Start-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
+            Write-Log "[RECOVERY] Scheduled Task reiniciada" "INFO"
+        }
+    } catch {
+        Write-Log "[RECOVERY] Falha ao reiniciar task. RepetitionInterval reiniciara em 5min." "WARN"
+    }
+    
+    # NAO fazer exit 1
 }

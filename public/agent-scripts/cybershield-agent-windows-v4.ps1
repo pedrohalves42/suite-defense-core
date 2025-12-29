@@ -1,12 +1,13 @@
 <#
-    CyberShield Agent - Windows v4.2.1
+    CyberShield Agent - Windows v4.2.2
     
-    v4.2.1: Opera Browser Support
-    - NEW: Coleta de histórico do Opera (Opera Stable)
-    - NEW: Coleta de histórico do Opera GX (Opera GX Stable)
-    - Opera usa mesmo formato Chromium do Chrome/Edge
-    - Path: AppData\Roaming\Opera Software\Opera Stable\History
-    - Path: AppData\Roaming\Opera Software\Opera GX Stable\History
+    v4.2.2: AUTO-RECOVERY - Agentes nao ficam mais offline permanentemente
+    - CRITICAL FIX: Scheduled Task com RepetitionInterval de 5 minutos
+    - CRITICAL FIX: Removido exit 1 do catch fatal - nao mata processo permanentemente
+    - CRITICAL FIX: RestartCount aumentado de 3 para 5
+    - CRITICAL FIX: ExecutionTimeLimit 365 dias (nunca timeout)
+    - CRITICAL FIX: MultipleInstances = IgnoreNew evita duplicatas
+    - NEW: Auto-recovery tenta reiniciar task antes de morrer
     
     v4.2.0: REAL ENFORCEMENT - Website Blocking
     v4.1.8: PROOF OF EXECUTION (PoE) - Result Signing
@@ -106,7 +107,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.2.0"
+    [string]$AgentVersion = "v4.2.2"
 )
 
 $ErrorActionPreference = "Stop"
@@ -4062,15 +4063,30 @@ function Invoke-ReinstallAgentJob {
         Copy-Item -Path $tempScript -Destination $targetScript -Force
         Remove-Item $tempScript -Force
         
-        # Criar nova scheduled task
+        # Criar nova scheduled task com RECOVERY AUTOMATICO
         $action = New-ScheduledTaskAction -Execute "powershell.exe" `
             -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$targetScript`""
-        $trigger = New-ScheduledTaskTrigger -AtStartup
-        $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-            -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+        
+        # CRITICAL FIX v4.2.2: Triggers duplos para auto-recovery
+        # AtStartup: Inicia com Windows
+        # RepetitionInterval 5min: Reinicia automaticamente se processo morrer
+        $triggers = @(
+            (New-ScheduledTaskTrigger -AtStartup),
+            (New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5))
+        )
+        
+        $settings = New-ScheduledTaskSettingsSet `
+            -AllowStartIfOnBatteries `
+            -DontStopIfGoingOnBatteries `
+            -StartWhenAvailable `
+            -RestartCount 5 `
+            -RestartInterval (New-TimeSpan -Minutes 1) `
+            -ExecutionTimeLimit (New-TimeSpan -Days 365) `
+            -MultipleInstances IgnoreNew
+        
         $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
         
-        Register-ScheduledTask -TaskName "CyberShieldAgent" -Action $action -Trigger $trigger `
+        Register-ScheduledTask -TaskName "CyberShieldAgent" -Action $action -Trigger $triggers `
             -Settings $settings -Principal $principal -Force | Out-Null
         
         Start-ScheduledTask -TaskName "CyberShieldAgent"
@@ -5278,8 +5294,26 @@ catch {
         stack = $_.ScriptStackTrace
     } -Severity "critical"
     
-    # Flush final antes de morrer
+    # Flush final
     Invoke-FlushEvidence
     
-    exit 1
+    # CRITICAL FIX v4.2.2: NAO fazer exit 1 - deixar RepetitionInterval reiniciar
+    # Aguardar e tentar reiniciar via Scheduled Task
+    Write-Log "[RECOVERY] Aguardando 30s antes de tentar auto-recovery..." "WARN"
+    Start-Sleep -Seconds 30
+    
+    try {
+        # Tentar reiniciar a propria task
+        $taskInfo = Get-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
+        if ($taskInfo -and $taskInfo.State -ne "Running") {
+            Start-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
+            Write-Log "[RECOVERY] Scheduled Task reiniciada manualmente" "INFO"
+        } else {
+            Write-Log "[RECOVERY] Task ja em execucao ou nao encontrada, deixando RepetitionInterval agir" "WARN"
+        }
+    } catch {
+        Write-Log "[RECOVERY] Falha ao reiniciar task: $($_.Exception.Message). RepetitionInterval reiniciara em 5min." "WARN"
+    }
+    
+    # NAO fazer exit 1 - o RepetitionInterval da Scheduled Task reiniciara o agente
 }
