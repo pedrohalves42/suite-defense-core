@@ -3826,13 +3826,27 @@ function Invoke-CollectNetworkInfoJob {
     }
 }
 
-# SYNC BLOCKED WEBSITES JOB - Sincroniza lista de sites bloqueados
+# SYNC BLOCKED WEBSITES JOB - Sincroniza lista de sites bloqueados com ENFORCEMENT REAL
 function Invoke-SyncBlockedWebsitesJob {
     param($Job)
     
     try {
-        Write-Log "[BLOCKED-SITES] Iniciando sincronizacao de sites bloqueados..." "INFO"
+        Write-Log "[BLOCKED-SITES] Iniciando sincronizacao de sites bloqueados (ENFORCEMENT REAL)..." "INFO"
         
+        # Extrair payload do job
+        $jobPayload = $Job.payload
+        $applyToHosts = $false
+        $autoInstallDnsFilter = $false
+        
+        if ($null -ne $jobPayload) {
+            if ($jobPayload -is [string]) {
+                try { $jobPayload = $jobPayload | ConvertFrom-Json } catch { }
+            }
+            $applyToHosts = $jobPayload.apply_to_hosts -eq $true
+            $autoInstallDnsFilter = $jobPayload.auto_install_dns_filter -eq $true
+        }
+        
+        # 1. BUSCAR LISTA DE SITES BLOQUEADOS
         $result = Invoke-SecureRequest `
             -Path "/functions/v1/get-blocked-websites" `
             -Method "GET" `
@@ -3854,24 +3868,140 @@ function Invoke-SyncBlockedWebsitesJob {
         
         Write-Log "[BLOCKED-SITES] Recebidos $($blockedDomains.Count) dominios bloqueados" "INFO"
         
-        $blockedListPath = "C:\CyberShield\blocked_websites.json"
+        # 2. SALVAR NO FORMATO CORRETO PARA O DNS FILTER
+        # Path correto: C:\ProgramData\CyberShield\blocked_websites.json
+        $programDataDir = "C:\ProgramData\CyberShield"
+        if (-not (Test-Path $programDataDir)) {
+            New-Item -ItemType Directory -Path $programDataDir -Force | Out-Null
+        }
+        
+        $blockedListPath = Join-Path $programDataDir "blocked_websites.json"
+        
+        # Formato correto esperado pelo DNS Filter
         $blockedData = @{
+            version = "1.0.0"
+            blocked = $blockedDomains
             updated_at = [DateTime]::UtcNow.ToString("o")
-            domains = $blockedDomains
+            source = "cybershield-agent"
         }
         
         $blockedJson = $blockedData | ConvertTo-Json -Compress
         [System.IO.File]::WriteAllText($blockedListPath, $blockedJson, [System.Text.UTF8Encoding]::new($false))
         
-        Write-Log "[BLOCKED-SITES] Lista salva em $blockedListPath" "SUCCESS"
+        Write-Log "[BLOCKED-SITES] Lista salva em $blockedListPath (formato DNS Filter)" "SUCCESS"
+        
+        # Tambem salvar na pasta CyberShield para compatibilidade
+        $legacyPath = "C:\CyberShield\blocked_websites.json"
+        [System.IO.File]::WriteAllText($legacyPath, $blockedJson, [System.Text.UTF8Encoding]::new($false))
+        
+        # 3. APLICAR AO HOSTS FILE (FALLBACK IMEDIATO)
+        $hostsModified = 0
+        $hostsPath = "C:\Windows\System32\drivers\etc\hosts"
+        
+        if ($blockedDomains.Count -gt 0) {
+            try {
+                Write-Log "[BLOCKED-SITES] Aplicando bloqueio ao hosts file..." "INFO"
+                
+                # Ler hosts atual
+                $hostsContent = Get-Content $hostsPath -Raw -ErrorAction SilentlyContinue
+                if (-not $hostsContent) { $hostsContent = "" }
+                
+                # Marcadores CyberShield
+                $startMarker = "# === CYBERSHIELD BLOCKED SITES START ==="
+                $endMarker = "# === CYBERSHIELD BLOCKED SITES END ==="
+                
+                # Remover bloco anterior
+                if ($hostsContent -match "(?s)$([regex]::Escape($startMarker)).*?$([regex]::Escape($endMarker))") {
+                    $hostsContent = $hostsContent -replace "(?s)$([regex]::Escape($startMarker)).*?$([regex]::Escape($endMarker))\r?\n?", ""
+                }
+                
+                # Criar novo bloco de bloqueios
+                $blockLines = @($startMarker)
+                $blockLines += "# Updated: $([DateTime]::UtcNow.ToString('o'))"
+                
+                foreach ($domain in $blockedDomains) {
+                    # Normalizar dominio
+                    $cleanDomain = $domain -replace '^\*\.', ''
+                    if ($cleanDomain -and $cleanDomain.Length -gt 0) {
+                        $blockLines += "0.0.0.0 $cleanDomain"
+                        $blockLines += "0.0.0.0 www.$cleanDomain"
+                        $hostsModified += 2
+                    }
+                }
+                
+                $blockLines += $endMarker
+                
+                # Escrever hosts atualizado
+                $newHostsContent = $hostsContent.TrimEnd() + "`r`n`r`n" + ($blockLines -join "`r`n") + "`r`n"
+                [System.IO.File]::WriteAllText($hostsPath, $newHostsContent, [System.Text.Encoding]::ASCII)
+                
+                Write-Log "[BLOCKED-SITES] Adicionadas $hostsModified entradas ao hosts file" "SUCCESS"
+                
+                # 4. FLUSH DNS CACHE
+                $flushResult = Start-Process -FilePath "ipconfig" -ArgumentList "/flushdns" -Wait -NoNewWindow -PassThru
+                if ($flushResult.ExitCode -eq 0) {
+                    Write-Log "[BLOCKED-SITES] DNS cache limpo com sucesso" "SUCCESS"
+                } else {
+                    Write-Log "[BLOCKED-SITES] Aviso: Falha ao limpar DNS cache (exit code $($flushResult.ExitCode))" "WARN"
+                }
+            }
+            catch {
+                Write-Log "[BLOCKED-SITES] Erro ao modificar hosts file: $($_.Exception.Message)" "ERROR"
+                # Continuar mesmo se falhar - nao e critico
+            }
+        }
+        
+        # 5. VERIFICAR/INSTALAR DNS FILTER SERVICE (se configurado)
+        $dnsFilterInstalled = $false
+        $dnsFilterRunning = $false
+        
+        try {
+            $dnsService = Get-Service -Name "CyberShield-DNS" -ErrorAction SilentlyContinue
+            if ($null -ne $dnsService) {
+                $dnsFilterInstalled = $true
+                $dnsFilterRunning = $dnsService.Status -eq "Running"
+                Write-Log "[BLOCKED-SITES] DNS Filter service status: $($dnsService.Status)" "INFO"
+                
+                # Se instalado mas parado, tentar iniciar
+                if (-not $dnsFilterRunning) {
+                    try {
+                        Start-Service -Name "CyberShield-DNS" -ErrorAction Stop
+                        $dnsFilterRunning = $true
+                        Write-Log "[BLOCKED-SITES] DNS Filter service iniciado" "SUCCESS"
+                    }
+                    catch {
+                        Write-Log "[BLOCKED-SITES] Falha ao iniciar DNS Filter: $($_.Exception.Message)" "WARN"
+                    }
+                }
+            }
+            else {
+                Write-Log "[BLOCKED-SITES] DNS Filter service nao instalado - usando apenas hosts file" "INFO"
+            }
+        }
+        catch {
+            Write-Log "[BLOCKED-SITES] Erro ao verificar DNS Filter: $($_.Exception.Message)" "WARN"
+        }
+        
+        # 6. RETORNAR OUTPUT DETALHADO PARA GOVERNANCA
+        $outputData = @{
+            message = "Sites bloqueados sincronizados com ENFORCEMENT REAL"
+            domains_count = $blockedDomains.Count
+            blocked_domains_count = $blockedDomains.Count
+            list_path = $blockedListPath
+            legacy_path = $legacyPath
+            apply_to_hosts = $true
+            hosts_modified = $hostsModified
+            dns_filter_installed = $dnsFilterInstalled
+            dns_filter_running = $dnsFilterRunning
+            enforcement_method = if ($dnsFilterRunning) { "dns_filter+hosts" } elseif ($hostsModified -gt 0) { "hosts_file" } else { "none" }
+            sync_timestamp = [DateTime]::UtcNow.ToString("o")
+        }
+        
+        Write-Log "[BLOCKED-SITES] Enforcement completo: $($outputData.enforcement_method)" "SUCCESS"
         
         return @{
             success = $true
-            output = (@{
-                message = "Sites bloqueados sincronizados"
-                domains_count = $blockedDomains.Count
-                list_path = $blockedListPath
-            } | ConvertTo-Json -Compress)
+            output = ($outputData | ConvertTo-Json -Compress)
         }
     }
     catch {
