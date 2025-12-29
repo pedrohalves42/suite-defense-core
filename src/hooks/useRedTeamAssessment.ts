@@ -63,6 +63,9 @@ export function useRedTeamHistory() {
 
       if (error) throw error;
       return (data || []) as unknown as RedTeamAssessment[];
+    },
+  });
+}
 
 export function useRedTeamById(id: string | null) {
   return useQuery({
