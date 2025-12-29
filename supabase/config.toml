@@ -558,3 +558,7 @@ verify_jwt = false
 [functions.auto-execute-ai-actions]
 verify_jwt = false
 schedule = "*/30 * * * *"
+
+# === AI System Audit (Ana Persona) ===
+[functions.ai-system-audit]
+verify_jwt = true
