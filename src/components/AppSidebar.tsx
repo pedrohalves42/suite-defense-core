@@ -5,7 +5,8 @@ import {
   Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, 
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Code, Heart, Search, Monitor, AppWindow, ListTodo, Receipt, GitBranch,
-  Download, Star, Building2, FileText, Cpu, Network, Percent, ClipboardCheck
+  Download, Star, Building2, FileText, Cpu, Network, Percent, ClipboardCheck,
+  FileCheck
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -47,6 +48,7 @@ export const AppSidebar = () => {
     return saved ? JSON.parse(saved) : {
       monitoring: true,
       security: true,
+      compliance: true,
       infrastructure: false,
       ai: false,
       management: false,
@@ -118,7 +120,11 @@ export const AppSidebar = () => {
     { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity', section: 'security' },
     { icon: Clock, label: 'Histórico', to: '/admin/agent-timeline', section: 'security' },
     { icon: FileText, label: 'Relatórios', to: '/admin/reports', section: 'security' },
-    { icon: ClipboardCheck, label: 'Conformidade SOC 2', to: '/admin/soc2-compliance', section: 'security' },
+    
+    // === CONFORMIDADE (para auditor / investidor) ===
+    { icon: ClipboardCheck, label: 'Prontidão SOC 2', to: '/admin/soc2-compliance', section: 'compliance' },
+    { icon: ScrollText, label: 'Timeline de Compliance', to: '/admin/compliance-timeline', section: 'compliance' },
+    { icon: FileCheck, label: 'Auditoria do Sistema', to: '/admin/system-audit', section: 'compliance' },
     
     // === INFRAESTRUTURA (para técnicos) ===
     { icon: Network, label: 'Instalações', to: '/admin/installations', section: 'infrastructure' },
@@ -433,6 +439,7 @@ export const AppSidebar = () => {
               <div className="space-y-1">
                 {renderCollapsibleSection('📊 Monitoramento', 'monitoring', adminItems.filter(i => i.section === 'monitoring'))}
                 {renderCollapsibleSection('🛡️ Segurança', 'security', adminItems.filter(i => i.section === 'security'))}
+                {renderCollapsibleSection('📋 Conformidade', 'compliance', adminItems.filter(i => i.section === 'compliance'))}
                 {renderCollapsibleSection('⚙️ Infraestrutura', 'infrastructure', adminItems.filter(i => i.section === 'infrastructure'))}
                 {renderCollapsibleSection('🤖 Inteligência Artificial', 'ai', adminItems.filter(i => i.section === 'ai'))}
                 {renderCollapsibleSection('👥 Gestão', 'management', adminItems.filter(i => i.section === 'management'))}

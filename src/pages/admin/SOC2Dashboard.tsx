@@ -1,6 +1,6 @@
 /**
- * SOC 2 Readiness Dashboard
- * Displays compliance readiness for SOC 2 Type I
+ * Painel de Prontidão SOC 2
+ * Exibe o status de conformidade para auditoria SOC 2 Type I
  */
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,24 +17,24 @@ export default function SOC2Dashboard() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">SOC 2 Readiness</h1>
-          <p className="text-muted-foreground">Trust Services Criteria (Type I)</p>
+          <h1 className="text-3xl font-bold">Prontidão para Auditoria SOC 2</h1>
+          <p className="text-muted-foreground">Critérios de Confiança (Type I)</p>
         </div>
         <Badge variant={overallScore >= 80 ? 'default' : overallScore >= 60 ? 'secondary' : 'destructive'} className="text-lg px-4 py-2">
-          {overallScore}% Ready
+          {overallScore}% Pronto
         </Badge>
       </div>
 
-      {/* Overview Cards */}
+      {/* Cards de Resumo */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
-              Overall Score
+              Progresso Geral
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -47,7 +47,7 @@ export default function SOC2Dashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              Criteria Met
+              Critérios Atendidos
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -62,12 +62,12 @@ export default function SOC2Dashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <FileText className="h-4 w-4 text-blue-500" />
-              Policies
+              Políticas Documentadas
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">9/9</div>
-            <p className="text-xs text-muted-foreground">Templates ready</p>
+            <p className="text-xs text-muted-foreground">Prontas para auditor</p>
           </CardContent>
         </Card>
 
@@ -75,22 +75,22 @@ export default function SOC2Dashboard() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Clock className="h-4 w-4 text-yellow-500" />
-              Est. Time to Type I
+              Tempo Estimado
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">60-90</div>
-            <p className="text-xs text-muted-foreground">dias</p>
+            <p className="text-xs text-muted-foreground">dias para Type I</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabs */}
+      {/* Abas */}
       <Tabs defaultValue="criteria" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="criteria">CC1-CC9</TabsTrigger>
+          <TabsTrigger value="criteria">Critérios CC1-CC9</TabsTrigger>
           <TabsTrigger value="policies">Políticas</TabsTrigger>
-          <TabsTrigger value="vendors">Vendors</TabsTrigger>
+          <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
         </TabsList>
 
         {/* Criteria Tab */}
@@ -144,13 +144,13 @@ export default function SOC2Dashboard() {
           </div>
         </TabsContent>
 
-        {/* Vendors Tab */}
+        {/* Aba de Fornecedores */}
         <TabsContent value="vendors" className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
-              { name: 'Supabase', type: 'Database/Auth', certs: ['SOC 2 Type II'], criticality: 'critical' },
-              { name: 'Stripe', type: 'Payments', certs: ['PCI-DSS', 'SOC 2'], criticality: 'critical' },
-              { name: 'Vercel/Cloud', type: 'Hosting', certs: ['SOC 2', 'ISO 27001'], criticality: 'high' },
+              { name: 'Supabase', type: 'Banco de Dados / Autenticação', certs: ['SOC 2 Type II'], criticality: 'crítico', criticalityLabel: 'Crítico' },
+              { name: 'Stripe', type: 'Pagamentos', certs: ['PCI-DSS', 'SOC 2'], criticality: 'crítico', criticalityLabel: 'Crítico' },
+              { name: 'Vercel/Cloud', type: 'Hospedagem', certs: ['SOC 2', 'ISO 27001'], criticality: 'alto', criticalityLabel: 'Alto' },
             ].map((vendor) => (
               <Card key={vendor.name}>
                 <CardHeader className="pb-2">
@@ -159,8 +159,8 @@ export default function SOC2Dashboard() {
                       <Building2 className="h-4 w-4" />
                       {vendor.name}
                     </CardTitle>
-                    <Badge variant={vendor.criticality === 'critical' ? 'destructive' : 'secondary'}>
-                      {vendor.criticality}
+                    <Badge variant={vendor.criticality === 'crítico' ? 'destructive' : 'secondary'}>
+                      {vendor.criticalityLabel}
                     </Badge>
                   </div>
                   <CardDescription>{vendor.type}</CardDescription>
