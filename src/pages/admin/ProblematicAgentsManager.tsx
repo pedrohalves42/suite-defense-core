@@ -258,6 +258,7 @@ export default function ProblematicAgentsManager() {
                           agentName={agent.agent_name ?? 'Unknown'}
                           isThrottled={agent.is_throttled}
                           isIsolated={agent.is_isolated}
+                          isInSafeMode={false}
                         />
                       )}
                     </div>

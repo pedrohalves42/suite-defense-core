@@ -752,13 +752,77 @@ function Invoke-SafeRollback {
 function Reset-SafeMode {
     <#
     .SYNOPSIS
-        Resets Safe Mode (for manual recovery)
+        Resets Safe Mode (for manual recovery or remote job)
     #>
+    param(
+        [Parameter(Mandatory = \$false)]
+        [string]\$Reason = "manual_reset"
+    )
+    
     \$state = Get-RollbackState
+    \$previousSafeMode = \$state.safe_mode
+    \$previousRollbackCount = \$state.rollback_count
+    
     \$state.safe_mode = \$false
     \$state.rollback_count = 0
     Save-RollbackState -State \$state
-    Write-Log "[ROLLBACK] Safe mode reset - auto-updates re-enabled" "INFO"
+    
+    Write-Log "[ROLLBACK] Safe mode reset - auto-updates re-enabled (reason: \$Reason)" "INFO"
+    
+    return @{
+        previous_safe_mode = \$previousSafeMode
+        previous_rollback_count = \$previousRollbackCount
+        reset_reason = \$Reason
+    }
+}
+
+# ============================================
+#  RESET SAFE MODE JOB (Remote Reset via Backend)
+# ============================================
+function Invoke-ResetSafeModeJob {
+    <#
+    .SYNOPSIS
+        Job handler for remotely resetting safe mode via backend
+    .DESCRIPTION
+        Allows admins to reset safe_mode remotely without physical access
+        to the machine. Creates evidence log and returns previous state.
+    #>
+    param(\$Job)
+    
+    try {
+        Write-Log "[RESET-SAFE-MODE] Iniciando reset do safe mode via job remoto..." "INFO"
+        
+        \$rollbackState = Get-RollbackState
+        \$wasSafeMode = \$rollbackState.safe_mode
+        \$previousRollbackCount = \$rollbackState.rollback_count
+        
+        # Chamar funcao existente Reset-SafeMode
+        \$resetResult = Reset-SafeMode -Reason "remote_job"
+        
+        Add-EvidenceEntry -Type "safe_mode_reset" -Data @{
+            previous_safe_mode = \$wasSafeMode
+            previous_rollback_count = \$previousRollbackCount
+            reset_by = "remote_job"
+            job_id = \$Job.id
+            reset_at = (Get-Date).ToUniversalTime().ToString("o")
+        } -Severity "warning"
+        
+        Write-Log "[RESET-SAFE-MODE] Safe mode resetado com sucesso" "SUCCESS"
+        
+        return @{ 
+            success = \$true
+            output = (@{
+                previous_safe_mode = \$wasSafeMode
+                previous_rollback_count = \$previousRollbackCount
+                reset_at = (Get-Date).ToUniversalTime().ToString("o")
+                message = "Safe mode reset successfully via remote job"
+            } | ConvertTo-Json -Compress)
+        }
+    }
+    catch {
+        Write-Log "[RESET-SAFE-MODE] Erro: \$(\$_.Exception.Message)" "ERROR"
+        return @{ success = \$false; error = \$_.Exception.Message }
+    }
 }
 
 
@@ -1976,18 +2040,34 @@ function Apply-ForcedUpdate {
         
         Write-Log "[FORCE UPDATE] Version: \$targetVersion, Reason: \$reason" "INFO"
         
-        # SAFE MODE CHECK - mesmo check do Invoke-UpdateAgentJob
+        # SAFE MODE CHECK - com suporte a override via heartbeat
+        \$overrideSafeMode = \$Response.override_safe_mode -eq \$true
         \$rollbackState = Get-RollbackState
+        
         if (\$rollbackState.safe_mode) {
-            Write-Log "[SAFE MODE] Updates desabilitados - rollback loop detectado" "ERROR"
-            
-            Add-EvidenceEntry -Type "security_warning" -Data @{
-                event = "force_update_blocked_safe_mode"
-                target_version = \$targetVersion
-                rollback_count = \$rollbackState.rollback_count
-            } -Severity "warning"
-            
-            return @{ success = \$false; error = "Safe mode active - updates disabled" }
+            if (\$overrideSafeMode) {
+                # Admin habilitou override - resetar safe mode antes de aplicar update
+                Write-Log "[SAFE MODE] Override habilitado pelo admin - resetando safe mode" "WARN"
+                Reset-SafeMode -Reason "force_update_override"
+                
+                Add-EvidenceEntry -Type "safe_mode_override" -Data @{
+                    event = "safe_mode_overridden_by_admin"
+                    target_version = \$targetVersion
+                    previous_rollback_count = \$rollbackState.rollback_count
+                    override_enabled = \$true
+                } -Severity "warning"
+            } else {
+                Write-Log "[SAFE MODE] Updates desabilitados - rollback loop detectado" "ERROR"
+                
+                Add-EvidenceEntry -Type "security_warning" -Data @{
+                    event = "force_update_blocked_safe_mode"
+                    target_version = \$targetVersion
+                    rollback_count = \$rollbackState.rollback_count
+                    override_enabled = \$false
+                } -Severity "warning"
+                
+                return @{ success = \$false; error = "Safe mode active - updates disabled. Admin can enable override_safe_mode to bypass." }
+            }
         }
         
         # Criar arquivo temporario
@@ -2371,6 +2451,11 @@ function Execute-Job {
             }
             "reinstall_agent" {
                 \$result = Invoke-ReinstallAgentJob -Job \$Job
+                if (\$result.success) { \$output = \$result.output }
+                else { throw \$result.error }
+            }
+            "reset_safe_mode" {
+                \$result = Invoke-ResetSafeModeJob -Job \$Job
                 if (\$result.success) { \$output = \$result.output }
                 else { throw \$result.error }
             }

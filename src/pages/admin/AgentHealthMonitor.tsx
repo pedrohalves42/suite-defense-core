@@ -398,6 +398,7 @@ export default function AgentHealthMonitor() {
                           agentName={agent.agent_name}
                           isThrottled={agent.is_throttled}
                           isIsolated={agent.is_isolated}
+                          isInSafeMode={agent.is_in_safe_mode}
                         />
                       </div>
                     )}

@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     const tokenHash = await hashToken(agentToken)
     const { data: token } = await supabase
       .from('agent_tokens')
-      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, tenant_id, force_update_version, force_update_reason, agent_version)')
+      .select('agent_id, agents!inner(id, agent_name, hmac_secret, status, tenant_id, force_update_version, force_update_reason, force_update_override_safe_mode, agent_version)')
       .eq('token_hash', tokenHash)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -130,6 +130,7 @@ Deno.serve(async (req) => {
       tenant_id: string;
       force_update_version: string | null;
       force_update_reason: string | null;
+      force_update_override_safe_mode: boolean | null;
       agent_version: string | null;
     }
     
@@ -318,7 +319,8 @@ Deno.serve(async (req) => {
             target_version: release.version,
             script_content_base64: base64Script,
             sha256: calculatedSha256,
-            reason: agent.force_update_reason || 'System recovery update'
+            reason: agent.force_update_reason || 'System recovery update',
+            override_safe_mode: agent.force_update_override_safe_mode || false
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
