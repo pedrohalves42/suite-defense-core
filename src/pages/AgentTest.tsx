@@ -312,9 +312,9 @@ export default function AgentTest() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Teste de Integracao de Agentes</h1>
+          <h1 className="text-3xl font-bold">Teste de Integração de Computadores</h1>
           <p className="text-muted-foreground mt-2">
-            Valide o fluxo completo: criar job, polling, execucao, report e ACK
+            Valide o fluxo completo: criar verificação, polling, execução, relatório e confirmação
           </p>
         </div>
         <AlertDialog>
@@ -331,11 +331,11 @@ export default function AgentTest() {
                 <div className="space-y-2">
                   <p>Esta acao ira remover permanentemente:</p>
                   <ul className="list-disc list-inside space-y-1 text-sm">
-                    <li>Todos os agentes</li>
-                    <li>Todos os tokens de agente</li>
+                    <li>Todos os computadores</li>
+                    <li>Todas as credenciais de acesso</li>
                     <li>Todos os eventos de telemetria</li>
-                    <li>Todas as metricas de sistema</li>
-                    <li>Chaves de enrollment usadas</li>
+                    <li>Todas as métricas de sistema</li>
+                    <li>Chaves de cadastro usadas</li>
                   </ul>
                   <p className="font-semibold mt-4">Os usuarios serao mantidos.</p>
                   <p className="text-destructive">Esta acao nao pode ser desfeita.</p>
@@ -363,10 +363,10 @@ export default function AgentTest() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Server className="h-5 w-5" />
-              Selecionar Agent para Teste
+              Selecionar Computador para Teste
             </CardTitle>
             <CardDescription>
-              Escolha um agent ativo para executar o teste de integracao
+              Escolha um computador ativo para executar o teste de integração
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -415,7 +415,7 @@ export default function AgentTest() {
           <CardHeader>
             <CardTitle>Resultados do Teste</CardTitle>
             <CardDescription>
-              Timeline de execucao do fluxo de integracao
+              Linha do tempo da execução do fluxo de integração
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -424,7 +424,7 @@ export default function AgentTest() {
                 <div className="flex items-center justify-center h-full text-muted-foreground">
                   <div className="text-center">
                     <AlertCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>Selecione um agent e inicie o teste</p>
+                    <p>Selecione um computador e inicie o teste</p>
                   </div>
                 </div>
               ) : (
@@ -471,19 +471,19 @@ export default function AgentTest() {
         <CardContent className="prose prose-sm max-w-none dark:prose-invert">
           <ol className="space-y-2">
             <li>
-              <strong>Criar Job de Teste:</strong> Sistema cria um job tipo "report" para o agent selecionado
+              <strong>Criar Verificação de Teste:</strong> Sistema cria uma verificação tipo "report" para o computador selecionado
             </li>
             <li>
-              <strong>Polling do Agent:</strong> Aguarda ate 120s para o agent fazer polling e receber o job
+              <strong>Polling do Computador:</strong> Aguarda até 120s para o computador buscar e receber a verificação
             </li>
             <li>
-              <strong>Upload de Report:</strong> Aguarda ate 60s para o agent executar o job e enviar o report
+              <strong>Upload de Relatório:</strong> Aguarda até 60s para o computador executar a verificação e enviar o relatório
             </li>
             <li>
-              <strong>ACK do Job:</strong> Aguarda ate 30s para o agent confirmar a conclusao do job
+              <strong>Confirmação:</strong> Aguarda até 30s para o computador confirmar a conclusão da verificação
             </li>
             <li>
-              <strong>Validacao:</strong> Se todas as etapas completarem com sucesso, o fluxo esta funcionando corretamente
+              <strong>Validação:</strong> Se todas as etapas completarem com sucesso, o fluxo está funcionando corretamente
             </li>
           </ol>
 

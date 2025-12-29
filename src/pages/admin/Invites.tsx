@@ -132,8 +132,8 @@ export default function Invites() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="viewer">Viewer - Apenas visualizacao</SelectItem>
-                    <SelectItem value="operator">Operator - Pode gerenciar jobs</SelectItem>
+                    <SelectItem value="viewer">Viewer - Apenas visualização</SelectItem>
+                    <SelectItem value="operator">Operator - Pode gerenciar verificações</SelectItem>
                     <SelectItem value="admin">Admin - Acesso total</SelectItem>
                   </SelectContent>
                 </Select>
