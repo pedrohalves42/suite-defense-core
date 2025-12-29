@@ -263,7 +263,7 @@ export default function RealTimeSecurityDashboard() {
       color: 'text-yellow-500',
     },
     {
-      label: 'Agentes Protegidos',
+      label: 'Computadores Protegidos',
       value: agentStats?.protected || 0,
       icon: ShieldCheck,
       color: 'text-green-500',

@@ -25,7 +25,7 @@ const features: Record<string, Feature[]> = {
       title: 'Monitorar Saúde dos Computadores',
       description: 'Acompanhe em tempo real o status de CPU, memória e disco de todos os computadores.',
       howItWorks: [
-        'O agente instalado coleta métricas a cada 10 minutos automaticamente',
+        'O programa instalado coleta métricas a cada 10 minutos automaticamente',
         'Você vê os dados no painel principal',
         'Alertas são enviados se algo estiver fora do normal'
       ],
@@ -37,7 +37,7 @@ const features: Record<string, Feature[]> = {
       title: 'Verificar se Computador está Online',
       description: 'Saiba instantaneamente se algum computador parou de responder.',
       howItWorks: [
-        'O agente envia um "sinal de vida" a cada 60 segundos',
+        'O programa envia um "sinal de vida" a cada 60 segundos',
         'Se não recebemos sinal por 5 minutos, marcamos como offline',
         'Você recebe alerta quando um computador fica offline'
       ],
@@ -75,7 +75,7 @@ const features: Record<string, Feature[]> = {
       howItWorks: [
         'Vá em Segurança > Sites Bloqueados',
         'Adicione o domínio que deseja bloquear (ex: facebook.com)',
-        'O agente impede acesso automaticamente'
+        'O programa impede acesso automaticamente'
       ],
       autoRuns: true,
       frequency: 'Aplicado em tempo real'
@@ -97,12 +97,12 @@ const features: Record<string, Feature[]> = {
   automacao: [
     {
       icon: Zap,
-      title: 'Atualização Automática do Agente',
-      description: 'Mantenha todos os agentes atualizados sem precisar visitar cada computador.',
+      title: 'Atualização Automática do Programa',
+      description: 'Mantenha todos os programas atualizados sem precisar visitar cada computador.',
       howItWorks: [
         'Quando lançamos uma atualização, você é notificado',
-        'Clique em "Atualizar Todos" no painel de agentes',
-        'O agente baixa e instala a nova versão automaticamente'
+        'Clique em "Atualizar Todos" no painel de computadores',
+        'O programa baixa e instala a nova versão automaticamente'
       ],
       autoRuns: false
     }

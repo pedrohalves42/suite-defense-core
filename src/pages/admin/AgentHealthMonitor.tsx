@@ -79,9 +79,9 @@ export default function AgentHealthMonitor() {
     };
 
     const confirmMessage = 
-      type === 'failed' ? `Limpar ${jobStats?.failed || 0} tarefas com falha?` :
-      type === 'delivered' ? `Limpar ${jobStats?.delivered || 0} tarefas pendentes?` :
-      `Limpar todas as ${(jobStats?.failed || 0) + (jobStats?.delivered || 0)} tarefas?`;
+      type === 'failed' ? `Limpar ${jobStats?.failed || 0} verificações com falha?` :
+      type === 'delivered' ? `Limpar ${jobStats?.delivered || 0} verificações pendentes?` :
+      `Limpar todas as ${(jobStats?.failed || 0) + (jobStats?.delivered || 0)} verificações?`;
 
     if (!confirm(confirmMessage)) return;
 
@@ -97,11 +97,11 @@ export default function AgentHealthMonitor() {
 
       if (error) throw error;
 
-      toast.success(`${data.deleted_count} tarefas removidas`);
+      toast.success(`${data.deleted_count} verificações removidas`);
       refetchJobStats();
     } catch (error) {
       console.error('Cleanup error:', error);
-      toast.error('Erro ao limpar tarefas');
+      toast.error('Erro ao limpar verificações');
     } finally {
       setIsCleaningJobs(false);
     }
@@ -329,10 +329,10 @@ export default function AgentHealthMonitor() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Trash2 className="h-5 w-5 text-orange-600" />
-              Limpeza de Tarefas
+              Limpeza de Verificações
             </CardTitle>
             <CardDescription>
-              Remover tarefas antigas ou com problemas
+              Remover verificações antigas ou com problemas
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -378,18 +378,18 @@ export default function AgentHealthMonitor() {
                 variant="ghost" 
                 size="sm"
                 onClick={async () => {
-                  if (!confirm('Limpar TODO o histórico de tarefas? Isso inclui tarefas completadas, falhas e canceladas.')) return;
+                  if (!confirm('Limpar TODO o histórico de verificações? Isso inclui verificações completadas, com falha e canceladas.')) return;
                   setIsCleaningJobs(true);
                   try {
                     const { data, error } = await supabase.functions.invoke('cleanup-jobs', {
                       body: { status: ['completed', 'failed', 'cancelled', 'delivered'], older_than_days: 0 }
                     });
                     if (error) throw error;
-                    toast.success(`${data.deleted_count} tarefas removidas. Histórico zerado!`);
+                    toast.success(`${data.deleted_count} verificações removidas. Histórico zerado!`);
                     refetchJobStats();
                   } catch (error) {
                     console.error('Cleanup error:', error);
-                    toast.error('Erro ao limpar histórico');
+                    toast.error('Erro ao limpar verificações');
                   } finally {
                     setIsCleaningJobs(false);
                   }

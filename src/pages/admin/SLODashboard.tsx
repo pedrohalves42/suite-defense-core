@@ -345,14 +345,14 @@ export default function SLODashboard() {
           </CardContent>
         </Card>
 
-        {/* Tarefas */}
+        {/* Verificações */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center justify-between text-base">
               <span className="flex items-center gap-2">
                 <Zap className="h-5 w-5 text-yellow-500" />
-                Tarefas
-                <HelpTooltip term="tarefa" />
+                Verificações
+                <HelpTooltip term="verificação" />
               </span>
               {metrics && getStatusBadge(metrics.jobExecution.status)}
             </CardTitle>

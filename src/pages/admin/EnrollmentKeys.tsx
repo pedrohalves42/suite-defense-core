@@ -304,8 +304,8 @@ export default function EnrollmentKeys() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold">Chaves de Enrollment</h2>
-          <p className="text-muted-foreground">Gerencie as chaves para registro de novos agentes</p>
+          <h2 className="text-3xl font-bold">Chaves de Cadastro</h2>
+          <p className="text-muted-foreground">Gerencie as chaves para cadastrar novos computadores</p>
         </div>
         <div className="flex gap-2">
           {canWrite && (

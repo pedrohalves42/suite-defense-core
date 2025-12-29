@@ -85,8 +85,8 @@ export default function ProblematicAgentsManager() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Agente limpo com sucesso",
-        description: `${data.agent_name}: ${data.tokens_invalidated} tokens invalidados, ${data.jobs_deleted} jobs removidos`,
+        title: "Computador limpo com sucesso",
+        description: `${data.agent_name}: ${data.tokens_invalidated} credenciais invalidadas, ${data.jobs_deleted} verificações removidas`,
       });
       queryClient.invalidateQueries({ queryKey: ['problematic-agents'] });
       setShowCleanupDialog(false);
@@ -94,7 +94,7 @@ export default function ProblematicAgentsManager() {
     },
     onError: (error: any) => {
       toast({
-        title: "Erro ao limpar agente",
+        title: "Erro ao limpar computador",
         description: error.message,
         variant: "destructive",
       });
@@ -115,8 +115,8 @@ export default function ProblematicAgentsManager() {
     },
     onSuccess: (data) => {
       toast({
-        title: "Limpeza em massa concluida",
-        description: `${data.total_cleaned} agentes foram limpos com sucesso`,
+        title: "Limpeza em massa concluída",
+        description: `${data.total_cleaned} computadores foram limpos com sucesso`,
       });
       queryClient.invalidateQueries({ queryKey: ['problematic-agents'] });
       setShowCleanupAllDialog(false);
@@ -179,9 +179,9 @@ export default function ProblematicAgentsManager() {
       </div>
 
       {isLoading ? (
-        <Card>
+      <Card>
           <CardContent className="py-8">
-            <p className="text-center text-muted-foreground">Carregando agentes...</p>
+            <p className="text-center text-muted-foreground">Carregando computadores...</p>
           </CardContent>
         </Card>
       ) : agents && agents.length === 0 ? (
@@ -232,7 +232,7 @@ export default function ProblematicAgentsManager() {
                           <span>Credenciais: <strong>{agent.token_count ?? 0}</strong> ({agent.has_active_token ? 'válida' : 'inválida'})</span>
                           <span>Cadastrado em: {agent.enrolled_at ? formatBrazilDateTime(agent.enrolled_at, 'datetime') : 'N/A'}</span>
                           <span>Tempo desde cadastro: <strong>{agent.minutes_since_enrollment ? Math.floor(agent.minutes_since_enrollment) : 0} minutos</strong></span>
-                          <span>Tarefas pendentes: <strong>{agent.pending_jobs_count ?? 0}</strong></span>
+                          <span>Verificações pendentes: <strong>{agent.pending_jobs_count ?? 0}</strong></span>
                           <span>Última comunicação: <strong>{agent.last_heartbeat ? formatBrazilDateTime(agent.last_heartbeat, 'short') : 'Nunca'}</strong></span>
                         </div>
                       </CardDescription>
@@ -270,10 +270,10 @@ export default function ProblematicAgentsManager() {
                       <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
                       <div className="text-sm">
                         <p className="font-semibold text-yellow-900 dark:text-yellow-200">
-                          {agent.pending_jobs_count} tarefa{(agent.pending_jobs_count ?? 0) > 1 ? 's' : ''} pendente{(agent.pending_jobs_count ?? 0) > 1 ? 's' : ''}
+                          {agent.pending_jobs_count} verificação{(agent.pending_jobs_count ?? 0) > 1 ? 'ões' : ''} pendente{(agent.pending_jobs_count ?? 0) > 1 ? 's' : ''}
                         </p>
                         <p className="text-yellow-700 dark:text-yellow-400">
-                          Estas tarefas serão canceladas durante a limpeza
+                          Estas verificações serão canceladas durante a limpeza
                         </p>
                       </div>
                     </div>
@@ -294,7 +294,7 @@ export default function ProblematicAgentsManager() {
               <p>Esta ação irá:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li>Invalidar as credenciais atuais ({selectedAgent?.token_count ?? 0})</li>
-                <li>Cancelar tarefas pendentes ({selectedAgent?.pending_jobs_count ?? 0})</li>
+                <li>Cancelar verificações pendentes ({selectedAgent?.pending_jobs_count ?? 0})</li>
                 <li>Preparar o computador para nova instalação</li>
               </ul>
               <p className="font-semibold mt-3">
@@ -323,7 +323,7 @@ export default function ProblematicAgentsManager() {
               <p>Esta ação irá resetar <strong>{agents?.length || 0} computadores</strong>:</p>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li>Invalidar todas as credenciais</li>
-                <li>Cancelar todas as tarefas pendentes</li>
+                <li>Cancelar todas as verificações pendentes</li>
                 <li>Preparar os computadores para nova instalação</li>
               </ul>
               <p className="font-semibold mt-3 text-destructive">

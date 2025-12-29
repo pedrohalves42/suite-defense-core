@@ -85,8 +85,8 @@ export default function InstallationPipelineMonitor() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-xl font-bold">Pipeline de Instalacao</h1>
-          <p className="text-sm text-muted-foreground">Monitoramento em tempo real do fluxo de instalacao de agentes</p>
+          <h1 className="text-xl font-bold">Pipeline de Instalação</h1>
+          <p className="text-sm text-muted-foreground">Monitoramento em tempo real do fluxo de instalação de computadores</p>
         </div>
         <div className="flex gap-3 items-center">
           <Button
@@ -133,13 +133,13 @@ export default function InstallationPipelineMonitor() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Agentes Ativos</CardTitle>
+            <CardTitle className="text-sm font-medium">Computadores Ativos</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-xl font-bold">{metrics?.total_active || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Enviando heartbeats
+              Conectados ao sistema
             </p>
           </CardContent>
         </Card>

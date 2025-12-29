@@ -86,7 +86,7 @@ export default function DeadLetterQueue() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Tarefa marcada como resolvida');
+      toast.success('Verificação marcada como resolvida');
       queryClient.invalidateQueries({ queryKey: ['dlq-entries'] });
       setShowResolveDialog(false);
       setResolveNotes('');
@@ -119,7 +119,7 @@ export default function DeadLetterQueue() {
       if (dlqError) throw dlqError;
     },
     onSuccess: () => {
-      toast.success('Tarefa reenviada para execução');
+      toast.success('Verificação reenviada para execução');
       queryClient.invalidateQueries({ queryKey: ['dlq-entries'] });
     },
     onError: (error) => {
@@ -296,9 +296,9 @@ export default function DeadLetterQueue() {
         {/* P2: Enhanced Table with Better Descriptions */}
         <Card>
           <CardHeader>
-            <CardTitle>Jobs com Falha</CardTitle>
+            <CardTitle>Verificações com Falha</CardTitle>
             <CardDescription>
-              Jobs que falharam e foram movidos para a fila de retry. 
+              Verificações que falharam e foram movidas para nova tentativa. 
               {(statusCounts['pending'] ?? 0) > 0 && (
                 <span className="text-primary"> {statusCounts['pending']} aguardando próxima tentativa.</span>
               )}
@@ -312,14 +312,14 @@ export default function DeadLetterQueue() {
             ) : entries?.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Inbox className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Nenhuma tarefa com falha na fila</p>
+                <p>Nenhuma verificação com falha na fila</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Computador</TableHead>
-                    <TableHead>Tipo de Tarefa</TableHead>
+                    <TableHead>Tipo de Verificação</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Tentativas</TableHead>
                     <TableHead>Última Falha</TableHead>
@@ -406,7 +406,7 @@ export default function DeadLetterQueue() {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Detalhes da Tarefa</DialogTitle>
+            <DialogTitle>Detalhes da Verificação</DialogTitle>
             <DialogDescription>
               Informações sobre a falha e erro ocorrido
             </DialogDescription>
@@ -419,7 +419,7 @@ export default function DeadLetterQueue() {
                   <p className="text-sm text-muted-foreground">{selectedEntry.agent_name}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Tipo de Tarefa</label>
+                  <label className="text-sm font-medium">Tipo de Verificação</label>
                   <p className="text-sm text-muted-foreground">{getJobTypeLabel(selectedEntry.job_type)}</p>
                 </div>
                 <div>

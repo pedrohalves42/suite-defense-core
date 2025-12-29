@@ -53,7 +53,7 @@ export const TEST_CONFIG = {
     tabOffline: 'Offline',
     
     // Badges
-    badgeThrottled: 'Velocidade Limitada',
+    badgeThrottled: 'Comunicação Reduzida',
     badgeIsolated: 'Isolado',
     badgeSafeMode: 'Modo Protegido',
     
