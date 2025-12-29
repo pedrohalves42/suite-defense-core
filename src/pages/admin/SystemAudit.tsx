@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Play, BarChart3, FileText, Clock, RefreshCw } from 'lucide-react';
+import { Loader2, Play, BarChart3, FileText, Clock, RefreshCw, Skull, TrendingUp, AlertTriangle } from 'lucide-react';
 import { 
   useAuditHistory, 
   useAuditById, 
@@ -10,10 +10,16 @@ import {
   auditToResult,
   AuditResult 
 } from '@/hooks/useSystemAudit';
+import { useLatestRedTeam } from '@/hooks/useRedTeamAssessment';
+import { useLatestConfidenceGap, useConfidenceGapTrend } from '@/hooks/useConfidenceGap';
+import { useRunFullAudit } from '@/hooks/useRunFullAudit';
 import { AuditRadarChart } from '@/components/admin/audit/AuditRadarChart';
 import { AuditDimensionCard } from '@/components/admin/audit/AuditDimensionCard';
 import { AuditTimeline } from '@/components/admin/audit/AuditTimeline';
 import { AuditExecutiveSummary } from '@/components/admin/audit/AuditExecutiveSummary';
+import { RedTeamSummary } from '@/components/admin/audit/RedTeamSummary';
+import { ConfidenceGapChart } from '@/components/admin/audit/ConfidenceGapChart';
+import { FalsificationCriteria, FalsificationCriterion } from '@/components/admin/audit/FalsificationCriteria';
 
 export default function SystemAudit() {
   const [selectedAuditId, setSelectedAuditId] = useState<string | null>(null);
@@ -23,6 +29,10 @@ export default function SystemAudit() {
   const { data: latestAudit } = useLatestAudit();
   const { data: selectedAuditData } = useAuditById(selectedAuditId);
   const { runAudit, isRunning } = useRunAudit();
+  const { data: latestRedTeam } = useLatestRedTeam();
+  const { data: latestConfidenceGap } = useLatestConfidenceGap();
+  const { data: confidenceGapTrend } = useConfidenceGapTrend();
+  const { runFullAudit, isRunning: isFullAuditRunning } = useRunFullAudit();
 
   // Determine which audit to display
   const currentAudit = useMemo(() => {
@@ -60,6 +70,22 @@ export default function SystemAudit() {
     }
   };
 
+  const handleRunFullAudit = async () => {
+    const result = await runFullAudit();
+    if (result) {
+      refetchHistory();
+    }
+  };
+
+  // Extract falsification criteria from latest audit metrics snapshot
+  const falsificationCriteria: FalsificationCriterion[] = useMemo(() => {
+    if (!currentAudit?.metrics_snapshot) return [];
+    const snapshot = currentAudit.metrics_snapshot as Record<string, unknown>;
+    return (snapshot.falsification_criteria as FalsificationCriterion[]) || [];
+  }, [currentAudit]);
+
+  const anyAuditRunning = isRunning || isFullAuditRunning;
+
   const handleSelectAudit = (auditId: string) => {
     setSelectedAuditId(auditId);
     setActiveTab('overview');
@@ -85,16 +111,29 @@ export default function SystemAudit() {
             <RefreshCw className={`h-4 w-4 mr-2 ${historyLoading ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
-          <Button onClick={handleRunAudit} disabled={isRunning}>
+          <Button variant="outline" onClick={handleRunAudit} disabled={anyAuditRunning}>
             {isRunning ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Analisando...
+                Ana...
               </>
             ) : (
               <>
                 <Play className="h-4 w-4 mr-2" />
-                Nova Auditoria
+                Só Ana
+              </>
+            )}
+          </Button>
+          <Button onClick={handleRunFullAudit} disabled={anyAuditRunning}>
+            {isFullAuditRunning ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Auditoria Completa...
+              </>
+            ) : (
+              <>
+                <Skull className="h-4 w-4 mr-2" />
+                Auditoria Completa
               </>
             )}
           </Button>
@@ -121,15 +160,15 @@ export default function SystemAudit() {
               <p className="text-muted-foreground mb-4">
                 Execute sua primeira auditoria para ver a análise completa do sistema
               </p>
-              <Button onClick={handleRunAudit} disabled={isRunning}>
-                {isRunning ? (
+              <Button onClick={handleRunFullAudit} disabled={anyAuditRunning}>
+                {anyAuditRunning ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Analisando...
                   </>
                 ) : (
                   <>
-                    <Play className="h-4 w-4 mr-2" />
+                    <Skull className="h-4 w-4 mr-2" />
                     Executar Primeira Auditoria
                   </>
                 )}
@@ -137,18 +176,30 @@ export default function SystemAudit() {
             </div>
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="overview" className="gap-2">
+              <TabsList className="grid w-full grid-cols-6">
+                <TabsTrigger value="overview" className="gap-1 text-xs">
                   <BarChart3 className="h-4 w-4" />
-                  Visão Geral
+                  <span className="hidden sm:inline">Visão Geral</span>
                 </TabsTrigger>
-                <TabsTrigger value="dimensions" className="gap-2">
+                <TabsTrigger value="dimensions" className="gap-1 text-xs">
                   <FileText className="h-4 w-4" />
-                  Dimensões
+                  <span className="hidden sm:inline">Dimensões</span>
                 </TabsTrigger>
-                <TabsTrigger value="executive" className="gap-2">
+                <TabsTrigger value="executive" className="gap-1 text-xs">
                   <Clock className="h-4 w-4" />
-                  Executivo
+                  <span className="hidden sm:inline">Executivo</span>
+                </TabsTrigger>
+                <TabsTrigger value="redteam" className="gap-1 text-xs">
+                  <Skull className="h-4 w-4" />
+                  <span className="hidden sm:inline">Red Team</span>
+                </TabsTrigger>
+                <TabsTrigger value="gap" className="gap-1 text-xs">
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="hidden sm:inline">Gap</span>
+                </TabsTrigger>
+                <TabsTrigger value="falsification" className="gap-1 text-xs">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="hidden sm:inline">Falsificação</span>
                 </TabsTrigger>
               </TabsList>
 
@@ -171,6 +222,18 @@ export default function SystemAudit() {
 
               <TabsContent value="executive" className="mt-6">
                 <AuditExecutiveSummary audit={currentAudit} />
+              </TabsContent>
+
+              <TabsContent value="redteam" className="mt-6">
+                <RedTeamSummary assessment={latestRedTeam || null} />
+              </TabsContent>
+
+              <TabsContent value="gap" className="mt-6">
+                <ConfidenceGapChart latestGap={latestConfidenceGap || null} trendData={confidenceGapTrend || []} />
+              </TabsContent>
+
+              <TabsContent value="falsification" className="mt-6">
+                <FalsificationCriteria criteria={falsificationCriteria} />
               </TabsContent>
             </Tabs>
           )}
