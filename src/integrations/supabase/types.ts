@@ -8018,6 +8018,120 @@ export type Database = {
           },
         ]
       }
+      system_audits: {
+        Row: {
+          ai_model: string | null
+          analysis_control_vs_monitor: string | null
+          analysis_evidence_proof: string | null
+          analysis_failure_handling: string | null
+          analysis_limitations: string | null
+          analysis_market_value: string | null
+          analysis_maturity: string | null
+          analysis_operational_trust: string | null
+          analysis_simplicity: string | null
+          analysis_system_identity: string | null
+          created_at: string
+          created_by: string | null
+          executive_summary: string | null
+          final_sentence: string | null
+          id: string
+          metrics_snapshot: Json | null
+          overall_score: number
+          prompt_hash: string | null
+          recommendation: string | null
+          score_control_vs_monitor: number
+          score_evidence_proof: number
+          score_failure_handling: number
+          score_limitations: number
+          score_market_value: number
+          score_maturity: number
+          score_operational_trust: number
+          score_simplicity: number
+          score_system_identity: number
+          tenant_id: string | null
+          tokens_used: number | null
+        }
+        Insert: {
+          ai_model?: string | null
+          analysis_control_vs_monitor?: string | null
+          analysis_evidence_proof?: string | null
+          analysis_failure_handling?: string | null
+          analysis_limitations?: string | null
+          analysis_market_value?: string | null
+          analysis_maturity?: string | null
+          analysis_operational_trust?: string | null
+          analysis_simplicity?: string | null
+          analysis_system_identity?: string | null
+          created_at?: string
+          created_by?: string | null
+          executive_summary?: string | null
+          final_sentence?: string | null
+          id?: string
+          metrics_snapshot?: Json | null
+          overall_score: number
+          prompt_hash?: string | null
+          recommendation?: string | null
+          score_control_vs_monitor: number
+          score_evidence_proof: number
+          score_failure_handling: number
+          score_limitations: number
+          score_market_value: number
+          score_maturity: number
+          score_operational_trust: number
+          score_simplicity: number
+          score_system_identity: number
+          tenant_id?: string | null
+          tokens_used?: number | null
+        }
+        Update: {
+          ai_model?: string | null
+          analysis_control_vs_monitor?: string | null
+          analysis_evidence_proof?: string | null
+          analysis_failure_handling?: string | null
+          analysis_limitations?: string | null
+          analysis_market_value?: string | null
+          analysis_maturity?: string | null
+          analysis_operational_trust?: string | null
+          analysis_simplicity?: string | null
+          analysis_system_identity?: string | null
+          created_at?: string
+          created_by?: string | null
+          executive_summary?: string | null
+          final_sentence?: string | null
+          id?: string
+          metrics_snapshot?: Json | null
+          overall_score?: number
+          prompt_hash?: string | null
+          recommendation?: string | null
+          score_control_vs_monitor?: number
+          score_evidence_proof?: number
+          score_failure_handling?: number
+          score_limitations?: number
+          score_market_value?: number
+          score_maturity?: number
+          score_operational_trust?: number
+          score_simplicity?: number
+          score_system_identity?: number
+          tenant_id?: string | null
+          tokens_used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_audits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_audits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       system_liveness: {
         Row: {
           component_name: string
@@ -11127,6 +11241,7 @@ export type Database = {
           throttle_reason: string
         }[]
       }
+      get_audit_raw_metrics: { Args: { p_tenant_id: string }; Returns: Json }
       get_autonomy_metrics: {
         Args: { p_days?: number; p_tenant_id: string }
         Returns: Json
