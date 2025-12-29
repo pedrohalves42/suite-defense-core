@@ -1,7 +1,24 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { z } from 'https://esm.sh/zod@3.23.8';
 import { corsHeaders } from '../_shared/cors.ts';
 import { authenticateApiKey, logApiRequest } from '../_shared/api-auth.ts';
 import { checkRateLimit } from '../_shared/rate-limit.ts';
+
+// Validation schemas
+const ApiKeySchema = z.string()
+  .min(32, 'Invalid API key format')
+  .max(256, 'API key too long')
+  .regex(/^[a-zA-Z0-9_-]+$/, 'Invalid API key characters');
+
+const IpAddressSchema = z.string()
+  .max(45)
+  .optional()
+  .default('unknown');
+
+const UserAgentSchema = z.string()
+  .max(512)
+  .optional()
+  .default('unknown');
 
 Deno.serve(async (req) => {
   const startTime = Date.now();
@@ -15,10 +32,10 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    // Extract API key from Authorization header
-    const apiKey = req.headers.get('Authorization')?.replace('Bearer ', '');
+    // Extract and validate API key from Authorization header
+    const rawApiKey = req.headers.get('Authorization')?.replace('Bearer ', '');
     
-    if (!apiKey) {
+    if (!rawApiKey) {
       return new Response(
         JSON.stringify({ error: 'Missing API key' }),
         {
@@ -28,12 +45,27 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Validate API key format
+    const apiKeyValidation = ApiKeySchema.safeParse(rawApiKey);
+    if (!apiKeyValidation.success) {
+      console.warn('Invalid API key format received');
+      return new Response(
+        JSON.stringify({ error: 'Invalid API key format' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+    
+    const apiKey = apiKeyValidation.data;
+
     // Authenticate
     const authResult = await authenticateApiKey(apiKey, supabaseUrl, supabaseServiceKey);
     
     if (!authResult.success) {
       return new Response(
-        JSON.stringify({ error: authResult.error }),
+        JSON.stringify({ error: 'Authentication failed' }),
         {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -67,9 +99,19 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database error in api-tenant-info:', error.message);
+      throw new Error('Failed to fetch tenant info');
+    }
 
     const responseTimeMs = Date.now() - startTime;
+
+    // Validate and sanitize header values for logging
+    const rawIpAddress = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+    const rawUserAgent = req.headers.get('user-agent');
+    
+    const ipAddress = IpAddressSchema.parse(rawIpAddress);
+    const userAgent = UserAgentSchema.parse(rawUserAgent?.substring(0, 512));
 
     // Log request
     await logApiRequest(supabase, {
@@ -79,8 +121,8 @@ Deno.serve(async (req) => {
       method: req.method,
       statusCode: 200,
       responseTimeMs,
-      ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
-      userAgent: req.headers.get('user-agent') || 'unknown',
+      ipAddress,
+      userAgent,
     });
 
     return new Response(
@@ -92,7 +134,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in api-tenant-info:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'An error occurred. Please try again.' }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
