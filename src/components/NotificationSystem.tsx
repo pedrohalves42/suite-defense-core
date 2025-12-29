@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ShieldAlert, FileWarning, AlertTriangle, Server } from 'lucide-react';
+import { ShieldAlert, FileWarning, AlertTriangle, Server, ShieldOff, WifiOff } from 'lucide-react';
 import { useTenant } from '@/hooks/useTenant';
 import { getJobTypeLabelNoEmoji } from '@/lib/job-labels';
+import { deriveAgentState, getStateDescription, type AgentState } from '@/lib/agent-state-machine';
 
 interface QuarantinedFile {
   id: string;
@@ -17,7 +18,30 @@ interface QuarantinedFile {
 interface Agent {
   agent_name: string;
   status: string;
+  is_isolated: boolean | null;
+  is_throttled: boolean | null;
+  safe_mode_reason: string | null;
+  safe_mode_entered_at: string | null;
+  last_heartbeat: string | null;
+  force_update_version: string | null;
+  force_update_at: string | null;
+  agent_state: string | null;
 }
+
+// Map states to notification configurations
+const STATE_NOTIFICATIONS: Record<AgentState, { 
+  icon: React.ComponentType<{ className?: string }>;
+  type: 'success' | 'warning' | 'error' | 'info';
+} | null> = {
+  healthy: { icon: Server, type: 'success' },
+  degraded: { icon: AlertTriangle, type: 'warning' },
+  safe_mode: { icon: ShieldAlert, type: 'warning' },
+  updating: null, // Don't notify for updates
+  rollback: { icon: AlertTriangle, type: 'warning' },
+  isolated: { icon: ShieldOff, type: 'error' },
+  offline: { icon: WifiOff, type: 'warning' },
+  quarantined: { icon: ShieldOff, type: 'error' },
+};
 
 export const NotificationSystem = () => {
   const { tenant, loading } = useTenant();
@@ -56,7 +80,7 @@ export const NotificationSystem = () => {
       )
       .subscribe();
 
-    // Subscribe to agent status changes
+    // Subscribe to agent status changes - use formal state machine
     const agentsChannel = supabase
       .channel('agents-notifications')
       .on(
@@ -71,29 +95,34 @@ export const NotificationSystem = () => {
           const oldAgent = payload.old as Agent;
           const newAgent = payload.new as Agent;
           
-          // Agent went offline
-          if (oldAgent.status === 'active' && newAgent.status === 'inactive') {
-            toast.warning(
-              `Agente Offline`,
-              {
-                description: `${newAgent.agent_name} esta desconectado`,
-                icon: <Server className="h-5 w-5" />,
-                duration: 8000
-              }
-            );
-          }
+          // Derive formal states
+          const oldState = deriveAgentState(oldAgent);
+          const newState = deriveAgentState(newAgent);
           
-          // Agent came back online
-          if (oldAgent.status === 'inactive' && newAgent.status === 'active') {
-            toast.success(
-              `Agente Reconectado`,
-              {
-                description: `${newAgent.agent_name} voltou online`,
-                icon: <Server className="h-5 w-5" />,
-                duration: 5000
-              }
-            );
-          }
+          // Only notify if state actually changed
+          if (oldState === newState) return;
+          
+          const stateDesc = getStateDescription(newState);
+          const notification = STATE_NOTIFICATIONS[newState];
+          
+          if (!notification) return;
+          
+          const Icon = notification.icon;
+          
+          // Use appropriate toast type
+          const toastFn = notification.type === 'success' ? toast.success
+            : notification.type === 'error' ? toast.error
+            : notification.type === 'warning' ? toast.warning
+            : toast.info;
+          
+          toastFn(
+            `${newAgent.agent_name}: ${stateDesc.label}`,
+            {
+              description: stateDesc.description,
+              icon: <Icon className="h-5 w-5" />,
+              duration: notification.type === 'error' ? 10000 : 6000
+            }
+          );
         }
       )
       .subscribe();

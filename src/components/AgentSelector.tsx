@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { deriveAgentState, getStateColorClasses } from '@/lib/agent-state-machine';
 
 interface AgentSelectorProps {
   value: string;
@@ -15,6 +16,14 @@ interface Agent {
   agent_name: string;
   status: string;
   os_type: string | null;
+  is_isolated: boolean | null;
+  is_throttled: boolean | null;
+  safe_mode_reason: string | null;
+  safe_mode_entered_at: string | null;
+  last_heartbeat: string | null;
+  force_update_version: string | null;
+  force_update_at: string | null;
+  agent_state: string | null;
 }
 
 export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
@@ -23,7 +32,11 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agents')
-        .select('id, agent_name, status, os_type')
+        .select(`
+          id, agent_name, status, os_type,
+          is_isolated, is_throttled, safe_mode_reason, safe_mode_entered_at,
+          last_heartbeat, force_update_version, force_update_at, agent_state
+        `)
         .order('agent_name', { ascending: true });
 
       if (error) throw error;
@@ -64,17 +77,22 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
         <SelectValue placeholder="Selecione um computador..." />
       </SelectTrigger>
       <SelectContent>
-        {agents.map((agent) => (
-          <SelectItem key={agent.id} value={agent.id}>
-            <div className="flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${agent.status === 'active' ? 'bg-success' : 'bg-muted'}`} />
-              <span>{agent.agent_name}</span>
-              {agent.os_type && (
-                <span className="text-xs text-muted-foreground">({agent.os_type})</span>
-              )}
-            </div>
-          </SelectItem>
-        ))}
+        {agents.map((agent) => {
+          const state = deriveAgentState(agent);
+          const colors = getStateColorClasses(state);
+          
+          return (
+            <SelectItem key={agent.id} value={agent.id}>
+              <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${colors.bg.replace('/10', '')}`} />
+                <span>{agent.agent_name}</span>
+                {agent.os_type && (
+                  <span className="text-xs text-muted-foreground">({agent.os_type})</span>
+                )}
+              </div>
+            </SelectItem>
+          );
+        })}
       </SelectContent>
     </Select>
   );
