@@ -1,59 +1,76 @@
-// Mapeamento de tipos de tarefas para nomes amigáveis
+/**
+ * LABELS DE TAREFAS - LINGUAGEM HUMANA
+ * =====================================
+ * Regra: O usuário não precisa saber o que é um "job" ou "scan"
+ * Ele só precisa entender o que vai acontecer no computador dele.
+ */
+
+// Mapeamento de tipos de tarefas para nomes amigáveis (LINGUAGEM HUMANA)
 export const JOB_TYPE_LABELS: Record<string, string> = {
-  scan: '📁 Verificação de Arquivos',
-  update_agent: '🔄 Atualização do Agente',
-  report: '📊 Geração de Relatório',
-  software_inventory_collect: '📦 Inventário de Software',
-  collect_antivirus_status: '🛡️ Status do Antivírus',
-  collect_web_activity: '🌐 Atividade Web',
-  light_vuln_scan: '🔍 Scan de Vulnerabilidades',
-  collect_network_info: '🔌 Diagnóstico de Rede',
-  reinstall_agent: '🔧 Reinstalação do Agente',
-  fix_firewall: '🔥 Correção de Firewall',
-  restart_service: '🔃 Reiniciar Serviço',
-  sync_blocked_websites: '🚫 Sincronização de Sites Bloqueados',
-  setup_dns_filter: '🛡️ Setup DNS Filter',
-  collect_dns_blocks: '📊 Coletar Bloqueios DNS',
-  remove_dns_filter: '🗑️ Remover DNS Filter',
-  integration_test_v3: '🧪 Teste de Integração v3',
-  // Fase 1: Controle de Processos
-  kill_process: '☠️ Encerrar Processo',
-  stop_service: '⏹️ Parar Serviço',
-  disable_service: '🚫 Desabilitar Serviço',
+  // === Verificações de segurança ===
+  scan: '📁 Verificar arquivos',
+  light_vuln_scan: '🔍 Buscar falhas de segurança',
+  collect_antivirus_status: '🛡️ Checar proteção antivírus',
+  
+  // === Atualizações ===
+  update_agent: '🔄 Atualizar proteção',
+  reinstall_agent: '🔧 Reinstalar proteção',
+  
+  // === Coleta de informações ===
+  software_inventory_collect: '📦 Listar programas instalados',
+  collect_web_activity: '🌐 Verificar sites acessados',
+  collect_network_info: '🔌 Verificar conexão de rede',
+  collect_dns_blocks: '📊 Ver sites bloqueados',
+  report: '📊 Gerar relatório',
+  
+  // === Correções de segurança ===
+  fix_firewall: '🔥 Corrigir firewall',
+  sync_blocked_websites: '🚫 Atualizar lista de sites bloqueados',
+  setup_dns_filter: '🛡️ Ativar filtro de navegação',
+  remove_dns_filter: '🗑️ Remover filtro de navegação',
+  
+  // === Controle de processos ===
+  kill_process: '⚠️ Fechar programa',
+  stop_service: '⏹️ Pausar serviço',
+  disable_service: '🚫 Desativar serviço',
+  restart_service: '🔃 Reiniciar serviço',
+  
+  // === Testes ===
+  integration_test_v3: '🧪 Teste de sistema',
 };
 
 export const JOB_STATUS_LABELS: Record<string, string> = {
-  queued: '⏳ Na Fila',
-  delivered: '📤 Aguardando Resposta',
+  queued: '⏳ Aguardando',
+  delivered: '📤 Enviado',
   completed: '✅ Concluído',
   failed: '❌ Falhou',
-  pending: '⏸️ Aguardando',
+  pending: '⏸️ Pendente',
   running: '⚙️ Executando',
 };
 
-// Descriptions for tooltips
+// Descrições para tooltips (LINGUAGEM HUMANA)
 export const JOB_STATUS_DESCRIPTIONS: Record<string, string> = {
-  queued: 'Tarefa aguardando o computador buscar',
-  delivered: 'Enviado ao computador, aguardando confirmação de execução',
+  queued: 'A tarefa está na fila aguardando o computador ficar disponível',
+  delivered: 'Enviado para o computador, aguardando confirmação',
   completed: 'Tarefa finalizada com sucesso',
-  failed: 'Ocorreu um erro durante a execução',
+  failed: 'Não foi possível completar a tarefa',
   pending: 'Tarefa criada, será processada em breve',
-  running: 'Tarefa sendo executada no computador',
+  running: 'A tarefa está sendo executada agora',
 };
 
-// Terminologia amigável para UI
+// Terminologia amigável para UI (LINGUAGEM HUMANA)
 export const UI_TERMINOLOGY = {
-  job: 'Tarefa',
-  jobs: 'Tarefas',
-  createJob: 'Criar Tarefa',
-  newJob: 'Nova Tarefa',
-  recentJobs: 'Tarefas Recentes',
-  pendingJobs: 'Tarefas Pendentes',
-  jobHistory: 'Histórico de Tarefas',
+  job: 'Verificação',
+  jobs: 'Verificações',
+  createJob: 'Nova Verificação',
+  newJob: 'Nova Verificação',
+  recentJobs: 'Verificações Recentes',
+  pendingJobs: 'Verificações Pendentes',
+  jobHistory: 'Histórico de Verificações',
   clearPendingJobs: 'Limpar Pendentes',
   agent: 'Computador',
   agents: 'Computadores',
-  heartbeat: 'Sinal de Vida',
+  heartbeat: 'Status de Conexão',
   uptime: 'Tempo Online',
   tenant: 'Empresa',
 };
@@ -65,28 +82,38 @@ export const getJobTypeLabel = (type: string): string =>
 export const getJobStatusLabel = (status: string): string => 
   JOB_STATUS_LABELS[status] || status;
 
-// Versão sem emoji para contextos específicos
+// Versão sem emoji para contextos específicos (LINGUAGEM HUMANA)
 export const JOB_TYPE_LABELS_NO_EMOJI: Record<string, string> = {
-  scan: 'Verificação de Arquivos',
-  update_agent: 'Atualização do Agente',
-  report: 'Geração de Relatório',
-  software_inventory_collect: 'Inventário de Software',
-  collect_antivirus_status: 'Status do Antivírus',
-  collect_web_activity: 'Atividade Web',
-  light_vuln_scan: 'Scan de Vulnerabilidades',
-  collect_network_info: 'Diagnóstico de Rede',
-  reinstall_agent: 'Reinstalação do Agente',
-  fix_firewall: 'Correção de Firewall',
-  restart_service: 'Reiniciar Serviço',
-  sync_blocked_websites: 'Sincronização de Sites Bloqueados',
-  setup_dns_filter: 'Setup DNS Filter',
-  collect_dns_blocks: 'Coletar Bloqueios DNS',
-  remove_dns_filter: 'Remover DNS Filter',
-  integration_test_v3: 'Teste de Integração v3',
-  // Fase 1: Controle de Processos
-  kill_process: 'Encerrar Processo',
-  stop_service: 'Parar Serviço',
-  disable_service: 'Desabilitar Serviço',
+  // === Verificações de segurança ===
+  scan: 'Verificar arquivos',
+  light_vuln_scan: 'Buscar falhas de segurança',
+  collect_antivirus_status: 'Checar proteção antivírus',
+  
+  // === Atualizações ===
+  update_agent: 'Atualizar proteção',
+  reinstall_agent: 'Reinstalar proteção',
+  
+  // === Coleta de informações ===
+  software_inventory_collect: 'Listar programas instalados',
+  collect_web_activity: 'Verificar sites acessados',
+  collect_network_info: 'Verificar conexão de rede',
+  collect_dns_blocks: 'Ver sites bloqueados',
+  report: 'Gerar relatório',
+  
+  // === Correções de segurança ===
+  fix_firewall: 'Corrigir firewall',
+  sync_blocked_websites: 'Atualizar lista de sites bloqueados',
+  setup_dns_filter: 'Ativar filtro de navegação',
+  remove_dns_filter: 'Remover filtro de navegação',
+  
+  // === Controle de processos ===
+  kill_process: 'Fechar programa',
+  stop_service: 'Pausar serviço',
+  disable_service: 'Desativar serviço',
+  restart_service: 'Reiniciar serviço',
+  
+  // === Testes ===
+  integration_test_v3: 'Teste de sistema',
 };
 
 // Lista de processos críticos do sistema que NÃO podem ser encerrados

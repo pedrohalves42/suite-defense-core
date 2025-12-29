@@ -201,15 +201,15 @@ export default function AIInsights() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
+      {/* Header - LINGUAGEM HUMANA */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Brain className="h-8 w-8 text-primary" />
-            IA de Autoaprendizado
+            Avisos do Sistema
           </h1>
           <p className="text-muted-foreground mt-2">
-            Insights gerados automaticamente pela analise de dados do sistema
+            O CyberShield detectou situações que merecem sua atenção
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -220,81 +220,81 @@ export default function AIInsights() {
               variant="default"
             >
               <CheckCircle className="h-4 w-4 mr-2" />
-              Reconhecer Todos ({pendingInsights.length})
+              Entendi Todos ({pendingInsights.length})
             </Button>
           )}
           <Badge variant="outline" className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
-            FASE 1: IA Observadora
+            Monitoramento Inteligente
           </Badge>
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics Cards - LINGUAGEM HUMANA */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Insights</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Avisos</CardTitle>
             <Brain className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.pending} pendentes
+              {stats.pending} aguardando sua atenção
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Criticos</CardTitle>
+            <CardTitle className="text-sm font-medium">Urgentes</CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{stats.critical}</div>
             <p className="text-xs text-muted-foreground">
-              Requerem atencao imediata
+              Precisam de ação imediata
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avisos</CardTitle>
+            <CardTitle className="text-sm font-medium">Atenção</CardTitle>
             <AlertTriangle className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-warning">{stats.warning}</div>
             <p className="text-xs text-muted-foreground">
-              Investigacao recomendada
+              Vale a pena verificar
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Reconhecidos</CardTitle>
+            <CardTitle className="text-sm font-medium">Resolvidos</CardTitle>
             <CheckCircle className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.acknowledged}</div>
             <p className="text-xs text-muted-foreground">
-              De {stats.total} totais
+              De {stats.total} no total
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Insights Tabs */}
+      {/* Insights Tabs - LINGUAGEM HUMANA */}
       <Tabs defaultValue="pending" className="space-y-4">
         <TabsList>
           <TabsTrigger value="pending" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
-            Pendentes ({pendingInsights.length})
+            Aguardando ({pendingInsights.length})
           </TabsTrigger>
           <TabsTrigger value="acknowledged" className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4" />
-            Reconhecidos ({acknowledgedInsights.length})
+            Resolvidos ({acknowledgedInsights.length})
           </TabsTrigger>
         </TabsList>
 
@@ -302,9 +302,9 @@ export default function AIInsights() {
           {pendingInsights.length === 0 ? (
             <Alert>
               <Info className="h-4 w-4" />
-              <AlertTitle>Nenhum insight pendente</AlertTitle>
+              <AlertTitle>Tudo certo por aqui!</AlertTitle>
               <AlertDescription>
-                A IA esta monitorando o sistema continuamente. Novos insights aparecerao aqui automaticamente.
+                O sistema está monitorando seus computadores continuamente. Novos avisos aparecerão aqui automaticamente quando algo precisar da sua atenção.
               </AlertDescription>
             </Alert>
           ) : (

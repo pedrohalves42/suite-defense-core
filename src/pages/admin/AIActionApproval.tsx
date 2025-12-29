@@ -254,11 +254,12 @@ export default function AIActionApproval() {
 
   return (
     <div className="space-y-6">
+      {/* Header - LINGUAGEM HUMANA */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Inteligência Artificial</h1>
+          <h1 className="text-3xl font-bold">Decisões Automáticas</h1>
           <p className="text-muted-foreground mt-2">
-            Insights e ações sugeridas pela IA de autoaprendizado
+            O CyberShield pode tomar decisões automáticas para proteger sua empresa. Todas são registradas e podem ser revisadas aqui.
           </p>
         </div>
         <Button 
@@ -274,22 +275,22 @@ export default function AIActionApproval() {
           ) : (
             <>
               <Brain className="h-4 w-4" />
-              Analisar Agora
+              Verificar Agora
             </>
           )}
         </Button>
       </div>
 
-      {/* Insights Recentes */}
+      {/* Insights Recentes - LINGUAGEM HUMANA */}
       {recentInsights && recentInsights.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              Insights Recentes
+              O que o sistema detectou recentemente
             </CardTitle>
             <CardDescription>
-              Descobertas da IA nos últimos 30 dias
+              Descobertas e recomendações dos últimos 30 dias
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -334,22 +335,22 @@ export default function AIActionApproval() {
         </Card>
       )}
 
-      {/* Estado Vazio */}
+      {/* Estado Vazio - LINGUAGEM HUMANA */}
       {(!recentInsights || recentInsights.length === 0) && pendingActions?.length === 0 && (
         <Alert className="border-dashed">
           <Brain className="h-4 w-4" />
-          <AlertTitle>Nenhum insight gerado ainda</AlertTitle>
+          <AlertTitle>Nenhuma descoberta ainda</AlertTitle>
           <AlertDescription className="mt-2">
-            A IA analisa seus dados automaticamente todos os dias às 09:00. 
-            Você também pode clicar em "Analisar Agora" para executar uma análise manual.
+            O sistema analisa seus computadores automaticamente todos os dias às 09:00. 
+            Você também pode clicar em "Verificar Agora" para executar uma análise manual.
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Ações Pendentes */}
+      {/* Ações Pendentes - LINGUAGEM HUMANA */}
       {pendingActions && pendingActions.length > 0 && (
         <div>
-          <h2 className="text-xl font-semibold mb-4">Ações Pendentes de Aprovação</h2>
+          <h2 className="text-xl font-semibold mb-4">Decisões Aguardando Sua Aprovação</h2>
         </div>
       )}
 
