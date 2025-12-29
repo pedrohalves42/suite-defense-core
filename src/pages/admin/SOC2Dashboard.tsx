@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, FileText, AlertTriangle, CheckCircle2, Clock, Building2 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Shield, FileText, CheckCircle2, Clock, Building2, Link2, Database, Code } from 'lucide-react';
 import { useSOC2Readiness, calculateOverallScore } from '@/hooks/useSOC2Readiness';
 import { SOC2_TRUST_CRITERIA, COMPLIANCE_POLICIES } from '@/types/soc2-compliance';
 
@@ -87,9 +88,10 @@ export default function SOC2Dashboard() {
 
       {/* Abas */}
       <Tabs defaultValue="criteria" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="criteria">Critérios CC1-CC9</TabsTrigger>
           <TabsTrigger value="policies">Políticas</TabsTrigger>
+          <TabsTrigger value="matrix">Matriz de Rastreabilidade</TabsTrigger>
           <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
         </TabsList>
 
@@ -142,6 +144,89 @@ export default function SOC2Dashboard() {
               </Card>
             ))}
           </div>
+        </TabsContent>
+
+        {/* Aba Matriz de Rastreabilidade */}
+        <TabsContent value="matrix" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Link2 className="h-5 w-5" />
+                Matriz de Rastreabilidade SOC 2
+              </CardTitle>
+              <CardDescription>
+                Mapeamento direto: Política → Critério SOC 2 → Evidência Técnica
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Política</TableHead>
+                    <TableHead>Critérios SOC 2</TableHead>
+                    <TableHead>Evidência Técnica</TableHead>
+                    <TableHead>Localização</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="font-medium">ISP-001 - Segurança da Informação</TableCell>
+                    <TableCell><Badge variant="secondary">CC1</Badge> <Badge variant="secondary">CC3</Badge></TableCell>
+                    <TableCell>RLS, audit_logs, HMAC</TableCell>
+                    <TableCell className="flex items-center gap-1"><Database className="h-3 w-3" /> Tabelas + Edge Functions</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">ACP-001 - Controle de Acesso</TableCell>
+                    <TableCell><Badge variant="secondary">CC1</Badge> <Badge variant="secondary">CC6</Badge></TableCell>
+                    <TableCell>user_roles, tenant_id, RLS</TableCell>
+                    <TableCell className="flex items-center gap-1"><Database className="h-3 w-3" /> Tabelas + Políticas</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">CMP-001 - Gestão de Mudanças</TableCell>
+                    <TableCell><Badge variant="secondary">CC8</Badge></TableCell>
+                    <TableCell>agent_releases, migrations</TableCell>
+                    <TableCell className="flex items-center gap-1"><Code className="h-3 w-3" /> Git + Supabase</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">IRP-001 - Resposta a Incidentes</TableCell>
+                    <TableCell><Badge variant="secondary">CC7</Badge></TableCell>
+                    <TableCell>security_events, rate limiting</TableCell>
+                    <TableCell className="flex items-center gap-1"><Database className="h-3 w-3" /> Tabelas + Logs</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">LMP-001 - Logs e Monitoramento</TableCell>
+                    <TableCell><Badge variant="secondary">CC4</Badge> <Badge variant="secondary">CC7</Badge></TableCell>
+                    <TableCell>audit_logs, job_executions</TableCell>
+                    <TableCell className="flex items-center gap-1"><Database className="h-3 w-3" /> Tabelas Imutáveis</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">DRP-001 - Retenção de Dados</TableCell>
+                    <TableCell><Badge variant="secondary">CC5</Badge></TableCell>
+                    <TableCell>payload_hash, soft delete</TableCell>
+                    <TableCell className="flex items-center gap-1"><Database className="h-3 w-3" /> Triggers + RLS</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">VRP-001 - Risco de Fornecedores</TableCell>
+                    <TableCell><Badge variant="secondary">CC9</Badge></TableCell>
+                    <TableCell>vendor_risk_registry</TableCell>
+                    <TableCell className="flex items-center gap-1"><Database className="h-3 w-3" /> Tabela</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">BCP-001 - Continuidade de Negócios</TableCell>
+                    <TableCell><Badge variant="secondary">CC7</Badge> <Badge variant="secondary">CC9</Badge></TableCell>
+                    <TableCell>cleanup_jobs, retries</TableCell>
+                    <TableCell className="flex items-center gap-1"><Code className="h-3 w-3" /> Edge Functions</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">SDP-001 - Desenvolvimento Seguro</TableCell>
+                    <TableCell><Badge variant="secondary">CC5</Badge> <Badge variant="secondary">CC8</Badge></TableCell>
+                    <TableCell>triggers, Zod validation</TableCell>
+                    <TableCell className="flex items-center gap-1"><Code className="h-3 w-3" /> SQL + TypeScript</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Aba de Fornecedores */}

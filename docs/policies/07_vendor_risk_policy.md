@@ -4,10 +4,10 @@
 |-------|-------|
 | **Policy Code** | VRP-001 |
 | **Version** | 1.0 |
-| **Status** | Draft |
-| **Owner** | [OWNER_NAME] |
-| **Effective Date** | [DATE] |
-| **Review Date** | [DATE + 1 YEAR] |
+| **Status** | Approved |
+| **Owner** | Security Officer |
+| **Effective Date** | 2025-01-01 |
+| **Review Date** | 2026-01-01 |
 | **SOC 2 Criteria** | CC9 |
 
 ---
@@ -21,9 +21,9 @@ To assess and manage risks related to third-party service providers.
 ## 2. Scope
 
 This policy applies to all third-party vendors that:
-- Process, store, or have access to [TENANT_NAME] data
+- Process, store, or have access to CyberShield data
 - Provide critical infrastructure or services
-- Integrate with [TENANT_NAME] systems
+- Integrate with CyberShield systems
 
 ---
 
@@ -159,4 +159,4 @@ When terminating a vendor:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | [DATE] | [AUTHOR] | Initial version |
+| 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |

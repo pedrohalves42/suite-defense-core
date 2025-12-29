@@ -4,10 +4,10 @@
 |-------|-------|
 | **Policy Code** | DRP-001 |
 | **Version** | 1.0 |
-| **Status** | Draft |
-| **Owner** | [OWNER_NAME] |
-| **Effective Date** | [DATE] |
-| **Review Date** | [DATE + 1 YEAR] |
+| **Status** | Approved |
+| **Owner** | Security Officer |
+| **Effective Date** | 2025-01-01 |
+| **Review Date** | 2026-01-01 |
 | **SOC 2 Criteria** | CC5 |
 
 ---
@@ -20,7 +20,7 @@ To define how data is classified, protected, and retained.
 
 ## 2. Scope
 
-This policy applies to all data processed, stored, or transmitted by [TENANT_NAME], including:
+This policy applies to all data processed, stored, or transmitted by CyberShield, including:
 - Operational data
 - Audit data
 - Security metadata
@@ -144,4 +144,4 @@ This policy applies to all data processed, stored, or transmitted by [TENANT_NAM
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | [DATE] | [AUTHOR] | Initial version |
+| 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |

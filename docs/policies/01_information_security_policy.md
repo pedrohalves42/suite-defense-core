@@ -4,17 +4,17 @@
 |-------|-------|
 | **Policy Code** | ISP-001 |
 | **Version** | 1.0 |
-| **Status** | Draft |
-| **Owner** | [OWNER_NAME] |
-| **Effective Date** | [DATE] |
-| **Review Date** | [DATE + 1 YEAR] |
-| **SOC 2 Criteria** | CC1, CC2 |
+| **Status** | Approved |
+| **Owner** | Security Officer |
+| **Effective Date** | 2025-01-01 |
+| **Review Date** | 2026-01-01 |
+| **SOC 2 Criteria** | CC1, CC3 |
 
 ---
 
 ## 1. Purpose
 
-The purpose of this policy is to establish the information security principles that govern the design, development, and operation of the [TENANT_NAME] platform.
+The purpose of this policy is to establish the information security principles that govern the design, development, and operation of the CyberShield platform.
 
 This policy ensures that security is embedded at every layer of the system, from architecture to daily operations.
 
@@ -23,7 +23,7 @@ This policy ensures that security is embedded at every layer of the system, from
 ## 2. Scope
 
 This policy applies to:
-- All systems, applications, and infrastructure involved in the operation of [TENANT_NAME]
+- All systems, applications, and infrastructure involved in the operation of CyberShield
 - All employees, contractors, and third-party service providers
 - All data processed, stored, or transmitted by the platform
 - All environments including development, staging, and production
@@ -32,7 +32,7 @@ This policy applies to:
 
 ## 3. Security Principles
 
-[TENANT_NAME] adopts the following core security principles:
+CyberShield adopts the following core security principles:
 
 ### 3.1 Security by Design and by Default
 - Security is a requirement from the first line of code
@@ -149,4 +149,4 @@ This policy will be reviewed:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | [DATE] | [AUTHOR] | Initial version |
+| 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |

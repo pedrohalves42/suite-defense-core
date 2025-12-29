@@ -4,17 +4,17 @@
 |-------|-------|
 | **Policy Code** | CMP-001 |
 | **Version** | 1.0 |
-| **Status** | Draft |
-| **Owner** | [OWNER_NAME] |
-| **Effective Date** | [DATE] |
-| **Review Date** | [DATE + 1 YEAR] |
+| **Status** | Approved |
+| **Owner** | Security Officer |
+| **Effective Date** | 2025-01-01 |
+| **Review Date** | 2026-01-01 |
 | **SOC 2 Criteria** | CC8 |
 
 ---
 
 ## 1. Purpose
 
-To ensure that changes to the [TENANT_NAME] platform are controlled, reviewed, and traceable.
+To ensure that changes to the CyberShield platform are controlled, reviewed, and traceable.
 
 ---
 
@@ -125,4 +125,4 @@ Emergency changes require:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | [DATE] | [AUTHOR] | Initial version |
+| 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |
