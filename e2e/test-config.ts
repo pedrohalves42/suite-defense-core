@@ -67,11 +67,19 @@ export const TEST_CONFIG = {
     ruleEmergencyIsolation: 'Isolamento de Emergência',
     ruleVersionBlock: 'Bloqueio de Versões Problemáticas',
     
-    // Cards
+    // Cards - Health Monitor
     cardProtected: 'Protegidos',
     cardNeedAttention: 'Precisam de Atenção',
     cardOffline: 'Desligados',
     cardLiveConnections: 'Conexões ao Vivo',
+    cardHealthy: 'Saudáveis',
+    cardAttention: 'Atenção',
+    cardCritical: 'Crítico',
+    
+    // Health Monitor specific
+    overallHealth: 'Saúde Geral',
+    connectionReceived: 'Conexão recebida',
+    errorLoadingHealth: 'Erro ao Carregar Monitor de Saúde',
     
     // Empty states
     emptyNoRules: 'Nenhuma regra configurada',

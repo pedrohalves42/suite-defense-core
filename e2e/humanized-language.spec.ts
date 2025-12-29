@@ -222,8 +222,7 @@ test.describe('Humanized Portuguese Language Display', () => {
     
     const content = await page.content();
     const hasPortugueseContent = content.includes('Problemas') || 
-                                  content.includes('Computadores') ||
-                                  content.includes('Agentes');
+                                  content.includes('Computadores');
     expect(hasPortugueseContent).toBeTruthy();
   });
 
