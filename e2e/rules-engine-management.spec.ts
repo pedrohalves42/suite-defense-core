@@ -50,7 +50,7 @@ test.describe('Rules Engine Management', () => {
     await page.waitForTimeout(1000);
     
     // Look for description text patterns
-    const descriptions = page.locator('p, span').filter({ hasText: /agente|regra|proteção|limite/i });
+    const descriptions = page.locator('p, span').filter({ hasText: /computador|regra|proteção|limite/i });
     
     if (await descriptions.count() > 0) {
       await expect(descriptions.first()).toBeVisible();

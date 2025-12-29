@@ -13,35 +13,35 @@ test.describe('Agent Health Monitor Dashboard', () => {
   });
 
   test('should load health metrics', async ({ page }) => {
-    await expect(page.locator('text=Saude Geral')).toBeVisible();
-    await expect(page.locator('text=Heartbeats Live')).toBeVisible();
+    await expect(page.locator(`text=${TEST_CONFIG.texts.overallHealth}`)).toBeVisible();
+    await expect(page.locator(`text=${TEST_CONFIG.texts.cardLiveConnections}`)).toBeVisible();
     
     // Check percentage display
-    const healthCard = page.locator('text=Saude Geral').locator('..');
+    const healthCard = page.locator(`text=${TEST_CONFIG.texts.overallHealth}`).locator('..');
     await expect(healthCard.locator('div.text-2xl')).toContainText(/%/);
   });
 
   test('should display agent heatmap by health status', async ({ page }) => {
     // Check for health status cards
-    await expect(page.locator('text=Saudaveis')).toBeVisible();
-    await expect(page.locator('text=Atencao')).toBeVisible();
-    await expect(page.locator('text=Critico')).toBeVisible();
+    await expect(page.locator(`text=${TEST_CONFIG.texts.cardHealthy}`)).toBeVisible();
+    await expect(page.locator(`text=${TEST_CONFIG.texts.cardAttention}`)).toBeVisible();
+    await expect(page.locator(`text=${TEST_CONFIG.texts.cardCritical}`)).toBeVisible();
   });
 
   test('should show agents grouped by health', async ({ page }) => {
     // Wait for agent cards to load
-    await page.waitForSelector('[data-testid="agent-card"], .agent-card, text=/Agent/i', { 
+    await page.waitForSelector('[data-testid="agent-card"], .agent-card, text=/Computador/i', { 
       timeout: 5000,
       state: 'attached'
     }).catch(() => {
       // No agents is valid state
-      console.log('No agents found - this is acceptable');
+      console.log('No computers found - this is acceptable');
     });
   });
 
   test('should receive realtime heartbeat updates', async ({ page }) => {
     // Monitor for toast notifications
-    const toastPromise = page.waitForSelector('text=/Heartbeat recebido/i', { 
+    const toastPromise = page.waitForSelector(`text=/${TEST_CONFIG.texts.connectionReceived}/i`, { 
       timeout: 30000,
       state: 'visible'
     }).catch(() => null);
@@ -54,7 +54,7 @@ test.describe('Agent Health Monitor Dashboard', () => {
       await expect(toast).toBeVisible();
       
       // Check that live counter increased
-      const liveCountCard = page.locator('text=Heartbeats Live').locator('..');
+      const liveCountCard = page.locator(`text=${TEST_CONFIG.texts.cardLiveConnections}`).locator('..');
       const countText = await liveCountCard.locator('div.text-2xl').textContent();
       expect(parseInt(countText || '0')).toBeGreaterThan(0);
     }
@@ -64,7 +64,7 @@ test.describe('Agent Health Monitor Dashboard', () => {
     // Wait for health status tabs/buttons
     await page.waitForTimeout(1000);
     
-    const healthyButton = page.locator('text=Saudaveis');
+    const healthyButton = page.locator(`text=${TEST_CONFIG.texts.cardHealthy}`);
     if (await healthyButton.isVisible()) {
       await healthyButton.click();
       await page.waitForTimeout(500);
@@ -85,7 +85,7 @@ test.describe('Agent Health Monitor Dashboard', () => {
     
     await page.reload();
     
-    await expect(page.locator('text=Erro ao Carregar Monitor de Saude')).toBeVisible();
+    await expect(page.locator(`text=${TEST_CONFIG.texts.errorLoadingHealth}`)).toBeVisible();
     await expect(page.locator('button:has-text("Tentar Novamente")')).toBeVisible();
   });
 });
