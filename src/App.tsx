@@ -59,10 +59,8 @@ import PitchDeck from "./pages/admin/super/PitchDeck";
 import RiskAnalysis from "./pages/admin/super/RiskAnalysis";
 import RolloutPolicies from "./pages/super-admin/RolloutPolicies";
 import StripeSetup from "./pages/admin/StripeSetup";
-import AgentDiagnostics from "./pages/admin/AgentDiagnostics.tsx";
+import DiagnosticsCenter from "./pages/admin/DiagnosticsCenter";
 import AgentTroubleshooting from "./pages/admin/AgentTroubleshooting";
-import ProblematicAgentsManager from "./pages/admin/ProblematicAgentsManager";
-import AgentDiagnosticsUnified from "./pages/admin/AgentDiagnosticsUnified";
 import BuildHealthDashboard from "./pages/admin/BuildHealthDashboard";
 import SystemLogs from "./pages/admin/SystemLogs";
 import AgentHealthMonitor from "./pages/admin/AgentHealthMonitor";
@@ -177,9 +175,10 @@ const App = () => (
                 <Route path="subscriptions" element={<Subscriptions />} />
                 <Route path="installations" element={<Installations />} />
                 <Route path="agent-health" element={<AgentHealthMonitor />} />
-                <Route path="agent-diagnostics" element={<AgentDiagnosticsUnified />} />
-                <Route path="agent-troubleshooting" element={<AgentDiagnosticsUnified />} />
-                <Route path="problematic-agents" element={<AgentDiagnosticsUnified />} />
+                <Route path="diagnostics" element={<DiagnosticsCenter />} />
+                <Route path="agent-diagnostics" element={<DiagnosticsCenter />} />
+                <Route path="agent-troubleshooting" element={<DiagnosticsCenter />} />
+                <Route path="problematic-agents" element={<DiagnosticsCenter />} />
                 <Route path="ai-insights" element={<AIInsights />} />
                 <Route path="ai-actions" element={<AIActionApproval />} />
                 <Route path="ai-metrics" element={<AIMetrics />} />
