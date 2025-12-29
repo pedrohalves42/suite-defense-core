@@ -96,9 +96,9 @@ const humanizeAction = (action: string, resource: string): { icon: string; text:
   const map: Record<string, { icon: string; text: string }> = {
     'agent.enroll': { icon: '✓', text: 'Novo computador registrado' },
     'agent.heartbeat': { icon: '💓', text: 'Computador se comunicou' },
-    'job.create': { icon: '⚙️', text: 'Nova tarefa criada' },
-    'job.complete': { icon: '✓', text: 'Tarefa concluída com sucesso' },
-    'job.fail': { icon: '⚠️', text: 'Tarefa falhou' },
+    'job.create': { icon: '⚙️', text: 'Nova verificação iniciada' },
+    'job.complete': { icon: '✓', text: 'Verificação concluída com sucesso' },
+    'job.fail': { icon: '⚠️', text: 'Verificação não foi concluída' },
     'scan.complete': { icon: '🛡️', text: 'Verificação de vírus realizada' },
     'login.success': { icon: '🔐', text: 'Login realizado' },
     'login.fail': { icon: '⚠️', text: 'Tentativa de login falhou' },
@@ -478,9 +478,9 @@ const ServerDashboard = () => {
                   </span>
                   <div>
                     <h2 className="text-2xl font-bold text-foreground">
-                      {systemState === 'healthy' ? 'Sistema Operando Dentro do Esperado' : 
-                       systemState === 'critical' ? 'Atenção Sistêmica Detectada' : 
-                       'Pequenos Ajustes Recomendados'}
+                      {systemState === 'healthy' ? 'Tudo funcionando normalmente' : 
+                       systemState === 'critical' ? 'Alguns pontos precisam de atenção' : 
+                       'Pequenos ajustes recomendados'}
                     </h2>
                     <p className="text-sm text-muted-foreground">
                       Última atualização: {new Date().toLocaleTimeString('pt-BR')}
@@ -516,7 +516,7 @@ const ServerDashboard = () => {
                       {failedJobs > 0 && (
                         <p className="text-warning flex items-center gap-2">
                           <AlertCircle className="h-4 w-4" />
-                          {failedJobs} tarefa(s) falharam nas últimas 24h
+                          {failedJobs} verificação(ões) com erro nas últimas 24h
                         </p>
                       )}
                       {tenantsWithIssues > 0 && (
@@ -552,14 +552,14 @@ const ServerDashboard = () => {
             Cada card responde UMA pergunta clara
         ═══════════════════════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {/* Card 1: Base Monitorada */}
+          {/* Card 1: Computadores Protegidos */}
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
                 <Users className="h-4 w-4 text-primary" />
-                Base Monitorada
+                Computadores Protegidos
               </CardTitle>
-              <CardDescription className="text-[10px]">O tamanho do sistema mudou?</CardDescription>
+              <CardDescription className="text-[10px]">Quantos estão sob proteção?</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">{agents.length} ativos</div>
@@ -667,14 +667,14 @@ const ServerDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <IntegrityScoreCard />
           
-          {/* Card de tokens ativos */}
+          {/* Card de credenciais de acesso */}
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
                 <Key className="h-4 w-4 text-primary" />
-                Tokens de Agente
+                Credenciais de Acesso
               </CardTitle>
-              <CardDescription className="text-[10px]">Credenciais ativas no sistema</CardDescription>
+              <CardDescription className="text-[10px]">Acessos autorizados no sistema</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">
@@ -761,7 +761,7 @@ const ServerDashboard = () => {
                         {failedJobsCount > 0 && (
                           <p className="text-xs text-orange-500 flex items-center gap-1">
                             <AlertCircle className="h-3 w-3" />
-                            {failedJobsCount} tarefa(s) com erro
+                            {failedJobsCount} verificação(ões) com erro
                           </p>
                         )}
                       </div>
@@ -782,15 +782,15 @@ const ServerDashboard = () => {
 
         {/* Graficos e Visualizacoes */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Tendência de Tarefas */}
+          {/* Tendência de Verificações */}
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LineChart className="h-5 w-5 text-primary" />
-                Tendência de Tarefas (7 dias)
+                Tendência de Verificações (7 dias)
               </CardTitle>
               <CardDescription>
-                Volume de tarefas criadas por dia
+                Volume de verificações por dia
                 <span className="block text-[10px] text-muted-foreground/70 mt-1">
                   📊 Subindo = demanda aumentando • Estável = sistema saudável • Descendo = menos atividade
                 </span>
@@ -802,7 +802,7 @@ const ServerDashboard = () => {
               ) : jobsTrendData.every(d => d.total === 0) ? (
                 <div className="text-center py-8">
                   <Activity className="h-10 w-10 mx-auto mb-3 text-muted-foreground/30" />
-                  <p className="text-muted-foreground">Nenhuma tarefa registrada nos últimos 7 dias</p>
+                  <p className="text-muted-foreground">Nenhuma verificação nos últimos 7 dias</p>
                   <p className="text-xs text-success mt-2 flex items-center justify-center gap-1">
                     <CheckCircle2 className="h-3 w-3" />
                     Isso pode indicar estabilidade operacional
@@ -1027,7 +1027,7 @@ const ServerDashboard = () => {
         <Tabs defaultValue="agents" className="w-full">
           <TabsList className="grid w-full grid-cols-5 bg-secondary">
             <TabsTrigger value="agents">Computadores</TabsTrigger>
-            <TabsTrigger value="jobs">Tarefas</TabsTrigger>
+            <TabsTrigger value="jobs">Verificações</TabsTrigger>
             <TabsTrigger value="reports">Relatórios</TabsTrigger>
             <TabsTrigger value="evidence" className="gap-1">
               <Package className="h-3 w-3" />
@@ -1086,7 +1086,7 @@ const ServerDashboard = () => {
                                 
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                                   <div>
-                                    <p className="text-muted-foreground">Tarefas Executadas</p>
+                                    <p className="text-muted-foreground">Verificações</p>
                                     <p className="font-semibold text-foreground">{agentJobs.length}</p>
                                   </div>
                                   <div>
@@ -1111,7 +1111,7 @@ const ServerDashboard = () => {
 
                                 {lastJob && (
                                   <div className="pt-2 border-t border-border">
-                                    <p className="text-xs text-muted-foreground mb-1">Última Tarefa:</p>
+                                    <p className="text-xs text-muted-foreground mb-1">Última verificação:</p>
                                     <div className="flex items-center gap-2">
                                       <Badge variant="outline" className="text-xs">
                                         {getJobTypeLabel(lastJob.type)}
@@ -1146,14 +1146,14 @@ const ServerDashboard = () => {
           <TabsContent value="jobs" className="mt-4">
             <Card className="bg-gradient-card border-primary/20">
               <CardHeader>
-                <CardTitle>Tarefas do Sistema</CardTitle>
-                <CardDescription>Histórico e status das tarefas executadas</CardDescription>
+                <CardTitle>Verificações do Sistema</CardTitle>
+                <CardDescription>Histórico e status das verificações executadas</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
                   <p className="text-center text-muted-foreground py-8">Carregando...</p>
                 ) : jobs.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">Nenhuma tarefa encontrada</p>
+                  <p className="text-center text-muted-foreground py-8">Nenhuma verificação encontrada</p>
                 ) : (
                   <div className="space-y-2 max-h-[600px] overflow-y-auto">
                     {jobs.map((job) => (
@@ -1169,7 +1169,7 @@ const ServerDashboard = () => {
                             <span className="text-sm font-mono text-foreground">{job.agent_name}</span>
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            Criado: {new Date(job.created_at).toLocaleString()}
+                            Iniciado: {new Date(job.created_at).toLocaleString()}
                           </p>
                         </div>
                         <div className="text-right">
@@ -1189,7 +1189,7 @@ const ServerDashboard = () => {
                           </Badge>
                           {job.completed_at && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              Concluído: {new Date(job.completed_at).toLocaleString()}
+                              Finalizado: {new Date(job.completed_at).toLocaleString()}
                             </p>
                           )}
                         </div>
@@ -1205,7 +1205,7 @@ const ServerDashboard = () => {
             <Card className="bg-gradient-card border-primary/20">
               <CardHeader>
                 <CardTitle>Relatórios Recebidos</CardTitle>
-                <CardDescription>Relatórios de segurança enviados pelos agentes</CardDescription>
+                <CardDescription>Relatórios de segurança enviados pelos computadores</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -1265,7 +1265,7 @@ const ServerDashboard = () => {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Activity className="h-4 w-4 text-primary" />
-                    Status dos Agentes
+                    Status dos Computadores
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -1287,7 +1287,7 @@ const ServerDashboard = () => {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Key className="h-4 w-4 text-warning" />
-                    Tokens de Agentes
+                    Credenciais de Acesso
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
