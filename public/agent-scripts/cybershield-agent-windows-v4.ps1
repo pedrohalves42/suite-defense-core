@@ -1,15 +1,14 @@
 <#
-    CyberShield Agent - Windows v4.2.0
+    CyberShield Agent - Windows v4.2.1
+    
+    v4.2.1: Opera Browser Support
+    - NEW: Coleta de histórico do Opera (Opera Stable)
+    - NEW: Coleta de histórico do Opera GX (Opera GX Stable)
+    - Opera usa mesmo formato Chromium do Chrome/Edge
+    - Path: AppData\Roaming\Opera Software\Opera Stable\History
+    - Path: AppData\Roaming\Opera Software\Opera GX Stable\History
     
     v4.2.0: REAL ENFORCEMENT - Website Blocking
-    - FIX: Invoke-SyncBlockedWebsitesJob now applies REAL blocking
-    - FIX: Saves to correct path (C:\ProgramData\CyberShield\blocked_websites.json)
-    - FIX: Uses correct JSON format for DNS Filter (blocked, version fields)
-    - NEW: Hosts file fallback with DNS cache flush (immediate blocking)
-    - NEW: Detailed output for backend governance validation
-    - NEW: enforcement_method field (dns_filter+hosts, hosts_file, none)
-    
-    v4.1.9: HASH CHAIN - Cryptographic Ledger
     v4.1.8: PROOF OF EXECUTION (PoE) - Result Signing
     - ECDSA P-256 keypair generation (New-SigningKeyPair)
     - Public key registration (Register-SigningKey)
@@ -4521,6 +4520,128 @@ function Invoke-CollectWebActivityJob {
                 }
             } catch {
                 Write-Log "[WEB-ACTIVITY-V3] Erro ao acessar Edge ($userName): $($_.Exception.Message)" "WARN"
+            }
+            
+            # 2d. Opera History - SQLITE COM TIMESTAMPS REAIS (Chromium-based, mesmo formato do Chrome)
+            try {
+                $operaHistoryPath = Join-Path $userPath "AppData\Roaming\Opera Software\Opera Stable\History"
+                if (Test-Path $operaHistoryPath) {
+                    $tempHistoryPath = "$env:TEMP\opera_history_temp_$(Get-Random).db"
+                    Copy-Item -Path $operaHistoryPath -Destination $tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    
+                    if (Test-Path $tempHistoryPath) {
+                        $sqliteResults = $null
+                        
+                        try {
+                            $sqliteResults = Get-BrowserHistorySQLite `
+                                -DbPath $tempHistoryPath `
+                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" `
+                                -BrowserName "Opera" `
+                                -UserName $userName
+                        } catch {
+                            Write-Log "[WEB-ACTIVITY-V3] Opera SQLite falhou ($userName): $($_.Exception.Message)" "DEBUG"
+                        }
+                        
+                        if ($sqliteResults -and $sqliteResults.Count -gt 0) {
+                            foreach ($row in $sqliteResults) {
+                                $domain = Extract-DomainFromUrl $row.url
+                                if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local" -or $domain -like "*opera*") { continue }
+                                
+                                $visitedAt = ConvertFrom-WebKitTimestamp $row.last_visit_time
+                                [void]$items.Add(@{
+                                    domain = $domain
+                                    source = "opera_history_$userName"
+                                    visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
+                                    visit_count = [int]$row.visit_count
+                                })
+                            }
+                            Write-Log "[WEB-ACTIVITY-V3] Opera ($userName): $($sqliteResults.Count) registros via SQLite" "INFO"
+                        } else {
+                            # Fallback regex
+                            try {
+                                $maxBytes = 5 * 1024 * 1024
+                                $fileInfo = Get-Item $tempHistoryPath
+                                $bytesToRead = [Math]::Min($fileInfo.Length, $maxBytes)
+                                
+                                $fileStream = [System.IO.File]::OpenRead($tempHistoryPath)
+                                $buffer = New-Object byte[] $bytesToRead
+                                [void]$fileStream.Read($buffer, 0, $bytesToRead)
+                                $fileStream.Close()
+                                $fileStream.Dispose()
+                                
+                                if ($buffer) {
+                                    $dataString = [System.Text.Encoding]::UTF8.GetString($buffer)
+                                    $urlMatches = [regex]::Matches($dataString, 'https?://([a-zA-Z0-9][a-zA-Z0-9\-\.]*[a-zA-Z0-9]\.[a-zA-Z]{2,})')
+                                    
+                                    $operaDomains = $urlMatches | 
+                                        ForEach-Object { $_.Groups[1].Value } | 
+                                        Where-Object { $_ -notlike "localhost*" -and $_ -notlike "*.local" -and $_ -notlike "*opera*" } |
+                                        Select-Object -Unique -First 50
+                                    
+                                    foreach ($domain in $operaDomains) {
+                                        [void]$items.Add(@{
+                                            domain = $domain
+                                            source = "opera_history_$userName"
+                                            visited_at = $nowUtc.ToString("o")
+                                            visit_count = 1
+                                        })
+                                    }
+                                    Write-Log "[WEB-ACTIVITY-V3] Opera ($userName): $($operaDomains.Count) dominios via regex" "INFO"
+                                    
+                                    $buffer = $null
+                                    $dataString = $null
+                                }
+                            } catch {
+                                Write-Log "[WEB-ACTIVITY-V3] Opera regex falhou ($userName): $($_.Exception.Message)" "WARN"
+                            }
+                        }
+                        Remove-Item $tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    }
+                }
+            } catch {
+                Write-Log "[WEB-ACTIVITY-V3] Erro ao acessar Opera ($userName): $($_.Exception.Message)" "WARN"
+            }
+            
+            # 2e. Opera GX History (mesmo formato, path diferente)
+            try {
+                $operaGxHistoryPath = Join-Path $userPath "AppData\Roaming\Opera Software\Opera GX Stable\History"
+                if (Test-Path $operaGxHistoryPath) {
+                    $tempHistoryPath = "$env:TEMP\operagx_history_temp_$(Get-Random).db"
+                    Copy-Item -Path $operaGxHistoryPath -Destination $tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    
+                    if (Test-Path $tempHistoryPath) {
+                        $sqliteResults = $null
+                        
+                        try {
+                            $sqliteResults = Get-BrowserHistorySQLite `
+                                -DbPath $tempHistoryPath `
+                                -Query "SELECT url, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 200" `
+                                -BrowserName "OperaGX" `
+                                -UserName $userName
+                        } catch {
+                            Write-Log "[WEB-ACTIVITY-V3] Opera GX SQLite falhou ($userName): $($_.Exception.Message)" "DEBUG"
+                        }
+                        
+                        if ($sqliteResults -and $sqliteResults.Count -gt 0) {
+                            foreach ($row in $sqliteResults) {
+                                $domain = Extract-DomainFromUrl $row.url
+                                if (-not $domain -or $domain -like "localhost*" -or $domain -like "*.local" -or $domain -like "*opera*") { continue }
+                                
+                                $visitedAt = ConvertFrom-WebKitTimestamp $row.last_visit_time
+                                [void]$items.Add(@{
+                                    domain = $domain
+                                    source = "operagx_history_$userName"
+                                    visited_at = if ($visitedAt) { $visitedAt.ToString("o") } else { $nowUtc.ToString("o") }
+                                    visit_count = [int]$row.visit_count
+                                })
+                            }
+                            Write-Log "[WEB-ACTIVITY-V3] Opera GX ($userName): $($sqliteResults.Count) registros via SQLite" "INFO"
+                        }
+                        Remove-Item $tempHistoryPath -Force -ErrorAction SilentlyContinue
+                    }
+                }
+            } catch {
+                Write-Log "[WEB-ACTIVITY-V3] Erro ao acessar Opera GX ($userName): $($_.Exception.Message)" "WARN"
             }
         }
 
