@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 import { corsHeaders } from '../_shared/cors.ts';
-import { getTenantIdForUser } from '../_shared/tenant.ts';
+import { getValidatedTenantId } from '../_shared/tenant.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -32,8 +32,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Buscar tenant do usuario usando helper (lida com multiplos roles)
-    const tenantId = await getTenantIdForUser(supabase, user.id);
+    // Parse request body to get tenant_id from frontend
+    let requestedTenantId: string | undefined;
+    try {
+      const body = await req.json();
+      requestedTenantId = body.tenant_id;
+    } catch {
+      // No body or invalid JSON - that's ok, we'll use default tenant
+    }
+
+    // Buscar tenant validado (respeitando seleção do frontend)
+    const tenantId = await getValidatedTenantId(supabase, user.id, requestedTenantId);
 
     if (!tenantId) {
       return new Response(JSON.stringify({ error: 'No tenant found' }), {

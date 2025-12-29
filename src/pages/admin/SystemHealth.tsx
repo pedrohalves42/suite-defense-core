@@ -21,14 +21,19 @@ import JobTestRunner from "@/components/admin/JobTestRunner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { useTenant } from "@/hooks/useTenant";
 
 export default function SystemHealth() {
+  const { tenant } = useTenant();
+
   const { data: agentStats, isLoading: loadingAgents } = useQuery({
-    queryKey: ["system-health-agents"],
+    queryKey: ["system-health-agents", tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return null;
       const { data, error } = await supabase
         .from("agents")
         .select("id, status, last_heartbeat")
+        .eq("tenant_id", tenant.id)
         .order("last_heartbeat", { ascending: false });
       
       if (error) throw error;
@@ -55,17 +60,20 @@ export default function SystemHealth() {
         ).length,
       };
     },
+    enabled: !!tenant?.id,
     refetchInterval: 30000,
   });
 
   const { data: jobStats, isLoading: loadingJobs } = useQuery({
-    queryKey: ["system-health-jobs"],
+    queryKey: ["system-health-jobs", tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return null;
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       
       const { data, error } = await supabase
         .from("jobs")
         .select("id, status, output, created_at, completed_at, delivered_at")
+        .eq("tenant_id", tenant.id)
         .gte("created_at", twentyFourHoursAgo);
       
       if (error) throw error;
@@ -99,17 +107,20 @@ export default function SystemHealth() {
         stuckCount: stuckJobs.length,
       };
     },
+    enabled: !!tenant?.id,
     refetchInterval: 30000,
   });
 
   const { data: jobsOverTime, isLoading: loadingTimeline } = useQuery({
-    queryKey: ["system-health-jobs-timeline"],
+    queryKey: ["system-health-jobs-timeline", tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       
       const { data, error } = await supabase
         .from("jobs")
         .select("created_at, status")
+        .eq("tenant_id", tenant.id)
         .gte("created_at", twentyFourHoursAgo)
         .order("created_at", { ascending: true });
       
@@ -130,15 +141,18 @@ export default function SystemHealth() {
       
       return Object.values(hourlyData).slice(-12);
     },
+    enabled: !!tenant?.id,
     refetchInterval: 60000,
   });
 
   const { data: aiInsightsStats, isLoading: loadingInsights } = useQuery({
-    queryKey: ["system-health-ai-insights"],
+    queryKey: ["system-health-ai-insights", tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return null;
       const { data, error } = await supabase
         .from("ai_insights")
         .select("id, severity, acknowledged")
+        .eq("tenant_id", tenant.id)
         .eq("acknowledged", false);
       
       if (error) throw error;
@@ -152,6 +166,7 @@ export default function SystemHealth() {
         info: data.filter(i => i.severity === 'info').length,
       };
     },
+    enabled: !!tenant?.id,
     refetchInterval: 60000,
   });
 

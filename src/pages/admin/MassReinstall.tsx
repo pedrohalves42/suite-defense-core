@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { useTenant } from '@/hooks/useTenant';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -124,22 +125,26 @@ Write-Host "=== Diagnóstico Concluído ===" -ForegroundColor Cyan
 export default function MassReinstall() {
   const [copiedScript, setCopiedScript] = useState<string | null>(null);
   const [enrollmentKey, setEnrollmentKey] = useState<string>('');
+  const { tenant } = useTenant();
 
   // Buscar agentes offline (sem heartbeat nos últimos 5 minutos)
   const { data: offlineAgents, isLoading, refetch } = useQuery({
-    queryKey: ['offline-agents-for-reinstall'],
+    queryKey: ['offline-agents-for-reinstall', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       
       const { data, error } = await supabase
         .from('agents')
         .select('id, agent_name, hostname, agent_version, last_heartbeat, status')
+        .eq('tenant_id', tenant.id)
         .or(`last_heartbeat.is.null,last_heartbeat.lt.${fiveMinutesAgo}`)
         .order('agent_name');
       
       if (error) throw error;
       return data || [];
     },
+    enabled: !!tenant?.id,
     refetchInterval: 30000, // Atualizar a cada 30s
   });
 

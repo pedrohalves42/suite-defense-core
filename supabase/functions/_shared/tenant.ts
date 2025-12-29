@@ -55,3 +55,30 @@ export async function verifyUserTenant(
 
   return !!data;
 }
+
+/**
+ * Get a validated tenant_id, preferring the requested tenant if user has access
+ * This allows the frontend to specify which tenant to use for multi-tenant users
+ * 
+ * @param supabase - Supabase client instance
+ * @param userId - User UUID
+ * @param requestedTenantId - Optional tenant_id requested by frontend
+ * @returns tenant_id or null if not found/unauthorized
+ */
+export async function getValidatedTenantId(
+  supabase: SupabaseClient,
+  userId: string,
+  requestedTenantId?: string
+): Promise<string | null> {
+  // If tenant_id was provided, validate user has access
+  if (requestedTenantId) {
+    const hasAccess = await verifyUserTenant(supabase, userId, requestedTenantId);
+    if (hasAccess) {
+      return requestedTenantId;
+    }
+    console.warn('[getValidatedTenantId] User does not have access to requested tenant:', requestedTenantId);
+  }
+  
+  // Fallback to first tenant (backwards compatibility)
+  return getTenantIdForUser(supabase, userId);
+}
