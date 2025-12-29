@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertCircle, Clock, Activity, ChevronDown, Heart, Zap, Shield, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { AgentStateExplainer } from '@/components/agent/AgentStateExplainer';
 
 const getEventIcon = (eventType: string) => {
   switch (eventType.toLowerCase()) {
@@ -76,6 +77,9 @@ export default function AgentTimeline() {
 
         {selectedAgent && (
           <>
+            {/* State Explainer - Por que este estado? */}
+            <AgentStateExplainer agentId={selectedAgent} />
+
             {/* Filter */}
             <Card>
               <CardHeader>
