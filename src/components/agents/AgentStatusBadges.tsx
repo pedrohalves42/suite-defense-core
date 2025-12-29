@@ -52,7 +52,7 @@ export function AgentStatusBadges({
             className="gap-1 text-xs border-amber-500 bg-amber-500/10 text-amber-700 dark:text-amber-400"
           >
             <Clock className="h-3 w-3" />
-            {!compact && 'Velocidade Limitada'}
+            {!compact && 'Comunicação Reduzida'}
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
