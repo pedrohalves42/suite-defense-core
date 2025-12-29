@@ -24,6 +24,7 @@ type StatusFilter = 'all' | 'problems' | 'protected' | 'offline';
 interface SelectedAgent {
   id: string;
   name: string;
+  tenantId: string;
   isThrottled?: boolean | null;
   isIsolated?: boolean | null;
   isInSafeMode?: boolean | null;
@@ -343,9 +344,10 @@ export default function AgentHealthMonitor() {
                 return (
                   <div 
                     key={agent.agent_name + idx}
-                    onClick={() => agent.id && setSelectedAgent({
+                    onClick={() => agent.id && tenant?.id && setSelectedAgent({
                       id: agent.id,
                       name: agent.agent_name,
+                      tenantId: tenant.id,
                       isThrottled: agent.is_throttled,
                       isIsolated: agent.is_isolated,
                       isInSafeMode: agent.is_in_safe_mode
@@ -431,6 +433,7 @@ export default function AgentHealthMonitor() {
       <AgentDetailsDrawer
         agentId={selectedAgent?.id || null}
         agentName={selectedAgent?.name}
+        tenantId={selectedAgent?.tenantId}
         open={!!selectedAgent}
         onClose={() => setSelectedAgent(null)}
         isThrottled={selectedAgent?.isThrottled}

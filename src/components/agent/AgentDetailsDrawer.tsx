@@ -4,6 +4,7 @@
  * Container de explicação que mostra:
  * - Estado atual com explicação completa
  * - Timeline de transições
+ * - Diagnóstico inline
  * - Ações rápidas contextuais
  */
 
@@ -15,13 +16,26 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AgentStateExplainer } from '@/components/agent/AgentStateExplainer';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
+import { DiagnosticPanel } from '@/components/agent/DiagnosticPanel';
 import { useAgentCausality } from '@/hooks/useAgentCausality';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Stethoscope, ExternalLink, CheckCircle, AlertTriangle, ShieldAlert, WifiOff, Download, ShieldOff } from 'lucide-react';
+import { 
+  Stethoscope, 
+  ExternalLink, 
+  CheckCircle, 
+  AlertTriangle, 
+  ShieldAlert, 
+  WifiOff, 
+  Download, 
+  ShieldOff,
+  Eye,
+  Activity,
+  Zap
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { getStateColorClasses, type AgentState } from '@/lib/agent-state-machine';
@@ -29,6 +43,7 @@ import { getStateColorClasses, type AgentState } from '@/lib/agent-state-machine
 interface AgentDetailsDrawerProps {
   agentId: string | null;
   agentName?: string;
+  tenantId?: string;
   open: boolean;
   onClose: () => void;
   // Props opcionais para ações (passados do pai que já tem os dados)
@@ -62,6 +77,7 @@ const STATE_LABELS: Record<AgentState, string> = {
 export function AgentDetailsDrawer({
   agentId,
   agentName,
+  tenantId,
   open,
   onClose,
   isThrottled,
@@ -71,11 +87,9 @@ export function AgentDetailsDrawer({
   const navigate = useNavigate();
   const { data: causality, isLoading } = useAgentCausality(agentId);
 
-  const hasSpecialStatus = isThrottled || isIsolated || isInSafeMode;
-
   const handleViewDiagnostics = () => {
     if (agentId) {
-      navigate(`/admin/agent-diagnostics?agent=${agentId}`);
+      navigate(`/admin/diagnostics?agent=${agentId}`);
       onClose();
     }
   };
@@ -119,63 +133,99 @@ export function AgentDetailsDrawer({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
-          {/* Explicador de Estado Completo */}
+        <div className="mt-6">
           {isLoading ? (
             <div className="space-y-3">
+              <Skeleton className="h-10 w-full" />
               <Skeleton className="h-24 w-full" />
               <Skeleton className="h-16 w-full" />
             </div>
           ) : (
-            <AgentStateExplainer agentId={agentId} />
-          )}
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="overview" className="text-xs sm:text-sm">
+                  <Eye className="h-3.5 w-3.5 mr-1.5" />
+                  Visão Geral
+                </TabsTrigger>
+                <TabsTrigger value="diagnostic" className="text-xs sm:text-sm">
+                  <Activity className="h-3.5 w-3.5 mr-1.5" />
+                  Diagnóstico
+                </TabsTrigger>
+                <TabsTrigger value="actions" className="text-xs sm:text-sm">
+                  <Zap className="h-3.5 w-3.5 mr-1.5" />
+                  Ações
+                </TabsTrigger>
+              </TabsList>
 
-          <Separator />
+              {/* Tab: Visão Geral */}
+              <TabsContent value="overview" className="mt-4 space-y-4">
+                {/* Explicador de Estado Completo */}
+                <AgentStateExplainer agentId={agentId} />
 
-          {/* Ações Rápidas */}
-          {agentId && (
-            <div className="space-y-3">
-              <h4 className="text-sm font-medium text-muted-foreground">Ações Rápidas</h4>
-              <TooltipProvider>
-                <div className="flex flex-wrap gap-2">
-                  <AgentQuickActions
-                    agentId={agentId}
-                    agentName={agentName || 'Computador'}
-                    isThrottled={isThrottled}
-                    isIsolated={isIsolated}
-                    isInSafeMode={isInSafeMode}
-                  />
+                {/* Links para Mais Detalhes */}
+                <div className="space-y-2 pt-2">
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={handleViewDiagnostics}
+                  >
+                    <Stethoscope className="h-4 w-4 mr-2" />
+                    Ver Diagnóstico Completo
+                    <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                  </Button>
+                  
+                  {causality && causality.stateTransitions.length > 0 && (
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={handleViewTimeline}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Ver Timeline Completa
+                      <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
+                    </Button>
+                  )}
                 </div>
-              </TooltipProvider>
-            </div>
+              </TabsContent>
+
+              {/* Tab: Diagnóstico */}
+              <TabsContent value="diagnostic" className="mt-4">
+                {agentId && agentName && tenantId ? (
+                  <DiagnosticPanel
+                    agentId={agentId}
+                    agentName={agentName}
+                    tenantId={tenantId}
+                    variant="compact"
+                  />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Selecione um computador para ver o diagnóstico</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Tab: Ações */}
+              <TabsContent value="actions" className="mt-4">
+                {agentId && (
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium text-muted-foreground">Ações Rápidas</h4>
+                    <TooltipProvider>
+                      <div className="flex flex-wrap gap-2">
+                        <AgentQuickActions
+                          agentId={agentId}
+                          agentName={agentName || 'Computador'}
+                          isThrottled={isThrottled}
+                          isIsolated={isIsolated}
+                          isInSafeMode={isInSafeMode}
+                        />
+                      </div>
+                    </TooltipProvider>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           )}
-
-          <Separator />
-
-          {/* Links para Mais Detalhes */}
-          <div className="space-y-2">
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={handleViewDiagnostics}
-            >
-              <Stethoscope className="h-4 w-4 mr-2" />
-              Ver Diagnóstico Completo
-              <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-            </Button>
-            
-            {causality && causality.stateTransitions.length > 0 && (
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={handleViewTimeline}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Ver Timeline Completa
-                <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
-              </Button>
-            )}
-          </div>
         </div>
       </SheetContent>
     </Sheet>
