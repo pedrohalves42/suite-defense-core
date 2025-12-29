@@ -540,15 +540,15 @@ const JobCreator = () => {
                 <>
                   {/* Agent Selection */}
                   <div className="space-y-2">
-                    <Label htmlFor="agent">Agente</Label>
+                    <Label htmlFor="agent">Computador</Label>
                     <Select value={selectedAgent} onValueChange={setSelectedAgent}>
                       <SelectTrigger id="agent">
-                        <SelectValue placeholder="Selecione um agente" />
+                        <SelectValue placeholder="Selecione um computador" />
                       </SelectTrigger>
                       <SelectContent>
                         {agents.length === 0 ? (
                           <SelectItem value="none" disabled>
-                            Nenhum agente disponivel
+                            Nenhum computador disponível
                           </SelectItem>
                         ) : (
                           agents.map((agent) => {

@@ -165,7 +165,7 @@ export default function VirusScans() {
                 </Badge>
               </div>
               <div>
-                <p className="text-sm font-semibold text-muted-foreground">Agente</p>
+                <p className="text-sm font-semibold text-muted-foreground">Computador</p>
                 <p className="text-sm mt-1 font-mono">{scan.agent_name}</p>
               </div>
               <div>
@@ -262,10 +262,10 @@ export default function VirusScans() {
                   setPage(0);
                 }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Todos os agentes" />
+                    <SelectValue placeholder="Todos os computadores" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todos os agentes</SelectItem>
+                    <SelectItem value="all">Todos os computadores</SelectItem>
                     {agents?.map((agent) => (
                       <SelectItem key={agent} value={agent}>
                         {agent}
@@ -352,7 +352,7 @@ export default function VirusScans() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Data/Hora</TableHead>
-                      <TableHead>Agente</TableHead>
+                      <TableHead>Computador</TableHead>
                       <TableHead>Arquivo</TableHead>
                       <TableHead>Hash</TableHead>
                       <TableHead>Status</TableHead>

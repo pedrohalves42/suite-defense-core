@@ -50,16 +50,16 @@ export function AgentQuickActions({
     onSuccess: (data) => {
       const result = data as { success: boolean; tokens_invalidated?: number; jobs_deleted?: number };
       toast({
-        title: 'Agente limpo com sucesso',
-        description: `Tokens invalidados: ${result.tokens_invalidated || 0}, Jobs removidos: ${result.jobs_deleted || 0}`,
+        title: 'Computador limpo com sucesso',
+        description: `Credenciais invalidadas: ${result.tokens_invalidated || 0}, Tarefas removidas: ${result.jobs_deleted || 0}`,
       });
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       queryClient.invalidateQueries({ queryKey: ['problematic-agents'] });
     },
     onError: (error) => {
       toast({
-        title: 'Erro ao limpar agente',
-        description: error.message,
+        title: 'Não foi possível limpar o computador',
+        description: 'Tente novamente em alguns minutos.',
         variant: 'destructive',
       });
     },
@@ -82,10 +82,10 @@ export function AgentQuickActions({
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Clock className="h-4 w-4" />
-                )}
+              )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Remover Throttle</TooltipContent>
+            <TooltipContent>Remover limitação temporária</TooltipContent>
           </Tooltip>
         )}
         {isIsolated && (
@@ -102,10 +102,10 @@ export function AgentQuickActions({
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <ShieldOff className="h-4 w-4" />
-                )}
+              )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Remover Isolamento</TooltipContent>
+            <TooltipContent>Remover isolamento de segurança</TooltipContent>
           </Tooltip>
         )}
         {isInSafeMode && (
@@ -126,7 +126,10 @@ export function AgentQuickActions({
                   )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Reset Safe Mode (job)</TooltipContent>
+              <TooltipContent>
+                <p className="font-medium">Resetar modo de proteção</p>
+                <p className="text-xs text-muted-foreground">Cria uma tarefa para desativar o modo de proteção</p>
+              </TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -145,56 +148,68 @@ export function AgentQuickActions({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p className="font-medium">Override Safe Mode (30 min)</p>
-                <p className="text-xs text-yellow-400">⚠️ Use apenas para recuperação de emergência</p>
+                <p className="font-medium">Forçar atualização (30 min)</p>
+                <p className="text-xs text-yellow-400">⚠️ Ignora proteções. Use apenas em emergências.</p>
               </TooltipContent>
             </Tooltip>
           </>
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(`/admin/agent-diagnostics?agent=${agentId}`)}
-          title="Ver Diagnóstico"
-        >
-          <Stethoscope className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/admin/enrollment-keys')}
-          title="Gerar Nova Key"
-        >
-          <Key className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowCleanupDialog(true)}
-          title="Limpar Agente"
-          disabled={cleanupMutation.isPending}
-        >
-          {cleanupMutation.isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Trash2 className="h-4 w-4" />
-          )}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(`/admin/agent-diagnostics?agent=${agentId}`)}
+            >
+              <Stethoscope className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Ver diagnóstico do computador</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/admin/enrollment-keys')}
+            >
+              <Key className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Gerar nova chave de instalação</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowCleanupDialog(true)}
+              disabled={cleanupMutation.isPending}
+            >
+              {cleanupMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Limpar e resetar computador</TooltipContent>
+        </Tooltip>
       </div>
 
       <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Limpar Agente Problemático</AlertDialogTitle>
+            <AlertDialogTitle>Limpar Computador com Problemas</AlertDialogTitle>
             <AlertDialogDescription>
               Esta ação irá:
               <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Invalidar todos os tokens do agente <strong>{agentName}</strong></li>
-                <li>Remover jobs pendentes/entregues</li>
-                <li>Resetar o status para "pending"</li>
+                <li>Invalidar todas as credenciais do computador <strong>{agentName}</strong></li>
+                <li>Remover tarefas pendentes</li>
+                <li>Resetar o status para reinstalação</li>
               </ul>
               <p className="mt-3 text-destructive font-medium">
-                O agente precisará ser reinstalado com uma nova enrollment key.
+                O computador precisará ser reinstalado com uma nova chave de instalação.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
