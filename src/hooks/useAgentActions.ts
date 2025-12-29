@@ -177,9 +177,15 @@ export function useAgentActions() {
 
   const enableOverrideSafeMode = useMutation({
     mutationFn: async (agentId: string) => {
+      // Expiração automática de 30 minutos (guardrail enterprise)
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      
       const { error } = await supabase
         .from('agents')
-        .update({ force_update_override_safe_mode: true })
+        .update({ 
+          force_update_override_safe_mode: true,
+          force_update_override_safe_mode_expires_at: expiresAt
+        })
         .eq('id', agentId);
       if (error) throw error;
     },

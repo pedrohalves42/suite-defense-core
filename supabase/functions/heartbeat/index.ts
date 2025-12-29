@@ -214,9 +214,14 @@ Deno.serve(async (req) => {
     // ============================================================
     const { data: forceCheck } = await supabase
       .from('agents')
-      .select('force_update_version, force_update_reason, force_update_override_safe_mode')
+      .select('force_update_version, force_update_reason, force_update_override_safe_mode, force_update_override_safe_mode_expires_at')
       .eq('id', agent.id)
       .single()
+    
+    // Calcular se override está válido (não expirado)
+    const overrideValid = forceCheck?.force_update_override_safe_mode && 
+      (!forceCheck?.force_update_override_safe_mode_expires_at || 
+       new Date(forceCheck.force_update_override_safe_mode_expires_at) > new Date())
 
     // Se tem force_update pendente, buscar release e incluir no response
     if (forceCheck?.force_update_version) {
@@ -275,7 +280,7 @@ Deno.serve(async (req) => {
             script_content_base64: base64Script,
             sha256: calculatedSha256,
             reason: forceCheck.force_update_reason || 'Forced update via backend',
-            override_safe_mode: forceCheck.force_update_override_safe_mode || false
+            override_safe_mode: overrideValid
           }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
