@@ -37,14 +37,21 @@ Deno.serve(async (req) => {
     try {
       const body = await req.json();
       requestedTenantId = body.tenant_id;
+      console.log('[get-agent-dashboard-data] Received body:', { tenant_id: requestedTenantId });
     } catch {
-      // No body or invalid JSON - that's ok, we'll use default tenant
+      console.log('[get-agent-dashboard-data] No body or invalid JSON');
     }
 
     // Buscar tenant validado (respeitando seleção do frontend)
+    console.log('[get-agent-dashboard-data] Calling getValidatedTenantId with:', {
+      userId: user.id,
+      requestedTenantId
+    });
     const tenantId = await getValidatedTenantId(supabase, user.id, requestedTenantId);
+    console.log('[get-agent-dashboard-data] Final tenantId to use:', tenantId);
 
     if (!tenantId) {
+      console.error('[get-agent-dashboard-data] No tenant found for user');
       return new Response(JSON.stringify({ error: 'No tenant found' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -68,18 +68,22 @@ export default function AgentTest() {
     },
   });
 
-  // Fetch agents
+  // Fetch agents - filtered by tenant
   const { data: agents } = useQuery({
-    queryKey: ["agents"],
+    queryKey: ["agents", tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
+      
       const { data, error } = await supabase
         .from("agents")
         .select("*")
+        .eq("tenant_id", tenant.id)
         .order("agent_name");
       
       if (error) throw error;
       return data;
     },
+    enabled: !!tenant?.id
   });
 
   const addTestResult = (result: Omit<TestResult, "timestamp">) => {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { toast } from 'sonner';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 
 export default function Quarantine() {
+  const { tenant } = useTenant();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
@@ -23,13 +25,16 @@ export default function Quarantine() {
 
   const queryClient = useQueryClient();
 
-  // Fetch quarantined files
+  // Fetch quarantined files - filtered by tenant
   const { data: quarantinedFiles, isLoading } = useQuery({
-    queryKey: ['quarantined-files', page, searchTerm, statusFilter],
+    queryKey: ['quarantined-files', tenant?.id, page, searchTerm, statusFilter],
     queryFn: async () => {
+      if (!tenant?.id) return { data: [], count: 0 };
+      
       let query = supabase
         .from('quarantined_files')
         .select('*, virus_scans(positives, total_scans, virustotal_permalink)', { count: 'exact' })
+        .eq('tenant_id', tenant.id)
         .order('quarantined_at', { ascending: false })
         .range((page - 1) * itemsPerPage, page * itemsPerPage - 1);
 
@@ -44,7 +49,8 @@ export default function Quarantine() {
       const { data, error, count } = await query;
       if (error) throw error;
       return { data, count };
-    }
+    },
+    enabled: !!tenant?.id
   });
 
   // Restore file mutation
