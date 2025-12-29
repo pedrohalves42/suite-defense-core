@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 #
-# CyberShield Agent - Linux v4.1.7
+# CyberShield Agent - Linux v4.2.1
+#
+# v4.2.1: SYNC com Windows - Paridade Completa
+# - NEW: Coleta de historico de navegadores (Chrome, Firefox, Opera, Opera GX, Chromium)
+# - NEW: Bloqueio de sites via /etc/hosts
+# - NEW: Proof of Execution (PoE) com ECDSA P-256
+# - NEW: Force Update via Heartbeat Response
+# - NEW: Auto-Rollback + Safe Mode
+# - FIX: Normalizacao temporal correta para todos os browsers
+# - FIX: Deduplicacao de entries com cache local
 #
 # FASE 2.1: State Machine Formal (6 estados)
 # FASE 2.2: Evidence Journal Local
@@ -17,15 +26,6 @@
 # - ERROR: Erro critico, requer intervencao
 # - RECOVERY: Tentando auto-recuperacao
 #
-# Funcionalidades v4.1.7 (PHASE 1 - PROCESS CONTROL):
-# - NEW: kill_process handler - Terminate processes by name
-# - NEW: stop_service handler - Stop system services
-# - NEW: disable_service handler - Stop + disable startup
-# - NEW: restart_service handler - Restart system services
-# - SECURITY: Protected processes/services lists (defense in depth)
-# - SECURITY: Agent-side validation prevents killing critical processes
-# - PARITY: Windows / Linux / macOS support
-#
 # Uso:
 #   ./cybershield-agent-linux-v4.sh \
 #       --server-url "https://seu-projeto.supabase.co" \
@@ -39,14 +39,30 @@ set -euo pipefail
 # ============================================
 #  CONSTANTES E VARIAVEIS GLOBAIS
 # ============================================
-AGENT_VERSION="v4.1.7"
+AGENT_VERSION="v4.2.1"
 BASE_DIR="/opt/cybershield"
 LOG_DIR="${BASE_DIR}/logs"
 EVIDENCE_DIR="${BASE_DIR}/evidence"
 CONFIG_DIR="${BASE_DIR}/config"
+KEYS_DIR="${BASE_DIR}/keys"
 LOG_FILE="${LOG_DIR}/agent.log"
 EVIDENCE_FILE="${EVIDENCE_DIR}/journal.log"
 POLL_INTERVAL=60
+
+# PoE - Proof of Execution (ECDSA P-256)
+PRIVATE_KEY_PATH="${KEYS_DIR}/agent.key"
+PUBLIC_KEY_PATH="${KEYS_DIR}/agent.pub"
+FINGERPRINT_PATH="${KEYS_DIR}/fingerprint.txt"
+PREVIOUS_KEY_PATH="${KEYS_DIR}/agent.key.prev"
+SIGNING_FINGERPRINT=""
+
+# Auto-Update + Rollback
+ROLLBACK_STATE_FILE="${CONFIG_DIR}/rollback_state.json"
+PREVIOUS_SCRIPT_PATH="${CONFIG_DIR}/agent_previous.sh"
+
+# Web Activity
+WEB_ACTIVITY_SEEN_FILE="${CONFIG_DIR}/web_activity_seen.cache"
+BLOCKED_WEBSITES_FILE="${CONFIG_DIR}/blocked_websites.json"
 
 # State Machine
 declare -A AGENT_STATE=(
@@ -91,14 +107,12 @@ declare -a EVIDENCE_BUFFER=()
 EVIDENCE_FLUSH_THRESHOLD=10
 
 # SSA-004: Ed25519 Public Key for job signature verification
-# Format: Base64-encoded SubjectPublicKeyInfo (SPKI)
 ED25519_PUBLIC_KEY="MCowBQYDK2VwAyEALE6FW6/R+acpFFZXw86DbfKQEtbYPVdABZih0iggaoI="
 REQUIRE_JOB_SIGNATURES=true
 
 # ============================================
 #  PHASE 1: PROTECTED TARGETS (DEFENSE IN DEPTH)
 # ============================================
-# Even if backend validation fails, agent NEVER touches these
 readonly PROTECTED_PROCESSES=(
     "systemd" "init" "kthreadd" "sshd" "dbus-daemon"
     "systemd-journald" "systemd-udevd" "systemd-logind"
@@ -174,7 +188,8 @@ SERVER_URL="${SERVER_URL%/}"
 # ============================================
 #  CRIAR DIRETORIOS
 # ============================================
-mkdir -p "$LOG_DIR" "$EVIDENCE_DIR" "$CONFIG_DIR"
+mkdir -p "$LOG_DIR" "$EVIDENCE_DIR" "$CONFIG_DIR" "$KEYS_DIR"
+chmod 700 "$KEYS_DIR"
 
 # ============================================
 #  BOOTSTRAP VALIDATION - CRITICAL FUNCTIONS
@@ -331,7 +346,6 @@ flush_evidence() {
         else
             entries+=","
         fi
-        # Extract relevant fields for API
         local event_type
         event_type=$(echo "$entry" | jq -r '.type')
         local event_data
@@ -382,7 +396,6 @@ rotate_evidence() {
         fi
     fi
     
-    # Clean old archives
     find "$EVIDENCE_DIR" -name "journal.log.*.bak" -mtime +$max_age_days -delete 2>/dev/null || true
 }
 
@@ -453,6 +466,333 @@ invoke_auto_recovery() {
 }
 
 # ============================================
+#  FASE 3: PROOF OF EXECUTION (PoE) - ECDSA P-256
+# ============================================
+generate_signing_keypair() {
+    log "INFO" "[POE] Generating new ECDSA P-256 keypair..."
+    
+    # Backup previous key if exists
+    if [[ -f "$PRIVATE_KEY_PATH" ]]; then
+        cp "$PRIVATE_KEY_PATH" "$PREVIOUS_KEY_PATH" 2>/dev/null || true
+    fi
+    
+    # Generate private key
+    openssl ecparam -genkey -name prime256v1 -noout -out "$PRIVATE_KEY_PATH" 2>/dev/null
+    chmod 600 "$PRIVATE_KEY_PATH"
+    
+    # Extract public key
+    openssl ec -in "$PRIVATE_KEY_PATH" -pubout -out "$PUBLIC_KEY_PATH" 2>/dev/null
+    
+    # Calculate fingerprint (SHA256 of public key)
+    local fingerprint
+    fingerprint=$(openssl dgst -sha256 -binary "$PUBLIC_KEY_PATH" | xxd -p | tr -d '\n')
+    echo "$fingerprint" > "$FINGERPRINT_PATH"
+    
+    SIGNING_FINGERPRINT="$fingerprint"
+    log "SUCCESS" "[POE] Keypair generated (fingerprint: ${fingerprint:0:16}...)"
+    
+    echo "$fingerprint"
+}
+
+initialize_signing_keypair() {
+    if [[ -f "$PRIVATE_KEY_PATH" && -f "$PUBLIC_KEY_PATH" && -f "$FINGERPRINT_PATH" ]]; then
+        SIGNING_FINGERPRINT=$(cat "$FINGERPRINT_PATH" 2>/dev/null)
+        log "INFO" "[POE] Loaded existing keypair (fingerprint: ${SIGNING_FINGERPRINT:0:16}...)"
+        return 0
+    fi
+    
+    log "INFO" "[POE] No existing keypair found, generating new one..."
+    SIGNING_FINGERPRINT=$(generate_signing_keypair)
+    
+    if [[ -z "$SIGNING_FINGERPRINT" ]]; then
+        log "ERROR" "[POE] Failed to generate keypair"
+        return 1
+    fi
+    
+    # Register public key with backend
+    register_signing_key
+}
+
+register_signing_key() {
+    log "INFO" "[POE] Registering public key with backend..."
+    
+    local public_key_b64
+    public_key_b64=$(base64 -w0 "$PUBLIC_KEY_PATH" 2>/dev/null)
+    
+    local body
+    body=$(cat <<EOF
+{"agent_name":"$AGENT_NAME","public_key":"$public_key_b64","key_fingerprint":"$SIGNING_FINGERPRINT","algorithm":"ECDSA-P256-SHA256"}
+EOF
+)
+    
+    local result
+    result=$(invoke_secure_request "POST" "/functions/v1/register-agent-key" "$body" 30)
+    
+    if [[ $? -eq 0 ]]; then
+        log "SUCCESS" "[POE] Public key registered successfully"
+        add_evidence "poe_key_registered" "{\"fingerprint\":\"$SIGNING_FINGERPRINT\",\"algorithm\":\"ECDSA-P256-SHA256\"}" "" "" "info"
+        return 0
+    else
+        log "WARN" "[POE] Failed to register public key (will retry later)"
+        return 1
+    fi
+}
+
+compute_output_hash() {
+    local output="$1"
+    echo -n "$output" | sha256sum | cut -d' ' -f1
+}
+
+sign_execution_result() {
+    local execution_id="$1"
+    local job_id="$2"
+    local nonce="$3"
+    local output_hash="$4"
+    local status="$5"
+    
+    # Canonical payload (fixed order, pipe-separated)
+    local canonical="${execution_id}|${job_id}|${nonce}|${output_hash}|${status}"
+    
+    # Sign with ECDSA
+    local signature
+    signature=$(echo -n "$canonical" | openssl dgst -sha256 -sign "$PRIVATE_KEY_PATH" 2>/dev/null | base64 -w0 2>/dev/null)
+    
+    echo "$signature"
+}
+
+# ============================================
+#  FASE 4: AUTO-UPDATE + ROLLBACK
+# ============================================
+get_rollback_state() {
+    if [[ -f "$ROLLBACK_STATE_FILE" ]]; then
+        cat "$ROLLBACK_STATE_FILE"
+    else
+        echo '{"rollback_count":0,"safe_mode":false,"previous_version":"","last_rollback":"","last_health_check":""}'
+    fi
+}
+
+save_rollback_state() {
+    local state="$1"
+    echo "$state" > "$ROLLBACK_STATE_FILE"
+}
+
+is_safe_mode() {
+    local state
+    state=$(get_rollback_state)
+    local safe_mode
+    safe_mode=$(echo "$state" | jq -r '.safe_mode // false')
+    [[ "$safe_mode" == "true" ]]
+}
+
+apply_forced_update() {
+    local response="$1"
+    
+    log "INFO" "[UPDATE] Processing forced update..."
+    
+    # Check Safe Mode
+    if is_safe_mode; then
+        log "ERROR" "[UPDATE] BLOCKED: Safe mode active - updates disabled"
+        add_evidence "update_blocked" "{\"reason\":\"safe_mode_active\"}" "" "" "warning"
+        return 1
+    fi
+    
+    local target_version
+    target_version=$(echo "$response" | jq -r '.target_version // empty')
+    local base64_content
+    base64_content=$(echo "$response" | jq -r '.script_content_base64 // empty')
+    local expected_hash
+    expected_hash=$(echo "$response" | jq -r '.sha256 // empty')
+    
+    if [[ -z "$base64_content" || -z "$expected_hash" ]]; then
+        log "ERROR" "[UPDATE] Invalid update payload - missing content or hash"
+        return 1
+    fi
+    
+    # Decode Base64
+    local temp_script="/tmp/cybershield-update-$$.sh"
+    echo "$base64_content" | base64 -d > "$temp_script" 2>/dev/null
+    
+    if [[ ! -s "$temp_script" ]]; then
+        log "ERROR" "[UPDATE] Failed to decode update content"
+        rm -f "$temp_script"
+        return 1
+    fi
+    
+    # Validate SHA256
+    local actual_hash
+    actual_hash=$(sha256sum "$temp_script" | cut -d' ' -f1)
+    
+    if [[ "$actual_hash" != "$expected_hash" ]]; then
+        log "ERROR" "[UPDATE] SHA256 MISMATCH! Expected: $expected_hash, Got: $actual_hash"
+        add_evidence "update_rejected" "{\"reason\":\"sha256_mismatch\",\"expected\":\"$expected_hash\",\"actual\":\"$actual_hash\"}" "" "" "critical"
+        rm -f "$temp_script"
+        return 1
+    fi
+    
+    log "SUCCESS" "[UPDATE] SHA256 validated: $actual_hash"
+    
+    # Backup current script
+    local current_script="$0"
+    cp "$current_script" "$PREVIOUS_SCRIPT_PATH" 2>/dev/null || true
+    
+    # Update rollback state
+    local state
+    state=$(get_rollback_state)
+    state=$(echo "$state" | jq ".previous_version = \"$AGENT_VERSION\"")
+    save_rollback_state "$state"
+    
+    # Apply update (atomic move)
+    cp "$temp_script" "$current_script"
+    chmod +x "$current_script"
+    rm -f "$temp_script"
+    
+    log "SUCCESS" "[UPDATE] Update $target_version applied!"
+    add_evidence "update_applied" "{\"from_version\":\"$AGENT_VERSION\",\"to_version\":\"$target_version\",\"sha256\":\"$actual_hash\"}" "" "" "info"
+    
+    # Confirm update to backend
+    local confirm_body
+    confirm_body="{\"agent_name\":\"$AGENT_NAME\",\"new_version\":\"$target_version\",\"old_version\":\"$AGENT_VERSION\"}"
+    invoke_secure_request "POST" "/functions/v1/confirm-force-update" "$confirm_body" 10 || true
+    
+    # Restart agent service
+    restart_agent_service
+}
+
+handle_update_agent() {
+    local job="$1"
+    log "INFO" "[UPDATE] Processing update_agent job..."
+    
+    # Check Safe Mode
+    if is_safe_mode; then
+        echo '{"success":false,"error":"Safe mode active - updates disabled"}'
+        return 1
+    fi
+    
+    local payload
+    payload=$(echo "$job" | jq '.payload')
+    
+    local base64_content
+    base64_content=$(echo "$payload" | jq -r '.script_content_base64 // empty')
+    local expected_hash
+    expected_hash=$(echo "$payload" | jq -r '.sha256 // empty')
+    local target_version
+    target_version=$(echo "$payload" | jq -r '.target_version // empty')
+    
+    if [[ -z "$base64_content" || -z "$expected_hash" ]]; then
+        echo '{"success":false,"error":"Invalid update payload"}'
+        return 1
+    fi
+    
+    # Use same logic as forced update
+    local update_response
+    update_response="{\"target_version\":\"$target_version\",\"script_content_base64\":\"$base64_content\",\"sha256\":\"$expected_hash\"}"
+    
+    if apply_forced_update "$update_response"; then
+        echo '{"success":true,"output":"Update applied successfully"}'
+    else
+        echo '{"success":false,"error":"Update failed"}'
+        return 1
+    fi
+}
+
+test_post_update_health() {
+    log "INFO" "[HEALTH] Running post-update health check..."
+    
+    local checks_passed=0
+    local total_checks=3
+    
+    # 1. State machine functional
+    if [[ "$(get_state)" != "ERROR" ]]; then
+        ((checks_passed++))
+    fi
+    
+    # 2. Heartbeat functional
+    if send_heartbeat 2>/dev/null; then
+        ((checks_passed++))
+    fi
+    
+    # 3. Poll jobs functional
+    if poll_jobs 2>/dev/null; then
+        ((checks_passed++))
+    fi
+    
+    if [[ $checks_passed -lt $total_checks ]]; then
+        log "ERROR" "[HEALTH] Post-update health check FAILED ($checks_passed/$total_checks)"
+        invoke_safe_rollback "Health check failed after update"
+        return 1
+    fi
+    
+    log "SUCCESS" "[HEALTH] Post-update health check OK ($checks_passed/$total_checks)"
+    
+    # Reset rollback counter on success
+    local state
+    state=$(get_rollback_state)
+    state=$(echo "$state" | jq '.rollback_count = 0 | .last_health_check = "'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"')
+    save_rollback_state "$state"
+    
+    return 0
+}
+
+invoke_safe_rollback() {
+    local reason="$1"
+    
+    log "WARN" "[ROLLBACK] Initiating rollback: $reason"
+    add_evidence "rollback_initiated" "{\"reason\":\"$reason\"}" "" "" "warning"
+    
+    if [[ ! -f "$PREVIOUS_SCRIPT_PATH" ]]; then
+        log "ERROR" "[ROLLBACK] Previous version not found - cannot rollback"
+        return 1
+    fi
+    
+    local state
+    state=$(get_rollback_state)
+    local count
+    count=$(echo "$state" | jq -r '.rollback_count // 0')
+    count=$((count + 1))
+    
+    # Safe Mode after 2 rollbacks
+    if [[ $count -ge 2 ]]; then
+        log "ERROR" "[CRITICAL] Rollback loop detected - ENTERING SAFE MODE"
+        state=$(echo "$state" | jq ".safe_mode = true | .rollback_count = $count")
+        save_rollback_state "$state"
+        
+        # Report to backend
+        invoke_secure_request "POST" "/functions/v1/submit-rollback-event" \
+            "{\"agent_name\":\"$AGENT_NAME\",\"safe_mode\":true,\"rollback_count\":$count,\"reason\":\"$reason\"}" 10 || true
+        
+        add_evidence "safe_mode_entered" "{\"rollback_count\":$count,\"reason\":\"$reason\"}" "" "" "critical"
+        return 1
+    fi
+    
+    state=$(echo "$state" | jq ".rollback_count = $count | .last_rollback = \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"")
+    save_rollback_state "$state"
+    
+    # Restore previous version
+    cp "$PREVIOUS_SCRIPT_PATH" "$0"
+    chmod +x "$0"
+    
+    log "INFO" "[ROLLBACK] Previous version restored (rollback #$count)"
+    add_evidence "rollback_completed" "{\"rollback_count\":$count}" "" "" "warning"
+    
+    # Report to backend
+    invoke_secure_request "POST" "/functions/v1/submit-rollback-event" \
+        "{\"agent_name\":\"$AGENT_NAME\",\"safe_mode\":false,\"rollback_count\":$count,\"reason\":\"$reason\"}" 10 || true
+    
+    # Restart
+    restart_agent_service
+}
+
+restart_agent_service() {
+    log "INFO" "[SERVICE] Restarting agent service..."
+    
+    if command -v systemctl &>/dev/null; then
+        systemctl restart cybershield-agent 2>/dev/null || true
+    fi
+    
+    exit 0
+}
+
+# ============================================
 #  FASE 2.4: DNS FILTER INTEGRATION
 # ============================================
 get_dns_status() {
@@ -477,7 +817,6 @@ start_dns_service() {
     
     if ! systemctl list-unit-files | grep -q "$DNS_FILTER_SERVICE"; then
         log "INFO" "[DNS] Installing service..."
-        # Create systemd service file
         cat > /etc/systemd/system/${DNS_FILTER_SERVICE}.service <<EOF
 [Unit]
 Description=CyberShield DNS Filter
@@ -527,7 +866,6 @@ test_dns_health() {
         return 1
     fi
     
-    # Test DNS resolution via local resolver
     if dig @127.0.0.1 google.com +short +time=2 &>/dev/null; then
         DNS_CONSECUTIVE_FAILURES=0
         echo "{\"healthy\":true,\"reason\":\"DNS resolution OK\",\"consecutive_failures\":0}"
@@ -574,7 +912,7 @@ get_current_policy_state() {
     local can_execute
     can_execute_job && can_execute="true" || can_execute="false"
     local blocked_synced
-    blocked_synced=$(test -f "${BASE_DIR}/blocked_websites.json" && echo "true" || echo "false")
+    blocked_synced=$(test -f "$BLOCKED_WEBSITES_FILE" && echo "true" || echo "false")
     
     cat <<EOF
 {"dns_enabled":"$DNS_FILTER_ENABLED","dns_service_running":"$dns_running","dns_installed":"$dns_installed","agent_version":"$AGENT_VERSION","agent_state":"$agent_state","job_execution_enabled":"$can_execute","heartbeat_interval":"$POLL_INTERVAL","blocked_domains_synced":"$blocked_synced","timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}
@@ -585,9 +923,7 @@ check_policy_compliance() {
     local current
     current=$(get_current_policy_state)
     local drift_count=0
-    local drift_items="[]"
     
-    # Check DNS enabled
     local actual_dns
     actual_dns=$(echo "$current" | jq -r '.dns_service_running')
     if [[ "${POLICY_EXPECTED[dns_service_running]}" == "true" && "$actual_dns" != "true" ]]; then
@@ -595,7 +931,6 @@ check_policy_compliance() {
         log "WARN" "[POLICY] Drift: dns_service_running expected=true actual=$actual_dns"
     fi
     
-    # Check blocked domains synced
     local actual_blocked
     actual_blocked=$(echo "$current" | jq -r '.blocked_domains_synced')
     if [[ "${POLICY_EXPECTED[blocked_domains_synced]}" == "true" && "$actual_blocked" != "true" ]]; then
@@ -627,7 +962,6 @@ invoke_policy_enforcement() {
     
     log "INFO" "[POLICY] Attempting to enforce policy..."
     
-    # Enforce DNS if needed
     local current
     current=$(get_current_policy_state)
     local actual_dns
@@ -652,7 +986,6 @@ sync_policy_from_server() {
     result=$(invoke_secure_request "POST" "/functions/v1/get-agent-policy" "$body" 15)
     
     if [[ $? -eq 0 && -n "$result" ]]; then
-        # Parse and update expected policy
         local server_version
         server_version=$(echo "$result" | jq -r '.version // empty')
         if [[ -n "$server_version" ]]; then
@@ -674,7 +1007,6 @@ get_hmac_signature() {
     local message="$1"
     local secret="$2"
     
-    # Convert hex secret to binary and compute HMAC
     echo -n "$message" | openssl dgst -sha256 -mac HMAC -macopt "hexkey:$secret" | awk '{print $2}'
 }
 
@@ -735,12 +1067,12 @@ invoke_secure_request() {
 }
 
 # ============================================
-#  HEARTBEAT
+#  HEARTBEAT (with force_update detection)
 # ============================================
 send_heartbeat() {
     local body
     body=$(cat <<EOF
-{"agent_name":"$AGENT_NAME","hostname":"$(hostname)","os_type":"linux","os_version":"$(uname -r)","agent_version":"$AGENT_VERSION","state":"$(get_state)","error_count":${AGENT_STATE[error_count]}}
+{"agent_name":"$AGENT_NAME","hostname":"$(hostname)","os_type":"linux","os_version":"$(uname -r)","agent_version":"$AGENT_VERSION","state":"$(get_state)","error_count":${AGENT_STATE[error_count]},"signing_fingerprint":"$SIGNING_FINGERPRINT"}
 EOF
 )
     
@@ -752,6 +1084,26 @@ EOF
     if [[ $? -eq 0 ]]; then
         log "SUCCESS" "[HEARTBEAT] OK (200)"
         add_evidence "heartbeat" "{\"status\":\"success\",\"state\":\"$(get_state)\"}" "" "" "debug"
+        
+        # Check for force_update in response
+        local force_update
+        force_update=$(echo "$result" | jq -r '.force_update // false' 2>/dev/null)
+        
+        if [[ "$force_update" == "true" ]]; then
+            log "WARN" "[HEARTBEAT] Force update detected!"
+            apply_forced_update "$result"
+        fi
+        
+        # Check for key rotation request
+        local rotate_key
+        rotate_key=$(echo "$result" | jq -r '.rotate_key // false' 2>/dev/null)
+        
+        if [[ "$rotate_key" == "true" ]]; then
+            log "WARN" "[HEARTBEAT] Key rotation requested"
+            generate_signing_keypair
+            register_signing_key
+        fi
+        
         return 0
     else
         log "ERROR" "[HEARTBEAT] Failed"
@@ -760,20 +1112,20 @@ EOF
 }
 
 # ============================================
-#  SEND SYSTEM METRICS (v4.0.9)
+#  SEND SYSTEM METRICS
 # ============================================
 send_system_metrics() {
-    log "DEBUG" "[METRICS] Coletando metricas do sistema..."
+    log "DEBUG" "[METRICS] Collecting system metrics..."
     
     local metrics
     metrics=$(collect_system_metrics 2>/dev/null)
     
     if [[ -z "$metrics" ]]; then
-        log "WARN" "[METRICS] Falha na coleta de metricas"
+        log "WARN" "[METRICS] Failed to collect metrics"
         return 1
     fi
     
-    log "DEBUG" "[METRICS] Enviando metricas para backend..."
+    log "DEBUG" "[METRICS] Sending metrics to backend..."
     
     local body
     body="{\"agent_name\":\"$AGENT_NAME\",\"agent_version\":\"$AGENT_VERSION\",\"metrics\":$metrics}"
@@ -786,10 +1138,10 @@ send_system_metrics() {
         cpu=$(echo "$metrics" | jq -r '.cpu_percent' 2>/dev/null || echo "?")
         mem=$(echo "$metrics" | jq -r '.memory_percent' 2>/dev/null || echo "?")
         disk=$(echo "$metrics" | jq -r '.disk_percent' 2>/dev/null || echo "?")
-        log "SUCCESS" "[METRICS] Metricas enviadas: CPU=${cpu}%, RAM=${mem}%, Disco=${disk}%"
+        log "SUCCESS" "[METRICS] Sent: CPU=${cpu}%, RAM=${mem}%, Disk=${disk}%"
         return 0
     else
-        log "WARN" "[METRICS] Falha ao enviar metricas"
+        log "WARN" "[METRICS] Failed to send metrics"
         return 1
     fi
 }
@@ -840,16 +1192,14 @@ verify_job_signature() {
     local signing_alg
     signing_alg=$(echo "$job" | jq -r '.signing_alg // empty')
     
-    # If no public key configured, skip verification
     if [[ -z "$ED25519_PUBLIC_KEY" ]]; then
         log "WARN" "[SECURITY] Ed25519 public key not configured - skipping signature verification"
         return 0
     fi
     
-    # If no signature provided
     if [[ -z "$signature" ]]; then
         if [[ "$REQUIRE_JOB_SIGNATURES" == "true" ]]; then
-            log "ERROR" "[SECURITY] ❌ REJECTED: Job $job_id has no signature (signatures required)"
+            log "ERROR" "[SECURITY] REJECTED: Job $job_id has no signature (signatures required)"
             add_evidence "security_alert" "{\"event\":\"unsigned_job_rejected\",\"job_id\":\"$job_id\",\"job_type\":\"$job_type\"}" "" "" "critical"
             return 1
         fi
@@ -857,49 +1207,42 @@ verify_job_signature() {
         return 0
     fi
     
-    # Verify algorithm
     if [[ -n "$signing_alg" && "$signing_alg" != "Ed25519" ]]; then
-        log "ERROR" "[SECURITY] ❌ REJECTED: Unsupported signing algorithm: $signing_alg"
+        log "ERROR" "[SECURITY] REJECTED: Unsupported signing algorithm: $signing_alg"
         return 1
     fi
     
     log "INFO" "[SECURITY] Verifying Ed25519 signature for job $job_id..."
     
-    # Create canonical payload: job_id:job_type:JSON(payload)
     local payload_json
     payload_json=$(echo "$job" | jq -c '.payload // {}' | jq -cS '.')
     local canonical_payload="${job_id}:${job_type}:${payload_json}"
     
-    # Create temp files for verification
     local temp_dir
     temp_dir=$(mktemp -d)
     local pubkey_file="${temp_dir}/pubkey.pem"
     local sig_file="${temp_dir}/signature.bin"
     local payload_file="${temp_dir}/payload.txt"
     
-    # Write public key in PEM format
     echo "-----BEGIN PUBLIC KEY-----" > "$pubkey_file"
     echo "$ED25519_PUBLIC_KEY" >> "$pubkey_file"
     echo "-----END PUBLIC KEY-----" >> "$pubkey_file"
     
-    # Decode signature from Base64
     echo -n "$signature" | base64 -d > "$sig_file" 2>/dev/null || {
         log "ERROR" "[SECURITY] Failed to decode signature from Base64"
         rm -rf "$temp_dir"
         return 1
     }
     
-    # Write payload
     echo -n "$canonical_payload" > "$payload_file"
     
-    # Verify with OpenSSL
     if openssl pkeyutl -verify -pubin -inkey "$pubkey_file" -rawin -in "$payload_file" -sigfile "$sig_file" 2>/dev/null; then
-        log "SUCCESS" "[SECURITY] ✅ Job $job_id signature verified successfully"
+        log "SUCCESS" "[SECURITY] Job $job_id signature verified successfully"
         add_evidence "security_check" "{\"event\":\"job_signature_verified\",\"job_id\":\"$job_id\",\"job_type\":\"$job_type\",\"algorithm\":\"Ed25519\"}" "" "" "info"
         rm -rf "$temp_dir"
         return 0
     else
-        log "ERROR" "[SECURITY] ❌ REJECTED: Job $job_id signature verification FAILED"
+        log "ERROR" "[SECURITY] REJECTED: Job $job_id signature verification FAILED"
         add_evidence "security_alert" "{\"event\":\"invalid_job_signature\",\"job_id\":\"$job_id\",\"job_type\":\"$job_type\"}" "" "" "critical"
         rm -rf "$temp_dir"
         return 1
@@ -907,7 +1250,7 @@ verify_job_signature() {
 }
 
 # ============================================
-#  EXECUTE JOB
+#  EXECUTE JOB (with PoE signing)
 # ============================================
 execute_job() {
     local job="$1"
@@ -919,12 +1262,11 @@ execute_job() {
         return 1
     fi
     
-    # SSA-004: Verify job signature BEFORE execution
     if ! verify_job_signature "$job"; then
         local job_id
         job_id=$(echo "$job" | jq -r '.id')
-        log "ERROR" "[SECURITY] ❌ BLOCKED: Job $job_id rejected due to invalid/missing signature"
-        submit_job_result "$job_id" "failed" "{}" "Security: Invalid or missing payload signature" "0" "security-rejected"
+        log "ERROR" "[SECURITY] BLOCKED: Job $job_id rejected due to invalid/missing signature"
+        submit_job_result "$job_id" "failed" "{}" "Security: Invalid or missing payload signature" "0" "security-rejected" ""
         return 1
     fi
     
@@ -932,6 +1274,8 @@ execute_job() {
     job_id=$(echo "$job" | jq -r '.id')
     local job_type
     job_type=$(echo "$job" | jq -r '.type')
+    local job_nonce
+    job_nonce=$(echo "$job" | jq -r '.nonce // empty')
     local execution_id="exec-$(cat /proc/sys/kernel/random/uuid 2>/dev/null || uuidgen)"
     local start_time
     start_time=$(date +%s)
@@ -957,9 +1301,26 @@ execute_job() {
         "collect_web_activity")
             output=$(collect_web_activity)
             ;;
-        # ===============================
-        # PHASE 1 — PROCESS CONTROL JOBS
-        # ===============================
+        "sync_blocked_websites")
+            local result
+            result=$(handle_sync_blocked_websites "$job")
+            if echo "$result" | jq -e '.success == true' >/dev/null 2>&1; then
+                output="$result"
+            else
+                status="failed"
+                error_message=$(echo "$result" | jq -r '.error // "Unknown error"')
+            fi
+            ;;
+        "update_agent")
+            local result
+            result=$(handle_update_agent "$job")
+            if echo "$result" | jq -e '.success == true' >/dev/null 2>&1; then
+                output="$result"
+            else
+                status="failed"
+                error_message=$(echo "$result" | jq -r '.error // "Unknown error"')
+            fi
+            ;;
         "kill_process")
             local result
             result=$(handle_kill_process "$job")
@@ -1012,7 +1373,7 @@ execute_job() {
     
     add_evidence "job_execution" "{\"job_id\":\"$job_id\",\"job_type\":\"$job_type\",\"execution_id\":\"$execution_id\",\"phase\":\"$status\",\"execution_time_seconds\":$exec_time}" "" "" "info"
     
-    submit_job_result "$job_id" "$status" "$output" "$error_message" "$exec_time" "$execution_id"
+    submit_job_result "$job_id" "$status" "$output" "$error_message" "$exec_time" "$execution_id" "$job_nonce"
 }
 
 submit_job_result() {
@@ -1022,10 +1383,23 @@ submit_job_result() {
     local error_message="$4"
     local exec_time="$5"
     local execution_id="$6"
+    local nonce="${7:-}"
+    
+    # PoE: Compute output hash and sign result
+    local output_hash=""
+    local result_signature=""
+    local signature_algorithm=""
+    
+    if [[ -n "$nonce" && -f "$PRIVATE_KEY_PATH" ]]; then
+        output_hash=$(compute_output_hash "$output")
+        result_signature=$(sign_execution_result "$execution_id" "$job_id" "$nonce" "$output_hash" "$status")
+        signature_algorithm="ECDSA-P256-SHA256"
+        log "DEBUG" "[POE] Result signed (output_hash: ${output_hash:0:16}...)"
+    fi
     
     local body
     body=$(cat <<EOF
-{"job_id":"$job_id","status":"$status","output":$output,"error_message":"$error_message","execution_time_seconds":$exec_time,"agent_name":"$AGENT_NAME","agent_version":"$AGENT_VERSION","execution_id":"$execution_id"}
+{"job_id":"$job_id","status":"$status","output":$output,"error_message":"$error_message","execution_time_seconds":$exec_time,"agent_name":"$AGENT_NAME","agent_version":"$AGENT_VERSION","execution_id":"$execution_id","output_hash":"$output_hash","result_signature":"$result_signature","signature_algorithm":"$signature_algorithm","key_fingerprint":"$SIGNING_FINGERPRINT"}
 EOF
 )
     
@@ -1054,7 +1428,6 @@ EOF
 collect_software_inventory() {
     local packages="[]"
     
-    # Detect package manager and collect
     if command -v dpkg &>/dev/null; then
         packages=$(dpkg-query -W -f='{"name":"${Package}","version":"${Version}"},\n' 2>/dev/null | sed '$ s/,$//' | tr -d '\n' | sed 's/^/[/' | sed 's/$/]/')
     elif command -v rpm &>/dev/null; then
@@ -1072,7 +1445,6 @@ EOF
 collect_antivirus_status() {
     local engines="[]"
     
-    # Check ClamAV
     if command -v clamscan &>/dev/null; then
         local version
         version=$(clamscan --version 2>/dev/null | head -1 || echo "unknown")
@@ -1084,24 +1456,310 @@ collect_antivirus_status() {
 EOF
 }
 
-collect_web_activity() {
-    local dns_cache="[]"
+# ============================================
+#  FASE 1: BROWSER HISTORY COLLECTION
+# ============================================
+check_sqlite3() {
+    if ! command -v sqlite3 &>/dev/null; then
+        log "ERROR" "[WEB-ACTIVITY] sqlite3 not installed - browser history collection disabled"
+        return 1
+    fi
+    return 0
+}
+
+normalize_timestamp() {
+    local raw="$1"
+    local browser="$2"
+    local ts_unix=0
     
-    # Get recent DNS queries from systemd-resolved if available
-    if command -v resolvectl &>/dev/null; then
-        # Just return empty for now as DNS cache varies by system
-        :
+    case "$browser" in
+        chromium)
+            # Chromium: microseconds since 1601-01-01
+            ts_unix=$((raw / 1000000 - 11644473600))
+            ;;
+        firefox)
+            # Firefox: microseconds since epoch
+            ts_unix=$((raw / 1000000))
+            ;;
+    esac
+    
+    # Convert to ISO 8601 UTC
+    date -u -d "@$ts_unix" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || echo ""
+}
+
+is_duplicate_entry() {
+    local entry_id="$1"
+    [[ -f "$WEB_ACTIVITY_SEEN_FILE" ]] && grep -q "^${entry_id}$" "$WEB_ACTIVITY_SEEN_FILE" 2>/dev/null
+}
+
+add_seen_entry() {
+    local entry_id="$1"
+    echo "$entry_id" >> "$WEB_ACTIVITY_SEEN_FILE"
+}
+
+cleanup_seen_cache() {
+    # Keep only last 24 hours of entries (approx 10000 lines)
+    if [[ -f "$WEB_ACTIVITY_SEEN_FILE" ]]; then
+        tail -n 10000 "$WEB_ACTIVITY_SEEN_FILE" > "${WEB_ACTIVITY_SEEN_FILE}.tmp" 2>/dev/null
+        mv "${WEB_ACTIVITY_SEEN_FILE}.tmp" "$WEB_ACTIVITY_SEEN_FILE" 2>/dev/null || true
+    fi
+}
+
+get_real_users() {
+    # Get real users (UID >= 1000, not system accounts)
+    awk -F: '$3 >= 1000 && $3 < 65534 && $7 !~ /nologin|false/ { print $1":"$6 }' /etc/passwd 2>/dev/null
+}
+
+collect_chromium_history() {
+    local db_path="$1"
+    local username="$2"
+    local browser_name="$3"
+    local items_json=""
+    
+    if [[ ! -f "$db_path" ]]; then
+        return
     fi
     
-    cat <<EOF
-{"timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","hostname":"$(hostname)","dns_cache":$dns_cache,"browser_history":[]}
+    # Copy DB to temp (bypass lock)
+    local temp_db="/tmp/cybershield-history-$$.db"
+    cp "$db_path" "$temp_db" 2>/dev/null || return
+    
+    # Query history
+    local query="SELECT url, title, last_visit_time, visit_count FROM urls WHERE visit_count > 0 ORDER BY last_visit_time DESC LIMIT 100;"
+    
+    while IFS='|' read -r url title last_visit visit_count; do
+        [[ -z "$url" ]] && continue
+        
+        local ts_iso
+        ts_iso=$(normalize_timestamp "$last_visit" "chromium")
+        [[ -z "$ts_iso" ]] && continue
+        
+        # Deduplication
+        local entry_id
+        entry_id=$(echo -n "${url}|${ts_iso}|${username}" | sha256sum | cut -d' ' -f1)
+        
+        if is_duplicate_entry "$entry_id"; then
+            continue
+        fi
+        add_seen_entry "$entry_id"
+        
+        # Extract domain
+        local domain
+        domain=$(echo "$url" | sed -E 's|https?://([^/]+).*|\1|')
+        
+        # Escape for JSON
+        title=$(echo "$title" | sed 's/"/\\"/g' | tr -d '\n\r')
+        
+        if [[ -n "$items_json" ]]; then
+            items_json+=","
+        fi
+        items_json+="{\"url\":\"$url\",\"title\":\"$title\",\"domain\":\"$domain\",\"visited_at\":\"$ts_iso\",\"visit_count\":$visit_count,\"browser\":\"$browser_name\",\"username\":\"$username\"}"
+        
+    done < <(sqlite3 -separator '|' "$temp_db" "$query" 2>/dev/null)
+    
+    rm -f "$temp_db"
+    echo "$items_json"
+}
+
+collect_firefox_history() {
+    local db_path="$1"
+    local username="$2"
+    local items_json=""
+    
+    if [[ ! -f "$db_path" ]]; then
+        return
+    fi
+    
+    local temp_db="/tmp/cybershield-firefox-$$.db"
+    cp "$db_path" "$temp_db" 2>/dev/null || return
+    
+    local query="SELECT url, title, last_visit_date, visit_count FROM moz_places WHERE visit_count > 0 ORDER BY last_visit_date DESC LIMIT 100;"
+    
+    while IFS='|' read -r url title last_visit visit_count; do
+        [[ -z "$url" ]] && continue
+        
+        local ts_iso
+        ts_iso=$(normalize_timestamp "$last_visit" "firefox")
+        [[ -z "$ts_iso" ]] && continue
+        
+        local entry_id
+        entry_id=$(echo -n "${url}|${ts_iso}|${username}" | sha256sum | cut -d' ' -f1)
+        
+        if is_duplicate_entry "$entry_id"; then
+            continue
+        fi
+        add_seen_entry "$entry_id"
+        
+        local domain
+        domain=$(echo "$url" | sed -E 's|https?://([^/]+).*|\1|')
+        
+        title=$(echo "$title" | sed 's/"/\\"/g' | tr -d '\n\r')
+        
+        if [[ -n "$items_json" ]]; then
+            items_json+=","
+        fi
+        items_json+="{\"url\":\"$url\",\"title\":\"$title\",\"domain\":\"$domain\",\"visited_at\":\"$ts_iso\",\"visit_count\":$visit_count,\"browser\":\"Firefox\",\"username\":\"$username\"}"
+        
+    done < <(sqlite3 -separator '|' "$temp_db" "$query" 2>/dev/null)
+    
+    rm -f "$temp_db"
+    echo "$items_json"
+}
+
+collect_web_activity() {
+    if ! check_sqlite3; then
+        cat <<EOF
+{"timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","hostname":"$(hostname)","error":"SQLITE3_NOT_INSTALLED","items":[]}
 EOF
+        return
+    fi
+    
+    log "INFO" "[WEB-ACTIVITY] Collecting browser history..."
+    
+    local all_items=""
+    
+    # Iterate real users
+    while IFS=: read -r username homedir; do
+        [[ -z "$homedir" || ! -d "$homedir" ]] && continue
+        
+        # Chrome
+        local chrome_db="$homedir/.config/google-chrome/Default/History"
+        local chrome_items
+        chrome_items=$(collect_chromium_history "$chrome_db" "$username" "Chrome")
+        [[ -n "$chrome_items" ]] && { [[ -n "$all_items" ]] && all_items+=","; all_items+="$chrome_items"; }
+        
+        # Chromium
+        local chromium_db="$homedir/.config/chromium/Default/History"
+        local chromium_items
+        chromium_items=$(collect_chromium_history "$chromium_db" "$username" "Chromium")
+        [[ -n "$chromium_items" ]] && { [[ -n "$all_items" ]] && all_items+=","; all_items+="$chromium_items"; }
+        
+        # Firefox
+        for ff_profile in "$homedir"/.mozilla/firefox/*.default*/places.sqlite; do
+            [[ -f "$ff_profile" ]] || continue
+            local ff_items
+            ff_items=$(collect_firefox_history "$ff_profile" "$username")
+            [[ -n "$ff_items" ]] && { [[ -n "$all_items" ]] && all_items+=","; all_items+="$ff_items"; }
+        done
+        
+        # Opera
+        local opera_db="$homedir/.config/opera/History"
+        local opera_items
+        opera_items=$(collect_chromium_history "$opera_db" "$username" "Opera")
+        [[ -n "$opera_items" ]] && { [[ -n "$all_items" ]] && all_items+=","; all_items+="$opera_items"; }
+        
+        # Opera GX
+        local operagx_db="$homedir/.config/opera-gx/History"
+        local operagx_items
+        operagx_items=$(collect_chromium_history "$operagx_db" "$username" "Opera GX")
+        [[ -n "$operagx_items" ]] && { [[ -n "$all_items" ]] && all_items+=","; all_items+="$operagx_items"; }
+        
+    done < <(get_real_users)
+    
+    cleanup_seen_cache
+    
+    local item_count=0
+    [[ -n "$all_items" ]] && item_count=$(echo "[$all_items]" | jq 'length' 2>/dev/null || echo 0)
+    
+    log "SUCCESS" "[WEB-ACTIVITY] Collected $item_count history items"
+    
+    cat <<EOF
+{"timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","hostname":"$(hostname)","item_count":$item_count,"items":[$all_items]}
+EOF
+}
+
+# ============================================
+#  FASE 2: SITE BLOCKING VIA /etc/hosts
+# ============================================
+handle_sync_blocked_websites() {
+    local job="$1"
+    log "INFO" "[BLOCKED-SITES] Syncing blocked websites..."
+    
+    # Fetch from backend
+    local result
+    result=$(invoke_secure_request "GET" "/functions/v1/get-blocked-websites" "" 30)
+    
+    if [[ $? -ne 0 || -z "$result" ]]; then
+        log "ERROR" "[BLOCKED-SITES] Failed to fetch blocked websites list"
+        echo '{"success":false,"error":"Failed to fetch blocked websites"}'
+        return 1
+    fi
+    
+    # Save JSON locally
+    echo "$result" > "$BLOCKED_WEBSITES_FILE"
+    
+    # Extract domains
+    local domains
+    domains=$(echo "$result" | jq -r '.blocked_websites[]?.domain_pattern // .blocked_domains[]? // empty' 2>/dev/null | sort -u)
+    
+    if [[ -z "$domains" ]]; then
+        log "INFO" "[BLOCKED-SITES] No domains to block"
+        echo '{"success":true,"count":0}'
+        return 0
+    fi
+    
+    # Apply to /etc/hosts
+    apply_hosts_blocking "$domains"
+    
+    local count
+    count=$(echo "$domains" | wc -l)
+    
+    log "SUCCESS" "[BLOCKED-SITES] $count domains blocked"
+    add_evidence "blocked_sites_synced" "{\"count\":$count}" "" "" "info"
+    
+    echo "{\"success\":true,\"count\":$count}"
+}
+
+apply_hosts_blocking() {
+    local domains="$1"
+    local hosts_file="/etc/hosts"
+    local marker_start="# CyberShield BLOCK START"
+    local marker_end="# CyberShield BLOCK END"
+    
+    # Create temp file (atomic update)
+    local tmp_hosts
+    tmp_hosts=$(mktemp)
+    cp "$hosts_file" "$tmp_hosts"
+    
+    # Remove old block
+    sed -i "/$marker_start/,/$marker_end/d" "$tmp_hosts"
+    
+    # Add new block
+    {
+        echo "$marker_start"
+        echo "$domains" | while read -r domain; do
+            [[ -n "$domain" ]] && echo "127.0.0.1 $domain"
+            [[ -n "$domain" ]] && echo "127.0.0.1 www.$domain"
+        done
+        echo "$marker_end"
+    } >> "$tmp_hosts"
+    
+    # Atomic move
+    mv "$tmp_hosts" "$hosts_file"
+    
+    # Flush DNS cache
+    flush_dns_cache
+    
+    log "INFO" "[BLOCKED-SITES] /etc/hosts updated"
+}
+
+flush_dns_cache() {
+    # Linux DNS cache flush
+    if command -v systemd-resolve &>/dev/null; then
+        systemd-resolve --flush-caches 2>/dev/null || true
+    elif command -v resolvectl &>/dev/null; then
+        resolvectl flush-caches 2>/dev/null || true
+    fi
+    
+    # Also try nscd if present
+    if command -v nscd &>/dev/null; then
+        nscd -i hosts 2>/dev/null || true
+    fi
 }
 
 # ============================================
 #  PHASE 1: PROCESS CONTROL HANDLERS
 # ============================================
-
 handle_kill_process() {
     local job="$1"
     local name
@@ -1110,13 +1768,13 @@ handle_kill_process() {
     [[ -z "$name" ]] && { echo '{"success":false,"error":"process_name ausente"}'; return 1; }
     
     if is_protected_process "$name"; then
-        log "WARN" "[KILL-PROCESS] BLOCKED: processo protegido ($name)"
-        echo "{\"success\":false,\"error\":\"SECURITY: processo protegido ($name)\"}"
+        log "WARN" "[KILL-PROCESS] BLOCKED: protected process ($name)"
+        echo "{\"success\":false,\"error\":\"SECURITY: protected process ($name)\"}"
         return 1
     fi
     
     if ! pgrep -f "$name" >/dev/null 2>&1; then
-        echo "{\"success\":false,\"error\":\"processo nao encontrado ($name)\"}"
+        echo "{\"success\":false,\"error\":\"process not found ($name)\"}"
         return 1
     fi
     
@@ -1125,8 +1783,8 @@ handle_kill_process() {
     
     pkill -f "$name" 2>/dev/null
     
-    log "INFO" "[KILL-PROCESS] Processo '$name' finalizado ($count instancias)"
-    echo "{\"success\":true,\"output\":\"Processo '$name' finalizado ($count instancias)\"}"
+    log "INFO" "[KILL-PROCESS] Process '$name' terminated ($count instances)"
+    echo "{\"success\":true,\"output\":\"Process '$name' terminated ($count instances)\"}"
 }
 
 handle_stop_service() {
@@ -1137,26 +1795,26 @@ handle_stop_service() {
     [[ -z "$svc" ]] && { echo '{"success":false,"error":"service_name ausente"}'; return 1; }
     
     if is_protected_service "$svc"; then
-        log "WARN" "[STOP-SERVICE] BLOCKED: servico protegido ($svc)"
-        echo "{\"success\":false,\"error\":\"SECURITY: servico protegido ($svc)\"}"
+        log "WARN" "[STOP-SERVICE] BLOCKED: protected service ($svc)"
+        echo "{\"success\":false,\"error\":\"SECURITY: protected service ($svc)\"}"
         return 1
     fi
     
     if ! systemctl is-active --quiet "$svc" 2>/dev/null; then
-        log "INFO" "[STOP-SERVICE] Servico '$svc' ja estava parado"
-        echo "{\"success\":true,\"output\":\"Servico '$svc' ja estava parado\"}"
+        log "INFO" "[STOP-SERVICE] Service '$svc' already stopped"
+        echo "{\"success\":true,\"output\":\"Service '$svc' already stopped\"}"
         return 0
     fi
     
     systemctl stop "$svc" 2>/dev/null
     
     if systemctl is-active --quiet "$svc" 2>/dev/null; then
-        echo "{\"success\":false,\"error\":\"falha ao parar servico ($svc)\"}"
+        echo "{\"success\":false,\"error\":\"failed to stop service ($svc)\"}"
         return 1
     fi
     
-    log "INFO" "[STOP-SERVICE] Servico '$svc' parado"
-    echo "{\"success\":true,\"output\":\"Servico '$svc' parado\"}"
+    log "INFO" "[STOP-SERVICE] Service '$svc' stopped"
+    echo "{\"success\":true,\"output\":\"Service '$svc' stopped\"}"
 }
 
 handle_disable_service() {
@@ -1167,8 +1825,8 @@ handle_disable_service() {
     [[ -z "$svc" ]] && { echo '{"success":false,"error":"service_name ausente"}'; return 1; }
     
     if is_protected_service "$svc"; then
-        log "WARN" "[DISABLE-SERVICE] BLOCKED: servico protegido ($svc)"
-        echo "{\"success\":false,\"error\":\"SECURITY: servico protegido ($svc)\"}"
+        log "WARN" "[DISABLE-SERVICE] BLOCKED: protected service ($svc)"
+        echo "{\"success\":false,\"error\":\"SECURITY: protected service ($svc)\"}"
         return 1
     fi
     
@@ -1176,15 +1834,15 @@ handle_disable_service() {
     systemctl disable "$svc" 2>/dev/null
     
     if systemctl is-enabled --quiet "$svc" 2>/dev/null; then
-        echo "{\"success\":false,\"error\":\"falha ao desativar servico ($svc)\"}"
+        echo "{\"success\":false,\"error\":\"failed to disable service ($svc)\"}"
         return 1
     fi
     
     local status
     status=$(systemctl is-active "$svc" 2>/dev/null || echo "inactive")
     
-    log "INFO" "[DISABLE-SERVICE] Servico '$svc' desativado (status: $status)"
-    echo "{\"success\":true,\"output\":\"Servico '$svc' desativado (status: $status)\"}"
+    log "INFO" "[DISABLE-SERVICE] Service '$svc' disabled (status: $status)"
+    echo "{\"success\":true,\"output\":\"Service '$svc' disabled (status: $status)\"}"
 }
 
 handle_restart_service() {
@@ -1195,20 +1853,20 @@ handle_restart_service() {
     [[ -z "$svc" ]] && { echo '{"success":false,"error":"service_name ausente"}'; return 1; }
     
     if is_protected_service "$svc"; then
-        log "WARN" "[RESTART-SERVICE] BLOCKED: servico protegido ($svc)"
-        echo "{\"success\":false,\"error\":\"SECURITY: servico protegido ($svc)\"}"
+        log "WARN" "[RESTART-SERVICE] BLOCKED: protected service ($svc)"
+        echo "{\"success\":false,\"error\":\"SECURITY: protected service ($svc)\"}"
         return 1
     fi
     
     systemctl restart "$svc" 2>/dev/null
     
     if ! systemctl is-active --quiet "$svc" 2>/dev/null; then
-        echo "{\"success\":false,\"error\":\"falha ao reiniciar servico ($svc)\"}"
+        echo "{\"success\":false,\"error\":\"failed to restart service ($svc)\"}"
         return 1
     fi
     
-    log "INFO" "[RESTART-SERVICE] Servico '$svc' reiniciado"
-    echo "{\"success\":true,\"output\":\"Servico '$svc' reiniciado\"}"
+    log "INFO" "[RESTART-SERVICE] Service '$svc' restarted"
+    echo "{\"success\":true,\"output\":\"Service '$svc' restarted\"}"
 }
 
 # ============================================
@@ -1237,19 +1895,23 @@ rotate_logs() {
 #  MAIN LOOP
 # ============================================
 
-# Bootstrap validation - verifica funcoes criticas
+# Bootstrap validation
 validate_critical_functions
 
 log "INFO" "============================================"
 log "INFO" "[START] CyberShield Agent $AGENT_VERSION - Linux"
 log "INFO" "[INFO] ServerUrl: $SERVER_URL"
 log "INFO" "[INFO] AgentName: $AGENT_NAME"
+log "INFO" "[FEATURES] PoE, Auto-Update, Browser History, Site Blocking"
 log "INFO" "============================================"
 
-add_evidence "state_change" "{\"event\":\"agent_started\",\"version\":\"$AGENT_VERSION\",\"hostname\":\"$(hostname)\",\"features\":[\"state_machine\",\"evidence_journal\",\"dns_filter\",\"policy_contract\"]}" "" "BOOTSTRAP" "info"
+add_evidence "state_change" "{\"event\":\"agent_started\",\"version\":\"$AGENT_VERSION\",\"hostname\":\"$(hostname)\",\"features\":[\"poe\",\"auto_update\",\"browser_history\",\"site_blocking\",\"state_machine\",\"evidence_journal\"]}" "" "BOOTSTRAP" "info"
 
 # Bootstrap
 set_state "SYNCING" "Starting initial sync"
+
+# Initialize PoE signing keypair
+initialize_signing_keypair || true
 
 # Sync policy from server
 sync_policy_from_server || true
@@ -1281,6 +1943,7 @@ last_dns_check=$(date +%s)
 last_policy_check=$(date +%s)
 last_policy_sync=$(date +%s)
 last_metrics=$(date +%s)
+last_web_activity=$(date +%s)
 
 # Main loop
 while true; do
@@ -1305,6 +1968,18 @@ while true; do
             poll_jobs || true
         fi
         last_poll=$now
+    fi
+    
+    # Web activity collection (every 5 minutes)
+    if [[ $((now - last_web_activity)) -ge 300 ]]; then
+        local web_data
+        web_data=$(collect_web_activity 2>/dev/null)
+        if [[ -n "$web_data" ]]; then
+            local body
+            body="{\"agent_name\":\"$AGENT_NAME\",\"data\":$web_data}"
+            invoke_secure_request "POST" "/functions/v1/submit-web-activity" "$body" 30 || true
+        fi
+        last_web_activity=$now
     fi
     
     # DNS health check (every 2 minutes)
