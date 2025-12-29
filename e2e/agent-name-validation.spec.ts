@@ -14,7 +14,7 @@ test.describe('Agent Name Validation', () => {
   test('should accept valid agent name', async ({ page }) => {
     const uniqueName = `test-agent-${Date.now()}`;
     // Try multiple possible selectors for agent name input
-    const inputSelectors = ['[name="agentName"]', 'input[placeholder*="nome"]', 'input[placeholder*="agent"]', '#agentName'];
+    const inputSelectors = ['[name="agentName"]', 'input[placeholder*="nome"]', 'input[placeholder*="computador"]', '#agentName'];
     let inputFound = false;
     
     for (const selector of inputSelectors) {
@@ -35,7 +35,7 @@ test.describe('Agent Name Validation', () => {
   });
 
   test('should reject agent name with less than 3 characters', async ({ page }) => {
-    const input = page.locator('[name="agentName"], input[placeholder*="nome"], input[placeholder*="agent"]').first();
+    const input = page.locator('[name="agentName"], input[placeholder*="nome"], input[placeholder*="computador"]').first();
     if (!await input.isVisible().catch(() => false)) {
       test.skip(true, 'Agent name input not found');
       return;
@@ -45,7 +45,7 @@ test.describe('Agent Name Validation', () => {
   });
 
   test('should reject agent name with special characters', async ({ page }) => {
-    const input = page.locator('[name="agentName"], input[placeholder*="nome"], input[placeholder*="agent"]').first();
+    const input = page.locator('[name="agentName"], input[placeholder*="nome"], input[placeholder*="computador"]').first();
     if (!await input.isVisible().catch(() => false)) {
       test.skip(true, 'Agent name input not found');
       return;
@@ -55,7 +55,7 @@ test.describe('Agent Name Validation', () => {
   });
 
   test('should reject agent name that exceeds 50 characters', async ({ page }) => {
-    const input = page.locator('[name="agentName"], input[placeholder*="nome"], input[placeholder*="agent"]').first();
+    const input = page.locator('[name="agentName"], input[placeholder*="nome"], input[placeholder*="computador"]').first();
     if (!await input.isVisible().catch(() => false)) {
       test.skip(true, 'Agent name input not found');
       return;
@@ -66,7 +66,7 @@ test.describe('Agent Name Validation', () => {
   });
 
   test('should handle validation flow', async ({ page }) => {
-    const input = page.locator('[name="agentName"], input[placeholder*="nome"], input[placeholder*="agent"]').first();
+    const input = page.locator('[name="agentName"], input[placeholder*="nome"], input[placeholder*="computador"]').first();
     if (!await input.isVisible().catch(() => false)) {
       test.skip(true, 'Agent name input not found');
       return;
@@ -84,7 +84,7 @@ test.describe('Agent Name Validation', () => {
   });
 
   test('should debounce validation requests', async ({ page }) => {
-    const input = page.locator('[name="agentName"], input[placeholder*="nome"], input[placeholder*="agent"]').first();
+    const input = page.locator('[name="agentName"], input[placeholder*="nome"], input[placeholder*="computador"]').first();
     if (!await input.isVisible().catch(() => false)) {
       test.skip(true, 'Agent name input not found');
       return;

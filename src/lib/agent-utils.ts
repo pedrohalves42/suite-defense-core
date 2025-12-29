@@ -64,10 +64,10 @@ export function getJobTypeName(jobType: string): string {
     collect_web_activity: 'Atividade Web',
     collect_network_info: 'Informações de Rede',
     fix_firewall: 'Correção de Firewall',
-    update_agent: 'Atualizar Agente',
+    update_agent: 'Atualizar Programa',
     restart_service: 'Reiniciar Serviço',
     scan_file: 'Escanear Arquivo',
-    reinstall_agent: 'Reinstalar Agente',
+    reinstall_agent: 'Reinstalar Programa',
   };
   
   return names[jobType] || jobType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());

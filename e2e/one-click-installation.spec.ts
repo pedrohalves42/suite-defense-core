@@ -28,7 +28,7 @@ test.describe('One-Click Agent Installation', () => {
     await expect(heading).toBeVisible({ timeout: 15000 });
     
     // Check for input field with flexible selector
-    const agentInput = page.locator('input[placeholder*="agente"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
+    const agentInput = page.locator('input[placeholder*="computador"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
     await expect(agentInput).toBeVisible({ timeout: 10000 });
   });
 
@@ -38,7 +38,7 @@ test.describe('One-Click Agent Installation', () => {
     
     // Fill agent name with flexible selector
     const agentName = `test-agent-win-${Date.now()}`;
-    const agentInput = page.locator('input[placeholder*="agente"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
+    const agentInput = page.locator('input[placeholder*="computador"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
     await agentInput.fill(agentName);
     
     // Select Windows platform
@@ -71,7 +71,7 @@ test.describe('One-Click Agent Installation', () => {
     
     // Fill agent name with flexible selector
     const agentName = `test-agent-linux-${Date.now()}`;
-    const agentInput = page.locator('input[placeholder*="agente"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
+    const agentInput = page.locator('input[placeholder*="computador"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
     await agentInput.fill(agentName);
     
     // Select Linux platform
@@ -107,7 +107,7 @@ test.describe('One-Click Agent Installation', () => {
     
     // Generate command
     const agentName = `test-agent-copy-${Date.now()}`;
-    const agentInput = page.locator('input[placeholder*="agente"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
+    const agentInput = page.locator('input[placeholder*="computador"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
     await agentInput.fill(agentName);
     
     const windowsBtn = page.locator('button:has-text("Windows"), [data-value="windows"]').first();
@@ -135,7 +135,7 @@ test.describe('One-Click Agent Installation', () => {
     
     // Fill agent name
     const agentName = `test-agent-download-${Date.now()}`;
-    const agentInput = page.locator('input[placeholder*="agente"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
+    const agentInput = page.locator('input[placeholder*="computador"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
     await agentInput.fill(agentName);
     
     // Select platform
@@ -190,7 +190,7 @@ test.describe('One-Click Agent Installation', () => {
       'agent/slash'
     ];
     
-    const agentInput = page.locator('input[placeholder*="agente"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
+    const agentInput = page.locator('input[placeholder*="computador"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
     
     for (const invalidName of invalidNames) {
       await agentInput.fill(invalidName);
@@ -221,7 +221,7 @@ test.describe('One-Click Agent Installation', () => {
       `agent-multi-3-${Date.now()}`
     ];
     
-    const agentInput = page.locator('input[placeholder*="agente"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
+    const agentInput = page.locator('input[placeholder*="computador"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
     const windowsBtn = page.locator('button:has-text("Windows"), [data-value="windows"]').first();
     const generateBtn = page.locator('button:has-text("Gerar"), button:has-text("Generate")').first();
     
@@ -260,7 +260,7 @@ test.describe('One-Click Agent Installation', () => {
     await expect(heading).toBeVisible({ timeout: 15000 });
     
     // Verify some form elements exist
-    const agentInput = page.locator('input[placeholder*="agente"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
+    const agentInput = page.locator('input[placeholder*="computador"], input[name*="agent"], input[data-testid="agent-name-input"]').first();
     await expect(agentInput).toBeVisible({ timeout: 10000 });
     
     // Verify platform buttons exist
