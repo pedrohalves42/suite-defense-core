@@ -5,10 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Brain, AlertTriangle, Info, CheckCircle, TrendingUp, Clock, Sparkles } from "lucide-react";
+import { Brain, AlertTriangle, Info, CheckCircle, TrendingUp, Clock, Sparkles, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { AIInsightExplainer } from "@/components/admin/AIInsightExplainer";
-
+import { InsightsTrendChart } from "@/components/admin/InsightsTrendChart";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 interface AIInsight {
   id: string;
   tenant_id: string;
@@ -199,91 +201,150 @@ export default function AIInsights() {
   const pendingInsights = insights.filter(i => !i.acknowledged);
   const acknowledgedInsights = insights.filter(i => i.acknowledged);
 
+  // Get global status
+  const getGlobalStatus = () => {
+    if (stats.critical > 0) {
+      return {
+        emoji: '🔴',
+        title: 'Ação urgente necessária',
+        description: `${stats.critical} aviso${stats.critical > 1 ? 's' : ''} crítico${stats.critical > 1 ? 's' : ''} precisam da sua atenção imediata.`,
+        variant: 'danger' as const
+      };
+    }
+    if (stats.warning > 0) {
+      return {
+        emoji: '🟡',
+        title: 'Avisos pendentes',
+        description: `${stats.warning} aviso${stats.warning > 1 ? 's' : ''} merecem sua verificação.`,
+        variant: 'warning' as const
+      };
+    }
+    return {
+      emoji: '🟢',
+      title: 'Tudo sob controle',
+      description: 'Nenhum aviso urgente no momento. Continue monitorando.',
+      variant: 'success' as const
+    };
+  };
+
+  const globalStatus = getGlobalStatus();
+
   return (
     <div className="p-6 space-y-6">
-      {/* Header - LINGUAGEM HUMANA */}
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Brain className="h-8 w-8 text-primary" />
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <Brain className="h-5 w-5 text-primary" />
             Avisos do Sistema
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-sm text-muted-foreground">
             O CyberShield detectou situações que merecem sua atenção
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {pendingInsights.length > 0 && (
-            <Button
-              onClick={() => acknowledgeAllMutation.mutate(pendingInsights.map(i => i.id))}
-              disabled={acknowledgeAllMutation.isPending}
-              variant="default"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Entendi Todos ({pendingInsights.length})
-            </Button>
-          )}
-          <Badge variant="outline" className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4" />
-            Monitoramento Inteligente
-          </Badge>
-        </div>
+        {pendingInsights.length > 0 && (
+          <Button
+            onClick={() => acknowledgeAllMutation.mutate(pendingInsights.map(i => i.id))}
+            disabled={acknowledgeAllMutation.isPending}
+            size="sm"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Entendi Todos ({pendingInsights.length})
+          </Button>
+        )}
       </div>
 
-      {/* Statistics Cards - LINGUAGEM HUMANA */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Avisos</CardTitle>
-            <Brain className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.pending} aguardando sua atenção
-            </p>
+      {/* 🔐 CAMADA 1: Status Global */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <Card className={cn(
+          "border-2",
+          globalStatus.variant === 'success' && "bg-green-500/5 border-green-500/30",
+          globalStatus.variant === 'warning' && "bg-amber-500/5 border-amber-500/30",
+          globalStatus.variant === 'danger' && "bg-red-500/5 border-red-500/30"
+        )}>
+          <CardContent className="py-6">
+            <div className="flex items-center gap-4">
+              <div className={cn(
+                "p-4 rounded-full",
+                globalStatus.variant === 'success' && "bg-green-500/10",
+                globalStatus.variant === 'warning' && "bg-amber-500/10",
+                globalStatus.variant === 'danger' && "bg-red-500/10"
+              )}>
+                <Shield className={cn(
+                  "h-10 w-10",
+                  globalStatus.variant === 'success' && "text-green-500",
+                  globalStatus.variant === 'warning' && "text-amber-500",
+                  globalStatus.variant === 'danger' && "text-red-500"
+                )} />
+              </div>
+              <div className="flex-1">
+                <h2 className={cn(
+                  "text-xl font-bold",
+                  globalStatus.variant === 'success' && "text-green-600 dark:text-green-400",
+                  globalStatus.variant === 'warning' && "text-amber-600 dark:text-amber-400",
+                  globalStatus.variant === 'danger' && "text-red-600 dark:text-red-400"
+                )}>
+                  {globalStatus.emoji} {globalStatus.title}
+                </h2>
+                <p className="text-muted-foreground mt-1">
+                  {globalStatus.description}
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
+      </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Urgentes</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{stats.critical}</div>
-            <p className="text-xs text-muted-foreground">
-              Precisam de ação imediata
-            </p>
-          </CardContent>
-        </Card>
+      {/* 🔢 CAMADA 2: KPIs - Máximo 3 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="border-l-4 border-red-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Urgentes</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-destructive">{stats.critical}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.critical > 0 ? 'Precisam de ação imediata' : '✓ Nenhum urgente'}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Atenção</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-warning" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-warning">{stats.warning}</div>
-            <p className="text-xs text-muted-foreground">
-              Vale a pena verificar
-            </p>
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card className="border-l-4 border-yellow-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Atenção</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-warning" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-warning">{stats.warning}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.warning > 0 ? 'Vale a pena verificar' : '✓ Sem pendências'}
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Resolvidos</CardTitle>
-            <CheckCircle className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.acknowledged}</div>
-            <p className="text-xs text-muted-foreground">
-              De {stats.total} no total
-            </p>
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Card className="border-l-4 border-green-500">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Resolvidos</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.acknowledged}</div>
+              <p className="text-xs text-muted-foreground">
+                De {stats.total} no total
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
+
+      {/* 📈 CAMADA 3: Gráfico de Tendência */}
+      <InsightsTrendChart />
 
       {/* Insights Tabs - LINGUAGEM HUMANA */}
       <Tabs defaultValue="pending" className="space-y-4">

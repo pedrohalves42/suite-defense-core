@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, Heart, AlertCircle, Server, Clock, Trash2, CheckCircle, XCircle, Wifi, WifiOff, Shield, ShieldAlert } from "lucide-react";
+import { Activity, AlertCircle, Server, Clock, CheckCircle, Wifi, WifiOff, Shield, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ErrorState } from "@/components/ErrorState";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -17,6 +16,7 @@ import { AgentStatusBadges } from '@/components/agents/AgentStatusBadges';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { TooltipProvider as TooltipProviderWrapper } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HealthTrendChart } from '@/components/admin/HealthTrendChart';
 
 type StatusFilter = 'all' | 'problems' | 'protected' | 'offline';
 
@@ -41,71 +41,34 @@ export default function AgentHealthMonitor() {
     refetchInterval: 30000,
   });
 
-  // Fetch job statistics - EXCLUDE timeouts from failure count
-  const { data: jobStats, refetch: refetchJobStats } = useQuery({
-    queryKey: ['job-stats', tenant?.id],
-    queryFn: async () => {
-      if (!tenant?.id) return { failed: 0, delivered: 0, total: 0, timeoutCount: 0, realFailedCount: 0 };
-      
-      const { data, error } = await supabase
-        .from('jobs')
-        .select('status, error_message')
-        .eq('tenant_id', tenant.id);
-      
-      if (error) throw error;
-      
-      const failed = data.filter(j => j.status === 'failed');
-      const delivered = data.filter(j => j.status === 'delivered').length;
-      
-      // Separate real failures from timeouts (computer offline)
-      const timeoutPatterns = ['Auto-cleanup', 'Timeout:', 'timeout', 'exceeded', 'expired', 'queued job exceeded'];
-      const isTimeout = (msg: string | null) => msg && timeoutPatterns.some(p => msg.toLowerCase().includes(p.toLowerCase()));
-      
-      const timeoutCount = failed.filter(j => isTimeout(j.error_message)).length;
-      const realFailedCount = failed.length - timeoutCount;
-      
-      return { failed: failed.length, delivered, total: data.length, timeoutCount, realFailedCount };
-    },
-    enabled: !!tenant?.id,
-    refetchInterval: 60000,
-  });
+  // Realtime subscription for heartbeats
+  useEffect(() => {
+    if (!tenant?.id) return;
 
-  // Cleanup jobs function
-  const handleCleanup = async (type: 'failed' | 'delivered' | 'all') => {
-    const statusMap = {
-      failed: ['failed'],
-      delivered: ['delivered'],
-      all: ['failed', 'delivered']
-    };
-
-    const confirmMessage = 
-      type === 'failed' ? `Limpar ${jobStats?.failed || 0} verificações com falha?` :
-      type === 'delivered' ? `Limpar ${jobStats?.delivered || 0} verificações pendentes?` :
-      `Limpar todas as ${(jobStats?.failed || 0) + (jobStats?.delivered || 0)} verificações?`;
-
-    if (!confirm(confirmMessage)) return;
-
-    setIsCleaningJobs(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('cleanup-jobs', {
-        body: {
-          status: statusMap[type],
-          older_than_days: 0
+    const channel = supabase
+      .channel('agent-heartbeats')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'agents',
+          filter: `tenant_id=eq.${tenant.id}`
+        },
+        (payload: { new: { agent_name: string } }) => {
+          const agentName = payload.new.agent_name;
+          setLiveHeartbeats(prev => prev + 1);
+          setRecentHeartbeats(prev => [agentName, ...prev.slice(0, 4)]);
+          
+          toast.success(`✓ ${agentName} conectado`, { duration: 2000 });
         }
-      });
+      )
+      .subscribe();
 
-      if (error) throw error;
-
-      toast.success(`${data.deleted_count} verificações removidas`);
-      refetchJobStats();
-    } catch (error) {
-      console.error('Cleanup error:', error);
-      toast.error('Erro ao limpar verificações');
-    } finally {
-      setIsCleaningJobs(false);
-    }
-  };
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tenant?.id]);
 
   // Realtime subscription for heartbeats
   useEffect(() => {
@@ -240,8 +203,8 @@ export default function AgentHealthMonitor() {
         </motion.div>
       )}
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* 🔢 CAMADA 2: KPIs - Máximo 3 */}
+      <div className="grid gap-4 md:grid-cols-3">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
           <Card className="border-l-4 border-green-500 hover:shadow-lg transition-all">
             <CardContent className="pt-6">
@@ -287,118 +250,26 @@ export default function AgentHealthMonitor() {
             </CardContent>
           </Card>
         </motion.div>
-
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card className="border-l-4 border-red-500 hover:shadow-lg transition-all">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-muted-foreground">Conexões ao Vivo</span>
-                <Heart className="h-5 w-5 text-red-500 animate-pulse" />
-              </div>
-              <div className="text-2xl font-bold text-red-600">{liveHeartbeats}</div>
-              <p className="text-xs text-muted-foreground mt-2">Recebidas agora</p>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
 
-      {/* Recent Connections */}
+      {/* 📈 CAMADA 3: Gráfico de Tendência */}
+      <HealthTrendChart />
+
+      {/* Recent Connections (sutil, não como KPI) */}
       {recentHeartbeats.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Heart className="h-4 w-4 text-red-500" />
-              Computadores que acabaram de se conectar
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {recentHeartbeats.map((name, idx) => (
-                <Badge key={`${name}-${idx}`} variant="secondary" className="px-3 py-1">
-                  ✓ {name}
+        <Card className="bg-muted/30">
+          <CardContent className="py-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Activity className="h-4 w-4" />
+              <span>Conexões recentes:</span>
+              {recentHeartbeats.slice(0, 3).map((name, idx) => (
+                <Badge key={`${name}-${idx}`} variant="secondary" className="px-2 py-0.5 text-xs">
+                  {name}
                 </Badge>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Job Cleanup - Humanized messages */}
-      {jobStats && (jobStats.realFailedCount > 0 || jobStats.delivered > 0 || jobStats.timeoutCount > 0) && (
-        <Card className="border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5 text-orange-600" />
-              Limpeza de Verificações
-            </CardTitle>
-            <CardDescription>
-              Remover verificações antigas ou com problemas
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 mb-3">
-              {jobStats.realFailedCount > 0 && (
-                <p className="text-sm flex items-center gap-2">
-                  <XCircle className="h-4 w-4 text-red-500" />
-                  <span className="font-semibold text-red-600">{jobStats.realFailedCount} com erro real</span>
-                  <span className="text-muted-foreground">- precisam de atenção</span>
-                </p>
+              {recentHeartbeats.length > 3 && (
+                <span className="text-xs">+{recentHeartbeats.length - 3} mais</span>
               )}
-              {jobStats.timeoutCount > 0 && (
-                <p className="text-sm flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-gray-500" />
-                  <span className="text-muted-foreground">{jobStats.timeoutCount} expiraram (computador desligado)</span>
-                </p>
-              )}
-              {jobStats.delivered > 0 && (
-                <p className="text-sm flex items-center gap-2">
-                  <Wifi className="h-4 w-4 text-yellow-500" />
-                  <span className="font-semibold text-yellow-600">{jobStats.delivered} aguardando</span>
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button 
-                variant="destructive" 
-                size="sm"
-                onClick={() => handleCleanup('failed')}
-                disabled={isCleaningJobs || jobStats.failed === 0}
-              >
-                Limpar com Falha
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => handleCleanup('all')}
-                disabled={isCleaningJobs || (jobStats.failed === 0 && jobStats.delivered === 0)}
-              >
-                Limpar Tudo
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={async () => {
-                  if (!confirm('Limpar TODO o histórico de verificações? Isso inclui verificações completadas, com falha e canceladas.')) return;
-                  setIsCleaningJobs(true);
-                  try {
-                    const { data, error } = await supabase.functions.invoke('cleanup-jobs', {
-                      body: { status: ['completed', 'failed', 'cancelled', 'delivered'], older_than_days: 0 }
-                    });
-                    if (error) throw error;
-                    toast.success(`${data.deleted_count} verificações removidas. Histórico zerado!`);
-                    refetchJobStats();
-                  } catch (error) {
-                    console.error('Cleanup error:', error);
-                    toast.error('Erro ao limpar verificações');
-                  } finally {
-                    setIsCleaningJobs(false);
-                  }
-                }}
-                disabled={isCleaningJobs}
-                className="text-muted-foreground"
-              >
-                Zerar Histórico
-              </Button>
             </div>
           </CardContent>
         </Card>
