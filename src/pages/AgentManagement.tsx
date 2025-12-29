@@ -178,7 +178,10 @@ export default function AgentManagement() {
   // Helper functions
   const getAgentStatus = (agent: Agent): 'online' | 'offline' | 'pending' | 'disabled' => {
     if (agent.status === 'disabled') return 'disabled';
-    if (!agent.last_heartbeat) return 'pending';
+    // Só pending se nunca teve heartbeat E status ainda é 'pending'
+    if (!agent.last_heartbeat && agent.status === 'pending') return 'pending';
+    // Fallback se heartbeat null mas status não é pending (agente provavelmente offline)
+    if (!agent.last_heartbeat) return 'offline';
     const diffMins = (new Date().getTime() - new Date(agent.last_heartbeat).getTime()) / (1000 * 60);
     return diffMins < 5 ? 'online' : 'offline';
   };
