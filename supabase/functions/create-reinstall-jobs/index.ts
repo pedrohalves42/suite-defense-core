@@ -51,14 +51,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se e admin ou super admin
+    // Verificar se e admin ou super admin (suporta usuarios com multiplos roles)
     const { data: roles } = await supabase
       .from('user_roles')
       .select('role, tenant_id')
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_id', user.id);
 
-    if (!roles || !['admin', 'super_admin'].includes(roles.role)) {
+    const adminRole = roles?.find(r => ['admin', 'super_admin'].includes(r.role));
+    if (!adminRole) {
       return new Response(
         JSON.stringify({ error: 'Requires admin role' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
         .from('agents')
         .select('id, agent_name, agent_version, tenant_id')
         .in('agent_name', agent_names)
-        .eq('tenant_id', roles.tenant_id)
+        .eq('tenant_id', adminRole.tenant_id)
         .eq('status', 'active');
 
       if (agentsError) {
@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
       const { data: agents, error: agentsError } = await supabase
         .from('agents')
         .select('id, agent_name, agent_version, tenant_id')
-        .eq('tenant_id', roles.tenant_id)
+        .eq('tenant_id', adminRole.tenant_id)
         .eq('status', 'active');
 
       if (agentsError) {
