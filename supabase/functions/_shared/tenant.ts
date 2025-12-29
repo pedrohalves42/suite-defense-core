@@ -70,15 +70,28 @@ export async function getValidatedTenantId(
   userId: string,
   requestedTenantId?: string
 ): Promise<string | null> {
+  console.log('[getValidatedTenantId] Starting validation:', {
+    userId,
+    requestedTenantId: requestedTenantId || 'not provided'
+  });
+
   // If tenant_id was provided, validate user has access
   if (requestedTenantId) {
     const hasAccess = await verifyUserTenant(supabase, userId, requestedTenantId);
+    console.log('[getValidatedTenantId] Access check result:', {
+      requestedTenantId,
+      hasAccess
+    });
+    
     if (hasAccess) {
+      console.log('[getValidatedTenantId] Using requested tenant:', requestedTenantId);
       return requestedTenantId;
     }
-    console.warn('[getValidatedTenantId] User does not have access to requested tenant:', requestedTenantId);
+    console.warn('[getValidatedTenantId] Access DENIED to tenant:', requestedTenantId);
   }
   
   // Fallback to first tenant (backwards compatibility)
-  return getTenantIdForUser(supabase, userId);
+  const fallbackTenantId = await getTenantIdForUser(supabase, userId);
+  console.log('[getValidatedTenantId] Using FALLBACK tenant:', fallbackTenantId);
+  return fallbackTenantId;
 }

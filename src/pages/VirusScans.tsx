@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 const ITEMS_PER_PAGE = 15;
 
 export default function VirusScans() {
+  const { tenant } = useTenant();
   const [page, setPage] = useState(0);
   const [agentFilter, setAgentFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -26,11 +28,14 @@ export default function VirusScans() {
   const [endDate, setEndDate] = useState('');
 
   const { data: scans, isLoading } = useQuery({
-    queryKey: ['virus-scans', page, agentFilter, statusFilter, searchTerm, startDate, endDate],
+    queryKey: ['virus-scans', tenant?.id, page, agentFilter, statusFilter, searchTerm, startDate, endDate],
     queryFn: async () => {
+      if (!tenant?.id) return { data: [], count: 0 };
+      
       let query = supabase
         .from('virus_scans')
         .select('*', { count: 'exact' })
+        .eq('tenant_id', tenant.id)
         .order('scanned_at', { ascending: false })
         .range(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE - 1);
 
@@ -63,14 +68,18 @@ export default function VirusScans() {
 
       return { data, count };
     },
+    enabled: !!tenant?.id
   });
 
   const { data: agents } = useQuery({
-    queryKey: ['scan-agents'],
+    queryKey: ['scan-agents', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
+      
       const { data, error } = await supabase
         .from('virus_scans')
         .select('agent_name')
+        .eq('tenant_id', tenant.id)
         .order('agent_name');
       
       if (error) throw error;
@@ -79,17 +88,21 @@ export default function VirusScans() {
       const unique = [...new Set(data?.map(s => s.agent_name))];
       return unique;
     },
+    enabled: !!tenant?.id
   });
 
   const totalPages = scans?.count ? Math.ceil(scans.count / ITEMS_PER_PAGE) : 0;
 
   const { data: trendData } = useQuery({
-    queryKey: ['scan-trend'],
+    queryKey: ['scan-trend', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
+      
       const last7Days = subDays(new Date(), 7);
       const { data, error } = await supabase
         .from('virus_scans')
         .select('scanned_at, is_malicious')
+        .eq('tenant_id', tenant.id)
         .gte('scanned_at', last7Days.toISOString())
         .order('scanned_at');
       
@@ -107,6 +120,7 @@ export default function VirusScans() {
 
       return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date));
     },
+    enabled: !!tenant?.id
   });
 
 
