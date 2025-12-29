@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Minus, AlertCircle, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertCircle, Activity, ArrowUp, ArrowDown, ArrowRight } from 'lucide-react';
 import { 
   LineChart, 
   Line, 
@@ -39,13 +39,45 @@ export function ConfidenceGapChart({ latestGap, trendData }: ConfidenceGapChartP
       redScore: item.red_score,
       gap: item.confidence_gap,
       health: item.health_status,
+      avg90d: item.avg_gap_90d,
+      trendDirection: item.trend_direction,
     }));
+
+  // Get latest trend data for 90d metrics
+  const latestTrend = trendData[0];
 
   const getTrendIcon = () => {
     if (!latestGap?.gap_delta) return <Minus className="h-4 w-4" />;
     if (latestGap.gap_delta > 0) return <TrendingUp className="h-4 w-4 text-green-500" />;
     if (latestGap.gap_delta < 0) return <TrendingDown className="h-4 w-4 text-red-500" />;
     return <Minus className="h-4 w-4" />;
+  };
+
+  const getTrendDirectionIcon = (direction: string | undefined | null) => {
+    switch (direction) {
+      case 'improving': return <ArrowUp className="h-4 w-4 text-green-500" />;
+      case 'degrading': return <ArrowDown className="h-4 w-4 text-red-500" />;
+      case 'stable': return <ArrowRight className="h-4 w-4 text-yellow-500" />;
+      default: return <Minus className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const getTrendDirectionLabel = (direction: string | undefined | null): string => {
+    switch (direction) {
+      case 'improving': return 'Melhorando';
+      case 'degrading': return 'Degradando';
+      case 'stable': return 'Estável';
+      default: return 'N/A';
+    }
+  };
+
+  const getTrendDirectionColor = (direction: string | undefined | null): string => {
+    switch (direction) {
+      case 'improving': return 'text-green-500';
+      case 'degrading': return 'text-red-500';
+      case 'stable': return 'text-yellow-500';
+      default: return 'text-muted-foreground';
+    }
   };
 
   if (!latestGap && trendData.length === 0) {
@@ -83,7 +115,7 @@ export function ConfidenceGapChart({ latestGap, trendData }: ConfidenceGapChartP
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-500">
                   {latestGap.ana_score}
@@ -109,6 +141,18 @@ export function ConfidenceGapChart({ latestGap, trendData }: ConfidenceGapChartP
                   )}
                 </div>
               </div>
+              {/* 90d Trend */}
+              <div className="text-center border-l">
+                <div className="flex items-center justify-center gap-1">
+                  {getTrendDirectionIcon(latestTrend?.trend_direction)}
+                  <span className={`text-lg font-bold ${getTrendDirectionColor(latestTrend?.trend_direction)}`}>
+                    {latestTrend?.avg_gap_90d?.toFixed(0) || 'N/A'}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Média 90d ({getTrendDirectionLabel(latestTrend?.trend_direction)})
+                </div>
+              </div>
             </div>
 
             {latestGap.alert_triggered && (
@@ -117,6 +161,17 @@ export function ConfidenceGapChart({ latestGap, trendData }: ConfidenceGapChartP
                 <div className="text-sm">
                   <span className="font-medium text-destructive">Alerta: </span>
                   {latestGap.alert_reason}
+                </div>
+              </div>
+            )}
+
+            {/* Consecutive decrease warning */}
+            {latestTrend?.consecutive_decrease && (
+              <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-2">
+                <TrendingDown className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <span className="font-medium text-yellow-500">Atenção: </span>
+                  Gap em queda por {latestTrend.consecutive_alerts || 3}+ medições consecutivas.
                 </div>
               </div>
             )}
@@ -133,7 +188,7 @@ export function ConfidenceGapChart({ latestGap, trendData }: ConfidenceGapChartP
               Evolução do Confidence Gap
             </CardTitle>
             <CardDescription>
-              Histórico de 30 dias - Gap saudável: {'>'} 40
+              Histórico de 30 dias — Linha tracejada = média 90d
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -163,8 +218,9 @@ export function ConfidenceGapChart({ latestGap, trendData }: ConfidenceGapChartP
                         anaScore: 'Ana Score',
                         redScore: 'Red Score',
                         gap: 'Confidence Gap',
+                        avg90d: 'Média 90d',
                       };
-                      return [value, labels[name] || name];
+                      return [value?.toFixed?.(0) ?? value, labels[name] || name];
                     }}
                     labelFormatter={(label) => `Data: ${label}`}
                   />
@@ -197,6 +253,16 @@ export function ConfidenceGapChart({ latestGap, trendData }: ConfidenceGapChartP
                     strokeWidth={2}
                     name="gap"
                   />
+                  {/* 90d average line */}
+                  <Line 
+                    type="monotone" 
+                    dataKey="avg90d" 
+                    stroke="hsl(var(--muted-foreground))"
+                    strokeWidth={2}
+                    strokeDasharray="8 4"
+                    dot={false}
+                    name="avg90d"
+                  />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -213,6 +279,10 @@ export function ConfidenceGapChart({ latestGap, trendData }: ConfidenceGapChartP
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-full bg-primary" />
                 <span className="text-muted-foreground">Gap</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-0.5 bg-muted-foreground" style={{ backgroundImage: 'repeating-linear-gradient(90deg, currentColor 0, currentColor 8px, transparent 8px, transparent 12px)' }} />
+                <span className="text-muted-foreground">Média 90d</span>
               </div>
             </div>
           </CardContent>

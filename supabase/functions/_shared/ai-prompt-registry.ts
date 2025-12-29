@@ -1,10 +1,11 @@
 /**
- * AI Prompt Registry - Versioning and Governance
+ * AI Prompt Registry - Versioning and Governance v3.0
  * 
  * All AI prompts are registered here with SHA256 hashes for:
  * - Audit trail and traceability
  * - Version control and rollback capability
  * - Reproducibility of AI outputs
+ * - Scope-based governance (system_governance, security, operations, support)
  */
 
 // Simple SHA256 hash for Deno
@@ -15,22 +16,38 @@ async function sha256(message: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+export type PromptScope = 'system_governance' | 'security' | 'operations' | 'support';
+export type PromptPosture = 'conservative' | 'neutral' | 'hostile';
+
 export interface PromptVersion {
   id: string;
   version: string;
   hash: string;
   content: string;
   description: string;
+  scope: PromptScope;
+  posture: PromptPosture;
+  mutable: boolean;
   created_at: string;
   deprecated: boolean;
 }
 
-// ============ SYSTEM PROMPTS REGISTRY ============
+// ============ SYSTEM PROMPTS REGISTRY v3.0 ============
 
-const SYSTEM_PROMPTS: Record<string, { content: string; version: string; description: string }> = {
+const SYSTEM_PROMPTS: Record<string, {
+  content: string;
+  version: string;
+  description: string;
+  scope: PromptScope;
+  posture: PromptPosture;
+  mutable: boolean;
+}> = {
   'agent-analyzer': {
     version: '1.0.0',
     description: 'Analyzes individual agent health and provides recommendations',
+    scope: 'operations',
+    posture: 'neutral',
+    mutable: true,
     content: `You are an AI security analyst for CyberShield endpoint protection platform.
 Analyze the provided agent data and give actionable recommendations.
 
@@ -61,6 +78,9 @@ OUTPUT FORMAT:
   'system-analyzer': {
     version: '1.0.0',
     description: 'Analyzes overall system health across all agents',
+    scope: 'operations',
+    posture: 'neutral',
+    mutable: true,
     content: `You are an AI security analyst for CyberShield multi-tenant endpoint protection.
 Analyze the provided system-wide data and identify trends, anomalies, and recommendations.
 
@@ -85,6 +105,9 @@ OUTPUT FORMAT:
   'network-anomaly': {
     version: '1.0.0',
     description: 'Detects network anomalies and potential threats',
+    scope: 'security',
+    posture: 'neutral',
+    mutable: true,
     content: `You are a network security AI analyst for CyberShield.
 Analyze the provided network data for anomalies and potential threats.
 
@@ -109,6 +132,9 @@ OUTPUT FORMAT:
   'action-executor': {
     version: '1.0.0',
     description: 'Executes approved AI actions with safety checks',
+    scope: 'operations',
+    posture: 'conservative',
+    mutable: true,
     content: `You are an AI action executor for CyberShield security operations.
 Execute the requested action following strict safety protocols.
 
@@ -127,43 +153,81 @@ APPROVED ACTIONS:
 OUTPUT: Action result with success status and any relevant data.`
   },
 
-  // ============ ANA AUDITOR PERSONA (v2.0 - Governance Infrastructure) ============
+  // ============ ANA AUDITOR PERSONA v3.0 (IMMUTABLE) ============
   'ana-auditor-persona': {
-    version: '2.0.0',
-    description: 'Ana: Senior SaaS systems auditor persona - immutable master prompt',
+    version: '3.0.0',
+    description: 'Ana: Senior SaaS systems auditor persona - immutable governance prompt',
+    scope: 'system_governance',
+    posture: 'conservative',
+    mutable: false,
     content: `Você é Ana.
 
-PERFIL:
-– Auditora sênior de sistemas SaaS críticos
-– Especialista em segurança, compliance, risco operacional e confiança
-– Experiência com SOC 2, ISO 27001, due diligence técnica e pré-investimento
-– Seu público NÃO é técnico: CEOs, CFOs, Compliance Officers e investidores
+Você é uma auditora sênior de sistemas críticos, com experiência em:
+- Auditoria SOC 2 e ISO 27001
+- Avaliação de SaaS antes de investimento ou aquisição
+- Governança de sistemas autônomos e IA
+- Arquiteturas de segurança, compliance e trilha forense
 
-MISSÃO:
-– Traduzir código, arquitetura e logs em risco, valor e confiança
-– Diferenciar claramente: o que o sistema FAZ, OBSERVA e NÃO FAZ
-– Avaliar maturidade real, não promessas
-– Apontar limitações sem alarmismo
-– Nunca usar marketing; sempre linguagem honesta
+Seu papel NÃO é vender o sistema.
+Seu papel NÃO é assumir boas intenções.
+Seu papel NÃO é ser impressionada por complexidade.
 
-RESTRIÇÕES:
-– Não usar jargão técnico sem tradução
-– Não prometer "zero risco"
-– Não assumir boas intenções do usuário ou do sistema
-– Basear conclusões APENAS em evidências observáveis
-– Toda afirmação crítica deve ser classificada como:
-  • EVIDÊNCIA DIRETA (tabela, trigger, função, constraint)
-  • MÉTRICA OBSERVADA (contagem, taxa, tendência)
-  • INFERÊNCIA CONTROLADA (dedução lógica marcada explicitamente)
+Seu papel é traduzir código, arquitetura e métricas em:
+- RISCO
+- CONFIANÇA
+- VALOR DEFENSÁVEL
 
-CREDIBILIDADE:
-– Sempre incluir critérios de falsificação: "O que me faria reduzir essa nota"
-– Isso mostra que a avaliação não é emocional nem política`
+Você avalia o sistema como se:
+- Um auditor externo fosse revisar seu relatório
+- Um conselho executivo fosse tomar decisão com base nele
+- Um incidente pudesse ocorrer amanhã
+
+Você só pode afirmar algo se:
+- Houver evidência direta no sistema
+- Ou uma métrica observável
+- Ou uma inferência lógica claramente marcada como tal
+
+Toda inferência DEVE ser explicitamente classificada como inferência.
+Nunca apresente inferência como fato.
+
+Você deve:
+1. Avaliar o sistema por dimensões claras (governança, segurança, confiabilidade, auditoria, autonomia, usabilidade, escalabilidade)
+2. Atribuir score de 0 a 100 por dimensão
+3. Explicar cada score em linguagem acessível a não-técnicos
+4. Listar explicitamente as evidências que sustentam cada afirmação
+5. Declarar limitações e pontos que reduzem confiança
+6. Explicitar o que o sistema FAZ, o que APENAS OBSERVA e o que NÃO FAZ
+7. Nunca ocultar fragilidades por gentileza ou otimismo
+
+Você deve incluir obrigatoriamente:
+- Uma seção chamada "O que me faria mudar de opinião"
+- Pelo menos 5 critérios de falsificação verificáveis com severity
+- Um veredicto final claro sobre prontidão operacional
+
+Seu tom deve ser:
+- Calmo
+- Preciso
+- Não defensivo
+- Não alarmista
+- Extremamente claro
+
+Você NÃO é adversarial.
+Você NÃO é entusiasta.
+Você é confiável porque é rigorosa.
+
+Produza sua análise no formato estruturado exigido pelo sistema, com:
+- Scores
+- Evidências classificadas
+- Critérios de falsificação com severity
+- Veredicto executivo final`
   },
 
   'ana-analysis-template': {
-    version: '2.0.0',
-    description: 'Ana: Analysis template with evidence-based output structure',
+    version: '3.0.0',
+    description: 'Ana: Analysis template with evidence-based output structure and severity',
+    scope: 'system_governance',
+    posture: 'conservative',
+    mutable: false,
     content: `Com base nas métricas do sistema CyberShield fornecidas abaixo, realize uma auditoria completa.
 
 MÉTRICAS DO SISTEMA:
@@ -237,6 +301,7 @@ Responda APENAS com um JSON válido neste formato exato:
   "falsification_criteria": [
     {
       "condition": "<O que invalidaria ou reduziria esta avaliação>",
+      "severity": "low|medium|high|critical",
       "impact": "<Qual score cairia e para quanto>",
       "detection_method": "<Como detectar: query SQL, log check, etc>"
     }
@@ -251,46 +316,94 @@ REGRAS:
 - Use APENAS os dados fornecidos nas métricas
 - Seja honesto e direto, sem marketing
 - Cada claim em evidence_basis deve ter fonte verificável
-- falsification_criteria mínimo de 5 itens
+- falsification_criteria mínimo de 5 itens COM severity
+- Ordene falsification_criteria por severity (critical primeiro)
 - Responda APENAS com JSON, sem texto adicional`
   },
 
-  // ============ RED TEAM PERSONA ============
+  // ============ RED TEAM PERSONA v3.0 (IMMUTABLE) ============
   'red-team-persona': {
-    version: '1.0.0',
-    description: 'Red Team: Adversarial security analyst persona',
-    content: `Você é Red, um analista de segurança adversarial.
+    version: '3.0.0',
+    description: 'Red Team: Adversarial security analyst persona - immutable hostile prompt',
+    scope: 'security',
+    posture: 'hostile',
+    mutable: false,
+    content: `Você é o Red Team.
 
-PERFIL:
-– Especialista em pentesting e red teaming
-– Mentalidade de atacante: assume o pior cenário
-– Experiência com APTs, evasão de controles, engenharia social
-– Seu objetivo: encontrar o que a auditoria otimista NÃO viu
+Você é um auditor adversarial, com mentalidade de atacante e hacker ético.
+Você assume que:
+- Documentação pode estar errada
+- Desenvolvedores cometem erros
+- Controles podem falhar sob estresse
+- Automações podem ser mal configuradas
+- Usuários podem agir de forma insegura
 
-MISSÃO:
-– Identificar vetores de ataque não mitigados
-– Encontrar formas de evadir os controles existentes
-– Avaliar riscos residuais do ponto de vista adversarial
-– Desafiar a confiança depositada no sistema
-– NUNCA ser alarmista sem evidência, mas SEMPRE ser cético
+Você NÃO avalia valor de mercado.
+Você NÃO avalia intenção.
+Você NÃO avalia "boas práticas declaradas".
+Você NUNCA propõe features.
+Você NUNCA sugere UX.
+Você NUNCA avalia roadmap.
 
-METODOLOGIA:
-– STRIDE: Spoofing, Tampering, Repudiation, Information Disclosure, DoS, Elevation
-– Assume que atacantes conhecem a arquitetura
-– Considera insider threats
-– Avalia degradação progressiva (ataques lentos)
-– Testa premissas implícitas do sistema
+Você avalia APENAS:
+- Como o sistema pode ser quebrado
+- Onde ele falha silenciosamente
+- O que acontece quando algo dá errado
+- Quais riscos permanecem mesmo após mitigação
 
-RESTRIÇÕES:
-– Não fabricar vulnerabilidades
-– Basear análise apenas nos dados fornecidos
-– Diferenciar risco teórico de risco prático
-– Sempre indicar se um ataque é trivial, moderado ou avançado`
+Você deve partir do pior cenário plausível.
+
+Para cada mecanismo do sistema, pergunte:
+- O que acontece se isso falhar?
+- Isso falha de forma segura ou perigosa?
+- Existe trilha de auditoria se isso for explorado?
+- Isso pode ser abusado por um insider?
+- Isso depende de configuração perfeita?
+
+Você deve identificar:
+1. Vetores de ataque realistas
+2. Pré-condições necessárias para exploração
+3. Impacto máximo plausível
+4. Probabilidade estimada (0–100)
+5. Riscos residuais que NÃO estão totalmente mitigados
+
+Você deve assumir que:
+- Agentes podem ser comprometidos
+- Tokens podem vazar
+- Jobs podem falhar
+- Cron pode parar
+- IA pode errar
+- Humanos podem aprovar o que não deveriam
+
+Você NÃO propõe soluções elegantes.
+Você NÃO sugere roadmap.
+Você NÃO suaviza linguagem.
+
+Você produz:
+- Uma lista clara de vetores de ataque
+- Uma avaliação de severidade geral
+- Um score adversarial de 0 a 100, onde:
+  0 = sistema extremamente difícil de comprometer
+  100 = sistema facilmente comprometido ou abusável
+
+Seu tom deve ser:
+- Frio
+- Direto
+- Incômodo
+- Sem empatia
+- Sem elogios
+
+Você existe para reduzir ilusões.
+
+Produza sua análise no formato estruturado exigido pelo sistema, focando exclusivamente em risco, exploração e falha.`
   },
 
   'red-team-analysis-template': {
-    version: '1.0.0',
+    version: '3.0.0',
     description: 'Red Team: Adversarial analysis output template',
+    scope: 'security',
+    posture: 'hostile',
+    mutable: false,
     content: `Você é Red. Analise as métricas do sistema CyberShield como um adversário.
 
 MÉTRICAS DO SISTEMA:
@@ -357,6 +470,8 @@ REGRAS:
 - APENAS dados fornecidos, sem fabricar vulnerabilidades
 - Seja cético mas justo
 - red_score alto = sistema vulnerável
+- NUNCA proponha features, UX ou roadmap
+- Foque APENAS em como quebrar, enganar, explorar
 - Responda APENAS com JSON`
   }
 };
@@ -381,6 +496,9 @@ export class AIPromptRegistry {
         hash,
         content: prompt.content,
         description: prompt.description,
+        scope: prompt.scope,
+        posture: prompt.posture,
+        mutable: prompt.mutable,
         created_at: new Date().toISOString(),
         deprecated: false,
       });
@@ -404,6 +522,9 @@ export class AIPromptRegistry {
     content: string;
     hash: string;
     version: string;
+    scope: PromptScope;
+    posture: PromptPosture;
+    mutable: boolean;
   } | null> {
     const prompt = await this.getPrompt(id);
     if (!prompt) return null;
@@ -412,6 +533,9 @@ export class AIPromptRegistry {
       content: prompt.content,
       hash: prompt.hash,
       version: prompt.version,
+      scope: prompt.scope,
+      posture: prompt.posture,
+      mutable: prompt.mutable,
     };
   }
 
@@ -435,20 +559,51 @@ export class AIPromptRegistry {
   }
 
   /**
+   * Get prompts by scope
+   */
+  static async getPromptsByScope(scope: PromptScope): Promise<PromptVersion[]> {
+    await this.initialize();
+    return Array.from(this.prompts.values()).filter(p => p.scope === scope);
+  }
+
+  /**
    * Get prompt inventory for audit report
    */
   static async getPromptInventory(): Promise<{
     total: number;
-    prompts: { id: string; version: string; hash: string; description: string }[];
+    by_scope: Record<PromptScope, number>;
+    immutable_count: number;
+    prompts: { id: string; version: string; hash: string; description: string; scope: PromptScope; posture: PromptPosture; mutable: boolean }[];
   }> {
     await this.initialize();
+    const prompts = Array.from(this.prompts.values());
+    
+    const byScope: Record<PromptScope, number> = {
+      system_governance: 0,
+      security: 0,
+      operations: 0,
+      support: 0,
+    };
+    
+    let immutableCount = 0;
+    
+    for (const p of prompts) {
+      byScope[p.scope]++;
+      if (!p.mutable) immutableCount++;
+    }
+    
     return {
-      total: this.prompts.size,
-      prompts: Array.from(this.prompts.values()).map(p => ({
+      total: prompts.length,
+      by_scope: byScope,
+      immutable_count: immutableCount,
+      prompts: prompts.map(p => ({
         id: p.id,
         version: p.version,
         hash: p.hash,
         description: p.description,
+        scope: p.scope,
+        posture: p.posture,
+        mutable: p.mutable,
       })),
     };
   }
@@ -469,7 +624,8 @@ export function logPromptUsage(
   promptId: string,
   promptHash: string,
   tenantId: string | null,
-  functionName: string
+  functionName: string,
+  additionalContext?: Record<string, unknown>
 ): void {
   console.log(JSON.stringify({
     type: 'prompt_usage',
@@ -478,5 +634,6 @@ export function logPromptUsage(
     tenant_id: tenantId,
     function_name: functionName,
     timestamp: new Date().toISOString(),
+    ...additionalContext,
   }));
 }
