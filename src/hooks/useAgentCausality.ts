@@ -7,7 +7,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AgentState, deriveAgentState, getStateDescription } from '@/lib/agent-state-machine';
-import { formatRelativeTime } from '@/lib/date-utils';
+import { formatRelativeTime, formatDuration } from '@/lib/date-utils';
 
 
 export interface CausalEvent {
@@ -22,6 +22,17 @@ export interface CausalEvent {
   actor?: string; // quem causou (sistema, usuário, regra)
 }
 
+export interface StateTransition {
+  fromState: AgentState;
+  toState: AgentState;
+  timestamp: string;
+  formattedTime: string;
+  reason: string;
+  triggeredBy: 'rule' | 'manual' | 'system';
+  ruleCode?: string;
+  duration?: string; // quanto tempo ficou no estado anterior
+}
+
 export interface AgentCausality {
   currentState: AgentState;
   stateDescription: string;
@@ -32,6 +43,8 @@ export interface AgentCausality {
   nextSteps: string;
   overrideExpiresAt: string | null;
   events: CausalEvent[];
+  stateTransitions: StateTransition[];
+  timeInCurrentState?: string;
 }
 
 export function useAgentCausality(agentId: string | null) {
@@ -126,6 +139,9 @@ export function useAgentCausality(agentId: string | null) {
       // Ordenar eventos por timestamp
       events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
+      // Derivar transições de estado a partir dos eventos
+      const stateTransitions = deriveStateTransitions(events, agent, currentState);
+
       // Determinar causa do estado atual
       let causedBy = 'Sistema';
       let reason = 'Estado normal de operação';
@@ -169,6 +185,11 @@ export function useAgentCausality(agentId: string | null) {
           break;
       }
 
+      // Calcular tempo no estado atual
+      const timeInCurrentState = stateSince 
+        ? formatDuration(new Date(stateSince), new Date())
+        : undefined;
+
       return {
         currentState,
         stateDescription: stateDesc.description,
@@ -178,10 +199,91 @@ export function useAgentCausality(agentId: string | null) {
         reason,
         nextSteps: stateDesc.nextSteps,
         overrideExpiresAt,
-        events: events.slice(0, 10) // Limitar a 10 eventos
+        events: events.slice(0, 10), // Limitar a 10 eventos
+        stateTransitions,
+        timeInCurrentState
       };
     },
     enabled: !!agentId,
     refetchInterval: 30000 // Atualizar a cada 30 segundos
   });
+}
+
+/**
+ * Deriva transições de estado a partir dos eventos registrados
+ */
+function deriveStateTransitions(
+  events: CausalEvent[],
+  agent: Record<string, unknown>,
+  currentState: AgentState
+): StateTransition[] {
+  const transitions: StateTransition[] = [];
+  
+  // Mapear tipos de evento para estados
+  const eventStateMap: Record<string, { from: AgentState; to: AgentState }> = {
+    'safe_mode': { from: 'healthy', to: 'safe_mode' },
+    'rollback': { from: 'updating', to: 'safe_mode' },
+    'isolation': { from: 'healthy', to: 'isolated' },
+  };
+
+  // Processar eventos para criar transições
+  for (let i = 0; i < Math.min(events.length, 5); i++) {
+    const event = events[i];
+    const nextEvent = events[i + 1];
+
+    let fromState: AgentState = 'healthy';
+    let toState: AgentState = currentState;
+    let triggeredBy: 'rule' | 'manual' | 'system' = 'system';
+
+    // Determinar estados baseado no tipo de evento
+    if (event.type === 'safe_mode') {
+      if (event.title.includes('desativado')) {
+        fromState = 'safe_mode';
+        toState = 'healthy';
+        triggeredBy = 'manual';
+      } else {
+        fromState = 'healthy';
+        toState = 'safe_mode';
+        triggeredBy = 'system';
+      }
+    } else if (event.type === 'rollback') {
+      fromState = 'updating';
+      toState = 'safe_mode';
+      triggeredBy = 'system';
+    } else if (event.type === 'decision') {
+      triggeredBy = 'rule';
+      // Inferir estados a partir da ação
+      if (event.rule_code?.includes('ISOLATE')) {
+        fromState = 'healthy';
+        toState = 'isolated';
+      } else if (event.rule_code?.includes('THROTTLE')) {
+        fromState = 'healthy';
+        toState = 'degraded';
+      } else if (event.rule_code?.includes('SAFE_MODE')) {
+        fromState = 'healthy';
+        toState = 'safe_mode';
+      }
+    }
+
+    // Calcular duração
+    let duration: string | undefined;
+    if (nextEvent) {
+      const eventTime = new Date(event.timestamp);
+      const nextEventTime = new Date(nextEvent.timestamp);
+      duration = formatDuration(nextEventTime, eventTime);
+    }
+
+    transitions.push({
+      fromState,
+      toState,
+      timestamp: event.timestamp,
+      formattedTime: event.formattedTime,
+      reason: event.description,
+      triggeredBy,
+      ruleCode: event.rule_code,
+      duration
+    });
+  }
+
+  return transitions;
 }

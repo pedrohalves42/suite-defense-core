@@ -111,3 +111,26 @@ export function formatRelativeTime(dateString: string | Date | null | undefined)
   
   return formatBrazilDateTime(date, 'date');
 }
+
+/**
+ * Formata duração entre duas datas (ex: "2h 30min", "3 dias")
+ */
+export function formatDuration(startDate: Date, endDate: Date): string {
+  const diffMs = Math.abs(endDate.getTime() - startDate.getTime());
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffSeconds < 60) return `${diffSeconds}s`;
+  if (diffMinutes < 60) return `${diffMinutes}min`;
+  if (diffHours < 24) {
+    const remainingMinutes = diffMinutes % 60;
+    if (remainingMinutes > 0) {
+      return `${diffHours}h ${remainingMinutes}min`;
+    }
+    return `${diffHours}h`;
+  }
+  if (diffDays === 1) return '1 dia';
+  return `${diffDays} dias`;
+}

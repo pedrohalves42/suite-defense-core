@@ -17,14 +17,24 @@ import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { TooltipProvider as TooltipProviderWrapper } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HealthTrendChart } from '@/components/admin/HealthTrendChart';
+import { AgentDetailsDrawer } from '@/components/agent/AgentDetailsDrawer';
 
 type StatusFilter = 'all' | 'problems' | 'protected' | 'offline';
+
+interface SelectedAgent {
+  id: string;
+  name: string;
+  isThrottled?: boolean | null;
+  isIsolated?: boolean | null;
+  isInSafeMode?: boolean | null;
+}
 
 export default function AgentHealthMonitor() {
   const { tenant } = useTenant();
   const [liveHeartbeats, setLiveHeartbeats] = useState<number>(0);
   const [recentHeartbeats, setRecentHeartbeats] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [selectedAgent, setSelectedAgent] = useState<SelectedAgent | null>(null);
 
   // Fetch agent health metrics using RPC
   const { data: agentsHealth = [], isLoading, isError, error: errorData, refetch } = useQuery({
@@ -333,8 +343,15 @@ export default function AgentHealthMonitor() {
                 return (
                   <div 
                     key={agent.agent_name + idx}
+                    onClick={() => agent.id && setSelectedAgent({
+                      id: agent.id,
+                      name: agent.agent_name,
+                      isThrottled: agent.is_throttled,
+                      isIsolated: agent.is_isolated,
+                      isInSafeMode: agent.is_in_safe_mode
+                    })}
                     className={cn(
-                      "p-4 rounded-lg border transition-all hover:shadow-md",
+                      "p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer",
                       agent.is_isolated ? "border-red-300 bg-red-50/50 dark:bg-red-950/20" :
                       agent.is_throttled ? "border-amber-300 bg-amber-50/50 dark:bg-amber-950/20" :
                       agent.is_in_safe_mode ? "border-orange-300 bg-orange-50/50 dark:bg-orange-950/20" :
@@ -409,6 +426,17 @@ export default function AgentHealthMonitor() {
           )}
         </CardContent>
       </Card>
+
+      {/* Agent Details Drawer */}
+      <AgentDetailsDrawer
+        agentId={selectedAgent?.id || null}
+        agentName={selectedAgent?.name}
+        open={!!selectedAgent}
+        onClose={() => setSelectedAgent(null)}
+        isThrottled={selectedAgent?.isThrottled}
+        isIsolated={selectedAgent?.isIsolated}
+        isInSafeMode={selectedAgent?.isInSafeMode}
+      />
     </div>
   );
 }

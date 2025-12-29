@@ -4,10 +4,13 @@
  * Responde: Por quê está assim? Quando aconteceu? O que fazer?
  */
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   CheckCircle, 
   AlertTriangle, 
@@ -20,9 +23,12 @@ import {
   Clock,
   User,
   Zap,
-  ArrowRight
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  History
 } from 'lucide-react';
-import { useAgentCausality, CausalEvent } from '@/hooks/useAgentCausality';
+import { useAgentCausality, CausalEvent, StateTransition } from '@/hooks/useAgentCausality';
 import { AgentState, getStateColorClasses } from '@/lib/agent-state-machine';
 import { formatRelativeTime } from '@/lib/date-utils';
 import { motion } from 'framer-motion';
@@ -38,6 +44,17 @@ const STATE_ICONS: Record<AgentState, typeof CheckCircle> = {
   quarantined: AlertOctagon
 };
 
+const STATE_LABELS: Record<AgentState, string> = {
+  healthy: 'Saudável',
+  degraded: 'Degradado',
+  safe_mode: 'Modo Protegido',
+  updating: 'Atualizando',
+  rollback: 'Rollback',
+  isolated: 'Isolado',
+  offline: 'Offline',
+  quarantined: 'Quarentena'
+};
+
 interface AgentStateExplainerProps {
   agentId: string | null;
   compact?: boolean;
@@ -45,6 +62,7 @@ interface AgentStateExplainerProps {
 
 export function AgentStateExplainer({ agentId, compact = false }: AgentStateExplainerProps) {
   const { data: causality, isLoading, error } = useAgentCausality(agentId);
+  const [showAllTransitions, setShowAllTransitions] = useState(false);
 
   if (!agentId) {
     return null;
@@ -95,6 +113,11 @@ export function AgentStateExplainer({ agentId, compact = false }: AgentStateExpl
     );
   }
 
+  // Transições a mostrar: primeiras 3 por padrão
+  const visibleTransitions = showAllTransitions 
+    ? causality.stateTransitions 
+    : causality.stateTransitions.slice(0, 3);
+
   return (
     <Card className={`border-l-4 ${colors.border}`}>
       <CardHeader>
@@ -126,6 +149,12 @@ export function AgentStateExplainer({ agentId, compact = false }: AgentStateExpl
                     {causality.formattedStateSince}
                   </span>
                 )}
+                {causality.timeInCurrentState && (
+                  <span className="flex items-center gap-1 text-primary">
+                    <History className="h-3 w-3" />
+                    {causality.timeInCurrentState}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -151,12 +180,57 @@ export function AgentStateExplainer({ agentId, compact = false }: AgentStateExpl
           </div>
         </div>
 
+        {/* Timeline de transições de estado (colapsável) */}
+        {causality.stateTransitions.length > 0 && (
+          <Collapsible open={showAllTransitions} onOpenChange={setShowAllTransitions}>
+            <div className="pt-4 border-t">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Histórico de Estados
+                </h4>
+                {causality.stateTransitions.length > 3 && (
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-7 px-2">
+                      {showAllTransitions ? (
+                        <>
+                          <ChevronUp className="h-3 w-3 mr-1" />
+                          Menos
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="h-3 w-3 mr-1" />
+                          Ver mais ({causality.stateTransitions.length - 3})
+                        </>
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                {visibleTransitions.slice(0, 3).map((transition, idx) => (
+                  <StateTransitionItem key={`${transition.timestamp}-${idx}`} transition={transition} index={idx} />
+                ))}
+              </div>
+              
+              <CollapsibleContent>
+                <div className="space-y-2 mt-2">
+                  {visibleTransitions.slice(3).map((transition, idx) => (
+                    <StateTransitionItem key={`${transition.timestamp}-${idx + 3}`} transition={transition} index={idx + 3} />
+                  ))}
+                </div>
+              </CollapsibleContent>
+            </div>
+          </Collapsible>
+        )}
+
         {/* Timeline de eventos causais */}
         {causality.events.length > 0 && (
           <div className="pt-4 border-t">
             <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              Histórico recente
+              Eventos recentes
             </h4>
             <div className="space-y-2">
               {causality.events.slice(0, 5).map((event, idx) => (
@@ -167,6 +241,53 @@ export function AgentStateExplainer({ agentId, compact = false }: AgentStateExpl
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function StateTransitionItem({ transition, index }: { transition: StateTransition; index: number }) {
+  const fromColors = getStateColorClasses(transition.fromState);
+  const toColors = getStateColorClasses(transition.toState);
+  const FromIcon = STATE_ICONS[transition.fromState];
+  const ToIcon = STATE_ICONS[transition.toState];
+
+  const getTriggeredByLabel = (triggeredBy: StateTransition['triggeredBy']) => {
+    switch (triggeredBy) {
+      case 'rule': return 'Regra automática';
+      case 'manual': return 'Ação manual';
+      case 'system': return 'Sistema';
+      default: return triggeredBy;
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-sm"
+    >
+      {/* Estado anterior */}
+      <div className={`flex items-center gap-1 px-2 py-0.5 rounded ${fromColors.bg} ${fromColors.text}`}>
+        <FromIcon className="h-3 w-3" />
+        <span className="text-xs">{STATE_LABELS[transition.fromState]}</span>
+      </div>
+      
+      <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+      
+      {/* Estado novo */}
+      <div className={`flex items-center gap-1 px-2 py-0.5 rounded ${toColors.bg} ${toColors.text}`}>
+        <ToIcon className="h-3 w-3" />
+        <span className="text-xs">{STATE_LABELS[transition.toState]}</span>
+      </div>
+      
+      {/* Meta info */}
+      <div className="flex-1 text-right text-xs text-muted-foreground">
+        <span>{transition.formattedTime}</span>
+        {transition.duration && (
+          <span className="ml-2 text-primary">({transition.duration})</span>
+        )}
+      </div>
+    </motion.div>
   );
 }
 
