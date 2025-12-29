@@ -4,11 +4,11 @@
 |-------|-------|
 | **Policy Code** | LMP-001 |
 | **Version** | 1.0 |
-| **Status** | Draft |
-| **Owner** | [OWNER_NAME] |
-| **Effective Date** | [DATE] |
-| **Review Date** | [DATE + 1 YEAR] |
-| **SOC 2 Criteria** | CC4, CC5 |
+| **Status** | Approved |
+| **Owner** | Security Officer |
+| **Effective Date** | 2025-01-01 |
+| **Review Date** | 2026-01-01 |
+| **SOC 2 Criteria** | CC4, CC7 |
 
 ---
 
@@ -139,4 +139,4 @@ Log data supports compliance with:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | [DATE] | [AUTHOR] | Initial version |
+| 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |
