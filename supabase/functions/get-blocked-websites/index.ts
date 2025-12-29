@@ -62,6 +62,8 @@ Deno.serve(async (req) => {
 
     const agent = tokenData.agents as any;
 
+    logger.info(`[get-blocked-websites] Agent authenticated: ${agent.agent_name}, tenant: ${agent.tenant_id}`);
+
     // Validate HMAC
     if (agent.hmac_secret) {
       const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret);
@@ -167,7 +169,11 @@ Deno.serve(async (req) => {
     // Also provide simple array for backward compatibility
     const blockedDomains = uniqueBlockedWebsites.map(site => site.domain_pattern);
 
-    logger.info(`Returning ${uniqueBlockedWebsites.length} blocked domains for agent ${agent.agent_name}`);
+    logger.info(`[get-blocked-websites] Returning ${uniqueBlockedWebsites.length} blocked domains for agent ${agent.agent_name}:`, {
+      domains: blockedDomains,
+      tenant_id: agent.tenant_id,
+      groups: groupIds
+    });
 
     return new Response(
       JSON.stringify({ 
