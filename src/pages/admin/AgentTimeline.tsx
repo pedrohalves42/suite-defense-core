@@ -56,8 +56,8 @@ export default function AgentTimeline() {
 
   return (
     <AdminPageLayout
-      title="Timeline do Agente"
-      description="Visualize eventos e atividades do agente"
+      title="Histórico do Computador"
+      description="Visualize eventos e atividades do computador"
     >
       <div className="space-y-6">
         {/* Agent Selector */}
@@ -65,9 +65,9 @@ export default function AgentTimeline() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
-              Selecionar Agente
+              Selecionar Computador
             </CardTitle>
-            <CardDescription>Escolha um agente para visualizar timeline</CardDescription>
+            <CardDescription>Escolha um computador para visualizar o histórico</CardDescription>
           </CardHeader>
           <CardContent>
             <AgentSelector value={selectedAgent} onValueChange={setSelectedAgent} />
@@ -118,7 +118,7 @@ export default function AgentTimeline() {
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Nenhum evento encontrado para este agente.
+                  Nenhum evento encontrado para este computador.
                 </AlertDescription>
               </Alert>
             ) : (

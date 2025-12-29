@@ -149,6 +149,20 @@ const techTerms: Record<string, string> = {
   "tentativa falhada": "Acesso que não foi autorizado por credenciais incorretas.",
   "evento de segurança": "Ocorrência registrada relacionada à proteção do sistema.",
   "logs": "Registros detalhados de atividades do sistema.",
+  
+  // Safe Mode e Recovery (novos)
+  "modo de proteção": "Estado seguro em que o computador entra quando detecta problemas repetidos.",
+  "safe mode": "Modo de proteção - estado seguro após detecção de problemas.",
+  "forçar atualização": "Ignorar temporariamente as proteções para aplicar uma atualização urgente.",
+  "override": "Ação que ignora proteções temporariamente para recuperação de emergência.",
+  "limitação temporária": "Redução da frequência de comunicação para proteger o sistema.",
+  "throttle": "Limitação temporária na comunicação do computador.",
+  "isolamento": "Computador separado da rede por motivos de segurança.",
+  "isolation": "Isolamento de segurança - computador separado da rede.",
+  "recovery": "Recuperação - processo de restaurar o funcionamento normal.",
+  "rollback": "Voltar para uma versão anterior do software.",
+  "limpeza": "Remoção de credenciais e tarefas para permitir nova instalação.",
+  "cleanup": "Processo de limpeza que prepara o computador para reinstalação.",
 };
 
 export function TechTooltip({ term, children, side = "top" }: TechTooltipProps) {

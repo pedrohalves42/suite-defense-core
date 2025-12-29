@@ -86,6 +86,21 @@ export const UI_DICTIONARY = {
   execute: 'executar',
   approve: 'aprovar',
   reject: 'rejeitar',
+  
+  // Novos termos (Safe Mode, Recovery, etc.)
+  override: 'forçar atualização',
+  forceUpdate: 'atualização forçada',
+  heartbeat: 'sinal de vida',
+  tenant: 'empresa',
+  scan: 'verificação de segurança',
+  hash: 'identificador único',
+  payload: 'configurações',
+  webhook: 'notificação automática',
+  timeout: 'tempo esgotado',
+  cleanup: 'limpeza',
+  token: 'credencial de acesso',
+  recovery: 'recuperação',
+  emergency: 'emergência',
 } as const;
 
 // Tipo para chaves do dicionário
@@ -247,6 +262,25 @@ export const UI_SENTENCES = {
   confirmAction: 'Tem certeza que deseja continuar?',
   actionConfirmed: 'Ação confirmada.',
   actionCancelled: 'Ação cancelada.',
+  
+  // Safe Mode e Recovery (novos)
+  safeModePending: 'Este computador está em modo de proteção. Aguarde ou force a atualização.',
+  overrideWarning: 'Esta ação ignora proteções de segurança. Use apenas em emergências.',
+  overrideActive: 'Atualização forçada ativada por 30 minutos.',
+  updateAvailable: 'Há uma atualização disponível para este computador.',
+  updateForced: 'A atualização será aplicada automaticamente no próximo contato.',
+  
+  // Ações em computadores
+  throttleRemoved: 'Limitação removida com sucesso.',
+  isolationRemoved: 'Isolamento removido. Computador liberado.',
+  cleanupSuccess: 'Computador limpo com sucesso.',
+  cleanupDescription: 'Credenciais invalidadas e tarefas removidas.',
+  
+  // Navegação e filtros
+  selectComputer: 'Selecione um computador',
+  noComputerAvailable: 'Nenhum computador disponível',
+  allComputers: 'Todos os computadores',
+  filterByComputer: 'Filtrar por computador',
 } as const;
 
 // Tipo para chaves de frases
