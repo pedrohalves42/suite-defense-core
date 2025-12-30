@@ -3,7 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-tenant-id',
 };
 
 interface ActionItem {
@@ -116,19 +116,49 @@ serve(async (req) => {
 
     console.log('[action-center-feed] User authenticated:', user.id);
 
-    // Get user's tenant using service client (bypass RLS)
-    const { data: userRole, error: roleError } = await serviceClient
-      .from('user_roles')
-      .select('tenant_id, role')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    // Get tenant from header (sent by frontend) or fallback to user's tenant
+    const requestedTenantId = req.headers.get('x-tenant-id');
+    let tenantId: string | null = null;
 
-    if (roleError) {
-      console.error('[action-center-feed] Role query error:', roleError);
+    if (requestedTenantId) {
+      // Validate that user has access to this tenant
+      const { data: hasAccess, error: accessError } = await serviceClient
+        .from('user_roles')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .eq('tenant_id', requestedTenantId)
+        .maybeSingle();
+
+      if (accessError) {
+        console.error('[action-center-feed] Access check error:', accessError);
+      }
+
+      if (hasAccess) {
+        tenantId = requestedTenantId;
+        console.log('[action-center-feed] Using requested tenant:', tenantId);
+      } else {
+        console.warn('[action-center-feed] User has no access to requested tenant:', requestedTenantId);
+      }
     }
 
-    // If no tenant, return empty feed with warning instead of 403
-    if (!userRole?.tenant_id) {
+    // Fallback: get first tenant for user
+    if (!tenantId) {
+      const { data: userRole, error: roleError } = await serviceClient
+        .from('user_roles')
+        .select('tenant_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+
+      if (roleError) {
+        console.error('[action-center-feed] Role query error:', roleError);
+      }
+
+      tenantId = userRole?.tenant_id || null;
+    }
+
+    // If no tenant, return empty feed with warning
+    if (!tenantId) {
       console.warn('[action-center-feed] User has no tenant:', user.id);
       
       const emptyFeed: ActionCenterFeed = {
@@ -146,8 +176,7 @@ serve(async (req) => {
       );
     }
 
-    const tenantId = userRole.tenant_id;
-    console.log('[action-center-feed] Tenant found:', tenantId);
+    console.log('[action-center-feed] Tenant resolved:', tenantId);
 
     // Create client with user context for subsequent operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {

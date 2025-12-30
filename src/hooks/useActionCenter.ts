@@ -43,6 +43,9 @@ export function useActionCenter() {
     queryFn: async (): Promise<ActionCenterFeed> => {
       const { data, error } = await supabase.functions.invoke('action-center-feed', {
         method: 'GET',
+        headers: {
+          'x-tenant-id': tenant!.id,
+        },
       });
 
       if (error) throw error;
@@ -111,6 +114,9 @@ export function useExecuteActionItem() {
     }) => {
       const { data, error } = await supabase.functions.invoke('action-center-feed', {
         method: 'POST',
+        headers: {
+          'x-tenant-id': tenant?.id || '',
+        },
         body: {
           item_id: itemId,
           source_type: sourceType,
