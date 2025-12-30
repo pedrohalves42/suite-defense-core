@@ -222,7 +222,33 @@ powershell -ExecutionPolicy Bypass -File tests/manual-installation-test.ps1 `
 
 ## CI/CD Pipeline
 
-Este projeto usa GitHub Actions para executar testes automaticamente:
+Este projeto usa GitHub Actions para executar testes automaticamente.
+
+### Pipeline Recomendado
+
+#### Fast Gate (< 2 min) - Para PRs e commits rápidos
+```bash
+# 1. Seed smoke (não precisa de setup-test-users)
+psql "$DATABASE_URL" -f supabase/seed-fast-smoke.sql
+
+# 2. Rodar apenas smoke
+npx playwright test smoke.spec.ts
+```
+
+#### Full E2E (10-20 min) - Para main/develop
+```bash
+# 1. Criar usuarios auth (requer SERVICE_ROLE_KEY)
+npx tsx tests/setup-test-users.ts
+
+# 2. Seed completo
+psql "$DATABASE_URL" -f supabase/seed-test-users.sql
+
+# 3. Rodar todos os testes
+npx playwright test
+
+# 4. Verificar skips silenciosos
+./e2e/scripts/check-skip-guard.sh
+```
 
 ### e2e-tests.yml
 - Executa em push para `main` ou `develop`
