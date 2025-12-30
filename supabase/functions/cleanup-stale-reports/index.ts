@@ -5,19 +5,29 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const STALE_HOURS = 24; // Reports stuck for more than 24 hours
+const STALE_HOURS = 24;
 
 Deno.serve(async (req) => {
+  const startedAt = Date.now();
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
 
+  const results = {
+    processed: 0,
+    cleaned: 0,
+    retried: 0,
+    failed: 0,
+    errors: [] as string[],
+  };
+
+  try {
     console.log('[cleanup-stale-reports] Starting cleanup...');
 
     const cutoffTime = new Date(Date.now() - STALE_HOURS * 60 * 60 * 1000).toISOString();
@@ -33,15 +43,20 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to fetch stale reports: ${fetchError.message}`);
     }
 
-    const results = {
-      cleaned: 0,
-      retried: 0,
-      failed: 0,
-      errors: [] as string[],
-    };
-
     if (!staleReports || staleReports.length === 0) {
       console.log('[cleanup-stale-reports] No stale reports found');
+      
+      // Log observability
+      await supabase.from('scheduled_job_runs').insert({
+        job_name: 'cleanup-stale-reports',
+        ran_at: new Date(startedAt).toISOString(),
+        completed_at: new Date().toISOString(),
+        success: true,
+        duration_ms: Date.now() - startedAt,
+        jobs_processed: 0,
+        metadata: { message: 'No stale reports found' }
+      });
+
       return new Response(
         JSON.stringify({ success: true, ...results }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -51,6 +66,8 @@ Deno.serve(async (req) => {
     console.log(`[cleanup-stale-reports] Found ${staleReports.length} stale reports`);
 
     for (const report of staleReports) {
+      results.processed++;
+      
       try {
         const ageHours = Math.floor((Date.now() - new Date(report.created_at).getTime()) / (1000 * 60 * 60));
 
@@ -69,6 +86,7 @@ Deno.serve(async (req) => {
             results.errors.push(`Failed to update report ${report.id}: ${updateError.message}`);
           } else {
             results.failed++;
+            results.cleaned++;
           }
         } else if (report.status === 'generated') {
           // Generated but not completed - try to complete it
@@ -84,6 +102,7 @@ Deno.serve(async (req) => {
             results.errors.push(`Failed to complete report ${report.id}: ${completeError.message}`);
           } else {
             results.retried++;
+            results.cleaned++;
           }
         } else {
           // Pending or processing for too long - mark as failed for retry
@@ -108,15 +127,36 @@ Deno.serve(async (req) => {
 
     console.log('[cleanup-stale-reports] Cleanup complete:', results);
 
+    // Log observability - success
+    await supabase.from('scheduled_job_runs').insert({
+      job_name: 'cleanup-stale-reports',
+      ran_at: new Date(startedAt).toISOString(),
+      completed_at: new Date().toISOString(),
+      success: true,
+      duration_ms: Date.now() - startedAt,
+      jobs_processed: results.processed,
+      metadata: results
+    });
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        ...results,
-      }),
+      JSON.stringify({ success: true, ...results }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('[cleanup-stale-reports] Error:', error);
+
+    // Log observability - failure
+    await supabase.from('scheduled_job_runs').insert({
+      job_name: 'cleanup-stale-reports',
+      ran_at: new Date(startedAt).toISOString(),
+      completed_at: new Date().toISOString(),
+      success: false,
+      duration_ms: Date.now() - startedAt,
+      jobs_processed: results.processed,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      metadata: results
+    });
+
     return new Response(
       JSON.stringify({ 
         success: false, 

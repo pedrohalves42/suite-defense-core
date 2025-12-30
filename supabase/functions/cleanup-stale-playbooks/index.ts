@@ -8,16 +8,25 @@ const corsHeaders = {
 const TIMEOUT_MINUTES = 30;
 
 Deno.serve(async (req) => {
+  const startedAt = Date.now();
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
 
+  const results = {
+    processed: 0,
+    cleaned: 0,
+    alertsCreated: 0,
+    errors: [] as string[],
+  };
+
+  try {
     console.log('[cleanup-stale-playbooks] Starting cleanup...');
 
     const cutoffTime = new Date(Date.now() - TIMEOUT_MINUTES * 60 * 1000).toISOString();
@@ -35,6 +44,18 @@ Deno.serve(async (req) => {
 
     if (!staleExecutions || staleExecutions.length === 0) {
       console.log('[cleanup-stale-playbooks] No stale executions found');
+      
+      // Log observability
+      await supabase.from('scheduled_job_runs').insert({
+        job_name: 'cleanup-stale-playbooks',
+        ran_at: new Date(startedAt).toISOString(),
+        completed_at: new Date().toISOString(),
+        success: true,
+        duration_ms: Date.now() - startedAt,
+        jobs_processed: 0,
+        metadata: { message: 'No stale executions found' }
+      });
+
       return new Response(
         JSON.stringify({ success: true, cleaned: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -43,13 +64,9 @@ Deno.serve(async (req) => {
 
     console.log(`[cleanup-stale-playbooks] Found ${staleExecutions.length} stale executions`);
 
-    const results = {
-      cleaned: 0,
-      alertsCreated: 0,
-      errors: [] as string[],
-    };
-
     for (const execution of staleExecutions) {
+      results.processed++;
+      
       try {
         // Update execution status to failed
         const { error: updateError } = await supabase
@@ -96,15 +113,36 @@ Deno.serve(async (req) => {
 
     console.log('[cleanup-stale-playbooks] Cleanup complete:', results);
 
+    // Log observability - success
+    await supabase.from('scheduled_job_runs').insert({
+      job_name: 'cleanup-stale-playbooks',
+      ran_at: new Date(startedAt).toISOString(),
+      completed_at: new Date().toISOString(),
+      success: true,
+      duration_ms: Date.now() - startedAt,
+      jobs_processed: results.processed,
+      metadata: results
+    });
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        ...results,
-      }),
+      JSON.stringify({ success: true, ...results }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('[cleanup-stale-playbooks] Error:', error);
+
+    // Log observability - failure
+    await supabase.from('scheduled_job_runs').insert({
+      job_name: 'cleanup-stale-playbooks',
+      ran_at: new Date(startedAt).toISOString(),
+      completed_at: new Date().toISOString(),
+      success: false,
+      duration_ms: Date.now() - startedAt,
+      jobs_processed: results.processed,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      metadata: results
+    });
+
     return new Response(
       JSON.stringify({ 
         success: false, 

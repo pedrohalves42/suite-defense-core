@@ -6,19 +6,28 @@ const corsHeaders = {
 };
 
 const MAX_RETRIES = 3;
-const ALERT_THRESHOLD = 3; // Create alert after 3 consecutive failures
 
 Deno.serve(async (req) => {
+  const startedAt = Date.now();
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
 
+  const results = {
+    processed: 0,
+    retried: 0,
+    alertsCreated: 0,
+    exhausted: 0,
+    errors: [] as string[],
+  };
+
+  try {
     console.log('[process-failed-jobs] Starting failed jobs processing...');
 
     // Get failed jobs with retry count < MAX_RETRIES
@@ -34,16 +43,20 @@ Deno.serve(async (req) => {
       throw new Error(`Failed to fetch failed jobs: ${fetchError.message}`);
     }
 
-    const results = {
-      processed: 0,
-      retried: 0,
-      alertsCreated: 0,
-      exhausted: 0,
-      errors: [] as string[],
-    };
-
     if (!failedJobs || failedJobs.length === 0) {
       console.log('[process-failed-jobs] No failed jobs to process');
+      
+      // Log observability
+      await supabase.from('scheduled_job_runs').insert({
+        job_name: 'process-failed-jobs',
+        ran_at: new Date(startedAt).toISOString(),
+        completed_at: new Date().toISOString(),
+        success: true,
+        duration_ms: Date.now() - startedAt,
+        jobs_processed: 0,
+        metadata: { message: 'No failed jobs to process' }
+      });
+      
       return new Response(
         JSON.stringify({ success: true, ...results }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -150,15 +163,36 @@ Deno.serve(async (req) => {
 
     console.log('[process-failed-jobs] Processing complete:', results);
 
+    // Log observability - success
+    await supabase.from('scheduled_job_runs').insert({
+      job_name: 'process-failed-jobs',
+      ran_at: new Date(startedAt).toISOString(),
+      completed_at: new Date().toISOString(),
+      success: true,
+      duration_ms: Date.now() - startedAt,
+      jobs_processed: results.processed,
+      metadata: results
+    });
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        ...results,
-      }),
+      JSON.stringify({ success: true, ...results }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('[process-failed-jobs] Error:', error);
+    
+    // Log observability - failure
+    await supabase.from('scheduled_job_runs').insert({
+      job_name: 'process-failed-jobs',
+      ran_at: new Date(startedAt).toISOString(),
+      completed_at: new Date().toISOString(),
+      success: false,
+      duration_ms: Date.now() - startedAt,
+      jobs_processed: results.processed,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      metadata: results
+    });
+    
     return new Response(
       JSON.stringify({ 
         success: false, 

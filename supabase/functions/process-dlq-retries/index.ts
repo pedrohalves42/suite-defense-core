@@ -21,6 +21,7 @@ interface DLQEntryRow {
 }
 
 Deno.serve(async (req) => {
+  const startedAt = Date.now();
   const ctx = createRequestContext(req, 'process-dlq-retries');
   const log = loggerWithContext(ctx.requestId);
   
@@ -28,19 +29,20 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: mergeHeaders(corsHeaders, ctx) });
   }
 
-  if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed', requestId: ctx.requestId }),
-      { status: 405, headers: mergeHeaders(corsHeaders, ctx) }
-    );
-  }
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+
+  const results = {
+    processed: 0,
+    retried: 0,
+    exhausted: 0,
+    alertsCreated: 0,
+    errors: [] as string[],
+  };
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
     log.info('Starting DLQ retry processing');
 
     // Get entries ready for retry with proper typing
@@ -49,12 +51,23 @@ Deno.serve(async (req) => {
     
     log.info('Found entries for retry', { count: entries.length });
 
-    const results = {
-      processed: 0,
-      retried: 0,
-      exhausted: 0,
-      errors: [] as string[],
-    };
+    if (entries.length === 0) {
+      // Log observability
+      await supabase.from('scheduled_job_runs').insert({
+        job_name: 'process-dlq-retries',
+        ran_at: new Date(startedAt).toISOString(),
+        completed_at: new Date().toISOString(),
+        success: true,
+        duration_ms: Date.now() - startedAt,
+        jobs_processed: 0,
+        metadata: { message: 'No DLQ entries to process' }
+      });
+
+      return new Response(
+        JSON.stringify({ success: true, requestId: ctx.requestId, results }),
+        { status: 200, headers: mergeHeaders(corsHeaders, ctx) }
+      );
+    }
 
     for (const entry of entries) {
       results.processed++;
@@ -74,7 +87,7 @@ Deno.serve(async (req) => {
             tenant_id: entry.tenant_id,
             agent_id: entry.agent_id,
             agent_name: entry.agent_name,
-            job_type: entry.job_type,
+            type: entry.job_type,
             payload: entry.payload,
             status: 'queued',
           });
@@ -99,6 +112,29 @@ Deno.serve(async (req) => {
             })
             .eq('id', entry.id);
           results.exhausted++;
+
+          // Create critical alert for exhausted DLQ entries
+          const { error: alertError } = await supabase
+            .from('system_alerts')
+            .insert({
+              tenant_id: entry.tenant_id,
+              agent_id: entry.agent_id,
+              alert_type: 'dlq_exhausted',
+              severity: 'critical',
+              message: `Job "${entry.job_type}" falhou permanentemente após ${maxRetries} tentativas na DLQ para agente ${entry.agent_name}`,
+              metadata: {
+                dlq_id: entry.id,
+                original_job_id: entry.original_job_id,
+                job_type: entry.job_type,
+                agent_name: entry.agent_name,
+                retry_count: newRetryCount,
+              },
+              resolved: false,
+            });
+
+          if (!alertError) {
+            results.alertsCreated++;
+          }
         } else {
           // P2: Use shared calculateNextRetry function
           const nextRetry = calculateNextRetry(newRetryCount);
@@ -141,6 +177,17 @@ Deno.serve(async (req) => {
 
     log.timed('DLQ processing complete', results);
 
+    // Log observability - success
+    await supabase.from('scheduled_job_runs').insert({
+      job_name: 'process-dlq-retries',
+      ran_at: new Date(startedAt).toISOString(),
+      completed_at: new Date().toISOString(),
+      success: true,
+      duration_ms: Date.now() - startedAt,
+      jobs_processed: results.processed,
+      metadata: results
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -151,6 +198,19 @@ Deno.serve(async (req) => {
     );
   } catch (err) {
     log.error('Unexpected error', err);
+
+    // Log observability - failure
+    await supabase.from('scheduled_job_runs').insert({
+      job_name: 'process-dlq-retries',
+      ran_at: new Date(startedAt).toISOString(),
+      completed_at: new Date().toISOString(),
+      success: false,
+      duration_ms: Date.now() - startedAt,
+      jobs_processed: results.processed,
+      error: err instanceof Error ? err.message : 'Unknown error',
+      metadata: results
+    });
+
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error', 
