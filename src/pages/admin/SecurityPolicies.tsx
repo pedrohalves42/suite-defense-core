@@ -21,6 +21,7 @@ import {
 import { useSecurityPolicies, usePolicyRules, useAgentGroupPolicies } from '@/hooks/useSecurityPolicies';
 import { useTenant } from '@/hooks/useTenant';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuditLog } from '@/hooks/useAuditLog';
 import { useQuery } from '@tanstack/react-query';
 import { 
   RULE_TYPE_LABELS, 
@@ -47,6 +48,7 @@ export default function SecurityPolicies() {
   const { tenant } = useTenant();
   const { policies, loading, createPolicy, updatePolicy, deletePolicy } = useSecurityPolicies();
   const { groupPolicies, assignPolicy, unassignPolicy } = useAgentGroupPolicies();
+  const { logHighImpactAction } = useAuditLog();
   const [selectedPolicy, setSelectedPolicy] = useState<SecurityPolicy | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isRuleDialogOpen, setIsRuleDialogOpen] = useState(false);
@@ -638,8 +640,14 @@ export default function SecurityPolicies() {
         impactType="computers"
         actionLabel="Desativar Política"
         actionDescription={`A política "${selectedPolicy?.name}" será desativada. As regras deixarão de ser aplicadas imediatamente.`}
-        onConfirm={() => {
+        onConfirm={async () => {
           if (selectedPolicy) {
+            await logHighImpactAction('security_policy', selectedPolicy.id, 'deactivate', {
+              impactCount: policyImpact.agents,
+              impactType: 'agents',
+              thresholdExceeded: true,
+              targetResourceName: selectedPolicy.name,
+            });
             updatePolicy.mutate({ id: selectedPolicy.id, is_active: false });
           }
           setIsDeactivateConfirmOpen(false);
@@ -657,6 +665,17 @@ export default function SecurityPolicies() {
         actionDescription={`A política "${selectedPolicy?.name}" será aplicada a todos os computadores do grupo selecionado.`}
         onConfirm={async () => {
           if (pendingAssignGroupId && selectedPolicy?.id) {
+            const group = agentGroups.find(g => g.id === pendingAssignGroupId);
+            const memberCount = group?.memberCount || 0;
+            
+            await logHighImpactAction('security_policy', selectedPolicy.id, 'assign', {
+              impactCount: memberCount,
+              impactType: 'computers',
+              thresholdExceeded: true,
+              targetResourceId: pendingAssignGroupId,
+              targetResourceName: group?.name,
+            });
+            
             await assignPolicy.mutateAsync({
               group_id: pendingAssignGroupId,
               policy_id: selectedPolicy.id,
