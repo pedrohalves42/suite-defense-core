@@ -1942,6 +1942,8 @@ export type Database = {
           last_block_sync_at: string | null
           last_forced_update_applied: string | null
           last_heartbeat: string | null
+          offline_detected_at: string | null
+          offline_reason: string | null
           os_type: string | null
           os_version: string | null
           payload_hash: string | null
@@ -1983,6 +1985,8 @@ export type Database = {
           last_block_sync_at?: string | null
           last_forced_update_applied?: string | null
           last_heartbeat?: string | null
+          offline_detected_at?: string | null
+          offline_reason?: string | null
           os_type?: string | null
           os_version?: string | null
           payload_hash?: string | null
@@ -2024,6 +2028,8 @@ export type Database = {
           last_block_sync_at?: string | null
           last_forced_update_applied?: string | null
           last_heartbeat?: string | null
+          offline_detected_at?: string | null
+          offline_reason?: string | null
           os_type?: string | null
           os_version?: string | null
           payload_hash?: string | null
@@ -3143,9 +3149,14 @@ export type Database = {
           created_at: string
           details: Json | null
           id: string
+          integrity_hash: string | null
           ip_address: string | null
+          previous_log_hash: string | null
+          request_id: string | null
           resource_id: string | null
           resource_type: string
+          state_after: Json | null
+          state_before: Json | null
           success: boolean
           tenant_id: string
           user_agent: string | null
@@ -3157,9 +3168,14 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
+          integrity_hash?: string | null
           ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
           resource_id?: string | null
           resource_type: string
+          state_after?: Json | null
+          state_before?: Json | null
           success?: boolean
           tenant_id: string
           user_agent?: string | null
@@ -3171,9 +3187,14 @@ export type Database = {
           created_at?: string
           details?: Json | null
           id?: string
+          integrity_hash?: string | null
           ip_address?: string | null
+          previous_log_hash?: string | null
+          request_id?: string | null
           resource_id?: string | null
           resource_type?: string
+          state_after?: Json | null
+          state_before?: Json | null
           success?: boolean
           tenant_id?: string
           user_agent?: string | null
@@ -10737,6 +10758,90 @@ export type Database = {
           },
         ]
       }
+      v_job_hourly_trends: {
+        Row: {
+          completed: number | null
+          failed: number | null
+          hour: string | null
+          success_rate_pct: number | null
+          tenant_id: string | null
+          total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      v_job_metrics_by_type: {
+        Row: {
+          avg_execution_seconds: number | null
+          completed: number | null
+          delivered: number | null
+          failed: number | null
+          queued: number | null
+          stuck: number | null
+          success_rate_pct: number | null
+          tenant_id: string | null
+          total_jobs: number | null
+          type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_jobs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_jobs_status_corrected: {
         Row: {
           agent_id: string | null
@@ -12035,6 +12140,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      log_state_change: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_request_id?: string
+          p_resource_id: string
+          p_resource_type: string
+          p_state_after?: Json
+          p_state_before?: Json
+        }
+        Returns: undefined
+      }
       parse_version_code: { Args: { version_text: string }; Returns: number }
       process_autonomous_safe_mode: { Args: never; Returns: Json }
       process_safe_mode_entry: {
@@ -12155,6 +12272,19 @@ export type Database = {
           is_active: boolean
           max_uses: number
           tenant_id: string
+        }[]
+      }
+      verify_audit_log_chain: {
+        Args: {
+          p_end_date?: string
+          p_start_date?: string
+          p_tenant_id: string
+        }
+        Returns: {
+          broken_log_id: string
+          chain_valid: boolean
+          first_broken_at: string
+          total_logs: number
         }[]
       }
       verify_document_signature: {
