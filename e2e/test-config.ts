@@ -7,7 +7,7 @@ export const TEST_CONFIG = {
   // Test credentials - use environment variables from .env.test
   credentials: {
     email: process.env.TEST_ADMIN_EMAIL || 'admin@test.com',
-    password: process.env.TEST_ADMIN_PASSWORD || 'Test123!@#',
+    password: process.env.TEST_ADMIN_PASSWORD || 'Test1234!',
   },
   
   // Timeouts

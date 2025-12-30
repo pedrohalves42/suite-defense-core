@@ -12,11 +12,11 @@ import { test, expect } from '@playwright/test';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Skip if not configured
-test.beforeAll(() => {
+// Skip if not configured - using beforeEach for proper Playwright skip behavior
+test.beforeEach(({ }, testInfo) => {
   if (!SUPABASE_URL) {
     console.log('⚠️ SUPABASE_URL not configured, skipping security invariant tests');
-    test.skip();
+    testInfo.skip();
   }
 });
 

@@ -12,20 +12,20 @@ import { test, expect } from '@playwright/test';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY!;
 
-// Test users (must exist in database)
+// Test users - use environment variables for consistency
 const SUPER_ADMIN_USER = {
-  email: 'super@cybershield.test',
-  password: 'SuperSecure123!@#',
+  email: process.env.TEST_SUPER_ADMIN_EMAIL || 'super@cybershield.test',
+  password: process.env.TEST_SUPER_ADMIN_PASSWORD || 'SuperSecure123!@#',
 };
 
 const REGULAR_ADMIN_USER = {
-  email: 'admin@cybershield.test',
-  password: 'AdminSecure123!@#',
+  email: process.env.TEST_ADMIN_EMAIL || 'admin@cybershield.test',
+  password: process.env.TEST_ADMIN_PASSWORD || 'Test1234!',
 };
 
 const OPERATOR_USER = {
-  email: 'operator@cybershield.test',
-  password: 'OperatorSecure123!@#',
+  email: process.env.TEST_OPERATOR_EMAIL || 'operator@cybershield.test',
+  password: process.env.TEST_OPERATOR_PASSWORD || 'OperatorSecure123!@#',
 };
 
 test.describe('Super Admin Security - list-all-users-admin', () => {

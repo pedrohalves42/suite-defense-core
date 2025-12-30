@@ -85,12 +85,12 @@ export const TEST_BLOCKED_WEBSITES = {
 export const TEST_USERS = {
   admin: {
     email: process.env.TEST_ADMIN_EMAIL || 'admin@test.com',
-    password: process.env.TEST_ADMIN_PASSWORD || 'Test123!@#',
+    password: process.env.TEST_ADMIN_PASSWORD || 'Test1234!',
     role: 'admin' as const,
   },
   nonAdmin: {
     email: process.env.TEST_USER_EMAIL || 'user@test.com',
-    password: process.env.TEST_USER_PASSWORD || 'Test123!@#',
+    password: process.env.TEST_USER_PASSWORD || 'Test1234!',
     role: 'member' as const,
   },
 };

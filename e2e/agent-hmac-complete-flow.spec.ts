@@ -75,9 +75,11 @@ test.describe.serial('Agent HMAC Complete Flow', () => {
   let agentId: string;
   let agentName: string;
 
-  test.beforeAll(() => {
-    // Skip if no Supabase URL configured
-    test.skip(!SUPABASE_URL, 'Supabase URL not configured');
+  // Skip if no Supabase URL configured - using beforeEach for proper Playwright skip behavior
+  test.beforeEach(({ }, testInfo) => {
+    if (!SUPABASE_URL) {
+      testInfo.skip();
+    }
   });
 
   test('1. Heartbeat requires valid HMAC headers', async ({ request }) => {

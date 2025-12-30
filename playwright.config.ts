@@ -9,9 +9,9 @@ const __dirname = path.dirname(__filename);
 
 // Load environment variables in correct order:
 // 1. First load .env (main Supabase/Vite variables)
-// 2. Then load .env.test (test-specific overrides)
+// 2. Then load .env.test (test-specific overrides) with override: true
 dotenv.config({ path: path.resolve(__dirname, '.env') });
-dotenv.config({ path: path.resolve(__dirname, '.env.test') });
+dotenv.config({ path: path.resolve(__dirname, '.env.test'), override: true });
 
 // Validate required environment variables
 const requiredEnvVars = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'];
@@ -29,8 +29,8 @@ if (missingVars.length > 0) {
 export default defineConfig({
   testDir: './e2e',
   
-  // Maximum time one test can run for
-  timeout: 30 * 1000,
+  // Maximum time one test can run for (shorter on CI for faster feedback)
+  timeout: process.env.CI ? 15 * 1000 : 30 * 1000,
   
   expect: {
     timeout: 5000

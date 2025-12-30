@@ -220,8 +220,8 @@ export default function Members() {
           <div className="flex items-center gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Membros</p>
-              <p className="text-2xl font-bold">
-                {currentUsersCount} / {isUnlimited ? '?' : memberLimit}
+              <p className="text-2xl font-bold" data-testid="member-count">
+                {currentUsersCount} / {isUnlimited ? '∞' : memberLimit}
               </p>
             </div>
             {!isUnlimited && isAtLimit && (
@@ -251,7 +251,7 @@ export default function Members() {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4" data-testid="members-list">
               {members.map((member) => (
                 <MemberCard
                   key={member.id}
@@ -259,6 +259,7 @@ export default function Members() {
                   onRoleChange={(userId, newRole) => updateRole.mutate({ userId, newRole })}
                   onRemove={(m) => setMemberToRemove(m)}
                   isUpdating={updateRole.isPending}
+                  data-testid={`member-card-${member.id}`}
                 />
               ))}
             </div>
