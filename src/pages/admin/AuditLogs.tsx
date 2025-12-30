@@ -2,18 +2,23 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, History, Search, Filter, CheckCircle, XCircle, Download } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ChevronLeft, ChevronRight, History, Search, Filter, CheckCircle, XCircle, Download, Eye, FileCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatBrazilDateTime, TIMEZONE_INDICATOR } from '@/lib/date-utils';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { StateDiffViewer } from '@/components/admin/audit/StateDiffViewer';
+import { IntegrityBadge } from '@/components/admin/audit/IntegrityBadge';
+import { exportAuditLogsWithIntegrity, generateExportCertificate } from '@/lib/audit-integrity';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -42,6 +47,7 @@ const resourceLabels: Record<string, string> = {
 };
 
 export default function AuditLogs() {
+  const { activeTenant } = useActiveTenant();
   const [page, setPage] = useState(0);
   const [actionFilter, setActionFilter] = useState('all');
   const [userFilter, setUserFilter] = useState('all');
@@ -224,14 +230,18 @@ export default function AuditLogs() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <History className="h-5 w-5" />
-                Registros
-              </CardTitle>
-              <CardDescription>
-                Mostrando {logs?.data?.length || 0} de {logs?.count || 0} atividades
-              </CardDescription>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Registros
+            </CardTitle>
+            <CardDescription className="flex items-center gap-2">
+              Mostrando {logs?.data?.length || 0} de {logs?.count || 0} atividades
+              {activeTenant?.id && (
+                <IntegrityBadge tenantId={activeTenant.id} />
+              )}
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -240,8 +250,38 @@ export default function AuditLogs() {
               className="gap-2"
             >
               <Download className={cn("h-4 w-4", isExporting && "animate-spin")} />
-              Exportar CSV
+              CSV
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (!activeTenant?.id) return;
+                try {
+                  const result = await exportAuditLogsWithIntegrity(
+                    activeTenant.id,
+                    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+                    new Date()
+                  );
+                  const cert = generateExportCertificate(result);
+                  const blob = new Blob([cert], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `audit-certificate-${new Date().toISOString().split('T')[0]}.txt`;
+                  a.click();
+                  toast.success('Certificado exportado');
+                } catch (e) {
+                  toast.error('Erro ao exportar certificado');
+                }
+              }}
+              disabled={!activeTenant?.id}
+              className="gap-2"
+            >
+              <FileCheck className="h-4 w-4" />
+              Certificado
+            </Button>
+          </div>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -263,6 +303,7 @@ export default function AuditLogs() {
                       <TableHead>Usuário</TableHead>
                       <TableHead>Ação</TableHead>
                       <TableHead>O que foi alterado</TableHead>
+                      <TableHead>Mudança</TableHead>
                       <TableHead>Resultado</TableHead>
                       <TableHead>Origem</TableHead>
                     </TableRow>
@@ -290,6 +331,32 @@ export default function AuditLogs() {
                               </div>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {(log.state_before || log.state_after) ? (
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="gap-1">
+                                  <Eye className="h-3 w-3" />
+                                  Ver
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle>Detalhes da Alteração</DialogTitle>
+                                  <DialogDescription>
+                                    {getActionLabel(log.action)} em {getResourceLabel(log.resource_type)}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <StateDiffViewer 
+                                  stateBefore={log.state_before as Record<string, unknown> | null} 
+                                  stateAfter={log.state_after as Record<string, unknown> | null} 
+                                />
+                              </DialogContent>
+                            </Dialog>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           {log.success ? (

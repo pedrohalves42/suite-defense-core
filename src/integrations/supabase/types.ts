@@ -8107,6 +8107,45 @@ export type Database = {
           },
         ]
       }
+      software_knowledge_base: {
+        Row: {
+          category: string
+          created_at: string | null
+          default_risk_level: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          match_type: string
+          software_pattern: string
+          updated_at: string | null
+          vendor_patterns: string[] | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          default_risk_level: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          match_type: string
+          software_pattern: string
+          updated_at?: string | null
+          vendor_patterns?: string[] | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          default_risk_level?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          match_type?: string
+          software_pattern?: string
+          updated_at?: string | null
+          vendor_patterns?: string[] | null
+        }
+        Relationships: []
+      }
       software_vulnerability_baseline: {
         Row: {
           action: string
@@ -12078,6 +12117,14 @@ export type Database = {
       get_report_frequency_days: {
         Args: { p_plan_name: string }
         Returns: number
+      }
+      get_software_risk_summary: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          category_breakdown: Json
+          count: number
+          risk_level: string
+        }[]
       }
       get_valid_agent_signing_key: {
         Args: { p_agent_id: string; p_fingerprint: string }
