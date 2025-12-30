@@ -7,6 +7,18 @@
 
 export type DiagnosticSeverity = 'critical' | 'high' | 'medium' | 'info';
 
+/**
+ * Origem da issue - de onde veio o problema
+ * Fornece explicabilidade para o operador
+ */
+export interface IssueOrigin {
+  type: 'system' | 'group_policy' | 'agent_config' | 'network' | 'user_action';
+  source_id?: string;
+  source_name?: string;
+  policy_code?: string;
+  overrides_local?: boolean; // Se política de grupo sobrepõe config local
+}
+
 export interface DiagnosticIssue {
   issue_type: string;
   severity: DiagnosticSeverity;
@@ -14,6 +26,8 @@ export interface DiagnosticIssue {
   details: Record<string, unknown>;
   confidence?: number;
   rule_code?: string;
+  origin?: IssueOrigin; // De onde veio o problema
+  recommended_action?: string; // O que fazer
 }
 
 export interface DiagnosticSummary {

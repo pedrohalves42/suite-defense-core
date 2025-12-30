@@ -4,18 +4,23 @@
  * Suporta:
  * - Modo compacto (top N issues)
  * - Modo completo (todas as issues com detalhes)
+ * - Exibição de origin (grupo, config local, sistema)
+ * - Ações recomendadas para issues críticas
  * 
  * Componente puro, recebe issues via props.
  */
 
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, AlertTriangle, Info, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertCircle, AlertTriangle, Info, XCircle, Users, Settings, Zap } from 'lucide-react';
 import { 
   type DiagnosticIssue, 
   getSeverityColor, 
   getSeverityBorderColor, 
   getSeverityLabel 
 } from '@/types/diagnostic';
+import { getRecommendedAction } from '@/lib/diagnostic-actions';
 
 const SEVERITY_ICONS = {
   critical: XCircle,
@@ -27,10 +32,14 @@ const SEVERITY_ICONS = {
 interface DiagnosticIssueItemProps {
   issue: DiagnosticIssue;
   compact?: boolean;
+  showActions?: boolean;
+  onAction?: (actionKey: string, issue: DiagnosticIssue) => void;
 }
 
-function DiagnosticIssueItem({ issue, compact }: DiagnosticIssueItemProps) {
+function DiagnosticIssueItem({ issue, compact, showActions = true, onAction }: DiagnosticIssueItemProps) {
   const Icon = SEVERITY_ICONS[issue.severity] || AlertCircle;
+  const recommendedAction = getRecommendedAction(issue.issue_type);
+  const isCriticalOrHigh = issue.severity === 'critical' || issue.severity === 'high';
   
   return (
     <div className={`p-3 rounded-lg border-l-4 bg-card ${getSeverityBorderColor(issue.severity)}`}>
@@ -48,11 +57,88 @@ function DiagnosticIssueItem({ issue, compact }: DiagnosticIssueItemProps) {
               {getSeverityLabel(issue.severity)}
             </Badge>
           </div>
+          
+          {/* Origin badge - shows where the issue came from */}
+          {!compact && issue.origin && (
+            <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="text-xs gap-1">
+                      {issue.origin.type === 'group_policy' && (
+                        <>
+                          <Users className="h-3 w-3" />
+                          {issue.origin.source_name || 'Política de Grupo'}
+                        </>
+                      )}
+                      {issue.origin.type === 'agent_config' && (
+                        <>
+                          <Settings className="h-3 w-3" />
+                          Configuração Local
+                        </>
+                      )}
+                      {issue.origin.type === 'system' && (
+                        <>
+                          <AlertCircle className="h-3 w-3" />
+                          Detecção Automática
+                        </>
+                      )}
+                      {issue.origin.type === 'network' && (
+                        <>
+                          <AlertCircle className="h-3 w-3" />
+                          Rede
+                        </>
+                      )}
+                      {issue.origin.type === 'user_action' && (
+                        <>
+                          <Settings className="h-3 w-3" />
+                          Ação Manual
+                        </>
+                      )}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {issue.origin.overrides_local 
+                      ? 'Sobrepõe configuração local do agente'
+                      : `Origem: ${issue.origin.type}`
+                    }
+                    {issue.origin.policy_code && (
+                      <span className="block text-xs opacity-75">
+                        Política: {issue.origin.policy_code}
+                      </span>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
+
+          {/* Details in full mode */}
           {!compact && issue.details && Object.keys(issue.details).length > 0 && (
             <div className="mt-2">
               <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
                 {JSON.stringify(issue.details, null, 2)}
               </pre>
+            </div>
+          )}
+
+          {/* Recommended action for critical/high issues */}
+          {!compact && showActions && isCriticalOrHigh && recommendedAction && (
+            <div className="mt-2 flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-7 text-xs"
+                onClick={() => onAction?.(recommendedAction.action_key, issue)}
+              >
+                <Zap className="h-3 w-3 mr-1" />
+                {recommendedAction.label}
+              </Button>
+              {recommendedAction.description && (
+                <span className="text-xs text-muted-foreground">
+                  {recommendedAction.description}
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -66,6 +152,8 @@ interface DiagnosticIssuesListProps {
   compact?: boolean;
   maxItems?: number;
   showRemainingCount?: boolean;
+  showActions?: boolean;
+  onAction?: (actionKey: string, issue: DiagnosticIssue) => void;
   className?: string;
 }
 
@@ -74,6 +162,8 @@ export function DiagnosticIssuesList({
   compact = false, 
   maxItems,
   showRemainingCount = true,
+  showActions = true,
+  onAction,
   className = ''
 }: DiagnosticIssuesListProps) {
   const displayIssues = maxItems ? issues.slice(0, maxItems) : issues;
@@ -90,7 +180,13 @@ export function DiagnosticIssuesList({
   return (
     <div className={`space-y-2 ${className}`}>
       {displayIssues.map((issue, idx) => (
-        <DiagnosticIssueItem key={idx} issue={issue} compact={compact} />
+        <DiagnosticIssueItem 
+          key={idx} 
+          issue={issue} 
+          compact={compact}
+          showActions={showActions}
+          onAction={onAction}
+        />
       ))}
       
       {showRemainingCount && remainingCount > 0 && (

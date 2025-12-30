@@ -4,7 +4,7 @@
  * Fornece:
  * - Lista de issues do agente
  * - Resumo por severidade
- * - Integração com state machine
+ * - Integração com state machine via isAgentHealthy
  * 
  * IMPORTANTE: Este hook é READ-ONLY.
  * Para ações de remediação, use useAgentActions ou useRemediationActions.
@@ -12,6 +12,8 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { type AgentState } from '@/lib/agent-state-machine';
+import { isAgentHealthy } from '@/lib/health-rules';
 import { 
   type DiagnosticIssue, 
   type DiagnosticSummary, 
@@ -28,7 +30,18 @@ export type { DiagnosticIssue, DiagnosticSummary, DiagnosticResult };
 // Re-export styling utilities for backward compatibility
 export { getSeverityColor, getSeverityBorderColor, getSeverityLabel };
 
-export function useDiagnostic(agentName: string | null, tenantId: string | null) {
+/**
+ * Hook para diagnóstico de agentes
+ * 
+ * @param agentName - Nome do agente
+ * @param tenantId - ID do tenant
+ * @param agentState - Estado formal do agente (opcional, para cálculo de saúde)
+ */
+export function useDiagnostic(
+  agentName: string | null, 
+  tenantId: string | null,
+  agentState?: AgentState | null
+) {
   return useQuery({
     queryKey: ['agent-diagnostic', agentName, tenantId],
     queryFn: async (): Promise<DiagnosticResult> => {
@@ -64,8 +77,14 @@ export function useDiagnostic(agentName: string | null, tenantId: string | null)
         total: issues.length,
       };
 
+      // Use canonical health rule when agentState is provided
+      // Falls back to simple check if no state provided
+      const healthy = agentState 
+        ? isAgentHealthy(agentState, summary)
+        : (summary.critical === 0 && summary.high === 0);
+
       return {
-        isHealthy: summary.critical === 0 && summary.high === 0,
+        isHealthy: healthy,
         issues,
         summary,
         lastCheck: new Date().toISOString(),
