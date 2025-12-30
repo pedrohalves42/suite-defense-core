@@ -2387,6 +2387,12 @@ export type Database = {
           acknowledged: boolean | null
           acknowledged_at: string | null
           acknowledged_by: string | null
+          affected_resources: Json | null
+          agent_id: string | null
+          auto_action_executed: boolean | null
+          auto_action_executed_at: string | null
+          auto_action_mode: string | null
+          category: string | null
           confidence_score: number | null
           created_at: string
           description: string
@@ -2395,6 +2401,7 @@ export type Database = {
           insight_type: string
           metadata: Json | null
           recommendation: string | null
+          recommended_actions: Json | null
           severity: string
           tenant_id: string
           title: string
@@ -2403,6 +2410,12 @@ export type Database = {
           acknowledged?: boolean | null
           acknowledged_at?: string | null
           acknowledged_by?: string | null
+          affected_resources?: Json | null
+          agent_id?: string | null
+          auto_action_executed?: boolean | null
+          auto_action_executed_at?: string | null
+          auto_action_mode?: string | null
+          category?: string | null
           confidence_score?: number | null
           created_at?: string
           description: string
@@ -2411,6 +2424,7 @@ export type Database = {
           insight_type: string
           metadata?: Json | null
           recommendation?: string | null
+          recommended_actions?: Json | null
           severity: string
           tenant_id: string
           title: string
@@ -2419,6 +2433,12 @@ export type Database = {
           acknowledged?: boolean | null
           acknowledged_at?: string | null
           acknowledged_by?: string | null
+          affected_resources?: Json | null
+          agent_id?: string | null
+          auto_action_executed?: boolean | null
+          auto_action_executed_at?: string | null
+          auto_action_mode?: string | null
+          category?: string | null
           confidence_score?: number | null
           created_at?: string
           description?: string
@@ -2427,11 +2447,61 @@ export type Database = {
           insight_type?: string
           metadata?: Json | null
           recommendation?: string | null
+          recommended_actions?: Json | null
           severity?: string
           tenant_id?: string
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_insights_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_insights_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_insights_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_insights_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "ai_insights_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_insights_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "ai_insights_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_insights_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -10589,13 +10659,11 @@ export type Database = {
       }
       v_action_center: {
         Row: {
-          action_status: string | null
           agent_id: string | null
           agent_name: string | null
           context: Json | null
           created_at: string | null
           description: string | null
-          execution_mode: string | null
           hostname: string | null
           item_id: string | null
           playbook_id: string | null
