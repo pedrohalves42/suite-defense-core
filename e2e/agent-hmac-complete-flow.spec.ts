@@ -13,66 +13,15 @@
 
 import { test, expect } from '@playwright/test';
 import * as crypto from 'crypto';
+import { signHmac, signHmacWithTimestamp, generateTestHmacSecret } from './helpers/hmac-signer';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
-
-interface HmacHeaders {
-  signature: string;
-  timestamp: string;
-  nonce: string;
-}
-
-/**
- * Generate HMAC-SHA256 signature for agent authentication
- */
-function generateHmac(hmacSecret: string, body: string = ''): HmacHeaders {
-  const timestamp = Date.now().toString();
-  const nonce = crypto.randomUUID();
-  const payload = `${timestamp}:${nonce}:${body}`;
-  
-  // Convert hex secret to bytes
-  const keyBytes = Buffer.from(hmacSecret, 'hex');
-  const signature = crypto
-    .createHmac('sha256', keyBytes)
-    .update(payload)
-    .digest('hex');
-  
-  return { signature, timestamp, nonce };
-}
-
-/**
- * Generate HMAC with custom timestamp (for testing expiration)
- */
-function generateHmacWithTimestamp(
-  hmacSecret: string, 
-  timestamp: string, 
-  body: string = ''
-): HmacHeaders {
-  const nonce = crypto.randomUUID();
-  const payload = `${timestamp}:${nonce}:${body}`;
-  
-  const keyBytes = Buffer.from(hmacSecret, 'hex');
-  const signature = crypto
-    .createHmac('sha256', keyBytes)
-    .update(payload)
-    .digest('hex');
-  
-  return { signature, timestamp, nonce };
-}
-
-/**
- * Generate random 64-char hex string (valid HMAC secret format)
- */
-function generateHmacSecret(): string {
-  return crypto.randomBytes(32).toString('hex');
-}
 
 test.describe.serial('Agent HMAC Complete Flow', () => {
   // Store credentials across tests
   let agentToken: string;
   let hmacSecret: string;
-  let agentId: string;
   let agentName: string;
 
   // Skip if no Supabase URL configured - using beforeEach for proper Playwright skip behavior
@@ -84,7 +33,7 @@ test.describe.serial('Agent HMAC Complete Flow', () => {
 
   test('1. Heartbeat requires valid HMAC headers', async ({ request }) => {
     // Generate test credentials
-    hmacSecret = generateHmacSecret();
+    hmacSecret = generateTestHmacSecret();
     agentToken = `test-token-${Date.now()}`;
     agentName = `e2e-hmac-test-${Date.now()}`;
 
@@ -109,7 +58,7 @@ test.describe.serial('Agent HMAC Complete Flow', () => {
 
   test('2. Invalid HMAC signature is rejected', async ({ request }) => {
     const body = JSON.stringify({ os_type: 'windows', os_version: '10.0.22631' });
-    const hmac = generateHmac(hmacSecret, body);
+    const hmac = signHmac(hmacSecret, body);
 
     // Tamper with signature
     const tamperedSignature = hmac.signature.replace(/^.{8}/, '00000000');
@@ -136,7 +85,7 @@ test.describe.serial('Agent HMAC Complete Flow', () => {
     // Generate timestamp 6 minutes in the past
     const expiredTimestamp = (Date.now() - 6 * 60 * 1000).toString();
     const body = JSON.stringify({ os_type: 'windows' });
-    const hmac = generateHmacWithTimestamp(hmacSecret, expiredTimestamp, body);
+    const hmac = signHmacWithTimestamp(hmacSecret, body, expiredTimestamp, crypto.randomUUID());
 
     const response = await request.post(
       `${SUPABASE_URL}/functions/v1/heartbeat`,
@@ -163,7 +112,7 @@ test.describe.serial('Agent HMAC Complete Flow', () => {
   });
 
   test('4. poll-jobs requires valid HMAC authentication', async ({ request }) => {
-    const hmac = generateHmac(hmacSecret, '');
+    const hmac = signHmac(hmacSecret, '');
 
     const response = await request.get(
       `${SUPABASE_URL}/functions/v1/poll-jobs`,
@@ -183,7 +132,7 @@ test.describe.serial('Agent HMAC Complete Flow', () => {
 
   test('5. Replay attack prevention - same nonce rejected', async ({ request }) => {
     const body = JSON.stringify({ os_type: 'windows' });
-    const hmac = generateHmac(hmacSecret, body);
+    const hmac = signHmac(hmacSecret, body);
 
     // First request (will fail because token doesn't exist, but nonce is logged)
     await request.post(
@@ -224,7 +173,7 @@ test.describe.serial('Agent HMAC Complete Flow', () => {
     const tamperedBody = JSON.stringify({ os_type: 'linux' });
     
     // Generate HMAC for original body
-    const hmac = generateHmac(hmacSecret, originalBody);
+    const hmac = signHmac(hmacSecret, originalBody);
 
     // Send with tampered body
     const response = await request.post(
@@ -246,14 +195,10 @@ test.describe.serial('Agent HMAC Complete Flow', () => {
   });
 
   test('7. Invalid HMAC secret format (not 64 hex chars) is rejected', async ({ request }) => {
-    // Use invalid secret format (not 64 hex chars)
-    const invalidSecret = 'short-invalid-secret';
-    
     try {
       const body = JSON.stringify({ os_type: 'windows' });
       const timestamp = Date.now().toString();
       const nonce = crypto.randomUUID();
-      const payload = `${timestamp}:${nonce}:${body}`;
       
       // This will fail because invalidSecret is not valid hex
       // But we test the server's response anyway
@@ -282,8 +227,8 @@ test.describe.serial('Agent HMAC Complete Flow', () => {
     const body1 = '';
     const body2 = JSON.stringify({ os_type: 'windows' });
     
-    const hmac1 = generateHmac(hmacSecret, body1);
-    const hmac2 = generateHmac(hmacSecret, body2);
+    const hmac1 = signHmac(hmacSecret, body1);
+    const hmac2 = signHmac(hmacSecret, body2);
 
     // Verify nonces are different
     expect(hmac1.nonce).not.toBe(hmac2.nonce);
@@ -321,7 +266,7 @@ test.describe.serial('Agent HMAC Complete Flow', () => {
   });
 
   test('9. Missing X-Agent-Token header returns 401', async ({ request }) => {
-    const hmac = generateHmac(hmacSecret, '');
+    const hmac = signHmac(hmacSecret, '');
 
     const response = await request.get(
       `${SUPABASE_URL}/functions/v1/poll-jobs`,
@@ -344,7 +289,7 @@ test.describe.serial('Agent HMAC Complete Flow', () => {
     // Generate timestamp 6 minutes in the future
     const futureTimestamp = (Date.now() + 6 * 60 * 1000).toString();
     const body = JSON.stringify({ os_type: 'windows' });
-    const hmac = generateHmacWithTimestamp(hmacSecret, futureTimestamp, body);
+    const hmac = signHmacWithTimestamp(hmacSecret, body, futureTimestamp, crypto.randomUUID());
 
     const response = await request.post(
       `${SUPABASE_URL}/functions/v1/heartbeat`,
