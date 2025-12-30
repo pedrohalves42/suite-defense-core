@@ -131,6 +131,7 @@ export const AppSidebar = () => {
     { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases', section: 'infrastructure' },
     { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics', section: 'infrastructure' },
     { icon: Heart, label: 'Saúde do Sistema', to: '/admin/slo-dashboard', section: 'infrastructure' },
+    { icon: Activity, label: 'Saúde dos Jobs', to: '/admin/jobs-health', section: 'infrastructure' },
     { icon: Inbox, label: 'Fila de Tarefas', to: '/admin/dead-letter-queue', section: 'infrastructure' },
     { icon: Code, label: 'API', to: '/admin/api-docs', section: 'infrastructure' },
     
