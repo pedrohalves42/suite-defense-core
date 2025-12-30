@@ -28,6 +28,8 @@ interface ActionCenterFeed {
   recommended: ActionItem[];
   informational: ActionItem[];
   healthy_count: number;
+  offline_count: number;
+  total_agents: number;
   generated_at: string;
   warning?: string;
 }
@@ -77,6 +79,47 @@ function enrichActionItem(item: ActionItem): ActionItem & { humanized: typeof AC
     ...item,
     humanized: copy,
   };
+}
+
+function calculateOfflineSeverity(lastHeartbeat: string | null, stateChangedAt: string | null): 'urgent' | 'high' | 'medium' | 'info' {
+  const referenceTime = stateChangedAt || lastHeartbeat;
+  if (!referenceTime) return 'high';
+  
+  const offlineDuration = Date.now() - new Date(referenceTime).getTime();
+  const hoursOffline = offlineDuration / (1000 * 60 * 60);
+  
+  if (hoursOffline >= 24) return 'urgent';
+  if (hoursOffline >= 6) return 'high';
+  if (hoursOffline >= 1) return 'medium';
+  return 'info';
+}
+
+function formatOfflineDuration(lastHeartbeat: string | null, stateChangedAt: string | null): string {
+  const referenceTime = stateChangedAt || lastHeartbeat;
+  if (!referenceTime) return 'tempo indeterminado';
+  
+  const offlineDuration = Date.now() - new Date(referenceTime).getTime();
+  const hours = Math.floor(offlineDuration / (1000 * 60 * 60));
+  const minutes = Math.floor((offlineDuration % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    return `${days} ${days === 1 ? 'dia' : 'dias'}`;
+  }
+  if (hours >= 1) {
+    return `${hours}h ${minutes}min`;
+  }
+  return `${minutes} min`;
+}
+
+function calculatePriorityScore(severity: string): number {
+  switch (severity) {
+    case 'urgent': return 100;
+    case 'high': return 75;
+    case 'medium': return 40;
+    case 'info': return 15;
+    default: return 20;
+  }
 }
 
 serve(async (req) => {
@@ -166,6 +209,8 @@ serve(async (req) => {
         recommended: [],
         informational: [],
         healthy_count: 0,
+        offline_count: 0,
+        total_agents: 0,
         generated_at: new Date().toISOString(),
         warning: 'User has no tenant associated. Please contact your administrator.',
       };
@@ -186,40 +231,77 @@ serve(async (req) => {
     });
 
     if (req.method === 'GET') {
-      // Fetch action center feed using RPC
-      const { data, error } = await supabase.rpc('get_action_center_feed', {
-        p_tenant_id: tenantId,
+      // Get agent health metrics - use status = 'active' which is the real status in DB
+      const { data: agentStats } = await serviceClient
+        .from('agents')
+        .select('id, agent_state, last_heartbeat, agent_state_changed_at, agent_name, hostname, offline_reason')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'active');
+
+      const allAgents = agentStats || [];
+      const totalAgents = allAgents.length;
+      const healthyAgents = allAgents.filter(a => a.agent_state === 'healthy');
+      const offlineAgents = allAgents.filter(a => a.agent_state === 'offline');
+      
+      console.log('[action-center-feed] Agent stats:', {
+        total: totalAgents,
+        healthy: healthyAgents.length,
+        offline: offlineAgents.length,
       });
 
-      if (error) {
-        console.error('[action-center-feed] RPC error:', error);
+      // Generate offline agent action items
+      const offlineActionItems: ActionItem[] = offlineAgents.map(agent => {
+        const severity = calculateOfflineSeverity(agent.last_heartbeat, agent.agent_state_changed_at);
+        const duration = formatOfflineDuration(agent.last_heartbeat, agent.agent_state_changed_at);
         
-        // Fallback: query directly from playbook_executions
-        const { data: executions, error: execError } = await serviceClient
-          .from('playbook_executions')
-          .select(`
-            id,
-            tenant_id,
-            agent_id,
-            status,
-            risk_score,
-            trigger_context,
-            triggered_at,
-            playbook:playbooks(id, name, description, severity, trigger_type),
-            agent:agents(agent_name, hostname)
-          `)
-          .eq('tenant_id', tenantId)
-          .eq('status', 'pending')
-          .order('triggered_at', { ascending: false })
-          .limit(50);
+        return {
+          item_id: `offline_${agent.id}`,
+          source_type: 'agent_offline' as const,
+          agent_id: agent.id,
+          agent_name: agent.agent_name,
+          hostname: agent.hostname,
+          title: `${agent.agent_name || agent.hostname || 'Computador'} está offline`,
+          description: `Offline há ${duration}. ${agent.offline_reason || 'Sem desligamento normal registrado.'}`,
+          severity,
+          risk_score: severity === 'urgent' ? 90 : severity === 'high' ? 70 : severity === 'medium' ? 40 : 20,
+          context: {
+            last_heartbeat: agent.last_heartbeat,
+            agent_state_changed_at: agent.agent_state_changed_at,
+            offline_reason: agent.offline_reason,
+            duration,
+          },
+          created_at: agent.agent_state_changed_at || agent.last_heartbeat || new Date().toISOString(),
+          trigger_type: 'agent_offline',
+          playbook_id: null,
+          priority_score: calculatePriorityScore(severity),
+        };
+      });
 
-        if (execError) {
-          console.error('[action-center-feed] Fallback query error:', execError);
-          throw execError;
-        }
+      // Fetch playbook executions
+      let playbookItems: ActionItem[] = [];
+      
+      const { data: executions, error: execError } = await serviceClient
+        .from('playbook_executions')
+        .select(`
+          id,
+          tenant_id,
+          agent_id,
+          status,
+          risk_score,
+          trigger_context,
+          triggered_at,
+          playbook:playbooks(id, name, description, severity, trigger_type),
+          agent:agents(agent_name, hostname)
+        `)
+        .eq('tenant_id', tenantId)
+        .eq('status', 'pending')
+        .order('triggered_at', { ascending: false })
+        .limit(50);
 
-        // Transform to action items
-        const actionItems: ActionItem[] = (executions || []).map((exec: any) => ({
+      if (execError) {
+        console.error('[action-center-feed] Playbook query error:', execError);
+      } else {
+        playbookItems = (executions || []).map((exec: any) => ({
           item_id: exec.id,
           source_type: 'playbook' as const,
           agent_id: exec.agent_id,
@@ -238,60 +320,54 @@ serve(async (req) => {
              exec.playbook?.severity === 'high' ? 50 : 
              exec.playbook?.severity === 'medium' ? 20 : 5),
         }));
-
-        // Get healthy count
-        const { count: healthyCount } = await serviceClient
-          .from('agents')
-          .select('*', { count: 'exact', head: true })
-          .eq('tenant_id', tenantId)
-          .eq('status', 'online')
-          .eq('agent_state', 'healthy');
-
-        const feed: ActionCenterFeed = {
-          urgent: actionItems
-            .filter(i => i.severity === 'critical' || i.severity === 'high' || i.priority_score >= 70)
-            .map(enrichActionItem) as any,
-          recommended: actionItems
-            .filter(i => i.severity !== 'critical' && i.severity !== 'high' && i.priority_score >= 30 && i.priority_score < 70)
-            .map(enrichActionItem) as any,
-          informational: actionItems
-            .filter(i => i.priority_score < 30)
-            .map(enrichActionItem) as any,
-          healthy_count: healthyCount || 0,
-          generated_at: new Date().toISOString(),
-        };
-
-        console.log('[action-center-feed] Feed generated (fallback):', {
-          urgent: feed.urgent.length,
-          recommended: feed.recommended.length,
-          informational: feed.informational.length,
-          healthy: feed.healthy_count,
-        });
-
-        return new Response(
-          JSON.stringify(feed),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
       }
 
-      // Enrich with human-readable copy
-      const feed = data as ActionCenterFeed;
-      const enrichedFeed = {
-        ...feed,
-        urgent: feed.urgent.map(enrichActionItem),
-        recommended: feed.recommended.map(enrichActionItem),
-        informational: feed.informational.map(enrichActionItem),
+      // Merge all action items
+      const allItems = [...playbookItems, ...offlineActionItems];
+
+      // Categorize items
+      const urgent = allItems
+        .filter(i => i.severity === 'critical' || i.severity === 'urgent' || i.severity === 'high' || i.priority_score >= 70)
+        .sort((a, b) => b.priority_score - a.priority_score)
+        .map(enrichActionItem) as any;
+
+      const recommended = allItems
+        .filter(i => 
+          i.severity !== 'critical' && 
+          i.severity !== 'urgent' && 
+          i.severity !== 'high' && 
+          i.priority_score >= 30 && 
+          i.priority_score < 70
+        )
+        .sort((a, b) => b.priority_score - a.priority_score)
+        .map(enrichActionItem) as any;
+
+      const informational = allItems
+        .filter(i => i.priority_score < 30)
+        .sort((a, b) => b.priority_score - a.priority_score)
+        .map(enrichActionItem) as any;
+
+      const feed: ActionCenterFeed = {
+        urgent,
+        recommended,
+        informational,
+        healthy_count: healthyAgents.length,
+        offline_count: offlineAgents.length,
+        total_agents: totalAgents,
+        generated_at: new Date().toISOString(),
       };
 
       console.log('[action-center-feed] Feed generated:', {
-        urgent: enrichedFeed.urgent.length,
-        recommended: enrichedFeed.recommended.length,
-        informational: enrichedFeed.informational.length,
-        healthy: enrichedFeed.healthy_count,
+        urgent: feed.urgent.length,
+        recommended: feed.recommended.length,
+        informational: feed.informational.length,
+        healthy: feed.healthy_count,
+        offline: feed.offline_count,
+        total: feed.total_agents,
       });
 
       return new Response(
-        JSON.stringify(enrichedFeed),
+        JSON.stringify(feed),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -378,6 +454,21 @@ serve(async (req) => {
 
         return new Response(
           JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Handle agent_offline acknowledge action
+      if (source_type === 'agent_offline' && action === 'acknowledge') {
+        // Extract agent_id from item_id (format: offline_<agent_id>)
+        const agentId = item_id.replace('offline_', '');
+        
+        // We could update the agent state or create an acknowledgment record
+        // For now, just return success - the action is informational
+        console.log('[action-center-feed] Acknowledged offline agent:', agentId);
+        
+        return new Response(
+          JSON.stringify({ success: true, message: 'Offline status acknowledged' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

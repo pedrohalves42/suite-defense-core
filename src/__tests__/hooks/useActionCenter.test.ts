@@ -117,6 +117,8 @@ const mockFeedData: ActionCenterFeed = {
     },
   ],
   healthy_count: 15,
+  offline_count: 0,
+  total_agents: 15,
   generated_at: new Date().toISOString(),
 };
 
@@ -152,6 +154,8 @@ describe('useActionCenter', () => {
       recommended: [],
       informational: [],
       healthy_count: 10,
+      offline_count: 0,
+      total_agents: 10,
       generated_at: new Date().toISOString(),
     };
 
@@ -337,6 +341,8 @@ describe('useActionCenterCount', () => {
       recommended: [],
       informational: [],
       healthy_count: 0,
+      offline_count: 0,
+      total_agents: 0,
       generated_at: new Date().toISOString(),
     };
     mockInvoke.mockResolvedValue({ data: emptyFeed, error: null });
