@@ -114,6 +114,7 @@ export const AppSidebar = () => {
 
   // === AVANÇADO (colapsável) ===
   const advancedItems = useMemo<MenuItem[]>(() => [
+    { icon: Clock, label: 'Automações', to: '/admin/automations' },
     { icon: Download, label: 'Instalações', to: '/admin/installations' },
     { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
     { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics' },
