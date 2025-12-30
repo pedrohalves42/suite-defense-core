@@ -1,22 +1,38 @@
 # E2E Tests para CyberShield
 
-## Configuração
+## Pré-requisitos
 
-1. Instalar Playwright:
+### 1. Instalar Playwright
 ```bash
 npm install -D @playwright/test
 npx playwright install
 ```
 
-2. Configurar credenciais de teste:
-```bash
-cp .env.test .env.test.local
-# Editar .env.test.local com credenciais reais
+### 2. Configurar variáveis de ambiente
+Crie `.env.test` na raiz do projeto:
+
+```env
+# Supabase config (copie do .env)
+VITE_SUPABASE_URL=https://iavbnmduxpxhwubqrzzn.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
+
+# Credenciais de teste
+TEST_ADMIN_EMAIL=admin@test.com
+TEST_ADMIN_PASSWORD=Test1234!
+
+# Opcional: Super admin para testes de privilégio
+TEST_SUPER_ADMIN_EMAIL=super@cybershield.test
+TEST_SUPER_ADMIN_PASSWORD=SuperSecure123!@#
+
+# Opcional: Para criar usuários de teste
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 ```
 
-3. Criar usuários de teste no banco:
-   - Um usuário admin
-   - Um usuário regular (sem role admin)
+### 3. Criar usuários de teste (opcional)
+```bash
+# Requer SUPABASE_SERVICE_ROLE_KEY
+npx tsx tests/setup-test-users.ts
+```
 
 ## Executar Testes
 
