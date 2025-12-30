@@ -91,11 +91,20 @@ Deno.serve(async (req) => {
     const enrollmentKey = generateKey();
     const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000).toISOString();
 
+    // SEC-001: Calculate SHA-256 hash - never store plaintext key
+    const keyHashBuffer = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(enrollmentKey)
+    );
+    const keyHash = Array.from(new Uint8Array(keyHashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
     // Insert enrollment key using service role (already initialized above)
     const { data: keyData, error: insertError } = await supabaseAdmin
       .from('enrollment_keys')
       .insert({
-        key: enrollmentKey,
+        key_hash: keyHash,  // Only hash, never plaintext
         created_by: user.id,
         expires_at: expiresAt,
         max_uses: maxUses,
@@ -111,7 +120,7 @@ Deno.serve(async (req) => {
       throw new Error('Failed to create enrollment key');
     }
 
-    // Audit log
+    // Audit log - SEC-001: Do not log plaintext key
     await supabaseAdmin.from('audit_logs').insert({
       user_id: user.id,
       action: 'create_enrollment_key',
@@ -119,7 +128,6 @@ Deno.serve(async (req) => {
       resource_id: keyData.id,
       tenant_id: tenantId,
       details: { 
-        key: enrollmentKey, 
         expiresInHours, 
         maxUses,
         description: keyData.description 
@@ -127,11 +135,11 @@ Deno.serve(async (req) => {
       success: true,
     });
 
-    console.log(`[${requestId}] Enrollment key created: ${enrollmentKey} by ${user.email}`);
+    console.log(`[${requestId}] Enrollment key created by ${user.email}`);
 
     return new Response(
       JSON.stringify({
-        enrollmentKey: keyData.key,
+        enrollmentKey: enrollmentKey,  // Return plaintext to user (one-time visibility)
         expiresAt: keyData.expires_at,
         maxUses: keyData.max_uses,
         description: keyData.description,
