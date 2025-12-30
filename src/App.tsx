@@ -105,6 +105,7 @@ import RealTimeSecurityDashboard from "./pages/admin/RealTimeSecurityDashboard";
 import AutonomyDashboard from "./pages/admin/AutonomyDashboard";
 import SystemAudit from "./pages/admin/SystemAudit";
 import SOC2Dashboard from "./pages/admin/SOC2Dashboard";
+import JobsHealthDashboard from "./pages/admin/JobsHealthDashboard";
 import {
   ClientDashboard, 
   ClientComputers, 
@@ -207,6 +208,7 @@ const App = () => (
                 <Route path="api-docs" element={<ApiDocumentation />} />
                 <Route path="my-account" element={<MyAccount />} />
                 <Route path="slo-dashboard" element={<SLODashboard />} />
+                <Route path="jobs-health" element={<JobsHealthDashboard />} />
                 <Route path="system-operations" element={<SystemOperations />} />
                 <Route path="compliance-timeline" element={<ComplianceTimeline />} />
                 <Route path="risk-score" element={<RiskScore />} />

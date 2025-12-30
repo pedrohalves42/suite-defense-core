@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 type ResourceType = 'enrollment_key' | 'agent_token' | 'api_key' | 'agent_secret' | 'security_policy' | 'agent_group';
 type ActionType = 'view' | 'copy' | 'export' | 'reveal' | 'list' | 'high_impact_confirm' | 'assign' | 'deactivate' | 'delete';
@@ -63,5 +64,34 @@ export const useAuditLog = () => {
     }
   };
 
-  return { logSensitiveAccess, logHighImpactAction };
+  /**
+   * Log a state change with before/after tracking for compliance
+   */
+  const logStateChange = async (
+    resourceType: string,
+    resourceId: string,
+    action: string,
+    stateBefore: Json | null,
+    stateAfter: Json | null,
+    requestId?: string
+  ): Promise<void> => {
+    try {
+      await supabase.rpc('log_state_change', {
+        p_resource_type: resourceType,
+        p_resource_id: resourceId,
+        p_action: action,
+        p_state_before: stateBefore,
+        p_state_after: stateAfter,
+        p_request_id: requestId || crypto.randomUUID(),
+        p_details: {
+          timestamp: new Date().toISOString(),
+          user_agent: navigator.userAgent,
+        },
+      });
+    } catch (error) {
+      console.error('[AuditLog] Failed to log state change:', error);
+    }
+  };
+
+  return { logSensitiveAccess, logHighImpactAction, logStateChange };
 };
