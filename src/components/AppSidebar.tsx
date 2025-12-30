@@ -105,7 +105,8 @@ export const AppSidebar = () => {
 
   const adminItems = useMemo<MenuItem[]>(() => [
     // === VISÃO GERAL ===
-    { icon: Home, label: 'Painel Principal', to: '/admin/dashboard', end: true, section: 'overview' },
+    { icon: Target, label: 'Central de Ações', to: '/admin/action-center', end: true, section: 'overview' },
+    { icon: Home, label: 'Painel Geral', to: '/admin/dashboard', section: 'overview' },
     
     // === MONITORAMENTO ===
     { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced', section: 'monitoring' },
