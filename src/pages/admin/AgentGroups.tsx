@@ -17,11 +17,25 @@ import {
   FolderOpen, Search
 } from 'lucide-react';
 import { useAgentGroups, useAgentGroupMembers, useAvailableAgents } from '@/hooks/useAgentGroups';
+import { useAgentGroupPolicies } from '@/hooks/useSecurityPolicies';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Shield } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default function AgentGroups() {
   const { groups, memberCounts, isLoading, createGroup, updateGroup, deleteGroup } = useAgentGroups();
+  const { groupPolicies } = useAgentGroupPolicies();
+  
+  // Build policy counts per group
+  const policyCountsByGroup = groupPolicies.reduce((acc, gp) => {
+    const groupId = (gp as any).agent_groups?.id || gp.group_id;
+    acc[groupId] = acc[groupId] || { count: 0, names: [] };
+    acc[groupId].count++;
+    const policyName = (gp as any).security_policies?.name;
+    if (policyName) acc[groupId].names.push(policyName);
+    return acc;
+  }, {} as Record<string, { count: number; names: string[] }>);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -284,9 +298,31 @@ export default function AgentGroups() {
                           <Users className="h-4 w-4 text-primary" />
                           <span className="font-medium text-sm">{group.name}</span>
                         </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {memberCounts[group.id] || 0} PCs
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          {policyCountsByGroup[group.id]?.count > 0 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-xs gap-1 border-primary/30 text-primary">
+                                    <Shield className="h-3 w-3" />
+                                    {policyCountsByGroup[group.id].count}
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="font-medium mb-1">Políticas atribuídas:</p>
+                                  <ul className="text-xs space-y-0.5">
+                                    {policyCountsByGroup[group.id].names.map((name, i) => (
+                                      <li key={i}>• {name}</li>
+                                    ))}
+                                  </ul>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          <Badge variant="secondary" className="text-xs">
+                            {memberCounts[group.id] || 0} PCs
+                          </Badge>
+                        </div>
                       </div>
                       {group.description && (
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-2">

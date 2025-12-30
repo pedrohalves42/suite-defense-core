@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -51,6 +52,7 @@ const getRiskIcon = (risk: string) => {
 export default function SoftwareInventory() {
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [riskFilter, setRiskFilter] = useState<string>('all');
   const { tenant } = useTenant();
   
   // Query to get agents list for name lookup
@@ -99,10 +101,12 @@ export default function SoftwareInventory() {
     },
   });
 
-  const filteredSoftware = software?.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.vendor?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredSoftware = software?.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.vendor?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRisk = riskFilter === 'all' || item.risk_level.toLowerCase() === riskFilter;
+    return matchesSearch && matchesRisk;
+  }) || [];
 
   const riskCounts = software?.reduce((acc, item) => {
     const risk = item.risk_level.toLowerCase();
@@ -208,20 +212,54 @@ export default function SoftwareInventory() {
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
                   <Search className="h-4 w-4" />
-                  Buscar Programa
+                  Filtrar Programas
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Digite o nome do programa ou fabricante..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Digite o nome do programa ou fabricante..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={riskFilter} onValueChange={setRiskFilter}>
+                    <SelectTrigger className="w-full md:w-[200px]">
+                      <SelectValue placeholder="Filtrar por risco" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os níveis</SelectItem>
+                      <SelectItem value="critical">
+                        <div className="flex items-center gap-2">
+                          <ShieldX className="h-4 w-4 text-destructive" />
+                          Crítico ({riskCounts['critical'] || 0})
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="high">
+                        <div className="flex items-center gap-2">
+                          <ShieldAlert className="h-4 w-4 text-orange-500" />
+                          Alto ({riskCounts['high'] || 0})
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="medium">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4 text-yellow-500" />
+                          Médio ({riskCounts['medium'] || 0})
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="low">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="h-4 w-4 text-green-500" />
+                          Baixo ({riskCounts['low'] || 0})
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                {searchTerm && (
+                {(searchTerm || riskFilter !== 'all') && (
                   <p className="text-xs text-muted-foreground mt-2">
                     {filteredSoftware.length} programa(s) encontrado(s)
                   </p>
