@@ -29,6 +29,7 @@ interface ActionCenterFeed {
   informational: ActionItem[];
   healthy_count: number;
   generated_at: string;
+  warning?: string;
 }
 
 // Human-readable copy map
@@ -97,40 +98,63 @@ serve(async (req) => {
       );
     }
 
-    // Create client with user token for RLS
-    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      global: {
-        headers: { Authorization: authHeader },
-      },
-    });
+    // Create service client for admin operations (bypass RLS)
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get user
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
+    // Get user from token
+    const { data: { user }, error: userError } = await serviceClient.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
 
     if (userError || !user) {
+      console.error('[action-center-feed] User auth error:', userError);
       return new Response(
         JSON.stringify({ error: 'Invalid token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get user's tenant
-    const { data: userRole, error: roleError } = await supabase
-      .from('user_roles')
-      .select('tenant_id')
-      .eq('user_id', user.id)
-      .single();
+    console.log('[action-center-feed] User authenticated:', user.id);
 
-    if (roleError || !userRole) {
+    // Get user's tenant using service client (bypass RLS)
+    const { data: userRole, error: roleError } = await serviceClient
+      .from('user_roles')
+      .select('tenant_id, role')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (roleError) {
+      console.error('[action-center-feed] Role query error:', roleError);
+    }
+
+    // If no tenant, return empty feed with warning instead of 403
+    if (!userRole?.tenant_id) {
+      console.warn('[action-center-feed] User has no tenant:', user.id);
+      
+      const emptyFeed: ActionCenterFeed = {
+        urgent: [],
+        recommended: [],
+        informational: [],
+        healthy_count: 0,
+        generated_at: new Date().toISOString(),
+        warning: 'User has no tenant associated. Please contact your administrator.',
+      };
+
       return new Response(
-        JSON.stringify({ error: 'User has no tenant' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify(emptyFeed),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const tenantId = userRole.tenant_id;
+    console.log('[action-center-feed] Tenant found:', tenantId);
+
+    // Create client with user context for subsequent operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+      global: {
+        headers: { Authorization: authHeader },
+      },
+    });
 
     if (req.method === 'GET') {
       // Fetch action center feed using RPC
@@ -142,7 +166,7 @@ serve(async (req) => {
         console.error('[action-center-feed] RPC error:', error);
         
         // Fallback: query directly from playbook_executions
-        const { data: executions, error: execError } = await supabase
+        const { data: executions, error: execError } = await serviceClient
           .from('playbook_executions')
           .select(`
             id,
@@ -161,6 +185,7 @@ serve(async (req) => {
           .limit(50);
 
         if (execError) {
+          console.error('[action-center-feed] Fallback query error:', execError);
           throw execError;
         }
 
@@ -186,7 +211,7 @@ serve(async (req) => {
         }));
 
         // Get healthy count
-        const { count: healthyCount } = await supabase
+        const { count: healthyCount } = await serviceClient
           .from('agents')
           .select('*', { count: 'exact', head: true })
           .eq('tenant_id', tenantId)
@@ -206,6 +231,13 @@ serve(async (req) => {
           healthy_count: healthyCount || 0,
           generated_at: new Date().toISOString(),
         };
+
+        console.log('[action-center-feed] Feed generated (fallback):', {
+          urgent: feed.urgent.length,
+          recommended: feed.recommended.length,
+          informational: feed.informational.length,
+          healthy: feed.healthy_count,
+        });
 
         return new Response(
           JSON.stringify(feed),
@@ -272,7 +304,7 @@ serve(async (req) => {
       if (source_type === 'playbook' && action === 'ignore') {
         const { reason } = body;
         
-        const { error } = await supabase
+        const { error } = await serviceClient
           .from('playbook_executions')
           .update({
             status: 'ignored',
@@ -297,7 +329,7 @@ serve(async (req) => {
       }
 
       if (source_type === 'alert' && action === 'acknowledge') {
-        const { error } = await supabase
+        const { error } = await serviceClient
           .from('system_alerts')
           .update({
             resolved: true,
