@@ -4697,6 +4697,13 @@ export type Database = {
             foreignKeyName: "generated_reports_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "job_integrity_violations"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "generated_reports_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
@@ -5274,6 +5281,13 @@ export type Database = {
             foreignKeyName: "job_executions_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
+            referencedRelation: "job_integrity_violations"
+            referencedColumns: ["job_id"]
+          },
+          {
+            foreignKeyName: "job_executions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
             referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
@@ -5479,6 +5493,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "job_executions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "job_integrity_violations"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "jobs_parent_job_id_fkey"
@@ -10155,14 +10176,82 @@ export type Database = {
       job_integrity_violations: {
         Row: {
           agent_id: string | null
-          created_at: string | null
+          completed_at: string | null
+          job_created_at: string | null
           job_id: string | null
-          tenant_id: string | null
-          type: string | null
-          violation_description: string | null
+          job_type: string | null
+          status: string | null
           violation_type: string | null
         }
-        Relationships: []
+        Insert: {
+          agent_id?: string | null
+          completed_at?: string | null
+          job_created_at?: string | null
+          job_id?: string | null
+          job_type?: string | null
+          status?: string | null
+          violation_type?: never
+        }
+        Update: {
+          agent_id?: string | null
+          completed_at?: string | null
+          job_created_at?: string | null
+          job_id?: string | null
+          job_type?: string | null
+          status?: string | null
+          violation_type?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       jobs_normalized: {
         Row: {
@@ -10312,6 +10401,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_problematic_agents"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "job_integrity_violations"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "jobs_parent_job_id_fkey"
@@ -11067,6 +11163,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "job_executions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jobs_parent_job_id_fkey"
+            columns: ["parent_job_id"]
+            isOneToOne: false
+            referencedRelation: "job_integrity_violations"
+            referencedColumns: ["job_id"]
           },
           {
             foreignKeyName: "jobs_parent_job_id_fkey"
