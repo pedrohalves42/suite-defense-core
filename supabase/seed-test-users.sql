@@ -147,7 +147,104 @@ WHERE u.email = 'member@test.com'
 ON CONFLICT (user_id, tenant_id) DO UPDATE SET role = EXCLUDED.role;
 
 -- =====================================================
--- 5. VERIFICACAO FINAL
+-- 5. CRIAR TENANT_FEATURES PARA TESTES
+-- =====================================================
+
+-- Features essenciais para Tenant A (simula plano Starter)
+INSERT INTO public.tenant_features (tenant_id, feature_key, enabled, quota_limit)
+VALUES
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'max_users', true, 10),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'agents', true, 50),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'jobs', true, 500),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'virus_scans', true, 1000),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'advanced_scans_daily', true, 2),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'quarantine', true, 100),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'audit_logs', true, NULL),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'email_alerts', true, NULL)
+ON CONFLICT (tenant_id, feature_key) DO UPDATE SET
+  enabled = EXCLUDED.enabled,
+  quota_limit = EXCLUDED.quota_limit;
+
+-- Features para Tenant B (plano Free, limites menores)
+INSERT INTO public.tenant_features (tenant_id, feature_key, enabled, quota_limit)
+VALUES
+  ('b0000000-0000-0000-0000-000000000002'::uuid, 'max_users', true, 3),
+  ('b0000000-0000-0000-0000-000000000002'::uuid, 'agents', true, 5),
+  ('b0000000-0000-0000-0000-000000000002'::uuid, 'jobs', true, 50)
+ON CONFLICT (tenant_id, feature_key) DO UPDATE SET
+  enabled = EXCLUDED.enabled,
+  quota_limit = EXCLUDED.quota_limit;
+
+-- =====================================================
+-- 6. CRIAR TENANT_SUBSCRIPTIONS PARA TESTES
+-- =====================================================
+
+-- Subscription para Tenant A (Starter plan)
+INSERT INTO public.tenant_subscriptions (id, tenant_id, plan_id, status, device_quantity)
+SELECT
+  'a0000000-0000-0000-0000-000000000011'::uuid,
+  'a0000000-0000-0000-0000-000000000001'::uuid,
+  id,
+  'active',
+  30
+FROM public.subscription_plans WHERE name = 'starter'
+LIMIT 1
+ON CONFLICT (id) DO UPDATE SET
+  status = EXCLUDED.status,
+  device_quantity = EXCLUDED.device_quantity;
+
+-- Subscription para Tenant B (Free plan)
+INSERT INTO public.tenant_subscriptions (id, tenant_id, plan_id, status, device_quantity)
+SELECT
+  'b0000000-0000-0000-0000-000000000022'::uuid,
+  'b0000000-0000-0000-0000-000000000002'::uuid,
+  id,
+  'active',
+  3
+FROM public.subscription_plans WHERE name = 'free'
+LIMIT 1
+ON CONFLICT (id) DO UPDATE SET
+  status = EXCLUDED.status,
+  device_quantity = EXCLUDED.device_quantity;
+
+-- =====================================================
+-- 7. CRIAR ENROLLMENT KEY DE TESTE
+-- =====================================================
+
+INSERT INTO public.enrollment_keys (id, tenant_id, description, key, max_uses, expires_at)
+VALUES (
+  'e0000000-0000-0000-0000-000000000001'::uuid,
+  'a0000000-0000-0000-0000-000000000001'::uuid,
+  'Test Enrollment Key for E2E',
+  'TEST-ENROLL-KEY-12345',
+  100,
+  NOW() + INTERVAL '1 year'
+)
+ON CONFLICT (id) DO UPDATE SET
+  max_uses = EXCLUDED.max_uses,
+  expires_at = EXCLUDED.expires_at;
+
+-- =====================================================
+-- 8. CRIAR AGENT DE TESTE (para testes de agent management)
+-- =====================================================
+
+INSERT INTO public.agents (id, tenant_id, agent_name, hostname, status, agent_version, hmac_secret, last_heartbeat)
+VALUES (
+  'ag000000-0000-0000-0000-000000000001'::uuid,
+  'a0000000-0000-0000-0000-000000000001'::uuid,
+  'test-agent-e2e-01',
+  'test-computer-01',
+  'active',
+  '1.0.0',
+  'test-hmac-secret-for-e2e-testing-only',
+  NOW()
+)
+ON CONFLICT (id) DO UPDATE SET
+  status = EXCLUDED.status,
+  last_heartbeat = EXCLUDED.last_heartbeat;
+
+-- =====================================================
+-- 9. VERIFICACAO FINAL
 -- =====================================================
 
 SELECT 
@@ -176,3 +273,14 @@ ORDER BY
     WHEN 'viewer' THEN 4
     WHEN 'member' THEN 5
   END;
+
+-- Verificar tenant_features
+SELECT 
+  t.name as tenant_name,
+  tf.feature_key,
+  tf.quota_limit,
+  tf.enabled
+FROM public.tenant_features tf
+JOIN public.tenants t ON t.id = tf.tenant_id
+WHERE t.slug IN ('test-tenant-a', 'test-tenant-b')
+ORDER BY t.name, tf.feature_key;

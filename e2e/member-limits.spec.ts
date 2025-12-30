@@ -58,11 +58,8 @@ test.describe('Member Limits Enforcement', () => {
       
       console.log(`[E2E] Current: ${currentUsers}, Max: ${maxUsers}`);
       
-      if (currentUsers >= maxUsers) {
-        console.log('[E2E] Already at limit, skipping invite test');
-        test.skip();
-        return;
-      }
+      // Use proper Playwright skip syntax
+      test.skip(currentUsers >= maxUsers, 'Already at member limit, cannot test invite');
     }
 
     // Try to invite a new member (should succeed)

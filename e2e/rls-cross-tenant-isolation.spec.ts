@@ -10,7 +10,7 @@ import { test, expect } from '@playwright/test';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-// Skip if no Supabase configuration - using beforeEach for proper Playwright skip behavior
+// Skip all tests if no Supabase configuration
 test.beforeEach(({ }, testInfo) => {
   if (!SUPABASE_URL) {
     console.log('Skipping RLS isolation tests: SUPABASE_URL not configured');
@@ -21,11 +21,6 @@ test.beforeEach(({ }, testInfo) => {
 test.describe('P0: Cross-Tenant Data Isolation', () => {
   
   test('Unauthenticated user cannot access any tenant data', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const criticalTables = [
       'agents',
       'agent_tokens',
@@ -46,11 +41,9 @@ test.describe('P0: Cross-Tenant Data Isolation', () => {
       const response = await request.get(`${SUPABASE_URL}/rest/v1/${table}?select=*&limit=10`, {
         headers: {
           'apikey': SUPABASE_ANON_KEY!,
-          // No Authorization header = unauthenticated
         }
       });
       
-      // Should return empty array or 401
       if (response.status() === 200) {
         const data = await response.json();
         expect(Array.isArray(data) && data.length === 0,
@@ -63,12 +56,6 @@ test.describe('P0: Cross-Tenant Data Isolation', () => {
   });
 
   test('Cannot access tenant data via direct ID without proper auth', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
-    // Try to access a random UUID as tenant_id
     const randomTenantId = '00000000-0000-0000-0000-000000000001';
     
     const response = await request.get(
@@ -80,7 +67,6 @@ test.describe('P0: Cross-Tenant Data Isolation', () => {
       }
     );
     
-    // Should return empty even if tenant exists (RLS blocks access)
     if (response.status() === 200) {
       const data = await response.json();
       expect(data).toEqual([]);
@@ -88,12 +74,6 @@ test.describe('P0: Cross-Tenant Data Isolation', () => {
   });
 
   test('Cannot bypass RLS with OR conditions', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
-    // Attempt SQL injection-like bypass via query parameters
     const bypassAttempts = [
       'or=(tenant_id.neq.00000000-0000-0000-0000-000000000000)',
       'or=(id.neq.null)',
@@ -118,12 +98,6 @@ test.describe('P0: Cross-Tenant Data Isolation', () => {
   });
 
   test('Enrollment keys are not accessible without authentication', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
-    // Enrollment keys contain sensitive data (the key itself)
     const response = await request.get(`${SUPABASE_URL}/rest/v1/enrollment_keys?select=*`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
@@ -139,12 +113,6 @@ test.describe('P0: Cross-Tenant Data Isolation', () => {
   });
 
   test('Agent secrets (hmac_secret) never exposed in responses', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
-    // Even if we had access, hmac_secret should not be in select
     const response = await request.get(
       `${SUPABASE_URL}/rest/v1/agents?select=id,agent_name,hmac_secret`, 
       {
@@ -154,7 +122,6 @@ test.describe('P0: Cross-Tenant Data Isolation', () => {
       }
     );
     
-    // Should return empty (no access) or exclude hmac_secret
     if (response.status() === 200) {
       const data = await response.json();
       expect(data.length).toBe(0);
@@ -162,11 +129,6 @@ test.describe('P0: Cross-Tenant Data Isolation', () => {
   });
 
   test('User roles table protected from enumeration', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const response = await request.get(`${SUPABASE_URL}/rest/v1/user_roles?select=*`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
@@ -182,11 +144,6 @@ test.describe('P0: Cross-Tenant Data Isolation', () => {
   });
 
   test('Audit logs cannot be read without proper authorization', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const response = await request.get(`${SUPABASE_URL}/rest/v1/audit_logs?select=*&limit=5`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
@@ -202,11 +159,6 @@ test.describe('P0: Cross-Tenant Data Isolation', () => {
   });
 
   test('Generated reports protected by RLS', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const response = await request.get(`${SUPABASE_URL}/rest/v1/generated_reports?select=*`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
@@ -223,11 +175,6 @@ test.describe('P0: Cross-Tenant Data Isolation', () => {
 test.describe('P0: Protected Edge Functions', () => {
   
   test('create-job requires JWT authentication', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const response = await request.post(`${SUPABASE_URL}/functions/v1/create-job`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
@@ -243,11 +190,6 @@ test.describe('P0: Protected Edge Functions', () => {
   });
 
   test('list-users requires JWT authentication', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const response = await request.get(`${SUPABASE_URL}/functions/v1/list-users`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
@@ -258,11 +200,6 @@ test.describe('P0: Protected Edge Functions', () => {
   });
 
   test('generate-enrollment-key requires JWT authentication', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const response = await request.post(`${SUPABASE_URL}/functions/v1/generate-enrollment-key`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
@@ -278,11 +215,6 @@ test.describe('P0: Protected Edge Functions', () => {
   });
 
   test('ai-get-insights requires JWT authentication', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const response = await request.post(`${SUPABASE_URL}/functions/v1/ai-get-insights`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
@@ -295,11 +227,6 @@ test.describe('P0: Protected Edge Functions', () => {
   });
 
   test('remove-member requires JWT authentication', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const response = await request.post(`${SUPABASE_URL}/functions/v1/remove-member`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
@@ -317,12 +244,6 @@ test.describe('P0: Protected Edge Functions', () => {
 test.describe('P0: HMAC Agent Authentication', () => {
   
   test('heartbeat requires valid HMAC signature', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
-    // Without HMAC headers
     const response = await request.post(`${SUPABASE_URL}/functions/v1/heartbeat`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
@@ -335,11 +256,6 @@ test.describe('P0: HMAC Agent Authentication', () => {
   });
 
   test('poll-jobs requires valid HMAC signature', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const response = await request.post(`${SUPABASE_URL}/functions/v1/poll-jobs`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
@@ -352,11 +268,6 @@ test.describe('P0: HMAC Agent Authentication', () => {
   });
 
   test('submit-system-metrics requires valid HMAC signature', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const response = await request.post(`${SUPABASE_URL}/functions/v1/submit-system-metrics`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
@@ -373,17 +284,12 @@ test.describe('P0: HMAC Agent Authentication', () => {
   });
 
   test('HMAC with forged signature is rejected', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const response = await request.post(`${SUPABASE_URL}/functions/v1/heartbeat`, {
       headers: {
         'apikey': SUPABASE_ANON_KEY!,
         'Content-Type': 'application/json',
         'X-Agent-Token': 'fake-token-12345',
-        'X-HMAC-Signature': 'a'.repeat(64), // Forged signature
+        'X-HMAC-Signature': 'a'.repeat(64),
         'X-Timestamp': Date.now().toString(),
         'X-Nonce': 'test-nonce-' + Date.now(),
       },
@@ -394,12 +300,6 @@ test.describe('P0: HMAC Agent Authentication', () => {
   });
 
   test('HMAC with expired timestamp is rejected', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
-    // 10 minutes ago
     const expiredTimestamp = (Date.now() - 10 * 60 * 1000).toString();
     
     const response = await request.post(`${SUPABASE_URL}/functions/v1/heartbeat`, {
@@ -418,15 +318,10 @@ test.describe('P0: HMAC Agent Authentication', () => {
   });
 
   test('HMAC with invalid format is rejected (non-hex)', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const invalidSignatures = [
       'not-hex-characters-at-all',
-      'z'.repeat(64), // z is not hex
-      'a'.repeat(32), // too short
+      'z'.repeat(64),
+      'a'.repeat(32),
       '',
     ];
     
@@ -451,11 +346,6 @@ test.describe('P0: HMAC Agent Authentication', () => {
 test.describe('P0: Input Validation & Injection Prevention', () => {
   
   test('SQL injection via agent_name is blocked', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const sqlInjectionPayloads = [
       "'; DROP TABLE agents; --",
       "1 OR 1=1",
@@ -478,10 +368,8 @@ test.describe('P0: Input Validation & Injection Prevention', () => {
         },
       });
       
-      // Should be rejected (not 200 success)
       expect([400, 403, 404, 422]).toContain(response.status());
       
-      // Response should not reveal SQL internals
       const text = await response.text();
       expect(text.toLowerCase()).not.toContain('syntax error');
       expect(text.toLowerCase()).not.toContain('postgresql');
@@ -489,11 +377,6 @@ test.describe('P0: Input Validation & Injection Prevention', () => {
   });
 
   test('XSS payloads are sanitized or rejected', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const xssPayloads = [
       '<script>alert("xss")</script>',
       '<img src=x onerror=alert("xss")>',
@@ -514,7 +397,6 @@ test.describe('P0: Input Validation & Injection Prevention', () => {
         },
       });
       
-      // If accepted, should not echo raw XSS
       if (response.status() === 200) {
         const data = await response.json();
         const str = JSON.stringify(data);
@@ -525,11 +407,6 @@ test.describe('P0: Input Validation & Injection Prevention', () => {
   });
 
   test('Path traversal in serve-installer is blocked', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
     const traversalPayloads = [
       '../../../etc/passwd',
       '..\\..\\..\\windows\\system32\\config',
@@ -551,12 +428,7 @@ test.describe('P0: Input Validation & Injection Prevention', () => {
 
 test.describe('Compliance Report', () => {
   
-  test('Generate isolation test report', async ({ request }) => {
-    if (!SUPABASE_URL) {
-      test.skip();
-      return;
-    }
-    
+  test('Generate isolation test report', async () => {
     const report = {
       timestamp: new Date().toISOString(),
       system: 'CyberShield',
