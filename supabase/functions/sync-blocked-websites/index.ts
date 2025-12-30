@@ -46,13 +46,15 @@ serve(async (req) => {
       );
     }
 
-    // Get user's tenant
+    // Get user's tenant (use maybeSingle to handle users with multiple roles)
     const { data: userRole, error: roleError } = await supabase
       .from('user_roles')
       .select('tenant_id, role')
       .eq('user_id', user.id)
       .in('role', ['admin', 'super_admin', 'operator'])
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (roleError || !userRole) {
       console.error('Role error:', roleError);
