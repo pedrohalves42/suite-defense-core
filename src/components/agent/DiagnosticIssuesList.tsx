@@ -38,7 +38,10 @@ interface DiagnosticIssueItemProps {
 
 function DiagnosticIssueItem({ issue, compact, showActions = true, onAction }: DiagnosticIssueItemProps) {
   const Icon = SEVERITY_ICONS[issue.severity] || AlertCircle;
-  const recommendedAction = getRecommendedAction(issue.issue_type);
+  // Resolve action by key first, fallback to issue_type
+  const recommendedAction = issue.recommended_action_key 
+    ? getRecommendedAction(issue.recommended_action_key)
+    : getRecommendedAction(issue.issue_type);
   const isCriticalOrHigh = issue.severity === 'critical' || issue.severity === 'high';
   
   return (
