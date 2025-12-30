@@ -514,8 +514,8 @@ if (-not $writeSuccess) {
     throw $msg
 }
 
-# ============= FASE 4: Scheduled Task =============
-Write-InstallerLog "FASE 4: Criando Scheduled Task..." "INFO"
+# ============= FASE 4: Scheduled Task (v4.3.0 ENHANCED) =============
+Write-InstallerLog "FASE 4: Criando Scheduled Task com watchdog settings..." "INFO"
 
 $TaskName = "CyberShieldAgent-$AgentName"
 
@@ -532,13 +532,24 @@ $ArgumentString = "-ExecutionPolicy Unrestricted -NoProfile -WindowStyle Hidden 
 Write-InstallerLog "Task arguments: $ArgumentString" "DEBUG"
 
 $Action = New-ScheduledTaskAction -Execute "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" -Argument $ArgumentString
-$Trigger = New-ScheduledTaskTrigger -AtStartup
+
+# Trigger primario: na inicializacao do sistema
+$TriggerStartup = New-ScheduledTaskTrigger -AtStartup
+
+# Trigger secundario: repetir a cada 5 minutos (watchdog externo)
+# Isso garante que mesmo se a task parar, ela sera reiniciada em no maximo 5 minutos
+$TriggerRepeat = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration ([TimeSpan]::MaxValue)
+
 $Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-$Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartInterval (New-TimeSpan -Minutes 1) -RestartCount 3
 
-Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger -Principal $Principal -Settings $Settings -Force | Out-Null
+# v4.3.0: Settings otimizados para maxima resiliencia
+$Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartInterval (New-TimeSpan -Minutes 1) -RestartCount 999 -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
 
-Write-InstallerLog "Scheduled Task criada: $TaskName" "SUCCESS"
+Write-InstallerLog "Task Settings: RestartCount=999, RestartInterval=1min, ExecutionTimeLimit=Unlimited, RepetitionInterval=5min" "INFO"
+
+Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger @($TriggerStartup, $TriggerRepeat) -Principal $Principal -Settings $Settings -Force | Out-Null
+
+Write-InstallerLog "Scheduled Task criada com watchdog: $TaskName" "SUCCESS"
 
 # ============= FASE 5: Inicializacao =============
 Write-InstallerLog "FASE 5: Iniciando agente..." "INFO"
