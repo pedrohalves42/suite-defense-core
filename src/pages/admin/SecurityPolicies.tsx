@@ -63,20 +63,44 @@ export default function SecurityPolicies() {
   
   const { rules, createRule, deleteRule } = usePolicyRules(selectedPolicy?.id || null);
 
-  // Fetch agent groups
+  // Fetch agent groups with member counts
   const { data: agentGroups = [] } = useQuery({
-    queryKey: ['agent-groups', tenant?.id],
+    queryKey: ['agent-groups-with-counts', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
-      const { data, error } = await supabase
+      const { data: groups, error } = await supabase
         .from('agent_groups')
         .select('*')
         .eq('tenant_id', tenant.id);
       if (error) throw error;
-      return data;
+      
+      // Fetch member counts for each group
+      const groupsWithCounts = await Promise.all((groups || []).map(async (group) => {
+        const { count } = await supabase
+          .from('agents_groups')
+          .select('*', { count: 'exact', head: true })
+          .eq('group_id', group.id);
+        return { ...group, memberCount: count || 0 };
+      }));
+      
+      return groupsWithCounts;
     },
     enabled: !!tenant?.id,
   });
+  
+  // Calculate total impact for selected policy
+  const getPolicyImpact = () => {
+    if (!selectedPolicy) return { groups: 0, agents: 0 };
+    const assignedGroups = groupPolicies.filter((gp: any) => gp.policy_id === selectedPolicy.id);
+    let totalAgents = 0;
+    assignedGroups.forEach((gp: any) => {
+      const group = agentGroups.find(g => g.id === gp.group_id);
+      if (group) totalAgents += (group as any).memberCount || 0;
+    });
+    return { groups: assignedGroups.length, agents: totalAgents };
+  };
+  
+  const policyImpact = getPolicyImpact();
 
   const handleCreatePolicy = async () => {
     if (!tenant?.id || !policyName.trim()) return;
@@ -339,6 +363,12 @@ export default function SecurityPolicies() {
                     <Badge variant={selectedPolicy.is_active ? 'default' : 'secondary'}>
                       {selectedPolicy.is_active ? 'Ativa' : 'Inativa'}
                     </Badge>
+                    {policyImpact.agents > 0 && (
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <Users className="h-3 w-3" />
+                        Afeta {policyImpact.groups} grupo{policyImpact.groups !== 1 ? 's' : ''} ({policyImpact.agents} PC{policyImpact.agents !== 1 ? 's' : ''})
+                      </Badge>
+                    )}
                   </div>
                   <CardDescription className="mt-1">
                     {selectedPolicy.description || 'Sem descrição'}

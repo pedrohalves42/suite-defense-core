@@ -93,6 +93,29 @@ export default function RiskScore() {
     score: h.score,
   })) ?? [];
 
+  // Calculate period comparisons
+  const getComparison = () => {
+    if (!history || history.length < 2) return null;
+    
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    
+    const currentScore = riskScore?.score ?? 100;
+    
+    // Find score from ~1 week ago
+    const weekAgoEntry = history.find(h => new Date(h.calculated_at) <= oneWeekAgo);
+    const weekDiff = weekAgoEntry ? currentScore - weekAgoEntry.score : null;
+    
+    // Find score from ~1 month ago
+    const monthAgoEntry = history.find(h => new Date(h.calculated_at) <= oneMonthAgo);
+    const monthDiff = monthAgoEntry ? currentScore - monthAgoEntry.score : null;
+    
+    return { weekDiff, monthDiff };
+  };
+  
+  const comparison = getComparison();
+
   // Get active breakdown items (non-zero penalties)
   const activeBreakdown = Object.entries(breakdown).filter(([_, value]) => value !== 0);
 
@@ -194,6 +217,33 @@ export default function RiskScore() {
                     ? "Existem pontos de atenção que precisam ser verificados para melhorar sua proteção."
                     : "Ação urgente necessária. Existem riscos significativos que precisam ser resolvidos."}
                 </p>
+                {/* Period Comparison */}
+                {comparison && (comparison.weekDiff !== null || comparison.monthDiff !== null) && (
+                  <div className="flex items-center gap-4 mt-3 text-sm">
+                    {comparison.weekDiff !== null && (
+                      <span className={cn(
+                        "flex items-center gap-1",
+                        comparison.weekDiff > 0 && "text-green-600",
+                        comparison.weekDiff < 0 && "text-red-600",
+                        comparison.weekDiff === 0 && "text-muted-foreground"
+                      )}>
+                        {comparison.weekDiff > 0 ? <TrendingUp className="h-4 w-4" /> : comparison.weekDiff < 0 ? <TrendingDown className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
+                        vs. semana: {comparison.weekDiff > 0 ? '+' : ''}{comparison.weekDiff} pts
+                      </span>
+                    )}
+                    {comparison.monthDiff !== null && (
+                      <span className={cn(
+                        "flex items-center gap-1",
+                        comparison.monthDiff > 0 && "text-green-600",
+                        comparison.monthDiff < 0 && "text-red-600",
+                        comparison.monthDiff === 0 && "text-muted-foreground"
+                      )}>
+                        {comparison.monthDiff > 0 ? <TrendingUp className="h-4 w-4" /> : comparison.monthDiff < 0 ? <TrendingDown className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
+                        vs. mês: {comparison.monthDiff > 0 ? '+' : ''}{comparison.monthDiff} pts
+                      </span>
+                    )}
+                  </div>
+                )}
                 {riskScore?.calculated_at && (
                   <p className="text-xs text-muted-foreground mt-2">
                     Última atualização: {format(new Date(riskScore.calculated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}

@@ -89,6 +89,47 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   ignored: { label: 'Ignorado', color: 'bg-muted-foreground' },
 };
 
+// Helper to calculate playbook metrics from history
+const calculatePlaybookMetrics = (
+  playbookId: string, 
+  executions: PlaybookExecution[] | undefined
+): { successRate: number; avgExecutionMs: number | null; trend: 'up' | 'down' | 'stable' } => {
+  if (!executions || executions.length === 0) {
+    return { successRate: 0, avgExecutionMs: null, trend: 'stable' };
+  }
+  
+  const playbookExecutions = executions.filter(e => e.playbook_id === playbookId).slice(0, 30);
+  if (playbookExecutions.length === 0) {
+    return { successRate: 0, avgExecutionMs: null, trend: 'stable' };
+  }
+  
+  const completed = playbookExecutions.filter(e => e.status === 'completed').length;
+  const failed = playbookExecutions.filter(e => e.status === 'failed').length;
+  const total = completed + failed;
+  const successRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+  
+  // Calculate avg execution time if available
+  const executionTimes = playbookExecutions
+    .filter(e => e.completed_at && e.triggered_at)
+    .map(e => new Date(e.completed_at!).getTime() - new Date(e.triggered_at).getTime());
+  const avgExecutionMs = executionTimes.length > 0 
+    ? Math.round(executionTimes.reduce((a, b) => a + b, 0) / executionTimes.length)
+    : null;
+  
+  // Calculate trend (compare first half vs second half)
+  const halfIdx = Math.floor(playbookExecutions.length / 2);
+  if (halfIdx > 0) {
+    const recentHalf = playbookExecutions.slice(0, halfIdx);
+    const olderHalf = playbookExecutions.slice(halfIdx);
+    const recentSuccess = recentHalf.filter(e => e.status === 'completed').length / recentHalf.length;
+    const olderSuccess = olderHalf.filter(e => e.status === 'completed').length / olderHalf.length;
+    if (recentSuccess > olderSuccess + 0.1) return { successRate, avgExecutionMs, trend: 'up' };
+    if (recentSuccess < olderSuccess - 0.1) return { successRate, avgExecutionMs, trend: 'down' };
+  }
+  
+  return { successRate, avgExecutionMs, trend: 'stable' };
+};
+
 export default function Playbooks() {
   const [activeTab, setActiveTab] = useState('pending');
   
@@ -253,7 +294,7 @@ export default function Playbooks() {
                           {playbook.description}
                         </p>
                         <div className="flex items-center justify-between">
-                          <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="outline">
                               {playbook.actions?.length || 0} ações
                             </Badge>
@@ -272,6 +313,27 @@ export default function Playbooks() {
                                 Requer aprovação
                               </Badge>
                             )}
+                            {/* Metrics: Success Rate */}
+                            {(() => {
+                              const metrics = calculatePlaybookMetrics(playbook.id, historyExecutions);
+                              if (metrics.successRate === 0 && !metrics.avgExecutionMs) return null;
+                              return (
+                                <Badge 
+                                  variant="outline" 
+                                  className={cn(
+                                    "gap-1",
+                                    metrics.successRate >= 80 && "border-green-500/30 text-green-600",
+                                    metrics.successRate >= 50 && metrics.successRate < 80 && "border-yellow-500/30 text-yellow-600",
+                                    metrics.successRate < 50 && "border-red-500/30 text-red-600"
+                                  )}
+                                  title={`Taxa de sucesso: ${metrics.successRate}%${metrics.avgExecutionMs ? ` | Tempo médio: ${Math.round(metrics.avgExecutionMs / 1000)}s` : ''}`}
+                                >
+                                  {metrics.trend === 'up' && '↑'}
+                                  {metrics.trend === 'down' && '↓'}
+                                  {metrics.successRate}% sucesso
+                                </Badge>
+                              );
+                            })()}
                           </div>
                           {isManual && (
                             <Button

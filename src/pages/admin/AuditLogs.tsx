@@ -8,10 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, History, Search, Filter, CheckCircle, XCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, History, Search, Filter, CheckCircle, XCircle, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { formatBrazilDateTime, TIMEZONE_INDICATOR } from '@/lib/date-utils';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -46,6 +48,7 @@ export default function AuditLogs() {
   const [searchInput, setSearchInput] = useState('');
   
   const searchTerm = useDebounce(searchInput, 500);
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data: logs, isLoading } = useQuery({
     queryKey: ['audit-logs', page, actionFilter, userFilter, searchTerm],
@@ -91,6 +94,53 @@ export default function AuditLogs() {
 
   const getActionLabel = (action: string) => actionLabels[action] || action;
   const getResourceLabel = (resource: string) => resourceLabels[resource] || resource;
+
+  // Export CSV handler
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    try {
+      let query = supabase
+        .from('audit_logs')
+        .select('*, actor:profiles!audit_logs_actor_id_fkey(full_name)')
+        .order('created_at', { ascending: false })
+        .limit(1000);
+
+      if (actionFilter !== 'all') query = query.eq('action', actionFilter);
+      if (userFilter && userFilter !== 'all') query = query.eq('actor_id', userFilter);
+      if (searchTerm) query = query.or(`action.ilike.%${searchTerm}%,resource_type.ilike.%${searchTerm}%`);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Build CSV
+      const headers = ['Data/Hora', 'Usuário', 'Ação', 'Recurso', 'ID Recurso', 'Resultado', 'IP'];
+      const rows = (data || []).map((log: any) => [
+        new Date(log.created_at).toLocaleString('pt-BR'),
+        log.actor?.full_name || 'Sistema',
+        getActionLabel(log.action),
+        getResourceLabel(log.resource_type),
+        log.resource_id || '-',
+        log.success ? 'Sucesso' : 'Falha',
+        log.ip_address || '-',
+      ]);
+      
+      const csvContent = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      toast.success(`Exportado ${data?.length || 0} registros`);
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Erro ao exportar logs');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -172,14 +222,26 @@ export default function AuditLogs() {
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-5 w-5" />
-              Registros
-            </CardTitle>
-            <CardDescription>
-              Mostrando {logs?.data?.length || 0} de {logs?.count || 0} atividades
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Registros
+              </CardTitle>
+              <CardDescription>
+                Mostrando {logs?.data?.length || 0} de {logs?.count || 0} atividades
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              disabled={isExporting || !logs?.data?.length}
+              className="gap-2"
+            >
+              <Download className={cn("h-4 w-4", isExporting && "animate-spin")} />
+              Exportar CSV
+            </Button>
           </CardHeader>
           <CardContent>
             {isLoading ? (

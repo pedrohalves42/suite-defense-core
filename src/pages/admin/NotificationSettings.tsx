@@ -699,6 +699,17 @@ export default function NotificationSettings() {
                   const Icon = CHANNEL_ICONS[channel.channel_type];
                   const pref = preferences.find(p => p.channel_id === channel.id);
                   
+                  // Get last delivery status from logs
+                  const channelLogs = logs.filter(l => l.channel_type === channel.channel_type).slice(0, 10);
+                  const lastDelivery = channelLogs[0];
+                  const last24hLogs = channelLogs.filter(l => {
+                    const logTime = new Date(l.created_at).getTime();
+                    return Date.now() - logTime < 24 * 60 * 60 * 1000;
+                  });
+                  const successRate = last24hLogs.length > 0 
+                    ? Math.round((last24hLogs.filter(l => l.status === 'sent').length / last24hLogs.length) * 100)
+                    : null;
+                  
                   return (
                     <Card key={channel.id}>
                       <CardHeader className="pb-3">
@@ -728,6 +739,29 @@ export default function NotificationSettings() {
                             )}
                           </div>
                         </div>
+                        {/* Delivery Status Inline */}
+                        {lastDelivery && (
+                          <div className="mt-2 pt-2 border-t flex items-center gap-3 text-xs">
+                            <div className="flex items-center gap-1">
+                              {lastDelivery.status === 'sent' ? (
+                                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <XCircle className="h-3 w-3 text-red-500" />
+                              )}
+                              <span className="text-muted-foreground">
+                                Última: {lastDelivery.status === 'sent' ? 'Sucesso' : 'Falha'}
+                              </span>
+                            </div>
+                            {successRate !== null && (
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${successRate >= 90 ? 'border-green-500/30 text-green-600' : successRate >= 70 ? 'border-yellow-500/30 text-yellow-600' : 'border-red-500/30 text-red-600'}`}
+                              >
+                                {successRate}% (24h)
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="flex items-center justify-between">
