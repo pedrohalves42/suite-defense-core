@@ -12,6 +12,7 @@ import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { useCriticalInsights } from '@/hooks/useCriticalInsights';
+import { useActionCenterCount } from '@/hooks/useActionCenter';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -35,6 +36,7 @@ export const AppSidebar = () => {
   const { isAdmin } = useIsAdmin();
   const { isSuperAdmin } = useSuperAdmin();
   const { data: criticalInsightsCount = 0 } = useCriticalInsights();
+  const { urgentCount } = useActionCenterCount();
   const location = useLocation();
   
   const [collapsed, setCollapsed] = useState(() => {
@@ -105,7 +107,7 @@ export const AppSidebar = () => {
 
   const adminItems = useMemo<MenuItem[]>(() => [
     // === VISÃO GERAL ===
-    { icon: Target, label: 'Central de Ações', to: '/admin/action-center', end: true, section: 'overview' },
+    { icon: Target, label: 'Central de Ações', to: '/admin/action-center', end: true, section: 'overview', badge: urgentCount > 0 ? urgentCount : undefined },
     { icon: Home, label: 'Painel Geral', to: '/admin/dashboard', section: 'overview' },
     
     // === MONITORAMENTO ===
