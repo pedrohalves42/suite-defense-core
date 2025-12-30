@@ -579,3 +579,18 @@ verify_jwt = true
 [functions.invoke-scheduled-jobs]
 verify_jwt = false
 schedule = "* * * * *"
+
+# === P0: Cleanup Stale Playbooks (every 5 minutes) ===
+[functions.cleanup-stale-playbooks]
+verify_jwt = false
+schedule = "*/5 * * * *"
+
+# === P0: Process Failed Jobs (every 10 minutes) ===
+[functions.process-failed-jobs]
+verify_jwt = false
+schedule = "*/10 * * * *"
+
+# === P1: Cleanup Stale Reports (every hour) ===
+[functions.cleanup-stale-reports]
+verify_jwt = false
+schedule = "0 * * * *"

@@ -1,0 +1,116 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const TIMEOUT_MINUTES = 30;
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    console.log('[cleanup-stale-playbooks] Starting cleanup...');
+
+    const cutoffTime = new Date(Date.now() - TIMEOUT_MINUTES * 60 * 1000).toISOString();
+
+    // Find stale playbook executions
+    const { data: staleExecutions, error: fetchError } = await supabase
+      .from('playbook_executions')
+      .select('id, playbook_id, tenant_id, started_at, status')
+      .in('status', ['pending', 'in_progress'])
+      .lt('started_at', cutoffTime);
+
+    if (fetchError) {
+      throw new Error(`Failed to fetch stale executions: ${fetchError.message}`);
+    }
+
+    if (!staleExecutions || staleExecutions.length === 0) {
+      console.log('[cleanup-stale-playbooks] No stale executions found');
+      return new Response(
+        JSON.stringify({ success: true, cleaned: 0 }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[cleanup-stale-playbooks] Found ${staleExecutions.length} stale executions`);
+
+    const results = {
+      cleaned: 0,
+      alertsCreated: 0,
+      errors: [] as string[],
+    };
+
+    for (const execution of staleExecutions) {
+      try {
+        // Update execution status to failed
+        const { error: updateError } = await supabase
+          .from('playbook_executions')
+          .update({
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            error_message: `Timeout automático: execução excedeu ${TIMEOUT_MINUTES} minutos sem conclusão`,
+          })
+          .eq('id', execution.id);
+
+        if (updateError) {
+          results.errors.push(`Failed to update execution ${execution.id}: ${updateError.message}`);
+          continue;
+        }
+
+        results.cleaned++;
+
+        // Create system alert for admin visibility
+        const { error: alertError } = await supabase
+          .from('system_alerts')
+          .insert({
+            tenant_id: execution.tenant_id,
+            alert_type: 'playbook_timeout',
+            severity: 'high',
+            message: `Execução de playbook travada por mais de ${TIMEOUT_MINUTES} minutos foi automaticamente marcada como falha`,
+            metadata: {
+              execution_id: execution.id,
+              playbook_id: execution.playbook_id,
+              started_at: execution.started_at,
+              original_status: execution.status,
+            },
+            resolved: false,
+          });
+
+        if (!alertError) {
+          results.alertsCreated++;
+        }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+        results.errors.push(`Error processing execution ${execution.id}: ${errorMsg}`);
+      }
+    }
+
+    console.log('[cleanup-stale-playbooks] Cleanup complete:', results);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        ...results,
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.error('[cleanup-stale-playbooks] Error:', error);
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
