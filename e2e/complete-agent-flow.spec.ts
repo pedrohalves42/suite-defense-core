@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { hasRequiredEnvVars } from './helpers/backend-client';
+import { signHmac } from './helpers/hmac-signer';
 import { TEST_CONFIG } from './test-config';
 
 /**
@@ -7,6 +8,8 @@ import { TEST_CONFIG } from './test-config';
  * 
  * Valida: Signup → Login → Gerar Enrollment → Download Installer → 
  *         Simular Instalacao → Heartbeat → Metricas → Jobs
+ * 
+ * IMPORTANTE: Todos os testes usam HMAC real (não mock).
  */
 
 test.describe.serial('Complete Agent Lifecycle Flow', () => {
@@ -115,31 +118,28 @@ test.describe.serial('Complete Agent Lifecycle Flow', () => {
     // Aguardar 2s para simular instalacao
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    const timestamp = Date.now();
-    const nonce = Math.random().toString(36).substring(7);
     const bodyJson = JSON.stringify({
       os_type: 'windows',
       os_version: 'Windows Server 2022',
       hostname: 'TEST-SERVER',
     });
-    const message = `${timestamp}:${nonce}:${bodyJson}`;
 
-    // Gerar HMAC signature (simplificado para teste)
-    const signature = 'mock-signature-for-testing';
+    // Gerar HMAC signature REAL
+    const { signature, timestamp, nonce } = signHmac(hmacSecret, bodyJson);
 
     const response = await request.post(`${baseUrl}/functions/v1/heartbeat`, {
       headers: {
         'X-Agent-Token': agentToken,
         'X-HMAC-Signature': signature,
-        'X-Timestamp': timestamp.toString(),
+        'X-Timestamp': timestamp,
         'X-Nonce': nonce,
         'Content-Type': 'application/json',
       },
       data: bodyJson,
     });
 
-    // Pode falhar por HMAC, mas deve retornar 401 (nao 500)
-    expect([200, 401, 403]).toContain(response.status());
+    // Com HMAC real, esperamos sucesso
+    expect(response.status()).toBe(200);
   });
 
   test('5. Submit System Metrics', async ({ request }) => {
@@ -148,8 +148,6 @@ test.describe.serial('Complete Agent Lifecycle Flow', () => {
       return;
     }
 
-    const timestamp = Date.now();
-    const nonce = Math.random().toString(36).substring(7);
     const bodyJson = JSON.stringify({
       cpu_usage_percent: 45.5,
       cpu_cores: 8,
@@ -164,21 +162,22 @@ test.describe.serial('Complete Agent Lifecycle Flow', () => {
       uptime_seconds: 3600,
       last_boot_time: new Date(Date.now() - 3600000).toISOString(),
     });
-    const message = `${timestamp}:${nonce}:${bodyJson}`;
-    const signature = 'mock-signature-for-testing';
+
+    // Gerar HMAC signature REAL
+    const { signature, timestamp, nonce } = signHmac(hmacSecret, bodyJson);
 
     const response = await request.post(`${baseUrl}/functions/v1/submit-system-metrics`, {
       headers: {
         'X-Agent-Token': agentToken,
         'X-HMAC-Signature': signature,
-        'X-Timestamp': timestamp.toString(),
+        'X-Timestamp': timestamp,
         'X-Nonce': nonce,
         'Content-Type': 'application/json',
       },
       data: bodyJson,
     });
 
-    expect([200, 401, 403]).toContain(response.status());
+    expect(response.status()).toBe(200);
   });
 
   test('6. Create and Poll Job', async ({ request }) => {
@@ -207,22 +206,20 @@ test.describe.serial('Complete Agent Lifecycle Flow', () => {
     // Poll jobs
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const timestamp = Date.now();
-    const nonce = Math.random().toString(36).substring(7);
-    const message = `${timestamp}:${nonce}:{}`;
-    const signature = 'mock-signature-for-testing';
+    // Gerar HMAC signature REAL (poll-jobs usa GET, body vazio)
+    const { signature, timestamp, nonce } = signHmac(hmacSecret, '');
 
     const pollResponse = await request.get(`${baseUrl}/functions/v1/poll-jobs`, {
       headers: {
         'X-Agent-Token': agentToken,
         'X-HMAC-Signature': signature,
-        'X-Timestamp': timestamp.toString(),
+        'X-Timestamp': timestamp,
         'X-Nonce': nonce,
         'Content-Type': 'application/json',
       },
     });
 
-    expect([200, 401, 403]).toContain(pollResponse.status());
+    expect(pollResponse.status()).toBe(200);
   });
 
   test('7. Acknowledge Job', async ({ request }) => {
@@ -247,23 +244,21 @@ test.describe.serial('Complete Agent Lifecycle Flow', () => {
     const jobData = await createJobResponse.json();
     const jobId = jobData.job_id;
 
-    // ACK job
-    const timestamp = Date.now();
-    const nonce = Math.random().toString(36).substring(7);
-    const message = `${timestamp}:${nonce}:{}`;
-    const signature = 'mock-signature-for-testing';
+    // ACK job com HMAC REAL
+    const bodyJson = '{}';
+    const { signature, timestamp, nonce } = signHmac(hmacSecret, bodyJson);
 
     const ackResponse = await request.post(`${baseUrl}/functions/v1/ack-job/${jobId}`, {
       headers: {
         'X-Agent-Token': agentToken,
         'X-HMAC-Signature': signature,
-        'X-Timestamp': timestamp.toString(),
+        'X-Timestamp': timestamp,
         'X-Nonce': nonce,
         'Content-Type': 'application/json',
       },
-      data: '{}',
+      data: bodyJson,
     });
 
-    expect([200, 401, 403]).toContain(ackResponse.status());
+    expect(ackResponse.status()).toBe(200);
   });
 });
