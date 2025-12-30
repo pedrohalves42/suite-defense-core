@@ -37,13 +37,6 @@ export interface ActionCenterFeed {
   warning?: string;
 }
 
-export interface ActionCenterFeed {
-  urgent: ActionItem[];
-  recommended: ActionItem[];
-  informational: ActionItem[];
-  healthy_count: number;
-  generated_at: string;
-}
 
 export function useActionCenter() {
   const { tenant } = useTenant();
