@@ -109,7 +109,7 @@ export const AppSidebar = () => {
     { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory' },
     { icon: Users, label: 'Equipe', to: '/admin/members' },
     { icon: Settings, label: 'Configurações', to: '/admin/tenant' },
-    { icon: Bell, label: 'Notificações', to: '/admin/notification-settings' },
+    { icon: Bell, label: 'Notificações', to: '/admin/notification-channels' },
   ], []);
 
   // === AVANÇADO (colapsável) ===
@@ -118,6 +118,7 @@ export const AppSidebar = () => {
     { icon: Download, label: 'Instalações', to: '/admin/installations' },
     { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
     { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics' },
+    { icon: Gauge, label: 'Saúde Sistema', to: '/admin/system-health' },
     { icon: ClipboardCheck, label: 'SOC 2', to: '/admin/soc2-compliance' },
     { icon: FileText, label: 'Auditoria', to: '/admin/system-audit' },
     { icon: Brain, label: 'Regras IA', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
