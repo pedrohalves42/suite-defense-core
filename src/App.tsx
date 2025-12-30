@@ -109,6 +109,7 @@ import JobsHealthDashboard from "./pages/admin/JobsHealthDashboard";
 import SoftwareRiskDashboard from "./pages/admin/SoftwareRiskDashboard";
 import SoftwareKnowledgeBase from "./pages/admin/SoftwareKnowledgeBase";
 import ActionCenterDashboard from "./pages/admin/ActionCenterDashboard";
+import Automations from "./pages/admin/Automations";
 import {
   ClientDashboard, 
   ClientComputers, 
@@ -225,6 +226,7 @@ const App = () => (
                 <Route path="soc2-compliance" element={<SOC2Dashboard />} />
                 <Route path="software-risk" element={<SoftwareRiskDashboard />} />
                 <Route path="software-knowledge-base" element={<SoftwareKnowledgeBase />} />
+                <Route path="automations" element={<Automations />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}

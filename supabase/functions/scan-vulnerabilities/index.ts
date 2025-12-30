@@ -78,26 +78,18 @@ async function scanAgentVulnerabilities(
           if (isVersionAffectedHelper(sw.version, cve.affected_versions)) {
             processedCVEs.add(cve.cve_id);
             
-            vulnerabilities.push({
-              agent_id,
-              tenant_id,
-              cve_id: cve.cve_id,
-              title: `${cve.cve_id}: ${(cve.description || '').slice(0, 100)}...`,
-              description: cve.description,
-              severity: cve.severity || getSeverityFromScoreHelper(cve.cvss_score),
-              cvss_score: cve.cvss_score,
-              affected_software: sw.name,
-              affected_version: sw.version,
-              fix_available: true,
-              remediation: `Update ${sw.name.split(/[\s\-_]/)[0]} to the latest version`,
-              discovered_at: new Date().toISOString(),
-              acknowledged: false,
-              metadata: {
-                vendor: sw.vendor,
-                detection_method: 'nvd_database_match',
-                nvd_link: `https://nvd.nist.gov/vuln/detail/${cve.cve_id}`
-              }
-            });
+              const now = new Date().toISOString();
+              vulnerabilities.push({
+                agent_id,
+                tenant_id,
+                check_key: cve.cve_id,
+                title: `${cve.cve_id}: ${(cve.description || '').slice(0, 100)}...`,
+                description: cve.description,
+                severity: cve.severity || getSeverityFromScoreHelper(cve.cvss_score),
+                remediation: `Update ${sw.name.split(/[\s\-_]/)[0]} to the latest version`,
+                first_seen_at: now,
+                last_seen_at: now
+              });
             break;
           }
         }
@@ -385,29 +377,17 @@ Deno.serve(async (req) => {
             if (isVersionAffected(sw.version, cve.affected_versions)) {
               processedCVEs.add(cve.cve_id);
               
+              const now = new Date().toISOString();
               vulnerabilities.push({
                 agent_id,
                 tenant_id,
-                cve_id: cve.cve_id,
+                check_key: cve.cve_id,
                 title: `${cve.cve_id}: ${truncate(cve.description, 100)}`,
                 description: cve.description,
                 severity: cve.severity || getSeverityFromScore(cve.cvss_score),
-                cvss_score: cve.cvss_score,
-                affected_software: sw.name,
-                affected_version: sw.version,
-                fix_available: true,
                 remediation: generateRemediation(sw.name, cve),
-                discovered_at: new Date().toISOString(),
-                acknowledged: false,
-                metadata: {
-                  vendor: sw.vendor,
-                  detection_method: 'nvd_database_match',
-                  nvd_link: `https://nvd.nist.gov/vuln/detail/${cve.cve_id}`,
-                  cvss_vector: cve.cvss_vector,
-                  weaknesses: cve.weaknesses || [],
-                  published_date: cve.published_date,
-                  last_modified: cve.last_modified
-                }
+                first_seen_at: now,
+                last_seen_at: now
               });
               break; // One vulnerability entry per CVE
             }
@@ -631,25 +611,17 @@ async function scanWithFallback(
     });
 
     for (const vuln of vulns) {
+      const now = new Date().toISOString();
       vulnerabilities.push({
         agent_id,
         tenant_id,
-        cve_id: vuln.cve_id,
+        check_key: vuln.cve_id,
         title: vuln.title,
         description: vuln.description,
         severity: vuln.severity,
-        cvss_score: vuln.cvss_score,
-        affected_software: item.name,
-        affected_version: item.version,
-        fix_available: vuln.fix_available,
         remediation: vuln.remediation,
-        discovered_at: new Date().toISOString(),
-        acknowledged: false,
-        metadata: {
-          vendor: item.vendor,
-          detection_method: 'fallback_signature_match',
-          nvd_link: `https://nvd.nist.gov/vuln/detail/${vuln.cve_id}`
-        }
+        first_seen_at: now,
+        last_seen_at: now
       });
     }
   }
