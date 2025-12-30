@@ -1,7 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
 
-type ResourceType = 'enrollment_key' | 'agent_token' | 'api_key' | 'agent_secret';
-type ActionType = 'view' | 'copy' | 'export' | 'reveal' | 'list';
+type ResourceType = 'enrollment_key' | 'agent_token' | 'api_key' | 'agent_secret' | 'security_policy' | 'agent_group';
+type ActionType = 'view' | 'copy' | 'export' | 'reveal' | 'list' | 'high_impact_confirm' | 'assign' | 'deactivate' | 'delete';
+
+export interface HighImpactLogDetails {
+  impactCount: number;
+  impactType: 'computers' | 'agents' | 'groups';
+  thresholdExceeded: boolean;
+  targetResourceId?: string;
+  targetResourceName?: string;
+}
 
 export const useAuditLog = () => {
   const logSensitiveAccess = async (
@@ -27,5 +35,33 @@ export const useAuditLog = () => {
     }
   };
 
-  return { logSensitiveAccess };
+  const logHighImpactAction = async (
+    resourceType: 'security_policy' | 'agent_group',
+    resourceId: string,
+    action: 'assign' | 'deactivate' | 'delete',
+    details: HighImpactLogDetails
+  ): Promise<void> => {
+    try {
+      await supabase.rpc('log_sensitive_access', {
+        p_resource_type: resourceType,
+        p_resource_id: resourceId,
+        p_action: `high_impact_${action}_${resourceType}`,
+        p_details: {
+          timestamp: new Date().toISOString(),
+          user_agent: navigator.userAgent,
+          impact_count: details.impactCount,
+          impact_type: details.impactType,
+          threshold_exceeded: details.thresholdExceeded,
+          target_resource_id: details.targetResourceId,
+          target_resource_name: details.targetResourceName,
+          high_impact_confirmed: true,
+        },
+      });
+    } catch (error) {
+      // Silent fail - don't break UI if audit fails
+      console.error('[AuditLog] Failed to log high impact action:', error);
+    }
+  };
+
+  return { logSensitiveAccess, logHighImpactAction };
 };

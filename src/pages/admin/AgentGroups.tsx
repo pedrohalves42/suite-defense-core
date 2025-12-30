@@ -23,10 +23,12 @@ import { Shield } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { HighImpactConfirmDialog, needsHighImpactConfirmation } from '@/components/ui/high-impact-confirm-dialog';
+import { useAuditLog } from '@/hooks/useAuditLog';
 
 export default function AgentGroups() {
   const { groups, memberCounts, isLoading, createGroup, updateGroup, deleteGroup } = useAgentGroups();
   const { groupPolicies } = useAgentGroupPolicies();
+  const { logHighImpactAction } = useAuditLog();
   
   // Build policy counts per group
   const policyCountsByGroup = groupPolicies.reduce((acc, gp) => {
@@ -96,6 +98,18 @@ export default function AgentGroups() {
 
   const executeDeleteGroup = async () => {
     if (!selectedGroupId) return;
+    
+    const memberCount = memberCounts[selectedGroupId] || 0;
+    const group = groups.find(g => g.id === selectedGroupId);
+    
+    // Log high impact action before deletion
+    await logHighImpactAction('agent_group', selectedGroupId, 'delete', {
+      impactCount: memberCount,
+      impactType: 'computers',
+      thresholdExceeded: needsHighImpactConfirmation(memberCount),
+      targetResourceName: group?.name,
+    });
+    
     await deleteGroup.mutateAsync(selectedGroupId);
     setSelectedGroupId(null);
     setIsDeleteConfirmOpen(false);
