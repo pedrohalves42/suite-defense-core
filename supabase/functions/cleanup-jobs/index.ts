@@ -43,12 +43,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verificar se e admin
+    // Verificar se e admin (use maybeSingle for users with multiple roles)
     const { data: userRole } = await supabase
       .from('user_roles')
       .select('role, tenant_id')
       .eq('user_id', user.id)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (!userRole || !['admin', 'super_admin'].includes(userRole.role)) {
       logger.error('[cleanup-jobs] Insufficient permissions', { requestId, userId: user.id });
