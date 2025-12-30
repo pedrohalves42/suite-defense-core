@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getOsIcon } from '@/lib/os-utils';
 import { AgentStatusBadges } from '@/components/agents/AgentStatusBadges';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
+import { OfflineAgentActions } from '@/components/admin/OfflineAgentActions';
 import { TooltipProvider as TooltipProviderWrapper } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HealthTrendChart } from '@/components/admin/HealthTrendChart';
@@ -418,6 +419,18 @@ export default function AgentHealthMonitor() {
                           isThrottled={agent.is_throttled}
                           isIsolated={agent.is_isolated}
                           isInSafeMode={agent.is_in_safe_mode}
+                        />
+                      </div>
+                    )}
+
+                    {/* Offline Agent Actions */}
+                    {!isOnline && !hasSpecialStatus && agent.id && tenant?.id && (
+                      <div className="mt-3 pt-3 border-t">
+                        <OfflineAgentActions
+                          agentId={agent.id}
+                          agentName={agent.agent_name}
+                          tenantId={tenant.id}
+                          secondsOffline={secondsSinceHeartbeat}
                         />
                       </div>
                     )}
