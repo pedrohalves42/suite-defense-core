@@ -195,7 +195,9 @@ export function AgentDetailsDrawer({
                     agentId={agentId}
                     agentName={agentName}
                     tenantId={tenantId}
+                    agentState={causality?.currentState}
                     variant="compact"
+                    intent="overview"
                   />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">

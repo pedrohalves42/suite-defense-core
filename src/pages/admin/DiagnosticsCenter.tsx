@@ -494,7 +494,9 @@ export default function DiagnosticsCenter() {
                     agentId={selectedAgent.id}
                     agentName={selectedAgent.agent_name}
                     tenantId={selectedAgent.tenant_id}
+                    agentState={selectedAgentState}
                     variant="full"
+                    intent={socMode ? 'soc' : 'triage'}
                   />
                 </TabsContent>
 
