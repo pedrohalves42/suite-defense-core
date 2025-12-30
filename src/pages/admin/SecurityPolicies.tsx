@@ -30,6 +30,7 @@ import {
   type RuleAction,
   type SecurityPolicy
 } from '@/types/security-policies';
+import { HighImpactConfirmDialog, needsHighImpactConfirmation } from '@/components/ui/high-impact-confirm-dialog';
 
 const RULE_TYPE_ICONS: Record<RuleType, React.ReactNode> = {
   usb_control: <Usb className="h-4 w-4" />,
@@ -50,6 +51,9 @@ export default function SecurityPolicies() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isRuleDialogOpen, setIsRuleDialogOpen] = useState(false);
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [isDeactivateConfirmOpen, setIsDeactivateConfirmOpen] = useState(false);
+  const [pendingAssignGroupId, setPendingAssignGroupId] = useState<string | null>(null);
+  const [isAssignConfirmOpen, setIsAssignConfirmOpen] = useState(false);
   
   // Form state
   const [policyName, setPolicyName] = useState('');
@@ -140,6 +144,16 @@ export default function SecurityPolicies() {
 
   const handleAssignToGroup = async (groupId: string) => {
     if (!selectedPolicy?.id) return;
+    
+    const group = agentGroups.find(g => g.id === groupId);
+    const memberCount = (group as any)?.memberCount || 0;
+    
+    // Check if high impact confirmation is needed
+    if (needsHighImpactConfirmation(memberCount)) {
+      setPendingAssignGroupId(groupId);
+      setIsAssignConfirmOpen(true);
+      return;
+    }
     
     await assignPolicy.mutateAsync({
       group_id: groupId,
@@ -378,10 +392,17 @@ export default function SecurityPolicies() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => updatePolicy.mutate({ 
-                      id: selectedPolicy.id, 
-                      is_active: !selectedPolicy.is_active 
-                    })}
+                    onClick={() => {
+                      // If deactivating and high impact, show confirmation
+                      if (selectedPolicy.is_active && needsHighImpactConfirmation(policyImpact.agents)) {
+                        setIsDeactivateConfirmOpen(true);
+                      } else {
+                        updatePolicy.mutate({ 
+                          id: selectedPolicy.id, 
+                          is_active: !selectedPolicy.is_active 
+                        });
+                      }
+                    }}
                   >
                     {selectedPolicy.is_active ? (
                       <><Pause className="h-4 w-4 mr-1" /> Desativar</>
@@ -608,6 +629,44 @@ export default function SecurityPolicies() {
           )}
         </Card>
       </div>
+      
+      {/* High Impact Deactivate Confirmation */}
+      <HighImpactConfirmDialog
+        open={isDeactivateConfirmOpen}
+        onOpenChange={setIsDeactivateConfirmOpen}
+        impactCount={policyImpact.agents}
+        impactType="computers"
+        actionLabel="Desativar Política"
+        actionDescription={`A política "${selectedPolicy?.name}" será desativada. As regras deixarão de ser aplicadas imediatamente.`}
+        onConfirm={() => {
+          if (selectedPolicy) {
+            updatePolicy.mutate({ id: selectedPolicy.id, is_active: false });
+          }
+          setIsDeactivateConfirmOpen(false);
+        }}
+        destructive
+      />
+      
+      {/* High Impact Assign Confirmation */}
+      <HighImpactConfirmDialog
+        open={isAssignConfirmOpen}
+        onOpenChange={setIsAssignConfirmOpen}
+        impactCount={agentGroups.find(g => g.id === pendingAssignGroupId)?.memberCount || 0}
+        impactType="computers"
+        actionLabel="Atribuir Política"
+        actionDescription={`A política "${selectedPolicy?.name}" será aplicada a todos os computadores do grupo selecionado.`}
+        onConfirm={async () => {
+          if (pendingAssignGroupId && selectedPolicy?.id) {
+            await assignPolicy.mutateAsync({
+              group_id: pendingAssignGroupId,
+              policy_id: selectedPolicy.id,
+            });
+          }
+          setPendingAssignGroupId(null);
+          setIsAssignConfirmOpen(false);
+          setIsAssignDialogOpen(false);
+        }}
+      />
     </AdminPageLayout>
   );
 }
