@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useTenant } from './useTenant';
 import { toast } from 'sonner';
+import { useTenant } from './useTenant';
 import { useEffect } from 'react';
 
 export interface ActionItem {
@@ -12,7 +12,7 @@ export interface ActionItem {
   hostname: string | null;
   title: string;
   description: string | null;
-  severity: 'critical' | 'high' | 'medium' | 'low';
+  severity: string;
   risk_score: number | null;
   context: Record<string, unknown>;
   created_at: string;
@@ -24,6 +24,17 @@ export interface ActionItem {
     description: string;
     cta: string;
   } | null;
+}
+
+export interface ActionCenterFeed {
+  urgent: ActionItem[];
+  recommended: ActionItem[];
+  informational: ActionItem[];
+  healthy_count: number;
+  offline_count: number;
+  total_agents: number;
+  generated_at: string;
+  warning?: string;
 }
 
 export interface ActionCenterFeed {
