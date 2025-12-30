@@ -116,6 +116,8 @@ export const AppSidebar = () => {
     { icon: ShieldCheck, label: 'Políticas de Proteção', to: '/admin/security-policies', section: 'security' },
     { icon: Shield, label: 'Alertas de Segurança', to: '/admin/security-monitoring', section: 'security' },
     { icon: AppWindow, label: 'Programas Instalados', to: '/admin/software-inventory', section: 'security' },
+    { icon: Gauge, label: 'Risco de Software', to: '/admin/software-risk', section: 'security' },
+    { icon: Settings, label: 'Base de Conhecimento', to: '/admin/software-knowledge-base', section: 'security' },
     { icon: AlertTriangle, label: 'Vulnerabilidades', to: '/admin/vulnerabilities', section: 'security' },
     { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity', section: 'security' },
     { icon: Clock, label: 'Histórico', to: '/admin/agent-timeline', section: 'security' },
