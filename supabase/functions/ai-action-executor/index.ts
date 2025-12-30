@@ -56,13 +56,15 @@ serve(async (req) => {
       throw new Error('Action not found');
     }
 
-    // 2. Verificar se usuario e admin do tenant
+    // 2. Verificar se usuario e admin do tenant (use maybeSingle for users with multiple roles)
     const { data: userRole, error: roleError } = await supabase
       .from('user_roles')
       .select('role, tenant_id')
       .eq('user_id', user.id)
       .eq('tenant_id', action.tenant_id)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
     if (roleError || !userRole || !['admin', 'super_admin'].includes(userRole.role)) {
       throw new Error('Forbidden: Only admins can execute actions');

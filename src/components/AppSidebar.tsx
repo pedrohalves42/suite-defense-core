@@ -1,17 +1,17 @@
 import { 
-  Home, Shield, Package, Users, Key, Mail, ScrollText, Settings, 
-  ChevronLeft, ChevronRight, ChevronDown, Zap, TestTube, Server, 
-  FileDown, Activity, CreditCard, Crown, BarChart3, AlertTriangle, 
-  Brain, CheckCircle, Terminal, Globe, Clock, Gauge, Inbox, ShieldCheck, 
+  Home, Shield, Users, ScrollText, Settings, 
+  ChevronLeft, ChevronRight, ChevronDown, Server, 
+  Activity, CreditCard, Crown, BarChart3, AlertTriangle, 
+  Brain, Terminal, Globe, Clock, Gauge, 
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
-  Code, Heart, Search, Monitor, AppWindow, ListTodo, Receipt, GitBranch,
-  Download, Star, Building2, FileText, Cpu, Network, Percent, ClipboardCheck,
-  FileCheck
+  Heart, Search, Monitor, AppWindow, GitBranch,
+  Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { useCriticalInsights } from '@/hooks/useCriticalInsights';
+import { useActionCenterCount } from '@/hooks/useActionCenter';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -27,7 +27,6 @@ interface MenuItem {
   label: string;
   to: string;
   end?: boolean;
-  section?: string;
   badge?: number;
 }
 
@@ -35,6 +34,7 @@ export const AppSidebar = () => {
   const { isAdmin } = useIsAdmin();
   const { isSuperAdmin } = useSuperAdmin();
   const { data: criticalInsightsCount = 0 } = useCriticalInsights();
+  const { urgentCount } = useActionCenterCount();
   const location = useLocation();
   
   const [collapsed, setCollapsed] = useState(() => {
@@ -44,22 +44,18 @@ export const AppSidebar = () => {
 
   // Section collapse states - saved to localStorage
   const [sectionStates, setSectionStates] = useState<Record<string, boolean>>(() => {
-    const saved = localStorage.getItem('sidebar-sections');
+    const saved = localStorage.getItem('sidebar-sections-v2');
     return saved ? JSON.parse(saved) : {
-      monitoring: true,
-      security: true,
-      compliance: true,
-      infrastructure: false,
-      ai: false,
+      protection: true,
       management: false,
-      billing: false,
+      advanced: false,
       superAdmin: true
     };
   });
 
   // Save section states
   useEffect(() => {
-    localStorage.setItem('sidebar-sections', JSON.stringify(sectionStates));
+    localStorage.setItem('sidebar-sections-v2', JSON.stringify(sectionStates));
   }, [sectionStates]);
 
   useEffect(() => {
@@ -82,7 +78,6 @@ export const AppSidebar = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        // Dispatch custom event for search modal
         window.dispatchEvent(new CustomEvent('open-search'));
       }
     };
@@ -90,77 +85,51 @@ export const AppSidebar = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Humanized menu items - LINGUAGEM LEIGA (sem termos técnicos)
-  const menuItems = useMemo<MenuItem[]>(() => [
-    { icon: Home, label: 'Início', to: '/dashboard', end: true },
-    { icon: Activity, label: 'Tempo Real', to: '/monitoring' },
-    { icon: Monitor, label: 'Meus Computadores', to: '/agents' },
-    { icon: ListTodo, label: 'Verificações', to: '/jobs' },
-    { icon: ShieldCheck, label: 'Análises de Segurança', to: '/virus-scans' },
+  // === VISÃO GERAL (sempre visível) ===
+  const overviewItems = useMemo<MenuItem[]>(() => [
+    { icon: Target, label: 'Central de Ações', to: '/admin/action-center', end: true, badge: urgentCount > 0 ? urgentCount : undefined },
+    { icon: Home, label: 'Painel Geral', to: '/admin/dashboard' },
+    { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced' },
+    { icon: Cpu, label: 'Meus Computadores', to: '/admin/agent-health' },
+  ], [urgentCount]);
+
+  // === PROTEÇÃO (colapsável - expandido por padrão) ===
+  const protectionItems = useMemo<MenuItem[]>(() => [
+    { icon: AlertTriangle, label: 'Alertas', to: '/admin/security-monitoring' },
+    { icon: Shield, label: 'Vulnerabilidades', to: '/admin/vulnerabilities' },
     { icon: AlertTriangle, label: 'Quarentena', to: '/quarantine' },
-    { icon: Download, label: 'Instalador', to: '/installer' },
-    { icon: FileDown, label: 'Exportar', to: '/export' },
-    { icon: TestTube, label: 'Testar', to: '/agent-test' },
+    { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity' },
+    { icon: Clock, label: 'Histórico', to: '/admin/agent-timeline' },
   ], []);
 
-  const adminItems = useMemo<MenuItem[]>(() => [
-    // === VISÃO GERAL ===
-    { icon: Home, label: 'Painel Principal', to: '/admin/dashboard', end: true, section: 'overview' },
-    
-    // === MONITORAMENTO ===
-    { icon: Activity, label: 'Tempo Real', to: '/admin/monitoring-advanced', section: 'monitoring' },
-    { icon: Cpu, label: 'Computadores Protegidos', to: '/admin/agent-health', section: 'monitoring' },
-    
-    // === SEGURANÇA ===
-    { icon: Users, label: 'Grupos', to: '/admin/agent-groups', section: 'security' },
-    { icon: ShieldCheck, label: 'Políticas de Proteção', to: '/admin/security-policies', section: 'security' },
-    { icon: Shield, label: 'Alertas de Segurança', to: '/admin/security-monitoring', section: 'security' },
-    { icon: AppWindow, label: 'Programas Instalados', to: '/admin/software-inventory', section: 'security' },
-    { icon: Gauge, label: 'Risco de Software', to: '/admin/software-risk', section: 'security' },
-    { icon: Settings, label: 'Base de Conhecimento', to: '/admin/software-knowledge-base', section: 'security' },
-    { icon: AlertTriangle, label: 'Vulnerabilidades', to: '/admin/vulnerabilities', section: 'security' },
-    { icon: Globe, label: 'Navegação Web', to: '/admin/web-activity', section: 'security' },
-    { icon: Clock, label: 'Histórico', to: '/admin/agent-timeline', section: 'security' },
-    { icon: FileText, label: 'Relatórios', to: '/admin/reports', section: 'security' },
-    
-    // === CONFORMIDADE ===
-    { icon: ClipboardCheck, label: 'Prontidão SOC 2', to: '/admin/soc2-compliance', section: 'compliance' },
-    { icon: ScrollText, label: 'Timeline de Conformidade', to: '/admin/compliance-timeline', section: 'compliance' },
-    { icon: FileCheck, label: 'Auditoria do Sistema', to: '/admin/system-audit', section: 'compliance' },
-    
-    // === INFRAESTRUTURA ===
-    { icon: Network, label: 'Instalações', to: '/admin/installations', section: 'infrastructure' },
-    { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases', section: 'infrastructure' },
-    { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics', section: 'infrastructure' },
-    { icon: Heart, label: 'Saúde do Sistema', to: '/admin/slo-dashboard', section: 'infrastructure' },
-    { icon: Activity, label: 'Saúde dos Jobs', to: '/admin/jobs-health', section: 'infrastructure' },
-    { icon: Inbox, label: 'Fila de Tarefas', to: '/admin/dead-letter-queue', section: 'infrastructure' },
-    { icon: Code, label: 'API', to: '/admin/api-docs', section: 'infrastructure' },
-    
-    // === INTELIGÊNCIA (linguagem humana) ===
-    { icon: Brain, label: 'Avisos do Sistema', to: '/admin/ai-insights', section: 'ai', badge: criticalInsightsCount },
-    { icon: CheckCircle, label: 'Decisões Automáticas', to: '/admin/ai-actions', section: 'ai' },
-    { icon: BarChart3, label: 'Métricas', to: '/admin/ai-metrics', section: 'ai' },
-    { icon: Scale, label: 'Histórico de Decisões', to: '/admin/decision-audit', section: 'ai' },
-    { icon: Settings, label: 'Regras de Proteção', to: '/admin/rules-management', section: 'ai' },
-    
-    // === GESTÃO ===
-    { icon: Users, label: 'Equipe', to: '/admin/members', section: 'management' },
-    { icon: Mail, label: 'Convites', to: '/admin/invites', section: 'management' },
-    { icon: Settings, label: 'Configurações', to: '/admin/tenant', section: 'management' },
-    { icon: Bell, label: 'Notificações', to: '/admin/notification-settings', section: 'management' },
-    
-    // === FINANCEIRO ===
-    { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade', section: 'billing' },
-    { icon: Receipt, label: 'Assinaturas', to: '/admin/subscriptions', section: 'billing' },
+  // === GESTÃO (colapsável) ===
+  const managementItems = useMemo<MenuItem[]>(() => [
+    { icon: Users, label: 'Grupos', to: '/admin/agent-groups' },
+    { icon: Shield, label: 'Políticas', to: '/admin/security-policies' },
+    { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory' },
+    { icon: Users, label: 'Equipe', to: '/admin/members' },
+    { icon: Settings, label: 'Configurações', to: '/admin/tenant' },
+    { icon: Bell, label: 'Notificações', to: '/admin/notification-settings' },
+  ], []);
+
+  // === AVANÇADO (colapsável) ===
+  const advancedItems = useMemo<MenuItem[]>(() => [
+    { icon: Download, label: 'Instalações', to: '/admin/installations' },
+    { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
+    { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics' },
+    { icon: ClipboardCheck, label: 'SOC 2', to: '/admin/soc2-compliance' },
+    { icon: FileText, label: 'Auditoria', to: '/admin/system-audit' },
+    { icon: Brain, label: 'Regras IA', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
+    { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
   ], [criticalInsightsCount]);
 
+  // === SUPER ADMIN ===
   const superAdminItems = useMemo<MenuItem[]>(() => [
     { icon: Building2, label: 'Minha Empresa', to: '/admin/dashboard', end: false },
     { icon: Server, label: 'Empresas', to: '/super-admin/tenants', end: true },
     { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases', end: false },
     { icon: Percent, label: 'Rollout', to: '/super-admin/rollout-policies', end: false },
-    { icon: BarChart3, label: 'Métricas Globais', to: '/super-admin/metrics' },
+    { icon: BarChart3, label: 'Métricas', to: '/super-admin/metrics' },
     { icon: PieChart, label: 'Assinaturas', to: '/super-admin/subscription-analytics' },
     { icon: DollarSign, label: 'Indicadores', to: '/super-admin/unit-economics' },
     { icon: TrendingUp, label: 'Retenção', to: '/super-admin/cohort-analysis' },
@@ -171,10 +140,6 @@ export const AppSidebar = () => {
     { icon: CreditCard, label: 'Pagamentos', to: '/super-admin/stripe-setup' },
     { icon: Users, label: 'Usuários', to: '/super-admin/users' },
     { icon: Shield, label: 'Funcionalidades', to: '/super-admin/features' },
-    { icon: Key, label: 'Chaves API', to: '/super-admin/api-keys' },
-    { icon: Key, label: 'Chaves Instalação', to: '/super-admin/enrollment-keys' },
-    { icon: Mail, label: 'Convites', to: '/super-admin/invites' },
-    { icon: ShieldCheck, label: 'Segurança', to: '/super-admin/security' },
     { icon: ScrollText, label: 'Auditoria', to: '/super-admin/audit-logs' },
     { icon: Activity, label: 'Logs', to: '/super-admin/system-logs' },
     { icon: Settings, label: 'Configurações', to: '/super-admin/settings' },
@@ -183,7 +148,6 @@ export const AppSidebar = () => {
   const renderNavItem = (item: MenuItem, idx: number, variant: 'default' | 'super' = 'default') => {
     const Icon = item.icon;
     const isSuper = variant === 'super';
-    const isActive = location.pathname === item.to || (item.end === false && location.pathname.startsWith(item.to));
     
     const navContent = (
       <NavLink
@@ -217,7 +181,6 @@ export const AppSidebar = () => {
       </NavLink>
     );
 
-    // Wrap in tooltip when collapsed
     if (collapsed) {
       return (
         <motion.div
@@ -267,7 +230,6 @@ export const AppSidebar = () => {
     const hasActiveItem = isRouteInSection(items);
     
     if (collapsed) {
-      // When sidebar is collapsed, just show items without section headers
       return (
         <div className="space-y-0.5">
           {items.map((item, idx) => renderNavItem(item, idx, variant))}
@@ -380,10 +342,50 @@ export const AppSidebar = () => {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-2 px-2">
-          {/* User Menu */}
-          <div className="space-y-0.5">
-            {menuItems.map((item, idx) => renderNavItem(item, idx))}
-          </div>
+          {isAdmin ? (
+            <>
+              {/* VISÃO GERAL - sempre visível */}
+              <div className="space-y-0.5 mb-3">
+                {overviewItems.map((item, idx) => renderNavItem(item, idx))}
+              </div>
+
+              <div className="my-2 mx-2 h-px bg-border" />
+
+              {/* PROTEÇÃO */}
+              {renderCollapsibleSection('Proteção', 'protection', protectionItems)}
+
+              <div className="my-2" />
+
+              {/* GESTÃO */}
+              {renderCollapsibleSection('Gestão', 'management', managementItems)}
+
+              <div className="my-2" />
+
+              {/* AVANÇADO */}
+              {renderCollapsibleSection('Avançado', 'advanced', advancedItems)}
+            </>
+          ) : (
+            // Non-admin basic menu
+            <div className="space-y-0.5">
+              <NavLink
+                to="/dashboard"
+                end
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                activeClassName="bg-accent text-accent-foreground font-medium"
+              >
+                <Home className="h-4 w-4" />
+                {!collapsed && <span className="text-sm">Início</span>}
+              </NavLink>
+              <NavLink
+                to="/agents"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                activeClassName="bg-accent text-accent-foreground font-medium"
+              >
+                <Monitor className="h-4 w-4" />
+                {!collapsed && <span className="text-sm">Meus Computadores</span>}
+              </NavLink>
+            </div>
+          )}
 
           {/* Super Admin */}
           {isSuperAdmin && (
@@ -407,50 +409,42 @@ export const AppSidebar = () => {
                     </div>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
-                    <div className="space-y-0.5 mt-1">
-                      {superAdminItems.map((item, idx) => renderNavItem(item, idx, 'super'))}
-                    </div>
+                    <AnimatePresence>
+                      <div className="space-y-0.5 mt-1">
+                        {superAdminItems.map((item, idx) => renderNavItem(item, idx, 'super'))}
+                      </div>
+                    </AnimatePresence>
                   </CollapsibleContent>
                 </Collapsible>
               ) : (
                 <div className="space-y-0.5">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex justify-center py-2">
-                        <Crown className="h-4 w-4 text-destructive" />
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">Super Admin</TooltipContent>
-                  </Tooltip>
-                  {superAdminItems.map((item, idx) => renderNavItem(item, idx, 'super'))}
+                  {superAdminItems.slice(0, 5).map((item, idx) => renderNavItem(item, idx, 'super'))}
                 </div>
               )}
             </>
           )}
-
-          {/* Admin Menu */}
-          {isAdmin && (
-            <>
-              <div className="my-3 mx-2 h-px bg-border" />
-              
-              {/* Overview - always visible */}
-              <div className="space-y-0.5 mb-2">
-                {adminItems.filter(i => i.section === 'overview').map((item, idx) => renderNavItem(item, idx))}
-              </div>
-
-              {/* Collapsible Sections */}
-              <div className="space-y-1">
-                {renderCollapsibleSection('📊 Monitoramento', 'monitoring', adminItems.filter(i => i.section === 'monitoring'))}
-                {renderCollapsibleSection('🛡️ Segurança', 'security', adminItems.filter(i => i.section === 'security'))}
-                {renderCollapsibleSection('📋 Conformidade', 'compliance', adminItems.filter(i => i.section === 'compliance'))}
-                {renderCollapsibleSection('⚙️ Infraestrutura', 'infrastructure', adminItems.filter(i => i.section === 'infrastructure'))}
-                {renderCollapsibleSection('🤖 Inteligência Artificial', 'ai', adminItems.filter(i => i.section === 'ai'))}
-                {renderCollapsibleSection('👥 Gestão', 'management', adminItems.filter(i => i.section === 'management'))}
-                {renderCollapsibleSection('💳 Financeiro', 'billing', adminItems.filter(i => i.section === 'billing'))}
-              </div>
-            </>
-          )}
         </nav>
+
+        {/* Footer */}
+        <div className="border-t border-border p-2">
+          {!collapsed ? (
+            <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+              <Heart className="h-3 w-3" />
+              <span>CyberShield v2.0</span>
+            </div>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex justify-center py-2">
+                  <Heart className="h-3 w-3 text-muted-foreground" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                CyberShield v2.0
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
       </aside>
     </TooltipProvider>
   );

@@ -108,6 +108,7 @@ import SOC2Dashboard from "./pages/admin/SOC2Dashboard";
 import JobsHealthDashboard from "./pages/admin/JobsHealthDashboard";
 import SoftwareRiskDashboard from "./pages/admin/SoftwareRiskDashboard";
 import SoftwareKnowledgeBase from "./pages/admin/SoftwareKnowledgeBase";
+import ActionCenterDashboard from "./pages/admin/ActionCenterDashboard";
 import {
   ClientDashboard, 
   ClientComputers, 
@@ -169,7 +170,8 @@ const App = () => (
               
               {/* Admin Routes (Tenant-specific) */}
               <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<Dashboard />} />
+                <Route index element={<ActionCenterDashboard />} />
+                <Route path="action-center" element={<ActionCenterDashboard />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="monitoring-advanced" element={<AgentMonitoringAdvanced />} />
                 <Route path="members" element={<Members />} />

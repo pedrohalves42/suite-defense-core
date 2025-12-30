@@ -10391,6 +10391,28 @@ export type Database = {
         }
         Relationships: []
       }
+      v_action_center: {
+        Row: {
+          action_status: string | null
+          agent_id: string | null
+          agent_name: string | null
+          context: Json | null
+          created_at: string | null
+          description: string | null
+          execution_mode: string | null
+          hostname: string | null
+          item_id: string | null
+          playbook_id: string | null
+          priority_score: number | null
+          risk_score: number | null
+          severity: string | null
+          source_type: string | null
+          tenant_id: string | null
+          title: string | null
+          trigger_type: string | null
+        }
+        Relationships: []
+      }
       v_agent_execution_health: {
         Row: {
           agent_id: string | null
@@ -11929,6 +11951,7 @@ export type Database = {
         Returns: Json
       }
       generate_ai_actions_from_insights: { Args: never; Returns: Json }
+      get_action_center_feed: { Args: { p_tenant_id: string }; Returns: Json }
       get_agent_disk_details: {
         Args: { p_agent_id: string }
         Returns: {
