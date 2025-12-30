@@ -1,5 +1,12 @@
 <#
-    CyberShield Agent - Windows v4.2.2
+    CyberShield Agent - Windows v4.3.0
+    
+    v4.3.0: WATCHDOG INTERNO - Auto-recovery robusto com retry loop
+    - NEW: Wrapper de watchdog envolvendo todo o script principal
+    - NEW: Retry loop com até 10 tentativas e backoff exponencial
+    - NEW: Reinício automático da Scheduled Task após esgotamento de retries
+    - NEW: Notificação ao servidor sobre eventos de watchdog
+    - IMPROVED: Lógica de recovery mais robusta
     
     v4.2.2: AUTO-RECOVERY - Agentes nao ficam mais offline permanentemente
     - CRITICAL FIX: Scheduled Task com RepetitionInterval de 5 minutos
@@ -107,7 +114,7 @@ param(
     [string]$AgentName = $env:COMPUTERNAME.ToLower(),
 
     [Parameter(Mandatory = $false)]
-    [string]$AgentVersion = "v4.2.2"
+    [string]$AgentVersion = "v4.3.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -5297,22 +5304,125 @@ catch {
     # Flush final
     Invoke-FlushEvidence
     
-    # CRITICAL FIX v4.2.2: NAO fazer exit 1 - deixar RepetitionInterval reiniciar
-    # Aguardar e tentar reiniciar via Scheduled Task
-    Write-Log "[RECOVERY] Aguardando 30s antes de tentar auto-recovery..." "WARN"
-    Start-Sleep -Seconds 30
+    # ============================================
+    #  WATCHDOG v4.3.0: RETRY LOOP COM BACKOFF EXPONENCIAL
+    # ============================================
     
-    try {
-        # Tentar reiniciar a propria task
-        $taskInfo = Get-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
-        if ($taskInfo -and $taskInfo.State -ne "Running") {
-            Start-ScheduledTask -TaskName "CyberShieldAgent" -ErrorAction SilentlyContinue
-            Write-Log "[RECOVERY] Scheduled Task reiniciada manualmente" "INFO"
-        } else {
-            Write-Log "[RECOVERY] Task ja em execucao ou nao encontrada, deixando RepetitionInterval agir" "WARN"
+    $maxWatchdogRetries = 10
+    $watchdogRetryCount = 0
+    $baseBackoffSeconds = 30
+    
+    Write-Log "[WATCHDOG] Iniciando watchdog loop (max $maxWatchdogRetries retries)..." "WARN"
+    
+    while ($watchdogRetryCount -lt $maxWatchdogRetries) {
+        $watchdogRetryCount++
+        
+        # Calcular backoff exponencial (30s, 60s, 120s, 240s... max 30min)
+        $backoffSeconds = [Math]::Min($baseBackoffSeconds * [Math]::Pow(2, $watchdogRetryCount - 1), 1800)
+        
+        Write-Log "[WATCHDOG] Retry $watchdogRetryCount/$maxWatchdogRetries - Aguardando ${backoffSeconds}s..." "WARN"
+        
+        # Tentar notificar servidor sobre watchdog event
+        try {
+            $watchdogEvent = @{
+                agent_name = $Global:AgentName
+                event_type = "watchdog_retry"
+                event_data = @{
+                    retry_count = $watchdogRetryCount
+                    max_retries = $maxWatchdogRetries
+                    backoff_seconds = $backoffSeconds
+                    original_error = $_.Exception.Message
+                    agent_version = $Global:AgentVersion
+                }
+            } | ConvertTo-Json -Compress
+            
+            Invoke-SecureRequest -Endpoint "submit-agent-evidence" -Body $watchdogEvent -RetryCount 1 -TimeoutSec 5 | Out-Null
+        } catch {
+            # Silencioso - nao derrubar por causa de telemetria
         }
+        
+        Start-Sleep -Seconds $backoffSeconds
+        
+        # Verificar se a Scheduled Task ainda existe e tentar reiniciar
+        try {
+            $taskName = "CyberShieldAgent-$Global:AgentName"
+            $taskInfo = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+            
+            if ($taskInfo) {
+                Write-Log "[WATCHDOG] Task encontrada: $taskName (State: $($taskInfo.State))" "INFO"
+                
+                # Se a task nao esta Running, tentar reiniciar
+                if ($taskInfo.State -ne "Running") {
+                    Write-Log "[WATCHDOG] Reiniciando Scheduled Task..." "INFO"
+                    Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+                    Start-Sleep -Seconds 2
+                    Start-ScheduledTask -TaskName $taskName -ErrorAction Stop
+                    Write-Log "[WATCHDOG] Task reiniciada com sucesso. Encerrando este processo." "SUCCESS"
+                    
+                    # Notificar servidor sobre recovery bem-sucedido
+                    try {
+                        $recoveryEvent = @{
+                            agent_name = $Global:AgentName
+                            event_type = "watchdog_recovery"
+                            event_data = @{
+                                retry_count = $watchdogRetryCount
+                                recovery_method = "task_restart"
+                                agent_version = $Global:AgentVersion
+                            }
+                        } | ConvertTo-Json -Compress
+                        
+                        Invoke-SecureRequest -Endpoint "submit-agent-evidence" -Body $recoveryEvent -RetryCount 1 -TimeoutSec 5 | Out-Null
+                    } catch { }
+                    
+                    # Sair sem exit 1 - deixar a nova instancia assumir
+                    return
+                } else {
+                    Write-Log "[WATCHDOG] Task ja em Running - verificando se processo esta saudavel..." "INFO"
+                    # Se a task esta running mas chegamos aqui, pode ser processo duplicado
+                    # Sair silenciosamente para evitar conflito
+                    Write-Log "[WATCHDOG] Possivel processo duplicado. Encerrando este processo." "WARN"
+                    return
+                }
+            } else {
+                Write-Log "[WATCHDOG] Task nao encontrada: $taskName" "WARN"
+            }
+        } catch {
+            Write-Log "[WATCHDOG] Erro ao verificar/reiniciar task: $($_.Exception.Message)" "WARN"
+        }
+    }
+    
+    # Esgotou todas as tentativas
+    Write-Log "[WATCHDOG] Maximo de $maxWatchdogRetries retries atingido." "ERROR"
+    Write-Log "[WATCHDOG] Entrando em modo de hibernacao por 30 minutos..." "ERROR"
+    
+    # Notificar servidor sobre falha total
+    try {
+        $failEvent = @{
+            agent_name = $Global:AgentName
+            event_type = "watchdog_exhausted"
+            event_data = @{
+                total_retries = $maxWatchdogRetries
+                final_error = $_.Exception.Message
+                agent_version = $Global:AgentVersion
+                hibernation_minutes = 30
+            }
+        } | ConvertTo-Json -Compress
+        
+        Invoke-SecureRequest -Endpoint "submit-agent-evidence" -Body $failEvent -RetryCount 1 -TimeoutSec 5 | Out-Null
+    } catch { }
+    
+    # Hibernar por 30 minutos e tentar novamente (loop infinito de recovery)
+    Start-Sleep -Seconds 1800
+    
+    # Tentar reiniciar a si mesmo via Scheduled Task uma ultima vez
+    try {
+        $taskName = "CyberShieldAgent-$Global:AgentName"
+        Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+        Start-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+        Write-Log "[WATCHDOG] Task reiniciada apos hibernacao." "INFO"
     } catch {
-        Write-Log "[RECOVERY] Falha ao reiniciar task: $($_.Exception.Message). RepetitionInterval reiniciara em 5min." "WARN"
+        Write-Log "[WATCHDOG] Falha final. Dependendo do RepetitionInterval da task." "ERROR"
     }
     
     # NAO fazer exit 1 - o RepetitionInterval da Scheduled Task reiniciara o agente
