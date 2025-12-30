@@ -27,7 +27,20 @@ export interface DiagnosticIssue {
   confidence?: number;
   rule_code?: string;
   origin?: IssueOrigin; // De onde veio o problema
-  recommended_action?: string; // O que fazer
+  recommended_action_key?: string; // Chave para resolver no frontend
+}
+
+/**
+ * Valida uma issue de diagnóstico.
+ * Issues críticas/high sem origin geram warning.
+ */
+export function validateIssue(issue: DiagnosticIssue): void {
+  if ((issue.severity === 'critical' || issue.severity === 'high') && !issue.origin) {
+    console.warn(
+      `[diagnostic] Critical/High issue without origin: ${issue.issue_type}`,
+      { severity: issue.severity, description: issue.description }
+    );
+  }
 }
 
 export interface DiagnosticSummary {

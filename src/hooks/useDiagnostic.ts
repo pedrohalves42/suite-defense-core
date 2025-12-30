@@ -22,6 +22,7 @@ import {
   getSeverityColor,
   getSeverityBorderColor,
   getSeverityLabel,
+  validateIssue,
 } from '@/types/diagnostic';
 
 // Re-export types for backward compatibility
@@ -63,6 +64,9 @@ export function useDiagnostic(
 
       const issues = (data || []) as DiagnosticIssue[];
       
+      // Validate issues (logs warnings for critical/high without origin)
+      issues.forEach(validateIssue);
+      
       // Sort issues by severity
       issues.sort((a, b) => 
         (SEVERITY_ORDER[a.severity] || 99) - (SEVERITY_ORDER[b.severity] || 99)
@@ -77,11 +81,8 @@ export function useDiagnostic(
         total: issues.length,
       };
 
-      // Use canonical health rule when agentState is provided
-      // Falls back to simple check if no state provided
-      const healthy = agentState 
-        ? isAgentHealthy(agentState, summary)
-        : (summary.critical === 0 && summary.high === 0);
+      // Use canonical health rule - explicit input object
+      const healthy = isAgentHealthy({ state: agentState, summary });
 
       return {
         isHealthy: healthy,

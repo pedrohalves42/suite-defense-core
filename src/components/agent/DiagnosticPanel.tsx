@@ -25,6 +25,7 @@ import { DiagnosticSummary } from '@/components/agent/DiagnosticSummary';
 import { DiagnosticIssuesList } from '@/components/agent/DiagnosticIssuesList';
 import { type DiagnosticIssue } from '@/types/diagnostic';
 import { type AgentState } from '@/lib/agent-state-machine';
+import { sortIssuesByIntent, type DiagnosticIntent } from '@/lib/diagnostic-actions';
 import { 
   AlertCircle, 
   CheckCircle2, 
@@ -41,7 +42,7 @@ interface DiagnosticPanelProps {
   tenantId: string;
   agentState?: AgentState | null;
   variant?: 'compact' | 'full';
-  intent?: 'overview' | 'triage' | 'soc';
+  intent?: DiagnosticIntent;
   onActionComplete?: () => void;
   onAction?: (actionKey: string, issue: DiagnosticIssue) => void;
 }
@@ -59,16 +60,19 @@ export function DiagnosticPanel({
   const navigate = useNavigate();
   const { data: diagnostic, isLoading, refetch, isRefetching } = useDiagnostic(agentName, tenantId, agentState);
 
-  // Filter issues based on intent
+  // Filter and sort issues based on intent
   const filteredIssues = useMemo(() => {
     if (!diagnostic?.issues) return [];
     
+    let issues = diagnostic.issues;
+    
+    // SOC mode: only critical and high
     if (intent === 'soc') {
-      // SOC mode: only critical and high
-      return diagnostic.issues.filter(i => i.severity === 'critical' || i.severity === 'high');
+      issues = issues.filter(i => i.severity === 'critical' || i.severity === 'high');
     }
     
-    return diagnostic.issues;
+    // Sort based on intent (SOC prioritizes blocking issues)
+    return sortIssuesByIntent(issues, intent);
   }, [diagnostic?.issues, intent]);
 
   // Determine if we should show actions

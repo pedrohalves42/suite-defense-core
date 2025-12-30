@@ -3,7 +3,14 @@
  * 
  * Define ações recomendadas para cada tipo de issue de diagnóstico.
  * Garante que issues críticas sempre tenham uma ação acionável.
+ * 
+ * IMPORTANTE: Este é o sistema de chaves para ações.
+ * Labels e textos são resolvidos aqui, não persistidos nas issues.
  */
+
+import { type DiagnosticIssue, SEVERITY_ORDER } from '@/types/diagnostic';
+
+export type DiagnosticIntent = 'overview' | 'triage' | 'soc';
 
 export interface RecommendedAction {
   label: string;
@@ -190,4 +197,61 @@ export function hasRecommendedAction(issueType: string): boolean {
  */
 export function getAllActions(): Record<string, RecommendedAction> {
   return { ...ISSUE_ACTIONS };
+}
+
+/**
+ * Issue types que bloqueiam execução do agente
+ */
+const BLOCKING_ISSUE_TYPES = [
+  'isolated',
+  'agent_isolated',
+  'no_token',
+  'version_blocked',
+  'token_expired',
+  'safe_mode_active',
+];
+
+/**
+ * Verifica se uma issue bloqueia execução
+ */
+function isBlockingIssue(issue: DiagnosticIssue): boolean {
+  return BLOCKING_ISSUE_TYPES.includes(issue.issue_type);
+}
+
+/**
+ * Ordena issues baseado no intent semântico.
+ * 
+ * - SOC: críticos primeiro, depois high, depois blocking, resto
+ * - Triage: ordenação padrão por severidade
+ * - Overview: ordenação padrão por severidade
+ * 
+ * @param issues - Lista de issues
+ * @param intent - Intenção do contexto de uso
+ * @returns Issues ordenadas
+ */
+export function sortIssuesByIntent(
+  issues: DiagnosticIssue[], 
+  intent: DiagnosticIntent
+): DiagnosticIssue[] {
+  if (intent === 'soc') {
+    // SOC: critical primeiro, depois high, depois blocking, resto
+    return [...issues].sort((a, b) => {
+      // Prioridade 1: Severidade
+      const severityDiff = (SEVERITY_ORDER[a.severity] ?? 99) - (SEVERITY_ORDER[b.severity] ?? 99);
+      if (severityDiff !== 0) return severityDiff;
+      
+      // Prioridade 2: Issues que bloqueiam execução
+      const aBlocking = isBlockingIssue(a);
+      const bBlocking = isBlockingIssue(b);
+      if (aBlocking && !bBlocking) return -1;
+      if (!aBlocking && bBlocking) return 1;
+      
+      return 0;
+    });
+  }
+  
+  // Default: ordenação padrão por severidade
+  return [...issues].sort((a, b) => 
+    (SEVERITY_ORDER[a.severity] ?? 99) - (SEVERITY_ORDER[b.severity] ?? 99)
+  );
 }

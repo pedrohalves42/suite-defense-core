@@ -3,10 +3,22 @@
  * 
  * Fonte única de verdade para determinar se um agente está saudável.
  * Combina AgentState + DiagnosticSummary para definição consistente.
+ * 
+ * IMPORTANTE: Funções são determinísticas e explícitas.
+ * Ausência de dados gera warning + retorna não saudável.
  */
 
 import { type AgentState } from '@/lib/agent-state-machine';
 import { type DiagnosticSummary } from '@/types/diagnostic';
+
+/**
+ * Input estruturado para verificação de saúde.
+ * Evita defaults silenciosos e args posicionais.
+ */
+export interface HealthCheckInput {
+  state: AgentState | null | undefined;
+  summary?: DiagnosticSummary | null;
+}
 
 /**
  * Regra canônica de saúde do agente.
@@ -15,26 +27,23 @@ import { type DiagnosticSummary } from '@/types/diagnostic';
  * 1. O estado formal é 'healthy'
  * 2. Não possui issues críticas ou de alta prioridade
  * 
- * @param agentState - Estado formal derivado do agente
- * @param diagnosticSummary - Resumo de diagnóstico (opcional)
+ * @param input - Objeto com state e summary
  * @returns true se o agente está saudável
  */
-export function isAgentHealthy(
-  agentState: AgentState | null | undefined,
-  diagnosticSummary?: DiagnosticSummary | null
-): boolean {
-  // Se não temos estado, consideramos não saudável
-  if (!agentState) {
+export function isAgentHealthy(input: HealthCheckInput): boolean {
+  // Falha explícita se estado ausente
+  if (!input.state) {
+    console.warn('[health-rules] isAgentHealthy called without state - returning unhealthy');
     return false;
   }
 
   // Regra 1: Estado formal deve ser 'healthy'
-  const stateIsHealthy = agentState === 'healthy';
+  const stateIsHealthy = input.state === 'healthy';
   
   // Regra 2: Sem issues críticas ou de alta prioridade
   const noActionableIssues = 
-    !diagnosticSummary || 
-    (diagnosticSummary.critical === 0 && diagnosticSummary.high === 0);
+    !input.summary || 
+    (input.summary.critical === 0 && input.summary.high === 0);
   
   return stateIsHealthy && noActionableIssues;
 }
@@ -42,37 +51,37 @@ export function isAgentHealthy(
 /**
  * Determina o nível de severidade geral do agente
  * baseado em estado + diagnóstico
+ * 
+ * @param input - Objeto com state e summary (usa HealthCheckInput)
  */
-export function getAgentHealthLevel(
-  agentState: AgentState | null | undefined,
-  diagnosticSummary?: DiagnosticSummary | null
-): 'healthy' | 'warning' | 'critical' {
-  if (!agentState) {
+export function getAgentHealthLevel(input: HealthCheckInput): 'healthy' | 'warning' | 'critical' {
+  if (!input.state) {
+    console.warn('[health-rules] getAgentHealthLevel called without state - returning critical');
     return 'critical';
   }
 
   // Estados críticos
-  if (agentState === 'isolated' || agentState === 'quarantined') {
+  if (input.state === 'isolated' || input.state === 'quarantined') {
     return 'critical';
   }
 
   // Issues críticas
-  if (diagnosticSummary && diagnosticSummary.critical > 0) {
+  if (input.summary && input.summary.critical > 0) {
     return 'critical';
   }
 
   // Estados de atenção
-  if (agentState === 'offline' || agentState === 'safe_mode') {
+  if (input.state === 'offline' || input.state === 'safe_mode') {
     return 'warning';
   }
 
   // Issues de alta prioridade
-  if (diagnosticSummary && diagnosticSummary.high > 0) {
+  if (input.summary && input.summary.high > 0) {
     return 'warning';
   }
 
   // Estados degradados
-  if (agentState === 'degraded' || agentState === 'updating' || agentState === 'rollback') {
+  if (input.state === 'degraded' || input.state === 'updating' || input.state === 'rollback') {
     return 'warning';
   }
 
