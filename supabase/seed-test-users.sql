@@ -6,6 +6,34 @@
 -- =====================================================
 
 -- =====================================================
+-- 0. PRE-REQUISITOS: VERIFICAR AUTH.USERS
+-- =====================================================
+DO $$
+DECLARE
+  missing_users text[];
+BEGIN
+  SELECT array_agg(email) INTO missing_users
+  FROM (
+    VALUES
+      ('admin@test.com'),
+      ('member@test.com'),
+      ('super@cybershield.test'),
+      ('admin-b@test.com'),
+      ('operator@test.com'),
+      ('viewer@test.com')
+  ) AS required(email)
+  WHERE NOT EXISTS (
+    SELECT 1 FROM auth.users u WHERE u.email = required.email
+  );
+
+  IF array_length(missing_users, 1) > 0 THEN
+    RAISE WARNING 
+      'SEED PARCIAL: Usuarios auth ausentes: %. Execute setup-test-users.ts primeiro.',
+      missing_users;
+  END IF;
+END $$;
+
+-- =====================================================
 -- 1. LIMPEZA DE DADOS ANTERIORES
 -- =====================================================
 
@@ -176,33 +204,41 @@ ON CONFLICT (tenant_id, feature_key) DO UPDATE SET
   quota_limit = EXCLUDED.quota_limit;
 
 -- =====================================================
+-- 5.5 GARANTIR SUBSCRIPTION_PLANS EXISTEM
+-- =====================================================
+INSERT INTO public.subscription_plans (id, name, max_users, max_agents, max_scans_per_month, price_per_device)
+VALUES
+  ('00000000-0000-0000-0000-000000000001'::uuid, 'free', 3, 5, 100, 0),
+  ('00000000-0000-0000-0000-000000000002'::uuid, 'starter', 10, 50, 1000, 299),
+  ('00000000-0000-0000-0000-000000000003'::uuid, 'professional', 50, 200, 5000, 499)
+ON CONFLICT (id) DO NOTHING;
+
+-- =====================================================
 -- 6. CRIAR TENANT_SUBSCRIPTIONS PARA TESTES
 -- =====================================================
 
--- Subscription para Tenant A (Starter plan)
+-- Subscription para Tenant A (Starter plan - ID fixo)
 INSERT INTO public.tenant_subscriptions (id, tenant_id, plan_id, status, device_quantity)
-SELECT
+VALUES (
   'a0000000-0000-0000-0000-000000000011'::uuid,
   'a0000000-0000-0000-0000-000000000001'::uuid,
-  id,
+  '00000000-0000-0000-0000-000000000002'::uuid, -- starter
   'active',
   30
-FROM public.subscription_plans WHERE name = 'starter'
-LIMIT 1
+)
 ON CONFLICT (id) DO UPDATE SET
   status = EXCLUDED.status,
   device_quantity = EXCLUDED.device_quantity;
 
--- Subscription para Tenant B (Free plan)
+-- Subscription para Tenant B (Free plan - ID fixo)
 INSERT INTO public.tenant_subscriptions (id, tenant_id, plan_id, status, device_quantity)
-SELECT
+VALUES (
   'b0000000-0000-0000-0000-000000000022'::uuid,
   'b0000000-0000-0000-0000-000000000002'::uuid,
-  id,
+  '00000000-0000-0000-0000-000000000001'::uuid, -- free
   'active',
   3
-FROM public.subscription_plans WHERE name = 'free'
-LIMIT 1
+)
 ON CONFLICT (id) DO UPDATE SET
   status = EXCLUDED.status,
   device_quantity = EXCLUDED.device_quantity;
