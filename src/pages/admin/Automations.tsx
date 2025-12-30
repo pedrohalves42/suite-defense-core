@@ -51,7 +51,7 @@ export default function Automations() {
         .from('scheduled_jobs')
         .select('*')
         .eq('tenant_id', tenant!.id)
-        .order('job_name');
+        .order('name');
       if (error) throw error;
       return data as ScheduledJob[];
     },

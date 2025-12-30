@@ -1,5 +1,6 @@
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
+import NotificationChannels from "@/pages/admin/NotificationChannels";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -218,6 +219,7 @@ const App = () => (
                 <Route path="compliance-timeline" element={<ComplianceTimeline />} />
                 <Route path="risk-score" element={<RiskScore />} />
                 <Route path="playbooks" element={<Playbooks />} />
+                <Route path="notification-channels" element={<NotificationChannels />} />
                 <Route path="decision-audit" element={<DecisionAudit />} />
                 <Route path="rules-management" element={<RulesManagement />} />
                 <Route path="realtime-security" element={<RealTimeSecurityDashboard />} />

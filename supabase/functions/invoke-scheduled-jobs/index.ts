@@ -1,0 +1,281 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0';
+import { corsHeaders } from '../_shared/cors.ts';
+
+/**
+ * Invoca todos os scheduled_jobs que estão habilitados e no horário de execução.
+ * Este endpoint pode ser chamado por:
+ * - pg_cron do Supabase
+ * - Cron externo (Vercel Cron, Railway, etc.)
+ * - Manualmente via dashboard
+ */
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const requestId = crypto.randomUUID();
+  console.log(`[${requestId}] invoke-scheduled-jobs started`);
+
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const now = new Date();
+    const results: Array<{
+      name: string;
+      job_type: string;
+      status: 'executed' | 'skipped' | 'error';
+      message?: string;
+    }> = [];
+
+    // Fetch all enabled scheduled jobs
+    const { data: scheduledJobs, error: fetchError } = await supabase
+      .from('scheduled_jobs')
+      .select('*')
+      .eq('enabled', true);
+
+    if (fetchError) {
+      console.error(`[${requestId}] Error fetching scheduled jobs:`, fetchError);
+      throw fetchError;
+    }
+
+    console.log(`[${requestId}] Found ${scheduledJobs?.length || 0} enabled scheduled jobs`);
+
+    // Map of job_type to edge function name
+    const jobTypeToFunction: Record<string, string> = {
+      'edge_function': '', // Generic - uses name mapping below
+      'autonomous_safe_mode': 'autonomous-safe-mode',
+      'auto_cleanup': 'auto-cleanup-jobs',
+      'auto_execute_ai': 'auto-execute-ai-actions',
+      'watchdog_non_execution': 'watchdog-non-execution',
+      'ai_system_analyzer': 'ai-system-analyzer',
+      'integrity_sentinel': 'integrity-sentinel',
+      'scheduled_reports': 'scheduled-report-generator',
+      'executive_report': 'generate-executive-report',
+      'detect_blocked_attempts': 'detect-blocked-attempts',
+      'ai_insight_generator': 'ai-get-insights',
+      'scan_vulnerabilities': 'scan-vulnerabilities',
+    };
+
+    // Name-based mapping for edge_function type jobs
+    const nameToFunction: Record<string, string> = {
+      'Autonomous SAFE_MODE': 'autonomous-safe-mode',
+      'Auto Cleanup Jobs': 'auto-cleanup-jobs',
+      'Auto Execute AI Actions': 'auto-execute-ai-actions',
+      'Watchdog Non-Execution': 'watchdog-non-execution',
+      'AI System Analyzer': 'ai-system-analyzer',
+      'Integrity Sentinel': 'integrity-sentinel',
+      'Scheduled Report Generator': 'scheduled-report-generator',
+      'Executive Report': 'generate-executive-report',
+      'Detect Blocked Attempts': 'detect-blocked-attempts',
+      'AI Insight Generator': 'ai-get-insights',
+    };
+
+    // Parse cron expression to check if job should run
+    const shouldRunNow = (cronExpr: string, lastRunAt: string | null): boolean => {
+      // For simplicity, check if next_run_at is in the past or null
+      // More advanced: use cron parser library
+      // For now, always run if enabled (let the function be idempotent)
+      return true;
+    };
+
+    for (const job of scheduledJobs || []) {
+      try {
+        // Determine which function to call
+        let functionName = jobTypeToFunction[job.job_type];
+        if (!functionName && job.job_type === 'edge_function') {
+          functionName = nameToFunction[job.name] || '';
+        }
+
+        if (!functionName) {
+          console.log(`[${requestId}] No function mapping for job: ${job.name} (type: ${job.job_type})`);
+          results.push({
+            name: job.name,
+            job_type: job.job_type,
+            status: 'skipped',
+            message: 'No function mapping'
+          });
+          continue;
+        }
+
+        // Check if should run based on next_run_at
+        if (job.next_run_at && new Date(job.next_run_at) > now) {
+          console.log(`[${requestId}] Job ${job.name} not due yet (next_run_at: ${job.next_run_at})`);
+          results.push({
+            name: job.name,
+            job_type: job.job_type,
+            status: 'skipped',
+            message: `Not due until ${job.next_run_at}`
+          });
+          continue;
+        }
+
+        console.log(`[${requestId}] Invoking function: ${functionName} for job: ${job.name}`);
+
+        // Invoke the edge function
+        const { data: invokeData, error: invokeError } = await supabase.functions.invoke(functionName, {
+          body: { 
+            scheduled_job_id: job.id,
+            tenant_id: job.tenant_id,
+            triggered_by: 'scheduled'
+          }
+        });
+
+        if (invokeError) {
+          console.error(`[${requestId}] Error invoking ${functionName}:`, invokeError);
+          results.push({
+            name: job.name,
+            job_type: job.job_type,
+            status: 'error',
+            message: invokeError.message
+          });
+          continue;
+        }
+
+        // Update last_run_at and calculate next_run_at
+        const nextRunAt = calculateNextRun(job.cron_expr, now);
+        
+        await supabase
+          .from('scheduled_jobs')
+          .update({ 
+            last_run_at: now.toISOString(),
+            next_run_at: nextRunAt?.toISOString() || null
+          })
+          .eq('id', job.id);
+
+        console.log(`[${requestId}] Successfully executed job: ${job.name}`);
+        results.push({
+          name: job.name,
+          job_type: job.job_type,
+          status: 'executed',
+          message: 'Success'
+        });
+
+      } catch (jobError) {
+        console.error(`[${requestId}] Error processing job ${job.name}:`, jobError);
+        results.push({
+          name: job.name,
+          job_type: job.job_type,
+          status: 'error',
+          message: jobError instanceof Error ? jobError.message : 'Unknown error'
+        });
+      }
+    }
+
+    const summary = {
+      success: true,
+      total_jobs: scheduledJobs?.length || 0,
+      executed: results.filter(r => r.status === 'executed').length,
+      skipped: results.filter(r => r.status === 'skipped').length,
+      errors: results.filter(r => r.status === 'error').length,
+      results,
+      timestamp: now.toISOString()
+    };
+
+    console.log(`[${requestId}] Completed:`, summary);
+
+    return new Response(
+      JSON.stringify(summary),
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+
+  } catch (error) {
+    console.error(`[${requestId}] Fatal error:`, error);
+    
+    return new Response(
+      JSON.stringify({ 
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
+  }
+});
+
+// Simple cron expression parser for common patterns
+// Supports: star-slash-n (every n), specific numbers, star
+function calculateNextRun(cronExpr: string, from: Date): Date | null {
+  try {
+    const parts = cronExpr.split(' ');
+    if (parts.length !== 5) return null;
+
+    const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+    const next = new Date(from);
+    
+    // Handle */n patterns for minutes
+    if (minute.startsWith('*/')) {
+      const interval = parseInt(minute.slice(2), 10);
+      const currentMinute = next.getMinutes();
+      const nextMinute = Math.ceil((currentMinute + 1) / interval) * interval;
+      
+      if (nextMinute >= 60) {
+        next.setHours(next.getHours() + 1);
+        next.setMinutes(nextMinute - 60);
+      } else {
+        next.setMinutes(nextMinute);
+      }
+      next.setSeconds(0);
+      next.setMilliseconds(0);
+      return next;
+    }
+
+    // Handle specific minute with */n hours
+    if (minute !== '*' && hour.startsWith('*/')) {
+      const hourInterval = parseInt(hour.slice(2), 10);
+      const targetMinute = parseInt(minute, 10);
+      
+      next.setMinutes(targetMinute);
+      next.setSeconds(0);
+      next.setMilliseconds(0);
+      
+      // If we've passed this minute, go to next hour interval
+      if (next <= from) {
+        const currentHour = next.getHours();
+        const nextHour = Math.ceil((currentHour + 1) / hourInterval) * hourInterval;
+        
+        if (nextHour >= 24) {
+          next.setDate(next.getDate() + 1);
+          next.setHours(nextHour - 24);
+        } else {
+          next.setHours(nextHour);
+        }
+      }
+      return next;
+    }
+
+    // Handle specific hour and minute (e.g., "0 6 * * *" = 6:00 daily)
+    if (!minute.includes('*') && !hour.includes('*')) {
+      const targetMinute = parseInt(minute, 10);
+      const targetHour = parseInt(hour, 10);
+      
+      next.setHours(targetHour);
+      next.setMinutes(targetMinute);
+      next.setSeconds(0);
+      next.setMilliseconds(0);
+      
+      // If we've passed this time today, schedule for tomorrow
+      if (next <= from) {
+        next.setDate(next.getDate() + 1);
+      }
+      return next;
+    }
+
+    // Default: add 1 hour
+    next.setHours(next.getHours() + 1);
+    next.setMinutes(0);
+    next.setSeconds(0);
+    next.setMilliseconds(0);
+    return next;
+
+  } catch {
+    return null;
+  }
+}

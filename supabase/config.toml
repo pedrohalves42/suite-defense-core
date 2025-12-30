@@ -574,3 +574,8 @@ verify_jwt = true
 # === Action Center ===
 [functions.action-center-feed]
 verify_jwt = true
+
+# === Invoke Scheduled Jobs (CRON trigger) ===
+[functions.invoke-scheduled-jobs]
+verify_jwt = false
+schedule = "* * * * *"
