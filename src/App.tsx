@@ -2,7 +2,7 @@ import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminLayout } from "./components/AdminLayout";
 import { SuperAdminLayout } from "./components/SuperAdminLayout";
@@ -60,7 +60,6 @@ import RiskAnalysis from "./pages/admin/super/RiskAnalysis";
 import RolloutPolicies from "./pages/super-admin/RolloutPolicies";
 import StripeSetup from "./pages/admin/StripeSetup";
 import DiagnosticsCenter from "./pages/admin/DiagnosticsCenter";
-import AgentTroubleshooting from "./pages/admin/AgentTroubleshooting";
 import BuildHealthDashboard from "./pages/admin/BuildHealthDashboard";
 import SystemLogs from "./pages/admin/SystemLogs";
 import AgentHealthMonitor from "./pages/admin/AgentHealthMonitor";
@@ -235,7 +234,7 @@ const App = () => (
                 <Route path="security" element={<SecurityDashboard />} />
                 <Route path="audit-logs" element={<AuditLogs />} />
                 <Route path="settings" element={<Settings />} />
-                <Route path="agent-troubleshooting" element={<AgentTroubleshooting />} />
+                <Route path="agent-troubleshooting" element={<Navigate to="/admin/diagnostics" replace />} />
                 <Route path="build-health" element={<BuildHealthDashboard />} />
                 <Route path="system-logs" element={<SystemLogs />} />
                 <Route path="custom-trials" element={<CustomTrials />} />

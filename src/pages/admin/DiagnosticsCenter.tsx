@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -44,7 +45,9 @@ import {
   Activity,
   Network,
   FileText,
-  Wrench
+  Wrench,
+  Target,
+  Eye
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/date-utils';
@@ -69,14 +72,16 @@ interface ProblematicAgent {
 }
 
 export default function DiagnosticsCenter() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const preSelectedAgentId = searchParams.get('agent');
+  const viewMode = searchParams.get('view') as 'default' | 'soc' | null;
   
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(preSelectedAgentId);
   const [agentToCleanup, setAgentToCleanup] = useState<ProblematicAgent | null>(null);
   const [showBulkCleanupDialog, setShowBulkCleanupDialog] = useState(false);
+  const [socMode, setSocMode] = useState<boolean>(viewMode === 'soc');
 
   // Query all agents for list
   const { data: allAgents = [], isLoading: agentsLoading, refetch: refetchAgents } = useQuery({
@@ -206,12 +211,40 @@ export default function DiagnosticsCenter() {
     }
   };
 
+  // SOC mode handler
+  const handleSocModeChange = (value: string) => {
+    const isSoc = value === 'soc';
+    setSocMode(isSoc);
+    setSearchParams(prev => {
+      if (isSoc) {
+        prev.set('view', 'soc');
+      } else {
+        prev.delete('view');
+      }
+      return prev;
+    });
+  };
+
   // Counts
   const problemCounts = useMemo(() => ({
     total: problematicAgents.length,
     noHeartbeat: problematicAgents.filter(a => a.issue_type === 'no_heartbeat' || a.issue_type === 'stale_heartbeat').length,
     noToken: problematicAgents.filter(a => a.issue_type === 'no_token').length,
+    criticalCount: problematicAgents.filter(a => a.issue_type === 'no_token' || a.issue_type === 'no_heartbeat').length,
   }), [problematicAgents]);
+
+  // Filter agents based on SOC mode
+  const filteredAgents = useMemo(() => {
+    if (!socMode) return allAgents;
+    // In SOC mode, only show agents with critical issues (no heartbeat, no token)
+    return allAgents.filter(a => 
+      problematicAgents.some(p => p.id === a.id && 
+        (p.issue_type === 'no_heartbeat' || p.issue_type === 'no_token' || p.issue_type === 'stale_heartbeat')
+      ) ||
+      a.is_isolated ||
+      !!a.safe_mode_entered_at
+    );
+  }, [allAgents, problematicAgents, socMode]);
 
   if (agentsLoading) {
     return (
@@ -235,15 +268,41 @@ export default function DiagnosticsCenter() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Stethoscope className="h-6 w-6 text-primary" />
             Central de Diagnósticos
+            {socMode && (
+              <Badge variant="destructive" className="ml-2">
+                <Target className="h-3 w-3 mr-1" />
+                Modo SOC
+              </Badge>
+            )}
           </h1>
           <p className="text-muted-foreground mt-1">
-            Identifique e resolva problemas de instalação e conectividade
+            {socMode 
+              ? 'Visualização focada em problemas críticos — ação rápida'
+              : 'Identifique e resolva problemas de instalação e conectividade'
+            }
           </p>
         </div>
-        <Button variant="outline" onClick={() => { refetchAgents(); refetchProblematic(); }}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <ToggleGroup 
+            type="single" 
+            value={socMode ? 'soc' : 'default'}
+            onValueChange={handleSocModeChange}
+            className="border rounded-lg p-1"
+          >
+            <ToggleGroupItem value="default" className="text-xs px-3">
+              <Eye className="h-3.5 w-3.5 mr-1.5" />
+              Completo
+            </ToggleGroupItem>
+            <ToggleGroupItem value="soc" className="text-xs px-3">
+              <Target className="h-3.5 w-3.5 mr-1.5" />
+              SOC
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <Button variant="outline" onClick={() => { refetchAgents(); refetchProblematic(); }}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -285,13 +344,15 @@ export default function DiagnosticsCenter() {
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Agent List */}
-        <Card className="lg:col-span-1">
+        <Card className={`lg:col-span-1 ${socMode ? 'border-destructive/30' : ''}`}>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Computer className="h-4 w-4" />
-              Computadores ({allAgents.length})
+              {socMode ? 'Críticos' : 'Computadores'} ({socMode ? filteredAgents.length : allAgents.length})
             </CardTitle>
-            <CardDescription>Clique para diagnosticar</CardDescription>
+            <CardDescription>
+              {socMode ? 'Apenas agentes que requerem ação imediata' : 'Clique para diagnosticar'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <ScrollArea className="h-[500px]">
@@ -334,7 +395,9 @@ export default function DiagnosticsCenter() {
                   </div>
                 )}
 
-                {/* All other agents */}
+                {/* All other agents - hide in SOC mode */}
+                {!socMode && (
+                  <>
                 <p className="text-xs font-medium text-muted-foreground mb-2 px-1">TODOS</p>
                 {allAgents.filter(a => !problematicAgents.find(p => p.id === a.id)).map((agent) => {
                   const isSelected = selectedAgentId === agent.id;
@@ -369,6 +432,8 @@ export default function DiagnosticsCenter() {
                     </button>
                   );
                 })}
+                  </>
+                )}
               </div>
             </ScrollArea>
           </CardContent>

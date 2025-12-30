@@ -1,5 +1,9 @@
 /**
- * DiagnosticPanel - Componente modular para diagnóstico de agentes
+ * DiagnosticPanel - Orquestrador modular para diagnóstico de agentes
+ * 
+ * Compõe:
+ * - DiagnosticSummary (badges)
+ * - DiagnosticIssuesList (lista de problemas)
  * 
  * Modos:
  * - compact: Resumo para uso em drawers (top 3 issues)
@@ -7,24 +11,16 @@
  */
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { 
-  useDiagnostic, 
-  getSeverityColor, 
-  getSeverityBorderColor,
-  getSeverityLabel,
-  type DiagnosticIssue 
-} from '@/hooks/useDiagnostic';
+import { useDiagnostic } from '@/hooks/useDiagnostic';
+import { DiagnosticSummary } from '@/components/agent/DiagnosticSummary';
+import { DiagnosticIssuesList } from '@/components/agent/DiagnosticIssuesList';
 import { 
   AlertCircle, 
   CheckCircle2, 
-  XCircle, 
-  AlertTriangle,
-  Info,
   RefreshCw,
   ExternalLink,
   Activity
@@ -37,76 +33,6 @@ interface DiagnosticPanelProps {
   tenantId: string;
   variant?: 'compact' | 'full';
   onActionComplete?: () => void;
-}
-
-const SEVERITY_ICONS = {
-  critical: XCircle,
-  high: AlertTriangle,
-  medium: AlertCircle,
-  info: Info,
-};
-
-function IssueItem({ issue, compact }: { issue: DiagnosticIssue; compact?: boolean }) {
-  const Icon = SEVERITY_ICONS[issue.severity] || AlertCircle;
-  
-  return (
-    <div className={`p-3 rounded-lg border-l-4 bg-card ${getSeverityBorderColor(issue.severity)}`}>
-      <div className="flex items-start gap-3">
-        <Icon className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
-          issue.severity === 'critical' ? 'text-destructive' :
-          issue.severity === 'high' ? 'text-orange-500' :
-          issue.severity === 'medium' ? 'text-yellow-500' :
-          'text-blue-500'
-        }`} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-sm">{issue.description}</span>
-            <Badge className={`${getSeverityColor(issue.severity)} text-xs`}>
-              {getSeverityLabel(issue.severity)}
-            </Badge>
-          </div>
-          {!compact && issue.details && Object.keys(issue.details).length > 0 && (
-            <div className="mt-2">
-              <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-                {JSON.stringify(issue.details, null, 2)}
-              </pre>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SummaryBadges({ summary }: { summary: { critical: number; high: number; medium: number; info: number } }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {summary.critical > 0 && (
-        <Badge variant="destructive" className="gap-1">
-          <XCircle className="h-3 w-3" />
-          {summary.critical} crítico{summary.critical > 1 ? 's' : ''}
-        </Badge>
-      )}
-      {summary.high > 0 && (
-        <Badge className="bg-orange-500 text-white gap-1">
-          <AlertTriangle className="h-3 w-3" />
-          {summary.high} alto{summary.high > 1 ? 's' : ''}
-        </Badge>
-      )}
-      {summary.medium > 0 && (
-        <Badge className="bg-yellow-500 text-black gap-1">
-          <AlertCircle className="h-3 w-3" />
-          {summary.medium} médio{summary.medium > 1 ? 's' : ''}
-        </Badge>
-      )}
-      {summary.info > 0 && (
-        <Badge className="bg-blue-500 text-white gap-1">
-          <Info className="h-3 w-3" />
-          {summary.info} info
-        </Badge>
-      )}
-    </div>
-  );
 }
 
 export function DiagnosticPanel({
@@ -181,9 +107,6 @@ export function DiagnosticPanel({
 
   // Compact mode - show summary and top 3 issues
   if (variant === 'compact') {
-    const displayIssues = diagnostic.issues.slice(0, 3);
-    const remainingCount = diagnostic.issues.length - 3;
-
     return (
       <div className="space-y-4">
         {/* Summary */}
@@ -206,21 +129,16 @@ export function DiagnosticPanel({
               )}
             </Button>
           </div>
-          <SummaryBadges summary={diagnostic.summary} />
+          <DiagnosticSummary summary={diagnostic.summary} />
         </div>
 
         {/* Top issues */}
-        <div className="space-y-2">
-          {displayIssues.map((issue, idx) => (
-            <IssueItem key={idx} issue={issue} compact />
-          ))}
-          
-          {remainingCount > 0 && (
-            <p className="text-xs text-muted-foreground text-center py-2">
-              + {remainingCount} problema{remainingCount > 1 ? 's' : ''} adiciona{remainingCount > 1 ? 'is' : 'l'}
-            </p>
-          )}
-        </div>
+        <DiagnosticIssuesList 
+          issues={diagnostic.issues} 
+          compact 
+          maxItems={3}
+          showRemainingCount
+        />
 
         {/* Action button */}
         <Button 
@@ -264,16 +182,12 @@ export function DiagnosticPanel({
           </Button>
         </div>
         <div className="pt-2">
-          <SummaryBadges summary={diagnostic.summary} />
+          <DiagnosticSummary summary={diagnostic.summary} />
         </div>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[400px] pr-4">
-          <div className="space-y-3">
-            {diagnostic.issues.map((issue, idx) => (
-              <IssueItem key={idx} issue={issue} />
-            ))}
-          </div>
+          <DiagnosticIssuesList issues={diagnostic.issues} />
         </ScrollArea>
       </CardContent>
     </Card>

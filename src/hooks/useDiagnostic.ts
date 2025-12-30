@@ -5,39 +5,28 @@
  * - Lista de issues do agente
  * - Resumo por severidade
  * - Integração com state machine
+ * 
+ * IMPORTANTE: Este hook é READ-ONLY.
+ * Para ações de remediação, use useAgentActions ou useRemediationActions.
  */
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { 
+  type DiagnosticIssue, 
+  type DiagnosticSummary, 
+  type DiagnosticResult,
+  SEVERITY_ORDER,
+  getSeverityColor,
+  getSeverityBorderColor,
+  getSeverityLabel,
+} from '@/types/diagnostic';
 
-export interface DiagnosticIssue {
-  issue_type: string;
-  severity: 'critical' | 'high' | 'medium' | 'info';
-  description: string;
-  details: Record<string, unknown>;
-}
+// Re-export types for backward compatibility
+export type { DiagnosticIssue, DiagnosticSummary, DiagnosticResult };
 
-export interface DiagnosticSummary {
-  critical: number;
-  high: number;
-  medium: number;
-  info: number;
-  total: number;
-}
-
-export interface DiagnosticResult {
-  isHealthy: boolean;
-  issues: DiagnosticIssue[];
-  summary: DiagnosticSummary;
-  lastCheck: string;
-}
-
-const SEVERITY_ORDER: Record<string, number> = {
-  critical: 0,
-  high: 1,
-  medium: 2,
-  info: 3,
-};
+// Re-export styling utilities for backward compatibility
+export { getSeverityColor, getSeverityBorderColor, getSeverityLabel };
 
 export function useDiagnostic(agentName: string | null, tenantId: string | null) {
   return useQuery({
@@ -86,35 +75,4 @@ export function useDiagnostic(agentName: string | null, tenantId: string | null)
     staleTime: 30000, // 30 seconds
     refetchInterval: 60000, // 1 minute
   });
-}
-
-// Utility functions for severity styling
-export function getSeverityColor(severity: string): string {
-  switch (severity) {
-    case 'critical': return 'bg-destructive text-destructive-foreground';
-    case 'high': return 'bg-orange-500 text-white';
-    case 'medium': return 'bg-yellow-500 text-black';
-    case 'info': return 'bg-blue-500 text-white';
-    default: return 'bg-muted text-muted-foreground';
-  }
-}
-
-export function getSeverityBorderColor(severity: string): string {
-  switch (severity) {
-    case 'critical': return 'border-l-destructive';
-    case 'high': return 'border-l-orange-500';
-    case 'medium': return 'border-l-yellow-500';
-    case 'info': return 'border-l-blue-500';
-    default: return 'border-l-muted';
-  }
-}
-
-export function getSeverityLabel(severity: string): string {
-  switch (severity) {
-    case 'critical': return 'Crítico';
-    case 'high': return 'Alto';
-    case 'medium': return 'Médio';
-    case 'info': return 'Informativo';
-    default: return severity;
-  }
 }
