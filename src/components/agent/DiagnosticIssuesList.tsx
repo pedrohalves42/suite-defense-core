@@ -67,11 +67,12 @@ function DiagnosticIssueItem({ issue, compact, showActions = true, onAction }: D
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="outline" className="text-xs gap-1">
+                    <Badge variant="outline" className={`text-xs gap-1 ${issue.origin.overrides_local ? 'border-orange-500/50 text-orange-600' : ''}`}>
                       {issue.origin.type === 'group_policy' && (
                         <>
                           <Users className="h-3 w-3" />
                           {issue.origin.source_name || 'Política de Grupo'}
+                          {issue.origin.overrides_local && <span className="text-[10px] opacity-75">• Sobrepõe</span>}
                         </>
                       )}
                       {issue.origin.type === 'agent_config' && (
@@ -101,8 +102,10 @@ function DiagnosticIssueItem({ issue, compact, showActions = true, onAction }: D
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {issue.origin.overrides_local 
-                      ? 'Sobrepõe configuração local do agente'
+                    {issue.origin.overrides_local && issue.origin.source_name
+                      ? `Política do grupo "${issue.origin.source_name}" sobrepõe configuração local`
+                      : issue.origin.overrides_local
+                      ? 'Política de grupo sobrepõe configuração local'
                       : `Origem: ${issue.origin.type}`
                     }
                     {issue.origin.policy_code && (

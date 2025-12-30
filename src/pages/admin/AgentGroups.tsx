@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Shield } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { HighImpactConfirmDialog, needsHighImpactConfirmation } from '@/components/ui/high-impact-confirm-dialog';
 
 export default function AgentGroups() {
   const { groups, memberCounts, isLoading, createGroup, updateGroup, deleteGroup } = useAgentGroups();
@@ -40,6 +41,7 @@ export default function AgentGroups() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddAgentsOpen, setIsAddAgentsOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [createSearchTerm, setCreateSearchTerm] = useState('');
   
@@ -81,8 +83,22 @@ export default function AgentGroups() {
 
   const handleDeleteGroup = async () => {
     if (!selectedGroupId) return;
+    const memberCount = memberCounts[selectedGroupId] || 0;
+    
+    // Check if high impact confirmation is needed
+    if (needsHighImpactConfirmation(memberCount)) {
+      setIsDeleteConfirmOpen(true);
+      return;
+    }
+    
+    await executeDeleteGroup();
+  };
+
+  const executeDeleteGroup = async () => {
+    if (!selectedGroupId) return;
     await deleteGroup.mutateAsync(selectedGroupId);
     setSelectedGroupId(null);
+    setIsDeleteConfirmOpen(false);
   };
 
   const handleAddAgents = async () => {
@@ -560,6 +576,18 @@ export default function AgentGroups() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* High Impact Delete Confirmation */}
+      <HighImpactConfirmDialog
+        open={isDeleteConfirmOpen}
+        onOpenChange={setIsDeleteConfirmOpen}
+        impactCount={selectedGroupId ? (memberCounts[selectedGroupId] || 0) : 0}
+        impactType="computers"
+        actionLabel="Excluir Grupo"
+        actionDescription={`O grupo "${selectedGroup?.name}" será excluído permanentemente. Os computadores não serão removidos do sistema, apenas desvinculados do grupo.`}
+        onConfirm={executeDeleteGroup}
+        destructive
+      />
     </AdminPageLayout>
   );
 }
