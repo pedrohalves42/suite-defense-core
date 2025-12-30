@@ -12326,6 +12326,7 @@ export type Database = {
         Returns: undefined
       }
       parse_version_code: { Args: { version_text: string }; Returns: number }
+      persist_chain_breaks: { Args: never; Returns: number }
       process_autonomous_safe_mode: { Args: never; Returns: Json }
       process_safe_mode_entry: {
         Args: {
