@@ -224,3 +224,82 @@ export const SuggestJobCleanupPayloadSchema = z.object({
   older_than_days: z.number().int().min(0).max(365).optional().default(7),
   reason: z.string().min(1).max(300),
 });
+
+// ========== NOVOS AI ACTION PAYLOADS (FASE 3) ==========
+
+export const DeleteOldDataPayloadSchema = z.object({
+  data_type: z.enum(['jobs', 'logs', 'metrics', 'alerts', 'all']),
+  older_than_days: z.number().int().min(1).max(365).default(30),
+  job_status: z.enum(['stuck', 'failed', 'pending', 'all']).optional().default('all'),
+  dry_run: z.boolean().optional().default(false),
+  reason: z.string().min(1).max(300),
+});
+
+export const QuarantineAgentPayloadSchema = z.object({
+  agent_name: AgentNameSchema,
+  reason: z.string().min(1).max(500),
+  block_network: z.boolean().optional().default(true),
+  notify_admin: z.boolean().optional().default(true),
+  duration_hours: z.number().int().min(1).max(720).optional(), // max 30 dias
+});
+
+export const IsolateAgentPayloadSchema = z.object({
+  agent_name: AgentNameSchema,
+  reason: z.string().min(1).max(500),
+  isolation_level: z.enum(['soft', 'hard', 'full']).default('soft'),
+  allow_management: z.boolean().optional().default(true),
+  duration_hours: z.number().int().min(1).max(720).optional(),
+});
+
+export const RevokeTokenPayloadSchema = z.object({
+  agent_name: AgentNameSchema,
+  reason: z.string().min(1).max(300),
+  force_reenrollment: z.boolean().optional().default(false),
+});
+
+export const DisableUserPayloadSchema = z.object({
+  user_email: z.string().email(),
+  reason: z.string().min(1).max(500),
+  notify_user: z.boolean().optional().default(false),
+  duration_hours: z.number().int().min(1).max(8760).optional(), // max 1 ano
+});
+
+export const BlockIpPayloadSchema = z.object({
+  ip_address: z.string().ip({ version: 'v4' }),
+  reason: z.string().min(1).max(300),
+  duration_hours: z.number().int().min(1).max(8760).optional().default(24),
+  scope: z.enum(['tenant', 'agent', 'global']).default('tenant'),
+  agent_name: AgentNameSchema.optional(),
+});
+
+export const IncludeFirewallRulePayloadSchema = z.object({
+  agent_name: AgentNameSchema,
+  rule_type: z.enum(['allow', 'block']),
+  protocol: z.enum(['tcp', 'udp', 'icmp', 'any']).default('any'),
+  port: z.number().int().min(1).max(65535).optional(),
+  port_range: z.string().regex(/^\d+-\d+$/).optional(),
+  ip_address: z.string().ip().optional(),
+  direction: z.enum(['inbound', 'outbound', 'both']).default('inbound'),
+  reason: z.string().min(1).max(300),
+});
+
+export const RestartServicePayloadSchema = z.object({
+  agent_name: AgentNameSchema,
+  service_name: z.string().min(1).max(255).regex(/^[a-zA-Z0-9_-]+$/),
+  force: z.boolean().optional().default(false),
+  timeout_seconds: z.number().int().min(10).max(300).optional().default(60),
+  reason: z.string().min(1).max(300),
+});
+
+export const AcknowledgeAlertPayloadSchema = z.object({
+  alert_ids: z.array(z.string().uuid()).min(1).max(100).optional(),
+  acknowledge_all: z.boolean().optional().default(false),
+  reason: z.string().min(1).max(300),
+});
+
+export const CleanupStuckJobsPayloadSchema = z.object({
+  agent_name: AgentNameSchema.optional(),
+  older_than_hours: z.number().int().min(1).max(168).default(24), // max 7 dias
+  job_types: z.array(z.string()).optional(),
+  dry_run: z.boolean().optional().default(false),
+});

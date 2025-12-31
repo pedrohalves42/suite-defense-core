@@ -65,9 +65,7 @@ interface OperationsSummary {
   jobs_24h: number;
   jobs_completed_24h: number;
   jobs_failed_24h: number;
-  stuck_jobs: number;
-  active_alerts: number;
-  quota_warnings: number;
+  open_alerts: number;
 }
 
 export default function SystemOperations() {
@@ -290,7 +288,7 @@ export default function SystemOperations() {
         >
           <Card className={cn(
             "border-l-4",
-            (summary?.stuck_jobs || 0) === 0 ? "border-green-500" : "border-red-500"
+            stuckJobs.length === 0 ? "border-green-500" : "border-red-500"
           )}>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -299,7 +297,7 @@ export default function SystemOperations() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{summary?.stuck_jobs || 0}</div>
+              <div className="text-2xl font-bold">{stuckJobs.length}</div>
               <p className="text-xs text-muted-foreground">
                 {stuckJobs.length > 0 ? `Mais antigo: ${Math.round(stuckJobs[0]?.minutes_stuck || 0)} min` : 'Nenhum travado'}
               </p>
@@ -314,7 +312,7 @@ export default function SystemOperations() {
         >
           <Card className={cn(
             "border-l-4",
-            (summary?.active_alerts || 0) === 0 ? "border-green-500" : "border-orange-500"
+            (summary?.open_alerts || 0) === 0 ? "border-green-500" : "border-orange-500"
           )}>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -323,9 +321,9 @@ export default function SystemOperations() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{summary?.active_alerts || 0}</div>
+              <div className="text-2xl font-bold">{summary?.open_alerts || 0}</div>
               <p className="text-xs text-muted-foreground">
-                {summary?.quota_warnings || 0} avisos de quota
+                Alertas em aberto
               </p>
             </CardContent>
           </Card>

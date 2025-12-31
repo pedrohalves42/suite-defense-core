@@ -8,6 +8,16 @@ import {
   SuggestAgentRestartPayloadSchema,
   SuggestConfigChangePayloadSchema,
   SuggestJobCleanupPayloadSchema,
+  DeleteOldDataPayloadSchema,
+  QuarantineAgentPayloadSchema,
+  IsolateAgentPayloadSchema,
+  RevokeTokenPayloadSchema,
+  DisableUserPayloadSchema,
+  BlockIpPayloadSchema,
+  IncludeFirewallRulePayloadSchema,
+  RestartServicePayloadSchema,
+  AcknowledgeAlertPayloadSchema,
+  CleanupStuckJobsPayloadSchema,
 } from '../_shared/validation.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -121,9 +131,7 @@ serve(async (req) => {
     try {
       switch (action.action_type) {
         case 'create_diagnostic_job': {
-          // Validar payload com Zod
           const payload = DiagnosticJobPayloadSchema.parse(action.action_payload);
-
           const { data: job, error: jobError } = await supabase
             .from('jobs')
             .insert({
@@ -151,7 +159,6 @@ serve(async (req) => {
 
         case 'create_system_alert': {
           const payload = SystemAlertPayloadSchema.parse(action.action_payload);
-
           const { data: alert, error: alertError } = await supabase
             .from('system_alerts')
             .insert({
@@ -177,7 +184,6 @@ serve(async (req) => {
 
         case 'suggest_agent_restart': {
           const payload = SuggestAgentRestartPayloadSchema.parse(action.action_payload);
-
           executionResult = {
             suggestion_type: 'agent_restart',
             agent_name: payload.agent_name,
@@ -190,7 +196,6 @@ serve(async (req) => {
 
         case 'suggest_config_change': {
           const payload = SuggestConfigChangePayloadSchema.parse(action.action_payload);
-
           executionResult = {
             suggestion_type: 'config_change',
             agent_name: payload.agent_name,
@@ -204,7 +209,6 @@ serve(async (req) => {
 
         case 'suggest_job_cleanup': {
           const payload = SuggestJobCleanupPayloadSchema.parse(action.action_payload);
-
           executionResult = {
             suggestion_type: 'job_cleanup',
             agent_name: payload.agent_name,
@@ -213,6 +217,406 @@ serve(async (req) => {
             reason: payload.reason,
             note: 'Suggestion recorded. Manual action required.',
           };
+          break;
+        }
+
+        // ========== NOVOS ACTION TYPES (FASE 3) ==========
+
+        case 'delete_old_data': {
+          const payload = DeleteOldDataPayloadSchema.parse(action.action_payload);
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - payload.older_than_days);
+          
+          let deletedCount = 0;
+          const tables: string[] = [];
+
+          if (payload.data_type === 'jobs' || payload.data_type === 'all') {
+            let query = supabase
+              .from('jobs')
+              .delete()
+              .eq('tenant_id', action.tenant_id)
+              .lt('created_at', cutoffDate.toISOString());
+
+            if (payload.job_status !== 'all') {
+              query = query.eq('status', payload.job_status);
+            }
+
+            if (!payload.dry_run) {
+              const { count } = await query.select('*', { count: 'exact', head: true });
+              deletedCount += count || 0;
+            }
+            tables.push('jobs');
+          }
+
+          if (payload.data_type === 'alerts' || payload.data_type === 'all') {
+            if (!payload.dry_run) {
+              const { count } = await supabase
+                .from('system_alerts')
+                .delete()
+                .eq('tenant_id', action.tenant_id)
+                .lt('created_at', cutoffDate.toISOString())
+                .eq('is_acknowledged', true)
+                .select('*', { count: 'exact', head: true });
+              deletedCount += count || 0;
+            }
+            tables.push('system_alerts');
+          }
+
+          executionResult = {
+            action: 'delete_old_data',
+            tables_affected: tables,
+            cutoff_date: cutoffDate.toISOString(),
+            deleted_count: deletedCount,
+            dry_run: payload.dry_run,
+            reason: payload.reason,
+          };
+          break;
+        }
+
+        case 'quarantine_agent': {
+          const payload = QuarantineAgentPayloadSchema.parse(action.action_payload);
+          
+          // Buscar agente
+          const { data: agent, error: agentError } = await supabase
+            .from('agents')
+            .select('id, agent_name, is_isolated')
+            .eq('tenant_id', action.tenant_id)
+            .eq('agent_name', payload.agent_name)
+            .single();
+
+          if (agentError || !agent) throw new Error(`Agent ${payload.agent_name} not found`);
+
+          // Marcar agente como isolado
+          const { error: updateError } = await supabase
+            .from('agents')
+            .update({
+              is_isolated: true,
+              isolated_at: new Date().toISOString(),
+              isolation_reason: payload.reason,
+            })
+            .eq('id', agent.id);
+
+          if (updateError) throw updateError;
+
+          // Criar alerta se necessario
+          if (payload.notify_admin) {
+            await supabase.from('system_alerts').insert({
+              tenant_id: action.tenant_id,
+              alert_type: 'warning',
+              severity: 'high',
+              title: `Agente ${payload.agent_name} foi colocado em quarentena`,
+              message: payload.reason,
+              details: { agent_id: agent.id, source: 'ai-action-executor' },
+            });
+          }
+
+          executionResult = {
+            action: 'quarantine_agent',
+            agent_id: agent.id,
+            agent_name: payload.agent_name,
+            quarantined: true,
+            reason: payload.reason,
+          };
+          break;
+        }
+
+        case 'isolate_agent': {
+          const payload = IsolateAgentPayloadSchema.parse(action.action_payload);
+          
+          const { data: agent, error: agentError } = await supabase
+            .from('agents')
+            .select('id, agent_name')
+            .eq('tenant_id', action.tenant_id)
+            .eq('agent_name', payload.agent_name)
+            .single();
+
+          if (agentError || !agent) throw new Error(`Agent ${payload.agent_name} not found`);
+
+          // Update agent isolation state
+          const { error: updateError } = await supabase
+            .from('agents')
+            .update({
+              is_isolated: true,
+              isolated_at: new Date().toISOString(),
+              isolation_reason: `[${payload.isolation_level.toUpperCase()}] ${payload.reason}`,
+            })
+            .eq('id', agent.id);
+
+          if (updateError) throw updateError;
+
+          // Create isolation job if needed
+          if (payload.isolation_level !== 'soft') {
+            await supabase.from('jobs').insert({
+              tenant_id: action.tenant_id,
+              agent_name: payload.agent_name,
+              type: 'config',
+              status: 'pending',
+              approved: true,
+              payload: {
+                action: 'isolate_network',
+                level: payload.isolation_level,
+                allow_management: payload.allow_management,
+                duration_hours: payload.duration_hours,
+              },
+            });
+          }
+
+          executionResult = {
+            action: 'isolate_agent',
+            agent_id: agent.id,
+            agent_name: payload.agent_name,
+            isolation_level: payload.isolation_level,
+            isolated: true,
+          };
+          break;
+        }
+
+        case 'revoke_token': {
+          const payload = RevokeTokenPayloadSchema.parse(action.action_payload);
+          
+          const { data: agent, error: agentError } = await supabase
+            .from('agents')
+            .select('id, agent_name')
+            .eq('tenant_id', action.tenant_id)
+            .eq('agent_name', payload.agent_name)
+            .single();
+
+          if (agentError || !agent) throw new Error(`Agent ${payload.agent_name} not found`);
+
+          // Revoke all active tokens
+          const { count, error: revokeError } = await supabase
+            .from('agent_tokens')
+            .update({ is_active: false })
+            .eq('agent_id', agent.id)
+            .eq('is_active', true)
+            .select('*', { count: 'exact', head: true });
+
+          if (revokeError) throw revokeError;
+
+          executionResult = {
+            action: 'revoke_token',
+            agent_id: agent.id,
+            agent_name: payload.agent_name,
+            tokens_revoked: count || 0,
+            force_reenrollment: payload.force_reenrollment,
+            reason: payload.reason,
+          };
+          break;
+        }
+
+        case 'disable_user': {
+          const payload = DisableUserPayloadSchema.parse(action.action_payload);
+          
+          // This is a suggestion - we don't actually disable users directly
+          // The admin must do this manually for security reasons
+          executionResult = {
+            action: 'disable_user',
+            user_email: payload.user_email,
+            reason: payload.reason,
+            duration_hours: payload.duration_hours,
+            note: 'User disable is a manual action. This has been logged for admin review.',
+            requires_manual_action: true,
+          };
+
+          // Log security event
+          await supabase.from('security_logs').insert({
+            tenant_id: action.tenant_id,
+            user_id: user.id,
+            ip_address: req.headers.get('x-forwarded-for') || 'unknown',
+            endpoint: '/functions/v1/ai-action-executor',
+            attack_type: 'ai_disable_user_request',
+            severity: 'high',
+            blocked: false,
+            user_agent: req.headers.get('user-agent') || 'unknown',
+            details: { target_email: payload.user_email, reason: payload.reason },
+          });
+          break;
+        }
+
+        case 'block_ip': {
+          const payload = BlockIpPayloadSchema.parse(action.action_payload);
+          
+          // Create a job to block the IP
+          const jobPayload: any = {
+            ip_address: payload.ip_address,
+            duration_hours: payload.duration_hours,
+            scope: payload.scope,
+            reason: payload.reason,
+          };
+
+          if (payload.agent_name) {
+            const { data: agent } = await supabase
+              .from('agents')
+              .select('id')
+              .eq('tenant_id', action.tenant_id)
+              .eq('agent_name', payload.agent_name)
+              .single();
+            
+            if (agent) {
+              jobPayload.agent_id = agent.id;
+            }
+          }
+
+          const { data: job, error: jobError } = await supabase
+            .from('jobs')
+            .insert({
+              tenant_id: action.tenant_id,
+              agent_name: payload.agent_name || 'all',
+              type: 'config',
+              status: 'pending',
+              approved: true,
+              payload: { action: 'block_ip', ...jobPayload },
+            })
+            .select()
+            .single();
+
+          if (jobError) throw jobError;
+
+          executionResult = {
+            action: 'block_ip',
+            job_id: job.id,
+            ip_address: payload.ip_address,
+            scope: payload.scope,
+            duration_hours: payload.duration_hours,
+          };
+          break;
+        }
+
+        case 'include_firewall_rule': {
+          const payload = IncludeFirewallRulePayloadSchema.parse(action.action_payload);
+          
+          const { data: job, error: jobError } = await supabase
+            .from('jobs')
+            .insert({
+              tenant_id: action.tenant_id,
+              agent_name: payload.agent_name,
+              type: 'fix_firewall',
+              status: 'pending',
+              approved: true,
+              payload: {
+                rule_type: payload.rule_type,
+                protocol: payload.protocol,
+                port: payload.port,
+                port_range: payload.port_range,
+                ip_address: payload.ip_address,
+                direction: payload.direction,
+                reason: payload.reason,
+              },
+            })
+            .select()
+            .single();
+
+          if (jobError) throw jobError;
+
+          executionResult = {
+            action: 'include_firewall_rule',
+            job_id: job.id,
+            agent_name: payload.agent_name,
+            rule_type: payload.rule_type,
+            protocol: payload.protocol,
+            direction: payload.direction,
+          };
+          break;
+        }
+
+        case 'restart_service': {
+          const payload = RestartServicePayloadSchema.parse(action.action_payload);
+          
+          const { data: job, error: jobError } = await supabase
+            .from('jobs')
+            .insert({
+              tenant_id: action.tenant_id,
+              agent_name: payload.agent_name,
+              type: 'restart_service',
+              status: 'pending',
+              approved: true,
+              payload: {
+                service_name: payload.service_name,
+                force: payload.force,
+                timeout_seconds: payload.timeout_seconds,
+                reason: payload.reason,
+              },
+            })
+            .select()
+            .single();
+
+          if (jobError) throw jobError;
+
+          executionResult = {
+            action: 'restart_service',
+            job_id: job.id,
+            agent_name: payload.agent_name,
+            service_name: payload.service_name,
+          };
+          break;
+        }
+
+        case 'acknowledge_alerts': {
+          const payload = AcknowledgeAlertPayloadSchema.parse(action.action_payload);
+          
+          let query = supabase
+            .from('system_alerts')
+            .update({ is_acknowledged: true, acknowledged_at: new Date().toISOString() })
+            .eq('tenant_id', action.tenant_id)
+            .eq('is_acknowledged', false);
+
+          if (!payload.acknowledge_all && payload.alert_ids) {
+            query = query.in('id', payload.alert_ids);
+          }
+
+          const { count, error: ackError } = await query.select('*', { count: 'exact', head: true });
+
+          if (ackError) throw ackError;
+
+          executionResult = {
+            action: 'acknowledge_alerts',
+            acknowledged_count: count || 0,
+            all_alerts: payload.acknowledge_all,
+            reason: payload.reason,
+          };
+          break;
+        }
+
+        case 'cleanup_stuck_jobs': {
+          const payload = CleanupStuckJobsPayloadSchema.parse(action.action_payload);
+          const cutoffDate = new Date();
+          cutoffDate.setHours(cutoffDate.getHours() - payload.older_than_hours);
+
+          let query = supabase
+            .from('jobs')
+            .update({ status: 'failed', completed_at: new Date().toISOString() })
+            .eq('tenant_id', action.tenant_id)
+            .in('status', ['pending', 'in_progress'])
+            .lt('created_at', cutoffDate.toISOString());
+
+          if (payload.agent_name) {
+            query = query.eq('agent_name', payload.agent_name);
+          }
+
+          if (payload.job_types && payload.job_types.length > 0) {
+            query = query.in('type', payload.job_types);
+          }
+
+          if (!payload.dry_run) {
+            const { count, error: cleanupError } = await query.select('*', { count: 'exact', head: true });
+            if (cleanupError) throw cleanupError;
+            
+            executionResult = {
+              action: 'cleanup_stuck_jobs',
+              jobs_cleaned: count || 0,
+              cutoff_hours: payload.older_than_hours,
+              agent_filter: payload.agent_name || 'all',
+              dry_run: false,
+            };
+          } else {
+            executionResult = {
+              action: 'cleanup_stuck_jobs',
+              cutoff_hours: payload.older_than_hours,
+              agent_filter: payload.agent_name || 'all',
+              dry_run: true,
+              note: 'Dry run - no changes made',
+            };
+          }
           break;
         }
 
