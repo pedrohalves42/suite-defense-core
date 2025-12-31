@@ -4468,6 +4468,7 @@ export type Database = {
       }
       decision_rules: {
         Row: {
+          auto_execute: boolean | null
           code: string
           created_at: string
           definition: Json
@@ -4478,6 +4479,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          auto_execute?: boolean | null
           code: string
           created_at?: string
           definition?: Json
@@ -4488,6 +4490,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          auto_execute?: boolean | null
           code?: string
           created_at?: string
           definition?: Json
@@ -14006,7 +14009,9 @@ export type Database = {
           throttle_reason: string
         }[]
       }
-      get_audit_raw_metrics: { Args: { p_tenant_id: string }; Returns: Json }
+      get_audit_raw_metrics:
+        | { Args: never; Returns: Json }
+        | { Args: { p_tenant_id: string }; Returns: Json }
       get_autonomy_metrics: {
         Args: { p_days?: number; p_tenant_id: string }
         Returns: Json
