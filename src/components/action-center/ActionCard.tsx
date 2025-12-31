@@ -205,6 +205,23 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
               </Button>
             )}
 
+            {item.source_type === 'ai_insight' && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleAcknowledge}
+                  disabled={executeAction.isPending}
+                >
+                  Reconhecer
+                </Button>
+                {item.context?.confidence_score && (
+                  <Badge variant="secondary" className="ml-2">
+                    {Math.round(Number(item.context.confidence_score) * 100)}% confiança
+                  </Badge>
+                )}
+              </>
+            )}
+
             {item.agent_id && (
               <Button variant="ghost" size="sm" asChild>
                 <Link to={`/admin/agent-health?agent=${item.agent_id}`}>
