@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from './useTenant';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface ActionHistoryItem {
   id: string;
@@ -16,6 +17,8 @@ export interface ActionHistoryItem {
   auto_action_executed: boolean;
   auto_action_executed_at: string | null;
   created_at: string;
+  evidence: Json | null;
+  recommendation: string | null;
   agent?: {
     agent_name: string;
     hostname: string | null;
@@ -44,6 +47,8 @@ export function useActionCenterHistory(limit = 50) {
           auto_action_executed,
           auto_action_executed_at,
           created_at,
+          evidence,
+          recommendation,
           agents:agent_id (
             agent_name,
             hostname
