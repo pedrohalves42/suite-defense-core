@@ -4927,11 +4927,13 @@ export type Database = {
         Row: {
           agent_id: string | null
           agent_name: string
+          auto_flagged_reason: string | null
           created_at: string | null
           error_count: number | null
           error_message: string | null
           failure_class: string | null
           first_failure_at: string | null
+          flagged_suspicious: boolean | null
           id: string
           job_type: string
           last_failure_at: string | null
@@ -4945,6 +4947,7 @@ export type Database = {
           resolved_by: string | null
           retry_count: number | null
           review_notes: string | null
+          review_required: boolean | null
           risk_category: string | null
           status: string | null
           tenant_id: string | null
@@ -4952,11 +4955,13 @@ export type Database = {
         Insert: {
           agent_id?: string | null
           agent_name: string
+          auto_flagged_reason?: string | null
           created_at?: string | null
           error_count?: number | null
           error_message?: string | null
           failure_class?: string | null
           first_failure_at?: string | null
+          flagged_suspicious?: boolean | null
           id?: string
           job_type: string
           last_failure_at?: string | null
@@ -4970,6 +4975,7 @@ export type Database = {
           resolved_by?: string | null
           retry_count?: number | null
           review_notes?: string | null
+          review_required?: boolean | null
           risk_category?: string | null
           status?: string | null
           tenant_id?: string | null
@@ -4977,11 +4983,13 @@ export type Database = {
         Update: {
           agent_id?: string | null
           agent_name?: string
+          auto_flagged_reason?: string | null
           created_at?: string | null
           error_count?: number | null
           error_message?: string | null
           failure_class?: string | null
           first_failure_at?: string | null
+          flagged_suspicious?: boolean | null
           id?: string
           job_type?: string
           last_failure_at?: string | null
@@ -4995,6 +5003,7 @@ export type Database = {
           resolved_by?: string | null
           retry_count?: number | null
           review_notes?: string | null
+          review_required?: boolean | null
           risk_category?: string | null
           status?: string | null
           tenant_id?: string | null
@@ -11621,6 +11630,132 @@ export type Database = {
           },
         ]
       }
+      dlq_categorized: {
+        Row: {
+          agent_id: string | null
+          created_at: string | null
+          error_message: string | null
+          flagged_suspicious: boolean | null
+          id: string | null
+          job_type: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          retry_count: number | null
+          review_notes: string | null
+          risk_category: string | null
+          status: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          flagged_suspicious?: boolean | null
+          id?: string | null
+          job_type?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          retry_count?: number | null
+          review_notes?: string | null
+          risk_category?: never
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          flagged_suspicious?: boolean | null
+          id?: string | null
+          job_type?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          retry_count?: number | null
+          review_notes?: string | null
+          risk_category?: never
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_signatures"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       enrollment_keys_safe: {
         Row: {
           agent_id: string | null
@@ -12708,6 +12843,40 @@ export type Database = {
           },
           {
             foreignKeyName: "audit_confidence_gaps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      v_dlq_risk_overview: {
+        Row: {
+          manually_reviewed: number | null
+          overdue_items: number | null
+          resolved_items: number | null
+          review_rate_pct: number | null
+          suspicious_items: number | null
+          tenant_id: string | null
+          total_items: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -14121,6 +14290,14 @@ export type Database = {
           p_status: string
         }
         Returns: Json
+      }
+      force_review_unreviewed_dlq: {
+        Args: { p_max_items?: number; p_reviewer_id: string }
+        Returns: {
+          flagged_suspicious: number
+          items_processed: string[]
+          reviewed_count: number
+        }[]
       }
       generate_ai_actions_from_insights: { Args: never; Returns: Json }
       get_action_center_feed: { Args: { p_tenant_id: string }; Returns: Json }
