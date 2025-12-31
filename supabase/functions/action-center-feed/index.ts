@@ -719,6 +719,39 @@ serve(async (req) => {
         );
       }
 
+      // Handle ai_insight ignore action - closes the cycle as ignored
+      if (source_type === 'ai_insight' && action === 'ignore') {
+        const { reason } = body;
+        
+        const { error } = await serviceClient
+          .from('ai_insights')
+          .update({
+            status: 'ignored',
+            resolved_at: new Date().toISOString(),
+            resolved_by: user.id,
+            acknowledged: true,
+            acknowledged_by: user.id,
+            acknowledged_at: new Date().toISOString(),
+          })
+          .eq('id', item_id)
+          .eq('tenant_id', tenantId);
+
+        if (error) {
+          console.error('[action-center-feed] Ignore insight error:', error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log(`[action-center-feed] Insight ${item_id} ignored by user ${user.id}${reason ? ` - reason: ${reason}` : ''}`);
+
+        return new Response(
+          JSON.stringify({ success: true, status: 'ignored' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       // Handle ai_insight execute action - creates ai_action and calls dispatcher
       if (source_type === 'ai_insight' && action === 'execute') {
         // Get the insight to access recommended_actions
@@ -791,17 +824,22 @@ serve(async (req) => {
             );
           }
 
-          // Mark insight as having had action executed
+          // CLOSE THE CYCLE: Mark insight as resolved after successful execution
           await serviceClient
             .from('ai_insights')
             .update({ 
               auto_action_executed: true,
               auto_action_executed_at: new Date().toISOString(),
+              status: 'resolved',
+              resolved_at: new Date().toISOString(),
+              resolved_by: user.id,
             })
             .eq('id', item_id);
 
+          console.log(`[action-center-feed] Insight ${item_id} resolved via execute by user ${user.id}`);
+
           return new Response(
-            JSON.stringify({ success: true, action_id: createdAction.id, result: execResult }),
+            JSON.stringify({ success: true, action_id: createdAction.id, result: execResult, status: 'resolved' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         } catch (execErr) {
