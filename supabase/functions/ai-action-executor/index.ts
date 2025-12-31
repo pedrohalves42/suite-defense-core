@@ -231,33 +231,33 @@ serve(async (req) => {
           const tables: string[] = [];
 
           if (payload.data_type === 'jobs' || payload.data_type === 'all') {
-            let query = supabase
-              .from('jobs')
-              .delete()
-              .eq('tenant_id', action.tenant_id)
-              .lt('created_at', cutoffDate.toISOString());
-
-            if (payload.job_status !== 'all') {
-              query = query.eq('status', payload.job_status);
-            }
-
             if (!payload.dry_run) {
-              const { count } = await query.select('*', { count: 'exact', head: true });
-              deletedCount += count || 0;
+              let query = supabase
+                .from('jobs')
+                .delete()
+                .eq('tenant_id', action.tenant_id)
+                .lt('created_at', cutoffDate.toISOString());
+
+              if (payload.job_status !== 'all') {
+                query = query.eq('status', payload.job_status);
+              }
+
+              const { data: deletedJobs } = await query.select('id');
+              deletedCount += deletedJobs?.length || 0;
             }
             tables.push('jobs');
           }
 
           if (payload.data_type === 'alerts' || payload.data_type === 'all') {
             if (!payload.dry_run) {
-              const { count } = await supabase
+              const { data: deletedAlerts } = await supabase
                 .from('system_alerts')
                 .delete()
                 .eq('tenant_id', action.tenant_id)
                 .lt('created_at', cutoffDate.toISOString())
                 .eq('is_acknowledged', true)
-                .select('*', { count: 'exact', head: true });
-              deletedCount += count || 0;
+                .select('id');
+              deletedCount += deletedAlerts?.length || 0;
             }
             tables.push('system_alerts');
           }
@@ -384,20 +384,21 @@ serve(async (req) => {
           if (agentError || !agent) throw new Error(`Agent ${payload.agent_name} not found`);
 
           // Revoke all active tokens
-          const { count, error: revokeError } = await supabase
+          const { data: revokedTokens, error: revokeError } = await supabase
             .from('agent_tokens')
             .update({ is_active: false })
             .eq('agent_id', agent.id)
             .eq('is_active', true)
-            .select('*', { count: 'exact', head: true });
+            .select('id');
 
           if (revokeError) throw revokeError;
+          const tokenCount = revokedTokens?.length || 0;
 
           executionResult = {
             action: 'revoke_token',
             agent_id: agent.id,
             agent_name: payload.agent_name,
-            tokens_revoked: count || 0,
+            tokens_revoked: tokenCount,
             force_reenrollment: payload.force_reenrollment,
             reason: payload.reason,
           };
@@ -564,13 +565,13 @@ serve(async (req) => {
             query = query.in('id', payload.alert_ids);
           }
 
-          const { count, error: ackError } = await query.select('*', { count: 'exact', head: true });
+          const { data: acknowledgedAlerts, error: ackError } = await query.select('id');
 
           if (ackError) throw ackError;
 
           executionResult = {
             action: 'acknowledge_alerts',
-            acknowledged_count: count || 0,
+            acknowledged_count: acknowledgedAlerts?.length || 0,
             all_alerts: payload.acknowledge_all,
             reason: payload.reason,
           };
@@ -582,28 +583,28 @@ serve(async (req) => {
           const cutoffDate = new Date();
           cutoffDate.setHours(cutoffDate.getHours() - payload.older_than_hours);
 
-          let query = supabase
-            .from('jobs')
-            .update({ status: 'failed', completed_at: new Date().toISOString() })
-            .eq('tenant_id', action.tenant_id)
-            .in('status', ['pending', 'in_progress'])
-            .lt('created_at', cutoffDate.toISOString());
-
-          if (payload.agent_name) {
-            query = query.eq('agent_name', payload.agent_name);
-          }
-
-          if (payload.job_types && payload.job_types.length > 0) {
-            query = query.in('type', payload.job_types);
-          }
-
           if (!payload.dry_run) {
-            const { count, error: cleanupError } = await query.select('*', { count: 'exact', head: true });
+            let query = supabase
+              .from('jobs')
+              .update({ status: 'failed', completed_at: new Date().toISOString() })
+              .eq('tenant_id', action.tenant_id)
+              .in('status', ['pending', 'in_progress'])
+              .lt('created_at', cutoffDate.toISOString());
+
+            if (payload.agent_name) {
+              query = query.eq('agent_name', payload.agent_name);
+            }
+
+            if (payload.job_types && payload.job_types.length > 0) {
+              query = query.in('type', payload.job_types);
+            }
+
+            const { data: cleanedJobs, error: cleanupError } = await query.select('id');
             if (cleanupError) throw cleanupError;
             
             executionResult = {
               action: 'cleanup_stuck_jobs',
-              jobs_cleaned: count || 0,
+              jobs_cleaned: cleanedJobs?.length || 0,
               cutoff_hours: payload.older_than_hours,
               agent_filter: payload.agent_name || 'all',
               dry_run: false,
