@@ -2612,7 +2612,10 @@ export type Database = {
           metadata: Json | null
           recommendation: string | null
           recommended_actions: Json | null
+          resolved_at: string | null
+          resolved_by: string | null
           severity: string
+          status: string
           tenant_id: string
           title: string
         }
@@ -2635,7 +2638,10 @@ export type Database = {
           metadata?: Json | null
           recommendation?: string | null
           recommended_actions?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           severity: string
+          status?: string
           tenant_id: string
           title: string
         }
@@ -2658,7 +2664,10 @@ export type Database = {
           metadata?: Json | null
           recommendation?: string | null
           recommended_actions?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           severity?: string
+          status?: string
           tenant_id?: string
           title?: string
         }
@@ -8084,7 +8093,8 @@ export type Database = {
           duration_ms: number | null
           error: string | null
           id: string
-          job_name: string
+          job_key: string
+          job_source: string
           processed_count: number | null
           ran_at: string
           result: Json | null
@@ -8096,7 +8106,8 @@ export type Database = {
           duration_ms?: number | null
           error?: string | null
           id?: string
-          job_name: string
+          job_key: string
+          job_source?: string
           processed_count?: number | null
           ran_at?: string
           result?: Json | null
@@ -8108,7 +8119,8 @@ export type Database = {
           duration_ms?: number | null
           error?: string | null
           id?: string
-          job_name?: string
+          job_key?: string
+          job_source?: string
           processed_count?: number | null
           ran_at?: string
           result?: Json | null
@@ -12378,11 +12390,14 @@ export type Database = {
           avg_duration_ms: number | null
           failure_count_24h: number | null
           health_status: string | null
-          job_name: string | null
+          job_key: string | null
+          job_source: string | null
+          last_failure: string | null
           last_run: string | null
           last_success: string | null
           max_duration_ms: number | null
           severity: string | null
+          success_count_24h: number | null
           total_runs_24h: number | null
         }
         Relationships: []
@@ -13665,17 +13680,7 @@ export type Database = {
           total_attempts: number
         }[]
       }
-      get_job_health_summary: {
-        Args: never
-        Returns: {
-          avg_success_rate: number
-          failing_jobs: number
-          healthy_jobs: number
-          never_ran_jobs: number
-          stale_jobs: number
-          total_jobs: number
-        }[]
-      }
+      get_job_health_summary: { Args: never; Returns: Json }
       get_latest_agent_metrics: {
         Args: { p_tenant_id: string }
         Returns: {
@@ -13864,11 +13869,11 @@ export type Database = {
         Args: {
           p_duration_ms?: number
           p_error?: string
-          p_job_name: string
+          p_job_key: string
+          p_job_source?: string
           p_processed_count?: number
           p_result?: Json
           p_success: boolean
-          p_tenant_id?: string
         }
         Returns: string
       }
