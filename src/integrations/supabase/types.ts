@@ -6085,6 +6085,7 @@ export type Database = {
           payload_hash: string
           priority: number | null
           recurrence_pattern: string | null
+          retry_count: number | null
           scheduled_at: string | null
           started_at: string | null
           status: string
@@ -6114,6 +6115,7 @@ export type Database = {
           payload_hash: string
           priority?: number | null
           recurrence_pattern?: string | null
+          retry_count?: number | null
           scheduled_at?: string | null
           started_at?: string | null
           status?: string
@@ -6143,6 +6145,7 @@ export type Database = {
           payload_hash?: string
           priority?: number | null
           recurrence_pattern?: string | null
+          retry_count?: number | null
           scheduled_at?: string | null
           started_at?: string | null
           status?: string
@@ -6967,6 +6970,7 @@ export type Database = {
           playbook_id: string | null
           playbook_snapshot: Json | null
           risk_score: number | null
+          started_at: string | null
           status: string | null
           tenant_id: string
           trigger_context: Json | null
@@ -6990,6 +6994,7 @@ export type Database = {
           playbook_id?: string | null
           playbook_snapshot?: Json | null
           risk_score?: number | null
+          started_at?: string | null
           status?: string | null
           tenant_id: string
           trigger_context?: Json | null
@@ -7013,6 +7018,7 @@ export type Database = {
           playbook_id?: string | null
           playbook_snapshot?: Json | null
           risk_score?: number | null
+          started_at?: string | null
           status?: string | null
           tenant_id?: string
           trigger_context?: Json | null
@@ -8809,6 +8815,129 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "security_policies"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_reports: {
+        Row: {
+          agent_id: string | null
+          content: Json | null
+          created_at: string | null
+          error_message: string | null
+          expires_at: string | null
+          generated_at: string | null
+          id: string
+          report_type: string
+          status: string | null
+          tenant_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          content?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          expires_at?: string | null
+          generated_at?: string | null
+          id?: string
+          report_type: string
+          status?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          content?: Json | null
+          created_at?: string | null
+          error_message?: string | null
+          expires_at?: string | null
+          generated_at?: string | null
+          id?: string
+          report_type?: string
+          status?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_signatures"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "security_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "security_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "security_reports_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "security_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
           },
         ]
       }
@@ -13997,6 +14126,7 @@ export type Database = {
           payload_hash: string
           priority: number | null
           recurrence_pattern: string | null
+          retry_count: number | null
           scheduled_at: string | null
           started_at: string | null
           status: string
