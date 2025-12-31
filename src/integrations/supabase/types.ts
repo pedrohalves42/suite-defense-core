@@ -8078,6 +8078,67 @@ export type Database = {
           },
         ]
       }
+      scheduled_job_runs: {
+        Row: {
+          created_at: string | null
+          duration_ms: number | null
+          error: string | null
+          id: string
+          job_name: string
+          processed_count: number | null
+          ran_at: string
+          result: Json | null
+          success: boolean
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error?: string | null
+          id?: string
+          job_name: string
+          processed_count?: number | null
+          ran_at?: string
+          result?: Json | null
+          success?: boolean
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_ms?: number | null
+          error?: string | null
+          id?: string
+          job_name?: string
+          processed_count?: number | null
+          ran_at?: string
+          result?: Json | null
+          success?: boolean
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_job_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_job_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "scheduled_job_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       scheduled_jobs: {
         Row: {
           agent_group_id: string | null
@@ -10080,6 +10141,7 @@ export type Database = {
       tenants: {
         Row: {
           address: string | null
+          auto_action_mode: string | null
           city: string | null
           cnpj: string | null
           company_name: string | null
@@ -10097,6 +10159,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          auto_action_mode?: string | null
           city?: string | null
           cnpj?: string | null
           company_name?: string | null
@@ -10114,6 +10177,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          auto_action_mode?: string | null
           city?: string | null
           cnpj?: string | null
           company_name?: string | null
@@ -12309,6 +12373,20 @@ export type Database = {
           },
         ]
       }
+      v_job_health: {
+        Row: {
+          avg_duration_ms: number | null
+          failure_count_24h: number | null
+          health_status: string | null
+          job_name: string | null
+          last_run: string | null
+          last_success: string | null
+          max_duration_ms: number | null
+          severity: string | null
+          total_runs_24h: number | null
+        }
+        Relationships: []
+      }
       v_job_hourly_trends: {
         Row: {
           completed: number | null
@@ -13587,6 +13665,17 @@ export type Database = {
           total_attempts: number
         }[]
       }
+      get_job_health_summary: {
+        Args: never
+        Returns: {
+          avg_success_rate: number
+          failing_jobs: number
+          healthy_jobs: number
+          never_ran_jobs: number
+          stale_jobs: number
+          total_jobs: number
+        }[]
+      }
       get_latest_agent_metrics: {
         Args: { p_tenant_id: string }
         Returns: {
@@ -13771,6 +13860,18 @@ export type Database = {
       }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      log_scheduled_job_run: {
+        Args: {
+          p_duration_ms?: number
+          p_error?: string
+          p_job_name: string
+          p_processed_count?: number
+          p_result?: Json
+          p_success: boolean
+          p_tenant_id?: string
+        }
+        Returns: string
+      }
       log_sensitive_access: {
         Args: {
           p_action: string
