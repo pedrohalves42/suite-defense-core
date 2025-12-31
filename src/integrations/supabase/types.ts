@@ -2460,8 +2460,10 @@ export type Database = {
           created_at: string
           id: string
           tenant_id: string
+          validated_at: string | null
           validated_by: string | null
           validation_notes: string | null
+          validation_passed: boolean | null
           validation_result: string
           validation_source: string
         }
@@ -2471,8 +2473,10 @@ export type Database = {
           created_at?: string
           id?: string
           tenant_id: string
+          validated_at?: string | null
           validated_by?: string | null
           validation_notes?: string | null
+          validation_passed?: boolean | null
           validation_result: string
           validation_source: string
         }
@@ -2482,8 +2486,10 @@ export type Database = {
           created_at?: string
           id?: string
           tenant_id?: string
+          validated_at?: string | null
           validated_by?: string | null
           validation_notes?: string | null
+          validation_passed?: boolean | null
           validation_result?: string
           validation_source?: string
         }
@@ -2528,10 +2534,12 @@ export type Database = {
           effectiveness_evidence: Json | null
           effectiveness_status: string | null
           error_message: string | null
+          evidence_pack: Json | null
           executed_at: string | null
           executed_by: string | null
           id: string
           insight_id: string | null
+          reasoning_summary: string | null
           result: Json | null
           risk_level: string | null
           status: string
@@ -2546,10 +2554,12 @@ export type Database = {
           effectiveness_evidence?: Json | null
           effectiveness_status?: string | null
           error_message?: string | null
+          evidence_pack?: Json | null
           executed_at?: string | null
           executed_by?: string | null
           id?: string
           insight_id?: string | null
+          reasoning_summary?: string | null
           result?: Json | null
           risk_level?: string | null
           status?: string
@@ -2564,10 +2574,12 @@ export type Database = {
           effectiveness_evidence?: Json | null
           effectiveness_status?: string | null
           error_message?: string | null
+          evidence_pack?: Json | null
           executed_at?: string | null
           executed_by?: string | null
           id?: string
           insight_id?: string | null
+          reasoning_summary?: string | null
           result?: Json | null
           risk_level?: string | null
           status?: string
@@ -2816,10 +2828,12 @@ export type Database = {
           created_at: string
           description: string
           evidence: Json
+          evidence_pack: Json | null
           final_outcome: string | null
           id: string
           insight_type: string
           metadata: Json | null
+          reasoning_summary: string | null
           recommendation: string | null
           recommended_actions: Json | null
           resolved_at: string | null
@@ -2843,10 +2857,12 @@ export type Database = {
           created_at?: string
           description: string
           evidence?: Json
+          evidence_pack?: Json | null
           final_outcome?: string | null
           id?: string
           insight_type: string
           metadata?: Json | null
+          reasoning_summary?: string | null
           recommendation?: string | null
           recommended_actions?: Json | null
           resolved_at?: string | null
@@ -2870,10 +2886,12 @@ export type Database = {
           created_at?: string
           description?: string
           evidence?: Json
+          evidence_pack?: Json | null
           final_outcome?: string | null
           id?: string
           insight_type?: string
           metadata?: Json | null
+          reasoning_summary?: string | null
           recommendation?: string | null
           recommended_actions?: Json | null
           resolved_at?: string | null
@@ -3014,6 +3032,71 @@ export type Database = {
           },
           {
             foreignKeyName: "ai_learned_patterns_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      ai_rejected_decisions: {
+        Row: {
+          action_type: string
+          confidence_score: number | null
+          id: string
+          input_parameters: Json | null
+          insight_id: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string
+          tenant_id: string
+        }
+        Insert: {
+          action_type: string
+          confidence_score?: number | null
+          id?: string
+          input_parameters?: Json | null
+          insight_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason: string
+          tenant_id: string
+        }
+        Update: {
+          action_type?: string
+          confidence_score?: number | null
+          id?: string
+          input_parameters?: Json | null
+          insight_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_rejected_decisions_insight_id_fkey"
+            columns: ["insight_id"]
+            isOneToOne: false
+            referencedRelation: "ai_insights"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_rejected_decisions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_rejected_decisions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_rejected_decisions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -3730,6 +3813,64 @@ export type Database = {
           },
           {
             foreignKeyName: "audit_confidence_gaps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      audit_integrity_checks: {
+        Row: {
+          alert_sent: boolean | null
+          breaks_detected: number | null
+          broken_log_id: string | null
+          chain_valid: boolean
+          checked_at: string | null
+          first_break_at: string | null
+          id: string
+          logs_checked: number
+          tenant_id: string
+        }
+        Insert: {
+          alert_sent?: boolean | null
+          breaks_detected?: number | null
+          broken_log_id?: string | null
+          chain_valid?: boolean
+          checked_at?: string | null
+          first_break_at?: string | null
+          id?: string
+          logs_checked?: number
+          tenant_id: string
+        }
+        Update: {
+          alert_sent?: boolean | null
+          breaks_detected?: number | null
+          broken_log_id?: string | null
+          chain_valid?: boolean
+          checked_at?: string | null
+          first_break_at?: string | null
+          id?: string
+          logs_checked?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_integrity_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_integrity_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_integrity_checks_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -8158,6 +8299,39 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      rls_test_results: {
+        Row: {
+          details: Json | null
+          failure_reason: string | null
+          id: string
+          passed: boolean
+          table_name: string | null
+          test_name: string
+          test_run_id: string
+          tested_at: string | null
+        }
+        Insert: {
+          details?: Json | null
+          failure_reason?: string | null
+          id?: string
+          passed: boolean
+          table_name?: string | null
+          test_name: string
+          test_run_id: string
+          tested_at?: string | null
+        }
+        Update: {
+          details?: Json | null
+          failure_reason?: string | null
+          id?: string
+          passed?: boolean
+          table_name?: string | null
+          test_name?: string
+          test_run_id?: string
+          tested_at?: string | null
+        }
+        Relationships: []
       }
       sales_contacts: {
         Row: {
@@ -12808,6 +12982,39 @@ export type Database = {
           },
         ]
       }
+      v_audit_integrity_status: {
+        Row: {
+          all_checks_valid: boolean | null
+          last_check: string | null
+          status: string | null
+          tenant_id: string | null
+          total_breaks: number | null
+          total_checks: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_integrity_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_integrity_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_integrity_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_confidence_gap_trend: {
         Row: {
           alert_triggered: boolean | null
@@ -13637,6 +13844,17 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      v_rls_security_status: {
+        Row: {
+          failed: number | null
+          pass_rate_pct: number | null
+          passed: number | null
+          run_at: string | null
+          test_run_id: string | null
+          total_tests: number | null
+        }
+        Relationships: []
       }
       v_soc2_readiness: {
         Row: {
@@ -14668,6 +14886,16 @@ export type Database = {
       submit_approval: {
         Args: { p_decision: string; p_reason?: string; p_request_id: string }
         Returns: Json
+      }
+      test_tenant_isolation: {
+        Args: never
+        Returns: {
+          details: string
+          has_rls_enabled: boolean
+          has_tenant_id: boolean
+          isolation_valid: boolean
+          table_name: string
+        }[]
       }
       update_quota_usage: {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }
