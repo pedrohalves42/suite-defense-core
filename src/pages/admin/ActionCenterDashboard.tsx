@@ -8,74 +8,154 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { RefreshCw, Target, ArrowRight, Clock, History, CheckCircle2, XCircle, Bot, User } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { RefreshCw, Target, ArrowRight, Clock, History, CheckCircle2, XCircle, Bot, User, ChevronDown, ShieldCheck, BookOpen, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { explainInsight } from '@/lib/explain-insight';
+import { getEducationalMoment } from '@/lib/education-mapping';
+import { mapInsightToAction } from '@/lib/insight-action-mapping';
 
 function HistoryItemCard({ item }: { item: ActionHistoryItem }) {
+  const [showDetails, setShowDetails] = useState(false);
+  const [showEducation, setShowEducation] = useState(false);
+  
   const isResolved = item.status === 'resolved';
   const wasAutoExecuted = item.auto_action_executed;
   
+  // Get explanation and educational content
+  const mapping = mapInsightToAction(item.insight_type);
+  const explanation = explainInsight(item, mapping);
+  const education = getEducationalMoment(item.insight_type);
+  
+  const riskColors: Record<string, string> = {
+    critical: 'text-red-600 bg-red-50 border-red-200',
+    high: 'text-orange-600 bg-orange-50 border-orange-200',
+    medium: 'text-yellow-600 bg-yellow-50 border-yellow-200',
+    low: 'text-blue-600 bg-blue-50 border-blue-200',
+  };
+  
   return (
-    <Card className="border-l-4" style={{ borderLeftColor: isResolved ? 'hsl(var(--success))' : 'hsl(var(--muted))' }}>
+    <Card className="border-l-4 overflow-hidden" style={{ borderLeftColor: isResolved ? 'hsl(142.1 76.2% 36.3%)' : 'hsl(var(--muted))' }}>
       <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              {isResolved ? (
-                <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-              ) : (
-                <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
-              )}
-              <span className="font-medium truncate">{item.title}</span>
-              <Badge variant={isResolved ? 'default' : 'secondary'} className="shrink-0">
-                {isResolved ? 'Resolvido' : 'Ignorado'}
-              </Badge>
+        <div className="space-y-3">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                {isResolved ? (
+                  <ShieldCheck className="h-4 w-4 text-green-600 shrink-0" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+                )}
+                <span className="font-medium">{explanation.human_title}</span>
+                <Badge variant={isResolved ? 'default' : 'secondary'} className="shrink-0">
+                  {isResolved ? 'Resolvido' : 'Ignorado'}
+                </Badge>
+              </div>
+              
+              {/* Human explanation */}
+              <p className="text-sm text-muted-foreground mb-2">
+                {explanation.what_happened}
+              </p>
+              
+              {/* Why it matters */}
+              <p className="text-xs text-muted-foreground italic">
+                {explanation.why_it_matters}
+              </p>
             </div>
             
-            {item.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                {item.description}
-              </p>
-            )}
-            
-            <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-              {item.agent && (
-                <span className="flex items-center gap-1">
-                  <span className="font-medium">{item.agent.agent_name}</span>
-                  {item.agent.hostname && (
-                    <span className="text-muted-foreground">({item.agent.hostname})</span>
-                  )}
-                </span>
-              )}
-              
-              <span className="flex items-center gap-1">
-                {wasAutoExecuted ? (
-                  <>
-                    <Bot className="h-3 w-3" />
-                    <span>Auto-executado</span>
-                  </>
-                ) : (
-                  <>
-                    <User className="h-3 w-3" />
-                    <span>Manual</span>
-                  </>
-                )}
-              </span>
-              
-              {item.resolved_at && (
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {format(new Date(item.resolved_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                </span>
-              )}
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <Badge 
+                variant="outline" 
+                className={`capitalize ${riskColors[mapping.risk] || ''}`}
+              >
+                {mapping.risk}
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                {wasAutoExecuted ? 'Auto' : 'Manual'}
+              </Badge>
             </div>
           </div>
           
-          <Badge variant="outline" className="shrink-0 capitalize">
-            {item.severity}
-          </Badge>
+          {/* Meta info */}
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground border-t pt-3">
+            {item.agent && (
+              <span className="flex items-center gap-1">
+                <span className="font-medium">{item.agent.agent_name}</span>
+                {item.agent.hostname && (
+                  <span>({item.agent.hostname})</span>
+                )}
+              </span>
+            )}
+            
+            <span className="flex items-center gap-1">
+              {wasAutoExecuted ? <Bot className="h-3 w-3" /> : <User className="h-3 w-3" />}
+              <span>{wasAutoExecuted ? 'Sistema' : 'Manual'}</span>
+            </span>
+            
+            {item.resolved_at && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {format(new Date(item.resolved_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </span>
+            )}
+            
+            <span className="text-xs px-2 py-0.5 bg-muted rounded">
+              Política: {explanation.policy_reference}
+            </span>
+          </div>
+          
+          {/* Expandable sections */}
+          <div className="flex gap-2 pt-2">
+            <Collapsible open={showEducation} onOpenChange={setShowEducation}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                  <BookOpen className="h-3 w-3" />
+                  Por que é importante?
+                  <ChevronDown className={`h-3 w-3 transition-transform ${showEducation ? 'rotate-180' : ''}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2">
+                <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 space-y-2">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-blue-600" />
+                    {education.title}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">{education.explanation}</p>
+                  <p className="text-sm">
+                    <strong>Por que importa:</strong> {education.why_it_matters}
+                  </p>
+                  {education.what_to_do_next && (
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      <strong>Próximos passos:</strong> {education.what_to_do_next}
+                    </p>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+            
+            {item.evidence && (
+              <Collapsible open={showDetails} onOpenChange={setShowDetails}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    Ver evidências
+                    <ChevronDown className={`h-3 w-3 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <div className="bg-muted/50 rounded-lg p-3">
+                    <h4 className="font-medium text-xs mb-2 text-muted-foreground">Evidências técnicas</h4>
+                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap font-mono bg-background p-2 rounded border">
+                      {JSON.stringify(item.evidence, null, 2)}
+                    </pre>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
