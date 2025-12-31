@@ -2444,6 +2444,9 @@ export type Database = {
           action_type: string
           created_at: string
           decision_event_id: string | null
+          effectiveness_checked_at: string | null
+          effectiveness_evidence: Json | null
+          effectiveness_status: string | null
           error_message: string | null
           executed_at: string | null
           executed_by: string | null
@@ -2458,6 +2461,9 @@ export type Database = {
           action_type: string
           created_at?: string
           decision_event_id?: string | null
+          effectiveness_checked_at?: string | null
+          effectiveness_evidence?: Json | null
+          effectiveness_status?: string | null
           error_message?: string | null
           executed_at?: string | null
           executed_by?: string | null
@@ -2472,6 +2478,9 @@ export type Database = {
           action_type?: string
           created_at?: string
           decision_event_id?: string | null
+          effectiveness_checked_at?: string | null
+          effectiveness_evidence?: Json | null
+          effectiveness_status?: string | null
           error_message?: string | null
           executed_at?: string | null
           executed_by?: string | null
@@ -2607,6 +2616,7 @@ export type Database = {
           created_at: string
           description: string
           evidence: Json
+          final_outcome: string | null
           id: string
           insight_type: string
           metadata: Json | null
@@ -2633,6 +2643,7 @@ export type Database = {
           created_at?: string
           description: string
           evidence?: Json
+          final_outcome?: string | null
           id?: string
           insight_type: string
           metadata?: Json | null
@@ -2659,6 +2670,7 @@ export type Database = {
           created_at?: string
           description?: string
           evidence?: Json
+          final_outcome?: string | null
           id?: string
           insight_type?: string
           metadata?: Json | null

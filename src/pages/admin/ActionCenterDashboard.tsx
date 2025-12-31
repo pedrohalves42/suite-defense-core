@@ -9,17 +9,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { RefreshCw, Target, ArrowRight, Clock, History, CheckCircle2, XCircle, Bot, User, ChevronDown, ShieldCheck, BookOpen, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Target, ArrowRight, Clock, History, CheckCircle2, XCircle, Bot, User, ChevronDown, ShieldCheck, BookOpen, AlertTriangle, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { explainInsight } from '@/lib/explain-insight';
+import { explainInsight, explainEffectiveness, type EffectivenessStatus } from '@/lib/explain-insight';
 import { getEducationalMoment } from '@/lib/education-mapping';
 import { mapInsightToAction } from '@/lib/insight-action-mapping';
+
+function EffectivenessBadge({ status }: { status: EffectivenessStatus }) {
+  const config = {
+    resolved: { icon: CheckCircle2, className: 'bg-green-100 text-green-700 border-green-200', label: 'Resolvido' },
+    partial: { icon: AlertTriangle, className: 'bg-yellow-100 text-yellow-700 border-yellow-200', label: 'Parcial' },
+    failed: { icon: XCircle, className: 'bg-red-100 text-red-700 border-red-200', label: 'Não resolvido' },
+    pending: { icon: Loader2, className: 'bg-gray-100 text-gray-600 border-gray-200', label: 'Verificando' },
+    unknown: { icon: AlertTriangle, className: 'bg-gray-100 text-gray-500 border-gray-200', label: 'Indeterminado' },
+  };
+  
+  const { icon: Icon, className, label } = config[status] || config.unknown;
+  
+  return (
+    <Badge variant="outline" className={`gap-1 ${className}`}>
+      <Icon className={`h-3 w-3 ${status === 'pending' ? 'animate-spin' : ''}`} />
+      {label}
+    </Badge>
+  );
+}
 
 function HistoryItemCard({ item }: { item: ActionHistoryItem }) {
   const [showDetails, setShowDetails] = useState(false);
   const [showEducation, setShowEducation] = useState(false);
+  const [showEffectiveness, setShowEffectiveness] = useState(false);
   
   const isResolved = item.status === 'resolved';
   const wasAutoExecuted = item.auto_action_executed;
@@ -28,6 +48,16 @@ function HistoryItemCard({ item }: { item: ActionHistoryItem }) {
   const mapping = mapInsightToAction(item.insight_type);
   const explanation = explainInsight(item, mapping);
   const education = getEducationalMoment(item.insight_type);
+  
+  // Get effectiveness data from first action (if exists)
+  const action = item.ai_actions?.[0];
+  const effectivenessStatus = (action?.effectiveness_status || item.final_outcome || 'pending') as EffectivenessStatus;
+  const effectivenessEvidence = action?.effectiveness_evidence as Record<string, unknown> | null;
+  const effectivenessExplanation = explainEffectiveness(
+    effectivenessStatus,
+    item.insight_type,
+    effectivenessEvidence || undefined
+  );
   
   const riskColors: Record<string, string> = {
     critical: 'text-red-600 bg-red-50 border-red-200',
@@ -43,7 +73,7 @@ function HistoryItemCard({ item }: { item: ActionHistoryItem }) {
           {/* Header */}
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 {isResolved ? (
                   <ShieldCheck className="h-4 w-4 text-green-600 shrink-0" />
                 ) : (
@@ -53,6 +83,7 @@ function HistoryItemCard({ item }: { item: ActionHistoryItem }) {
                 <Badge variant={isResolved ? 'default' : 'secondary'} className="shrink-0">
                   {isResolved ? 'Resolvido' : 'Ignorado'}
                 </Badge>
+                <EffectivenessBadge status={effectivenessStatus} />
               </div>
               
               {/* Human explanation */}
@@ -60,9 +91,14 @@ function HistoryItemCard({ item }: { item: ActionHistoryItem }) {
                 {explanation.what_happened}
               </p>
               
-              {/* Why it matters */}
-              <p className="text-xs text-muted-foreground italic">
-                {explanation.why_it_matters}
+              {/* Effectiveness result */}
+              <p className="text-sm font-medium" style={{ 
+                color: effectivenessStatus === 'resolved' ? 'hsl(142.1 76.2% 36.3%)' 
+                  : effectivenessStatus === 'failed' ? 'hsl(0 84.2% 60.2%)' 
+                  : effectivenessStatus === 'partial' ? 'hsl(38 92% 50%)' 
+                  : 'inherit' 
+              }}>
+                {effectivenessExplanation.human_text}
               </p>
             </div>
             
@@ -108,7 +144,7 @@ function HistoryItemCard({ item }: { item: ActionHistoryItem }) {
           </div>
           
           {/* Expandable sections */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex flex-wrap gap-2 pt-2">
             <Collapsible open={showEducation} onOpenChange={setShowEducation}>
               <CollapsibleTrigger asChild>
                 <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
@@ -136,18 +172,38 @@ function HistoryItemCard({ item }: { item: ActionHistoryItem }) {
               </CollapsibleContent>
             </Collapsible>
             
+            {effectivenessEvidence && Object.keys(effectivenessEvidence).length > 0 && (
+              <Collapsible open={showEffectiveness} onOpenChange={setShowEffectiveness}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Ver verificação
+                    <ChevronDown className={`h-3 w-3 transition-transform ${showEffectiveness ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2">
+                  <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                    <h4 className="font-medium text-xs mb-2 text-muted-foreground">Evidências da verificação</h4>
+                    <pre className="text-xs overflow-x-auto whitespace-pre-wrap font-mono bg-background p-2 rounded border">
+                      {JSON.stringify(effectivenessEvidence, null, 2)}
+                    </pre>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+            
             {item.evidence && (
               <Collapsible open={showDetails} onOpenChange={setShowDetails}>
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-7 text-xs gap-1">
                     <AlertTriangle className="h-3 w-3" />
-                    Ver evidências
+                    Ver evidências originais
                     <ChevronDown className={`h-3 w-3 transition-transform ${showDetails ? 'rotate-180' : ''}`} />
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="mt-2">
                   <div className="bg-muted/50 rounded-lg p-3">
-                    <h4 className="font-medium text-xs mb-2 text-muted-foreground">Evidências técnicas</h4>
+                    <h4 className="font-medium text-xs mb-2 text-muted-foreground">Evidências técnicas originais</h4>
                     <pre className="text-xs overflow-x-auto whitespace-pre-wrap font-mono bg-background p-2 rounded border">
                       {JSON.stringify(item.evidence, null, 2)}
                     </pre>
