@@ -2340,8 +2340,13 @@ export type Database = {
       ai_action_configs: {
         Row: {
           action_type: string
+          circuit_breaker_enabled: boolean | null
+          circuit_open_until: string | null
           created_at: string | null
+          current_failures: number | null
           description: string | null
+          failure_threshold: number | null
+          failure_window_minutes: number | null
           id: string
           is_enabled: boolean | null
           max_executions_per_day: number | null
@@ -2351,8 +2356,13 @@ export type Database = {
         }
         Insert: {
           action_type: string
+          circuit_breaker_enabled?: boolean | null
+          circuit_open_until?: string | null
           created_at?: string | null
+          current_failures?: number | null
           description?: string | null
+          failure_threshold?: number | null
+          failure_window_minutes?: number | null
           id?: string
           is_enabled?: boolean | null
           max_executions_per_day?: number | null
@@ -2362,8 +2372,13 @@ export type Database = {
         }
         Update: {
           action_type?: string
+          circuit_breaker_enabled?: boolean | null
+          circuit_open_until?: string | null
           created_at?: string | null
+          current_failures?: number | null
           description?: string | null
+          failure_threshold?: number | null
+          failure_window_minutes?: number | null
           id?: string
           is_enabled?: boolean | null
           max_executions_per_day?: number | null
@@ -2431,6 +2446,71 @@ export type Database = {
           },
           {
             foreignKeyName: "ai_action_executions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      ai_action_validations: {
+        Row: {
+          action_id: string
+          confidence_score: number | null
+          created_at: string
+          id: string
+          tenant_id: string
+          validated_by: string | null
+          validation_notes: string | null
+          validation_result: string
+          validation_source: string
+        }
+        Insert: {
+          action_id: string
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          tenant_id: string
+          validated_by?: string | null
+          validation_notes?: string | null
+          validation_result: string
+          validation_source: string
+        }
+        Update: {
+          action_id?: string
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          tenant_id?: string
+          validated_by?: string | null
+          validation_notes?: string | null
+          validation_result?: string
+          validation_source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_action_validations_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "ai_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_action_validations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_action_validations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_action_validations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -3323,6 +3403,7 @@ export type Database = {
           is_active: boolean
           min_approvers: number
           name: string
+          require_different_approvers: boolean | null
           tenant_id: string
           timeout_hours: number
           updated_at: string
@@ -3336,6 +3417,7 @@ export type Database = {
           is_active?: boolean
           min_approvers?: number
           name: string
+          require_different_approvers?: boolean | null
           tenant_id: string
           timeout_hours?: number
           updated_at?: string
@@ -3349,6 +3431,7 @@ export type Database = {
           is_active?: boolean
           min_approvers?: number
           name?: string
+          require_different_approvers?: boolean | null
           tenant_id?: string
           timeout_hours?: number
           updated_at?: string
@@ -4861,6 +4944,8 @@ export type Database = {
           resolved_at: string | null
           resolved_by: string | null
           retry_count: number | null
+          review_notes: string | null
+          risk_category: string | null
           status: string | null
           tenant_id: string | null
         }
@@ -4884,6 +4969,8 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           retry_count?: number | null
+          review_notes?: string | null
+          risk_category?: string | null
           status?: string | null
           tenant_id?: string | null
         }
@@ -4907,6 +4994,8 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           retry_count?: number | null
+          review_notes?: string | null
+          risk_category?: string | null
           status?: string | null
           tenant_id?: string | null
         }
@@ -12549,6 +12638,41 @@ export type Database = {
           },
         ]
       }
+      v_ai_anomalies: {
+        Row: {
+          action_type: string | null
+          anomaly_type: string | null
+          executed: number | null
+          failed: number | null
+          resolved_insights: number | null
+          severity: string | null
+          tenant_id: string | null
+          total_actions: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_actions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_confidence_gap_trend: {
         Row: {
           alert_triggered: boolean | null
@@ -13636,6 +13760,10 @@ export type Database = {
         Args: { p_action_type: string; p_tenant_id: string }
         Returns: boolean
       }
+      check_ai_circuit_breaker: {
+        Args: { p_action_type: string; p_tenant_id: string }
+        Returns: Json
+      }
       check_and_block_ip: {
         Args: { p_email?: string; p_ip_address: string }
         Returns: {
@@ -13645,6 +13773,7 @@ export type Database = {
           is_blocked: boolean
         }[]
       }
+      check_approval_complete: { Args: { p_request_id: string }; Returns: Json }
       check_execution_orphans: {
         Args: never
         Returns: {
@@ -14324,6 +14453,14 @@ export type Database = {
         }[]
       }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
+      review_dlq_item: {
+        Args: {
+          p_dlq_id: string
+          p_review_notes: string
+          p_risk_category?: string
+        }
+        Returns: Json
+      }
       revoke_agent_signing_key: {
         Args: { p_key_id: string; p_reason?: string }
         Returns: boolean
