@@ -610,6 +610,104 @@ serve(async (req) => {
         );
       }
 
+      // Handle ai_insight execute action - creates ai_action and calls dispatcher
+      if (source_type === 'ai_insight' && action === 'execute') {
+        // Get the insight to access recommended_actions
+        const { data: insight, error: insightError } = await serviceClient
+          .from('ai_insights')
+          .select('id, tenant_id, agent_id, recommended_actions, insight_type, severity')
+          .eq('id', item_id)
+          .eq('tenant_id', tenantId)
+          .single();
+
+        if (insightError || !insight) {
+          console.error('[action-center-feed] Get insight error:', insightError);
+          return new Response(
+            JSON.stringify({ error: 'Insight not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const recommendedActions = insight.recommended_actions as Array<{ action_type: string; parameters?: Record<string, unknown> }> | null;
+        
+        if (!recommendedActions || recommendedActions.length === 0) {
+          return new Response(
+            JSON.stringify({ error: 'No recommended actions for this insight' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Create ai_action for the first recommended action
+        const firstAction = recommendedActions[0];
+        const { data: createdAction, error: createError } = await serviceClient
+          .from('ai_actions')
+          .insert({
+            tenant_id: tenantId,
+            insight_id: insight.id,
+            agent_id: insight.agent_id,
+            action_type: firstAction.action_type,
+            parameters: firstAction.parameters || {},
+            status: 'pending',
+            triggered_by: 'user_manual',
+            created_by: user.id,
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('[action-center-feed] Create action error:', createError);
+          return new Response(
+            JSON.stringify({ error: createError.message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Call the ai-action-executor to execute
+        try {
+          const { data: execResult, error: execError } = await supabase.functions.invoke('ai-action-executor', {
+            body: { action_id: createdAction.id },
+          });
+
+          if (execError) {
+            console.error('[action-center-feed] Execute action error:', execError);
+            // Action was created but execution failed - still return success with warning
+            return new Response(
+              JSON.stringify({ 
+                success: true, 
+                action_id: createdAction.id,
+                warning: 'Action created but execution may have failed',
+                error: execError.message,
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // Mark insight as having had action executed
+          await serviceClient
+            .from('ai_insights')
+            .update({ 
+              auto_action_executed: true,
+              auto_action_executed_at: new Date().toISOString(),
+            })
+            .eq('id', item_id);
+
+          return new Response(
+            JSON.stringify({ success: true, action_id: createdAction.id, result: execResult }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (execErr) {
+          console.error('[action-center-feed] Execute action exception:', execErr);
+          return new Response(
+            JSON.stringify({ 
+              success: true, 
+              action_id: createdAction.id,
+              warning: 'Action created but execution threw exception',
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
       return new Response(
         JSON.stringify({ error: 'Unknown action' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
