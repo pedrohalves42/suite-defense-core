@@ -91,12 +91,39 @@ Deno.serve(async (req) => {
     
     const tenantModeMap = new Map((tenantModes || []).map(t => [t.id, t.auto_action_mode || 'suggest']))
 
+    // CICLO 6: Buscar políticas personalizadas por tenant
+    const { data: tenantPolicies } = await supabase
+      .from('tenant_action_policies')
+      .select('tenant_id, insight_type, execution_mode')
+      .in('tenant_id', tenantIds)
+    
+    // Map: "tenant_id:insight_type" -> execution_mode
+    const policyMap = new Map(
+      (tenantPolicies || []).map(p => [`${p.tenant_id}:${p.insight_type}`, p.execution_mode])
+    )
+    
+    console.log(`[${requestId}] Loaded ${tenantPolicies?.length || 0} tenant-specific policies`)
+
     // Buscar configurações de ações
     const { data: actionConfigs } = await supabase
       .from('ai_action_configs')
       .select('action_type, is_enabled, requires_approval, risk_level, max_executions_per_day')
 
     const configMap = new Map(actionConfigs?.map(c => [c.action_type, c]) || [])
+
+    // Default insight mappings (mirrors insight-action-mapping.ts)
+    const INSIGHT_DEFAULT_MODES: Record<string, string> = {
+      antivirus_disabled: 'auto',
+      antivirus_outdated: 'auto',
+      vulnerability_critical: 'approval',
+      vulnerability_high: 'approval',
+      dns_malicious_activity: 'auto',
+      agent_offline_suspicious: 'auto',
+      safe_mode_prolonged: 'approval',
+      agent_tampering: 'auto',
+      anomaly_stuck_jobs: 'auto',
+      job_failed_recurring: 'auto',
+    }
 
     const result: ExecutionResult = {
       actions_processed: 0,
@@ -119,32 +146,44 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Skip se requer aprovação manual
+      // Skip se requer aprovação manual (from ai_action_configs)
       if (config.requires_approval) {
-        console.log(`[${requestId}] Skipping ${action.id}: requires manual approval`)
+        console.log(`[${requestId}] Skipping ${action.id}: requires manual approval (config)`)
         result.actions_skipped++
         continue
       }
 
-      // Check tenant automation mode
-      const tenantMode = tenantModeMap.get(action.tenant_id) || 'suggest'
+      // CICLO 6: Hierarquia de decisão de modo
+      // 1. Política específica do tenant para este insight_type
+      // 2. Mapeamento padrão do código (INSIGHT_DEFAULT_MODES)
+      // 3. Modo global do tenant (auto_action_mode)
+      const insightType = insight?.insight_type || ''
+      const tenantPolicyMode = policyMap.get(`${action.tenant_id}:${insightType}`)
+      const defaultInsightMode = INSIGHT_DEFAULT_MODES[insightType]
+      const tenantGlobalMode = tenantModeMap.get(action.tenant_id) || 'suggest'
       
-      // Skip if tenant has automation off
-      if (tenantMode === 'off') {
-        console.log(`[${requestId}] Skipping ${action.id}: tenant automation is off`)
+      // Determinar modo final
+      const finalMode = tenantPolicyMode ?? defaultInsightMode ?? tenantGlobalMode
+      
+      console.log(`[${requestId}] Action ${action.id} mode decision: tenant_policy=${tenantPolicyMode}, default=${defaultInsightMode}, global=${tenantGlobalMode} -> final=${finalMode}`)
+      
+      // Skip se tenant desabilitou este tipo de insight
+      if (finalMode === 'disabled') {
+        console.log(`[${requestId}] Skipping ${action.id}: disabled by tenant policy`)
         result.actions_skipped++
         continue
       }
       
-      // Skip if tenant only allows suggestions and this is not a suggestion type
-      if (tenantMode === 'suggest' && !action.action_type.startsWith('suggest_')) {
-        console.log(`[${requestId}] Skipping ${action.id}: tenant only allows suggestions`)
+      // Skip se requer aprovação (não é auto)
+      if (finalMode === 'approval' || finalMode === 'suggest') {
+        console.log(`[${requestId}] Skipping ${action.id}: requires approval (mode=${finalMode})`)
         result.actions_skipped++
         continue
       }
       
-      // Skip high risk if tenant only allows low risk automation
-      if (tenantMode === 'auto_low' && config.risk_level === 'high') {
+      // Só continua se finalMode === 'auto'
+      // Skip high risk if tenant only allows low risk automation (legacy check)
+      if (tenantGlobalMode === 'auto_low' && config.risk_level === 'high') {
         console.log(`[${requestId}] Skipping ${action.id}: tenant auto_low mode, action is high risk`)
         result.actions_skipped++
         continue

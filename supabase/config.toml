@@ -599,3 +599,16 @@ schedule = "0 * * * *"
 [functions.job-health-monitor]
 verify_jwt = false
 schedule = "0 * * * *"
+
+# === AI Execute Solution ===
+[functions.ai-execute-solution]
+verify_jwt = true
+
+# === Check Action Effectiveness (every 15 minutes) ===
+[functions.check-action-effectiveness]
+verify_jwt = false
+schedule = "*/15 * * * *"
+
+# === Generate Explainable AI Report ===
+[functions.generate-explainable-report]
+verify_jwt = true

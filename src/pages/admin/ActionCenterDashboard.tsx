@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useActionCenter } from '@/hooks/useActionCenter';
 import { useActionCenterHistory, ActionHistoryItem } from '@/hooks/useActionCenterHistory';
+import { useInsightFeedback, FeedbackType } from '@/hooks/useInsightFeedback';
 import { ActionCard, ActionCenterSection, EmptyActionCenter } from '@/components/action-center';
 import { ActionCenterOverview } from '@/components/action-center/ActionCenterOverview';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { RefreshCw, Target, ArrowRight, Clock, History, CheckCircle2, XCircle, Bot, User, ChevronDown, ShieldCheck, BookOpen, AlertTriangle, Loader2 } from 'lucide-react';
+import { RefreshCw, Target, ArrowRight, Clock, History, CheckCircle2, XCircle, Bot, User, ChevronDown, ShieldCheck, BookOpen, AlertTriangle, Loader2, ThumbsUp, ThumbsDown, Ban } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -40,6 +41,11 @@ function HistoryItemCard({ item }: { item: ActionHistoryItem }) {
   const [showDetails, setShowDetails] = useState(false);
   const [showEducation, setShowEducation] = useState(false);
   const [showEffectiveness, setShowEffectiveness] = useState(false);
+  const { feedback, hasFeedback, submitFeedback } = useInsightFeedback(item.id);
+  
+  const handleFeedback = (type: FeedbackType) => {
+    submitFeedback.mutate({ insightId: item.id, feedbackType: type });
+  };
   
   const isResolved = item.status === 'resolved';
   const wasAutoExecuted = item.auto_action_executed;
@@ -210,6 +216,48 @@ function HistoryItemCard({ item }: { item: ActionHistoryItem }) {
                   </div>
                 </CollapsibleContent>
               </Collapsible>
+            )}
+          </div>
+          
+          {/* CICLO 8: Feedback buttons */}
+          <div className="flex items-center gap-2 border-t pt-3 mt-3">
+            <span className="text-xs text-muted-foreground">Esta ação foi útil?</span>
+            {hasFeedback ? (
+              <Badge variant="outline" className="text-xs">
+                {feedback?.feedback_type === 'useful' && '👍 Útil'}
+                {feedback?.feedback_type === 'noise' && '👎 Ruído'}
+                {feedback?.feedback_type === 'false_positive' && '🚫 Falso positivo'}
+              </Badge>
+            ) : (
+              <>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 text-xs gap-1 hover:bg-green-50 hover:text-green-700"
+                  onClick={() => handleFeedback('useful')}
+                  disabled={submitFeedback.isPending}
+                >
+                  <ThumbsUp className="h-3 w-3" /> Útil
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="h-7 text-xs gap-1 hover:bg-yellow-50 hover:text-yellow-700"
+                  onClick={() => handleFeedback('noise')}
+                  disabled={submitFeedback.isPending}
+                >
+                  <ThumbsDown className="h-3 w-3" /> Ruído
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="h-7 text-xs gap-1 hover:bg-red-50 hover:text-red-700"
+                  onClick={() => handleFeedback('false_positive')}
+                  disabled={submitFeedback.isPending}
+                >
+                  <Ban className="h-3 w-3" /> Falso positivo
+                </Button>
+              </>
             )}
           </div>
         </div>
