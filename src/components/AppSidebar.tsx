@@ -5,7 +5,7 @@ import {
   Brain, Terminal, Globe, Clock, Gauge, 
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Heart, Search, Monitor, AppWindow, GitBranch,
-  Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck
+  Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck, FileBarChart
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -121,6 +121,8 @@ export const AppSidebar = () => {
     { icon: Gauge, label: 'Saúde Sistema', to: '/admin/system-health' },
     { icon: ClipboardCheck, label: 'SOC 2', to: '/admin/soc2-compliance' },
     { icon: FileText, label: 'Auditoria', to: '/admin/system-audit' },
+    { icon: FileBarChart, label: 'Relatórios', to: '/admin/reports' },
+    { icon: Scale, label: 'Compliance', to: '/admin/compliance-timeline' },
     { icon: Brain, label: 'Regras IA', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
   ], [criticalInsightsCount]);
