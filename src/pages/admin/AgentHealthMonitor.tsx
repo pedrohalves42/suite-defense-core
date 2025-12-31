@@ -19,6 +19,7 @@ import { TooltipProvider as TooltipProviderWrapper } from '@/components/ui/toolt
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HealthTrendChart } from '@/components/admin/HealthTrendChart';
 import { AgentDetailsDrawer } from '@/components/agent/AgentDetailsDrawer';
+import { DiskMetricsPanel } from '@/components/agent/DiskMetricsPanel';
 
 type StatusFilter = 'all' | 'problems' | 'protected' | 'offline';
 
@@ -403,6 +404,13 @@ export default function AgentHealthMonitor() {
                       <p>Versão: {agent.agent_version || 'N/A'}</p>
                       <p>SO: {agent.os_version || agent.os_type || 'N/A'}</p>
                     </div>
+
+                    {/* Disk Metrics */}
+                    {agent.id && (
+                      <div className="mt-3 pt-3 border-t">
+                        <DiskMetricsPanel agentId={agent.id} compact />
+                      </div>
+                    )}
 
                     {/* Last seen */}
                     <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
