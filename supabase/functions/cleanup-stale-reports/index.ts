@@ -46,15 +46,14 @@ Deno.serve(async (req) => {
     if (!staleReports || staleReports.length === 0) {
       console.log('[cleanup-stale-reports] No stale reports found');
       
-      // Log observability
-      await supabase.from('scheduled_job_runs').insert({
-        job_name: 'cleanup-stale-reports',
-        ran_at: new Date(startedAt).toISOString(),
-        completed_at: new Date().toISOString(),
-        success: true,
-        duration_ms: Date.now() - startedAt,
-        jobs_processed: 0,
-        metadata: { message: 'No stale reports found' }
+      // Log observability using RPC with job_key
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'cleanup-stale-reports',
+        p_success: true,
+        p_duration_ms: Date.now() - startedAt,
+        p_result: { message: 'No stale reports found' },
+        p_processed_count: 0,
+        p_job_source: 'cron'
       });
 
       return new Response(
@@ -127,15 +126,14 @@ Deno.serve(async (req) => {
 
     console.log('[cleanup-stale-reports] Cleanup complete:', results);
 
-    // Log observability - success
-    await supabase.from('scheduled_job_runs').insert({
-      job_name: 'cleanup-stale-reports',
-      ran_at: new Date(startedAt).toISOString(),
-      completed_at: new Date().toISOString(),
-      success: true,
-      duration_ms: Date.now() - startedAt,
-      jobs_processed: results.processed,
-      metadata: results
+    // Log observability - success using RPC with job_key
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'cleanup-stale-reports',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: results,
+      p_processed_count: results.processed,
+      p_job_source: 'cron'
     });
 
     return new Response(
@@ -145,16 +143,15 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('[cleanup-stale-reports] Error:', error);
 
-    // Log observability - failure
-    await supabase.from('scheduled_job_runs').insert({
-      job_name: 'cleanup-stale-reports',
-      ran_at: new Date(startedAt).toISOString(),
-      completed_at: new Date().toISOString(),
-      success: false,
-      duration_ms: Date.now() - startedAt,
-      jobs_processed: results.processed,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      metadata: results
+    // Log observability - failure using RPC with job_key
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'cleanup-stale-reports',
+      p_success: false,
+      p_duration_ms: Date.now() - startedAt,
+      p_error: error instanceof Error ? error.message : 'Unknown error',
+      p_result: results,
+      p_processed_count: results.processed,
+      p_job_source: 'cron'
     });
 
     return new Response(

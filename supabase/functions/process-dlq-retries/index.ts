@@ -52,15 +52,14 @@ Deno.serve(async (req) => {
     log.info('Found entries for retry', { count: entries.length });
 
     if (entries.length === 0) {
-      // Log observability
-      await supabase.from('scheduled_job_runs').insert({
-        job_name: 'process-dlq-retries',
-        ran_at: new Date(startedAt).toISOString(),
-        completed_at: new Date().toISOString(),
-        success: true,
-        duration_ms: Date.now() - startedAt,
-        jobs_processed: 0,
-        metadata: { message: 'No DLQ entries to process' }
+      // Log observability using RPC with job_key
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_key: 'process-dlq-retries',
+        p_success: true,
+        p_duration_ms: Date.now() - startedAt,
+        p_result: { message: 'No DLQ entries to process' },
+        p_processed_count: 0,
+        p_job_source: 'cron'
       });
 
       return new Response(
@@ -177,15 +176,14 @@ Deno.serve(async (req) => {
 
     log.timed('DLQ processing complete', results);
 
-    // Log observability - success
-    await supabase.from('scheduled_job_runs').insert({
-      job_name: 'process-dlq-retries',
-      ran_at: new Date(startedAt).toISOString(),
-      completed_at: new Date().toISOString(),
-      success: true,
-      duration_ms: Date.now() - startedAt,
-      jobs_processed: results.processed,
-      metadata: results
+    // Log observability - success using RPC with job_key
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'process-dlq-retries',
+      p_success: true,
+      p_duration_ms: Date.now() - startedAt,
+      p_result: results,
+      p_processed_count: results.processed,
+      p_job_source: 'cron'
     });
 
     return new Response(
@@ -199,16 +197,15 @@ Deno.serve(async (req) => {
   } catch (err) {
     log.error('Unexpected error', err);
 
-    // Log observability - failure
-    await supabase.from('scheduled_job_runs').insert({
-      job_name: 'process-dlq-retries',
-      ran_at: new Date(startedAt).toISOString(),
-      completed_at: new Date().toISOString(),
-      success: false,
-      duration_ms: Date.now() - startedAt,
-      jobs_processed: results.processed,
-      error: err instanceof Error ? err.message : 'Unknown error',
-      metadata: results
+    // Log observability - failure using RPC with job_key
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'process-dlq-retries',
+      p_success: false,
+      p_duration_ms: Date.now() - startedAt,
+      p_error: err instanceof Error ? err.message : 'Unknown error',
+      p_result: results,
+      p_processed_count: results.processed,
+      p_job_source: 'cron'
     });
 
     return new Response(

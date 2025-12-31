@@ -2,12 +2,14 @@
  * Auto Execute AI Actions - Edge Function
  * 
  * Executa automaticamente ações de IA de baixo risco que não requerem aprovação manual.
+ * AGORA COM CICLO FECHADO: atualiza status do insight após execução.
  * 
  * Fluxo:
  * 1. Busca insights recentes que geraram ações pendentes
  * 2. Verifica whitelist e rate limits
  * 3. Executa ações de baixo risco automaticamente
  * 4. Registra execuções no audit log
+ * 5. NOVO: Fecha ciclo atualizando status do insight
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
@@ -17,6 +19,7 @@ interface ExecutionResult {
   actions_processed: number
   actions_executed: number
   actions_skipped: number
+  insights_resolved: number
   errors: string[]
 }
 
@@ -44,7 +47,7 @@ Deno.serve(async (req) => {
         action_type,
         action_payload,
         insight_id,
-        ai_insights(confidence_score, insight_type)
+        ai_insights(id, confidence_score, insight_type, status)
       `)
       .eq('status', 'pending')
       .order('created_at', { ascending: true })
@@ -59,11 +62,12 @@ Deno.serve(async (req) => {
       
       // Log job run even when no actions
       await supabase.rpc('log_scheduled_job_run', {
-        p_job_name: 'auto-execute-ai-actions',
+        p_job_key: 'auto-execute-ai-actions',
         p_success: true,
         p_duration_ms: Date.now() - startTime,
         p_result: { message: 'No pending actions' },
         p_processed_count: 0,
+        p_job_source: 'cron'
       })
       
       return new Response(
@@ -98,6 +102,7 @@ Deno.serve(async (req) => {
       actions_processed: 0,
       actions_executed: 0,
       actions_skipped: 0,
+      insights_resolved: 0,
       errors: []
     }
 
@@ -105,6 +110,7 @@ Deno.serve(async (req) => {
       result.actions_processed++
       
       const config = configMap.get(action.action_type)
+      const insight = action.ai_insights as any
       
       // Skip se não está na whitelist ou está desabilitado
       if (!config || !config.is_enabled) {
@@ -164,6 +170,14 @@ Deno.serve(async (req) => {
         continue
       }
 
+      // CICLO FECHADO: Marcar insight como in_progress
+      if (action.insight_id && insight) {
+        await supabase
+          .from('ai_insights')
+          .update({ status: 'in_progress' })
+          .eq('id', action.insight_id)
+      }
+
       // Executar ação automaticamente
       try {
         let executionResult: any = {}
@@ -206,6 +220,21 @@ Deno.serve(async (req) => {
             break
           }
 
+          case 'cleanup_stuck_jobs': {
+            // Execute the cleanup_stuck_jobs RPC function
+            const { data: cleanupResult, error: cleanupError } = await supabase
+              .rpc('cleanup_stuck_jobs')
+            
+            if (cleanupError) throw cleanupError
+            
+            executionResult = {
+              action_executed: true,
+              cleanup_result: cleanupResult,
+              jobs_cleaned: cleanupResult?.[0]?.cleaned_count || 0
+            }
+            break
+          }
+
           case 'suggest_agent_restart':
           case 'suggest_config_change':
           case 'suggest_job_cleanup': {
@@ -245,6 +274,21 @@ Deno.serve(async (req) => {
             executed_at: new Date().toISOString()
           })
 
+        // CICLO FECHADO: Marcar insight como resolved
+        if (action.insight_id) {
+          await supabase
+            .from('ai_insights')
+            .update({
+              status: 'resolved',
+              resolved_at: new Date().toISOString(),
+              auto_action_executed: true
+            })
+            .eq('id', action.insight_id)
+          
+          result.insights_resolved++
+          console.log(`[${requestId}] Insight ${action.insight_id} marked as resolved (cycle closed)`)
+        }
+
         console.log(`[${requestId}] Auto-executed action ${action.id}`)
         result.actions_executed++
 
@@ -252,7 +296,7 @@ Deno.serve(async (req) => {
         console.error(`[${requestId}] Failed to execute action ${action.id}:`, execError)
         result.errors.push(`${action.id}: ${execError.message}`)
         
-        // Marcar como falhou
+        // Marcar ação como falhou
         await supabase
           .from('ai_actions')
           .update({
@@ -260,6 +304,16 @@ Deno.serve(async (req) => {
             error_message: execError.message
           })
           .eq('id', action.id)
+
+        // CICLO FECHADO: Marcar insight como failed
+        if (action.insight_id) {
+          await supabase
+            .from('ai_insights')
+            .update({
+              status: 'failed'
+            })
+            .eq('id', action.insight_id)
+        }
       }
     }
 
@@ -268,11 +322,12 @@ Deno.serve(async (req) => {
 
     // Log job run
     await supabase.rpc('log_scheduled_job_run', {
-      p_job_name: 'auto-execute-ai-actions',
+      p_job_key: 'auto-execute-ai-actions',
       p_success: true,
       p_duration_ms: duration,
       p_result: result,
       p_processed_count: result.actions_processed,
+      p_job_source: 'cron'
     })
 
     return new Response(
@@ -288,6 +343,21 @@ Deno.serve(async (req) => {
   } catch (error) {
     const duration = Date.now() - startTime
     console.error(`[${requestId}] Error after ${duration}ms:`, error)
+    
+    // Log job run failure
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
+    
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_key: 'auto-execute-ai-actions',
+      p_success: false,
+      p_duration_ms: duration,
+      p_error: error instanceof Error ? error.message : 'Unknown error',
+      p_processed_count: 0,
+      p_job_source: 'cron'
+    })
     
     return new Response(
       JSON.stringify({ 
