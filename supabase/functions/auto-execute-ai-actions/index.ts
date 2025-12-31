@@ -56,6 +56,16 @@ Deno.serve(async (req) => {
 
     if (!pendingActions || pendingActions.length === 0) {
       console.log(`[${requestId}] No pending actions found`)
+      
+      // Log job run even when no actions
+      await supabase.rpc('log_scheduled_job_run', {
+        p_job_name: 'auto-execute-ai-actions',
+        p_success: true,
+        p_duration_ms: Date.now() - startTime,
+        p_result: { message: 'No pending actions' },
+        p_processed_count: 0,
+      })
+      
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -67,6 +77,15 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[${requestId}] Found ${pendingActions.length} pending actions`)
+    
+    // Fetch tenant automation modes
+    const tenantIds = [...new Set(pendingActions.map(a => a.tenant_id).filter(Boolean))]
+    const { data: tenantModes } = await supabase
+      .from('tenants')
+      .select('id, auto_action_mode')
+      .in('id', tenantIds)
+    
+    const tenantModeMap = new Map((tenantModes || []).map(t => [t.id, t.auto_action_mode || 'suggest']))
 
     // Buscar configurações de ações
     const { data: actionConfigs } = await supabase
@@ -101,7 +120,31 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Skip se é alto risco
+      // Check tenant automation mode
+      const tenantMode = tenantModeMap.get(action.tenant_id) || 'suggest'
+      
+      // Skip if tenant has automation off
+      if (tenantMode === 'off') {
+        console.log(`[${requestId}] Skipping ${action.id}: tenant automation is off`)
+        result.actions_skipped++
+        continue
+      }
+      
+      // Skip if tenant only allows suggestions and this is not a suggestion type
+      if (tenantMode === 'suggest' && !action.action_type.startsWith('suggest_')) {
+        console.log(`[${requestId}] Skipping ${action.id}: tenant only allows suggestions`)
+        result.actions_skipped++
+        continue
+      }
+      
+      // Skip high risk if tenant only allows low risk automation
+      if (tenantMode === 'auto_low' && config.risk_level === 'high') {
+        console.log(`[${requestId}] Skipping ${action.id}: tenant auto_low mode, action is high risk`)
+        result.actions_skipped++
+        continue
+      }
+
+      // Skip se é alto risco (global check)
       if (config.risk_level === 'high') {
         console.log(`[${requestId}] Skipping ${action.id}: high risk action`)
         result.actions_skipped++
@@ -222,6 +265,15 @@ Deno.serve(async (req) => {
 
     const duration = Date.now() - startTime
     console.log(`[${requestId}] Completed in ${duration}ms:`, result)
+
+    // Log job run
+    await supabase.rpc('log_scheduled_job_run', {
+      p_job_name: 'auto-execute-ai-actions',
+      p_success: true,
+      p_duration_ms: duration,
+      p_result: result,
+      p_processed_count: result.actions_processed,
+    })
 
     return new Response(
       JSON.stringify({

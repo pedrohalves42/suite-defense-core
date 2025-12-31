@@ -594,3 +594,8 @@ schedule = "*/10 * * * *"
 [functions.cleanup-stale-reports]
 verify_jwt = false
 schedule = "0 * * * *"
+
+# === P1: Job Health Monitor (every hour) ===
+[functions.job-health-monitor]
+verify_jwt = false
+schedule = "0 * * * *"

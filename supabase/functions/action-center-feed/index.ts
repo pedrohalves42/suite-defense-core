@@ -34,18 +34,31 @@ interface ActionCenterFeed {
   warning?: string;
 }
 
-// Human-readable copy map
+// Human-readable copy map - Expanded for all trigger types
 const ACTION_COPY: Record<string, { title: string; description: string; cta: string }> = {
+  // === Vulnerability & Software Risk ===
   vulnerability_critical: {
     title: 'Falha crítica que pode permitir invasão',
     description: 'Encontramos uma falha grave com exploit público disponível. Se explorada, um invasor pode assumir o controle.',
     cta: 'Corrigir agora',
+  },
+  vulnerability_high: {
+    title: 'Vulnerabilidade de alto impacto',
+    description: 'Vulnerabilidade significativa que pode ser explorada em cenários específicos.',
+    cta: 'Avaliar correção',
   },
   software_risk_detected: {
     title: 'Software de alto risco detectado',
     description: 'Este computador possui software classificado como alto risco que pode comprometer a segurança.',
     cta: 'Revisar software',
   },
+  software_outdated: {
+    title: 'Software desatualizado detectado',
+    description: 'Versões antigas de software podem conter vulnerabilidades conhecidas.',
+    cta: 'Atualizar software',
+  },
+  
+  // === Agent Status ===
   agent_offline: {
     title: 'Computador offline de forma inesperada',
     description: 'Este computador parou de responder sem desligamento normal registrado.',
@@ -56,22 +69,64 @@ const ACTION_COPY: Record<string, { title: string; description: string; cta: str
     description: 'Este computador ficou offline após alertas de segurança recentes.',
     cta: 'Investigar agora',
   },
-  multiple_malicious_access: {
-    title: 'Tentativas DNS maliciosas recorrentes',
-    description: 'Foram detectadas múltiplas tentativas de acesso a domínios maliciosos.',
-    cta: 'Bloquear automaticamente',
-  },
-  suspicious_process: {
-    title: 'Processo incomum em execução',
-    description: 'Um programa que não faz parte do comportamento normal está rodando.',
-    cta: 'Encerrar processo',
+  agent_degraded: {
+    title: 'Agente com performance degradada',
+    description: 'O agente está respondendo, mas com atrasos ou falhas intermitentes.',
+    cta: 'Diagnosticar',
   },
   safe_mode_detected: {
     title: 'Proteções limitadas ativas',
     description: 'Este computador entrou em modo de segurança após falhas e ainda não retornou ao modo normal.',
     cta: 'Reativar proteções',
   },
-  // AI Insight types
+  
+  // === Network & Access ===
+  multiple_malicious_access: {
+    title: 'Tentativas DNS maliciosas recorrentes',
+    description: 'Foram detectadas múltiplas tentativas de acesso a domínios maliciosos.',
+    cta: 'Bloquear automaticamente',
+  },
+  blocked_access_pattern: {
+    title: 'Padrão de acesso bloqueado',
+    description: 'Múltiplas tentativas de acesso a sites bloqueados foram registradas.',
+    cta: 'Revisar política',
+  },
+  suspicious_network_activity: {
+    title: 'Atividade de rede suspeita',
+    description: 'Conexões ou transferências de dados incomuns foram detectadas.',
+    cta: 'Investigar tráfego',
+  },
+  
+  // === Process & Execution ===
+  suspicious_process: {
+    title: 'Processo incomum em execução',
+    description: 'Um programa que não faz parte do comportamento normal está rodando.',
+    cta: 'Encerrar processo',
+  },
+  unauthorized_execution: {
+    title: 'Execução não autorizada',
+    description: 'Um programa foi executado sem aprovação prévia.',
+    cta: 'Bloquear execução',
+  },
+  
+  // === System Health ===
+  high_cpu_usage: {
+    title: 'CPU em uso excessivo',
+    description: 'O processador está sob carga elevada por período prolongado.',
+    cta: 'Identificar causa',
+  },
+  high_memory_usage: {
+    title: 'Memória em uso excessivo',
+    description: 'A memória RAM está quase totalmente ocupada.',
+    cta: 'Liberar memória',
+  },
+  high_disk_usage: {
+    title: 'Disco quase cheio',
+    description: 'O espaço em disco está criticamente baixo.',
+    cta: 'Limpar espaço',
+  },
+  
+  // === AI Insight types ===
   vulnerability: {
     title: 'Vulnerabilidade detectada pela IA',
     description: 'Nossa análise automática identificou uma falha de segurança que requer atenção.',
@@ -81,6 +136,11 @@ const ACTION_COPY: Record<string, { title: string; description: string; cta: str
     title: 'Comportamento anômalo detectado',
     description: 'Padrão incomum identificado que pode indicar problema de segurança.',
     cta: 'Analisar',
+  },
+  anomaly_detection: {
+    title: 'Anomalia detectada automaticamente',
+    description: 'O sistema identificou um desvio significativo do comportamento esperado.',
+    cta: 'Investigar anomalia',
   },
   compliance: {
     title: 'Problema de conformidade',
@@ -101,6 +161,55 @@ const ACTION_COPY: Record<string, { title: string; description: string; cta: str
     title: 'Indicador de ameaça detectado',
     description: 'Inteligência de ameaças identificou potencial risco.',
     cta: 'Investigar',
+  },
+  root_cause: {
+    title: 'Causa raiz identificada',
+    description: 'A IA identificou a origem provável de problemas recorrentes.',
+    cta: 'Resolver causa',
+  },
+  optimization: {
+    title: 'Oportunidade de otimização',
+    description: 'Há espaço para melhorar configurações ou processos.',
+    cta: 'Ver sugestões',
+  },
+  predictive: {
+    title: 'Risco futuro previsto',
+    description: 'Com base em padrões, um problema pode ocorrer em breve.',
+    cta: 'Prevenir',
+  },
+  
+  // === Job & Automation ===
+  job_failed: {
+    title: 'Tarefa agendada falhou',
+    description: 'Uma tarefa automática não foi concluída com sucesso.',
+    cta: 'Ver detalhes',
+  },
+  job_stuck: {
+    title: 'Tarefa travada',
+    description: 'Uma tarefa está em execução há muito tempo sem progresso.',
+    cta: 'Cancelar tarefa',
+  },
+  playbook_triggered: {
+    title: 'Playbook acionado',
+    description: 'Uma automação de segurança foi disparada por evento detectado.',
+    cta: 'Revisar ação',
+  },
+  
+  // === Antivirus & Protection ===
+  antivirus_disabled: {
+    title: 'Antivírus desativado',
+    description: 'A proteção antivírus foi desabilitada neste computador.',
+    cta: 'Reativar proteção',
+  },
+  antivirus_outdated: {
+    title: 'Definições de vírus desatualizadas',
+    description: 'As definições de vírus estão antigas e podem não detectar ameaças recentes.',
+    cta: 'Atualizar definições',
+  },
+  malware_detected: {
+    title: 'Malware detectado',
+    description: 'Software malicioso foi identificado no sistema.',
+    cta: 'Remover ameaça',
   },
 };
 
