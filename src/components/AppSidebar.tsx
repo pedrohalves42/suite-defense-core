@@ -108,6 +108,7 @@ export const AppSidebar = () => {
     { icon: Shield, label: 'Políticas', to: '/admin/security-policies' },
     { icon: AppWindow, label: 'Programas', to: '/admin/software-inventory' },
     { icon: Users, label: 'Equipe', to: '/admin/members' },
+    { icon: FileBarChart, label: 'Relatórios', to: '/admin/reports' },
     { icon: Settings, label: 'Configurações', to: '/admin/tenant' },
     { icon: Bell, label: 'Notificações', to: '/admin/notification-channels' },
   ], []);
@@ -121,7 +122,6 @@ export const AppSidebar = () => {
     { icon: Gauge, label: 'Saúde Sistema', to: '/admin/system-health' },
     { icon: ClipboardCheck, label: 'SOC 2', to: '/admin/soc2-compliance' },
     { icon: FileText, label: 'Auditoria', to: '/admin/system-audit' },
-    { icon: FileBarChart, label: 'Relatórios', to: '/admin/reports' },
     { icon: Scale, label: 'Compliance', to: '/admin/compliance-timeline' },
     { icon: Brain, label: 'Regras IA', to: '/admin/rules-management', badge: criticalInsightsCount > 0 ? criticalInsightsCount : undefined },
     { icon: CreditCard, label: 'Planos', to: '/admin/plan-upgrade' },
