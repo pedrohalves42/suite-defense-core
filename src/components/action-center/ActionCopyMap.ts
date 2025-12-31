@@ -1,4 +1,4 @@
-import { AlertTriangle, Shield, Wifi, WifiOff, Bug, Lock, Bell, Zap, FileText, Activity } from 'lucide-react';
+import { AlertTriangle, Shield, Wifi, WifiOff, Bug, Lock, Bell, Zap, FileText, Activity, Brain, Eye, TrendingUp, AlertCircle } from 'lucide-react';
 
 export interface ActionCopy {
   title: string;
@@ -65,6 +65,49 @@ export const ACTION_COPY_MAP: Record<string, ActionCopy> = {
     impact: 'Requer atenção do administrador.',
     cta: 'Executar ação',
     icon: Zap,
+  },
+  // AI Insight types
+  vulnerability: {
+    title: 'Vulnerabilidade detectada pela IA',
+    description: 'Nossa análise automática identificou uma falha de segurança que requer atenção.',
+    impact: 'Risco de exploração se não corrigido.',
+    cta: 'Ver recomendação',
+    icon: Brain,
+  },
+  anomaly: {
+    title: 'Comportamento anômalo detectado',
+    description: 'Padrão incomum identificado que pode indicar problema de segurança.',
+    impact: 'Pode ser comportamento malicioso ou configuração incorreta.',
+    cta: 'Analisar',
+    icon: Eye,
+  },
+  compliance: {
+    title: 'Problema de conformidade',
+    description: 'Configuração ou comportamento fora dos padrões de segurança esperados.',
+    impact: 'Pode afetar auditorias e compliance.',
+    cta: 'Corrigir',
+    icon: FileText,
+  },
+  performance: {
+    title: 'Problema de performance detectado',
+    description: 'Métricas de sistema indicam degradação que pode afetar operações.',
+    impact: 'Pode indicar problema maior ou ataque.',
+    cta: 'Otimizar',
+    icon: TrendingUp,
+  },
+  security_posture: {
+    title: 'Postura de segurança comprometida',
+    description: 'Análise indica configurações ou estados que enfraquecem a segurança.',
+    impact: 'Aumenta superfície de ataque.',
+    cta: 'Fortalecer',
+    icon: Shield,
+  },
+  threat_intel: {
+    title: 'Indicador de ameaça detectado',
+    description: 'Inteligência de ameaças identificou potencial risco.',
+    impact: 'Possível atividade maliciosa em andamento.',
+    cta: 'Investigar',
+    icon: AlertCircle,
   },
 };
 

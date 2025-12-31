@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface ActionItem {
   item_id: string;
-  source_type: 'playbook' | 'alert' | 'agent_offline';
+  source_type: 'playbook' | 'alert' | 'agent_offline' | 'ai_insight';
   agent_id: string | null;
   agent_name: string | null;
   hostname: string | null;
@@ -70,6 +70,37 @@ const ACTION_COPY: Record<string, { title: string; description: string; cta: str
     title: 'Proteções limitadas ativas',
     description: 'Este computador entrou em modo de segurança após falhas e ainda não retornou ao modo normal.',
     cta: 'Reativar proteções',
+  },
+  // AI Insight types
+  vulnerability: {
+    title: 'Vulnerabilidade detectada pela IA',
+    description: 'Nossa análise automática identificou uma falha de segurança que requer atenção.',
+    cta: 'Ver recomendação',
+  },
+  anomaly: {
+    title: 'Comportamento anômalo detectado',
+    description: 'Padrão incomum identificado que pode indicar problema de segurança.',
+    cta: 'Analisar',
+  },
+  compliance: {
+    title: 'Problema de conformidade',
+    description: 'Configuração ou comportamento fora dos padrões de segurança esperados.',
+    cta: 'Corrigir',
+  },
+  performance: {
+    title: 'Problema de performance detectado',
+    description: 'Métricas de sistema indicam degradação que pode afetar operações.',
+    cta: 'Otimizar',
+  },
+  security_posture: {
+    title: 'Postura de segurança comprometida',
+    description: 'Análise indica configurações ou estados que enfraquecem a segurança.',
+    cta: 'Fortalecer',
+  },
+  threat_intel: {
+    title: 'Indicador de ameaça detectado',
+    description: 'Inteligência de ameaças identificou potencial risco.',
+    cta: 'Investigar',
   },
 };
 
@@ -322,8 +353,88 @@ serve(async (req) => {
         }));
       }
 
+      // Fetch AI Insights not acknowledged and not auto-executed
+      let aiInsightItems: ActionItem[] = [];
+      
+      const { data: insights, error: insightsError } = await serviceClient
+        .from('ai_insights')
+        .select(`
+          id,
+          tenant_id,
+          agent_id,
+          insight_type,
+          severity,
+          title,
+          description,
+          evidence,
+          recommendation,
+          confidence_score,
+          category,
+          recommended_actions,
+          auto_action_mode,
+          auto_action_executed,
+          created_at
+        `)
+        .eq('tenant_id', tenantId)
+        .eq('acknowledged', false)
+        .eq('auto_action_executed', false)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (insightsError) {
+        console.error('[action-center-feed] AI Insights query error:', insightsError);
+      } else {
+        // Get agent info for insights
+        const agentIds = (insights || []).filter(i => i.agent_id).map(i => i.agent_id);
+        let agentMap: Record<string, { agent_name: string; hostname: string }> = {};
+        
+        if (agentIds.length > 0) {
+          const { data: insightAgents } = await serviceClient
+            .from('agents')
+            .select('id, agent_name, hostname')
+            .in('id', agentIds);
+          
+          agentMap = (insightAgents || []).reduce((acc, a) => {
+            acc[a.id] = { agent_name: a.agent_name, hostname: a.hostname };
+            return acc;
+          }, {} as Record<string, { agent_name: string; hostname: string }>);
+        }
+
+        aiInsightItems = (insights || []).map((insight: any) => {
+          const agent = insight.agent_id ? agentMap[insight.agent_id] : null;
+          const severityScore = insight.severity === 'critical' ? 100 : 
+                                insight.severity === 'high' ? 75 : 
+                                insight.severity === 'medium' ? 50 : 25;
+          
+          return {
+            item_id: insight.id,
+            source_type: 'ai_insight' as const,
+            agent_id: insight.agent_id,
+            agent_name: agent?.agent_name || null,
+            hostname: agent?.hostname || null,
+            title: insight.title,
+            description: insight.description,
+            severity: insight.severity,
+            risk_score: insight.confidence_score,
+            context: {
+              insight_type: insight.insight_type,
+              category: insight.category,
+              recommended_actions: insight.recommended_actions,
+              evidence: insight.evidence,
+              auto_action_mode: insight.auto_action_mode,
+              confidence_score: insight.confidence_score,
+              recommendation: insight.recommendation,
+            },
+            created_at: insight.created_at,
+            trigger_type: insight.insight_type,
+            playbook_id: null,
+            priority_score: severityScore + Math.round((insight.confidence_score || 0) * 10),
+          };
+        });
+      }
+
       // Merge all action items
-      const allItems = [...playbookItems, ...offlineActionItems];
+      const allItems = [...playbookItems, ...offlineActionItems, ...aiInsightItems];
 
       // Categorize items
       const urgent = allItems
@@ -469,6 +580,32 @@ serve(async (req) => {
         
         return new Response(
           JSON.stringify({ success: true, message: 'Offline status acknowledged' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Handle ai_insight acknowledge action
+      if (source_type === 'ai_insight' && action === 'acknowledge') {
+        const { error } = await serviceClient
+          .from('ai_insights')
+          .update({
+            acknowledged: true,
+            acknowledged_by: user.id,
+            acknowledged_at: new Date().toISOString(),
+          })
+          .eq('id', item_id)
+          .eq('tenant_id', tenantId);
+
+        if (error) {
+          console.error('[action-center-feed] Acknowledge insight error:', error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }

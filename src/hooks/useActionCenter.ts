@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 
 export interface ActionItem {
   item_id: string;
-  source_type: 'playbook' | 'alert' | 'agent_offline';
+  source_type: 'playbook' | 'alert' | 'agent_offline' | 'ai_insight';
   agent_id: string | null;
   agent_name: string | null;
   hostname: string | null;
@@ -112,7 +112,7 @@ export function useExecuteActionItem() {
       reason,
     }: {
       itemId: string;
-      sourceType: 'playbook' | 'alert' | 'agent_offline';
+      sourceType: 'playbook' | 'alert' | 'agent_offline' | 'ai_insight';
       action: 'execute' | 'ignore' | 'acknowledge';
       reason?: string;
     }) => {
