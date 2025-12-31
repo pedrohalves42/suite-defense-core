@@ -13538,6 +13538,13 @@ export type Database = {
           job_ids: string[]
         }[]
       }
+      backfill_audit_log_hashes: {
+        Args: { p_tenant_id?: string }
+        Returns: {
+          tenant_id: string
+          updated_count: number
+        }[]
+      }
       calculate_confidence_gap: {
         Args: {
           p_ana_score: number
