@@ -263,6 +263,38 @@ Deno.serve(async (req) => {
 
     console.log(`[${requestId}] Report generated: ${totalDecisions} decisions`);
 
+    // CICLO 7: Calcular hash de integridade e persistir relatório
+    const reportStr = JSON.stringify(report);
+    const hashBuffer = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(reportStr)
+    );
+    const integrityHash = Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    // Persistir relatório para auditoria (upsert para evitar duplicatas)
+    const { error: persistError } = await supabase
+      .from('ai_decision_reports')
+      .upsert({
+        tenant_id,
+        period_start,
+        period_end,
+        report_payload: report,
+        generated_by: user.id,
+        generated_at: new Date().toISOString(),
+        integrity_hash: integrityHash,
+        engine_version: 'v1.0',
+      }, {
+        onConflict: 'tenant_id,period_start,period_end',
+      });
+
+    if (persistError) {
+      console.warn(`[${requestId}] Failed to persist report (non-fatal):`, persistError);
+    } else {
+      console.log(`[${requestId}] Report persisted with hash: ${integrityHash.slice(0, 16)}...`);
+    }
+
     // Return as HTML if requested
     if (format === 'html') {
       const html = generateHTMLReport(report);
@@ -272,7 +304,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, report }),
+      JSON.stringify({ success: true, report, integrity_hash: integrityHash }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

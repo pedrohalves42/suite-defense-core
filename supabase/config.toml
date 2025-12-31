@@ -612,3 +612,7 @@ schedule = "*/15 * * * *"
 # === Generate Explainable AI Report ===
 [functions.generate-explainable-report]
 verify_jwt = true
+
+# === Resolve Action Policy (Enterprise Policy Engine) ===
+[functions.resolve-action-policy]
+verify_jwt = false

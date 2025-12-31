@@ -115,5 +115,36 @@ export function useFeedbackStats() {
       return stats;
     },
     enabled: !!activeTenant?.id,
+    staleTime: 60000,
+  });
+}
+
+/**
+ * Hook para buscar métricas de qualidade agregadas por tipo de insight
+ * Usa a view insight_feedback_quality
+ */
+export function useFeedbackQualityMetrics() {
+  const { activeTenant } = useActiveTenant();
+
+  return useQuery({
+    queryKey: ['feedback-quality-metrics', activeTenant?.id],
+    queryFn: async () => {
+      if (!activeTenant?.id) return [];
+      
+      // Query the aggregated view
+      const { data, error } = await supabase
+        .from('insight_feedback_quality' as any)
+        .select('*')
+        .eq('tenant_id', activeTenant.id);
+
+      if (error) {
+        console.warn('insight_feedback_quality view not accessible:', error);
+        return [];
+      }
+
+      return data || [];
+    },
+    enabled: !!activeTenant?.id,
+    staleTime: 120000, // 2 minutes
   });
 }
