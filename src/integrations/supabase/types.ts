@@ -2528,6 +2528,64 @@ export type Database = {
           },
         ]
       }
+      ai_decision_reports: {
+        Row: {
+          engine_version: string
+          generated_at: string | null
+          generated_by: string | null
+          id: string
+          integrity_hash: string
+          period_end: string
+          period_start: string
+          report_payload: Json
+          tenant_id: string
+        }
+        Insert: {
+          engine_version?: string
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          integrity_hash: string
+          period_end: string
+          period_start: string
+          report_payload: Json
+          tenant_id: string
+        }
+        Update: {
+          engine_version?: string
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          integrity_hash?: string
+          period_end?: string
+          period_start?: string
+          report_payload?: Json
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_decision_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_decision_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_decision_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       ai_inference_metrics: {
         Row: {
           circuit_breaker_state: string | null
@@ -9815,6 +9873,7 @@ export type Database = {
           execution_mode: string
           id: string
           insight_type: string
+          last_applied_at: string | null
           tenant_id: string
           updated_at: string | null
         }
@@ -9824,6 +9883,7 @@ export type Database = {
           execution_mode: string
           id?: string
           insight_type: string
+          last_applied_at?: string | null
           tenant_id: string
           updated_at?: string | null
         }
@@ -9833,6 +9893,7 @@ export type Database = {
           execution_mode?: string
           id?: string
           insight_type?: string
+          last_applied_at?: string | null
           tenant_id?: string
           updated_at?: string | null
         }
@@ -11543,6 +11604,40 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_agents_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      insight_feedback_quality: {
+        Row: {
+          false_positive: number | null
+          insight_type: string | null
+          noise: number | null
+          tenant_id: string | null
+          total_feedback: number | null
+          useful: number | null
+          usefulness_rate: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insight_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_insight_feedback_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_insight_feedback_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
