@@ -2,14 +2,14 @@
  * Auto Execute AI Actions - Edge Function
  * 
  * Executa automaticamente ações de IA de baixo risco que não requerem aprovação manual.
- * AGORA COM CICLO FECHADO: atualiza status do insight após execução.
+ * ENTERPRISE: Usa resolve-action-policy como PONTO ÚNICO DE DECISÃO.
  * 
  * Fluxo:
  * 1. Busca insights recentes que geraram ações pendentes
- * 2. Verifica whitelist e rate limits
+ * 2. Consulta resolve-action-policy para cada ação
  * 3. Executa ações de baixo risco automaticamente
  * 4. Registra execuções no audit log
- * 5. NOVO: Fecha ciclo atualizando status do insight
+ * 5. Fecha ciclo atualizando status do insight
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.74.0'
@@ -21,6 +21,12 @@ interface ExecutionResult {
   actions_skipped: number
   insights_resolved: number
   errors: string[]
+}
+
+interface PolicyResponse {
+  execution_mode: 'auto' | 'approval' | 'disabled'
+  source: 'tenant_policy' | 'default_mapping' | 'tenant_fallback'
+  policy_details?: Record<string, any>
 }
 
 Deno.serve(async (req) => {
@@ -37,6 +43,36 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Helper: Invocar resolve-action-policy (PONTO ÚNICO DE DECISÃO)
+    async function resolvePolicy(tenantId: string, insightType: string): Promise<PolicyResponse> {
+      try {
+        const response = await fetch(
+          `${supabaseUrl}/functions/v1/resolve-action-policy`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({
+              tenant_id: tenantId,
+              insight_type: insightType,
+            }),
+          }
+        )
+        
+        if (!response.ok) {
+          console.error(`[${requestId}] Policy resolution failed: ${response.status}`)
+          return { execution_mode: 'approval', source: 'tenant_fallback' }
+        }
+        
+        return await response.json()
+      } catch (err) {
+        console.error(`[${requestId}] Policy resolution error:`, err)
+        return { execution_mode: 'approval', source: 'tenant_fallback' }
+      }
+    }
 
     // Buscar ações pendentes que não requerem aprovação
     const { data: pendingActions, error: actionsError } = await supabase
@@ -81,49 +117,13 @@ Deno.serve(async (req) => {
     }
 
     console.log(`[${requestId}] Found ${pendingActions.length} pending actions`)
-    
-    // Fetch tenant automation modes
-    const tenantIds = [...new Set(pendingActions.map(a => a.tenant_id).filter(Boolean))]
-    const { data: tenantModes } = await supabase
-      .from('tenants')
-      .select('id, auto_action_mode')
-      .in('id', tenantIds)
-    
-    const tenantModeMap = new Map((tenantModes || []).map(t => [t.id, t.auto_action_mode || 'suggest']))
 
-    // CICLO 6: Buscar políticas personalizadas por tenant
-    const { data: tenantPolicies } = await supabase
-      .from('tenant_action_policies')
-      .select('tenant_id, insight_type, execution_mode')
-      .in('tenant_id', tenantIds)
-    
-    // Map: "tenant_id:insight_type" -> execution_mode
-    const policyMap = new Map(
-      (tenantPolicies || []).map(p => [`${p.tenant_id}:${p.insight_type}`, p.execution_mode])
-    )
-    
-    console.log(`[${requestId}] Loaded ${tenantPolicies?.length || 0} tenant-specific policies`)
-
-    // Buscar configurações de ações
+    // Buscar configurações de ações (whitelist)
     const { data: actionConfigs } = await supabase
       .from('ai_action_configs')
       .select('action_type, is_enabled, requires_approval, risk_level, max_executions_per_day')
 
     const configMap = new Map(actionConfigs?.map(c => [c.action_type, c]) || [])
-
-    // Default insight mappings (mirrors insight-action-mapping.ts)
-    const INSIGHT_DEFAULT_MODES: Record<string, string> = {
-      antivirus_disabled: 'auto',
-      antivirus_outdated: 'auto',
-      vulnerability_critical: 'approval',
-      vulnerability_high: 'approval',
-      dns_malicious_activity: 'auto',
-      agent_offline_suspicious: 'auto',
-      safe_mode_prolonged: 'approval',
-      agent_tampering: 'auto',
-      anomaly_stuck_jobs: 'auto',
-      job_failed_recurring: 'auto',
-    }
 
     const result: ExecutionResult = {
       actions_processed: 0,
@@ -153,43 +153,28 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // CICLO 6: Hierarquia de decisão de modo
-      // 1. Política específica do tenant para este insight_type
-      // 2. Mapeamento padrão do código (INSIGHT_DEFAULT_MODES)
-      // 3. Modo global do tenant (auto_action_mode)
+      // ENTERPRISE: Consultar Policy Engine centralizado
       const insightType = insight?.insight_type || ''
-      const tenantPolicyMode = policyMap.get(`${action.tenant_id}:${insightType}`)
-      const defaultInsightMode = INSIGHT_DEFAULT_MODES[insightType]
-      const tenantGlobalMode = tenantModeMap.get(action.tenant_id) || 'suggest'
+      const policy = await resolvePolicy(action.tenant_id, insightType)
       
-      // Determinar modo final
-      const finalMode = tenantPolicyMode ?? defaultInsightMode ?? tenantGlobalMode
-      
-      console.log(`[${requestId}] Action ${action.id} mode decision: tenant_policy=${tenantPolicyMode}, default=${defaultInsightMode}, global=${tenantGlobalMode} -> final=${finalMode}`)
+      console.log(`[${requestId}] Action ${action.id} policy: mode=${policy.execution_mode}, source=${policy.source}`)
       
       // Skip se tenant desabilitou este tipo de insight
-      if (finalMode === 'disabled') {
-        console.log(`[${requestId}] Skipping ${action.id}: disabled by tenant policy`)
+      if (policy.execution_mode === 'disabled') {
+        console.log(`[${requestId}] Skipping ${action.id}: disabled by policy (source=${policy.source})`)
         result.actions_skipped++
         continue
       }
       
       // Skip se requer aprovação (não é auto)
-      if (finalMode === 'approval' || finalMode === 'suggest') {
-        console.log(`[${requestId}] Skipping ${action.id}: requires approval (mode=${finalMode})`)
+      if (policy.execution_mode === 'approval') {
+        console.log(`[${requestId}] Skipping ${action.id}: requires approval (source=${policy.source})`)
         result.actions_skipped++
         continue
       }
       
-      // Só continua se finalMode === 'auto'
-      // Skip high risk if tenant only allows low risk automation (legacy check)
-      if (tenantGlobalMode === 'auto_low' && config.risk_level === 'high') {
-        console.log(`[${requestId}] Skipping ${action.id}: tenant auto_low mode, action is high risk`)
-        result.actions_skipped++
-        continue
-      }
-
-      // Skip se é alto risco (global check)
+      // Só continua se execution_mode === 'auto'
+      // Skip se é alto risco (proteção adicional)
       if (config.risk_level === 'high') {
         console.log(`[${requestId}] Skipping ${action.id}: high risk action`)
         result.actions_skipped++
@@ -292,13 +277,17 @@ Deno.serve(async (req) => {
             continue
         }
 
-        // Atualizar status da ação
+        // Atualizar status da ação COM policy_source para auditoria
         await supabase
           .from('ai_actions')
           .update({
             status: 'executed',
             executed_at: new Date().toISOString(),
-            result: executionResult
+            result: { 
+              ...executionResult, 
+              policy_source: policy.source,
+              policy_mode: policy.execution_mode
+            }
           })
           .eq('id', action.id)
 
@@ -309,7 +298,10 @@ Deno.serve(async (req) => {
             action_id: action.id,
             tenant_id: action.tenant_id,
             execution_status: 'executed',
-            execution_result: executionResult,
+            execution_result: {
+              ...executionResult,
+              policy_source: policy.source
+            },
             executed_at: new Date().toISOString()
           })
 
@@ -328,7 +320,7 @@ Deno.serve(async (req) => {
           console.log(`[${requestId}] Insight ${action.insight_id} marked as resolved (cycle closed)`)
         }
 
-        console.log(`[${requestId}] Auto-executed action ${action.id}`)
+        console.log(`[${requestId}] Auto-executed action ${action.id} (policy_source=${policy.source})`)
         result.actions_executed++
 
       } catch (execError: any) {
