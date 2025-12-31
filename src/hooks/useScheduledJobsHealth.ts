@@ -4,7 +4,8 @@ import { toast } from 'sonner';
 
 export interface ScheduledJobRun {
   id: string;
-  job_name: string;
+  job_key: string;
+  job_source: string;
   ran_at: string;
   duration_ms: number | null;
   success: boolean;
@@ -16,24 +17,27 @@ export interface ScheduledJobRun {
 }
 
 export interface JobHealthStatus {
-  job_name: string;
+  job_key: string;
+  job_source: string;
   last_run: string | null;
   last_success: string | null;
+  last_failure: string | null;
   failure_count_24h: number;
+  success_count_24h: number;
   total_runs_24h: number;
   avg_duration_ms: number | null;
   max_duration_ms: number | null;
-  health_status: 'healthy' | 'failing' | 'degraded' | 'stale' | 'never_ran';
-  severity: 'ok' | 'warning' | 'critical';
+  health_status: 'healthy' | 'warning' | 'critical' | 'stale' | 'never_ran';
+  severity: 'low' | 'medium' | 'high' | 'critical';
 }
 
 export interface ScheduledJobsHealthSummary {
   total_jobs: number;
   healthy_jobs: number;
-  failing_jobs: number;
+  warning_jobs: number;
+  critical_jobs: number;
   stale_jobs: number;
   never_ran_jobs: number;
-  avg_success_rate: number;
 }
 
 export function useScheduledJobsHealth() {
@@ -46,10 +50,10 @@ export function useScheduledJobsHealth() {
       const { data, error } = await supabase
         .from('v_job_health')
         .select('*')
-        .order('job_name');
+        .order('job_key');
 
       if (error) throw error;
-      return (data || []) as JobHealthStatus[];
+      return (data || []) as unknown as JobHealthStatus[];
     },
     refetchInterval: 60000, // Every minute
     staleTime: 30000,
@@ -66,7 +70,7 @@ export function useScheduledJobsHealth() {
         .limit(100);
 
       if (error) throw error;
-      return (data || []) as ScheduledJobRun[];
+      return (data || []) as unknown as ScheduledJobRun[];
     },
     refetchInterval: 30000,
     staleTime: 10000,
@@ -80,14 +84,15 @@ export function useScheduledJobsHealth() {
 
       if (error) throw error;
       
-      const result = data as unknown as ScheduledJobsHealthSummary[];
-      return result?.[0] || {
+      // The function returns a JSON object directly
+      const result = data as unknown as ScheduledJobsHealthSummary;
+      return result || {
         total_jobs: 0,
         healthy_jobs: 0,
-        failing_jobs: 0,
+        warning_jobs: 0,
+        critical_jobs: 0,
         stale_jobs: 0,
         never_ran_jobs: 0,
-        avg_success_rate: 0,
       };
     },
     refetchInterval: 60000,
@@ -117,9 +122,9 @@ export function useScheduledJobsHealth() {
     healthyPercentage: summaryQuery.data?.total_jobs 
       ? Math.round((summaryQuery.data.healthy_jobs / summaryQuery.data.total_jobs) * 100)
       : 0,
-    hasIssues: (summaryQuery.data?.failing_jobs || 0) > 0 || (summaryQuery.data?.stale_jobs || 0) > 0,
+    hasIssues: (summaryQuery.data?.critical_jobs || 0) > 0 || (summaryQuery.data?.warning_jobs || 0) > 0,
     criticalJobs: healthQuery.data?.filter(j => j.severity === 'critical') || [],
-    warningJobs: healthQuery.data?.filter(j => j.severity === 'warning') || [],
+    warningJobs: healthQuery.data?.filter(j => j.severity === 'high') || [],
   };
 
   return {
@@ -128,10 +133,10 @@ export function useScheduledJobsHealth() {
     summary: summaryQuery.data || {
       total_jobs: 0,
       healthy_jobs: 0,
-      failing_jobs: 0,
+      warning_jobs: 0,
+      critical_jobs: 0,
       stale_jobs: 0,
       never_ran_jobs: 0,
-      avg_success_rate: 0,
     },
     stats,
     isLoading: healthQuery.isLoading || summaryQuery.isLoading,
