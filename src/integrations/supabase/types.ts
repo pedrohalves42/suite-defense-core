@@ -14556,7 +14556,10 @@ export type Database = {
           throttle_reason: string
         }[]
       }
-      get_audit_raw_metrics: { Args: { p_tenant_id: string }; Returns: Json }
+      get_audit_raw_metrics: {
+        Args: { p_tenant_id: string; p_user_id?: string }
+        Returns: Json
+      }
       get_autonomy_metrics: {
         Args: { p_days?: number; p_tenant_id: string }
         Returns: Json
