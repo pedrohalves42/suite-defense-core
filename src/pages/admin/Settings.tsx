@@ -15,6 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { logger } from '@/lib/logger';
 import { MFASettings } from '@/components/mfa/MFASettings';
 import { PasswordChangeCard } from '@/components/settings/PasswordChangeCard';
+import { AutomationSettings } from '@/components/settings/AutomationSettings';
 
 interface TenantSettings {
   id: string;
@@ -738,6 +739,9 @@ export default function Settings() {
               )}
             </CardContent>
           </Card>
+          
+          {/* Automation Settings */}
+          <AutomationSettings />
         </TabsContent>
 
         {/* Security Tab */}
