@@ -19,10 +19,18 @@ export interface ActionHistoryItem {
   created_at: string;
   evidence: Json | null;
   recommendation: string | null;
+  final_outcome: string | null;
   agent?: {
     agent_name: string;
     hostname: string | null;
   } | null;
+  ai_actions?: Array<{
+    id: string;
+    action_type: string;
+    effectiveness_status: string | null;
+    effectiveness_checked_at: string | null;
+    effectiveness_evidence: Json | null;
+  }> | null;
 }
 
 export function useActionCenterHistory(limit = 50) {
@@ -49,9 +57,17 @@ export function useActionCenterHistory(limit = 50) {
           created_at,
           evidence,
           recommendation,
+          final_outcome,
           agents:agent_id (
             agent_name,
             hostname
+          ),
+          ai_actions (
+            id,
+            action_type,
+            effectiveness_status,
+            effectiveness_checked_at,
+            effectiveness_evidence
           )
         `)
         .eq('tenant_id', tenant!.id)
@@ -63,7 +79,8 @@ export function useActionCenterHistory(limit = 50) {
       
       return (data || []).map(item => ({
         ...item,
-        agent: item.agents as ActionHistoryItem['agent']
+        agent: item.agents as ActionHistoryItem['agent'],
+        ai_actions: item.ai_actions as ActionHistoryItem['ai_actions']
       }));
     },
     enabled: !!tenant?.id,
@@ -78,5 +95,43 @@ export function useActionCenterHistoryCount() {
     resolvedCount: data?.filter(i => i.status === 'resolved').length || 0,
     ignoredCount: data?.filter(i => i.status === 'ignored').length || 0,
     totalCount: data?.length || 0,
+  };
+}
+
+export function useActionCenterEffectivenessStats() {
+  const { data } = useActionCenterHistory();
+  
+  if (!data) return null;
+  
+  const actionsWithEffectiveness = data.filter(
+    i => i.ai_actions && i.ai_actions.length > 0
+  );
+  
+  const resolvedCount = actionsWithEffectiveness.filter(
+    i => i.ai_actions?.some(a => a.effectiveness_status === 'resolved')
+  ).length;
+  
+  const partialCount = actionsWithEffectiveness.filter(
+    i => i.ai_actions?.some(a => a.effectiveness_status === 'partial')
+  ).length;
+  
+  const failedCount = actionsWithEffectiveness.filter(
+    i => i.ai_actions?.some(a => a.effectiveness_status === 'failed')
+  ).length;
+  
+  const pendingCount = actionsWithEffectiveness.filter(
+    i => i.ai_actions?.some(a => a.effectiveness_status === 'pending')
+  ).length;
+  
+  const total = actionsWithEffectiveness.length;
+  const successRate = total > 0 ? Math.round((resolvedCount / total) * 100) : 0;
+  
+  return {
+    resolvedCount,
+    partialCount,
+    failedCount,
+    pendingCount,
+    total,
+    successRate
   };
 }
