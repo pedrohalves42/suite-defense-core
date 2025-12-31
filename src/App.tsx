@@ -84,6 +84,7 @@ import CustomTrials from "./pages/admin/CustomTrials";
 import RateLimitingStats from "./pages/admin/RateLimitingStats";
 import DeadLetterQueue from "./pages/admin/DeadLetterQueue";
 import SecurityPolicies from "./pages/admin/SecurityPolicies";
+import SecurityPoliciesAutoActions from "./pages/admin/SecurityPoliciesAutoActions";
 import AgentGroups from "./pages/admin/AgentGroups";
 import NotificationSettings from "./pages/admin/NotificationSettings";
 import SecurityMonitoring from "./pages/admin/SecurityMonitoring";
@@ -206,6 +207,7 @@ const App = () => (
                 <Route path="rate-limiting" element={<RateLimitingStats />} />
                 <Route path="dead-letter-queue" element={<DeadLetterQueue />} />
                 <Route path="security-policies" element={<SecurityPolicies />} />
+                <Route path="security-policies/auto-actions" element={<SecurityPoliciesAutoActions />} />
                 <Route path="agent-groups" element={<AgentGroups />} />
                 <Route path="notification-settings" element={<NotificationSettings />} />
                 <Route path="security-monitoring" element={<SecurityMonitoring />} />
