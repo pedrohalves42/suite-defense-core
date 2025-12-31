@@ -7,6 +7,20 @@ const corsHeaders = {
 
 const MAX_RETRIES = 3;
 
+// Classes de falha que podem ser retentadas
+const RETRYABLE_CLASSES = ['TRANSIENT'];
+
+// Classes que vão direto para DLQ (sem retry)
+const DLQ_CLASSES = [
+  'AGENT_OFFLINE',
+  'AGENT_STALLED',
+  'AGENT_INCOMPATIBLE',
+  'CASCADE_FAILURE',
+  'BUG',
+  'POLICY',
+  'SECURITY'
+];
+
 Deno.serve(async (req) => {
   const startedAt = Date.now();
   
@@ -22,19 +36,21 @@ Deno.serve(async (req) => {
   const results = {
     processed: 0,
     retried: 0,
+    sentToDlq: 0,
     alertsCreated: 0,
     exhausted: 0,
+    byClass: {} as Record<string, number>,
     errors: [] as string[],
   };
 
   try {
-    console.log('[process-failed-jobs] Starting failed jobs processing...');
+    console.log('[process-failed-jobs] Starting intelligent failed jobs processing...');
 
     // Get failed jobs with retry count < MAX_RETRIES
-    // Note: retry_count column was added via migration
+    // Agora inclui failure_class para decisão inteligente
     const { data: failedJobs, error: fetchError } = await supabase
       .from('jobs')
-      .select('id, tenant_id, agent_id, agent_name, type, payload, status, approved, error_message, retry_count')
+      .select('id, tenant_id, agent_id, agent_name, type, payload, status, approved, error_message, retry_count, failure_class')
       .eq('status', 'failed')
       .lt('retry_count', MAX_RETRIES)
       .order('completed_at', { ascending: true })
@@ -47,7 +63,6 @@ Deno.serve(async (req) => {
     if (!failedJobs || failedJobs.length === 0) {
       console.log('[process-failed-jobs] No failed jobs to process');
       
-      // Log observability using RPC with job_key
       await supabase.rpc('log_scheduled_job_run', {
         p_job_key: 'process-failed-jobs',
         p_success: true,
@@ -68,45 +83,52 @@ Deno.serve(async (req) => {
     for (const job of failedJobs) {
       results.processed++;
       const currentRetry = (job.retry_count || 0) + 1;
+      const failureClass = job.failure_class || 'BUG';
+      
+      // Contabilizar por classe
+      results.byClass[failureClass] = (results.byClass[failureClass] || 0) + 1;
 
       try {
-        if (currentRetry >= MAX_RETRIES) {
-          // Job exhausted - create alert and mark as permanently failed
-          results.exhausted++;
+        // Decisão inteligente: retry ou DLQ
+        const shouldRetry = RETRYABLE_CLASSES.includes(failureClass) && currentRetry < MAX_RETRIES;
+        const shouldDlq = DLQ_CLASSES.includes(failureClass) || currentRetry >= MAX_RETRIES;
 
-          // Create system alert
-          const { error: alertError } = await supabase
-            .from('system_alerts')
-            .insert({
-              tenant_id: job.tenant_id,
-              agent_id: job.agent_id,
-              alert_type: 'job_failure_exhausted',
-              severity: 'high',
-              message: `Job "${job.type}" falhou ${MAX_RETRIES} vezes consecutivas para o agente ${job.agent_name}`,
-              metadata: {
-                job_id: job.id,
-                job_type: job.type,
-                agent_name: job.agent_name,
-                last_error: job.error_message,
-                retry_count: currentRetry,
-              },
-              resolved: false,
-            });
-
-          if (!alertError) {
-            results.alertsCreated++;
+        if (shouldDlq) {
+          // Enviar direto para DLQ (sem retry inútil)
+          console.log(`[process-failed-jobs] Job ${job.id} -> DLQ (class: ${failureClass}, retries: ${currentRetry})`);
+          
+          results.sentToDlq++;
+          if (currentRetry >= MAX_RETRIES) {
+            results.exhausted++;
           }
 
-          // Update job to mark as permanently failed
-          await supabase
-            .from('jobs')
-            .update({
-              retry_count: currentRetry,
-              error_message: `[EXHAUSTED] ${job.error_message || 'Max retries reached'}`,
-            })
-            .eq('id', job.id);
+          // Create system alert for non-expected failures
+          if (failureClass !== 'EXPECTED_DROP') {
+            const { error: alertError } = await supabase
+              .from('system_alerts')
+              .insert({
+                tenant_id: job.tenant_id,
+                agent_id: job.agent_id,
+                alert_type: 'job_failure_dlq',
+                severity: failureClass === 'SECURITY' ? 'critical' : 'high',
+                message: `Job "${job.type}" enviado para DLQ: ${failureClass}`,
+                metadata: {
+                  job_id: job.id,
+                  job_type: job.type,
+                  agent_name: job.agent_name,
+                  failure_class: failureClass,
+                  last_error: job.error_message,
+                  retry_count: currentRetry,
+                },
+                resolved: false,
+              });
 
-          // Insert into DLQ if not already there
+            if (!alertError) {
+              results.alertsCreated++;
+            }
+          }
+
+          // Insert into DLQ com failure_class
           await supabase
             .from('failed_jobs_dlq')
             .upsert({
@@ -119,13 +141,25 @@ Deno.serve(async (req) => {
               error_count: currentRetry,
               retry_count: currentRetry,
               max_retries: MAX_RETRIES,
-              status: 'exhausted',
+              status: 'dlq',
               last_error: job.error_message,
+              failure_class: failureClass,
               failed_at: new Date().toISOString(),
             }, { onConflict: 'original_job_id' });
 
-        } else {
-          // Retry the job
+          // Marcar job original como processado (não tentar novamente)
+          await supabase
+            .from('jobs')
+            .update({
+              retry_count: MAX_RETRIES, // Impede reprocessamento
+              error_message: `[DLQ:${failureClass}] ${job.error_message || 'Sent to DLQ'}`,
+            })
+            .eq('id', job.id);
+
+        } else if (shouldRetry) {
+          // Retry apenas para TRANSIENT
+          console.log(`[process-failed-jobs] Job ${job.id} -> RETRY (class: ${failureClass}, attempt: ${currentRetry}/${MAX_RETRIES})`);
+
           const { error: createError } = await supabase
             .from('jobs')
             .insert({
@@ -163,7 +197,7 @@ Deno.serve(async (req) => {
 
     console.log('[process-failed-jobs] Processing complete:', results);
 
-    // Log observability - success using RPC with job_key
+    // Log observability
     await supabase.rpc('log_scheduled_job_run', {
       p_job_key: 'process-failed-jobs',
       p_success: true,
@@ -180,7 +214,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('[process-failed-jobs] Error:', error);
     
-    // Log observability - failure using RPC with job_key
     await supabase.rpc('log_scheduled_job_run', {
       p_job_key: 'process-failed-jobs',
       p_success: false,
