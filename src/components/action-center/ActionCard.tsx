@@ -207,6 +207,21 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
 
             {item.source_type === 'ai_insight' && (
               <>
+                {item.context?.recommended_actions && (item.context.recommended_actions as unknown[]).length > 0 && (
+                  <Button
+                    variant="default"
+                    onClick={handleExecute}
+                    disabled={executeAction.isPending}
+                    className="flex-1"
+                  >
+                    {executeAction.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                    )}
+                    Executar Recomendação
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={handleAcknowledge}

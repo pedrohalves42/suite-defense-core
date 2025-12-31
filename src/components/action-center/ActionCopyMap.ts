@@ -138,7 +138,20 @@ export const CTA_MAP: Record<string, string> = {
 };
 
 // Severity display config
-export const SEVERITY_CONFIG = {
+export const SEVERITY_CONFIG: Record<string, {
+  label: string;
+  className: string;
+  iconClassName: string;
+  borderClassName: string;
+  bgClassName: string;
+}> = {
+  urgent: {
+    label: 'Urgente',
+    className: 'bg-red-600/10 text-red-600 border-red-600/20',
+    iconClassName: 'text-red-600',
+    borderClassName: 'border-l-red-600',
+    bgClassName: 'bg-red-600/5',
+  },
   critical: {
     label: 'Crítico',
     className: 'bg-red-500/10 text-red-500 border-red-500/20',
@@ -166,5 +179,12 @@ export const SEVERITY_CONFIG = {
     iconClassName: 'text-blue-500',
     borderClassName: 'border-l-blue-500',
     bgClassName: 'bg-blue-500/5',
+  },
+  info: {
+    label: 'Info',
+    className: 'bg-slate-500/10 text-slate-500 border-slate-500/20',
+    iconClassName: 'text-slate-500',
+    borderClassName: 'border-l-slate-500',
+    bgClassName: 'bg-slate-500/5',
   },
 };

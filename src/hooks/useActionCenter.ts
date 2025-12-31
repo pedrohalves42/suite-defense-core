@@ -90,6 +90,18 @@ export function useActionCenter() {
           queryClient.invalidateQueries({ queryKey: ['action-center', tenant.id] });
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ai_insights',
+          filter: `tenant_id=eq.${tenant.id}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['action-center', tenant.id] });
+        }
+      )
       .subscribe();
 
     return () => {
