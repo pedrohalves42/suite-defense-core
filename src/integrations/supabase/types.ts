@@ -2453,6 +2453,7 @@ export type Database = {
           id: string
           insight_id: string | null
           result: Json | null
+          risk_level: string | null
           status: string
           tenant_id: string
         }
@@ -2470,6 +2471,7 @@ export type Database = {
           id?: string
           insight_id?: string | null
           result?: Json | null
+          risk_level?: string | null
           status?: string
           tenant_id: string
         }
@@ -2487,6 +2489,7 @@ export type Database = {
           id?: string
           insight_id?: string | null
           result?: Json | null
+          risk_level?: string | null
           status?: string
           tenant_id?: string
         }
@@ -4844,6 +4847,7 @@ export type Database = {
           created_at: string | null
           error_count: number | null
           error_message: string | null
+          failure_class: string | null
           first_failure_at: string | null
           id: string
           job_type: string
@@ -4866,6 +4870,7 @@ export type Database = {
           created_at?: string | null
           error_count?: number | null
           error_message?: string | null
+          failure_class?: string | null
           first_failure_at?: string | null
           id?: string
           job_type: string
@@ -4888,6 +4893,7 @@ export type Database = {
           created_at?: string | null
           error_count?: number | null
           error_message?: string | null
+          failure_class?: string | null
           first_failure_at?: string | null
           id?: string
           job_type?: string
@@ -6077,6 +6083,7 @@ export type Database = {
           error_message: string | null
           execution_time_seconds: number | null
           expires_at: string | null
+          failure_class: string | null
           finished_at: string | null
           id: string
           is_recurring: boolean | null
@@ -6107,6 +6114,7 @@ export type Database = {
           error_message?: string | null
           execution_time_seconds?: number | null
           expires_at?: string | null
+          failure_class?: string | null
           finished_at?: string | null
           id?: string
           is_recurring?: boolean | null
@@ -6137,6 +6145,7 @@ export type Database = {
           error_message?: string | null
           execution_time_seconds?: number | null
           expires_at?: string | null
+          failure_class?: string | null
           finished_at?: string | null
           id?: string
           is_recurring?: boolean | null
@@ -11897,6 +11906,16 @@ export type Database = {
           },
         ]
       }
+      job_failure_health: {
+        Row: {
+          failure_class: string | null
+          is_retryable: boolean | null
+          last_24h: number | null
+          last_7d: number | null
+          total: number | null
+        }
+        Relationships: []
+      }
       job_integrity_violations: {
         Row: {
           agent_id: string | null
@@ -13704,6 +13723,10 @@ export type Database = {
               previous_execution_hash: string
             }[]
           }
+      classify_job_failure: {
+        Args: { p_error_message: string }
+        Returns: string
+      }
       cleanup_all_problematic_agents: {
         Args: { p_tenant_id: string }
         Returns: Json
@@ -14127,6 +14150,7 @@ export type Database = {
           error_message: string | null
           execution_time_seconds: number | null
           expires_at: string | null
+          failure_class: string | null
           finished_at: string | null
           id: string
           is_recurring: boolean | null
