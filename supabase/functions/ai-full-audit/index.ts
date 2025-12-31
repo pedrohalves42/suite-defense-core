@@ -81,7 +81,14 @@ serve(async (req) => {
     if (metricsError) {
       console.error('Error fetching metrics:', metricsError);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch system metrics' }),
+        JSON.stringify({
+          error: 'Failed to fetch system metrics',
+          stage: 'metrics',
+          details: {
+            code: metricsError.code ?? 'unknown',
+            message: metricsError.message ?? 'unknown error'
+          }
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
