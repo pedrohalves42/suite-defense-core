@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
           .update({
             status: 'failed',
             completed_at: new Date().toISOString(),
-            error_message: `Timeout automático: execução excedeu ${TIMEOUT_MINUTES} minutos sem conclusão`,
+            notes: `Timeout automático: execução excedeu ${TIMEOUT_MINUTES} minutos sem conclusão`,
           })
           .eq('id', execution.id);
 

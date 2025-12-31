@@ -31,9 +31,10 @@ Deno.serve(async (req) => {
     console.log('[process-failed-jobs] Starting failed jobs processing...');
 
     // Get failed jobs with retry count < MAX_RETRIES
+    // Note: retry_count column was added via migration
     const { data: failedJobs, error: fetchError } = await supabase
       .from('jobs')
-      .select('*')
+      .select('id, tenant_id, agent_id, agent_name, type, payload, status, approved, error_message, retry_count')
       .eq('status', 'failed')
       .lt('retry_count', MAX_RETRIES)
       .order('completed_at', { ascending: true })
