@@ -772,10 +772,32 @@ serve(async (req) => {
 
         const recommendedActions = insight.recommended_actions as Array<{ action_type: string; parameters?: Record<string, unknown> }> | null;
         
+        // Handle insights without recommended actions gracefully
         if (!recommendedActions || recommendedActions.length === 0) {
+          // Auto-acknowledge insights without actions - this is a valid state
+          await serviceClient
+            .from('ai_insights')
+            .update({
+              acknowledged: true,
+              acknowledged_by: user.id,
+              acknowledged_at: new Date().toISOString(),
+              status: 'reviewed_no_action',
+              resolution_method: 'no_action_available',
+              resolved_at: new Date().toISOString(),
+              resolved_by: user.id,
+              final_outcome: 'Insight revisado - nenhuma ação automatizada disponível.',
+            })
+            .eq('id', item_id);
+
+          console.log(`[action-center-feed] Insight ${item_id} acknowledged (no actions) by user ${user.id}`);
+
           return new Response(
-            JSON.stringify({ error: 'No recommended actions for this insight' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ 
+              success: true, 
+              message: 'Insight acknowledged - no automated actions available',
+              status: 'reviewed_no_action',
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
