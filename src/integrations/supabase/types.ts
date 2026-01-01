@@ -5236,6 +5236,7 @@ export type Database = {
           agent_id: string | null
           agent_name: string
           auto_flagged_reason: string | null
+          classification: string | null
           created_at: string | null
           error_count: number | null
           error_message: string | null
@@ -5267,6 +5268,7 @@ export type Database = {
           agent_id?: string | null
           agent_name: string
           auto_flagged_reason?: string | null
+          classification?: string | null
           created_at?: string | null
           error_count?: number | null
           error_message?: string | null
@@ -5298,6 +5300,7 @@ export type Database = {
           agent_id?: string | null
           agent_name?: string
           auto_flagged_reason?: string | null
+          classification?: string | null
           created_at?: string | null
           error_count?: number | null
           error_message?: string | null
