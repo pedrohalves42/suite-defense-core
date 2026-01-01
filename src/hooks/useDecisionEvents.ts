@@ -2,6 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 
+import type { Json } from '@/integrations/supabase/types';
+
 export interface DecisionEvent {
   id: string;
   tenant_id: string;
@@ -9,43 +11,10 @@ export interface DecisionEvent {
   agent_id: string | null;
   agent_name: string | null;
   action: string;
-  evidence: {
-    error_signature?: string;
-    failure_count?: number;
-    time_window_minutes?: number;
-    heartbeat_age_seconds?: number;
-    agent_version?: string;
-    detected_at?: string;
-    // Throttle evidence
-    request_count?: number;
-    error_count?: number;
-    error_rate?: number;
-    new_poll_interval?: number;
-    // Isolate evidence
-    event_count?: number;
-    event_types?: string[];
-    // Version block evidence
-    version?: string;
-    platform?: string;
-    total_agents?: number;
-    failed_agents?: number;
-    failure_rate?: number;
-    // Improdutive agent evidence (AGENT_IMPRODUTIVE_005)
-    health_status?: string;
-    minutes_since_heartbeat?: number;
-    minutes_since_execution?: number;
-    stale_queued_jobs?: number;
-    pending_jobs?: number;
-    auto_revert_scheduled?: boolean;
-    auto_revert_after_hours?: number;
-    [key: string]: unknown;
-  };
-  actions_executed: Array<{
-    type: string;
-    success: boolean;
-    id?: string;
-    error?: string;
-  }>;
+  evidence: Json;
+  actions_executed: Json;
+  decision_source?: string | null;
+  decision_type?: string | null;
   created_at: string;
 }
 
