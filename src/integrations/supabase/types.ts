@@ -2597,6 +2597,10 @@ export type Database = {
         Row: {
           action_payload: Json
           action_type: string
+          ai_validated_at: string | null
+          ai_validation_reason: string | null
+          ai_validation_score: number | null
+          ai_validation_status: string | null
           created_at: string
           decision_event_id: string | null
           effectiveness_checked_at: string | null
@@ -2617,6 +2621,10 @@ export type Database = {
         Insert: {
           action_payload?: Json
           action_type: string
+          ai_validated_at?: string | null
+          ai_validation_reason?: string | null
+          ai_validation_score?: number | null
+          ai_validation_status?: string | null
           created_at?: string
           decision_event_id?: string | null
           effectiveness_checked_at?: string | null
@@ -2637,6 +2645,10 @@ export type Database = {
         Update: {
           action_payload?: Json
           action_type?: string
+          ai_validated_at?: string | null
+          ai_validation_reason?: string | null
+          ai_validation_score?: number | null
+          ai_validation_status?: string | null
           created_at?: string
           decision_event_id?: string | null
           effectiveness_checked_at?: string | null
@@ -2905,8 +2917,10 @@ export type Database = {
           reasoning_summary: string | null
           recommendation: string | null
           recommended_actions: Json | null
+          resolution_method: string | null
           resolved_at: string | null
           resolved_by: string | null
+          resolved_by_decision_event: string | null
           severity: string
           status: string
           tenant_id: string
@@ -2934,8 +2948,10 @@ export type Database = {
           reasoning_summary?: string | null
           recommendation?: string | null
           recommended_actions?: Json | null
+          resolution_method?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          resolved_by_decision_event?: string | null
           severity: string
           status?: string
           tenant_id: string
@@ -2963,8 +2979,10 @@ export type Database = {
           reasoning_summary?: string | null
           recommendation?: string | null
           recommended_actions?: Json | null
+          resolution_method?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
+          resolved_by_decision_event?: string | null
           severity?: string
           status?: string
           tenant_id?: string
@@ -3025,6 +3043,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_insights_resolved_by_decision_event_fkey"
+            columns: ["resolved_by_decision_event"]
+            isOneToOne: false
+            referencedRelation: "decision_events"
             referencedColumns: ["id"]
           },
           {
@@ -4403,6 +4428,64 @@ export type Database = {
         }
         Relationships: []
       }
+      circuit_breaker_events: {
+        Row: {
+          created_at: string | null
+          failure_count: number | null
+          id: string
+          previous_state: string | null
+          reason: string | null
+          service: string
+          state: string
+          tenant_id: string | null
+          triggered_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          failure_count?: number | null
+          id?: string
+          previous_state?: string | null
+          reason?: string | null
+          service: string
+          state: string
+          tenant_id?: string | null
+          triggered_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          failure_count?: number | null
+          id?: string
+          previous_state?: string | null
+          reason?: string | null
+          service?: string
+          state?: string
+          tenant_id?: string | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circuit_breaker_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circuit_breaker_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "circuit_breaker_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       compliance_policies: {
         Row: {
           approved_at: string | null
@@ -5152,6 +5235,9 @@ export type Database = {
           next_retry_at: string | null
           original_job_id: string
           payload: Json | null
+          payload_excerpt: string | null
+          payload_hash: string | null
+          payload_schema: string | null
           resolution_notes: string | null
           resolved_at: string | null
           resolved_by: string | null
@@ -5180,6 +5266,9 @@ export type Database = {
           next_retry_at?: string | null
           original_job_id: string
           payload?: Json | null
+          payload_excerpt?: string | null
+          payload_hash?: string | null
+          payload_schema?: string | null
           resolution_notes?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -5208,6 +5297,9 @@ export type Database = {
           next_retry_at?: string | null
           original_job_id?: string
           payload?: Json | null
+          payload_excerpt?: string | null
+          payload_hash?: string | null
+          payload_schema?: string | null
           resolution_notes?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -11873,6 +11965,30 @@ export type Database = {
           },
         ]
       }
+      circuit_breaker_health: {
+        Row: {
+          failure_count: number | null
+          health_status: string | null
+          last_event: string | null
+          service: string | null
+          state: string | null
+        }
+        Insert: {
+          failure_count?: number | null
+          health_status?: never
+          last_event?: string | null
+          service?: string | null
+          state?: string | null
+        }
+        Update: {
+          failure_count?: number | null
+          health_status?: never
+          last_event?: string | null
+          service?: string | null
+          state?: string | null
+        }
+        Relationships: []
+      }
       dlq_categorized: {
         Row: {
           agent_id: string | null
@@ -11998,6 +12114,17 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      dlq_risk_overview: {
+        Row: {
+          newest_item: string | null
+          oldest_item: string | null
+          pending_items: number | null
+          requires_attention: boolean | null
+          risk_category: string | null
+          total_items: number | null
+        }
+        Relationships: []
       }
       enrollment_keys_safe: {
         Row: {
@@ -14625,10 +14752,9 @@ export type Database = {
           throttle_reason: string
         }[]
       }
-      get_audit_raw_metrics: {
-        Args: { p_tenant_id: string; p_user_id: string }
-        Returns: Json
-      }
+      get_audit_raw_metrics:
+        | { Args: { p_tenant_id: string }; Returns: Json }
+        | { Args: { p_tenant_id: string; p_user_id: string }; Returns: Json }
       get_autonomy_metrics: {
         Args: { p_days?: number; p_tenant_id: string }
         Returns: Json
