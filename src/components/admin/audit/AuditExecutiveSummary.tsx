@@ -5,6 +5,55 @@ import { FileText, Quote, Target, Sparkles } from 'lucide-react';
 import { AuditResult, RECOMMENDATION_LABELS } from '@/hooks/useSystemAudit';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
+import { ReactNode } from 'react';
+
+// Formatter for nested metric objects
+const formatMetricValue = (value: unknown): ReactNode => {
+  if (value === null || value === undefined) return '—';
+
+  // Handle nested objects (e.g., { total: 3, online: 2, offline: 1 })
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    const obj = value as Record<string, unknown>;
+    const entries = Object.entries(obj);
+    
+    if (entries.length === 0) return '—';
+    
+    return (
+      <div className="space-y-1">
+        {entries.map(([key, val]) => (
+          <div key={key} className="flex justify-between gap-3 text-xs">
+            <span className="text-muted-foreground capitalize">
+              {key.replace(/_/g, ' ')}
+            </span>
+            <span className="font-mono font-medium">
+              {typeof val === 'number' 
+                ? val.toLocaleString() 
+                : typeof val === 'boolean'
+                  ? (val ? '✓' : '✗')
+                  : String(val ?? '—')}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Handle arrays
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value.join(', ') : '—';
+  }
+
+  // Handle primitives
+  if (typeof value === 'number') {
+    return value.toLocaleString();
+  }
+  
+  if (typeof value === 'boolean') {
+    return value ? '✓' : '✗';
+  }
+
+  return String(value);
+};
 
 interface AuditExecutiveSummaryProps {
   audit: AuditResult;
@@ -97,13 +146,15 @@ export function AuditExecutiveSummary({ audit }: AuditExecutiveSummaryProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Object.entries(audit.metrics_snapshot).map(([key, value]) => (
-              <div key={key} className="p-2 bg-muted/50 rounded-lg">
-                <p className="text-xs text-muted-foreground capitalize">
+              <div key={key} className="p-3 bg-muted/50 rounded-lg border">
+                <p className="text-xs text-muted-foreground capitalize font-medium mb-2">
                   {key.replace(/_/g, ' ')}
                 </p>
-                <p className="text-lg font-semibold">{String(value)}</p>
+                <div className="text-sm">
+                  {formatMetricValue(value)}
+                </div>
               </div>
             ))}
           </div>
