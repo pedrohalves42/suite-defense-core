@@ -11972,6 +11972,7 @@ export type Database = {
           last_event: string | null
           service: string | null
           state: string | null
+          tenant_id: string | null
         }
         Insert: {
           failure_count?: number | null
@@ -11979,6 +11980,7 @@ export type Database = {
           last_event?: string | null
           service?: string | null
           state?: string | null
+          tenant_id?: string | null
         }
         Update: {
           failure_count?: number | null
@@ -11986,8 +11988,31 @@ export type Database = {
           last_event?: string | null
           service?: string | null
           state?: string | null
+          tenant_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "circuit_breaker_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circuit_breaker_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "circuit_breaker_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
       }
       dlq_categorized: {
         Row: {
