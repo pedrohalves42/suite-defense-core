@@ -23,6 +23,22 @@ import {
 } from 'lucide-react';
 import { DecisionEvent } from '@/hooks/useDecisionEvents';
 
+interface EvidenceData {
+  error_signature?: string;
+  failure_count?: number;
+  time_window_minutes?: number;
+  heartbeat_age_seconds?: number;
+  agent_version?: string;
+  [key: string]: unknown;
+}
+
+interface ActionExecuted {
+  type: string;
+  success: boolean;
+  id?: string;
+  error?: string;
+}
+
 interface DecisionEventDrawerProps {
   event: DecisionEvent | null;
   open: boolean;
@@ -31,6 +47,15 @@ interface DecisionEventDrawerProps {
 
 export function DecisionEventDrawer({ event, open, onOpenChange }: DecisionEventDrawerProps) {
   if (!event) return null;
+
+  // Safe type guards
+  const evidence = (event.evidence && typeof event.evidence === 'object' && !Array.isArray(event.evidence)) 
+    ? event.evidence as unknown as EvidenceData 
+    : {} as EvidenceData;
+  
+  const actionsExecuted = Array.isArray(event.actions_executed) 
+    ? (event.actions_executed as unknown as ActionExecuted[])
+    : [];
 
   const getActionIcon = (type: string) => {
     switch (type) {
@@ -144,40 +169,40 @@ export function DecisionEventDrawer({ event, open, onOpenChange }: DecisionEvent
               </h4>
               
               <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                {event.evidence.error_signature && (
+                {evidence.error_signature && (
                   <div className="flex items-start justify-between">
                     <span className="text-sm text-muted-foreground">Assinatura do Erro</span>
                     <code className="text-xs bg-background px-2 py-1 rounded max-w-[200px] truncate">
-                      {event.evidence.error_signature}
+                      {evidence.error_signature}
                     </code>
                   </div>
                 )}
                 
-                {event.evidence.failure_count !== undefined && (
+                {evidence.failure_count !== undefined && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Contagem de Falhas</span>
-                    <Badge variant="secondary">{event.evidence.failure_count}</Badge>
+                    <Badge variant="secondary">{evidence.failure_count}</Badge>
                   </div>
                 )}
                 
-                {event.evidence.time_window_minutes !== undefined && (
+                {evidence.time_window_minutes !== undefined && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Janela de Tempo</span>
-                    <span className="text-sm">{event.evidence.time_window_minutes} minutos</span>
+                    <span className="text-sm">{evidence.time_window_minutes} minutos</span>
                   </div>
                 )}
                 
-                {event.evidence.heartbeat_age_seconds !== undefined && (
+                {evidence.heartbeat_age_seconds !== undefined && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Idade do Heartbeat</span>
-                    <span className="text-sm">{event.evidence.heartbeat_age_seconds}s</span>
+                    <span className="text-sm">{evidence.heartbeat_age_seconds}s</span>
                   </div>
                 )}
                 
-                {event.evidence.agent_version && (
+                {evidence.agent_version && (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Versão do Agente</span>
-                    <span className="text-sm font-mono">{event.evidence.agent_version}</span>
+                    <span className="text-sm font-mono">{evidence.agent_version}</span>
                   </div>
                 )}
               </div>
@@ -193,7 +218,7 @@ export function DecisionEventDrawer({ event, open, onOpenChange }: DecisionEvent
               </h4>
               
               <div className="space-y-2">
-                {event.actions_executed?.map((action, idx) => {
+                {actionsExecuted.map((action, idx) => {
                   const Icon = getActionIcon(action.type);
                   return (
                     <div 

@@ -36,6 +36,32 @@ import { useDecisionEvents, useDecisionRules, DecisionEvent } from '@/hooks/useD
 import { DecisionEventDrawer } from '@/components/decisions/DecisionEventDrawer';
 import { toast } from 'sonner';
 
+// Type guards for Json fields
+interface EvidenceData {
+  failure_count?: number;
+  error_signature?: string;
+  [key: string]: unknown;
+}
+
+interface ActionExecuted {
+  type: string;
+  success: boolean;
+}
+
+const getEvidence = (event: DecisionEvent): EvidenceData => {
+  if (event.evidence && typeof event.evidence === 'object' && !Array.isArray(event.evidence)) {
+    return event.evidence as unknown as EvidenceData;
+  }
+  return {};
+};
+
+const getActionsExecuted = (event: DecisionEvent): ActionExecuted[] => {
+  if (Array.isArray(event.actions_executed)) {
+    return event.actions_executed as unknown as ActionExecuted[];
+  }
+  return [];
+};
+
 export default function DecisionAudit() {
   const [selectedEvent, setSelectedEvent] = useState<DecisionEvent | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -67,15 +93,19 @@ export default function DecisionAudit() {
     }
 
     const headers = ['Data/Hora', 'Regra', 'Agente', 'Ação', 'Falhas', 'Erro', 'Ações Executadas'];
-    const rows = filteredEvents.map(event => [
-      format(new Date(event.created_at), "yyyy-MM-dd HH:mm:ss"),
-      event.rule_code,
-      event.agent_name || 'N/A',
-      event.action,
-      event.evidence?.failure_count || 0,
-      event.evidence?.error_signature || '',
-      event.actions_executed?.map(a => `${a.type}:${a.success ? 'OK' : 'FAIL'}`).join('; ')
-    ]);
+    const rows = filteredEvents.map(event => {
+      const evidence = getEvidence(event);
+      const actions = getActionsExecuted(event);
+      return [
+        format(new Date(event.created_at), "yyyy-MM-dd HH:mm:ss"),
+        event.rule_code,
+        event.agent_name || 'N/A',
+        event.action,
+        evidence.failure_count || 0,
+        evidence.error_signature || '',
+        actions.map(a => `${a.type}:${a.success ? 'OK' : 'FAIL'}`).join('; ')
+      ];
+    });
 
     const csvContent = [headers, ...rows]
       .map(row => row.map(cell => `"${cell}"`).join(','))
@@ -119,8 +149,9 @@ export default function DecisionAudit() {
     }
   };
 
-  const getSuccessRate = (actions: DecisionEvent['actions_executed']) => {
-    if (!actions?.length) return 0;
+  const getSuccessRate = (event: DecisionEvent) => {
+    const actions = getActionsExecuted(event);
+    if (!actions.length) return 0;
     const successful = actions.filter(a => a.success).length;
     return Math.round((successful / actions.length) * 100);
   };
@@ -313,21 +344,21 @@ export default function DecisionAudit() {
                     </TableCell>
                     <TableCell>
                       <span className="font-mono">
-                        {event.evidence?.failure_count || '-'}
+                        {getEvidence(event).failure_count || '-'}
                       </span>
                     </TableCell>
                     <TableCell>
-                      {event.actions_executed?.length > 0 ? (
+                      {getActionsExecuted(event).length > 0 ? (
                         <div className="flex items-center gap-2">
-                          {getSuccessRate(event.actions_executed) === 100 ? (
+                          {getSuccessRate(event) === 100 ? (
                             <CheckCircle className="h-4 w-4 text-green-500" />
-                          ) : getSuccessRate(event.actions_executed) > 0 ? (
+                          ) : getSuccessRate(event) > 0 ? (
                             <AlertTriangle className="h-4 w-4 text-amber-500" />
                           ) : (
                             <XCircle className="h-4 w-4 text-destructive" />
                           )}
                           <span className="text-sm">
-                            {getSuccessRate(event.actions_executed)}%
+                            {getSuccessRate(event)}%
                           </span>
                         </div>
                       ) : (
