@@ -4747,6 +4747,8 @@ export type Database = {
           agent_id: string | null
           agent_name: string | null
           created_at: string
+          decision_source: string | null
+          decision_type: string | null
           evidence: Json
           id: string
           rule_code: string
@@ -4758,6 +4760,8 @@ export type Database = {
           agent_id?: string | null
           agent_name?: string | null
           created_at?: string
+          decision_source?: string | null
+          decision_type?: string | null
           evidence?: Json
           id?: string
           rule_code: string
@@ -4769,6 +4773,8 @@ export type Database = {
           agent_id?: string | null
           agent_name?: string | null
           created_at?: string
+          decision_source?: string | null
+          decision_type?: string | null
           evidence?: Json
           id?: string
           rule_code?: string
