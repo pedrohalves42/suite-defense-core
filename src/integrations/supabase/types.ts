@@ -2610,10 +2610,13 @@ export type Database = {
           evidence_pack: Json | null
           executed_at: string | null
           executed_by: string | null
+          human_reviewed: boolean | null
           id: string
           insight_id: string | null
           reasoning_summary: string | null
           result: Json | null
+          review_decision: string | null
+          review_justification: string | null
           risk_level: string | null
           status: string
           tenant_id: string
@@ -2634,10 +2637,13 @@ export type Database = {
           evidence_pack?: Json | null
           executed_at?: string | null
           executed_by?: string | null
+          human_reviewed?: boolean | null
           id?: string
           insight_id?: string | null
           reasoning_summary?: string | null
           result?: Json | null
+          review_decision?: string | null
+          review_justification?: string | null
           risk_level?: string | null
           status?: string
           tenant_id: string
@@ -2658,10 +2664,13 @@ export type Database = {
           evidence_pack?: Json | null
           executed_at?: string | null
           executed_by?: string | null
+          human_reviewed?: boolean | null
           id?: string
           insight_id?: string | null
           reasoning_summary?: string | null
           result?: Json | null
+          review_decision?: string | null
+          review_justification?: string | null
           risk_level?: string | null
           status?: string
           tenant_id?: string
@@ -10156,10 +10165,14 @@ export type Database = {
           details: Json | null
           email_sent: boolean | null
           email_sent_at: string | null
+          human_reviewed: boolean | null
           id: string
           message: string
+          resolution_notes: string | null
           resolved: boolean | null
           resolved_at: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           severity: string
           tenant_id: string
           title: string
@@ -10174,10 +10187,14 @@ export type Database = {
           details?: Json | null
           email_sent?: boolean | null
           email_sent_at?: string | null
+          human_reviewed?: boolean | null
           id?: string
           message: string
+          resolution_notes?: string | null
           resolved?: boolean | null
           resolved_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           severity: string
           tenant_id: string
           title: string
@@ -10192,10 +10209,14 @@ export type Database = {
           details?: Json | null
           email_sent?: boolean | null
           email_sent_at?: string | null
+          human_reviewed?: boolean | null
           id?: string
           message?: string
+          resolution_notes?: string | null
           resolved?: boolean | null
           resolved_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           severity?: string
           tenant_id?: string
           title?: string
