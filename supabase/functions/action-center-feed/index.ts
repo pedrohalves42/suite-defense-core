@@ -213,6 +213,30 @@ const ACTION_COPY: Record<string, { title: string; description: string; cta: str
   },
 };
 
+/**
+ * Extract agent name from insight title when agent_id is null
+ * Matches patterns like: "... no Agente DESKTOP-4V16Q38", "... em SERVIDOR-01"
+ */
+function extractAgentFromTitle(title: string): string | null {
+  if (!title) return null;
+  
+  const patterns = [
+    /no Agente\s+([A-Z0-9\-_]+)/i,       // "no Agente DESKTOP-4V16Q38"
+    /Agente\s+([A-Z0-9\-_]+)/i,           // "Agente DESKTOP-4V16Q38"
+    /no\s+([A-Z][A-Z0-9\-_]{4,})/i,       // "no DESKTOP-4V16Q38" (min 5 chars, starts with letter)
+    /em\s+([A-Z][A-Z0-9\-_]{4,})/i,       // "em SERVIDOR-01"
+  ];
+  
+  for (const pattern of patterns) {
+    const match = title.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+  
+  return null;
+}
+
 function enrichActionItem(item: ActionItem): ActionItem & { humanized: typeof ACTION_COPY[string] | null } {
   const copy = ACTION_COPY[item.trigger_type] || null;
   return {
@@ -515,12 +539,20 @@ serve(async (req) => {
                                 insight.severity === 'high' ? 75 : 
                                 insight.severity === 'medium' ? 50 : 25;
           
+          // Fallback: extract agent name from title if agent_id is null
+          let agentName = agent?.agent_name || null;
+          let hostname = agent?.hostname || null;
+          
+          if (!agentName && insight.title) {
+            agentName = extractAgentFromTitle(insight.title);
+          }
+          
           return {
             item_id: insight.id,
             source_type: 'ai_insight' as const,
             agent_id: insight.agent_id,
-            agent_name: agent?.agent_name || null,
-            hostname: agent?.hostname || null,
+            agent_name: agentName,
+            hostname: hostname,
             title: insight.title,
             description: insight.description,
             severity: insight.severity,
