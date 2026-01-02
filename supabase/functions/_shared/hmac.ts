@@ -6,6 +6,11 @@ export interface HmacVerificationResult {
   errorMessage?: string;
   transient?: boolean;
   rawBody?: string;  // Body lido durante a verificacao
+  // Clock skew recovery fields (Fase 2)
+  serverTimeMs?: number;
+  skewSeconds?: number;
+  receivedTimestamp?: number;
+  maxSkewSeconds?: number;
 }
 
 /**
@@ -31,37 +36,65 @@ function hexToBytes(hex: string): Uint8Array {
   return bytes;
 }
 
+export interface AuthFailureContext {
+  agentId?: string;
+  tenantId?: string;
+  endpoint?: string;
+  ip?: string;
+}
+
 export async function verifyHmacSignature(
   supabase: SupabaseClient,
   request: Request,
   agentName: string,
-  hmacSecret: string
+  hmacSecret: string,
+  context?: AuthFailureContext
 ): Promise<HmacVerificationResult> {
   const signature = request.headers.get('X-HMAC-Signature');
   const timestamp = request.headers.get('X-Timestamp');
   const nonce = request.headers.get('X-Nonce');
+  const serverTimeMs = Date.now();
 
   if (!signature || !timestamp || !nonce) {
     return { 
       valid: false, 
       errorCode: 'AUTH_MISSING_HEADERS',
       errorMessage: 'Headers HMAC ausentes (X-HMAC-Signature, X-Timestamp, X-Nonce)',
-      transient: false
+      transient: false,
+      serverTimeMs
     };
   }
 
   // Verificar timestamp (maximo 5 minutos de diferenca)
   const requestTime = parseInt(timestamp);
-  const now = Date.now();
   const maxDiff = 5 * 60 * 1000; // 5 minutos
-  const skewSeconds = Math.abs(now - requestTime) / 1000;
+  const skewSeconds = Math.abs(serverTimeMs - requestTime) / 1000;
 
-  if (Math.abs(now - requestTime) > maxDiff) {
+  if (Math.abs(serverTimeMs - requestTime) > maxDiff) {
+    // Log auth failure to agent_evidence_logs for dashboard visibility
+    if (context?.agentId && context?.tenantId) {
+      await logAuthFailure(supabase, {
+        agentId: context.agentId,
+        agentName,
+        tenantId: context.tenantId,
+        errorCode: 'AUTH_TIMESTAMP_OUT_OF_RANGE',
+        skewSeconds,
+        endpoint: context.endpoint || 'unknown',
+        ip: context.ip || request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        serverTimeMs,
+        receivedTimestamp: requestTime
+      });
+    }
+    
     return { 
       valid: false, 
       errorCode: 'AUTH_TIMESTAMP_OUT_OF_RANGE',
       errorMessage: `Timestamp expirado (skew: ${skewSeconds.toFixed(1)}s, max: 300s)`,
-      transient: true // Clock skew pode ser transitorio
+      transient: true, // Clock skew pode ser transitorio
+      serverTimeMs,
+      skewSeconds,
+      receivedTimestamp: requestTime,
+      maxSkewSeconds: 300
     };
   }
 
@@ -187,4 +220,81 @@ export function generateHmacSecret(): string {
   return Array.from(array)
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
+}
+
+/**
+ * Log auth failure to agent_evidence_logs for dashboard visibility
+ * Includes rate limiting to avoid flooding (max 1 log per agent per 5 minutes)
+ */
+interface AuthFailureLogData {
+  agentId: string;
+  agentName: string;
+  tenantId: string;
+  errorCode: string;
+  skewSeconds?: number;
+  endpoint: string;
+  ip: string;
+  serverTimeMs: number;
+  receivedTimestamp?: number;
+}
+
+// In-memory cache for rate limiting auth failure logs
+const authFailureCache = new Map<string, number>();
+const AUTH_FAILURE_LOG_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+async function logAuthFailure(supabase: SupabaseClient, data: AuthFailureLogData): Promise<void> {
+  const cacheKey = `${data.agentId}:${data.errorCode}`;
+  const now = Date.now();
+  const lastLogged = authFailureCache.get(cacheKey);
+  
+  // Rate limit: only log once per agent per error code per 5 minutes
+  if (lastLogged && (now - lastLogged) < AUTH_FAILURE_LOG_INTERVAL_MS) {
+    return;
+  }
+  
+  try {
+    // Generate evidence hash
+    const evidencePayload = JSON.stringify({
+      errorCode: data.errorCode,
+      skewSeconds: data.skewSeconds,
+      serverTimeMs: data.serverTimeMs,
+      receivedTimestamp: data.receivedTimestamp,
+      ip: data.ip,
+      endpoint: data.endpoint,
+      timestamp: new Date().toISOString()
+    });
+    
+    const encoder = new TextEncoder();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(evidencePayload));
+    const evidenceHash = Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    
+    await supabase.from('agent_evidence_logs').insert({
+      agent_id: data.agentId,
+      agent_name: data.agentName,
+      tenant_id: data.tenantId,
+      event_type: 'auth_failure',
+      severity: data.errorCode === 'AUTH_TIMESTAMP_OUT_OF_RANGE' ? 'high' : 'medium',
+      evidence_hash: evidenceHash,
+      event_data: {
+        errorCode: data.errorCode,
+        errorMessage: data.errorCode === 'AUTH_TIMESTAMP_OUT_OF_RANGE' 
+          ? `Relógio do computador fora de sincronia (${data.skewSeconds?.toFixed(1) || '?'}s de diferença)`
+          : 'Falha de autenticação HMAC',
+        skewSeconds: data.skewSeconds,
+        serverTimeMs: data.serverTimeMs,
+        receivedTimestamp: data.receivedTimestamp,
+        maxSkewSeconds: 300,
+        ip: data.ip,
+        endpoint: data.endpoint
+      }
+    });
+    
+    authFailureCache.set(cacheKey, now);
+    console.log(`[HMAC] Auth failure logged for ${data.agentName}: ${data.errorCode}`);
+  } catch (error) {
+    // Non-blocking - don't fail the request if logging fails
+    console.warn('[HMAC] Failed to log auth failure (non-blocking):', error);
+  }
 }
