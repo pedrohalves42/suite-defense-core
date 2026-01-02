@@ -381,10 +381,16 @@ function Install-ScheduledTask {
     # Create task
     $action = New-ScheduledTaskAction -Execute $psPath -Argument $arguments
     
-    $triggers = @(
-        (New-ScheduledTaskTrigger -AtStartup),
-        (New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5))
-    )
+    # FIX: Usar RepetitionDuration explícito para evitar erro Duration:P999999990T23H59M59S
+    $startupTrigger = New-ScheduledTaskTrigger -AtStartup
+    
+    # Trigger de repetição com duração explícita (365 dias - máximo seguro)
+    $repetitionTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
+    $repetitionTrigger.Repetition.Interval = "PT5M"   # 5 minutos
+    $repetitionTrigger.Repetition.Duration = "P365D"  # 365 dias (valor seguro)
+    $repetitionTrigger.Repetition.StopAtDurationEnd = $false
+    
+    $triggers = @($startupTrigger, $repetitionTrigger)
     
     $settings = New-ScheduledTaskSettingsSet `
         -AllowStartIfOnBatteries `

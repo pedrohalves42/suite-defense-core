@@ -50,6 +50,7 @@ interface AgentDetailsDrawerProps {
   isThrottled?: boolean | null;
   isIsolated?: boolean | null;
   isInSafeMode?: boolean | null;
+  onAgentDeleted?: () => void;
 }
 
 const STATE_ICONS: Record<AgentState, typeof CheckCircle> = {
@@ -82,10 +83,16 @@ export function AgentDetailsDrawer({
   onClose,
   isThrottled,
   isIsolated,
-  isInSafeMode
+  isInSafeMode,
+  onAgentDeleted
 }: AgentDetailsDrawerProps) {
   const navigate = useNavigate();
   const { data: causality, isLoading } = useAgentCausality(agentId);
+
+  const handleAgentDeleted = () => {
+    onClose();
+    onAgentDeleted?.();
+  };
 
   const handleViewDiagnostics = () => {
     if (agentId) {
@@ -214,12 +221,13 @@ export function AgentDetailsDrawer({
                     <h4 className="text-sm font-medium text-muted-foreground">Ações Rápidas</h4>
                     <TooltipProvider>
                       <div className="flex flex-wrap gap-2">
-                        <AgentQuickActions
+                      <AgentQuickActions
                           agentId={agentId}
                           agentName={agentName || 'Computador'}
                           isThrottled={isThrottled}
                           isIsolated={isIsolated}
                           isInSafeMode={isInSafeMode}
+                          onAgentDeleted={handleAgentDeleted}
                         />
                       </div>
                     </TooltipProvider>
