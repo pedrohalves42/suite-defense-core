@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -68,52 +68,19 @@ export function AgentQuickActions({
     },
   });
 
-  const deleteMutation = useMutation({
+  // Mutation para ARQUIVAR (soft delete - sempre funciona)
+  const archiveMutation = useMutation({
     mutationFn: async () => {
-      // Excluir dados relacionados em ordem (tabelas sem constraint de auditoria)
-      const tablesToClean = [
-        'agent_tokens',
-        'agent_signing_keys',
-        'agents_groups',
-        'agent_disk_metrics',
-        'agent_network_info',
-        'software_inventory',
-        'antivirus_status',
-        'agent_web_activity',
-        'blocked_access_attempts',
-        'security_events',
-        'system_alerts',
-        'ai_insights',
-        'anomaly_events',
-        'network_anomalies',
-        'agent_update_decisions',
-        'agent_rollback_events',
-        'agent_safe_mode_events',
-        'agent_recovery_authorizations',
-        'scheduled_jobs',
-        'jobs',
-        'failed_jobs_dlq',
-        'forensic_snapshots',
-        'policy_enforcement_logs',
-        'vuln_findings',
-        'agent_timeline_events',
-        'agent_execution_chain',
-        'agent_evidence_logs',
-        'poe_chain_breaks',
-      ];
-      
-      for (const table of tablesToClean) {
-        await supabase.from(table as any).delete().eq('agent_id', agentId);
-      }
-      
-      // Agora tenta excluir o agente
-      const { error } = await supabase.from('agents').delete().eq('id', agentId);
+      const { data, error } = await supabase.rpc('archive_agent', { p_agent_id: agentId });
       if (error) throw error;
+      const result = data as { success?: boolean; error?: string } | null;
+      if (!result?.success) throw new Error(result?.error || 'Erro ao arquivar');
+      return result;
     },
     onSuccess: () => {
       toast({
-        title: 'Computador excluído',
-        description: `${agentName} foi removido permanentemente do sistema.`,
+        title: 'Computador arquivado',
+        description: 'O computador foi desativado e removido da operação.',
       });
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       queryClient.invalidateQueries({ queryKey: ['problematic-agents'] });
@@ -121,16 +88,60 @@ export function AgentQuickActions({
       onAgentDeleted?.();
     },
     onError: (error: any) => {
-      const isAuditViolation = error?.message?.includes('IMMUTABLE_VIOLATION');
       toast({
-        title: 'Erro ao excluir computador',
-        description: isAuditViolation 
-          ? 'Este computador possui registros de auditoria recentes (jobs executados). Por conformidade, não pode ser excluído por 30 dias. Use "Limpar e Resetar" para desativar o computador.'
-          : 'Erro inesperado. Tente novamente.',
+        title: 'Erro ao arquivar',
+        description: error?.message || 'Tente novamente.',
         variant: 'destructive',
       });
     },
   });
+
+  // Mutation para EXCLUIR DEFINITIVAMENTE (só funciona se auditoria permitir)
+  const hardDeleteMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc('hard_delete_agent', { p_agent_id: agentId });
+      if (error) throw error;
+      const result = data as { success?: boolean; reason?: string; message?: string; error?: string } | null;
+      if (!result?.success) {
+        if (result?.reason === 'AUDIT_RETENTION') {
+          throw new Error(result?.message || 'Bloqueado por auditoria');
+        }
+        throw new Error(result?.error || 'Erro ao excluir');
+      }
+      return result;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Computador excluído',
+        description: 'O computador foi removido permanentemente.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      queryClient.invalidateQueries({ queryKey: ['problematic-agents'] });
+      setShowDeleteDialog(false);
+      onAgentDeleted?.();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Não foi possível excluir',
+        description: error?.message || 'Tente arquivar em vez de excluir.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Verificar se pode excluir definitivamente
+  const [canHardDelete, setCanHardDelete] = useState<boolean | null>(null);
+  const [deleteBlockedUntil, setDeleteBlockedUntil] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (showDeleteDialog) {
+      supabase.rpc('can_hard_delete_agent', { p_agent_id: agentId }).then(({ data }) => {
+        const result = data as { can_delete?: boolean; blocked_until?: string } | null;
+        setCanHardDelete(result?.can_delete ?? false);
+        setDeleteBlockedUntil(result?.blocked_until ?? null);
+      });
+    }
+  }, [showDeleteDialog, agentId]);
 
   return (
     <>
@@ -268,17 +279,17 @@ export function AgentQuickActions({
               variant="ghost"
               size="sm"
               onClick={() => setShowDeleteDialog(true)}
-              disabled={deleteMutation.isPending}
+              disabled={archiveMutation.isPending || hardDeleteMutation.isPending}
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
             >
-              {deleteMutation.isPending ? (
+              {(archiveMutation.isPending || hardDeleteMutation.isPending) ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <UserX className="h-4 w-4" />
               )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Excluir computador permanentemente</TooltipContent>
+          <TooltipContent>Arquivar ou excluir computador</TooltipContent>
         </Tooltip>
       </div>
 
@@ -311,28 +322,88 @@ export function AgentQuickActions({
       </AlertDialog>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Computador Permanentemente?</AlertDialogTitle>
+            <AlertDialogTitle>Remover Computador: {agentName}</AlertDialogTitle>
             <AlertDialogDescription asChild>
-              <div>
-                <p>O computador <strong>{agentName}</strong> será permanentemente removido do sistema.</p>
-                <ul className="list-disc list-inside mt-2 space-y-1 text-amber-600">
-                  <li>Todos os dados e histórico serão perdidos</li>
-                  <li>O software instalado continuará tentando se conectar</li>
-                  <li>Será necessário desinstalar manualmente no computador</li>
-                </ul>
+              <div className="space-y-4">
+                <p>Escolha uma opção para remover este computador do sistema:</p>
+                
+                {/* Opção 1: Arquivar */}
+                <div className="border rounded-lg p-4 bg-muted/50">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-full">
+                      <Trash2 className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-foreground">Arquivar (Recomendado)</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Desativa o computador e remove da operação. Mantém registros de auditoria por conformidade.
+                      </p>
+                      <Button
+                        onClick={() => archiveMutation.mutate()}
+                        disabled={archiveMutation.isPending}
+                        className="mt-3 w-full"
+                        variant="outline"
+                      >
+                        {archiveMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
+                        Arquivar Computador
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Opção 2: Excluir definitivamente */}
+                <div className="border rounded-lg p-4 border-destructive/30 bg-destructive/5">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded-full">
+                      <UserX className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-foreground">Excluir Permanentemente</h4>
+                      {canHardDelete === null ? (
+                        <p className="text-sm text-muted-foreground mt-1">Verificando...</p>
+                      ) : canHardDelete ? (
+                        <>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Remove todos os dados permanentemente. Esta ação não pode ser desfeita.
+                          </p>
+                          <Button
+                            onClick={() => hardDeleteMutation.mutate()}
+                            disabled={hardDeleteMutation.isPending}
+                            className="mt-3 w-full"
+                            variant="destructive"
+                          >
+                            {hardDeleteMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : null}
+                            Excluir Permanentemente
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="mt-1">
+                          <p className="text-sm text-amber-600">
+                            ⚠️ Não disponível por conformidade
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Existem registros de auditoria recentes. A exclusão permanente estará disponível 
+                            {deleteBlockedUntil ? ` após ${new Date(deleteBlockedUntil).toLocaleDateString('pt-BR')}` : ' em 30 dias'}.
+                          </p>
+                          <Button disabled className="mt-3 w-full" variant="outline">
+                            Bloqueado por Auditoria
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteMutation.mutate()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir Permanentemente
-            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

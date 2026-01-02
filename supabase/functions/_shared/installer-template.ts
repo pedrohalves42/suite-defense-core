@@ -538,7 +538,8 @@ $TriggerStartup = New-ScheduledTaskTrigger -AtStartup
 
 # Trigger secundario: repetir a cada 5 minutos (watchdog externo)
 # Isso garante que mesmo se a task parar, ela sera reiniciada em no maximo 5 minutos
-$TriggerRepeat = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration ([TimeSpan]::MaxValue)
+# CRITICAL FIX: Usar P365D em vez de [TimeSpan]::MaxValue para evitar erro "Duration:P999999990T23H59M59S"
+$TriggerRepeat = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 365)
 
 $Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 
