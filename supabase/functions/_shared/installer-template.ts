@@ -543,8 +543,8 @@ $TriggerRepeat = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterv
 
 $Principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
 
-# v4.3.0: Settings otimizados para maxima resiliencia
-$Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartInterval (New-TimeSpan -Minutes 1) -RestartCount 999 -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances IgnoreNew
+# v4.3.1: Settings otimizados para maxima resiliencia (ExecutionTimeLimit corrigido)
+$Settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartInterval (New-TimeSpan -Minutes 1) -RestartCount 999 -ExecutionTimeLimit (New-TimeSpan -Days 9999) -MultipleInstances IgnoreNew
 
 Write-InstallerLog "Task Settings: RestartCount=999, RestartInterval=1min, ExecutionTimeLimit=Unlimited, RepetitionInterval=5min" "INFO"
 
