@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Activity, AlertCircle, Server, Clock, CheckCircle, Wifi, WifiOff, Shield, ShieldAlert } from "lucide-react";
+import { Activity, AlertCircle, Server, Clock, CheckCircle, Wifi, WifiOff, Shield, ShieldAlert, Archive } from "lucide-react";
 import { toast } from "sonner";
 import { ErrorState } from "@/components/ErrorState";
 import { useQuery } from "@tanstack/react-query";
@@ -20,6 +20,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HealthTrendChart } from '@/components/admin/HealthTrendChart';
 import { AgentDetailsDrawer } from '@/components/agent/AgentDetailsDrawer';
 import { DiskMetricsPanel } from '@/components/agent/DiskMetricsPanel';
+import { Link } from 'react-router-dom';
 
 type StatusFilter = 'all' | 'problems' | 'protected' | 'offline';
 
@@ -154,10 +155,18 @@ export default function AgentHealthMonitor() {
           </h1>
           <p className="text-sm text-muted-foreground">Veja se todos os seus computadores estão funcionando bem</p>
         </div>
-        <Button variant="outline" onClick={() => refetch()}>
-          <Activity className="h-4 w-4 mr-2" />
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/admin/archived-agents">
+              <Archive className="h-4 w-4 mr-2" />
+              Arquivados
+            </Link>
+          </Button>
+          <Button variant="outline" onClick={() => refetch()}>
+            <Activity className="h-4 w-4 mr-2" />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Contextual Message */}
