@@ -14,6 +14,100 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_archive_events: {
+        Row: {
+          actor_id: string | null
+          actor_type: string
+          agent_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          reason: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_type: string
+          agent_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          reason: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_type?: string
+          agent_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_archive_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_archive_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_archive_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_archive_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_archive_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_signatures"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_archive_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_archive_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_archive_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "agent_archive_events_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_builds: {
         Row: {
           agent_id: string
@@ -13812,13 +13906,14 @@ export type Database = {
           installation_success: boolean | null
           installation_time_seconds: number | null
           installed_at: string | null
+          is_stuck: boolean | null
           last_error_at: string | null
           last_error_message: string | null
           last_heartbeat: string | null
           lifecycle_stage: string | null
+          minutes_between_copy_and_install: number | null
           minutes_since_enrollment: number | null
           minutes_since_heartbeat: number | null
-          minutes_to_install: number | null
           network_connectivity: boolean | null
           os_type: string | null
           os_version: string | null
@@ -13839,13 +13934,14 @@ export type Database = {
           installation_success?: never
           installation_time_seconds?: never
           installed_at?: never
+          is_stuck?: never
           last_error_at?: never
           last_error_message?: never
           last_heartbeat?: never
           lifecycle_stage?: never
+          minutes_between_copy_and_install?: never
           minutes_since_enrollment?: never
           minutes_since_heartbeat?: never
-          minutes_to_install?: never
           network_connectivity?: never
           os_type?: string | null
           os_version?: string | null
@@ -13866,13 +13962,14 @@ export type Database = {
           installation_success?: never
           installation_time_seconds?: never
           installed_at?: never
+          is_stuck?: never
           last_error_at?: never
           last_error_message?: never
           last_heartbeat?: never
           lifecycle_stage?: never
+          minutes_between_copy_and_install?: never
           minutes_since_enrollment?: never
           minutes_since_heartbeat?: never
-          minutes_to_install?: never
           network_connectivity?: never
           os_type?: string | null
           os_version?: string | null
@@ -15047,7 +15144,18 @@ export type Database = {
         }
         Returns: boolean
       }
-      archive_agent: { Args: { p_agent_id: string }; Returns: Json }
+      archive_agent:
+        | { Args: { p_agent_id: string }; Returns: Json }
+        | {
+            Args: {
+              p_actor_id?: string
+              p_actor_type: string
+              p_agent_id: string
+              p_notes?: string
+              p_reason: string
+            }
+            Returns: undefined
+          }
       authorize_agent_recovery: {
         Args: {
           p_agent_id: string
