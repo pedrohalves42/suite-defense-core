@@ -4135,6 +4135,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "audit_confidence_gaps_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_moving_average"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "audit_confidence_gaps_red_team_id_fkey"
             columns: ["red_team_id"]
             isOneToOne: false
@@ -8512,7 +8519,9 @@ export type Database = {
           ai_prompt_hash: string | null
           ai_response_raw: Json | null
           attack_vectors: Json
+          binary_criteria: Json | null
           created_at: string
+          criteria_count_true: number | null
           executive_threat_summary: string | null
           id: string
           metrics_snapshot: Json | null
@@ -8537,7 +8546,9 @@ export type Database = {
           ai_prompt_hash?: string | null
           ai_response_raw?: Json | null
           attack_vectors?: Json
+          binary_criteria?: Json | null
           created_at?: string
+          criteria_count_true?: number | null
           executive_threat_summary?: string | null
           id?: string
           metrics_snapshot?: Json | null
@@ -8562,7 +8573,9 @@ export type Database = {
           ai_prompt_hash?: string | null
           ai_response_raw?: Json | null
           attack_vectors?: Json
+          binary_criteria?: Json | null
           created_at?: string
+          criteria_count_true?: number | null
           executive_threat_summary?: string | null
           id?: string
           metrics_snapshot?: Json | null
@@ -10859,15 +10872,22 @@ export type Database = {
           analysis_system_identity: string | null
           created_at: string
           created_by: string | null
+          deterministic_base_score: number | null
           evidence_basis: Json | null
           executive_summary: string | null
           falsification_criteria: Json | null
           final_sentence: string | null
+          guardrail_applied: boolean | null
+          guardrail_reason: string | null
           id: string
+          market_score: number | null
           metrics_snapshot: Json | null
+          official_score: number | null
           overall_score: number
           prompt_hash: string | null
+          raw_score: number | null
           recommendation: string | null
+          red_risk_factor: number | null
           score_control_vs_monitor: number
           score_evidence_proof: number
           score_failure_handling: number
@@ -10893,15 +10913,22 @@ export type Database = {
           analysis_system_identity?: string | null
           created_at?: string
           created_by?: string | null
+          deterministic_base_score?: number | null
           evidence_basis?: Json | null
           executive_summary?: string | null
           falsification_criteria?: Json | null
           final_sentence?: string | null
+          guardrail_applied?: boolean | null
+          guardrail_reason?: string | null
           id?: string
+          market_score?: number | null
           metrics_snapshot?: Json | null
+          official_score?: number | null
           overall_score: number
           prompt_hash?: string | null
+          raw_score?: number | null
           recommendation?: string | null
+          red_risk_factor?: number | null
           score_control_vs_monitor: number
           score_evidence_proof: number
           score_failure_handling: number
@@ -10927,15 +10954,22 @@ export type Database = {
           analysis_system_identity?: string | null
           created_at?: string
           created_by?: string | null
+          deterministic_base_score?: number | null
           evidence_basis?: Json | null
           executive_summary?: string | null
           falsification_criteria?: Json | null
           final_sentence?: string | null
+          guardrail_applied?: boolean | null
+          guardrail_reason?: string | null
           id?: string
+          market_score?: number | null
           metrics_snapshot?: Json | null
+          official_score?: number | null
           overall_score?: number
           prompt_hash?: string | null
+          raw_score?: number | null
           recommendation?: string | null
+          red_risk_factor?: number | null
           score_control_vs_monitor?: number
           score_evidence_proof?: number
           score_failure_handling?: number
@@ -14210,6 +14244,44 @@ export type Database = {
           },
         ]
       }
+      v_audit_moving_average: {
+        Row: {
+          avg_last_3: number | null
+          avg_last_7: number | null
+          calculated_official_score: number | null
+          created_at: string | null
+          current_score: number | null
+          guardrail_applied: boolean | null
+          id: string | null
+          market_score: number | null
+          official_score: number | null
+          raw_score: number | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_audits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_audits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "system_audits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_confidence_gap_trend: {
         Row: {
           alert_triggered: boolean | null
@@ -15876,6 +15948,15 @@ export type Database = {
           total_executions: number
           total_failed: number
           total_ignored: number
+        }[]
+      }
+      get_previous_audit_score: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          avg_last_3: number
+          avg_last_7: number
+          previous_official_score: number
+          previous_score: number
         }[]
       }
       get_problematic_agents: {
