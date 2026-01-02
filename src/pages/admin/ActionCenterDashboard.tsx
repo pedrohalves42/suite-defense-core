@@ -393,7 +393,7 @@ export default function ActionCenterDashboard() {
 
               {/* Urgent Actions */}
               {data.urgent && data.urgent.length > 0 && (
-                <ActionCenterSection type="urgent" count={data.urgent.length}>
+                <ActionCenterSection type="urgent" count={data.urgent.length} items={data.urgent}>
                   {data.urgent.map((item) => (
                     <ActionCard 
                       key={item.item_id} 
@@ -406,7 +406,7 @@ export default function ActionCenterDashboard() {
 
               {/* Recommended Actions */}
               {data.recommended && data.recommended.length > 0 && (
-                <ActionCenterSection type="recommended" count={data.recommended.length}>
+                <ActionCenterSection type="recommended" count={data.recommended.length} items={data.recommended}>
                   {data.recommended.map((item) => (
                     <ActionCard 
                       key={item.item_id} 
@@ -419,7 +419,7 @@ export default function ActionCenterDashboard() {
 
               {/* Informational Actions */}
               {data.informational && data.informational.length > 0 && (
-                <ActionCenterSection type="informational" count={data.informational.length}>
+                <ActionCenterSection type="informational" count={data.informational.length} items={data.informational}>
                   {data.informational.map((item) => (
                     <ActionCard 
                       key={item.item_id} 
