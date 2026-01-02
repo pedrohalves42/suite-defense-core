@@ -7346,6 +7346,67 @@ export type Database = {
           },
         ]
       }
+      operational_calendar: {
+        Row: {
+          affected_agents: string[] | null
+          created_at: string | null
+          created_by: string | null
+          end_date: string
+          event_type: string
+          id: string
+          notes: string | null
+          start_date: string
+          tenant_id: string
+          title: string
+        }
+        Insert: {
+          affected_agents?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date: string
+          event_type: string
+          id?: string
+          notes?: string | null
+          start_date: string
+          tenant_id: string
+          title: string
+        }
+        Update: {
+          affected_agents?: string[] | null
+          created_at?: string | null
+          created_by?: string | null
+          end_date?: string
+          event_type?: string
+          id?: string
+          notes?: string | null
+          start_date?: string
+          tenant_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_calendar_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "operational_calendar_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "operational_calendar_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       performance_metrics: {
         Row: {
           created_at: string
