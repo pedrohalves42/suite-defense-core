@@ -4074,13 +4074,19 @@ function Invoke-ReinstallAgentJob {
         $action = New-ScheduledTaskAction -Execute "powershell.exe" `
             -Argument "-ExecutionPolicy Bypass -WindowStyle Hidden -File `"$targetScript`""
         
-        # CRITICAL FIX v4.2.2: Triggers duplos para auto-recovery
+        # CRITICAL FIX v4.2.3: Triggers duplos para auto-recovery
         # AtStartup: Inicia com Windows
         # RepetitionInterval 5min: Reinicia automaticamente se processo morrer
-        $triggers = @(
-            (New-ScheduledTaskTrigger -AtStartup),
-            (New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5))
-        )
+        # FIX: Usar RepetitionDuration explícito para evitar erro Duration:P999999990T23H59M59S
+        $startupTrigger = New-ScheduledTaskTrigger -AtStartup
+        
+        # Trigger de repetição com duração explícita (365 dias - máximo seguro)
+        $repetitionTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1)
+        $repetitionTrigger.Repetition.Interval = "PT5M"   # 5 minutos
+        $repetitionTrigger.Repetition.Duration = "P365D"  # 365 dias (valor seguro)
+        $repetitionTrigger.Repetition.StopAtDurationEnd = $false
+        
+        $triggers = @($startupTrigger, $repetitionTrigger)
         
         $settings = New-ScheduledTaskSettingsSet `
             -AllowStartIfOnBatteries `

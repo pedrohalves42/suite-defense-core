@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Trash2, Key, Stethoscope, Loader2, Clock, ShieldOff, RefreshCcw } from 'lucide-react';
+import { Trash2, Key, Stethoscope, Loader2, Clock, ShieldOff, RefreshCcw, UserX } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -24,6 +24,7 @@ interface AgentQuickActionsProps {
   isThrottled?: boolean | null;
   isIsolated?: boolean | null;
   isInSafeMode?: boolean | null;
+  onAgentDeleted?: () => void;
 }
 
 export function AgentQuickActions({ 
@@ -32,11 +33,13 @@ export function AgentQuickActions({
   isThrottled,
   isIsolated,
   isInSafeMode,
+  onAgentDeleted,
 }: AgentQuickActionsProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { removeThrottle, removeIsolation, resetSafeMode, enableOverrideSafeMode } = useAgentActions();
 
   const cleanupMutation = useMutation({
@@ -59,6 +62,32 @@ export function AgentQuickActions({
     onError: (error) => {
       toast({
         title: 'Não foi possível limpar o computador',
+        description: 'Tente novamente em alguns minutos.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      // Primeiro exclui tokens associados
+      await supabase.from('agent_tokens').delete().eq('agent_id', agentId);
+      // Depois exclui o agente
+      const { error } = await supabase.from('agents').delete().eq('id', agentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Computador excluído',
+        description: `${agentName} foi removido permanentemente do sistema.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['agents'] });
+      queryClient.invalidateQueries({ queryKey: ['problematic-agents'] });
+      onAgentDeleted?.();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Erro ao excluir computador',
         description: 'Tente novamente em alguns minutos.',
         variant: 'destructive',
       });
@@ -195,6 +224,24 @@ export function AgentQuickActions({
           </TooltipTrigger>
           <TooltipContent>Limpar e resetar computador</TooltipContent>
         </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={deleteMutation.isPending}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <UserX className="h-4 w-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Excluir computador permanentemente</TooltipContent>
+        </Tooltip>
       </div>
 
       <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
@@ -220,6 +267,33 @@ export function AgentQuickActions({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Confirmar Limpeza
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Computador Permanentemente?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                <p>O computador <strong>{agentName}</strong> será permanentemente removido do sistema.</p>
+                <ul className="list-disc list-inside mt-2 space-y-1 text-amber-600">
+                  <li>Todos os dados e histórico serão perdidos</li>
+                  <li>O software instalado continuará tentando se conectar</li>
+                  <li>Será necessário desinstalar manualmente no computador</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteMutation.mutate()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir Permanentemente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
