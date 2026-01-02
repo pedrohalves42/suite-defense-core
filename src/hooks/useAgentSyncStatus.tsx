@@ -17,8 +17,9 @@ export function useAgentSyncStatus() {
     queryFn: async (): Promise<AgentSyncStatus[]> => {
       const { data, error } = await supabase
         .from('agents')
-        .select('id, agent_name, display_name, status, last_heartbeat, last_block_sync_at')
+        .select('id, agent_name, display_name, status, last_heartbeat, last_block_sync_at, archived_at')
         .eq('status', 'active')
+        .is('archived_at', null)
         .order('agent_name');
 
       if (error) {
