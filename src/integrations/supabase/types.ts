@@ -15405,6 +15405,7 @@ export type Database = {
         Args: { p_decision: string; p_reason?: string; p_request_id: string }
         Returns: Json
       }
+      sync_agent_status_from_heartbeat: { Args: never; Returns: undefined }
       test_tenant_isolation: {
         Args: never
         Returns: {
