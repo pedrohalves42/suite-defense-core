@@ -24,6 +24,7 @@ export function ScanFileDialog() {
         .from('agents')
         .select('agent_name, status')
         .eq('status', 'active')
+        .is('archived_at', null)
         .order('agent_name');
       
       if (error) throw error;

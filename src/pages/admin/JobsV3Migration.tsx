@@ -55,7 +55,8 @@ export default function JobsV3Migration() {
       const { data: agents } = await supabase
         .from('agents')
         .select('agent_name, last_heartbeat')
-        .eq('tenant_id', tenant.id);
+        .eq('tenant_id', tenant.id)
+        .is('archived_at', null);
 
       const agentHeartbeats = new Map(
         agents?.map((a) => [a.agent_name, a.last_heartbeat]) || []

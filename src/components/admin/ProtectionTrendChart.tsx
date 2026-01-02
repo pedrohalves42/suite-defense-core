@@ -38,7 +38,8 @@ export function ProtectionTrendChart() {
       const { data: agents } = await supabase
         .from('agents')
         .select('id, status, last_heartbeat')
-        .eq('tenant_id', tenant.id);
+        .eq('tenant_id', tenant.id)
+        .is('archived_at', null);
 
       // Get alerts for score calculation
       const { data: alerts } = await supabase

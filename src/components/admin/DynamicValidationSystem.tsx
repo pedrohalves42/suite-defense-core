@@ -82,6 +82,7 @@ export function DynamicValidationSystem() {
         .select('id, agent_name, agent_version, last_heartbeat')
         .eq('tenant_id', userRole.tenant_id)
         .eq('status', 'active')
+        .is('archived_at', null)
         .order('agent_name');
 
       if (!agentsData) {

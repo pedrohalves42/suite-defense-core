@@ -88,7 +88,8 @@ export default function SLODashboard() {
       const { data: agents } = await supabase
         .from('agents')
         .select('id, status, last_heartbeat')
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId)
+        .is('archived_at', null);
 
       const now = new Date();
       const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);

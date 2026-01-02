@@ -78,6 +78,7 @@ export const AutomatedOnboardingWizard = ({
         .from('agents')
         .select('id, last_heartbeat')
         .eq('tenant_id', tenant.id)
+        .is('archived_at', null)
         .limit(1);
       
       if (agents && agents.length > 0) {

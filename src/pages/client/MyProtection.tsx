@@ -37,7 +37,8 @@ export const MyProtection = () => {
         supabase
           .from('agents')
           .select('id, agent_name, last_heartbeat, status')
-          .eq('tenant_id', tenant.id),
+          .eq('tenant_id', tenant.id)
+          .is('archived_at', null),
         supabase
           .from('system_alerts')
           .select('id, severity, resolved')
