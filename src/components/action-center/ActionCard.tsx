@@ -38,7 +38,8 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ActionItem, useExecuteActionItem } from '@/hooks/useActionCenter';
 import { getActionCopy, SEVERITY_CONFIG, generateDynamicContent } from './ActionCopyMap';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { hToast } from '@/lib/humanized-toast';
 
 interface ActionCardProps {
   item: ActionItem;
@@ -87,11 +88,20 @@ function extractKeyMetrics(context: Record<string, unknown>, triggerType: string
 export function ActionCard({ item, compact = false, onExecuted }: ActionCardProps) {
   const [ignoreDialogOpen, setIgnoreDialogOpen] = useState(false);
   const [ignoreReason, setIgnoreReason] = useState('');
+  const navigate = useNavigate();
   
   const executeAction = useExecuteActionItem();
   const copy = getActionCopy(item.trigger_type);
   const severityConfig = SEVERITY_CONFIG[item.severity] || SEVERITY_CONFIG.medium;
   const Icon = copy.icon;
+  
+  // Check if this is an investigate-type action (anomalies, ai insights without direct action)
+  const isInvestigateAction = 
+    item.source_type === 'ai_insight' && 
+    (item.trigger_type.includes('anomaly') || 
+     item.trigger_type === 'performance' || 
+     item.trigger_type === 'security_posture' ||
+     !item.context?.recommended_actions);
   
   // Generate dynamic content based on context
   const dynamicContent = generateDynamicContent(item.trigger_type, item.context, item.agent_name, item.hostname);
@@ -100,6 +110,20 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
   const keyMetrics = extractKeyMetrics(item.context || {}, item.trigger_type);
 
   const handleExecute = async () => {
+    // For investigate actions, navigate to agent details instead of executing
+    if (isInvestigateAction && item.agent_id) {
+      hToast.info('Abrindo investigação do agente...');
+      navigate(`/admin/agent-health?agent=${item.agent_id}`);
+      // Also acknowledge the insight so it's marked as seen
+      await executeAction.mutateAsync({
+        itemId: item.item_id,
+        sourceType: item.source_type,
+        action: 'acknowledge',
+      });
+      onExecuted?.();
+      return;
+    }
+    
     await executeAction.mutateAsync({
       itemId: item.item_id,
       sourceType: item.source_type,
