@@ -18,6 +18,51 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/**
+ * Robust JSON extraction from AI responses
+ * Handles: code blocks, extra text, irregular formatting
+ */
+function extractJSON(content: string): any {
+  // Step 1: Remove code block markers
+  let cleaned = content
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
+  
+  // Step 2: Find JSON boundaries (first { to last })
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    console.error('[extractJSON] No valid JSON boundaries found');
+    throw new Error('No valid JSON object found in content');
+  }
+  
+  const jsonStr = cleaned.substring(firstBrace, lastBrace + 1);
+  
+  // Step 3: Attempt to parse
+  try {
+    return JSON.parse(jsonStr);
+  } catch (firstError) {
+    console.warn('[extractJSON] First parse attempt failed, trying cleanup...');
+    
+    // Step 4: Aggressive cleanup for malformed JSON
+    const cleanedJson = jsonStr
+      .replace(/[\r\n]+/g, ' ')           // Replace newlines with spaces
+      .replace(/,\s*}/g, '}')             // Remove trailing commas before }
+      .replace(/,\s*]/g, ']')             // Remove trailing commas before ]
+      .replace(/\s+/g, ' ');              // Collapse multiple spaces
+    
+    try {
+      return JSON.parse(cleanedJson);
+    } catch (secondError) {
+      console.error('[extractJSON] All parse attempts failed');
+      console.error('[extractJSON] JSON string (first 500 chars):', jsonStr.substring(0, 500));
+      throw new Error(`Failed to parse JSON: ${firstError}`);
+    }
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -200,15 +245,10 @@ serve(async (req) => {
 
     let redResult;
     try {
-      let jsonContent = redContent;
-      if (jsonContent.includes('```json')) {
-        jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      } else if (jsonContent.includes('```')) {
-        jsonContent = jsonContent.replace(/```\n?/g, '');
-      }
-      redResult = JSON.parse(jsonContent.trim());
+      redResult = extractJSON(redContent);
     } catch (parseError) {
       console.error('[ai-full-audit] Failed to parse Red Team content:', redContent.substring(0, 500));
+      console.error('[ai-full-audit] Parse error:', parseError);
       return new Response(
         JSON.stringify({ error: 'Failed to parse Red Team analysis', stage: 'red_team' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -366,15 +406,10 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
 
     let anaResult;
     try {
-      let jsonContent = anaContent;
-      if (jsonContent.includes('```json')) {
-        jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      } else if (jsonContent.includes('```')) {
-        jsonContent = jsonContent.replace(/```\n?/g, '');
-      }
-      anaResult = JSON.parse(jsonContent.trim());
+      anaResult = extractJSON(anaContent);
     } catch (parseError) {
       console.error('[ai-full-audit] Failed to parse Ana content:', anaContent.substring(0, 500));
+      console.error('[ai-full-audit] Parse error:', parseError);
       return new Response(
         JSON.stringify({ error: 'Failed to parse Ana analysis', stage: 'ana' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
