@@ -4814,8 +4814,8 @@ export type Database = {
           agent_id: string | null
           agent_name: string | null
           created_at: string
-          decision_source: string | null
-          decision_type: string | null
+          decision_source: string
+          decision_type: string
           evidence: Json
           id: string
           rule_code: string
@@ -4827,8 +4827,8 @@ export type Database = {
           agent_id?: string | null
           agent_name?: string | null
           created_at?: string
-          decision_source?: string | null
-          decision_type?: string | null
+          decision_source: string
+          decision_type: string
           evidence?: Json
           id?: string
           rule_code: string
@@ -4840,8 +4840,8 @@ export type Database = {
           agent_id?: string | null
           agent_name?: string | null
           created_at?: string
-          decision_source?: string | null
-          decision_type?: string | null
+          decision_source?: string
+          decision_type?: string
           evidence?: Json
           id?: string
           rule_code?: string
@@ -12552,6 +12552,16 @@ export type Database = {
           },
         ]
       }
+      governance_health_metrics: {
+        Row: {
+          decision_events_human: number | null
+          decision_events_system: number | null
+          decision_events_total: number | null
+          human_decision_rate: number | null
+          rollback_total: number | null
+        }
+        Relationships: []
+      }
       hmac_signatures: {
         Row: {
           agent_id: string | null
@@ -15061,6 +15071,7 @@ export type Database = {
         Returns: Json
       }
       get_enrollment_key_full: { Args: { p_key_id: string }; Returns: string }
+      get_governance_snapshot: { Args: never; Returns: Json }
       get_installation_health_status: {
         Args: { p_tenant_id: string }
         Returns: {
