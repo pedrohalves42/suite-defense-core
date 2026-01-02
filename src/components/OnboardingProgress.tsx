@@ -39,7 +39,8 @@ export const OnboardingProgress = () => {
       // Check agents
       const { data: agents } = await supabase
         .from('agents')
-        .select('id, status, last_heartbeat');
+        .select('id, status, last_heartbeat')
+        .is('archived_at', null);
       
       if (agents) {
         setAgentCount(agents.length);

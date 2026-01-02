@@ -30,7 +30,8 @@ export default function SuperAdminMetrics() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agents')
-        .select('status, tenant_id');
+        .select('status, tenant_id')
+        .is('archived_at', null);
       
       if (error) throw error;
 

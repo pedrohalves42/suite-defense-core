@@ -176,6 +176,7 @@ export function OfflineAgentAlerts() {
         .select('id, agent_name, last_heartbeat, hostname, os_type')
         .eq('tenant_id', tenant.id)
         .eq('status', 'active')
+        .is('archived_at', null)
         .lt('last_heartbeat', oneHourAgo)
         .order('last_heartbeat', { ascending: true });
 

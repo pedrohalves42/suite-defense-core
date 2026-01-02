@@ -41,6 +41,7 @@ export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
         .from('agents')
         .select('id, agent_name, agent_version, status, last_heartbeat, os_type, tenant_id')
         .eq('status', 'active')
+        .is('archived_at', null)
         .order('agent_name');
       
       if (error) throw error;

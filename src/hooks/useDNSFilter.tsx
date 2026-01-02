@@ -69,6 +69,7 @@ export function useDNSFilter() {
         .select('id, agent_name, display_name, last_heartbeat, last_block_sync_at, status')
         .eq('tenant_id', tenant.id)
         .eq('status', 'active')
+        .is('archived_at', null)
         .order('agent_name');
 
       if (error) {

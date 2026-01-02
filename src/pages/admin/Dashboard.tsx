@@ -41,7 +41,8 @@ export default function Dashboard() {
       const { data, error } = await supabase
         .from('agents')
         .select('id, agent_name, status, last_heartbeat')
-        .eq('tenant_id', tenant.id);
+        .eq('tenant_id', tenant.id)
+        .is('archived_at', null);
       if (error) throw error;
       return data || [];
     },

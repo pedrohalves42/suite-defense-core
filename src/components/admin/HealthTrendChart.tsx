@@ -39,7 +39,8 @@ export function HealthTrendChart() {
       const { data: agents } = await supabase
         .from('agents')
         .select('id, status, last_heartbeat, enrolled_at')
-        .eq('tenant_id', tenant.id);
+        .eq('tenant_id', tenant.id)
+        .is('archived_at', null);
 
       const totalAgents = agents?.length || 0;
       const currentOnline = agents?.filter(a => getAgentStatusInfo(a).isOnline).length || 0;

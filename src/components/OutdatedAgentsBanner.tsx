@@ -46,6 +46,7 @@ export const OutdatedAgentsBanner = () => {
           .select('agent_name, agent_version')
           .eq('tenant_id', tenant?.id)
           .eq('status', 'active')
+          .is('archived_at', null)
           .not('agent_version', 'is', null);
 
         // Filter agents that need manual reinstallation (v3.10.21 and below have bootstrap problem)

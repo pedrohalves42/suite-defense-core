@@ -63,7 +63,8 @@ export default function SoftwareInventory() {
       const { data } = await supabase
         .from('agents')
         .select('id, agent_name')
-        .eq('tenant_id', tenant.id);
+        .eq('tenant_id', tenant.id)
+        .is('archived_at', null);
       return data || [];
     },
     enabled: !!tenant

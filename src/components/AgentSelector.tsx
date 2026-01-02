@@ -37,6 +37,7 @@ export function AgentSelector({ value, onValueChange }: AgentSelectorProps) {
           is_isolated, is_throttled, safe_mode_reason, safe_mode_entered_at,
           last_heartbeat, force_update_version, force_update_at, agent_state
         `)
+        .is('archived_at', null)
         .order('agent_name', { ascending: true });
 
       if (error) throw error;

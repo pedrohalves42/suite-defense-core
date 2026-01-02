@@ -52,6 +52,7 @@ export default function InstallationHealth() {
         .from('agents')
         .select('id, agent_name, status, enrolled_at, last_heartbeat')
         .or('status.eq.pending,last_heartbeat.is.null')
+        .is('archived_at', null)
         .gte('enrolled_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
         .order('enrolled_at', { ascending: false });
 

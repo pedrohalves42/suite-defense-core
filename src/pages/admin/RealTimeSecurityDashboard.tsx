@@ -137,7 +137,8 @@ export default function RealTimeSecurityDashboard() {
       const { data, error } = await supabase
         .from('agents')
         .select('id, status, last_heartbeat, is_isolated')
-        .eq('tenant_id', tenant.id);
+        .eq('tenant_id', tenant.id)
+        .is('archived_at', null);
       
       if (error) throw error;
       

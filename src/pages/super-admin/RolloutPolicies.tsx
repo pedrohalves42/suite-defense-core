@@ -458,7 +458,8 @@ function AgentRolloutSimulator({ policies }: { policies: RolloutPolicy[] }) {
       const { data, error } = await supabase
         .from('agents')
         .select('id, agent_name, os_type, agent_version, status')
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .is('archived_at', null);
       
       if (error) throw error;
       return data;

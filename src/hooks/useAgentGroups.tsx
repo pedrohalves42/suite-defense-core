@@ -215,6 +215,7 @@ export function useAvailableAgents(groupId: string | null) {
         .from('agents')
         .select('id, agent_name, display_name, hostname, status')
         .eq('tenant_id', tenant.id)
+        .is('archived_at', null)
         .order('agent_name');
       if (agentsError) throw agentsError;
 

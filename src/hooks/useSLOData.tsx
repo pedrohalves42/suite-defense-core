@@ -134,7 +134,8 @@ export const useCalculatedSLOs = () => {
       const { data: agents } = await supabase
         .from('agents')
         .select('id, last_heartbeat')
-        .eq('tenant_id', tenant.id);
+        .eq('tenant_id', tenant.id)
+        .is('archived_at', null);
 
       const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
       const onlineAgents = agents?.filter(a => 

@@ -92,6 +92,7 @@ export default function DiagnosticsCenter() {
         .from('agents')
         .select('id, agent_name, tenant_id, status, enrolled_at, last_heartbeat, hostname, os_type, is_throttled, is_isolated, safe_mode_entered_at, throttle_reason, isolation_reason, safe_mode_reason')
         .eq('tenant_id', tenant.id)
+        .is('archived_at', null)
         .order('last_heartbeat', { ascending: false, nullsFirst: false });
 
       if (error) throw error;
