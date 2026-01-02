@@ -15039,6 +15039,7 @@ export type Database = {
           throttle_reason: string
         }[]
       }
+      get_alert_decision_chain: { Args: { p_alert_id: string }; Returns: Json }
       get_audit_raw_metrics:
         | { Args: { p_tenant_id: string }; Returns: Json }
         | { Args: { p_tenant_id: string; p_user_id: string }; Returns: Json }
@@ -15143,7 +15144,6 @@ export type Database = {
           unique_identifiers: number
         }[]
       }
-      get_reason_tree_for_alert: { Args: { p_alert_id: string }; Returns: Json }
       get_recent_jobs: {
         Args: { p_limit?: number; p_tenant_id: string }
         Returns: {
