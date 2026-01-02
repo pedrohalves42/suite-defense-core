@@ -63,18 +63,20 @@ export function useDiagnostic(
       if (error) throw error;
 
       // Map RPC response (message) to DiagnosticIssue (description)
-      const rawData = data || [];
-      const issues: DiagnosticIssue[] = rawData.map((item: { 
-        issue_type: string; 
-        severity: string; 
-        message: string; 
-        details: Record<string, unknown>;
-        origin?: string;
-      }) => ({
+      const rawData = (data || []) as Array<{
+        issue_type: string;
+        severity: string;
+        message: string;
+        details: unknown;
+        detected_at: string;
+        origin: string;
+      }>;
+      
+      const issues: DiagnosticIssue[] = rawData.map((item) => ({
         issue_type: item.issue_type,
         severity: item.severity as DiagnosticIssue['severity'],
         description: item.message, // RPC returns 'message', type expects 'description'
-        details: item.details || {},
+        details: (typeof item.details === 'object' && item.details !== null ? item.details : {}) as Record<string, unknown>,
         origin: item.origin ? { type: 'system' as const, source_name: item.origin } : undefined,
       }));
       
