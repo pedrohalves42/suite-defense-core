@@ -32,6 +32,7 @@ import {
   Globe,
   Shield,
   Zap,
+  Search,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -40,6 +41,7 @@ import { ActionItem, useExecuteActionItem } from '@/hooks/useActionCenter';
 import { getActionCopy, SEVERITY_CONFIG, generateDynamicContent } from './ActionCopyMap';
 import { Link, useNavigate } from 'react-router-dom';
 import { hToast } from '@/lib/humanized-toast';
+import { ArchiveReasonTree } from './ArchiveReasonTree';
 
 interface ActionCardProps {
   item: ActionItem;
@@ -278,6 +280,11 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
             </div>
           )}
 
+          {/* Archive Reason Tree - if agent was archived */}
+          {item.context?.suppression_reason === 'agent_archived' && item.agent_id && (
+            <ArchiveReasonTree agentId={item.agent_id} />
+          )}
+
           {/* Actions */}
           <div className="flex items-center gap-2 pt-2 border-t flex-wrap">
             <TooltipProvider>
@@ -290,6 +297,8 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
                   >
                     {executeAction.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : isInvestigateAction ? (
+                      <Search className="h-4 w-4 mr-2" />
                     ) : (
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                     )}
@@ -297,7 +306,12 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p className="max-w-xs">{copy.ctaTooltip || 'Aplicar a correção recomendada automaticamente'}</p>
+                  <p className="max-w-xs">
+                    {isInvestigateAction 
+                      ? 'Este alerta não tem ação automática — abrirá contexto completo do agente para análise manual'
+                      : copy.ctaTooltip || 'Aplicar a correção recomendada automaticamente'
+                    }
+                  </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
