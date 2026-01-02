@@ -449,8 +449,8 @@ Produza sua análise no formato estruturado exigido pelo sistema, focando exclus
   },
 
   'red-team-analysis-template': {
-    version: '3.0.0',
-    description: 'Red Team: Adversarial analysis output template',
+    version: '4.0.0',
+    description: 'Red Team: Adversarial analysis with BINARY CRITERIA for deterministic threat_level',
     scope: 'security',
     posture: 'hostile',
     mutable: false,
@@ -462,10 +462,43 @@ MÉTRICAS DO SISTEMA:
 ANÁLISE ANTERIOR (ANA):
 {ana_summary}
 
+=== CRITÉRIOS BINÁRIOS OBRIGATÓRIOS ===
+
+ANTES de definir threat_level, você DEVE avaliar cada critério como TRUE ou FALSE:
+
+1. offline_agents_exist: TRUE se agents.offline > 0
+2. human_approval_rate_zero: TRUE se ai_actions.approval_rate = 0 OU ai_actions.approved = 0
+3. human_reviewed_zero: TRUE se ai_actions.human_reviewed = 0
+4. rollback_never_tested: TRUE se rollbacks.total = 0
+5. single_user_system: TRUE se users.count <= 1
+6. dlq_has_items: TRUE se dlq.current > 0
+7. critical_alerts_open: TRUE se critical_alerts.open > 0
+
+REGRA DETERMINÍSTICA DE THREAT_LEVEL:
+- critical: >= 4 critérios TRUE
+- high: 3 critérios TRUE
+- medium: 2 critérios TRUE
+- low: 0-1 critérios TRUE
+
+O threat_level DEVE seguir esta regra. NÃO use interpretação subjetiva.
+
+=== FIM DOS CRITÉRIOS BINÁRIOS ===
+
 Responda APENAS com um JSON válido:
 {
   "threat_level": "low|medium|high|critical",
   "red_score": <0-100, onde 0=impenetrável e 100=comprometido>,
+  
+  "binary_criteria": {
+    "offline_agents_exist": <true|false>,
+    "human_approval_rate_zero": <true|false>,
+    "human_reviewed_zero": <true|false>,
+    "rollback_never_tested": <true|false>,
+    "single_user_system": <true|false>,
+    "dlq_has_items": <true|false>,
+    "critical_alerts_open": <true|false>
+  },
+  "criteria_count_true": <número de critérios TRUE>,
   
   "attack_vectors": [
     {
@@ -522,6 +555,8 @@ REGRAS:
 - red_score alto = sistema vulnerável
 - NUNCA proponha features, UX ou roadmap
 - Foque APENAS em como quebrar, enganar, explorar
+- binary_criteria DEVE refletir os dados exatos das métricas
+- threat_level DEVE seguir a regra de critérios (não interprete subjetivamente)
 - Responda APENAS com JSON`
   }
 };
