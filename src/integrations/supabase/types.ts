@@ -2601,6 +2601,7 @@ export type Database = {
           ai_validation_reason: string | null
           ai_validation_score: number | null
           ai_validation_status: string | null
+          block_reason: string | null
           created_at: string
           decision_event_id: string | null
           effectiveness_checked_at: string | null
@@ -2615,9 +2616,12 @@ export type Database = {
           insight_id: string | null
           reasoning_summary: string | null
           result: Json | null
+          reversible: boolean | null
           review_decision: string | null
           review_justification: string | null
           risk_level: string | null
+          rollback_reason: string | null
+          rollback_status: string | null
           status: string
           tenant_id: string
         }
@@ -2628,6 +2632,7 @@ export type Database = {
           ai_validation_reason?: string | null
           ai_validation_score?: number | null
           ai_validation_status?: string | null
+          block_reason?: string | null
           created_at?: string
           decision_event_id?: string | null
           effectiveness_checked_at?: string | null
@@ -2642,9 +2647,12 @@ export type Database = {
           insight_id?: string | null
           reasoning_summary?: string | null
           result?: Json | null
+          reversible?: boolean | null
           review_decision?: string | null
           review_justification?: string | null
           risk_level?: string | null
+          rollback_reason?: string | null
+          rollback_status?: string | null
           status?: string
           tenant_id: string
         }
@@ -2655,6 +2663,7 @@ export type Database = {
           ai_validation_reason?: string | null
           ai_validation_score?: number | null
           ai_validation_status?: string | null
+          block_reason?: string | null
           created_at?: string
           decision_event_id?: string | null
           effectiveness_checked_at?: string | null
@@ -2669,9 +2678,12 @@ export type Database = {
           insight_id?: string | null
           reasoning_summary?: string | null
           result?: Json | null
+          reversible?: boolean | null
           review_decision?: string | null
           review_justification?: string | null
           risk_level?: string | null
+          rollback_reason?: string | null
+          rollback_status?: string | null
           status?: string
           tenant_id?: string
         }
@@ -4084,6 +4096,58 @@ export type Database = {
           },
           {
             foreignKeyName: "fk_audit_logs_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      audit_reason_trees: {
+        Row: {
+          audit_id: string | null
+          generated_at: string | null
+          id: string
+          reasons: Json
+          score: number
+          tenant_id: string
+          verdict: string | null
+        }
+        Insert: {
+          audit_id?: string | null
+          generated_at?: string | null
+          id?: string
+          reasons?: Json
+          score: number
+          tenant_id: string
+          verdict?: string | null
+        }
+        Update: {
+          audit_id?: string | null
+          generated_at?: string | null
+          id?: string
+          reasons?: Json
+          score?: number
+          tenant_id?: string
+          verdict?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_reason_trees_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_reason_trees_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "audit_reason_trees_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -10437,6 +10501,61 @@ export type Database = {
           },
         ]
       }
+      system_kill_switch: {
+        Row: {
+          activated_at: string | null
+          activated_by: string | null
+          created_at: string | null
+          enabled: boolean
+          reason: string | null
+          scope: string | null
+          tenant_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          activated_by?: string | null
+          created_at?: string | null
+          enabled?: boolean
+          reason?: string | null
+          scope?: string | null
+          tenant_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          activated_by?: string | null
+          created_at?: string | null
+          enabled?: boolean
+          reason?: string | null
+          scope?: string | null
+          tenant_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_kill_switch_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_kill_switch_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "system_kill_switch_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       system_liveness: {
         Row: {
           component_name: string
@@ -14741,6 +14860,10 @@ export type Database = {
         }
         Returns: string
       }
+      execute_ai_action_rollback: {
+        Args: { p_ai_action_id: string; p_notes?: string; p_success: boolean }
+        Returns: Json
+      }
       finalize_job_execution: {
         Args: {
           p_agent_id: string
@@ -14769,6 +14892,10 @@ export type Database = {
         }[]
       }
       generate_ai_actions_from_insights: { Args: never; Returns: Json }
+      generate_audit_reason_tree: {
+        Args: { p_score: number; p_tenant_id: string }
+        Returns: Json
+      }
       get_action_center_feed: { Args: { p_tenant_id: string }; Returns: Json }
       get_agent_disk_details: {
         Args: { p_agent_id: string }
@@ -15099,6 +15226,14 @@ export type Database = {
           needs_reprocessing: boolean
           output_type: string
         }[]
+      }
+      request_ai_action_rollback: {
+        Args: {
+          p_ai_action_id: string
+          p_reason: string
+          p_requested_by: string
+        }
+        Returns: Json
       }
       reset_monthly_scan_quota: { Args: never; Returns: undefined }
       review_dlq_item: {
