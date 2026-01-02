@@ -752,6 +752,80 @@ serve(async (req) => {
         );
       }
 
+      // Handle agent_offline execute action - treat as acknowledge
+      if (source_type === 'agent_offline' && action === 'execute') {
+        const agentId = item_id.replace('offline_', '');
+        console.log('[action-center-feed] Execute on offline agent (treated as acknowledge):', agentId);
+        
+        return new Response(
+          JSON.stringify({ success: true, message: 'Offline status acknowledged' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Handle agent_offline ignore action
+      if (source_type === 'agent_offline' && action === 'ignore') {
+        const agentId = item_id.replace('offline_', '');
+        console.log('[action-center-feed] Ignore offline agent:', agentId);
+        
+        return new Response(
+          JSON.stringify({ success: true, message: 'Offline status ignored' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Handle alert execute action - resolve the alert
+      if (source_type === 'alert' && action === 'execute') {
+        const { error } = await serviceClient
+          .from('system_alerts')
+          .update({
+            resolved: true,
+            resolved_at: new Date().toISOString(),
+            resolved_by: user.id,
+          })
+          .eq('id', item_id)
+          .eq('tenant_id', tenantId);
+
+        if (error) {
+          console.error('[action-center-feed] Execute alert error:', error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Handle alert ignore action - resolve with reason
+      if (source_type === 'alert' && action === 'ignore') {
+        const { error } = await serviceClient
+          .from('system_alerts')
+          .update({
+            resolved: true,
+            resolved_at: new Date().toISOString(),
+            resolved_by: user.id,
+          })
+          .eq('id', item_id)
+          .eq('tenant_id', tenantId);
+
+        if (error) {
+          console.error('[action-center-feed] Ignore alert error:', error);
+          return new Response(
+            JSON.stringify({ error: error.message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       // Handle ai_insight execute action - creates ai_action and calls dispatcher
       if (source_type === 'ai_insight' && action === 'execute') {
         // Get the insight to access recommended_actions
