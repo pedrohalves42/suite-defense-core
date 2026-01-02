@@ -15406,6 +15406,16 @@ export type Database = {
         Returns: Json
       }
       sync_agent_status_from_heartbeat: { Args: never; Returns: undefined }
+      sync_pending_agents_status: {
+        Args: never
+        Returns: {
+          agent_id: string
+          agent_name: string
+          minutes_since_enrollment: number
+          new_status: string
+          old_status: string
+        }[]
+      }
       test_tenant_isolation: {
         Args: never
         Returns: {
