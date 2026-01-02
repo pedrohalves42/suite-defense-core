@@ -112,6 +112,7 @@ import SoftwareRiskDashboard from "./pages/admin/SoftwareRiskDashboard";
 import SoftwareKnowledgeBase from "./pages/admin/SoftwareKnowledgeBase";
 import ActionCenterDashboard from "./pages/admin/ActionCenterDashboard";
 import Automations from "./pages/admin/Automations";
+import ArchivedAgents from "./pages/admin/ArchivedAgents";
 import {
   ClientDashboard, 
   ClientComputers, 
@@ -231,6 +232,7 @@ const App = () => (
                 <Route path="software-risk" element={<SoftwareRiskDashboard />} />
                 <Route path="software-knowledge-base" element={<SoftwareKnowledgeBase />} />
                 <Route path="automations" element={<Automations />} />
+                <Route path="archived-agents" element={<ArchivedAgents />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) */}
