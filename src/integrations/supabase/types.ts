@@ -14944,9 +14944,11 @@ export type Database = {
       diagnose_agent_issues: {
         Args: { p_agent_name: string; p_tenant_id: string }
         Returns: {
-          description: string
           details: Json
+          detected_at: string
           issue_type: string
+          message: string
+          origin: string
           severity: string
         }[]
       }
