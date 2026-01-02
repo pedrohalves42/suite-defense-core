@@ -62,7 +62,21 @@ export function useDiagnostic(
 
       if (error) throw error;
 
-      const issues = (data || []) as DiagnosticIssue[];
+      // Map RPC response (message) to DiagnosticIssue (description)
+      const rawData = data || [];
+      const issues: DiagnosticIssue[] = rawData.map((item: { 
+        issue_type: string; 
+        severity: string; 
+        message: string; 
+        details: Record<string, unknown>;
+        origin?: string;
+      }) => ({
+        issue_type: item.issue_type,
+        severity: item.severity as DiagnosticIssue['severity'],
+        description: item.message, // RPC returns 'message', type expects 'description'
+        details: item.details || {},
+        origin: item.origin ? { type: 'system' as const, source_name: item.origin } : undefined,
+      }));
       
       // Validate issues (logs warnings for critical/high without origin)
       issues.forEach(validateIssue);
