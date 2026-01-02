@@ -2622,6 +2622,7 @@ export type Database = {
           risk_level: string | null
           rollback_reason: string | null
           rollback_status: string | null
+          shadow_validation: Json | null
           status: string
           tenant_id: string
         }
@@ -2653,6 +2654,7 @@ export type Database = {
           risk_level?: string | null
           rollback_reason?: string | null
           rollback_status?: string | null
+          shadow_validation?: Json | null
           status?: string
           tenant_id: string
         }
@@ -2684,6 +2686,7 @@ export type Database = {
           risk_level?: string | null
           rollback_reason?: string | null
           rollback_status?: string | null
+          shadow_validation?: Json | null
           status?: string
           tenant_id?: string
         }
@@ -7856,6 +7859,47 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
             referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      policy_assignments: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          created_at: string | null
+          id: string
+          policy_id: string | null
+          target_id: string
+          target_type: string
+          tenant_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          policy_id?: string | null
+          target_id: string
+          target_type: string
+          tenant_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          policy_id?: string | null
+          target_id?: string
+          target_type?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "policy_assignments_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "security_policies"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -15099,6 +15143,7 @@ export type Database = {
           unique_identifiers: number
         }[]
       }
+      get_reason_tree_for_alert: { Args: { p_alert_id: string }; Returns: Json }
       get_recent_jobs: {
         Args: { p_limit?: number; p_tenant_id: string }
         Returns: {
