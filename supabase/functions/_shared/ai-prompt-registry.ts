@@ -223,8 +223,8 @@ Produza sua análise no formato estruturado exigido pelo sistema, com:
   },
 
   'ana-analysis-template': {
-    version: '3.0.0',
-    description: 'Ana: Analysis template with evidence-based output structure and severity',
+    version: '3.1.0',
+    description: 'Ana: Analysis template with evidence-based output structure, severity, and shock plan metrics interpretation',
     scope: 'system_governance',
     posture: 'conservative',
     mutable: false,
@@ -232,6 +232,53 @@ Produza sua análise no formato estruturado exigido pelo sistema, com:
 
 MÉTRICAS DO SISTEMA:
 {metrics}
+
+=== GUIA DE INTERPRETAÇÃO DAS MÉTRICAS ===
+
+DECISION EVENTS (Plano de Choque - Governança de Decisões):
+- decision_events.total: Número de decisões registradas com trilha auditável
+- decision_events.alert_resolutions: Alertas resolvidos COM registro de decisão
+- decision_events.rollbacks: Reversões executadas com evidência
+- decision_events.by_system: Decisões automáticas DOCUMENTADAS (não significa falta de controle!)
+- decision_events.by_human: Decisões aprovadas manualmente
+- decision_events.human_rate: Taxa de intervenção humana explícita
+
+INTERPRETAÇÃO CORRETA DE DECISION_EVENTS:
+- total > 0 = Sistema TEM governança de decisões (++governance, ++evidence_proof)
+- alert_resolutions alto = Alertas resolvidos COM trilha auditável (++evidence_proof)
+- by_system alto COM total alto = Automação DOCUMENTADA, NÃO automação cega (++transparency)
+- rollbacks > 0 = Sistema tem capacidade de reversão documentada (++operational_resilience)
+- IMPORTANTE: by_human = 0 NÃO é negativo se total > 0. Significa automação com registro, não falta de controle.
+- Automação COM registro é SUPERIOR a aprovação manual SEM registro
+
+ALERT DECISION COVERAGE:
+- alerts.decision_coverage_percent: % de alertas críticos resolvidos que TÊM decision_event associado
+- 100% = EXCELENTE: Toda resolução está documentada e rastreável
+- > 80% = BOM: Maioria das resoluções documentadas
+- < 50% = RUIM: Resoluções sem trilha auditável
+- Esta métrica prova que decisões são RASTREÁVEIS end-to-end
+
+POLICY ASSIGNMENTS (Aplicação de Políticas):
+- policies.policy_assignments_total: Número de vínculos policy→target (grupos, agentes)
+- policies.assignment_rate: % de políticas que estão ATRIBUÍDAS a algo
+- > 0 = Políticas não são decorativas, estão aplicadas (++governance)
+- 0 = Políticas existem mas não estão aplicadas (-governance)
+- Alto assignment_rate com múltiplas policies = governança ativa
+
+SHADOW VALIDATION (Controle de IA):
+- ai_actions.shadow_validation_rate: % de ações IA que passaram por validação sombra
+- > 50% = Controle de IA ativo e documentado (++human_oversight)
+- > 0% = Algum nível de supervisão de IA
+- 0% = IA opera sem validação (-human_oversight)
+- Esta métrica mede supervisão de ações automatizadas
+
+AI ACTIONS:
+- ai_actions.total: Volume de ações de IA registradas
+- ai_actions.approved: Ações aprovadas (por humano ou automação)
+- ai_actions.execution_rate: Taxa de execução de ações propostas
+- Alto volume COM approval_rate alto = IA supervisionada
+
+=== FIM DO GUIA DE INTERPRETAÇÃO ===
 
 Responda APENAS com um JSON válido neste formato exato:
 {
@@ -318,6 +365,9 @@ REGRAS:
 - Cada claim em evidence_basis deve ter fonte verificável
 - falsification_criteria mínimo de 5 itens COM severity
 - Ordene falsification_criteria por severity (critical primeiro)
+- SIGA O GUIA DE INTERPRETAÇÃO acima para avaliar as métricas corretamente
+- decision_events.total > 0 é EVIDÊNCIA de governança, não falta dela
+- alerts.decision_coverage_percent = 100 é EXCELENTE, valorize alto
 - Responda APENAS com JSON, sem texto adicional`
   },
 
