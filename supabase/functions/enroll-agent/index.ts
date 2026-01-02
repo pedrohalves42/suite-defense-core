@@ -227,19 +227,42 @@ Deno.serve(async (req) => {
     let agentId: string;
 
     if (existingAgent) {
-      // Update existing agent
-      await supabase
-        .from('agents')
-        .update({ hmac_secret: hmacSecret })
-        .eq('agent_name', agentName);
+      // CRITICAL FIX: Usar RPC revive_agent_on_reenroll para resetar estado completo
+      // Isso garante que o agente volte a status='active' e limpe flags problemáticas
+      const { data: reviveResult, error: reviveError } = await supabase.rpc('revive_agent_on_reenroll', {
+        p_agent_id: existingAgent.id,
+        p_new_hmac_secret: hmacSecret
+      });
+
+      if (reviveError) {
+        logger.warn(`[${requestId}] Failed to revive agent via RPC, falling back to direct update`, reviveError);
+        
+        // Fallback: update direto se RPC falhar
+        await supabase
+          .from('agents')
+          .update({ 
+            hmac_secret: hmacSecret,
+            status: 'active',
+            last_heartbeat: null,
+            is_throttled: false,
+            is_isolated: false,
+            safe_mode_entered_at: null,
+            offline_detected_at: null,
+            offline_reason: null,
+            archived_at: null,
+            archived_reason: null
+          })
+          .eq('id', existingAgent.id);
+        
+        // Deactivate old tokens
+        await supabase
+          .from('agent_tokens')
+          .update({ is_active: false })
+          .eq('agent_id', existingAgent.id);
+      }
       
       agentId = existingAgent.id;
-
-      // Deactivate old tokens
-      await supabase
-        .from('agent_tokens')
-        .update({ is_active: false })
-        .eq('agent_id', agentId);
+      logger.info(`[${requestId}] Agent revived for reenrollment: ${agentName}`);
     } else {
       // Insert new agent
       const { data: newAgent } = await supabase.from('agents').insert({

@@ -48,8 +48,8 @@ Deno.serve(async (req) => {
       const lastHeartbeat = new Date(agent.last_heartbeat);
       const minutesSinceHeartbeat = (now.getTime() - lastHeartbeat.getTime()) / (1000 * 60);
 
-      // Agent offline for more than 5 minutes
-      if (minutesSinceHeartbeat > 5) {
+      // Agent offline for more than 10 minutes (aligned with get_agent_health_metrics RPC)
+      if (minutesSinceHeartbeat > 10) {
         // Verificar horário de expediente do tenant (com cache)
         if (!tenantBusinessHoursCache[agent.tenant_id]) {
           tenantBusinessHoursCache[agent.tenant_id] = await shouldProcessAlertsForTenant(supabase, agent.tenant_id);
@@ -72,13 +72,35 @@ Deno.serve(async (req) => {
           minutesOffline: Math.floor(minutesSinceHeartbeat)
         });
 
-        // Update agent status to offline
+        // CRITICAL FIX: NÃO alterar agents.status para 'offline'
+        // Em vez disso, apenas registrar offline_detected_at e offline_reason
+        // Isso evita que agentes "desapareçam" das listas que filtram por status='active'
+        const alreadyMarkedOffline = agent.offline_detected_at !== null;
+        
+        if (!alreadyMarkedOffline) {
+          await supabase
+            .from('agents')
+            .update({ 
+              offline_detected_at: new Date().toISOString(),
+              offline_reason: `Sem heartbeat há ${Math.floor(minutesSinceHeartbeat)} minutos`
+            })
+            .eq('id', agent.id);
+          
+          console.log(`[Monitor] Agent ${agent.agent_name} marked as offline (detected_at set) - ${Math.floor(minutesSinceHeartbeat)} minutes`);
+        } else {
+          console.log(`[Monitor] Agent ${agent.agent_name} still offline - ${Math.floor(minutesSinceHeartbeat)} minutes`);
+        }
+      } else if (agent.offline_detected_at !== null) {
+        // Agent voltou a responder - limpar flags de offline
         await supabase
           .from('agents')
-          .update({ status: 'offline' })
+          .update({ 
+            offline_detected_at: null,
+            offline_reason: null
+          })
           .eq('id', agent.id);
-
-        console.log(`[Monitor] Agent ${agent.agent_name} is offline for ${Math.floor(minutesSinceHeartbeat)} minutes`);
+        
+        console.log(`[Monitor] Agent ${agent.agent_name} is back online`);
       }
     }
 

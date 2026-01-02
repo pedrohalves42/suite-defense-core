@@ -2161,6 +2161,8 @@ export type Database = {
           agent_state_reason: string | null
           agent_version: string | null
           agent_version_code: number | null
+          archived_at: string | null
+          archived_reason: string | null
           display_name: string | null
           ed25519_supported: boolean | null
           enrolled_at: string
@@ -2204,6 +2206,8 @@ export type Database = {
           agent_state_reason?: string | null
           agent_version?: string | null
           agent_version_code?: number | null
+          archived_at?: string | null
+          archived_reason?: string | null
           display_name?: string | null
           ed25519_supported?: boolean | null
           enrolled_at?: string
@@ -2247,6 +2251,8 @@ export type Database = {
           agent_state_reason?: string | null
           agent_version?: string | null
           agent_version_code?: number | null
+          archived_at?: string | null
+          archived_reason?: string | null
           display_name?: string | null
           ed25519_supported?: boolean | null
           enrolled_at?: string
@@ -14534,6 +14540,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      archive_agent: { Args: { p_agent_id: string }; Returns: Json }
       authorize_agent_recovery: {
         Args: {
           p_agent_id: string
@@ -14619,6 +14626,7 @@ export type Database = {
           total_stuck: number
         }[]
       }
+      can_hard_delete_agent: { Args: { p_agent_id: string }; Returns: Json }
       capture_forensic_snapshot_full: {
         Args: {
           p_agent_id: string
@@ -15236,6 +15244,7 @@ export type Database = {
           version: number
         }[]
       }
+      hard_delete_agent: { Args: { p_agent_id: string }; Returns: Json }
       has_recent_playbook_execution: {
         Args: {
           p_agent_id?: string
@@ -15359,6 +15368,10 @@ export type Database = {
           p_review_notes: string
           p_risk_category?: string
         }
+        Returns: Json
+      }
+      revive_agent_on_reenroll: {
+        Args: { p_agent_id: string; p_new_hmac_secret: string }
         Returns: Json
       }
       revoke_agent_signing_key: {
