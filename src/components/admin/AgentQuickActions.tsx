@@ -70,9 +70,43 @@ export function AgentQuickActions({
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      // Primeiro exclui tokens associados
-      await supabase.from('agent_tokens').delete().eq('agent_id', agentId);
-      // Depois exclui o agente
+      // Excluir dados relacionados em ordem (tabelas sem constraint de auditoria)
+      const tablesToClean = [
+        'agent_tokens',
+        'agent_signing_keys',
+        'agents_groups',
+        'agent_disk_metrics',
+        'agent_network_info',
+        'software_inventory',
+        'antivirus_status',
+        'agent_web_activity',
+        'blocked_access_attempts',
+        'security_events',
+        'system_alerts',
+        'ai_insights',
+        'anomaly_events',
+        'network_anomalies',
+        'agent_update_decisions',
+        'agent_rollback_events',
+        'agent_safe_mode_events',
+        'agent_recovery_authorizations',
+        'scheduled_jobs',
+        'jobs',
+        'failed_jobs_dlq',
+        'forensic_snapshots',
+        'policy_enforcement_logs',
+        'vuln_findings',
+        'agent_timeline_events',
+        'agent_execution_chain',
+        'agent_evidence_logs',
+        'poe_chain_breaks',
+      ];
+      
+      for (const table of tablesToClean) {
+        await supabase.from(table as any).delete().eq('agent_id', agentId);
+      }
+      
+      // Agora tenta excluir o agente
       const { error } = await supabase.from('agents').delete().eq('id', agentId);
       if (error) throw error;
     },
@@ -83,12 +117,16 @@ export function AgentQuickActions({
       });
       queryClient.invalidateQueries({ queryKey: ['agents'] });
       queryClient.invalidateQueries({ queryKey: ['problematic-agents'] });
+      setShowDeleteDialog(false);
       onAgentDeleted?.();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      const isAuditViolation = error?.message?.includes('IMMUTABLE_VIOLATION');
       toast({
         title: 'Erro ao excluir computador',
-        description: 'Tente novamente em alguns minutos.',
+        description: isAuditViolation 
+          ? 'Este computador possui registros de auditoria recentes (jobs executados). Por conformidade, não pode ser excluído por 30 dias. Use "Limpar e Resetar" para desativar o computador.'
+          : 'Erro inesperado. Tente novamente.',
         variant: 'destructive',
       });
     },
