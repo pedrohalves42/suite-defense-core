@@ -76,6 +76,25 @@ Todas as RPCs, views e automações operacionais **DEVEM** usar essa view.
 - Função `archive_agent()` para arquivamento padronizado
 - RLS policies para controle de acesso
 
+### Schema Validation Tests (CI Guards)
+| Test | Location | Purpose |
+|------|----------|---------|
+| `assert_v_agent_lifecycle_state_columns.sql` | `tools/tests/` | Validates view has all frontend-required columns |
+| `assert_active_agents_columns.sql` | `tools/tests/` | Validates active_agents has all core columns |
+
+### RLS Strategy (Differentiated Access)
+| Object | Use Case | Access Level |
+|--------|----------|--------------|
+| `agents` | Historical + Admin | Restricted (admin/auditor only) |
+| `active_agents` | Operational | Standard (authenticated) |
+
+**Policy**: Direct SELECT on `agents` requires `admin` or `auditor` role via `has_role()` function.
+
+### ANA Reason Tree Integration
+- View `v_agent_archive_reason_tree` provides structured archive reasons
+- View `v_decision_with_archive_context` combines decisions with archive context
+- Enables ANA to explain: "Alert suppressed because agent was archived (reason: never_connected)"
+
 ## Governance
 Esta decisão é enforced pela Policy **DATA-AGENT-001**.
 
