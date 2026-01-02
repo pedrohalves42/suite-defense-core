@@ -115,33 +115,88 @@ serve(async (req) => {
       .replace('{metrics}', JSON.stringify(metrics, null, 2))
       .replace('{ana_summary}', 'Nenhuma análise Ana disponível - executando Red Team primeiro para evitar viés otimista.');
 
-    const redResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: redPersona.content },
-          { role: 'user', content: redPrompt }
-        ],
-      }),
-    });
+    // Red Team AI call with timeout and robust error handling
+    const redController = new AbortController();
+    const redTimeoutId = setTimeout(() => redController.abort(), 45000); // 45s timeout
+
+    let redResponse: Response;
+    try {
+      redResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: redPersona.content },
+            { role: 'user', content: redPrompt }
+          ],
+        }),
+        signal: redController.signal,
+      });
+    } catch (fetchError: unknown) {
+      clearTimeout(redTimeoutId);
+      const err = fetchError as Error;
+      if (err.name === 'AbortError') {
+        console.error('[ai-full-audit] Red Team request timeout (45s)');
+        return new Response(
+          JSON.stringify({ error: 'Timeout na chamada Red Team (45s)', stage: 'red_team' }),
+          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.error('[ai-full-audit] Red Team fetch error:', fetchError);
+      return new Response(
+        JSON.stringify({ error: 'Erro de conexão com AI', stage: 'red_team' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } finally {
+      clearTimeout(redTimeoutId);
+    }
 
     if (!redResponse.ok) {
       const errorText = await redResponse.text();
-      console.error('Red Team AI error:', redResponse.status, errorText);
+      console.error('[ai-full-audit] Red Team AI error:', redResponse.status, errorText);
       return new Response(
-        JSON.stringify({ error: 'Red Team analysis failed', status: redResponse.status }),
+        JSON.stringify({ error: 'Red Team analysis failed', status: redResponse.status, stage: 'red_team' }),
         { status: redResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const redData = await redResponse.json();
+    // Validate response before parsing
+    const redResponseText = await redResponse.text();
+    console.log('[ai-full-audit] Red Team response length:', redResponseText.length);
+
+    if (!redResponseText || redResponseText.length === 0) {
+      console.error('[ai-full-audit] Empty response from Red Team AI');
+      return new Response(
+        JSON.stringify({ error: 'AI retornou resposta vazia', stage: 'red_team' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let redData;
+    try {
+      redData = JSON.parse(redResponseText);
+    } catch (parseErr) {
+      console.error('[ai-full-audit] Failed to parse Red Team AI response:', redResponseText.substring(0, 500));
+      return new Response(
+        JSON.stringify({ error: 'Resposta AI inválida (JSON malformado)', stage: 'red_team' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const redContent = redData.choices?.[0]?.message?.content;
     const redTokens = redData.usage?.total_tokens || 0;
+
+    if (!redContent) {
+      console.error('[ai-full-audit] No content in Red Team AI response:', JSON.stringify(redData).substring(0, 500));
+      return new Response(
+        JSON.stringify({ error: 'AI não retornou conteúdo', stage: 'red_team' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     let redResult;
     try {
@@ -153,9 +208,9 @@ serve(async (req) => {
       }
       redResult = JSON.parse(jsonContent.trim());
     } catch (parseError) {
-      console.error('Failed to parse Red Team response:', redContent);
+      console.error('[ai-full-audit] Failed to parse Red Team content:', redContent.substring(0, 500));
       return new Response(
-        JSON.stringify({ error: 'Failed to parse Red Team analysis' }),
+        JSON.stringify({ error: 'Failed to parse Red Team analysis', stage: 'red_team' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -226,33 +281,88 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
 
     const anaPrompt = anaTemplate.content.replace('{metrics}', JSON.stringify(metrics, null, 2) + '\n\n' + redTeamContext);
 
-    const anaResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: anaPersona.content },
-          { role: 'user', content: anaPrompt }
-        ],
-      }),
-    });
+    // Ana AI call with timeout and robust error handling
+    const anaController = new AbortController();
+    const anaTimeoutId = setTimeout(() => anaController.abort(), 45000); // 45s timeout
+
+    let anaResponse: Response;
+    try {
+      anaResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { role: 'system', content: anaPersona.content },
+            { role: 'user', content: anaPrompt }
+          ],
+        }),
+        signal: anaController.signal,
+      });
+    } catch (fetchError: unknown) {
+      clearTimeout(anaTimeoutId);
+      const err = fetchError as Error;
+      if (err.name === 'AbortError') {
+        console.error('[ai-full-audit] Ana request timeout (45s)');
+        return new Response(
+          JSON.stringify({ error: 'Timeout na chamada Ana (45s)', stage: 'ana' }),
+          { status: 504, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.error('[ai-full-audit] Ana fetch error:', fetchError);
+      return new Response(
+        JSON.stringify({ error: 'Erro de conexão com AI', stage: 'ana' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } finally {
+      clearTimeout(anaTimeoutId);
+    }
 
     if (!anaResponse.ok) {
       const errorText = await anaResponse.text();
-      console.error('Ana AI error:', anaResponse.status, errorText);
+      console.error('[ai-full-audit] Ana AI error:', anaResponse.status, errorText);
       return new Response(
-        JSON.stringify({ error: 'Ana analysis failed', status: anaResponse.status }),
+        JSON.stringify({ error: 'Ana analysis failed', status: anaResponse.status, stage: 'ana' }),
         { status: anaResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const anaData = await anaResponse.json();
+    // Validate response before parsing
+    const anaResponseText = await anaResponse.text();
+    console.log('[ai-full-audit] Ana response length:', anaResponseText.length);
+
+    if (!anaResponseText || anaResponseText.length === 0) {
+      console.error('[ai-full-audit] Empty response from Ana AI');
+      return new Response(
+        JSON.stringify({ error: 'AI retornou resposta vazia', stage: 'ana' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    let anaData;
+    try {
+      anaData = JSON.parse(anaResponseText);
+    } catch (parseErr) {
+      console.error('[ai-full-audit] Failed to parse Ana AI response:', anaResponseText.substring(0, 500));
+      return new Response(
+        JSON.stringify({ error: 'Resposta AI inválida (JSON malformado)', stage: 'ana' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const anaContent = anaData.choices?.[0]?.message?.content;
     const anaTokens = anaData.usage?.total_tokens || 0;
+
+    if (!anaContent) {
+      console.error('[ai-full-audit] No content in Ana AI response:', JSON.stringify(anaData).substring(0, 500));
+      return new Response(
+        JSON.stringify({ error: 'AI não retornou conteúdo', stage: 'ana' }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     let anaResult;
     try {
@@ -264,9 +374,9 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       }
       anaResult = JSON.parse(jsonContent.trim());
     } catch (parseError) {
-      console.error('Failed to parse Ana response:', anaContent);
+      console.error('[ai-full-audit] Failed to parse Ana content:', anaContent.substring(0, 500));
       return new Response(
-        JSON.stringify({ error: 'Failed to parse Ana analysis' }),
+        JSON.stringify({ error: 'Failed to parse Ana analysis', stage: 'ana' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
