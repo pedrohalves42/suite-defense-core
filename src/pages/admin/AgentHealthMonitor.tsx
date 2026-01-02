@@ -15,6 +15,7 @@ import { getOsIcon } from '@/lib/os-utils';
 import { AgentStatusBadges } from '@/components/agents/AgentStatusBadges';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { OfflineAgentActions } from '@/components/admin/OfflineAgentActions';
+import { AgentAuthFailureAlert } from '@/components/admin/AgentAuthFailureAlert';
 import { TooltipProvider as TooltipProviderWrapper } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HealthTrendChart } from '@/components/admin/HealthTrendChart';
@@ -426,6 +427,16 @@ export default function AgentHealthMonitor() {
                       <Clock className="w-3 h-3" />
                       {agent.last_heartbeat ? lastSeenText : 'Nunca conectado'}
                     </p>
+
+                    {/* Auth Failure Alert for never_connected agents */}
+                    {agent.health_status === 'never_connected' && agent.id && (
+                      <TooltipProviderWrapper>
+                        <AgentAuthFailureAlert
+                          agentId={agent.id}
+                          agentName={agent.agent_name}
+                        />
+                      </TooltipProviderWrapper>
+                    )}
 
                     {/* Quick Actions for special states */}
                     {hasSpecialStatus && agent.id && (

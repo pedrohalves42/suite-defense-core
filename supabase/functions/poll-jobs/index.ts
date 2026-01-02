@@ -69,7 +69,12 @@ Deno.serve(async (req) => {
     }
     
     // Verificar HMAC (obrigatorio)
-    const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret)
+    const hmacResult = await verifyHmacSignature(supabase, req, agent.agent_name, agent.hmac_secret, {
+      agentId: token.agent_id,
+      tenantId: undefined, // Will be fetched later if needed
+      endpoint: 'poll-jobs',
+      ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || undefined
+    })
     if (!hmacResult.valid) {
       logger.warn('HMAC verification failed', {
         agent: agent.agent_name,
@@ -82,7 +87,12 @@ Deno.serve(async (req) => {
           error: 'unauthorized',
           code: hmacResult.errorCode,
           message: hmacResult.errorMessage,
-          transient: hmacResult.transient
+          transient: hmacResult.transient,
+          // Fase 2: Include server time for clock skew recovery
+          server_time_ms: hmacResult.serverTimeMs,
+          skew_seconds: hmacResult.skewSeconds,
+          received_timestamp: hmacResult.receivedTimestamp,
+          max_skew_seconds: hmacResult.maxSkewSeconds
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
