@@ -1,8 +1,9 @@
 import { ReactNode, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, AlertCircle, Info, Monitor, Clock } from 'lucide-react';
+import { AlertTriangle, AlertCircle, Info, Monitor, Clock, ArchiveX } from 'lucide-react';
 import { ActionItem } from '@/hooks/useActionCenter';
+import { useSuppressedAlertsByArchive } from '@/hooks/useSuppressedAlerts';
 
 type SectionType = 'urgent' | 'recommended' | 'informational';
 
@@ -115,6 +116,7 @@ export function ActionCenterSection({ type, count, children, className, items }:
   const config = SECTION_CONFIG[type];
   const Icon = config.icon;
   const summary = useSectionSummary(items);
+  const { data: suppressedCount } = useSuppressedAlertsByArchive();
 
   if (count === 0) return null;
 
@@ -127,6 +129,14 @@ export function ActionCenterSection({ type, count, children, className, items }:
           <Icon className={cn('h-5 w-5', config.iconClassName)} />
           <h2 className="text-lg font-semibold">{config.title}</h2>
           <Badge className={config.badgeClassName}>{count}</Badge>
+          
+          {/* Suppressed alerts indicator - only show on urgent section */}
+          {type === 'urgent' && suppressedCount && suppressedCount > 0 && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground ml-2">
+              <ArchiveX className="h-3.5 w-3.5" />
+              {suppressedCount} suprimidos por arquivamento
+            </span>
+          )}
         </div>
 
         {/* Summary line */}
