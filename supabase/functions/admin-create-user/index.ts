@@ -197,24 +197,22 @@ serve(async (req) => {
     const newUserId = authUser.user.id;
     console.log(`[admin-create-user] Auth user created: ${newUserId}`);
 
-    // Create profile
+    // Update profile (trigger já criou via handle_new_user, apenas atualizamos username/full_name)
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .insert({
-        id: newUserId,
-        user_id: newUserId,
+      .update({
         full_name,
         username: username.toLowerCase(),
-        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      });
+      })
+      .eq('user_id', newUserId);
 
     if (profileError) {
-      console.error('[admin-create-user] Profile creation failed:', profileError);
-      // Cleanup: delete the auth user if profile creation fails
+      console.error('[admin-create-user] Profile update failed:', profileError);
+      // Cleanup: delete auth user (CASCADE deleta profile e user_roles automaticamente)
       await supabaseAdmin.auth.admin.deleteUser(newUserId);
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to create user profile' }),
+        JSON.stringify({ success: false, error: 'Failed to update user profile' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -230,8 +228,7 @@ serve(async (req) => {
 
     if (roleInsertError) {
       console.error('[admin-create-user] Role assignment failed:', roleInsertError);
-      // Cleanup
-      await supabaseAdmin.from('profiles').delete().eq('id', newUserId);
+      // Cleanup: deleteUser com CASCADE já remove profile e user_roles
       await supabaseAdmin.auth.admin.deleteUser(newUserId);
       return new Response(
         JSON.stringify({ success: false, error: 'Failed to assign user role' }),
