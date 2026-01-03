@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, UserCog } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -19,6 +19,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useTenant } from '@/hooks/useTenant';
 import { MemberCard } from '@/components/members/MemberCard';
+import { CreateUserForm } from '@/components/members/CreateUserForm';
 import { AppRole } from '@/types/roles';
 import { Member, TenantSubscription } from '@/types/user';
 import { getMemberLimit } from '@/lib/subscriptionLimits';
@@ -29,6 +30,7 @@ export default function Members() {
   const navigate = useNavigate();
   const { tenant, loading: tenantLoading } = useTenant();
   const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
+  const [showCreateUserForm, setShowCreateUserForm] = useState(false);
 
   // CORRECAO: Cache key com tenant.id para invalidacao correta
   const { data: members = [], isLoading } = useQuery({
@@ -177,11 +179,19 @@ export default function Members() {
             </Badge>
           )}
           <Button 
+            variant="outline"
+            onClick={() => setShowCreateUserForm(true)}
+            disabled={isAtLimit}
+          >
+            <UserCog className="h-4 w-4 mr-2" />
+            Criar Usuário
+          </Button>
+          <Button 
             onClick={() => navigate('/admin/invites')}
             disabled={isAtLimit}
           >
             <UserPlus className="h-4 w-4 mr-2" />
-            Convidar Membro
+            Convidar por Email
           </Button>
         </div>
       </div>
@@ -291,6 +301,12 @@ export default function Members() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Create User Modal */}
+      <CreateUserForm 
+        open={showCreateUserForm} 
+        onOpenChange={setShowCreateUserForm} 
+      />
     </div>
   );
 }

@@ -616,3 +616,7 @@ verify_jwt = true
 # === Resolve Action Policy (Enterprise Policy Engine) ===
 [functions.resolve-action-policy]
 verify_jwt = false
+
+# === ADR-008: Admin Create User (username/password) ===
+[functions.admin-create-user]
+verify_jwt = true
