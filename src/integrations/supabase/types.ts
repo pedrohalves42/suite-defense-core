@@ -6190,6 +6190,70 @@ export type Database = {
           },
         ]
       }
+      governance_adrs: {
+        Row: {
+          adr_code: string
+          approved_at: string | null
+          approved_by: string | null
+          consequences: string | null
+          created_at: string | null
+          decision: string
+          id: string
+          rationale: string | null
+          status: string | null
+          tenant_id: string | null
+          title: string
+        }
+        Insert: {
+          adr_code: string
+          approved_at?: string | null
+          approved_by?: string | null
+          consequences?: string | null
+          created_at?: string | null
+          decision: string
+          id?: string
+          rationale?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          title: string
+        }
+        Update: {
+          adr_code?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          consequences?: string | null
+          created_at?: string | null
+          decision?: string
+          id?: string
+          rationale?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governance_adrs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "governance_adrs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_adrs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       hmac_signatures_2025_12: {
         Row: {
           agent_name: string
