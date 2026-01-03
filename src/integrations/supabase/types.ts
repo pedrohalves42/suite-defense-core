@@ -2372,9 +2372,12 @@ export type Database = {
           os_version: string | null
           payload_hash: string | null
           poll_interval_seconds: number | null
+          requires_revalidation: boolean | null
           result_key_fingerprint: string | null
           result_key_registered_at: string | null
           result_public_key: string | null
+          revalidation_reason: string | null
+          revalidation_required_at: string | null
           safe_mode_entered_at: string | null
           safe_mode_reason: string | null
           signature_mode: string | null
@@ -2417,9 +2420,12 @@ export type Database = {
           os_version?: string | null
           payload_hash?: string | null
           poll_interval_seconds?: number | null
+          requires_revalidation?: boolean | null
           result_key_fingerprint?: string | null
           result_key_registered_at?: string | null
           result_public_key?: string | null
+          revalidation_reason?: string | null
+          revalidation_required_at?: string | null
           safe_mode_entered_at?: string | null
           safe_mode_reason?: string | null
           signature_mode?: string | null
@@ -2462,9 +2468,12 @@ export type Database = {
           os_version?: string | null
           payload_hash?: string | null
           poll_interval_seconds?: number | null
+          requires_revalidation?: boolean | null
           result_key_fingerprint?: string | null
           result_key_registered_at?: string | null
           result_public_key?: string | null
+          revalidation_reason?: string | null
+          revalidation_required_at?: string | null
           safe_mode_entered_at?: string | null
           safe_mode_reason?: string | null
           signature_mode?: string | null
