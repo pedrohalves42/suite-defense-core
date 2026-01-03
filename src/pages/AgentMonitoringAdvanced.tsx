@@ -4,7 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Activity, AlertCircle, CheckCircle, Clock, Cpu, HardDrive, MemoryStick, Monitor, Search, XCircle, RefreshCw, Wifi, WifiOff, AlertTriangle } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Activity, AlertCircle, CheckCircle, Clock, Cpu, HardDrive, MemoryStick, Monitor, Search, XCircle, RefreshCw, Wifi, WifiOff, AlertTriangle, ChevronDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { getOsDisplayName, getOsIcon } from '@/lib/os-utils';
@@ -251,6 +258,55 @@ export default function AgentMonitoringAdvanced() {
     return matchesSearch && matchesStatus;
   });
 
+  // Sort agents by risk level: Critical > Medium > Offline > Healthy
+  const sortedAgents = useMemo(() => {
+    return [...filteredAgents].sort((a, b) => {
+      // Determine risk scores
+      const getRiskScore = (agent: AgentMetrics) => {
+        if (!agent.is_online) return 2; // Offline
+        const hasCritical = (agent.cpu_usage ?? 0) > 90 || (agent.disk_usage ?? 0) > 90;
+        const hasMedium = (agent.cpu_usage ?? 0) > 70 || (agent.memory_usage ?? 0) > 85 || (agent.disk_usage ?? 0) > 80;
+        if (hasCritical) return 3; // Critical
+        if (hasMedium) return 1; // Medium
+        return 0; // Healthy
+      };
+      return getRiskScore(b) - getRiskScore(a);
+    });
+  }, [filteredAgents]);
+
+  // Get agent card status styling
+  const getAgentCardStyle = (agent: AgentMetrics) => {
+    if (!agent.is_online) {
+      return {
+        border: 'border-dashed border-muted-foreground/50',
+        bg: 'bg-muted/20',
+        label: 'Offline'
+      };
+    }
+    const hasCritical = (agent.cpu_usage ?? 0) > 90 || (agent.disk_usage ?? 0) > 90;
+    const hasMedium = (agent.cpu_usage ?? 0) > 70 || (agent.memory_usage ?? 0) > 85 || (agent.disk_usage ?? 0) > 80;
+    
+    if (hasCritical) {
+      return {
+        border: 'border-red-500/50 border-l-4 border-l-red-500',
+        bg: 'bg-red-500/5',
+        label: 'Crítico'
+      };
+    }
+    if (hasMedium) {
+      return {
+        border: 'border-amber-500/50 border-l-4 border-l-amber-500',
+        bg: 'bg-amber-500/5',
+        label: 'Atenção'
+      };
+    }
+    return {
+      border: 'border-border',
+      bg: '',
+      label: 'Normal'
+    };
+  };
+
   const getHealthColor = (value: number | null, threshold: number) => {
     if (value === null) return 'text-muted-foreground';
     if (value > threshold) return 'text-destructive';
@@ -398,58 +454,79 @@ export default function AgentMonitoringAdvanced() {
         </Card>
       )}
 
-      {/* Alerts Section - Agrupados Semanticamente */}
+      {/* Alerts Section - Collapsible with severity grouping */}
       {groupedAlerts.length > 0 && (
-        <Card className="border-destructive/50 bg-destructive/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="w-5 h-5" />
-              Alertas Pendentes ({alerts.length} alertas em {groupedAlerts.length} grupos)
-            </CardTitle>
-            <CardDescription>
-              Alertas similares foram agrupados para facilitar a gestão
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {groupedAlerts.slice(0, 5).map((alert) => (
-                <div key={alert.groupKey || `${alert.alert_type}-${alert.title}`} className="flex items-center justify-between p-4 bg-card border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}>
-                        {alert.severity === 'critical' ? '🔴 Crítico' : alert.severity === 'high' ? '🟠 Alto' : '🟡 Médio'}
-                      </Badge>
-                      <span className="font-semibold">{alert.title}</span>
-                      {alert.count > 1 && (
-                        <Badge variant="outline" className="ml-2">
-                          {alert.count} ocorrências
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {alert.message}
-                      {alert.latestValue && (
-                        <span className="font-mono ml-2 text-destructive">({alert.latestValue.toFixed(1)}%)</span>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      Último: {formatBrazilDateTime(alert.created_at, 'datetime')}
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={() => resolveAlertGroup(alert.alert_type, alert.title)} 
-                    variant="outline" 
-                    size="sm"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    {alert.count > 1 ? 'Resolver Todos' : 'Resolver'}
-                  </Button>
+        <Collapsible defaultOpen={true}>
+          <Card className="border-l-4 border-l-red-500 bg-red-500/5">
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full p-4 h-auto justify-between hover:bg-transparent"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🔴</span>
+                  <AlertCircle className="w-5 h-5 text-red-500" />
+                  <span className="text-lg font-semibold">Alertas Pendentes</span>
+                  <Badge className="bg-red-500 text-white">
+                    {alerts.length}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground ml-2">
+                    ({groupedAlerts.length} grupos)
+                  </span>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <p className="text-sm text-muted-foreground mb-4">
+                  Alertas similares foram agrupados para facilitar a gestão
+                </p>
+                <div className="space-y-3">
+                  {groupedAlerts.slice(0, 5).map((alert) => (
+                    <div key={alert.groupKey || `${alert.alert_type}-${alert.title}`} className="flex items-center justify-between p-4 bg-card border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <Badge variant={alert.severity === 'critical' ? 'destructive' : 'secondary'}>
+                            {alert.severity === 'critical' ? '🔴 Crítico' : alert.severity === 'high' ? '🟠 Alto' : '🟡 Médio'}
+                          </Badge>
+                          <span className="font-semibold">{alert.title}</span>
+                          {alert.count > 1 && (
+                            <Badge variant="outline" className="ml-2">
+                              {alert.count} ocorrências
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {alert.message}
+                          {alert.latestValue && (
+                            <span className="font-mono ml-2 text-destructive">({alert.latestValue.toFixed(1)}%)</span>
+                          )}
+                        </p>
+                        {/* Impact info */}
+                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1 font-medium">
+                          Impacto: {alert.severity === 'critical' ? 'Pode causar indisponibilidade' : 'Requer atenção preventiva'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Último: {formatBrazilDateTime(alert.created_at, 'datetime')}
+                        </p>
+                      </div>
+                      <Button 
+                        onClick={() => resolveAlertGroup(alert.alert_type, alert.title)} 
+                        variant="outline" 
+                        size="sm"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        {alert.count > 1 ? 'Aplicar correções' : 'Aplicar correção'}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* Search and Filters */}
@@ -497,105 +574,192 @@ export default function AgentMonitoringAdvanced() {
         </CardContent>
       </Card>
 
-      {/* Agents Grid */}
+      {/* Agents Grid - Sorted by risk */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredAgents.map((agent) => (
-          <Card key={agent.id} className={cn(
-            "transition-all duration-200 hover:shadow-lg",
-            agent.is_online ? "border-success/30" : "border-muted"
-          )}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{getOsIcon(agent.os_type)}</span>
-                  <div>
-                    <CardTitle className="text-base">{agent.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{agent.hostname || 'N/A'}</p>
+        {sortedAgents.map((agent) => {
+          const cardStyle = getAgentCardStyle(agent);
+          
+          return (
+            <Card key={agent.id} className={cn(
+              "transition-all duration-200 hover:shadow-lg",
+              cardStyle.border,
+              cardStyle.bg
+            )}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{getOsIcon(agent.os_type)}</span>
+                    <div>
+                      <CardTitle className="text-base">{agent.name}</CardTitle>
+                      <p className="text-xs text-muted-foreground">{agent.hostname || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge variant={agent.is_online ? 'default' : 'secondary'} className={cn(
+                      agent.is_online ? "bg-success text-success-foreground" : ""
+                    )}>
+                      {agent.is_online ? (
+                        <><CheckCircle className="w-3 h-3 mr-1" /> Online</>
+                      ) : (
+                        <><XCircle className="w-3 h-3 mr-1" /> Offline</>
+                      )}
+                    </Badge>
+                    {cardStyle.label !== 'Normal' && cardStyle.label !== 'Offline' && (
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          'text-xs',
+                          cardStyle.label === 'Crítico' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                        )}
+                      >
+                        {cardStyle.label}
+                      </Badge>
+                    )}
                   </div>
                 </div>
-                <Badge variant={agent.is_online ? 'default' : 'secondary'} className={cn(
-                  agent.is_online ? "bg-success text-success-foreground" : ""
-                )}>
-                  {agent.is_online ? (
-                    <><CheckCircle className="w-3 h-3 mr-1" /> Online</>
-                  ) : (
-                    <><XCircle className="w-3 h-3 mr-1" /> Offline</>
-                  )}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Resource Bars */}
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Processador</span>
-                    <span className={getHealthColor(agent.cpu_usage, 90)}>
-                      {agent.cpu_usage !== null ? `${agent.cpu_usage.toFixed(0)}%` : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className={cn("h-full transition-all", 
-                        agent.cpu_usage !== null && agent.cpu_usage > 90 ? 'bg-destructive' : 
-                        agent.cpu_usage !== null && agent.cpu_usage > 70 ? 'bg-warning' : 'bg-success'
-                      )}
-                      style={{ width: `${agent.cpu_usage || 0}%` }}
-                    />
-                  </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Resource Bars with Intelligent Tooltips */}
+                <div className="space-y-3">
+                  {/* CPU */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-help">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">Processador</span>
+                            <span className={getHealthColor(agent.cpu_usage, 90)}>
+                              {agent.cpu_usage !== null ? `${agent.cpu_usage.toFixed(0)}%` : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className={cn("h-full transition-all", 
+                                agent.cpu_usage !== null && agent.cpu_usage > 90 ? 'bg-destructive' : 
+                                agent.cpu_usage !== null && agent.cpu_usage > 70 ? 'bg-warning' : 'bg-success'
+                              )}
+                              style={{ width: `${agent.cpu_usage || 0}%` }}
+                            />
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        {agent.cpu_usage !== null && agent.cpu_usage > 90 ? (
+                          <>
+                            <p className="font-medium text-red-500">CPU em uso excessivo</p>
+                            <p className="text-xs">Risco: travamento ou lentidão severa</p>
+                            <p className="text-xs text-muted-foreground">Ação: investigar processos consumindo CPU</p>
+                          </>
+                        ) : agent.cpu_usage !== null && agent.cpu_usage > 70 ? (
+                          <>
+                            <p className="font-medium text-amber-500">CPU elevada</p>
+                            <p className="text-xs">Monitorar possível degradação</p>
+                          </>
+                        ) : (
+                          <p className="text-xs">Uso de CPU normal</p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {/* Memory */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-help">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">Memória RAM</span>
+                            <span className={getHealthColor(agent.memory_usage, 85)}>
+                              {agent.memory_usage !== null ? `${agent.memory_usage.toFixed(0)}%` : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className={cn("h-full transition-all", 
+                                agent.memory_usage !== null && agent.memory_usage > 85 ? 'bg-destructive' : 
+                                agent.memory_usage !== null && agent.memory_usage > 70 ? 'bg-warning' : 'bg-success'
+                              )}
+                              style={{ width: `${agent.memory_usage || 0}%` }}
+                            />
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        {agent.memory_usage !== null && agent.memory_usage > 85 ? (
+                          <>
+                            <p className="font-medium text-red-500">Memória crítica</p>
+                            <p className="text-xs">Risco: sistema pode travar</p>
+                            <p className="text-xs text-muted-foreground">Ação: encerrar aplicativos não essenciais</p>
+                          </>
+                        ) : agent.memory_usage !== null && agent.memory_usage > 70 ? (
+                          <>
+                            <p className="font-medium text-amber-500">Memória elevada</p>
+                            <p className="text-xs">Recomendado monitorar</p>
+                          </>
+                        ) : (
+                          <p className="text-xs">Uso de memória normal</p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {/* Disk */}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="cursor-help">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">Armazenamento</span>
+                            <span className={getHealthColor(agent.disk_usage, 90)}>
+                              {agent.disk_usage !== null ? `${agent.disk_usage.toFixed(0)}%` : 'N/A'}
+                            </span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className={cn("h-full transition-all", 
+                                agent.disk_usage !== null && agent.disk_usage > 90 ? 'bg-destructive' : 
+                                agent.disk_usage !== null && agent.disk_usage > 80 ? 'bg-warning' : 'bg-success'
+                              )}
+                              style={{ width: `${agent.disk_usage || 0}%` }}
+                            />
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        {agent.disk_usage !== null && agent.disk_usage > 90 ? (
+                          <>
+                            <p className="font-medium text-red-500">Disco quase cheio</p>
+                            <p className="text-xs">Risco: falha de escrita / travamento</p>
+                            <p className="text-xs text-muted-foreground">Ação: limpeza ou expansão urgente</p>
+                          </>
+                        ) : agent.disk_usage !== null && agent.disk_usage > 80 ? (
+                          <>
+                            <p className="font-medium text-amber-500">Espaço em disco baixo</p>
+                            <p className="text-xs">Recomendado liberar espaço</p>
+                          </>
+                        ) : (
+                          <p className="text-xs">Espaço em disco adequado</p>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
 
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Memória RAM</span>
-                    <span className={getHealthColor(agent.memory_usage, 85)}>
-                      {agent.memory_usage !== null ? `${agent.memory_usage.toFixed(0)}%` : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className={cn("h-full transition-all", 
-                        agent.memory_usage !== null && agent.memory_usage > 85 ? 'bg-destructive' : 
-                        agent.memory_usage !== null && agent.memory_usage > 70 ? 'bg-warning' : 'bg-success'
-                      )}
-                      style={{ width: `${agent.memory_usage || 0}%` }}
-                    />
-                  </div>
+                {/* Footer Info */}
+                <div className="flex justify-between items-center pt-2 border-t text-xs text-muted-foreground">
+                  <span>{getOsDisplayName(agent.os_type, agent.os_version || null)}</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {agent.uptime_hours !== null ? `${agent.uptime_hours}h ligado` : 'N/A'}
+                  </span>
                 </div>
-
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Armazenamento</span>
-                    <span className={getHealthColor(agent.disk_usage, 90)}>
-                      {agent.disk_usage !== null ? `${agent.disk_usage.toFixed(0)}%` : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className={cn("h-full transition-all", 
-                        agent.disk_usage !== null && agent.disk_usage > 90 ? 'bg-destructive' : 
-                        agent.disk_usage !== null && agent.disk_usage > 80 ? 'bg-warning' : 'bg-success'
-                      )}
-                      style={{ width: `${agent.disk_usage || 0}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer Info */}
-              <div className="flex justify-between items-center pt-2 border-t text-xs text-muted-foreground">
-                <span>{getOsDisplayName(agent.os_type, agent.os_version || null)}</span>
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {agent.uptime_hours !== null ? `${agent.uptime_hours}h ligado` : 'N/A'}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {filteredAgents.length === 0 && (
+      {sortedAgents.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <Monitor className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />

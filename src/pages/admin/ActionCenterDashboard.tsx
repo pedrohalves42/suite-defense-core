@@ -4,13 +4,15 @@ import { useActionCenterHistory, ActionHistoryItem } from '@/hooks/useActionCent
 import { useInsightFeedback, FeedbackType } from '@/hooks/useInsightFeedback';
 import { ActionCard, ActionCenterSection, EmptyActionCenter } from '@/components/action-center';
 import { ActionCenterOverview } from '@/components/action-center/ActionCenterOverview';
+import { NextBestAction } from '@/components/action-center/NextBestAction';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { RefreshCw, Target, ArrowRight, Clock, History, CheckCircle2, XCircle, Bot, User, ChevronDown, ShieldCheck, BookOpen, AlertTriangle, Loader2, ThumbsUp, ThumbsDown, Ban } from 'lucide-react';
+import { RefreshCw, Target, ArrowRight, Clock, History, CheckCircle2, XCircle, Bot, User, ChevronDown, ShieldCheck, BookOpen, AlertTriangle, Loader2, ThumbsUp, ThumbsDown, Ban, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -268,6 +270,7 @@ function HistoryItemCard({ item }: { item: ActionHistoryItem }) {
 
 export default function ActionCenterDashboard() {
   const [activeTab, setActiveTab] = useState('pending');
+  const [searchTerm, setSearchTerm] = useState('');
   const { data, isLoading, refetch, isRefetching } = useActionCenter();
   const { data: historyData, isLoading: historyLoading } = useActionCenterHistory();
 
@@ -280,6 +283,23 @@ export default function ActionCenterDashboard() {
   const lastUpdated = data?.generated_at 
     ? formatDistanceToNow(new Date(data.generated_at), { addSuffix: true, locale: ptBR })
     : null;
+
+  // Filter actions by search term
+  const filterItems = (items: typeof data.urgent) => {
+    if (!items || !searchTerm.trim()) return items;
+    const term = searchTerm.toLowerCase();
+    return items.filter(item => 
+      item.agent_name?.toLowerCase().includes(term) ||
+      item.hostname?.toLowerCase().includes(term) ||
+      item.title?.toLowerCase().includes(term) ||
+      item.description?.toLowerCase().includes(term) ||
+      item.trigger_type?.toLowerCase().includes(term)
+    );
+  };
+
+  const filteredUrgent = filterItems(data?.urgent);
+  const filteredRecommended = filterItems(data?.recommended);
+  const filteredInformational = filterItems(data?.informational);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -373,6 +393,11 @@ export default function ActionCenterDashboard() {
           {/* Content */}
           {!isLoading && data && (
             <div className="space-y-6">
+              {/* Next Best Action Banner - Premium UX */}
+              {totalActions > 0 && (
+                <NextBestAction onExecute={() => refetch()} />
+              )}
+
               {/* Overview Cards - Always Visible */}
               <ActionCenterOverview
                 urgentCount={data.urgent?.length || 0}
@@ -381,6 +406,19 @@ export default function ActionCenterDashboard() {
                 offlineCount={offlineCount}
                 totalAgents={totalAgents}
               />
+
+              {/* Search Bar - Positioned above alerts */}
+              {totalActions > 0 && (
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por agente, tipo de alerta..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              )}
 
               {/* Empty State - Only when no actions */}
               {totalActions === 0 && (data.informational?.length || 0) === 0 && (
@@ -391,10 +429,10 @@ export default function ActionCenterDashboard() {
                 />
               )}
 
-              {/* Urgent Actions */}
-              {data.urgent && data.urgent.length > 0 && (
-                <ActionCenterSection type="urgent" count={data.urgent.length} items={data.urgent}>
-                  {data.urgent.map((item) => (
+              {/* Urgent Actions - Collapsible, always open by default */}
+              {filteredUrgent && filteredUrgent.length > 0 && (
+                <ActionCenterSection type="urgent" count={filteredUrgent.length} items={filteredUrgent}>
+                  {filteredUrgent.map((item) => (
                     <ActionCard 
                       key={item.item_id} 
                       item={item}
@@ -404,10 +442,10 @@ export default function ActionCenterDashboard() {
                 </ActionCenterSection>
               )}
 
-              {/* Recommended Actions */}
-              {data.recommended && data.recommended.length > 0 && (
-                <ActionCenterSection type="recommended" count={data.recommended.length} items={data.recommended}>
-                  {data.recommended.map((item) => (
+              {/* Recommended Actions - Collapsible, closed by default */}
+              {filteredRecommended && filteredRecommended.length > 0 && (
+                <ActionCenterSection type="recommended" count={filteredRecommended.length} items={filteredRecommended}>
+                  {filteredRecommended.map((item) => (
                     <ActionCard 
                       key={item.item_id} 
                       item={item}
@@ -417,10 +455,10 @@ export default function ActionCenterDashboard() {
                 </ActionCenterSection>
               )}
 
-              {/* Informational Actions */}
-              {data.informational && data.informational.length > 0 && (
-                <ActionCenterSection type="informational" count={data.informational.length} items={data.informational}>
-                  {data.informational.map((item) => (
+              {/* Informational Actions - Collapsible, closed by default */}
+              {filteredInformational && filteredInformational.length > 0 && (
+                <ActionCenterSection type="informational" count={filteredInformational.length} items={filteredInformational}>
+                  {filteredInformational.map((item) => (
                     <ActionCard 
                       key={item.item_id} 
                       item={item}

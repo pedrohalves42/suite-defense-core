@@ -1,7 +1,9 @@
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, AlertCircle, Info, Monitor, Clock, ArchiveX } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AlertTriangle, AlertCircle, Info, Monitor, Clock, ArchiveX, ChevronDown } from 'lucide-react';
 import { ActionItem } from '@/hooks/useActionCenter';
 import { useSuppressedAlertsByArchive } from '@/hooks/useSuppressedAlerts';
 
@@ -21,27 +23,39 @@ const SECTION_CONFIG: Record<SectionType, {
   iconClassName: string;
   badgeClassName: string;
   emoji: string;
+  bgClassName: string;
+  borderClassName: string;
+  defaultOpen: boolean;
 }> = {
   urgent: {
-    title: 'Ações Urgentes',
+    title: 'Críticos',
     icon: AlertTriangle,
     iconClassName: 'text-red-500',
     badgeClassName: 'bg-red-500 text-white',
     emoji: '🔴',
+    bgClassName: 'bg-red-500/5',
+    borderClassName: 'border-l-4 border-l-red-500',
+    defaultOpen: true, // Always open by default
   },
   recommended: {
-    title: 'Ações Recomendadas',
+    title: 'Médios',
     icon: AlertCircle,
-    iconClassName: 'text-yellow-500',
-    badgeClassName: 'bg-yellow-500 text-white',
+    iconClassName: 'text-amber-500',
+    badgeClassName: 'bg-amber-500 text-white',
     emoji: '🟡',
+    bgClassName: 'bg-amber-500/5',
+    borderClassName: 'border-l-4 border-l-amber-500',
+    defaultOpen: false, // Collapsed by default
   },
   informational: {
-    title: 'Informativo',
+    title: 'Informativos',
     icon: Info,
     iconClassName: 'text-blue-500',
     badgeClassName: 'bg-blue-500 text-white',
     emoji: '🔵',
+    bgClassName: 'bg-blue-500/5',
+    borderClassName: 'border-l-4 border-l-blue-500',
+    defaultOpen: false, // Collapsed by default
   },
 };
 
@@ -117,59 +131,90 @@ export function ActionCenterSection({ type, count, children, className, items }:
   const Icon = config.icon;
   const summary = useSectionSummary(items);
   const { data: suppressedCount } = useSuppressedAlertsByArchive();
+  const [isOpen, setIsOpen] = useState(config.defaultOpen);
 
   if (count === 0) return null;
 
   return (
-    <section className={cn('space-y-3', className)}>
-      <div className="space-y-2">
-        {/* Header */}
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{config.emoji}</span>
-          <Icon className={cn('h-5 w-5', config.iconClassName)} />
-          <h2 className="text-lg font-semibold">{config.title}</h2>
-          <Badge className={config.badgeClassName}>{count}</Badge>
-          
-          {/* Suppressed alerts indicator - only show on urgent section */}
-          {type === 'urgent' && suppressedCount && suppressedCount > 0 && (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground ml-2">
-              <ArchiveX className="h-3.5 w-3.5" />
-              {suppressedCount} suprimidos por arquivamento
-            </span>
-          )}
-        </div>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <section className={cn(
+        'rounded-lg overflow-hidden',
+        config.bgClassName,
+        config.borderClassName,
+        className
+      )}>
+        {/* Header - Clickable */}
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            className="w-full p-4 h-auto justify-between hover:bg-transparent"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{config.emoji}</span>
+              <Icon className={cn('h-5 w-5', config.iconClassName)} />
+              <h2 className="text-lg font-semibold">{config.title}</h2>
+              <Badge className={config.badgeClassName}>{count}</Badge>
+              
+              {/* Suppressed alerts indicator - only show on urgent section */}
+              {type === 'urgent' && suppressedCount && suppressedCount > 0 && (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground ml-2">
+                  <ArchiveX className="h-3.5 w-3.5" />
+                  {suppressedCount} suprimidos
+                </span>
+              )}
+            </div>
 
-        {/* Summary line */}
-        {summary && (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground pl-8">
-            {summary.typeBreakdown && (
-              <span className="flex items-center gap-1">
-                <AlertCircle className="h-3.5 w-3.5" />
-                {summary.typeBreakdown}
-              </span>
+            <div className="flex items-center gap-3">
+              {/* Summary info in header */}
+              {summary && !isOpen && (
+                <span className="text-xs text-muted-foreground hidden md:block">
+                  {summary.machineCount} {summary.machineCount === 1 ? 'máquina' : 'máquinas'} • {summary.avgTime} pendente
+                </span>
+              )}
+              <ChevronDown className={cn(
+                'h-5 w-5 text-muted-foreground transition-transform',
+                isOpen && 'rotate-180'
+              )} />
+            </div>
+          </Button>
+        </CollapsibleTrigger>
+
+        <CollapsibleContent>
+          <div className="px-4 pb-4 space-y-3">
+            {/* Summary line */}
+            {summary && (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground pb-2 border-b border-border/50">
+                {summary.typeBreakdown && (
+                  <span className="flex items-center gap-1">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    {summary.typeBreakdown}
+                  </span>
+                )}
+                {summary.machineCount > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Monitor className="h-3.5 w-3.5" />
+                    {summary.machineCount === 1 
+                      ? summary.machines[0]
+                      : `${summary.machineCount} máquinas afetadas`
+                    }
+                  </span>
+                )}
+                {summary.avgTime && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    Tempo médio pendente: {summary.avgTime}
+                  </span>
+                )}
+              </div>
             )}
-            {summary.machineCount > 0 && (
-              <span className="flex items-center gap-1">
-                <Monitor className="h-3.5 w-3.5" />
-                {summary.machineCount === 1 
-                  ? summary.machines[0]
-                  : `${summary.machineCount} máquinas afetadas`
-                }
-              </span>
-            )}
-            {summary.avgTime && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                Tempo médio pendente: {summary.avgTime}
-              </span>
-            )}
+
+            {/* Children (action cards) */}
+            <div className="space-y-3">
+              {children}
+            </div>
           </div>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        {children}
-      </div>
-    </section>
+        </CollapsibleContent>
+      </section>
+    </Collapsible>
   );
 }
