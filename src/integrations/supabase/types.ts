@@ -9652,6 +9652,30 @@ export type Database = {
           },
         ]
       }
+      security_definer_allowlist: {
+        Row: {
+          adr_reference: string | null
+          approved_at: string | null
+          approved_by: string | null
+          rationale: string
+          view_name: string
+        }
+        Insert: {
+          adr_reference?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          rationale: string
+          view_name: string
+        }
+        Update: {
+          adr_reference?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          rationale?: string
+          view_name?: string
+        }
+        Relationships: []
+      }
       security_events: {
         Row: {
           agent_id: string | null
