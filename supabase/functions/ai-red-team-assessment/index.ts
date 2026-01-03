@@ -89,9 +89,8 @@ serve(async (req) => {
     logPromptUsage('red-team-analysis-template', analysisTemplate.hash, tenantId, 'ai-red-team-assessment');
 
     // Get raw metrics
-    // Pass user.id explicitly since service role doesn't have auth.uid() context
     const { data: metrics, error: metricsError } = await supabase
-      .rpc('get_audit_raw_metrics', { p_tenant_id: tenantId, p_user_id: user.id });
+      .rpc('get_audit_raw_metrics', { p_tenant_id: tenantId });
 
     if (metricsError) {
       console.error('Error fetching metrics:', metricsError);
