@@ -13262,70 +13262,148 @@ export type Database = {
     Views: {
       active_agents: {
         Row: {
+          agent_mode: string | null
           agent_name: string | null
           agent_state: string | null
           agent_state_changed_at: string | null
           agent_state_reason: string | null
           agent_version: string | null
+          agent_version_code: number | null
+          archived_at: string | null
+          archived_reason: string | null
           display_name: string | null
+          ed25519_supported: boolean | null
           enrolled_at: string | null
+          force_update_at: string | null
+          force_update_override_safe_mode: boolean | null
+          force_update_override_safe_mode_expires_at: string | null
+          force_update_reason: string | null
+          force_update_version: string | null
           hmac_secret: string | null
           hostname: string | null
           id: string | null
           is_isolated: boolean | null
+          is_throttled: boolean | null
           isolated_at: string | null
           isolation_reason: string | null
+          last_block_sync_at: string | null
+          last_forced_update_applied: string | null
           last_heartbeat: string | null
           offline_detected_at: string | null
           offline_reason: string | null
           os_type: string | null
           os_version: string | null
+          payload_hash: string | null
+          poll_interval_seconds: number | null
+          requires_revalidation: boolean | null
+          result_key_fingerprint: string | null
+          result_key_registered_at: string | null
+          result_public_key: string | null
+          revalidation_reason: string | null
+          revalidation_required_at: string | null
+          safe_mode_entered_at: string | null
+          safe_mode_reason: string | null
+          signature_mode: string | null
           status: string | null
           tenant_id: string | null
+          throttle_reason: string | null
+          throttled_at: string | null
         }
         Insert: {
+          agent_mode?: string | null
           agent_name?: string | null
           agent_state?: string | null
           agent_state_changed_at?: string | null
           agent_state_reason?: string | null
           agent_version?: string | null
+          agent_version_code?: number | null
+          archived_at?: string | null
+          archived_reason?: string | null
           display_name?: string | null
+          ed25519_supported?: boolean | null
           enrolled_at?: string | null
+          force_update_at?: string | null
+          force_update_override_safe_mode?: boolean | null
+          force_update_override_safe_mode_expires_at?: string | null
+          force_update_reason?: string | null
+          force_update_version?: string | null
           hmac_secret?: string | null
           hostname?: string | null
           id?: string | null
           is_isolated?: boolean | null
+          is_throttled?: boolean | null
           isolated_at?: string | null
           isolation_reason?: string | null
+          last_block_sync_at?: string | null
+          last_forced_update_applied?: string | null
           last_heartbeat?: string | null
           offline_detected_at?: string | null
           offline_reason?: string | null
           os_type?: string | null
           os_version?: string | null
+          payload_hash?: string | null
+          poll_interval_seconds?: number | null
+          requires_revalidation?: boolean | null
+          result_key_fingerprint?: string | null
+          result_key_registered_at?: string | null
+          result_public_key?: string | null
+          revalidation_reason?: string | null
+          revalidation_required_at?: string | null
+          safe_mode_entered_at?: string | null
+          safe_mode_reason?: string | null
+          signature_mode?: string | null
           status?: string | null
           tenant_id?: string | null
+          throttle_reason?: string | null
+          throttled_at?: string | null
         }
         Update: {
+          agent_mode?: string | null
           agent_name?: string | null
           agent_state?: string | null
           agent_state_changed_at?: string | null
           agent_state_reason?: string | null
           agent_version?: string | null
+          agent_version_code?: number | null
+          archived_at?: string | null
+          archived_reason?: string | null
           display_name?: string | null
+          ed25519_supported?: boolean | null
           enrolled_at?: string | null
+          force_update_at?: string | null
+          force_update_override_safe_mode?: boolean | null
+          force_update_override_safe_mode_expires_at?: string | null
+          force_update_reason?: string | null
+          force_update_version?: string | null
           hmac_secret?: string | null
           hostname?: string | null
           id?: string | null
           is_isolated?: boolean | null
+          is_throttled?: boolean | null
           isolated_at?: string | null
           isolation_reason?: string | null
+          last_block_sync_at?: string | null
+          last_forced_update_applied?: string | null
           last_heartbeat?: string | null
           offline_detected_at?: string | null
           offline_reason?: string | null
           os_type?: string | null
           os_version?: string | null
+          payload_hash?: string | null
+          poll_interval_seconds?: number | null
+          requires_revalidation?: boolean | null
+          result_key_fingerprint?: string | null
+          result_key_registered_at?: string | null
+          result_public_key?: string | null
+          revalidation_reason?: string | null
+          revalidation_required_at?: string | null
+          safe_mode_entered_at?: string | null
+          safe_mode_reason?: string | null
+          signature_mode?: string | null
           status?: string | null
           tenant_id?: string | null
+          throttle_reason?: string | null
+          throttled_at?: string | null
         }
         Relationships: [
           {

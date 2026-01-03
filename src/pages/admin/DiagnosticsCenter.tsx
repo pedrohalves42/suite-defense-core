@@ -113,7 +113,7 @@ export default function DiagnosticsCenter() {
         .order('enrolled_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as ProblematicAgent[];
+      return (data || []) as unknown as ProblematicAgent[];
     },
     refetchInterval: 30000,
     enabled: !!tenant?.id,
