@@ -8498,6 +8498,7 @@ export type Database = {
           id: string
           updated_at: string
           user_id: string
+          username: string | null
         }
         Insert: {
           created_at?: string
@@ -8505,6 +8506,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id: string
+          username?: string | null
         }
         Update: {
           created_at?: string
@@ -8512,6 +8514,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+          username?: string | null
         }
         Relationships: []
       }
@@ -16319,6 +16322,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      must_change_password: { Args: never; Returns: boolean }
       parse_version_code: { Args: { version_text: string }; Returns: number }
       persist_chain_breaks: { Args: never; Returns: number }
       process_autonomous_safe_mode: { Args: never; Returns: Json }

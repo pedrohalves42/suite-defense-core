@@ -15,15 +15,24 @@ import { MFAVerificationDialog } from '@/components/mfa/MFAVerificationDialog';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 
 const loginSchema = z.object({
-  email: z.string()
+  identifier: z.string()
     .trim()
-    .min(1, 'Email e obrigatorio')
-    .email('Email invalido')
-    .max(255, 'Email muito longo'),
+    .min(1, 'Email ou username é obrigatório')
+    .max(255, 'Valor muito longo'),
   password: z.string()
-    .min(1, 'Senha e obrigatoria')
+    .min(1, 'Senha é obrigatória')
     .max(72, 'Senha muito longa'),
 });
+
+// Convert username to internal email format
+function getLoginEmail(identifier: string): string {
+  // If it looks like an email, use as-is
+  if (identifier.includes('@')) {
+    return identifier.toLowerCase().trim();
+  }
+  // Otherwise, convert username to internal email
+  return `${identifier.toLowerCase().trim()}@local.internal`;
+}
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -104,20 +113,23 @@ export default function Login() {
     }
 
     // Validate inputs
-    const validation = loginSchema.safeParse({ email, password });
+    const validation = loginSchema.safeParse({ identifier: email, password });
     if (!validation.success) {
       const firstError = validation.error.issues[0];
       toast({
         variant: 'destructive',
-        title: 'Erro de validacao',
+        title: 'Erro de validação',
         description: firstError.message,
       });
       setLoading(false);
       return;
     }
 
+    // Convert username to email if needed
+    const loginEmail = getLoginEmail(validation.data.identifier);
+
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: validation.data.email,
+      email: loginEmail,
       password: validation.data.password,
     });
 
@@ -133,7 +145,7 @@ export default function Login() {
       // Registrar tentativa falhada com audit log
       try {
         await supabase.functions.invoke('record-failed-login', {
-          body: { email: validation.data.email },
+          body: { email: loginEmail },
         });
       } catch (recordError) {
         logger.error('Failed to record login attempt', recordError);
@@ -315,13 +327,13 @@ export default function Login() {
                   </Alert>
                 )}
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-foreground font-medium tracking-wide">Email</Label>
+                  <Label htmlFor="email" className="text-foreground font-medium tracking-wide">Email ou Username</Label>
                   <div className="relative group">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
                     <Input
                       id="email"
-                      type="email"
-                      placeholder="seu@email.com"
+                      type="text"
+                      placeholder="seu@email.com ou username"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required

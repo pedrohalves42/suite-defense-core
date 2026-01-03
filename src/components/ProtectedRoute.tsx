@@ -1,8 +1,9 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -14,6 +15,14 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Check if user must change password (ADR-008: Access Governance)
+  const mustChangePassword = user.user_metadata?.must_change_password === true;
+  const isOnForcePasswordPage = location.pathname === '/force-password-change';
+  
+  if (mustChangePassword && !isOnForcePasswordPage) {
+    return <Navigate to="/force-password-change" replace />;
   }
 
   return <>{children}</>;
