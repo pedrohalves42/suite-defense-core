@@ -10884,6 +10884,7 @@ export type Database = {
           resolution_notes: string | null
           resolved: boolean | null
           resolved_at: string | null
+          resolved_by: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           severity: string
@@ -10906,6 +10907,7 @@ export type Database = {
           resolution_notes?: string | null
           resolved?: boolean | null
           resolved_at?: string | null
+          resolved_by?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           severity: string
@@ -10928,6 +10930,7 @@ export type Database = {
           resolution_notes?: string | null
           resolved?: boolean | null
           resolved_at?: string | null
+          resolved_by?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           severity?: string
