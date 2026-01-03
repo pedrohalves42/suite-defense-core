@@ -55,17 +55,18 @@ export function useAgentExecutionHealth() {
         .order('severity', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as AgentExecutionHealth[];
+      return (data || []) as unknown as AgentExecutionHealth[];
     },
     refetchInterval: 60000, // Refresh every minute
   });
 }
 
 export function useUnhealthyAgents() {
-  return useQuery({
+  return useQuery<AgentExecutionHealth[]>({
     queryKey: ['unhealthy-agents'],
-    queryFn: async (): Promise<AgentExecutionHealth[]> => {
-      const { data, error } = await supabase
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
         .from('v_agent_execution_health')
         .select('*')
         .neq('health_status', 'healthy')

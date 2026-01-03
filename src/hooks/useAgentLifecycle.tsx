@@ -17,7 +17,7 @@ export function useAgentLifecycle(tenantId: string | undefined) {
       if (error) throw new Error(`Erro ao buscar agentes: ${error.message}`);
 
       // Transform AgentLifecycleState to DashboardAgentCard
-      return (data as AgentLifecycleState[]).map(transformToCard);
+      return (data as unknown as AgentLifecycleState[]).map(transformToCard);
     },
     enabled: !!tenantId,
     staleTime: 30000, // Cache por 30s
