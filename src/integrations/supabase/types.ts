@@ -5060,39 +5060,51 @@ export type Database = {
         Row: {
           action: string
           actions_executed: Json | null
+          actor_id: string | null
+          actor_type: string | null
           agent_id: string | null
           agent_name: string | null
           created_at: string
           decision_source: string
           decision_type: string
           evidence: Json
+          human_reviewed: boolean | null
           id: string
+          justification: string | null
           rule_code: string
           tenant_id: string
         }
         Insert: {
           action: string
           actions_executed?: Json | null
+          actor_id?: string | null
+          actor_type?: string | null
           agent_id?: string | null
           agent_name?: string | null
           created_at?: string
           decision_source: string
           decision_type: string
           evidence?: Json
+          human_reviewed?: boolean | null
           id?: string
+          justification?: string | null
           rule_code: string
           tenant_id: string
         }
         Update: {
           action?: string
           actions_executed?: Json | null
+          actor_id?: string | null
+          actor_type?: string | null
           agent_id?: string | null
           agent_name?: string | null
           created_at?: string
           decision_source?: string
           decision_type?: string
           evidence?: Json
+          human_reviewed?: boolean | null
           id?: string
+          justification?: string | null
           rule_code?: string
           tenant_id?: string
         }
