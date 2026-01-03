@@ -33,6 +33,8 @@ import {
   Shield,
   Zap,
   Search,
+  Sparkles,
+  Target,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -80,9 +82,6 @@ function extractKeyMetrics(context: Record<string, unknown>, triggerType: string
   if (typeof context.failure_count === 'number') {
     metrics.push({ icon: AlertTriangle, label: 'Falhas', value: `${context.failure_count}x` });
   }
-  if (typeof context.confidence_score === 'number') {
-    metrics.push({ icon: HelpCircle, label: 'Confiança', value: `${Math.round(context.confidence_score * 100)}%` });
-  }
 
   return metrics.slice(0, 4); // Max 4 metrics
 }
@@ -104,6 +103,12 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
      item.trigger_type === 'performance' || 
      item.trigger_type === 'security_posture' ||
      !item.context?.recommended_actions);
+  
+  // Check if this is an AI-generated insight
+  const isAIInsight = item.source_type === 'ai_insight';
+  const confidenceScore = typeof item.context?.confidence_score === 'number' 
+    ? Math.round(item.context.confidence_score * 100) 
+    : null;
   
   // Generate dynamic content based on context
   const dynamicContent = generateDynamicContent(item.trigger_type, item.context, item.agent_name, item.hostname);
@@ -159,7 +164,10 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
   // Use humanized copy if available, otherwise use dynamic or from map
   const displayTitle = item.humanized?.title || dynamicContent.title || copy.title;
   const displayDescription = item.humanized?.description || dynamicContent.description || item.description || copy.description;
-  const displayCta = item.humanized?.cta || dynamicContent.cta || copy.cta;
+  // Updated CTA text: "Aplicar correção" instead of generic "Resolver"
+  const displayCta = isInvestigateAction 
+    ? 'Analisar causa raiz' 
+    : (item.humanized?.cta || dynamicContent.cta || 'Aplicar correção');
   const whyUrgent = dynamicContent.whyUrgent || copy.impact;
   const agentDisplay = item.agent_name || item.hostname || 'Sistema';
 
@@ -221,7 +229,15 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
                   <Badge variant="outline" className={cn('shrink-0', severityConfig.className)}>
                     {severityConfig.label}
                   </Badge>
+                  {/* AI Insight badge */}
+                  {isAIInsight && (
+                    <Badge variant="secondary" className="shrink-0 gap-1 bg-purple-500/10 text-purple-600 border-purple-500/20">
+                      <Sparkles className="h-3 w-3" />
+                      Detecção Inteligente
+                    </Badge>
+                  )}
                 </CardTitle>
+                {/* WHERE: Machine/Agent info */}
                 <CardDescription className="flex items-center gap-2 font-medium">
                   <Monitor className="h-4 w-4 shrink-0" />
                   <span className="text-foreground">{agentDisplay}</span>
@@ -242,27 +258,80 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
         </CardHeader>
 
         <CardContent className="pt-0 space-y-4">
-          {/* What's happening section */}
+          {/* STRUCTURED: What/Where/Impact/Action layout */}
           <div className="bg-background/50 rounded-lg p-3 space-y-3">
+            {/* WHAT: What's happening */}
             <div>
               <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                O que está acontecendo
+                <Target className="h-3 w-3" />
+                O que está errado
               </p>
               <p className="text-sm">{displayDescription}</p>
             </div>
             
-            {/* Why it's urgent section */}
+            {/* IMPACT: Why it's urgent - with visual emphasis */}
             {whyUrgent && (
               <div className="border-t pt-3">
                 <p className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
-                  <Zap className="h-3 w-3" />
-                  Por que é urgente
+                  <AlertTriangle className="h-3 w-3" />
+                  Impacto
                 </p>
-                <p className="text-sm text-orange-600 dark:text-orange-400">{whyUrgent}</p>
+                <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">{whyUrgent}</p>
               </div>
             )}
           </div>
+
+          {/* AI Insight: Confidence and Evidence */}
+          {isAIInsight && (
+            <div className="bg-purple-500/5 border border-purple-500/20 rounded-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-purple-600 flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Análise da Detecção Inteligente
+                </p>
+                {confidenceScore !== null && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            'cursor-help gap-1',
+                            confidenceScore >= 80 ? 'bg-green-500/10 text-green-600 border-green-500/20' :
+                            confidenceScore >= 60 ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
+                            'bg-gray-500/10 text-gray-600 border-gray-500/20'
+                          )}
+                        >
+                          <HelpCircle className="h-3 w-3" />
+                          {confidenceScore}% confiança
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>
+                          {confidenceScore >= 80 
+                            ? 'Alta certeza na detecção. O padrão identificado corresponde fortemente a ameaças conhecidas.' 
+                            : confidenceScore >= 60 
+                              ? 'Certeza moderada. Recomenda-se investigação manual para confirmar.' 
+                              : 'Baixa certeza. Pode ser falso positivo - analise com atenção.'}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
+              
+              {/* Evidence bullets if available */}
+              {item.context?.evidence && typeof item.context.evidence === 'object' && (
+                <ul className="text-xs text-muted-foreground space-y-1 pl-4">
+                  {Object.entries(item.context.evidence as Record<string, unknown>).slice(0, 3).map(([key, value]) => (
+                    <li key={key} className="list-disc">
+                      <span className="font-medium">{key}:</span> {String(value)}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           {/* Key Metrics Display */}
           {keyMetrics.length > 0 && (
@@ -285,7 +354,7 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
             <ArchiveReasonTree agentId={item.agent_id} />
           )}
 
-          {/* Actions */}
+          {/* Actions - with updated labels */}
           <div className="flex items-center gap-2 pt-2 border-t flex-wrap">
             <TooltipProvider>
               <Tooltip>
@@ -326,7 +395,7 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
                       disabled={executeAction.isPending}
                     >
                       <X className="h-4 w-4 mr-2" />
-                      Ignorar
+                      Arquivar sem ação
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -345,7 +414,7 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
                       onClick={handleAcknowledge}
                       disabled={executeAction.isPending}
                     >
-                      Reconhecer
+                      Marcar como visto
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -356,41 +425,22 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
             )}
 
             {item.source_type === 'ai_insight' && (
-              <>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        onClick={handleAcknowledge}
-                        disabled={executeAction.isPending}
-                      >
-                        Reconhecer
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs">Marcar insight como revisado sem executar ação</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                
-                {item.context?.confidence_score && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Badge variant="secondary" className="ml-auto cursor-help">
-                          {Math.round(Number(item.context.confidence_score) * 100)}% confiança
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="max-w-xs">
-                          Nível de confiança da IA na detecção. Valores acima de 80% indicam alta certeza.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={handleAcknowledge}
+                      disabled={executeAction.isPending}
+                    >
+                      Marcar como visto
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="max-w-xs">Marcar insight como revisado sem executar ação</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
 
             {item.source_type === 'agent_offline' && (
@@ -402,7 +452,7 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
                       onClick={handleAcknowledge}
                       disabled={executeAction.isPending}
                     >
-                      Reconhecer
+                      Marcar como visto
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -432,20 +482,20 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
         </CardContent>
       </Card>
 
-      {/* Ignore Dialog */}
+      {/* Ignore Dialog - Updated label */}
       <Dialog open={ignoreDialogOpen} onOpenChange={setIgnoreDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ignorar Ação</DialogTitle>
+            <DialogTitle>Arquivar sem Ação</DialogTitle>
             <DialogDescription>
-              Você está ignorando: <strong>{displayTitle}</strong>
+              Você está arquivando: <strong>{displayTitle}</strong>
               <br />
               <span className="text-muted-foreground">Agente: {agentDisplay}</span>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Informe o motivo para ignorar esta ação. Isso será registrado para auditoria.
+              Informe o motivo para arquivar esta ação. Isso será registrado para auditoria.
             </p>
             <Textarea
               placeholder="Ex: Falso positivo - computador em manutenção programada"
@@ -459,12 +509,13 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
               Cancelar
             </Button>
             <Button 
-              variant="destructive" 
-              onClick={handleIgnore}
+              onClick={handleIgnore} 
               disabled={!ignoreReason.trim() || executeAction.isPending}
             >
-              {executeAction.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Confirmar
+              {executeAction.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Confirmar Arquivamento
             </Button>
           </DialogFooter>
         </DialogContent>
