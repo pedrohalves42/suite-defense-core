@@ -53,15 +53,15 @@ serve(async (req) => {
       );
     }
 
-    // Verify caller is admin
-    const { data: callerRole, error: roleError } = await supabaseAdmin
+    // Verify caller is admin - use limit(1) to handle multiple roles
+    const { data: callerRoles, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role, tenant_id')
       .eq('user_id', caller.id)
       .in('role', ['admin', 'super_admin'])
-      .single();
+      .limit(1);
 
-    if (roleError || !callerRole) {
+    if (roleError || !callerRoles || callerRoles.length === 0) {
       console.error('[admin-create-user] Role check failed:', roleError);
       return new Response(
         JSON.stringify({ success: false, error: 'Forbidden: Admin role required' }),
@@ -69,7 +69,9 @@ serve(async (req) => {
       );
     }
 
+    const callerRole = callerRoles[0];
     const tenantId = callerRole.tenant_id;
+    console.log(`[admin-create-user] Admin verified: ${caller.id}, tenant: ${tenantId}`);
 
     // Parse and validate request body
     const body: CreateUserRequest = await req.json();
