@@ -13398,21 +13398,24 @@ export type Database = {
       }
       governance_health_metrics: {
         Row: {
-          ai_actions_with_approval: number | null
-          critical_alerts_human_resolved: number | null
-          decision_events_human: number | null
-          decision_events_system: number | null
-          decision_events_total: number | null
-          dlq_with_decision: number | null
-          high_risk_approved: number | null
-          human_decision_rate: number | null
-          isolation_status: string | null
+          ai_actions_compliance_pct: number | null
+          critical_alerts_compliance_pct: number | null
+          critical_alerts_open: number | null
+          dlq_compliance_pct: number | null
+          dlq_escalated: number | null
+          dlq_pending: number | null
+          enforcement_active_since: string | null
+          enforcement_status: string | null
+          expired_approvals: number | null
+          health_status: string | null
+          high_risk_pending: number | null
+          legacy_critical_alerts: number | null
+          legacy_dlq_resolved: number | null
+          pending_ai_reviews: number | null
+          pending_approvals: number | null
           rbac_assignments: number | null
           rbac_status: string | null
           rls_coverage_pct: number | null
-          rls_status: string | null
-          rollback_total: number | null
-          security_functions_present: boolean | null
           snapshot_at: string | null
           tenant_isolation_pct: number | null
         }
@@ -14819,6 +14822,28 @@ export type Database = {
           p99_latency_ms: number | null
           successful_calls: number | null
           total_calls: number | null
+        }
+        Relationships: []
+      }
+      v_enforcement_compliance: {
+        Row: {
+          ai_actions_compliance_pct: number | null
+          ai_actions_high_critical: number | null
+          ai_actions_with_approval: number | null
+          ai_actions_with_request: number | null
+          critical_alerts_compliance_pct: number | null
+          critical_alerts_human_resolved: number | null
+          critical_alerts_resolved: number | null
+          critical_alerts_total: number | null
+          critical_alerts_with_decision: number | null
+          dlq_compliance_pct: number | null
+          dlq_resolved_total: number | null
+          dlq_with_decision_event: number | null
+          dlq_with_resolution_source: number | null
+          enforcement_active_since: string | null
+          enforcement_status: string | null
+          legacy_critical_alerts: number | null
+          legacy_dlq_resolved: number | null
         }
         Relationships: []
       }
@@ -16367,7 +16392,9 @@ export type Database = {
         Returns: Json
       }
       get_enrollment_key_full: { Args: { p_key_id: string }; Returns: string }
-      get_governance_snapshot: { Args: never; Returns: Json }
+      get_governance_snapshot:
+        | { Args: never; Returns: Json }
+        | { Args: { p_tenant_id?: string }; Returns: Json }
       get_installation_health_status: {
         Args: { p_tenant_id: string }
         Returns: {
