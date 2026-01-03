@@ -13398,11 +13398,23 @@ export type Database = {
       }
       governance_health_metrics: {
         Row: {
+          ai_actions_with_approval: number | null
+          critical_alerts_human_resolved: number | null
           decision_events_human: number | null
           decision_events_system: number | null
           decision_events_total: number | null
+          dlq_with_decision: number | null
+          high_risk_approved: number | null
           human_decision_rate: number | null
+          isolation_status: string | null
+          rbac_assignments: number | null
+          rbac_status: string | null
+          rls_coverage_pct: number | null
+          rls_status: string | null
           rollback_total: number | null
+          security_functions_present: boolean | null
+          snapshot_at: string | null
+          tenant_isolation_pct: number | null
         }
         Relationships: []
       }
@@ -15568,6 +15580,24 @@ export type Database = {
           },
         ]
       }
+      v_rbac_metrics: {
+        Row: {
+          admin_count: number | null
+          distinct_roles: number | null
+          has_role_function: boolean | null
+          has_super_admin_function: boolean | null
+          has_tenant_access_function: boolean | null
+          has_tenant_id_function: boolean | null
+          operator_count: number | null
+          rbac_status: string | null
+          super_admin_count: number | null
+          total_role_assignments: number | null
+          total_tenants: number | null
+          users_with_roles: number | null
+          viewer_count: number | null
+        }
+        Relationships: []
+      }
       v_rls_security_status: {
         Row: {
           failed: number | null
@@ -15728,6 +15758,19 @@ export type Database = {
           tenant_id?: string | null
           tenant_name?: string | null
           total_agents?: never
+        }
+        Relationships: []
+      }
+      v_tenant_isolation_metrics: {
+        Row: {
+          isolation_coverage_pct: number | null
+          isolation_status: string | null
+          rls_coverage_pct: number | null
+          rls_status: string | null
+          tables_with_rls: number | null
+          tables_with_tenant_id: number | null
+          tables_with_valid_isolation: number | null
+          total_tables: number | null
         }
         Relationships: []
       }
