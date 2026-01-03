@@ -270,7 +270,11 @@ export function AgentHealthAlerts() {
 
   const handleResolveAll = () => {
     if (alerts && alerts.length > 0) {
-      resolveAllAlerts.mutate(alerts.map(a => a.id));
+      // Filtrar alertas não-críticos para resolução em lote
+      const nonCriticalAlerts = alerts.filter(a => a.severity !== 'critical');
+      if (nonCriticalAlerts.length > 0) {
+        resolveAllAlerts.mutate({ alertIds: nonCriticalAlerts.map(a => a.id) });
+      }
     }
   };
 
@@ -386,7 +390,7 @@ export function AgentHealthAlerts() {
             <AlertCard 
               key={alert.id} 
               alert={alert}
-              onResolve={() => resolveAlert.mutate(alert.id)}
+              onResolve={() => resolveAlert.mutate({ alertId: alert.id })}
               isResolving={resolveAlert.isPending}
             />
           ))}

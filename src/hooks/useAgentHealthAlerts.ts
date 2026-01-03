@@ -97,24 +97,96 @@ export function useNonExecutionAlerts() {
   });
 }
 
+/**
+ * Hook para resolver alertas com suporte a gate humano para críticos
+ * PASSO 2: Gate Humano para Alertas Críticos (+15 pts score)
+ * 
+ * Alertas críticos requerem:
+ * - resolved_by preenchido (enforced via trigger)
+ * - resolution_notes obrigatórias
+ * - decision_event criado para rastreabilidade
+ */
 export function useResolveAlert() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (alertId: string) => {
-      const { error } = await supabase
+    mutationFn: async ({ 
+      alertId, 
+      resolutionNotes,
+    }: { 
+      alertId: string; 
+      resolutionNotes?: string;
+    }) => {
+      // 1. Get current user (required for critical alerts)
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('User not authenticated');
+
+      // 2. Get alert details to check severity
+      const { data: alert, error: alertError } = await supabase
+        .from('system_alerts')
+        .select('severity, tenant_id')
+        .eq('id', alertId)
+        .single();
+
+      if (alertError) throw alertError;
+
+      // 3. Validate resolution notes for critical alerts
+      if (alert.severity === 'critical' && (!resolutionNotes || resolutionNotes.trim().length < 5)) {
+        throw new Error('Alertas críticos requerem notas de resolução (mínimo 5 caracteres)');
+      }
+
+      // 4. Update the alert with resolved_by (required by trigger for critical)
+      const { error: updateError } = await supabase
         .from('system_alerts')
         .update({
           resolved: true,
           resolved_at: new Date().toISOString(),
+          resolved_by: user.id,
         })
         .eq('id', alertId);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // 5. Create decision_event for critical alerts
+      if (alert.severity === 'critical') {
+        await supabase.from('decision_events').insert({
+          tenant_id: alert.tenant_id,
+          rule_code: 'CRITICAL_ALERT_RESOLUTION',
+          action: 'resolve_critical_alert',
+          evidence: {
+            alert_id: alertId,
+            severity: alert.severity,
+            resolution_notes: resolutionNotes,
+            resolved_by: user.id,
+            user_email: user.email,
+          },
+          decision_source: 'human',
+          decision_type: 'alert_resolution',
+        });
+
+        // 6. Update the alert with decision_event reference
+        const { data: decisionEvent } = await supabase
+          .from('decision_events')
+          .select('id')
+          .eq('rule_code', 'CRITICAL_ALERT_RESOLUTION')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (decisionEvent) {
+          await supabase
+            .from('system_alerts')
+            .update({ decision_event_id: decisionEvent.id })
+            .eq('id', alertId);
+        }
+      }
+
+      return { success: true, alertId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['non-execution-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['decision-events'] });
       toast({
         title: 'Alerta resolvido',
         description: 'O alerta foi marcado como resolvido.',
@@ -130,27 +202,56 @@ export function useResolveAlert() {
   });
 }
 
+/**
+ * Hook para resolver múltiplos alertas (apenas não-críticos)
+ * Alertas críticos devem ser resolvidos individualmente com useResolveAlert
+ */
 export function useResolveAllAlerts() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (alertIds: string[]) => {
-      const { error } = await supabase
+    mutationFn: async ({ 
+      alertIds, 
+      resolutionNotes 
+    }: { 
+      alertIds: string[]; 
+      resolutionNotes?: string;
+    }) => {
+      // 1. Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('User not authenticated');
+
+      // 2. Check if any alerts are critical (they require individual resolution)
+      const { data: criticalAlerts } = await supabase
+        .from('system_alerts')
+        .select('id')
+        .in('id', alertIds)
+        .eq('severity', 'critical');
+
+      if (criticalAlerts && criticalAlerts.length > 0) {
+        throw new Error(`${criticalAlerts.length} alerta(s) crítico(s) devem ser resolvidos individualmente`);
+      }
+
+      // 3. Update all non-critical alerts
+      const { error: updateError } = await supabase
         .from('system_alerts')
         .update({
           resolved: true,
           resolved_at: new Date().toISOString(),
+          resolved_by: user.id,
         })
         .in('id', alertIds);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      return { success: true, count: alertIds.length };
     },
-    onSuccess: (_, alertIds) => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['non-execution-alerts'] });
       toast({
         title: 'Alertas resolvidos',
-        description: `${alertIds.length} alerta(s) marcado(s) como resolvido(s).`,
+        description: `${data.count} alerta(s) marcado(s) como resolvido(s).`,
       });
     },
     onError: (error) => {

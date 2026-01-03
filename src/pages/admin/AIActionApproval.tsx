@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, Clock, AlertTriangle, Info, Loader2, Sparkles, Brain, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertTriangle, Info, Loader2, Sparkles, Brain, Shield } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { useApproveAiAction, useRejectAiAction, requiresFormalApproval, RISK_LEVEL_COLORS } from '@/hooks/useAiActionApproval';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface AIAction {
   id: string;
@@ -55,6 +58,13 @@ export default function AIActionApproval() {
   const queryClient = useQueryClient();
   const [executingActions, setExecutingActions] = useState<Set<string>>(new Set());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
+  const [approvalNotes, setApprovalNotes] = useState('');
+
+  // Use the new approval hooks
+  const approveAction = useApproveAiAction();
+  const rejectAction = useRejectAiAction();
 
   // Buscar acoes pendentes
   const { data: pendingActions, isLoading } = useQuery({
@@ -109,71 +119,54 @@ export default function AIActionApproval() {
     },
   });
 
-  // Mutation para executar acao
-  const executeAction = useMutation({
-    mutationFn: async (actionId: string) => {
-      const { data, error } = await supabase.functions.invoke('ai-action-executor', {
-        body: { action_id: actionId }
-      });
+  const handleApproveClick = (actionId: string, riskLevel: string | null) => {
+    if (requiresFormalApproval(riskLevel)) {
+      // Open dialog for formal approval with notes
+      setSelectedActionId(actionId);
+      setApprovalNotes('');
+      setApprovalDialogOpen(true);
+    } else {
+      // Direct approval for low/medium risk
+      setExecutingActions(prev => new Set(prev).add(actionId));
+      approveAction.mutate(
+        { actionId },
+        {
+          onSettled: () => {
+            setExecutingActions(prev => {
+              const next = new Set(prev);
+              next.delete(actionId);
+              return next;
+            });
+          },
+        }
+      );
+    }
+  };
 
-      if (error) throw error;
-      if (data.error) throw new Error(data.error);
-      return data;
-    },
-    onSuccess: (data, actionId) => {
-      queryClient.invalidateQueries({ queryKey: ['ai-actions-pending'] });
-      setExecutingActions(prev => {
-        const next = new Set(prev);
-        next.delete(actionId);
-        return next;
-      });
-      
-      toast({
-        title: 'Acao Executada',
-        description: 'A acao foi executada com sucesso.',
-      });
-    },
-    onError: (error: any, actionId) => {
-      setExecutingActions(prev => {
-        const next = new Set(prev);
-        next.delete(actionId);
-        return next;
-      });
-      
-      toast({
-        title: 'Erro ao Executar Acao',
-        description: error.message,
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Mutation para rejeitar acao
-  const rejectAction = useMutation({
-    mutationFn: async (actionId: string) => {
-      const { error } = await supabase
-        .from('ai_actions')
-        .update({ status: 'rejected' })
-        .eq('id', actionId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ai-actions-pending'] });
-      toast({
-        title: 'Acao Rejeitada',
-        description: 'A acao foi marcada como rejeitada.',
-      });
-    },
-  });
-
-  const handleApprove = (actionId: string) => {
-    setExecutingActions(prev => new Set(prev).add(actionId));
-    executeAction.mutate(actionId);
+  const handleConfirmApproval = () => {
+    if (!selectedActionId) return;
+    
+    setExecutingActions(prev => new Set(prev).add(selectedActionId));
+    setApprovalDialogOpen(false);
+    
+    approveAction.mutate(
+      { actionId: selectedActionId, approvalNotes },
+      {
+        onSettled: () => {
+          setExecutingActions(prev => {
+            const next = new Set(prev);
+            next.delete(selectedActionId!);
+            return next;
+          });
+          setSelectedActionId(null);
+          setApprovalNotes('');
+        },
+      }
+    );
   };
 
   const handleReject = (actionId: string) => {
-    rejectAction.mutate(actionId);
+    rejectAction.mutate({ actionId });
   };
 
   const getActionConfig = (actionType: string) => {
@@ -448,11 +441,17 @@ export default function AIActionApproval() {
                   </div>
                 )}
 
-                {/* Botoes de Acao */}
+                {/* Botoes de Acao - Com indicador de aprovação formal para high/critical */}
                 <div className="flex gap-2 pt-4 border-t">
+                  {requiresFormalApproval(config?.risk_level || null) && (
+                    <Badge variant="outline" className="gap-1 mr-2">
+                      <Shield className="h-3 w-3" />
+                      Aprovação Formal Requerida
+                    </Badge>
+                  )}
                   <Button
-                    onClick={() => handleApprove(action.id)}
-                    disabled={isExecuting || executeAction.isPending}
+                    onClick={() => handleApproveClick(action.id, config?.risk_level || null)}
+                    disabled={isExecuting || approveAction.isPending}
                     className="gap-2"
                   >
                     {isExecuting ? (
@@ -482,6 +481,47 @@ export default function AIActionApproval() {
           );
         })}
       </div>
+
+      {/* Dialog de Aprovação Formal para Ações High/Critical */}
+      <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-amber-500" />
+              Aprovação Formal Requerida
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação requer aprovação formal por ser de alto risco. 
+              Por favor, adicione notas explicando sua decisão para fins de auditoria.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Notas de aprovação (obrigatório para auditoria)..."
+              value={approvalNotes}
+              onChange={(e) => setApprovalNotes(e.target.value)}
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApprovalDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleConfirmApproval}
+              disabled={approveAction.isPending}
+              className="gap-2"
+            >
+              {approveAction.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4" />
+              )}
+              Confirmar Aprovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
