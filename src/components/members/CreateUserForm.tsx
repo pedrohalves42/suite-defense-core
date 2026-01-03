@@ -73,10 +73,17 @@ export function CreateUserForm({ open, onOpenChange }: CreateUserFormProps) {
 
   const createUser = useMutation({
     mutationFn: async (data: CreateUserFormData) => {
+      if (!tenant?.id) {
+        throw new Error('Nenhum tenant selecionado');
+      }
+      
       const { data: { session } } = await supabase.auth.getSession();
       
       const { data: result, error } = await supabase.functions.invoke('admin-create-user', {
-        body: data,
+        body: { 
+          ...data,
+          tenant_id: tenant.id,  // Enviar tenant atual explicitamente
+        },
         headers: {
           Authorization: `Bearer ${session?.access_token}`,
         },

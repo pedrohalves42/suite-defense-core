@@ -11,6 +11,7 @@ interface CreateUserRequest {
   password: string;
   full_name: string;
   role: 'admin' | 'operator' | 'viewer';
+  tenant_id: string;
 }
 
 serve(async (req) => {
@@ -53,29 +54,38 @@ serve(async (req) => {
       );
     }
 
-    // Verify caller is admin - use limit(1) to handle multiple roles
-    const { data: callerRoles, error: roleError } = await supabaseAdmin
-      .from('user_roles')
-      .select('role, tenant_id')
-      .eq('user_id', caller.id)
-      .in('role', ['admin', 'super_admin'])
-      .limit(1);
+    // Parse request body first to get tenant_id
+    const body: CreateUserRequest = await req.json();
+    const { username, password, full_name, role, tenant_id } = body;
 
-    if (roleError || !callerRoles || callerRoles.length === 0) {
+    // Validate tenant_id is provided
+    if (!tenant_id) {
+      console.error('[admin-create-user] Missing tenant_id');
+      return new Response(
+        JSON.stringify({ success: false, error: 'tenant_id is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify caller is admin IN THE SPECIFIC TENANT requested
+    const { data: callerRole, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', caller.id)
+      .eq('tenant_id', tenant_id)  // Verificar neste tenant específico
+      .in('role', ['admin', 'super_admin'])
+      .maybeSingle();
+
+    if (roleError || !callerRole) {
       console.error('[admin-create-user] Role check failed:', roleError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Forbidden: Admin role required' }),
+        JSON.stringify({ success: false, error: 'Forbidden: Admin role required in this tenant' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const callerRole = callerRoles[0];
-    const tenantId = callerRole.tenant_id;
+    const tenantId = tenant_id;  // Usar o tenant_id enviado (já validado)
     console.log(`[admin-create-user] Admin verified: ${caller.id}, tenant: ${tenantId}`);
-
-    // Parse and validate request body
-    const body: CreateUserRequest = await req.json();
-    const { username, password, full_name, role } = body;
 
     // Validation
     if (!username || !password || !full_name || !role) {
