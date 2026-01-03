@@ -2808,6 +2808,9 @@ export type Database = {
           ai_validation_reason: string | null
           ai_validation_score: number | null
           ai_validation_status: string | null
+          approval_request_id: string | null
+          approved_at: string | null
+          approved_by: string | null
           block_reason: string | null
           created_at: string
           decision_event_id: string | null
@@ -2840,6 +2843,9 @@ export type Database = {
           ai_validation_reason?: string | null
           ai_validation_score?: number | null
           ai_validation_status?: string | null
+          approval_request_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           block_reason?: string | null
           created_at?: string
           decision_event_id?: string | null
@@ -2872,6 +2878,9 @@ export type Database = {
           ai_validation_reason?: string | null
           ai_validation_score?: number | null
           ai_validation_status?: string | null
+          approval_request_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           block_reason?: string | null
           created_at?: string
           decision_event_id?: string | null
@@ -2898,6 +2907,13 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_actions_approval_request_id_fkey"
+            columns: ["approval_request_id"]
+            isOneToOne: false
+            referencedRelation: "approval_requests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ai_actions_decision_event_id_fkey"
             columns: ["decision_event_id"]
@@ -5580,6 +5596,7 @@ export type Database = {
           auto_flagged_reason: string | null
           classification: string | null
           created_at: string | null
+          decision_event_id: string | null
           error_count: number | null
           error_message: string | null
           failure_class: string | null
@@ -5597,6 +5614,7 @@ export type Database = {
           payload_hash: string | null
           payload_schema: string | null
           resolution_notes: string | null
+          resolution_source: string | null
           resolved_at: string | null
           resolved_by: string | null
           retry_count: number | null
@@ -5612,6 +5630,7 @@ export type Database = {
           auto_flagged_reason?: string | null
           classification?: string | null
           created_at?: string | null
+          decision_event_id?: string | null
           error_count?: number | null
           error_message?: string | null
           failure_class?: string | null
@@ -5629,6 +5648,7 @@ export type Database = {
           payload_hash?: string | null
           payload_schema?: string | null
           resolution_notes?: string | null
+          resolution_source?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           retry_count?: number | null
@@ -5644,6 +5664,7 @@ export type Database = {
           auto_flagged_reason?: string | null
           classification?: string | null
           created_at?: string | null
+          decision_event_id?: string | null
           error_count?: number | null
           error_message?: string | null
           failure_class?: string | null
@@ -5661,6 +5682,7 @@ export type Database = {
           payload_hash?: string | null
           payload_schema?: string | null
           resolution_notes?: string | null
+          resolution_source?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
           retry_count?: number | null
@@ -5732,6 +5754,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_decision_event_id_fkey"
+            columns: ["decision_event_id"]
+            isOneToOne: false
+            referencedRelation: "decision_events"
             referencedColumns: ["id"]
           },
           {
@@ -10902,12 +10931,14 @@ export type Database = {
           agent_id: string | null
           alert_type: string
           created_at: string
+          decision_event_id: string | null
           details: Json | null
           email_sent: boolean | null
           email_sent_at: string | null
           human_reviewed: boolean | null
           id: string
           message: string
+          requires_human_decision: boolean | null
           resolution_notes: string | null
           resolved: boolean | null
           resolved_at: string | null
@@ -10925,12 +10956,14 @@ export type Database = {
           agent_id?: string | null
           alert_type: string
           created_at?: string
+          decision_event_id?: string | null
           details?: Json | null
           email_sent?: boolean | null
           email_sent_at?: string | null
           human_reviewed?: boolean | null
           id?: string
           message: string
+          requires_human_decision?: boolean | null
           resolution_notes?: string | null
           resolved?: boolean | null
           resolved_at?: string | null
@@ -10948,12 +10981,14 @@ export type Database = {
           agent_id?: string | null
           alert_type?: string
           created_at?: string
+          decision_event_id?: string | null
           details?: Json | null
           email_sent?: boolean | null
           email_sent_at?: string | null
           human_reviewed?: boolean | null
           id?: string
           message?: string
+          requires_human_decision?: boolean | null
           resolution_notes?: string | null
           resolved?: boolean | null
           resolved_at?: string | null
@@ -11026,6 +11061,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_alerts_decision_event_id_fkey"
+            columns: ["decision_event_id"]
+            isOneToOne: false
+            referencedRelation: "decision_events"
             referencedColumns: ["id"]
           },
           {
@@ -14510,6 +14552,206 @@ export type Database = {
           },
           {
             foreignKeyName: "audit_confidence_gaps_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      v_dlq_pending_attention: {
+        Row: {
+          agent_id: string | null
+          agent_name: string | null
+          auto_flagged_reason: string | null
+          classification: string | null
+          created_at: string | null
+          decision_event_id: string | null
+          error_count: number | null
+          error_message: string | null
+          failure_class: string | null
+          first_failure_at: string | null
+          flagged_suspicious: boolean | null
+          hours_pending: number | null
+          id: string | null
+          job_type: string | null
+          last_failure_at: string | null
+          max_retries: number | null
+          metadata: Json | null
+          next_retry_at: string | null
+          original_job_id: string | null
+          payload: Json | null
+          payload_excerpt: string | null
+          payload_hash: string | null
+          payload_schema: string | null
+          resolution_notes: string | null
+          resolution_source: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          retry_count: number | null
+          review_notes: string | null
+          review_required: boolean | null
+          risk_category: string | null
+          status: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name?: string | null
+          auto_flagged_reason?: string | null
+          classification?: string | null
+          created_at?: string | null
+          decision_event_id?: string | null
+          error_count?: number | null
+          error_message?: string | null
+          failure_class?: string | null
+          first_failure_at?: string | null
+          flagged_suspicious?: boolean | null
+          hours_pending?: never
+          id?: string | null
+          job_type?: string | null
+          last_failure_at?: string | null
+          max_retries?: number | null
+          metadata?: Json | null
+          next_retry_at?: string | null
+          original_job_id?: string | null
+          payload?: Json | null
+          payload_excerpt?: string | null
+          payload_hash?: string | null
+          payload_schema?: string | null
+          resolution_notes?: string | null
+          resolution_source?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          retry_count?: number | null
+          review_notes?: string | null
+          review_required?: boolean | null
+          risk_category?: string | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string | null
+          auto_flagged_reason?: string | null
+          classification?: string | null
+          created_at?: string | null
+          decision_event_id?: string | null
+          error_count?: number | null
+          error_message?: string | null
+          failure_class?: string | null
+          first_failure_at?: string | null
+          flagged_suspicious?: boolean | null
+          hours_pending?: never
+          id?: string | null
+          job_type?: string | null
+          last_failure_at?: string | null
+          max_retries?: number | null
+          metadata?: Json | null
+          next_retry_at?: string | null
+          original_job_id?: string | null
+          payload?: Json | null
+          payload_excerpt?: string | null
+          payload_hash?: string | null
+          payload_schema?: string | null
+          resolution_notes?: string | null
+          resolution_source?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          retry_count?: number | null
+          review_notes?: string | null
+          review_required?: boolean | null
+          risk_category?: string | null
+          status?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "active_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_health_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "hmac_signatures"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_execution_health"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_health_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_agent_lifecycle_state"
+            referencedColumns: ["agent_id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "v_problematic_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_decision_event_id_fkey"
+            columns: ["decision_event_id"]
+            isOneToOne: false
+            referencedRelation: "decision_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "failed_jobs_dlq_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
