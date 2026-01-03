@@ -33,14 +33,24 @@ export async function callEdgeFunction<T = any>(
     hasPayload: !!payload
   });
 
+  // Get active tenant from localStorage for multi-tenant support
+  const activeTenantId = localStorage.getItem('cybershield_active_tenant_id');
+
   try {
+    const headers: Record<string, string> = {
+      'Authorization': `Bearer ${session.access_token}`,
+      'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
+      'Content-Type': 'application/json',
+    };
+
+    // Add tenant header if available (for multi-tenant users)
+    if (activeTenantId) {
+      headers['x-tenant-id'] = activeTenantId;
+    }
+
     const response = await fetch(url, {
       method,
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-        'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY!,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: payload ? JSON.stringify(payload) : undefined,
     });
 

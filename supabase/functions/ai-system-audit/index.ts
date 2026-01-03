@@ -23,6 +23,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
     if (!lovableApiKey) {
@@ -33,11 +34,21 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Service client for admin operations
+    const serviceClient = createClient(supabaseUrl, supabaseKey);
+    
+    // User client for RPC calls that depend on auth.uid()
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
 
     // Get user from token
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: userError } = await serviceClient.auth.getUser(token);
     
     if (userError || !user) {
       return new Response(
@@ -46,21 +57,32 @@ serve(async (req) => {
       );
     }
 
-    // Get user's tenant
-    const { data: userRole } = await supabase
+    // Get user's tenant - prefer x-tenant-id header
+    const requestedTenantId = req.headers.get('x-tenant-id');
+    
+    // Get all user roles (avoid .single() for multi-role users)
+    const { data: userRoles } = await serviceClient
       .from('user_roles')
       .select('tenant_id, role')
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_id', user.id);
 
-    if (!userRole || !['admin', 'super_admin'].includes(userRole.role)) {
+    const adminRole = userRoles?.find(r => ['admin', 'super_admin'].includes(r.role));
+    if (!adminRole) {
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const tenantId = userRole.tenant_id;
+    // Use requested tenant if user has access
+    let tenantId = adminRole.tenant_id;
+    if (requestedTenantId) {
+      const hasAccess = userRoles?.some(r => r.tenant_id === requestedTenantId);
+      if (hasAccess) {
+        tenantId = requestedTenantId;
+      }
+    }
+    
     console.log(`[ai-system-audit] Starting audit for tenant ${tenantId}`);
 
     // Get prompts from registry (versioned, hashed)
@@ -79,8 +101,8 @@ serve(async (req) => {
     logPromptUsage('ana-auditor-persona', personaPrompt.hash, tenantId, 'ai-system-audit');
     logPromptUsage('ana-analysis-template', analysisTemplate.hash, tenantId, 'ai-system-audit');
 
-    // Get raw metrics using the RPC function
-    const { data: metrics, error: metricsError } = await supabase
+    // Get raw metrics using userClient (so auth.uid() works)
+    const { data: metrics, error: metricsError } = await userClient
       .rpc('get_audit_raw_metrics', { p_tenant_id: tenantId });
 
     if (metricsError) {
@@ -214,8 +236,8 @@ serve(async (req) => {
       }
     }
 
-    // Save audit result to database
-    const { data: savedAudit, error: saveError } = await supabase
+    // Save audit result to database using serviceClient
+    const { data: savedAudit, error: saveError } = await serviceClient
       .from('system_audits')
       .insert(insertData)
       .select()

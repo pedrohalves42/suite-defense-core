@@ -235,6 +235,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
     if (!lovableApiKey) {
@@ -245,11 +246,21 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Service client for admin operations (inserts, updates)
+    const serviceClient = createClient(supabaseUrl, supabaseKey);
+    
+    // User client for RPC calls that depend on auth.uid()
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
 
     // Get user from token
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: userError } = await serviceClient.auth.getUser(token);
     
     if (userError || !user) {
       return new Response(
@@ -258,8 +269,12 @@ serve(async (req) => {
       );
     }
 
+    // Get user's tenant - prefer x-tenant-id header, fallback to first role
+    const requestedTenantId = req.headers.get('x-tenant-id');
+    console.log(`[ai-full-audit] Requested tenant from header: ${requestedTenantId || 'not provided'}`);
+
     // Get user's tenant (supports users with multiple roles)
-    const { data: userRoles } = await supabase
+    const { data: userRoles } = await serviceClient
       .from('user_roles')
       .select('tenant_id, role')
       .eq('user_id', user.id);
@@ -272,11 +287,22 @@ serve(async (req) => {
       );
     }
 
-    const tenantId = adminRole.tenant_id;
+    // Use requested tenant if user has access, otherwise use first admin role tenant
+    let tenantId = adminRole.tenant_id;
+    if (requestedTenantId) {
+      const hasAccessToRequested = userRoles?.some(r => r.tenant_id === requestedTenantId);
+      if (hasAccessToRequested) {
+        tenantId = requestedTenantId;
+        console.log(`[ai-full-audit] Using requested tenant: ${tenantId}`);
+      } else {
+        console.warn(`[ai-full-audit] User does not have access to requested tenant ${requestedTenantId}, using ${tenantId}`);
+      }
+    }
+    
     console.log(`[ai-full-audit] Starting FULL audit v2.0 for tenant ${tenantId} (Red → Ana → Gap)`);
 
-    // Get metrics (shared between Red Team and Ana)
-    const { data: metrics, error: metricsError } = await supabase
+    // Get metrics using userClient (so auth.uid() works in RPC)
+    const { data: metrics, error: metricsError } = await userClient
       .rpc('get_audit_raw_metrics', { p_tenant_id: tenantId });
 
     if (metricsError) {
@@ -291,7 +317,7 @@ serve(async (req) => {
           }
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      )
     }
 
     // ============ PHASE 1: RED TEAM (FIRST - NO BIAS) ============
@@ -423,7 +449,7 @@ serve(async (req) => {
       
       // Log governance event
       await logGovernanceEvent(
-        supabase, tenantId, null, 'binary_criteria_fallback',
+        serviceClient, tenantId, null, 'binary_criteria_fallback',
         null, Object.values(binaryCriteria).filter((v: unknown) => v === true).length,
         'llm_fallback', 'LLM não retornou binary_criteria completo, usando cálculo determinístico',
         { original_criteria: redResult.binary_criteria, calculated: binaryCriteria }
@@ -443,7 +469,7 @@ serve(async (req) => {
     // Save Red Team result with binary criteria
     const redPromptHash = `${redPersona.hash.slice(0, 8)}-${redTemplate.hash.slice(0, 8)}`;
     
-    const { data: savedRed, error: redSaveError } = await supabase
+    const { data: savedRed, error: redSaveError } = await serviceClient
       .from('red_team_assessments')
       .insert({
         tenant_id: tenantId,
@@ -612,7 +638,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     console.log(`[ai-full-audit] Deterministic base score: ${deterministicBaseScore}`);
     
     await logGovernanceEvent(
-      supabase, tenantId, null, 'deterministic_base_applied',
+      serviceClient, tenantId, null, 'deterministic_base_applied',
       null, deterministicBaseScore, 'fixed_rules',
       'Base score calculada com regras determinísticas das métricas',
       { metrics_used: ['agents', 'ai_actions', 'rollbacks', 'users', 'dlq', 'critical_alerts'] }
@@ -623,14 +649,14 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     console.log(`[ai-full-audit] Red risk factor: ${redRiskFactor.toFixed(3)}`);
     
     await logGovernanceEvent(
-      supabase, tenantId, null, 'risk_factor_applied',
+      serviceClient, tenantId, null, 'risk_factor_applied',
       null, redRiskFactor * 100, 'red_team_adjustment',
       `Red score ${redResult.red_score} → fator ${redRiskFactor.toFixed(3)}`,
       { red_score: redResult.red_score, threat_level: redResult.threat_level }
     );
     
     // Step 3: Get previous audit for guardrail check (with robust fallback - Ajuste B)
-    const { data: prevAuditData, error: rpcError } = await supabase
+    const { data: prevAuditData, error: rpcError } = await serviceClient
       .rpc('get_previous_audit_score', { p_tenant_id: tenantId });
     
     if (rpcError) {
@@ -659,7 +685,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       console.log(`[ai-full-audit] GUARDRAIL APPLIED: ${rawScore} -> ${guardedScore} (delta ${rawDelta} > 10)`);
       
       await logGovernanceEvent(
-        supabase, tenantId, null, 'guardrail_applied',
+        serviceClient, tenantId, null, 'guardrail_applied',
         rawScore, guardedScore, 'max_delta_10',
         guardrailReason,
         { raw_delta: rawDelta, previous_score: previousScore }
@@ -667,7 +693,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     }
     
     await logGovernanceEvent(
-      supabase, tenantId, null, 'raw_score_calculated',
+      serviceClient, tenantId, null, 'raw_score_calculated',
       null, rawScore, 'llm_evaluation',
       'Score bruto retornado pelo LLM Ana',
       { model: 'google/gemini-2.5-flash', tokens: anaTokens }
@@ -682,7 +708,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     );
     
     await logGovernanceEvent(
-      supabase, tenantId, null, 'moving_average_applied',
+      serviceClient, tenantId, null, 'moving_average_applied',
       guardedScore, officialScore, 'weighted_avg_50_30_20',
       `50% guarded(${guardedScore}) + 30% avg3(${avgLast3}) + 20% avg7(${avgLast7})`,
       { weights: { current: 0.5, avg_3: 0.3, avg_7: 0.2 } }
@@ -705,14 +731,14 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       console.log('[ai-full-audit] Market score floor applied (40 < market && avg3 > 50)');
       
       await logGovernanceEvent(
-        supabase, tenantId, null, 'market_score_calculated',
+        serviceClient, tenantId, null, 'market_score_calculated',
         originalMarket, marketScore, 'floor_protection',
         'Market score protegido contra queda brusca (avg3 > 50)',
         { original: originalMarket, floor_triggered: true }
       );
     } else {
       await logGovernanceEvent(
-        supabase, tenantId, null, 'market_score_calculated',
+        serviceClient, tenantId, null, 'market_score_calculated',
         officialScore, marketScore, 'conservative_smoothing',
         `30% guarded + 40% avg3 + 30% avg7`,
         { weights: { current: 0.3, avg_3: 0.4, avg_7: 0.3 } }
@@ -767,7 +793,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       }
     }
 
-    const { data: savedAna, error: anaSaveError } = await supabase
+    const { data: savedAna, error: anaSaveError } = await serviceClient
       .from('system_audits')
       .insert(insertData)
       .select()
@@ -797,7 +823,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     }
 
     // Get previous gap for delta calculation
-    const { data: prevGap } = await supabase
+    const { data: prevGap } = await serviceClient
       .from('audit_confidence_gaps')
       .select('confidence_gap')
       .eq('tenant_id', tenantId)
@@ -833,7 +859,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     }
 
     // Save confidence gap
-    const { data: savedGap, error: gapSaveError } = await supabase
+    const { data: savedGap, error: gapSaveError } = await serviceClient
       .from('audit_confidence_gaps')
       .insert({
         tenant_id: tenantId,
