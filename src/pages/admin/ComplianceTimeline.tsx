@@ -18,19 +18,8 @@ import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
-// Dynamic imports for jsPDF to avoid SSR/build issues
-const loadJsPDF = async () => {
-  try {
-    const jsPDFModule = await import(/* @vite-ignore */ 'jspdf');
-    const jsPDFClass = jsPDFModule.jsPDF || jsPDFModule.default;
-    const autoTableModule = await import(/* @vite-ignore */ 'jspdf-autotable');
-    const autoTable = autoTableModule.default;
-    return { jsPDF: jsPDFClass, autoTable };
-  } catch (error) {
-    console.error('Failed to load jsPDF:', error);
-    throw new Error('PDF generation is not available');
-  }
-};
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface EvidenceLog {
   id: string;
@@ -195,7 +184,6 @@ const ComplianceTimeline: React.FC = () => {
 
   // Export to PDF
   const exportPDF = async () => {
-    const { jsPDF, autoTable } = await loadJsPDF();
     const doc = new jsPDF();
     
     // Header
