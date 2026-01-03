@@ -449,8 +449,8 @@ Produza sua análise no formato estruturado exigido pelo sistema, focando exclus
   },
 
   'red-team-analysis-template': {
-    version: '4.0.0',
-    description: 'Red Team: Adversarial analysis with BINARY CRITERIA for deterministic threat_level',
+    version: '4.1.0',
+    description: 'Red Team: Adversarial analysis with BINARY CRITERIA and concrete example for deterministic threat_level',
     scope: 'security',
     posture: 'hostile',
     mutable: false,
@@ -481,6 +481,32 @@ REGRA DETERMINÍSTICA DE THREAT_LEVEL:
 - low: 0-1 critérios TRUE
 
 O threat_level DEVE seguir esta regra. NÃO use interpretação subjetiva.
+
+=== EXEMPLO CONCRETO DE binary_criteria ===
+
+Se os dados mostrarem:
+- agents.offline = 1 → offline_agents_exist = true
+- ai_actions.approval_rate = 0 → human_approval_rate_zero = true
+- ai_actions.human_reviewed = 0 → human_reviewed_zero = true
+- rollbacks.total = 0 → rollback_never_tested = true
+- users.count = 1 → single_user_system = true
+- dlq.current = 0 → dlq_has_items = false
+- critical_alerts.open = 0 → critical_alerts_open = false
+
+Então você DEVE retornar:
+"binary_criteria": {
+  "offline_agents_exist": true,
+  "human_approval_rate_zero": true,
+  "human_reviewed_zero": true,
+  "rollback_never_tested": true,
+  "single_user_system": true,
+  "dlq_has_items": false,
+  "critical_alerts_open": false
+},
+"criteria_count_true": 5,
+"threat_level": "critical"
+
+Neste exemplo, 5 critérios são TRUE, então threat_level = "critical" (>= 4).
 
 === FIM DOS CRITÉRIOS BINÁRIOS ===
 

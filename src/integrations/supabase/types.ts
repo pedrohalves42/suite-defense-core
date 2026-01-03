@@ -9489,6 +9489,84 @@ export type Database = {
           },
         ]
       }
+      score_governance_log: {
+        Row: {
+          audit_id: string | null
+          created_at: string | null
+          delta: number | null
+          event_type: string
+          id: string
+          justification: string | null
+          metadata: Json | null
+          new_value: number | null
+          previous_value: number | null
+          rule_applied: string
+          tenant_id: string
+        }
+        Insert: {
+          audit_id?: string | null
+          created_at?: string | null
+          delta?: number | null
+          event_type: string
+          id?: string
+          justification?: string | null
+          metadata?: Json | null
+          new_value?: number | null
+          previous_value?: number | null
+          rule_applied: string
+          tenant_id: string
+        }
+        Update: {
+          audit_id?: string | null
+          created_at?: string | null
+          delta?: number | null
+          event_type?: string
+          id?: string
+          justification?: string | null
+          metadata?: Json | null
+          new_value?: number | null
+          previous_value?: number | null
+          rule_applied?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_governance_log_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "system_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_governance_log_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "v_audit_moving_average"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_governance_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_governance_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "score_governance_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       security_events: {
         Row: {
           agent_id: string | null

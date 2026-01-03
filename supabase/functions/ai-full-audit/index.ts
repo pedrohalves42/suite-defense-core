@@ -3,14 +3,19 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
 
 /**
- * AI Full Audit Orchestrator
+ * AI Full Audit Orchestrator v2.0
  * 
  * Executes audits in anti-bias order:
  * 1. Red Team (adversarial, no prior context)
  * 2. Ana (with red_team_handoff context)
  * 3. Confidence Gap calculation
  * 
- * This order ensures Red Team isn't influenced by Ana's optimism.
+ * Score Governance (5 layers):
+ * - Layer 1: Weighted Moving Average (50/30/20)
+ * - Layer 2: Red Team as Risk Factor (not absolute judge)
+ * - Layer 3: Variation Guardrail (±10 max)
+ * - Layer 4: Binary Criteria for threat_level (deterministic)
+ * - Layer 5: Market Score (conservative smoothing)
  */
 
 const corsHeaders = {
@@ -149,6 +154,71 @@ function calculateRiskFactor(redScore: number): number {
   return Math.max(0.7, 1 - (redScore / 333)); // 100/333 ≈ 0.3, so max reduction is 30%
 }
 
+/**
+ * Calculate binary criteria from metrics (fallback if LLM doesn't return)
+ * This ensures threat_level is ALWAYS deterministic
+ */
+function calculateBinaryCriteria(metrics: any): Record<string, boolean> {
+  const agents = metrics?.agents || {};
+  const aiActions = metrics?.ai_actions || {};
+  const rollbacks = metrics?.rollbacks || {};
+  const users = metrics?.users || {};
+  const dlq = metrics?.dlq || {};
+  const criticalAlerts = metrics?.critical_alerts || {};
+
+  return {
+    offline_agents_exist: (agents.offline || 0) > 0,
+    human_approval_rate_zero: (aiActions.approval_rate || 0) === 0 || (aiActions.approved || 0) === 0,
+    human_reviewed_zero: (aiActions.human_reviewed || 0) === 0,
+    rollback_never_tested: (rollbacks.total || 0) === 0,
+    single_user_system: (users.count || 0) <= 1,
+    dlq_has_items: (dlq.current || 0) > 0,
+    critical_alerts_open: (criticalAlerts.open || 0) > 0,
+  };
+}
+
+/**
+ * Get deterministic threat level from criteria count
+ */
+function getDeterministicThreatLevel(criteriaCountTrue: number): string {
+  if (criteriaCountTrue >= 4) return 'critical';
+  if (criteriaCountTrue === 3) return 'high';
+  if (criteriaCountTrue === 2) return 'medium';
+  return 'low';
+}
+
+/**
+ * Log governance event for audit trail
+ */
+async function logGovernanceEvent(
+  supabase: any,
+  tenantId: string,
+  auditId: string | null,
+  eventType: string,
+  previousValue: number | null,
+  newValue: number,
+  ruleApplied: string,
+  justification: string,
+  metadata: any = {}
+): Promise<void> {
+  try {
+    await supabase.from('score_governance_log').insert({
+      tenant_id: tenantId,
+      audit_id: auditId,
+      event_type: eventType,
+      previous_value: previousValue,
+      new_value: newValue,
+      delta: previousValue !== null ? newValue - previousValue : null,
+      rule_applied: ruleApplied,
+      justification: justification,
+      metadata: metadata,
+    });
+  } catch (err) {
+    console.warn('[ai-full-audit] Failed to log governance event:', err);
+    // Non-blocking - don't fail audit if logging fails
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -203,7 +273,7 @@ serve(async (req) => {
     }
 
     const tenantId = adminRole.tenant_id;
-    console.log(`[ai-full-audit] Starting FULL audit for tenant ${tenantId} (Red → Ana → Gap)`);
+    console.log(`[ai-full-audit] Starting FULL audit v2.0 for tenant ${tenantId} (Red → Ana → Gap)`);
 
     // Get metrics (shared between Red Team and Ana)
     // Pass user.id explicitly since service role doesn't have auth.uid() context
@@ -341,17 +411,44 @@ serve(async (req) => {
       );
     }
 
+    // ============ BINARY CRITERIA FALLBACK (Ajuste C) ============
+    let binaryCriteria = redResult.binary_criteria || {};
+    let binaryCriteriaFallbackUsed = false;
+    
+    // Check if LLM returned valid binary_criteria
+    if (Object.keys(binaryCriteria).length < 7) {
+      console.warn('[ai-full-audit] Red Team binary_criteria incomplete, calculating fallback');
+      binaryCriteria = calculateBinaryCriteria(metrics);
+      redResult.binary_criteria = binaryCriteria;
+      binaryCriteriaFallbackUsed = true;
+      
+      // Log governance event
+      await logGovernanceEvent(
+        supabase, tenantId, null, 'binary_criteria_fallback',
+        null, Object.values(binaryCriteria).filter((v: unknown) => v === true).length,
+        'llm_fallback', 'LLM não retornou binary_criteria completo, usando cálculo determinístico',
+        { original_criteria: redResult.binary_criteria, calculated: binaryCriteria }
+      );
+    }
+    
+    const criteriaCountTrue = Object.values(binaryCriteria).filter((v: unknown) => v === true).length;
+    redResult.criteria_count_true = criteriaCountTrue;
+    
+    // Validate and correct threat_level if inconsistent
+    const expectedThreatLevel = getDeterministicThreatLevel(criteriaCountTrue);
+    if (redResult.threat_level !== expectedThreatLevel) {
+      console.warn(`[ai-full-audit] threat_level mismatch: LLM=${redResult.threat_level}, criteria=${expectedThreatLevel}. Correcting.`);
+      redResult.threat_level = expectedThreatLevel;
+    }
+    
     // Save Red Team result with binary criteria
     const redPromptHash = `${redPersona.hash.slice(0, 8)}-${redTemplate.hash.slice(0, 8)}`;
-    const binaryCriteria = redResult.binary_criteria || {};
-    const criteriaCountTrue = redResult.criteria_count_true || 
-      Object.values(binaryCriteria).filter((v: unknown) => v === true).length;
     
     const { data: savedRed, error: redSaveError } = await supabase
       .from('red_team_assessments')
       .insert({
         tenant_id: tenantId,
-        threat_level: redResult.threat_level || 'medium',
+        threat_level: redResult.threat_level,
         red_score: redResult.red_score || 50,
         attack_vectors: redResult.attack_vectors || [],
         residual_risks: redResult.residual_risks || [],
@@ -381,7 +478,7 @@ serve(async (req) => {
       console.error('Error saving Red Team:', redSaveError);
     }
     
-    console.log(`[ai-full-audit] Phase 1 complete. Red Score: ${redResult.red_score}, Threat: ${redResult.threat_level}, Criteria TRUE: ${criteriaCountTrue}`);
+    console.log(`[ai-full-audit] Phase 1 complete. Red Score: ${redResult.red_score}, Threat: ${redResult.threat_level}, Criteria TRUE: ${criteriaCountTrue}, Fallback: ${binaryCriteriaFallbackUsed}`);
 
     // ============ PHASE 2: ANA (WITH RED TEAM CONTEXT) ============
     console.log('[ai-full-audit] Phase 2: Running Ana audit with Red Team handoff...');
@@ -509,26 +606,47 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     }
 
     // ============ SCORE GOVERNANCE: Guardrails + Moving Average ============
-    console.log('[ai-full-audit] Applying score governance...');
+    console.log('[ai-full-audit] Applying score governance v2.0...');
     
     // Step 1: Calculate deterministic base score (no LLM variance)
     const deterministicBaseScore = calculateDeterministicScore(metrics);
     console.log(`[ai-full-audit] Deterministic base score: ${deterministicBaseScore}`);
     
+    await logGovernanceEvent(
+      supabase, tenantId, null, 'deterministic_base_applied',
+      null, deterministicBaseScore, 'fixed_rules',
+      'Base score calculada com regras determinísticas das métricas',
+      { metrics_used: ['agents', 'ai_actions', 'rollbacks', 'users', 'dlq', 'critical_alerts'] }
+    );
+    
     // Step 2: Calculate risk factor from Red Team
     const redRiskFactor = calculateRiskFactor(redResult.red_score);
     console.log(`[ai-full-audit] Red risk factor: ${redRiskFactor.toFixed(3)}`);
     
-    // Step 3: Get previous audit for guardrail check
-    const { data: prevAuditData } = await supabase
+    await logGovernanceEvent(
+      supabase, tenantId, null, 'risk_factor_applied',
+      null, redRiskFactor * 100, 'red_team_adjustment',
+      `Red score ${redResult.red_score} → fator ${redRiskFactor.toFixed(3)}`,
+      { red_score: redResult.red_score, threat_level: redResult.threat_level }
+    );
+    
+    // Step 3: Get previous audit for guardrail check (with robust fallback - Ajuste B)
+    const { data: prevAuditData, error: rpcError } = await supabase
       .rpc('get_previous_audit_score', { p_tenant_id: tenantId });
     
-    const previousScore = prevAuditData?.[0]?.previous_score || 70;
-    const avgLast3 = prevAuditData?.[0]?.avg_last_3 || anaResult.overall_score;
-    const avgLast7 = prevAuditData?.[0]?.avg_last_7 || anaResult.overall_score;
+    if (rpcError) {
+      console.warn('[ai-full-audit] RPC get_previous_audit_score failed:', rpcError.message);
+    }
+    
+    // Robust fallbacks for historical scores
+    const rawScore = anaResult.overall_score;
+    const previousScore = prevAuditData?.[0]?.previous_score ?? rawScore;
+    const avgLast3 = prevAuditData?.[0]?.avg_last_3 ?? rawScore;
+    const avgLast7 = prevAuditData?.[0]?.avg_last_7 ?? rawScore;
+    
+    console.log(`[ai-full-audit] Historical scores: prev=${previousScore}, avg3=${avgLast3}, avg7=${avgLast7} (fallback: ${!prevAuditData?.[0]})`);
     
     // Step 4: Apply guardrail (max ±10 points variation)
-    const rawScore = anaResult.overall_score;
     const rawDelta = rawScore - previousScore;
     let guardedScore = rawScore;
     let guardrailApplied = false;
@@ -540,7 +658,21 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       guardrailApplied = true;
       guardrailReason = `Delta original ${rawDelta} limitado a ${maxDelta} (score anterior: ${previousScore})`;
       console.log(`[ai-full-audit] GUARDRAIL APPLIED: ${rawScore} -> ${guardedScore} (delta ${rawDelta} > 10)`);
+      
+      await logGovernanceEvent(
+        supabase, tenantId, null, 'guardrail_applied',
+        rawScore, guardedScore, 'max_delta_10',
+        guardrailReason,
+        { raw_delta: rawDelta, previous_score: previousScore }
+      );
     }
+    
+    await logGovernanceEvent(
+      supabase, tenantId, null, 'raw_score_calculated',
+      null, rawScore, 'llm_evaluation',
+      'Score bruto retornado pelo LLM Ana',
+      { model: 'google/gemini-2.5-flash', tokens: anaTokens }
+    );
     
     // Step 5: Calculate official score (weighted moving average)
     // 50% current (guarded) + 30% avg_last_3 + 20% avg_last_7
@@ -548,6 +680,13 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       0.5 * guardedScore +
       0.3 * avgLast3 +
       0.2 * avgLast7
+    );
+    
+    await logGovernanceEvent(
+      supabase, tenantId, null, 'moving_average_applied',
+      guardedScore, officialScore, 'weighted_avg_50_30_20',
+      `50% guarded(${guardedScore}) + 30% avg3(${avgLast3}) + 20% avg7(${avgLast7})`,
+      { weights: { current: 0.5, avg_3: 0.3, avg_7: 0.2 } }
     );
     
     // Step 6: Calculate market score (more conservative, smoother)
@@ -558,10 +697,27 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       0.3 * avgLast7
     );
     
+    let marketFloorApplied = false;
     // Don't let market score drop below 40 unless confirmed trend
     if (marketScore < 40 && avgLast3 > 50) {
+      const originalMarket = marketScore;
       marketScore = 50;
+      marketFloorApplied = true;
       console.log('[ai-full-audit] Market score floor applied (40 < market && avg3 > 50)');
+      
+      await logGovernanceEvent(
+        supabase, tenantId, null, 'market_score_calculated',
+        originalMarket, marketScore, 'floor_protection',
+        'Market score protegido contra queda brusca (avg3 > 50)',
+        { original: originalMarket, floor_triggered: true }
+      );
+    } else {
+      await logGovernanceEvent(
+        supabase, tenantId, null, 'market_score_calculated',
+        officialScore, marketScore, 'conservative_smoothing',
+        `30% guarded + 40% avg3 + 30% avg7`,
+        { weights: { current: 0.3, avg_3: 0.4, avg_7: 0.3 } }
+      );
     }
     
     console.log(`[ai-full-audit] Scores: raw=${rawScore}, guarded=${guardedScore}, official=${officialScore}, market=${marketScore}`);
@@ -702,11 +858,12 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     }
 
     console.log(`[ai-full-audit] Phase 3 complete. Gap: ${gap} (${healthStatus}), Alert: ${alertTriggered}`);
-    console.log(`[ai-full-audit] FULL AUDIT COMPLETE. Total tokens: ${redTokens + anaTokens}`);
+    console.log(`[ai-full-audit] FULL AUDIT v2.0 COMPLETE. Total tokens: ${redTokens + anaTokens}`);
 
     return new Response(
       JSON.stringify({
         success: true,
+        version: '2.0',
         execution_order: 'red_team → ana → gap',
         
         // Phase 1: Red Team
@@ -716,8 +873,9 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
           red_score: redResult.red_score,
           attack_vectors_count: redResult.attack_vectors?.length || 0,
           tokens_used: redTokens,
-          binary_criteria: redResult.binary_criteria || {},
+          binary_criteria: binaryCriteria,
           criteria_count_true: criteriaCountTrue,
+          binary_criteria_fallback_used: binaryCriteriaFallbackUsed,
         },
         
         // Phase 2: Ana with Governance
@@ -731,6 +889,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
           red_risk_factor: redRiskFactor,
           guardrail_applied: guardrailApplied,
           guardrail_reason: guardrailReason,
+          market_floor_applied: marketFloorApplied,
           recommendation: anaResult.recommendation,
           falsification_count: anaResult.falsification_criteria?.length || 0,
           tokens_used: anaTokens,
@@ -755,6 +914,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
           avg_last_7: avgLast7,
           guardrail_max_delta: 10,
           variance_reduced: guardrailApplied,
+          fallback_used: !prevAuditData?.[0],
         },
         
         // Summary
