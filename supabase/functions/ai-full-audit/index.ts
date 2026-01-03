@@ -702,7 +702,7 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     
     // Step 5: Calculate official score (weighted moving average)
     // 50% current (guarded) + 30% avg_last_3 + 20% avg_last_7
-    const officialScore = Math.round(
+    let officialScore = Math.round(
       0.5 * guardedScore +
       0.3 * avgLast3 +
       0.2 * avgLast7
@@ -747,6 +747,60 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
     }
     
     console.log(`[ai-full-audit] Scores: raw=${rawScore}, guarded=${guardedScore}, official=${officialScore}, market=${marketScore}`);
+    
+    // ============ SCORE FLOOR POLICY ============
+    // Apply minimum score floor of 7/10 to all dimensions
+    const MINIMUM_DIMENSION_SCORE = 7;
+    const MINIMUM_OVERALL_SCORE = 70;
+    let dimensionsFlooredCount = 0;
+    const flooredDimensions: string[] = [];
+    
+    if (anaResult.dimensions) {
+      for (const [dimKey, dim] of Object.entries(anaResult.dimensions)) {
+        if (dim && typeof dim === 'object' && 'score' in dim) {
+          const originalScore = (dim as any).score || 0;
+          if (originalScore < MINIMUM_DIMENSION_SCORE) {
+            (dim as any).original_score = originalScore;
+            (dim as any).score = MINIMUM_DIMENSION_SCORE;
+            (dim as any).floor_applied = true;
+            dimensionsFlooredCount++;
+            flooredDimensions.push(dimKey);
+          }
+        }
+      }
+    }
+    
+    // Apply floor to overall scores
+    const originalGuardedScore = guardedScore;
+    const originalOfficialScore = officialScore;
+    const originalMarketScore = marketScore;
+    
+    if (guardedScore < MINIMUM_OVERALL_SCORE) {
+      guardedScore = MINIMUM_OVERALL_SCORE;
+    }
+    if (officialScore < MINIMUM_OVERALL_SCORE) {
+      officialScore = MINIMUM_OVERALL_SCORE;
+    }
+    if (marketScore < MINIMUM_OVERALL_SCORE) {
+      marketScore = MINIMUM_OVERALL_SCORE;
+    }
+    
+    if (dimensionsFlooredCount > 0 || originalGuardedScore < MINIMUM_OVERALL_SCORE) {
+      console.log(`[ai-full-audit] Score floor applied: ${dimensionsFlooredCount} dimensions, overall ${originalGuardedScore}->${guardedScore}`);
+      await logGovernanceEvent(
+        serviceClient, tenantId, null, 'score_floor_applied',
+        originalGuardedScore, guardedScore, 'minimum_score_policy',
+        `Piso mínimo de ${MINIMUM_DIMENSION_SCORE}/10 aplicado em ${dimensionsFlooredCount} dimensões`,
+        { 
+          floor: MINIMUM_DIMENSION_SCORE,
+          overall_floor: MINIMUM_OVERALL_SCORE,
+          affected_dimensions: flooredDimensions,
+          original_overall: originalGuardedScore,
+          original_official: originalOfficialScore,
+          original_market: originalMarketScore
+        }
+      );
+    }
     
     // Save Ana result with governance data
     const anaPromptHash = `${anaPersona.hash.slice(0, 8)}-${anaTemplate.hash.slice(0, 8)}`;

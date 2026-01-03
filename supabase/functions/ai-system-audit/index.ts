@@ -196,6 +196,38 @@ serve(async (req) => {
       );
     }
 
+    // ============ SCORE FLOOR POLICY ============
+    // Apply minimum score floor of 7/10 to all dimensions
+    const MINIMUM_DIMENSION_SCORE = 7;
+    const MINIMUM_OVERALL_SCORE = 70;
+    let dimensionsFlooredCount = 0;
+    const flooredDimensions: string[] = [];
+    
+    if (analysisResult.dimensions) {
+      for (const [dimKey, dim] of Object.entries(analysisResult.dimensions)) {
+        if (dim && typeof dim === 'object' && 'score' in dim) {
+          const originalScore = (dim as any).score || 0;
+          if (originalScore < MINIMUM_DIMENSION_SCORE) {
+            (dim as any).original_score = originalScore;
+            (dim as any).score = MINIMUM_DIMENSION_SCORE;
+            (dim as any).floor_applied = true;
+            dimensionsFlooredCount++;
+            flooredDimensions.push(dimKey);
+          }
+        }
+      }
+    }
+    
+    // Apply floor to overall score
+    const originalOverallScore = analysisResult.overall_score;
+    if (analysisResult.overall_score < MINIMUM_OVERALL_SCORE) {
+      analysisResult.overall_score = MINIMUM_OVERALL_SCORE;
+    }
+    
+    if (dimensionsFlooredCount > 0 || originalOverallScore < MINIMUM_OVERALL_SCORE) {
+      console.log(`[ai-system-audit] Score floor applied: ${dimensionsFlooredCount} dimensions, overall ${originalOverallScore}->${analysisResult.overall_score}`);
+    }
+
     // Create combined prompt hash for reproducibility
     const combinedPromptHash = `${personaPrompt.hash.slice(0, 8)}-${analysisTemplate.hash.slice(0, 8)}`;
 
