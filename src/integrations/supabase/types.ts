@@ -16371,9 +16371,10 @@ export type Database = {
         }[]
       }
       get_alert_decision_chain: { Args: { p_alert_id: string }; Returns: Json }
-      get_audit_raw_metrics:
-        | { Args: { p_tenant_id: string }; Returns: Json }
-        | { Args: { p_tenant_id: string; p_user_id: string }; Returns: Json }
+      get_audit_raw_metrics: {
+        Args: { p_tenant_id: string; p_user_id: string }
+        Returns: Json
+      }
       get_autonomy_metrics: {
         Args: { p_days?: number; p_tenant_id: string }
         Returns: Json
