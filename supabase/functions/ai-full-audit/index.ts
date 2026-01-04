@@ -25,8 +25,8 @@ const corsHeaders = {
 };
 
 /**
- * Robust JSON extraction from AI responses
- * Handles: code blocks, extra text, irregular formatting
+ * Robust JSON extraction from AI responses v2.0
+ * Handles: code blocks, unescaped quotes, control chars, irregular formatting
  */
 function extractJSON(content: string): any {
   // Step 1: Remove code block markers
@@ -44,27 +44,60 @@ function extractJSON(content: string): any {
     throw new Error('No valid JSON object found in content');
   }
   
-  const jsonStr = cleaned.substring(firstBrace, lastBrace + 1);
+  let jsonStr = cleaned.substring(firstBrace, lastBrace + 1);
   
-  // Step 3: Attempt to parse
+  // Step 3: Aggressive cleanup for AI-generated JSON
+  jsonStr = jsonStr
+    // Remove literal control characters (keep escaped versions)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    // Replace literal newlines/tabs with escaped versions  
+    .replace(/\r\n/g, '\\n')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '')
+    .replace(/\t/g, '\\t');
+  
+  // Step 4: Attempt first parse
   try {
     return JSON.parse(jsonStr);
   } catch (firstError) {
-    console.warn('[extractJSON] First parse attempt failed, trying cleanup...');
+    console.warn('[extractJSON] First parse attempt failed:', (firstError as Error).message);
     
-    // Step 4: Aggressive cleanup for malformed JSON
-    const cleanedJson = jsonStr
-      .replace(/[\r\n]+/g, ' ')           // Replace newlines with spaces
+    // Step 5: More aggressive cleanup
+    let cleanedJson = jsonStr
       .replace(/,\s*}/g, '}')             // Remove trailing commas before }
       .replace(/,\s*]/g, ']')             // Remove trailing commas before ]
+      .replace(/\\n/g, ' ')               // Replace escaped newlines with spaces
       .replace(/\s+/g, ' ');              // Collapse multiple spaces
     
     try {
       return JSON.parse(cleanedJson);
     } catch (secondError) {
-      console.error('[extractJSON] All parse attempts failed');
-      console.error('[extractJSON] JSON string (first 500 chars):', jsonStr.substring(0, 500));
-      throw new Error(`Failed to parse JSON: ${firstError}`);
+      console.warn('[extractJSON] Second parse attempt failed, trying quote fix...');
+      
+      // Step 6: Fix unescaped quotes inside string values (heuristic)
+      // This handles cases like: "analysis": "The 'admin' role..."
+      // Pattern: find string values and replace internal double quotes with single
+      cleanedJson = cleanedJson.replace(
+        /"([^"]+)":\s*"([^"]*)"/g,
+        (match, key, value) => {
+          // Only process if value contains suspicious quote patterns
+          if (value.includes('"')) {
+            const fixedValue = value.replace(/"/g, "'");
+            return `"${key}":"${fixedValue}"`;
+          }
+          return match;
+        }
+      );
+      
+      try {
+        return JSON.parse(cleanedJson);
+      } catch (thirdError) {
+        console.error('[extractJSON] All parse attempts failed');
+        console.error('[extractJSON] Original error:', (firstError as Error).message);
+        console.error('[extractJSON] JSON string (first 1000 chars):', jsonStr.substring(0, 1000));
+        console.error('[extractJSON] JSON string (last 500 chars):', jsonStr.substring(jsonStr.length - 500));
+        throw new Error(`Failed to parse JSON: ${(firstError as Error).message}`);
+      }
     }
   }
 }

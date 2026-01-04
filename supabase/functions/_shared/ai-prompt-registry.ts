@@ -392,7 +392,17 @@ Responda APENAS com um JSON válido neste formato exato:
   "red_team_handoff": "<Resumo dos maiores riscos para análise adversarial>"
 }
 
-REGRAS FINAIS:
+=== REGRAS DE FORMATAÇÃO JSON (CRÍTICO) ===
+
+VOCÊ DEVE:
+1. NUNCA usar aspas duplas (") dentro de textos de análise
+   - CORRETO: "O papel 'admin' foi identificado"  
+   - ERRADO: "O papel "admin" foi identificado"
+2. Usar aspas simples (') para citações dentro de análises
+3. Evitar quebras de linha dentro de strings (use espaço)
+4. Escapar caracteres especiais corretamente
+
+=== REGRAS FINAIS ===
 - Use APENAS os dados fornecidos nas métricas
 - Seja honesto e direto, sem marketing
 - SIGA AS REGRAS DE INTERPRETAÇÃO OBRIGATÓRIA acima
@@ -400,7 +410,7 @@ REGRAS FINAIS:
 - Scores 5-6 são apropriados para "dados insuficientes"
 - Cada claim em evidence_basis deve ter fonte verificável
 - falsification_criteria mínimo de 5 itens COM severity
-- Responda APENAS com JSON, sem texto adicional`
+- Responda APENAS com JSON válido, sem texto adicional`
   },
 
   // ============ RED TEAM PERSONA v3.0 (IMMUTABLE) ============
