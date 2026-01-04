@@ -223,8 +223,8 @@ Produza sua análise no formato estruturado exigido pelo sistema, com:
   },
 
   'ana-analysis-template': {
-    version: '4.0.0',
-    description: 'Ana: Balanced analysis template - fair scoring for early-stage systems',
+    version: '4.1.0',
+    description: 'Ana: Balanced analysis template v4.1 - with mandatory interpretation rules',
     scope: 'system_governance',
     posture: 'conservative',
     mutable: false,
@@ -233,40 +233,46 @@ Produza sua análise no formato estruturado exigido pelo sistema, com:
 MÉTRICAS DO SISTEMA:
 {metrics}
 
-=== REGRAS DE AVALIAÇÃO EQUILIBRADA (CRÍTICO!) ===
+=== REGRA DE INTERPRETAÇÃO OBRIGATÓRIA ===
 
-IMPORTANTE: Este sistema pode estar em fase inicial de implantação.
-Você DEVE seguir estas regras de avaliação:
+VOCÊ DEVE SEGUIR ESTAS REGRAS DE INTERPRETAÇÃO:
 
-1. DADOS AUSENTES NÃO SÃO FALHAS:
-   - Se uma métrica não existir ou estiver zerada: score NEUTRO (5/10)
-   - Ausência de dados = "ainda não implementado", NÃO = "falha crítica"
-   - NUNCA penalize com score 1-3 por falta de dados
+1. REVIEW HUMANA = APROVAÇÃO EXPLÍCITA:
+   - human_reviewed = true COM review_decision = 'approved' = APROVAÇÃO EXPLÍCITA
+   - Isso significa supervisão humana ATIVA, não passiva
+   - Se approval_rate = 100%, isso é EXCELENTE (score 9-10 em human_oversight)
 
-2. ESCALA DE AVALIAÇÃO CORRETA:
-   - 9-10: Implementado E funcionando MUITO bem (evidências positivas excepcionais)
-   - 7-8: Implementado e funcionando bem (evidências positivas claras)
-   - 5-6: Implementado parcialmente OU sem dados suficientes (NEUTRO)
-   - 3-4: Implementado mas com problemas EVIDENCIADOS
-   - 1-2: Implementado com falhas críticas COMPROVADAS
+2. SHADOW VALIDATION NÃO É AUSÊNCIA DE CONTROLE:
+   - shadow_validation é uma CAMADA ADICIONAL de verificação
+   - Ausência de shadow_validation NÃO significa falta de controle humano
+   - human_reviewed + review_decision são os campos primários de supervisão
 
-3. INTERPRETAÇÃO DE MÉTRICAS ZERADAS:
-   - ai_actions.total = 0 → "IA ainda não utilizada" = score 5 (neutro)
-   - decision_events.total = 0 → "Governança ainda não registrada" = score 5 (neutro)
-   - rollbacks.total = 0 → "Nunca precisou reverter" = pode ser POSITIVO (7-8)
-   - alerts.open = 0 → "Sem alertas pendentes" = POSITIVO (8-9)
+3. MÉTRICAS AUSENTES OU ZERO = NEUTRO (score 5):
+   - NÃO penalize com 1-4 por ausência de dados
+   - Ausência = "ainda não implementado", NÃO = "falha crítica"
+   - Score 5-6 é apropriado para "dados insuficientes"
 
-4. O QUE REALMENTE PENALIZA (score baixo 1-4):
-   - Evidência de FALHA ativa (erros, dados corrompidos)
-   - Violação de segurança COMPROVADA
-   - Ausência de RLS em tabelas com dados sensíveis
+4. O QUE NÃO DEVE PENALIZAR (NUNCA scores 1-4):
+   - Não ter eventos de rollback (pode significar ESTABILIDADE!)
+   - Não ter ações de IA executadas (sistema ainda não usa IA)
+   - Não ter alertas críticos ativos (ÓTIMO sinal!)
+   - Ter poucos usuários (pode ser fase inicial)
+   - decision_events.by_human = 0 com by_system alto (automação documentada)
+
+5. O QUE PENALIZA (scores 1-4 APENAS com evidência):
    - Taxa de falha > 20% em operações
-   - Alertas críticos NÃO resolvidos
+   - Alertas críticos NÃO resolvidos por > 24h
+   - Evidência de vazamento cross-tenant
+   - RLS desabilitado em tabelas sensíveis
+   - human_reviewed = false com review_decision != null (bypass!)
 
-5. O QUE NÃO DEVE PENALIZAR:
-   - Volume baixo de operações (sistema novo)
-   - Features não implementadas (são oportunidades, não falhas)
-   - Métricas sem dados (ausência ≠ problema)
+=== ESCALA DE AVALIAÇÃO CORRETA ===
+
+- 9-10: Implementado E funcionando MUITO bem (evidências positivas excepcionais)
+- 7-8: Implementado e funcionando bem (evidências positivas claras)
+- 5-6: Implementado parcialmente OU sem dados suficientes (NEUTRO)
+- 3-4: Implementado mas com problemas EVIDENCIADOS
+- 1-2: Implementado com falhas críticas COMPROVADAS
 
 === GUIA DE INTERPRETAÇÃO DAS MÉTRICAS ===
 
@@ -281,18 +287,29 @@ DECISION EVENTS:
 - by_system alto COM total alto = Automação DOCUMENTADA (++transparency)
 - by_human = 0 NÃO é negativo se total > 0 (automação com registro)
 
+AI ACTIONS (CRÍTICO - LEIA COM ATENÇÃO):
+- Se total = 0: IA ainda não utilizada (NEUTRO score 5)
+- Se total > 0 com approval_rate = 100%: IA 100% supervisionada (EXCELENTE score 9-10)
+- human_reviewed = total: TODAS as ações foram revisadas (EXCELENTE)
+- approval_rate calculado como: approved/total * 100
+
+HUMAN OVERSIGHT (agregado):
+- human_oversight.review_rate = 100% = EXCELENTE
+- human_oversight.kill_switch_available = true = Controle garantido
+- ai_actions_reviewed = ai_actions_total = Supervisão completa
+
+TENANT ISOLATION:
+- tenant_isolation.rls_coverage_percent = 100% = EXCELENTE
+- Qualquer valor < 80% = Preocupante
+
+ENFORCEMENT:
+- enforcement.compliance_score = Nível de conformidade
+- enforcement.policies_enforced = Políticas ativas
+
 ALERT DECISION COVERAGE:
 - alerts.decision_coverage_percent = 100% = EXCELENTE
 - > 80% = BOM
 - < 50% = Precisa melhorar (mas NÃO é crítico se poucos alertas)
-
-AI ACTIONS:
-- Se total = 0: IA ainda não utilizada (neutro 5)
-- Se total > 0 com approval_rate alto: IA supervisionada (positivo 7-8)
-
-POLICIES:
-- policies.total > 0: Sistema tem políticas definidas
-- policies.active > 0: Políticas estão ativas
 
 === FIM DO GUIA ===
 
@@ -378,7 +395,7 @@ Responda APENAS com um JSON válido neste formato exato:
 REGRAS FINAIS:
 - Use APENAS os dados fornecidos nas métricas
 - Seja honesto e direto, sem marketing
-- SIGA AS REGRAS DE AVALIAÇÃO EQUILIBRADA acima
+- SIGA AS REGRAS DE INTERPRETAÇÃO OBRIGATÓRIA acima
 - NÃO penalize com scores baixos (1-4) por ausência de dados
 - Scores 5-6 são apropriados para "dados insuficientes"
 - Cada claim em evidence_basis deve ter fonte verificável

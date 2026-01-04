@@ -72,6 +72,12 @@ function extractJSON(content: string): any {
 /**
  * Calculate deterministic base score from metrics (no LLM variance)
  * This provides a stable foundation that Red Team adjusts as risk factor
+ * 
+ * COMMIT 2: Corrigido para não penalizar ausência de uso
+ * - REGRA 1: Não penalizar se aiActions.total === 0 (IA ainda não usada)
+ * - REGRA 2: Só penalizar se HOUVE execução SEM aprovação
+ * - REGRA 3: Revisão humana só exigida em volume significativo
+ * - REGRA 4: Rollback = 0 NÃO é penalidade (nunca precisou reverter)
  */
 function calculateDeterministicScore(metrics: any): number {
   let score = 70; // Base score
@@ -90,24 +96,23 @@ function calculateDeterministicScore(metrics: any): number {
     score -= Math.min(agents.offline * 5, 15);
   }
   
-  // Approval rate zero (-15)
-  if (aiActions.approval_rate === 0 || aiActions.approved === 0) {
+  // REGRA 1: Não penalizar ausência de uso de IA
+  // REGRA 2: Só penaliza se HOUVE execução SEM aprovação
+  if (aiActions.total > 0 && (aiActions.approval_rate || 0) === 0) {
     score -= 15;
   }
   
-  // Human reviewed zero (-10)
-  if (aiActions.human_reviewed === 0) {
+  // REGRA 3: Revisão humana só exigida em volume significativo (> 10 ações)
+  if (aiActions.total > 10 && (aiActions.human_reviewed || 0) === 0) {
     score -= 10;
   }
   
-  // Rollback never tested (-5)
-  if (rollbacks.total === 0) {
-    score -= 5;
-  }
+  // REGRA 4: Rollback = 0 NÃO é penalidade (nunca precisou reverter = estabilidade!)
+  // REMOVIDO: if (rollbacks.total === 0) { score -= 5; }
   
-  // Single user system (-5)
+  // Single user system (-2 reduzido de -5, pode ser sistema novo)
   if ((users.count || 0) <= 1) {
-    score -= 5;
+    score -= 2;
   }
   
   // DLQ has items (-5 each, max -10)
@@ -139,6 +144,16 @@ function calculateDeterministicScore(metrics: any): number {
   
   // DLQ resolution = 100% (+3)
   if (dlq.resolution_rate === 100) {
+    score += 3;
+  }
+  
+  // BÔNUS: 100% approval rate com volume significativo (+5)
+  if (aiActions.total > 0 && aiActions.approval_rate === 100) {
+    score += 5;
+  }
+  
+  // BÔNUS: 100% human reviewed (+3)
+  if (aiActions.total > 0 && aiActions.human_reviewed === aiActions.total) {
     score += 3;
   }
   
