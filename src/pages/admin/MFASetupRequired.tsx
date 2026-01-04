@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, ShieldAlert, LogOut, Loader2, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useMFA } from '@/hooks/useMFA';
 import { MFAEnrollmentDialog } from '@/components/mfa/MFAEnrollmentDialog';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 
 /**
  * Página de configuração obrigatória de MFA para administradores
@@ -17,26 +18,43 @@ import { useToast } from '@/hooks/use-toast';
  */
 export default function MFASetupRequired() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { hasMFA, loading: mfaLoading, refreshFactors } = useMFA();
   const { toast } = useToast();
   const [showEnrollment, setShowEnrollment] = useState(false);
   const [checkingRole, setCheckingRole] = useState(true);
+  const didCheckRef = useRef(false);
 
   // Verificar se o usuário é realmente admin e se já tem MFA
   useEffect(() => {
     const checkRequirements = async () => {
-      if (!user) {
-        navigate('/login');
+      // Prevent double execution
+      if (didCheckRef.current) return;
+      
+      // Wait for auth to complete first
+      if (authLoading) {
+        logger.debug('MFASetupRequired: Waiting for auth to complete');
         return;
       }
 
-      // Refresh MFA status
-      await refreshFactors();
+      // If no user after auth completes, redirect to login
+      if (!user) {
+        logger.debug('MFASetupRequired: No user after auth complete, redirecting to login');
+        navigate('/login', { replace: true });
+        return;
+      }
+
+      didCheckRef.current = true;
+      logger.debug('MFASetupRequired: Starting requirements check', { userId: user.id });
+
+      // Refresh MFA status directly from API
+      const { data: factorsData } = await supabase.auth.mfa.listFactors();
+      const hasVerifiedMFA = factorsData?.totp?.some(f => f.status === 'verified') ?? false;
       
       // Se já tem MFA, redirecionar para o dashboard
-      if (hasMFA) {
-        navigate('/dashboard');
+      if (hasVerifiedMFA) {
+        logger.debug('MFASetupRequired: User already has MFA, redirecting to dashboard');
+        navigate('/dashboard', { replace: true });
         return;
       }
 
@@ -49,19 +67,19 @@ export default function MFASetupRequired() {
       const isAdmin = adminCheck.data === true;
       const isSuperAdmin = superAdminCheck.data === true;
 
+      logger.debug('MFASetupRequired: Role check complete', { isAdmin, isSuperAdmin });
+
       // Se não é admin/super_admin, redirecionar para dashboard
       if (!isAdmin && !isSuperAdmin) {
-        navigate('/dashboard');
+        navigate('/dashboard', { replace: true });
         return;
       }
 
       setCheckingRole(false);
     };
 
-    if (!mfaLoading) {
-      checkRequirements();
-    }
-  }, [user, hasMFA, mfaLoading, navigate, refreshFactors]);
+    checkRequirements();
+  }, [user, authLoading, navigate]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();

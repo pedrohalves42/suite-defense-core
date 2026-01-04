@@ -41,24 +41,35 @@ export const useAuth = () => {
   };
 
   useEffect(() => {
-    // Safety timeout to prevent infinite loading
+    let isMounted = true;
+    
+    // Safety timeout to prevent infinite loading - check current state via ref pattern
     const loadingTimeout = setTimeout(() => {
-      if (loading) {
-        logger.warn('Auth loading timeout - forcing completion');
-        setLoading(false);
-      }
-    }, 5000);
+      // Only force complete if still mounted and actually stuck
+      setLoading(prev => {
+        if (prev && isMounted) {
+          logger.warn('Auth loading timeout - forcing completion');
+          return false;
+        }
+        return prev;
+      });
+    }, 10000); // Increased to 10 seconds for slower connections
 
     // Set up auth state listener FIRST
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
+      logger.debug('Auth state changed', { event: _event, hasSession: !!session });
+      if (isMounted) {
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
     });
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (!isMounted) return;
+      
       if (error?.message?.includes('issued in the future')) {
         const match = error.message.match(/(\d+)\s+(\d+)\s+(\d+)/);
         if (match) {
@@ -76,6 +87,7 @@ export const useAuth = () => {
         }
       }
       
+      logger.debug('Initial session retrieved', { hasSession: !!session });
       setUser(session?.user ?? null);
       setLoading(false);
     });
@@ -84,6 +96,7 @@ export const useAuth = () => {
     const tokenCheckInterval = setInterval(checkAndRefreshToken, 120000);
 
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
       clearInterval(tokenCheckInterval);
       clearTimeout(loadingTimeout);
