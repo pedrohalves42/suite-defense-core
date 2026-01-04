@@ -107,6 +107,7 @@ import RulesManagement from "./pages/admin/RulesManagement";
 import RealTimeSecurityDashboard from "./pages/admin/RealTimeSecurityDashboard";
 import AutonomyDashboard from "./pages/admin/AutonomyDashboard";
 import SystemAudit from "./pages/admin/SystemAudit";
+import AIAnomalies from "./pages/admin/AIAnomalies";
 import SOC2Dashboard from "./pages/admin/SOC2Dashboard";
 import JobsHealthDashboard from "./pages/admin/JobsHealthDashboard";
 import SoftwareRiskDashboard from "./pages/admin/SoftwareRiskDashboard";
@@ -198,6 +199,7 @@ const App = () => (
                 <Route path="ai-actions" element={<AIActionApproval />} />
                 <Route path="ai-metrics" element={<AIMetrics />} />
                 <Route path="ai-governance" element={<AIGovernance />} />
+                <Route path="ai-anomalies" element={<AIAnomalies />} />
                 <Route path="system-logs" element={<SystemLogs />} />
                 <Route path="tenant" element={<Tenant />} />
                 <Route path="jobs-v3-migration" element={<JobsV3Migration />} />

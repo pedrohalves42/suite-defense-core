@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { logger } from '@/lib/logger';
+import { type AppRole, APP_ROLES } from '@/types/roles';
 
-type UserRole = 'admin' | 'operator' | 'viewer' | 'super_admin' | null;
+type UserRole = AppRole | null;
 
 export const useUserRole = () => {
   const { user } = useAuth();
@@ -41,6 +42,18 @@ export const useUserRole = () => {
         if (adminError) throw adminError;
         if (isAdmin === true) {
           setRole('admin');
+          setLoading(false);
+          return;
+        }
+
+        const { data: isAnalyst, error: analystError } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'analyst'
+        });
+
+        if (analystError) throw analystError;
+        if (isAnalyst === true) {
+          setRole('analyst');
           setLoading(false);
           return;
         }
@@ -83,9 +96,10 @@ export const useUserRole = () => {
 
   const isSuperAdmin = role === 'super_admin';
   const isAdmin = role === 'admin';
+  const isAnalyst = role === 'analyst';
   const isOperator = role === 'operator';
   const isViewer = role === 'viewer';
-  const canWrite = isSuperAdmin || isAdmin || isOperator;
+  const canWrite = isSuperAdmin || isAdmin || isAnalyst || isOperator;
 
-  return { role, isSuperAdmin, isAdmin, isOperator, isViewer, canWrite, loading };
+  return { role, isSuperAdmin, isAdmin, isAnalyst, isOperator, isViewer, canWrite, loading };
 };
