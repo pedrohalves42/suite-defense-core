@@ -23,24 +23,34 @@ export interface MFAEnrollmentResult {
 }
 
 export const useMFA = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [factors, setFactors] = useState<MFAFactor[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [mfaLoading, setMfaLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [enrollment, setEnrollment] = useState<MFAEnrollmentResult | null>(null);
+
+  // Loading is true while auth OR mfa is loading
+  const loading = authLoading || mfaLoading;
 
   // Check if user has MFA enabled
   const hasMFA = factors.some(f => f.status === 'verified');
 
   // Fetch current MFA factors
   const fetchFactors = useCallback(async () => {
+    // Don't fetch if auth is still loading or no user
+    if (authLoading) {
+      logger.debug('useMFA: Waiting for auth to complete before fetching factors');
+      return;
+    }
+
     if (!user) {
       setFactors([]);
-      setLoading(false);
+      setMfaLoading(false);
       return;
     }
 
     try {
+      logger.debug('useMFA: Fetching MFA factors', { userId: user.id });
       const { data, error } = await supabase.auth.mfa.listFactors();
       
       if (error) {
@@ -48,17 +58,25 @@ export const useMFA = () => {
         return;
       }
 
-      setFactors(data?.totp || []);
+      const totpFactors = data?.totp || [];
+      logger.debug('useMFA: Factors fetched', { 
+        count: totpFactors.length, 
+        hasVerified: totpFactors.some(f => f.status === 'verified') 
+      });
+      setFactors(totpFactors);
     } catch (err) {
       logger.error('Error fetching MFA factors', err);
     } finally {
-      setLoading(false);
+      setMfaLoading(false);
     }
-  }, [user]);
+  }, [user, authLoading]);
 
+  // Only fetch factors when auth is complete
   useEffect(() => {
-    fetchFactors();
-  }, [fetchFactors]);
+    if (!authLoading) {
+      fetchFactors();
+    }
+  }, [authLoading, fetchFactors]);
 
   // Start MFA enrollment - cleans up unverified factors first
   const startEnrollment = async (friendlyName?: string): Promise<MFAEnrollmentResult | null> => {
