@@ -13,7 +13,9 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { logger } from '@/lib/logger';
 import { MFAVerificationDialog } from '@/components/mfa/MFAVerificationDialog';
 import { formatBrazilDateTime } from '@/lib/date-utils';
-
+import { SecurityFooter, BrandSignature } from '@/components/auth/SecurityFooter';
+import { SecurityCheckScreen } from '@/components/auth/SecurityCheckScreen';
+import { SessionVerifiedScreen } from '@/components/auth/SessionVerifiedScreen';
 const loginSchema = z.object({
   identifier: z.string()
     .trim()
@@ -44,6 +46,8 @@ export default function Login() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showMFADialog, setShowMFADialog] = useState(false);
+  const [verifyingSession, setVerifyingSession] = useState(false);
+  const [sessionVerified, setSessionVerified] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -159,8 +163,8 @@ export default function Login() {
         window.location.reload(); // Recarregar para mostrar CAPTCHA
       }
       
-      // Mensagens especificas baseadas no erro
-      let message = 'Email ou senha incorretos. Tente novamente.';
+      // Mensagens seguras - não revela se usuário existe
+      let message = 'Não foi possível validar suas credenciais.';
       let description = '';
       
       if (error.message.includes('Email not confirmed')) {
@@ -198,6 +202,9 @@ export default function Login() {
   };
 
   const completeLogin = async () => {
+    // Mostrar tela de verificação de sessão
+    setVerifyingSession(true);
+    
     // Limpar tentativas falhadas
     await supabase.functions.invoke('clear-failed-logins', {
       body: {},
@@ -222,6 +229,7 @@ export default function Login() {
 
       // HARD GATE: Admin sem MFA → Redirect obrigatório para configurar MFA
       if ((isAdmin || isSuperAdmin) && !hasMFA) {
+        setVerifyingSession(false);
         toast({
           title: 'Configuração de MFA obrigatória',
           description: 'Administradores devem configurar autenticação de dois fatores.',
@@ -233,10 +241,12 @@ export default function Login() {
       }
     }
 
-    toast({
-      title: 'Login realizado com sucesso',
-      description: 'Redirecionando...',
-    });
+    // Mostrar tela de sessão verificada por 1.2s
+    setVerifyingSession(false);
+    setSessionVerified(true);
+    
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    
     navigate('/dashboard');
     setLoading(false);
   };
@@ -295,41 +305,53 @@ export default function Login() {
     setLoading(false);
   };
 
+  // Mostrar tela de verificação de sessão
+  if (verifyingSession) {
+    return <SecurityCheckScreen />;
+  }
+
+  // Mostrar tela de sessão verificada
+  if (sessionVerified) {
+    return <SessionVerifiedScreen showMFA={showMFADialog} />;
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-card">
-      {/* Animated Background Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(174,255,237,0.03),transparent_50%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_70%,transparent_110%)] opacity-20 pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-background">
+      {/* Enterprise Background - infraestrutura silenciosa */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(45,158,140,0.02),transparent_60%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border)/0.3)_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border)/0.3)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_50%_at_50%_50%,#000_60%,transparent_100%)] opacity-[0.08] pointer-events-none" />
+      {/* Vignette sutil */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,hsl(var(--background))_100%)] pointer-events-none" />
       
-      <Card className="w-full max-w-md backdrop-blur-xl bg-card/80 border-2 border-border/50 shadow-2xl shadow-primary/10 animate-fade-in relative z-10 hover:shadow-primary/20 transition-shadow duration-500">
-        <CardHeader className="space-y-1 text-center pb-6">
-          <div className="flex justify-center mb-6">
+      <Card className="w-full max-w-[460px] backdrop-blur-xl bg-card/95 border border-white/[0.06] shadow-[0_0_0_1px_rgba(45,158,140,0.05),0_30px_80px_rgba(0,0,0,0.7)] animate-fade-in relative z-10 rounded-[14px]">
+        <CardHeader className="space-y-1 text-center pb-6 pt-8">
+          <div className="flex justify-center mb-5">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-full blur-xl animate-pulse-glow" />
-              <div className="relative bg-gradient-to-br from-primary/10 to-accent/10 p-4 rounded-full backdrop-blur-sm border border-primary/20 shadow-glow-primary">
-                <Shield className="h-12 w-12 text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" />
+              <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl opacity-60" />
+              <div className="relative bg-card p-4 rounded-full border border-primary/15 shadow-glow-primary">
+                <Shield className="h-10 w-10 text-primary/90" />
               </div>
             </div>
           </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent tracking-tight">
+          <CardTitle className="text-2xl font-semibold text-foreground tracking-tight">
             CyberShield Cloud
           </CardTitle>
-          <CardDescription className="text-base text-muted-foreground/80 tracking-wide">
-            Entre com suas credenciais para acessar o sistema
+          <CardDescription className="text-sm text-muted-foreground/70 tracking-wide">
+            Acesso seguro ao ambiente protegido
           </CardDescription>
         </CardHeader>
 
         <Tabs defaultValue="password" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-muted/50 backdrop-blur-sm p-1 border border-border/50">
+          <TabsList className="grid w-full grid-cols-2 bg-muted/30 p-1 border border-border/30 mx-6 w-[calc(100%-3rem)]">
             <TabsTrigger 
               value="password" 
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:shadow-primary/50 transition-all duration-300 font-medium"
+              className="data-[state=active]:bg-primary/90 data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200 font-medium text-sm"
             >
               Senha
             </TabsTrigger>
             <TabsTrigger 
               value="magic"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary data-[state=active]:to-accent data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg data-[state=active]:shadow-primary/50 transition-all duration-300 font-medium"
+              className="data-[state=active]:bg-primary/90 data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all duration-200 font-medium text-sm"
             >
               Email Mágico
             </TabsTrigger>
@@ -400,26 +422,26 @@ export default function Login() {
                   <div id="captcha-container" className="flex justify-center" />
                 )}
               </CardContent>
-              <CardFooter className="flex flex-col space-y-4 pt-6">
+              <CardFooter className="flex flex-col space-y-4 pt-6 pb-8">
                 <Button 
                   type="submit" 
-                  className="w-full h-11 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground font-semibold shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] transition-all duration-300 tracking-wide" 
+                  className="w-full h-12 bg-primary/90 hover:bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/15 hover:shadow-primary/25 transition-all duration-200 tracking-wide" 
                   disabled={loading}
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Entrando...
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin opacity-80" />
+                      Verificando...
                     </>
                   ) : (
-                    'Entrar'
+                    'Continuar com segurança'
                   )}
                 </Button>
-                <div className="text-sm text-center text-muted-foreground/80 space-y-2">
+                <div className="text-sm text-center text-muted-foreground/60 space-y-2">
                   <div>
                     <Link 
                       to="/forgot-password" 
-                      className="text-primary hover:text-accent font-medium relative inline-block after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
+                      className="text-primary/80 hover:text-primary font-medium transition-colors duration-200"
                     >
                       Esqueceu sua senha?
                     </Link>
@@ -428,12 +450,15 @@ export default function Login() {
                     Não tem uma conta?{' '}
                     <Link 
                       to="/signup" 
-                      className="text-primary hover:text-accent font-medium relative inline-block after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
+                      className="text-primary/80 hover:text-primary font-medium transition-colors duration-200"
                     >
                       Cadastre-se
                     </Link>
                   </div>
                 </div>
+                
+                <SecurityFooter />
+                <BrandSignature />
               </CardFooter>
             </form>
           </TabsContent>
@@ -475,30 +500,33 @@ export default function Login() {
                   </Alert>
                 )}
               </CardContent>
-              <CardFooter className="flex flex-col space-y-4 pt-6">
+              <CardFooter className="flex flex-col space-y-4 pt-6 pb-8">
                 <Button 
                   type="submit" 
-                  className="w-full h-11 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground font-semibold shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] transition-all duration-300 tracking-wide" 
+                  className="w-full h-12 bg-primary/90 hover:bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/15 hover:shadow-primary/25 transition-all duration-200 tracking-wide" 
                   disabled={loading}
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin opacity-80" />
                       Enviando...
                     </>
                   ) : (
                     'Enviar Link Mágico'
                   )}
                 </Button>
-                <div className="text-sm text-center text-muted-foreground/80">
+                <div className="text-sm text-center text-muted-foreground/60">
                   Não tem uma conta?{' '}
                   <Link 
                     to="/signup" 
-                    className="text-primary hover:text-accent font-medium relative inline-block after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-primary after:origin-bottom-right after:transition-transform after:duration-300 hover:after:scale-x-100 hover:after:origin-bottom-left"
+                    className="text-primary/80 hover:text-primary font-medium transition-colors duration-200"
                   >
                     Cadastre-se
                   </Link>
                 </div>
+                
+                <SecurityFooter />
+                <BrandSignature />
               </CardFooter>
             </form>
           </TabsContent>
