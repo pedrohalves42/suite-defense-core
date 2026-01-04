@@ -1,7 +1,9 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import { useMFAEnforcement } from '@/hooks/useMFAEnforcement';
+import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
+import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/lib/logger';
 
 interface AdminMFAGuardProps {
@@ -16,43 +18,76 @@ interface AdminMFAGuardProps {
 export function AdminMFAGuard({ children }: AdminMFAGuardProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { requiresMFA, hasMFA, loading } = useMFAEnforcement();
+  const { user, loading: authLoading } = useAuth();
+  const { isAdmin, isSuperAdmin, loading: roleLoading } = useUserRole();
   const [checked, setChecked] = useState(false);
-  const [timedOut, setTimedOut] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const didCheckRef = useRef(false);
 
   useEffect(() => {
-    // Safety timeout - don't block forever
-    const timeout = setTimeout(() => {
-      if (!checked) {
-        logger.warn('AdminMFAGuard: Safety timeout - allowing access');
-        setTimedOut(true);
-        setChecked(true);
+    const checkMFA = async () => {
+      // Prevent double execution
+      if (didCheckRef.current || checking) return;
+
+      // Wait for auth and role to complete
+      if (authLoading || roleLoading) {
+        logger.debug('AdminMFAGuard: Waiting for auth/role to complete');
+        return;
       }
-    }, 5000);
 
-    return () => clearTimeout(timeout);
-  }, [checked]);
+      // No user means not authenticated
+      if (!user) {
+        logger.debug('AdminMFAGuard: No user, allowing ProtectedRoute to handle');
+        setChecked(true);
+        return;
+      }
 
-  useEffect(() => {
-    if (loading || timedOut) return;
+      // Only check MFA for admin/super_admin
+      const requiresMFA = isAdmin || isSuperAdmin;
+      if (!requiresMFA) {
+        logger.debug('AdminMFAGuard: User is not admin, no MFA required');
+        setChecked(true);
+        return;
+      }
 
-    logger.debug('AdminMFAGuard: Checking', { requiresMFA, hasMFA, loading });
+      didCheckRef.current = true;
+      setChecking(true);
 
-    // Admin/SuperAdmin sem MFA deve ser redirecionado
-    if (requiresMFA && !hasMFA) {
-      logger.info('AdminMFAGuard: Redirecting to MFA setup');
-      navigate('/admin/setup-mfa-required', { 
-        replace: true,
-        state: { from: location.pathname }
-      });
-      return;
-    }
+      try {
+        // Direct API check for MFA factors - most reliable
+        const { data } = await supabase.auth.mfa.listFactors();
+        const hasVerifiedMFA = data?.totp?.some(f => f.status === 'verified') ?? false;
 
-    setChecked(true);
-  }, [requiresMFA, hasMFA, loading, navigate, location, timedOut]);
+        logger.debug('AdminMFAGuard: MFA check result', { 
+          requiresMFA, 
+          hasVerifiedMFA,
+          factorsCount: data?.totp?.length ?? 0 
+        });
 
-  // Mostrar loading enquanto verifica (max 5 segundos)
-  if (loading && !timedOut && !checked) {
+        if (!hasVerifiedMFA) {
+          logger.info('AdminMFAGuard: Admin without MFA, redirecting to setup');
+          navigate('/admin/setup-mfa-required', { 
+            replace: true,
+            state: { from: location.pathname }
+          });
+          return;
+        }
+
+        setChecked(true);
+      } catch (error) {
+        logger.error('AdminMFAGuard: Error checking MFA', error);
+        // On error, allow access but log it
+        setChecked(true);
+      } finally {
+        setChecking(false);
+      }
+    };
+
+    checkMFA();
+  }, [authLoading, roleLoading, user, isAdmin, isSuperAdmin, navigate, location, checking]);
+
+  // Show loading while checking
+  if (authLoading || roleLoading || checking || !checked) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -65,6 +100,5 @@ export function AdminMFAGuard({ children }: AdminMFAGuardProps) {
     );
   }
 
-  // Se passou na verificação, renderizar children
   return <>{children}</>;
 }

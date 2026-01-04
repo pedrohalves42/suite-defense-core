@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useUserRole } from './useUserRole';
 import { useMFA } from './useMFA';
+import { logger } from '@/lib/logger';
 
 export interface MFAEnforcementStatus {
   requiresMFA: boolean;
@@ -21,12 +22,25 @@ export const useMFAEnforcement = (): MFAEnforcementStatus => {
   const status = useMemo(() => {
     const requiresMFA = isAdmin || isSuperAdmin;
     const isCompliant = !requiresMFA || hasMFA;
+    
+    // Only consider loaded when both hooks have finished
+    const loading = roleLoading || mfaLoading;
+
+    logger.debug('useMFAEnforcement: Status', { 
+      requiresMFA, 
+      hasMFA, 
+      isCompliant, 
+      loading,
+      roleLoading,
+      mfaLoading,
+      role 
+    });
 
     return {
       requiresMFA,
       hasMFA,
       isCompliant,
-      loading: roleLoading || mfaLoading,
+      loading,
       role,
     };
   }, [role, isAdmin, isSuperAdmin, hasMFA, roleLoading, mfaLoading]);
