@@ -145,39 +145,43 @@ export function GovernanceHealthBanner() {
 
   if (isLoading) return null;
 
-  // Personal MFA Warning (highest priority)
+  // Personal MFA Warning (highest priority) - Non-dismissible for admins
   const showPersonalMFAWarning = requiresMFA && !hasMFA;
 
   return (
     <div className="space-y-3">
-      {/* Personal MFA Warning - Always show if admin without MFA */}
+      {/* Personal MFA Warning - Always show if admin without MFA - NON-DISMISSIBLE */}
       {showPersonalMFAWarning && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <Card className="border-2 border-red-500/50 bg-red-500/5">
+          <Card className="border-2 border-red-500/50 bg-red-500/5 shadow-lg shadow-red-500/10">
             <CardContent className="py-4">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-red-500/20">
+                  <div className="p-2 rounded-full bg-red-500/20 animate-pulse">
                     <KeyRound className="h-5 w-5 text-red-500" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-red-600 dark:text-red-400">
-                      ⚠️ MFA Obrigatório para Administradores
+                      🔐 Configuração de MFA Obrigatória
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Sua conta tem privilégios administrativos. Configure a autenticação de dois fatores para proteger o acesso.
+                      Sua conta tem privilégios administrativos. <strong>Configure MFA agora</strong> para continuar usando o sistema.
                     </p>
                   </div>
                 </div>
-                <Button asChild variant="destructive" size="sm">
-                  <Link to="/admin/settings?tab=security">
+                <Button asChild className="bg-red-600 hover:bg-red-700 text-white shadow-lg">
+                  <Link to="/admin/setup-mfa-required">
                     <KeyRound className="h-4 w-4 mr-2" />
-                    Configurar MFA
+                    Configurar MFA Agora
                   </Link>
                 </Button>
+              </div>
+              <div className="mt-3 p-2 bg-red-500/10 rounded text-xs text-red-600 dark:text-red-400">
+                <strong>Política ADR-008:</strong> Administradores e Super Admins devem ter MFA configurado. 
+                Este aviso não pode ser fechado até que o MFA seja configurado.
               </div>
             </CardContent>
           </Card>

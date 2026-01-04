@@ -203,6 +203,36 @@ export default function Login() {
       body: {},
     });
 
+    // Obter sessão atual para verificar role e MFA
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      // Verificar se é admin ou super_admin
+      const [adminCheck, superAdminCheck] = await Promise.all([
+        supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' }),
+        supabase.rpc('has_role', { _user_id: user.id, _role: 'super_admin' }),
+      ]);
+
+      const isAdmin = adminCheck.data === true;
+      const isSuperAdmin = superAdminCheck.data === true;
+
+      // Verificar se tem MFA configurado
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const hasMFA = factors?.totp?.some(f => f.status === 'verified') ?? false;
+
+      // HARD GATE: Admin sem MFA → Redirect obrigatório para configurar MFA
+      if ((isAdmin || isSuperAdmin) && !hasMFA) {
+        toast({
+          title: 'Configuração de MFA obrigatória',
+          description: 'Administradores devem configurar autenticação de dois fatores.',
+          variant: 'default',
+        });
+        navigate('/admin/setup-mfa-required');
+        setLoading(false);
+        return;
+      }
+    }
+
     toast({
       title: 'Login realizado com sucesso',
       description: 'Redirecionando...',
