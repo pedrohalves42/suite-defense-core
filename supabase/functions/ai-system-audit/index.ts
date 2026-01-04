@@ -8,6 +8,66 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
 
+/**
+ * Robust JSON extraction from AI responses v2.0
+ */
+function extractJSON(content: string): any {
+  let cleaned = content
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim();
+  
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
+  
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error('No valid JSON object found in content');
+  }
+  
+  let jsonStr = cleaned.substring(firstBrace, lastBrace + 1);
+  
+  // Cleanup control characters
+  jsonStr = jsonStr
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .replace(/\r\n/g, '\\n')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '')
+    .replace(/\t/g, '\\t');
+  
+  try {
+    return JSON.parse(jsonStr);
+  } catch (firstError) {
+    // More aggressive cleanup
+    let cleanedJson = jsonStr
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']')
+      .replace(/\\n/g, ' ')
+      .replace(/\s+/g, ' ');
+    
+    try {
+      return JSON.parse(cleanedJson);
+    } catch {
+      // Fix unescaped quotes
+      cleanedJson = cleanedJson.replace(
+        /"([^"]+)":\s*"([^"]*)"/g,
+        (match, key, value) => {
+          if (value.includes('"')) {
+            return `"${key}":"${value.replace(/"/g, "'")}"`;
+          }
+          return match;
+        }
+      );
+      
+      try {
+        return JSON.parse(cleanedJson);
+      } catch {
+        console.error('[extractJSON] All attempts failed:', jsonStr.substring(0, 500));
+        throw new Error(`Failed to parse JSON: ${(firstError as Error).message}`);
+      }
+    }
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -178,20 +238,14 @@ serve(async (req) => {
       );
     }
 
-    // Parse AI response (handle markdown code blocks)
+    // Parse AI response with robust extraction
     let analysisResult;
     try {
-      let jsonContent = aiContent;
-      if (jsonContent.includes('```json')) {
-        jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-      } else if (jsonContent.includes('```')) {
-        jsonContent = jsonContent.replace(/```\n?/g, '');
-      }
-      analysisResult = JSON.parse(jsonContent.trim());
+      analysisResult = extractJSON(aiContent);
     } catch (parseError) {
-      console.error('Failed to parse AI response:', aiContent);
+      console.error('Failed to parse AI response:', aiContent.substring(0, 1000));
       return new Response(
-        JSON.stringify({ error: 'Failed to parse AI analysis', raw: aiContent }),
+        JSON.stringify({ error: 'Failed to parse AI analysis', stage: 'parse' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
