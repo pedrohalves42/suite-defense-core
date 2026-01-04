@@ -41,20 +41,34 @@ export const useAuth = () => {
   };
 
   useEffect(() => {
+    // Safety timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+      if (loading) {
+        logger.warn('Auth loading timeout - forcing completion');
+        setLoading(false);
+      }
+    }, 5000);
+
+    // Set up auth state listener FIRST
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
-      // Check for clock skew
       if (error?.message?.includes('issued in the future')) {
-        // Extract timestamps from error message
         const match = error.message.match(/(\d+)\s+(\d+)\s+(\d+)/);
         if (match) {
           const [_, issued, current, now] = match.map(Number);
           const skewSeconds = Math.abs(current - now);
           
-          if (skewSeconds > 60) { // More than 1 minute difference
+          if (skewSeconds > 60) {
             toast({
               title: 'Relogio do Sistema Dessincronizado',
-              description: `Diferenca de ${Math.floor(skewSeconds / 60)} minutos detectada. Sincronize o relogio para evitar problemas de autenticacao.`,
+              description: `Diferenca de ${Math.floor(skewSeconds / 60)} minutos detectada.`,
               variant: 'destructive',
               duration: 10000,
             });
@@ -66,19 +80,13 @@ export const useAuth = () => {
       setLoading(false);
     });
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
     // Check token expiration every 2 minutes
     const tokenCheckInterval = setInterval(checkAndRefreshToken, 120000);
 
     return () => {
       subscription.unsubscribe();
       clearInterval(tokenCheckInterval);
+      clearTimeout(loadingTimeout);
     };
   }, []);
 
