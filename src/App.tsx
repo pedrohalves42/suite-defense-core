@@ -122,6 +122,8 @@ import {
   ClientActivity,
   MyProtection 
 } from "./pages/client";
+import MFASetupRequired from "./pages/admin/MFASetupRequired";
+import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 
 const App = () => (
   <ErrorBoundary>
@@ -174,8 +176,11 @@ const App = () => (
               <Route path="/agents" element={<AgentManagement />} />
               <Route path="/export" element={<DataExport />} />
               
-              {/* Admin Routes (Tenant-specific) */}
-              <Route path="/admin" element={<AdminLayout />}>
+              {/* MFA Setup Required Route - Outside Guard */}
+              <Route path="/admin/setup-mfa-required" element={<MFASetupRequired />} />
+              
+              {/* Admin Routes (Tenant-specific) - Protected by MFA Guard */}
+              <Route path="/admin" element={<AdminMFAGuard><AdminLayout /></AdminMFAGuard>}>
                 <Route index element={<ActionCenterDashboard />} />
                 <Route path="action-center" element={<ActionCenterDashboard />} />
                 <Route path="dashboard" element={<Dashboard />} />
@@ -237,8 +242,8 @@ const App = () => (
                 <Route path="archived-agents" element={<ArchivedAgents />} />
               </Route>
 
-              {/* Super Admin Routes (System-wide) */}
-              <Route path="/super-admin" element={<SuperAdminLayout />}>
+              {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}
+              <Route path="/super-admin" element={<AdminMFAGuard><SuperAdminLayout /></AdminMFAGuard>}>
                 <Route index element={<SuperAdminTenants />} />
                 <Route path="tenants" element={<SuperAdminTenants />} />
                 <Route path="metrics" element={<SuperAdminMetrics />} />
