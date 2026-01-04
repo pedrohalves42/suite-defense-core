@@ -57,6 +57,7 @@ The system implements the following roles:
 |------|-------------|
 | super_admin | Full system access across all tenants |
 | admin | Full access within assigned tenant |
+| analyst | Read-only access with audit log visibility (cannot modify users/roles) |
 | operator | Operational access (jobs, agents) within tenant |
 | viewer | Read-only access within tenant |
 
@@ -83,6 +84,21 @@ The system implements the following roles:
 - Super admin accounts have cross-tenant visibility
 - Usage is audited and reviewed
 - Requires additional authentication factors
+
+### 5.3 Break Glass Access
+- Emergency access mechanism for critical situations
+- Requires two-person authorization
+- Session limited to 1 hour maximum
+- Full action logging with enhanced detail
+- See: [Break Glass Procedure](../procedures/break_glass_procedure.md)
+
+### 5.4 Analyst Role Restrictions
+Analyst role is explicitly denied:
+- Creating or modifying users
+- Changing user roles
+- Modifying security policies
+- Altering MFA settings
+This prevents auditors from becoming operators.
 
 ---
 
@@ -117,7 +133,16 @@ The system implements the following roles:
 
 ---
 
-## 8. Compliance
+## 8. Related Procedures
+
+| Procedure | Description |
+|-----------|-------------|
+| [MFA Reset Procedure](../procedures/mfa_reset_procedure.md) | Process for resetting user MFA |
+| [Break Glass Procedure](../procedures/break_glass_procedure.md) | Emergency access mechanism |
+
+---
+
+## 9. Compliance
 
 Violations of this policy will result in immediate access revocation and may lead to disciplinary action.
 
@@ -128,3 +153,4 @@ Violations of this policy will result in immediate access revocation and may lea
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-01-01 | CyberShield Security Team | Initial version |
+| 1.1 | 2025-01-04 | CyberShield Security Team | Added analyst role, break glass, MFA procedures |
