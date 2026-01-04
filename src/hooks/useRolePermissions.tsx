@@ -25,6 +25,9 @@ const PERMISSION_MATRIX: Record<string, AppRole[]> = {
   manage_roles: ['admin', 'super_admin'],
   manage_policies: ['admin', 'super_admin'],
   manage_tenant_settings: ['admin', 'super_admin'],
+  change_mfa_policy: ['admin', 'super_admin'],
+  create_user: ['admin', 'super_admin'],
+  delete_user: ['admin', 'super_admin'],
 
   // Ações críticas (requerem segregação)
   approve_role_change: ['admin', 'super_admin'],
@@ -35,6 +38,42 @@ const PERMISSION_MATRIX: Record<string, AppRole[]> = {
   manage_all_tenants: ['super_admin'],
   impersonate_user: ['super_admin'],
   access_system_settings: ['super_admin'],
+};
+
+/**
+ * Ações explicitamente NEGADAS por role
+ * Evita que analyst se torne operador acidentalmente
+ */
+const DENIED_ACTIONS: Partial<Record<AppRole, string[]>> = {
+  analyst: [
+    'manage_users',
+    'manage_roles', 
+    'manage_policies',
+    'create_user',
+    'delete_user',
+    'change_mfa_policy',
+    'manage_tenant_settings',
+  ],
+  viewer: [
+    'manage_users',
+    'manage_roles',
+    'manage_policies',
+    'manage_agents',
+    'execute_playbooks',
+    'manage_jobs',
+    'create_user',
+    'delete_user',
+    'change_mfa_policy',
+    'manage_tenant_settings',
+  ],
+  operator: [
+    'manage_users',
+    'manage_roles',
+    'manage_policies',
+    'create_user',
+    'delete_user',
+    'change_mfa_policy',
+  ],
 };
 
 /**
@@ -96,6 +135,12 @@ export const useRolePermissions = (): RolePermissions => {
       
       // Super admin pode tudo
       if (currentRole === 'super_admin') return true;
+      
+      // Verificar negações explícitas PRIMEIRO
+      const deniedActions = DENIED_ACTIONS[currentRole];
+      if (deniedActions?.includes(action)) {
+        return false;
+      }
       
       const allowedRoles = PERMISSION_MATRIX[action];
       if (!allowedRoles) {

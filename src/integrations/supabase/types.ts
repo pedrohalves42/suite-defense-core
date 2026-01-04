@@ -13099,6 +13099,10 @@ export type Database = {
         Row: {
           address: string | null
           auto_action_mode: string | null
+          break_glass_enabled: boolean | null
+          break_glass_last_used_at: string | null
+          break_glass_last_used_by: string | null
+          break_glass_user_id: string | null
           city: string | null
           cnpj: string | null
           company_name: string | null
@@ -13118,6 +13122,10 @@ export type Database = {
         Insert: {
           address?: string | null
           auto_action_mode?: string | null
+          break_glass_enabled?: boolean | null
+          break_glass_last_used_at?: string | null
+          break_glass_last_used_by?: string | null
+          break_glass_user_id?: string | null
           city?: string | null
           cnpj?: string | null
           company_name?: string | null
@@ -13137,6 +13145,10 @@ export type Database = {
         Update: {
           address?: string | null
           auto_action_mode?: string | null
+          break_glass_enabled?: boolean | null
+          break_glass_last_used_at?: string | null
+          break_glass_last_used_by?: string | null
+          break_glass_user_id?: string | null
           city?: string | null
           cnpj?: string | null
           company_name?: string | null
@@ -18625,6 +18637,10 @@ export type Database = {
           window_interval: string
         }[]
       }
+      is_break_glass_user: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       log_scheduled_job_run: {
@@ -18780,6 +18796,14 @@ export type Database = {
       update_quota_usage: {
         Args: { p_delta: number; p_feature_key: string; p_tenant_id: string }
         Returns: undefined
+      }
+      update_user_role: {
+        Args: {
+          _new_role: Database["public"]["Enums"]["app_role"]
+          _requester_id?: string
+          _target_user_id: string
+        }
+        Returns: Json
       }
       update_user_role_rpc: {
         Args: {

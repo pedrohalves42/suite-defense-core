@@ -162,9 +162,53 @@ export function validateAIBehavior(
   return {
     valid: anomalies.length === 0,
     anomalies,
-    shouldBlock: criticalAnomalies.length > 0,
+    // NUNCA bloquear automaticamente - apenas sinalizar para review humano
+    shouldBlock: false,
     requiresReview: warningAnomalies.length > 0 || criticalAnomalies.length > 0,
   };
+}
+
+// Rate limiting constants
+const RATE_LIMIT_HOURS = 24;
+const DOWNGRADE_THRESHOLD = 3;
+const SKIP_THRESHOLD = 10;
+
+/**
+ * Verifica anomalias recentes do mesmo tipo (rate limiting)
+ */
+async function checkRecentAnomalies(
+  supabase: any,
+  tenantId: string,
+  functionName: string,
+  anomalyType: string,
+  hoursBack: number = RATE_LIMIT_HOURS
+): Promise<{ count: number; lastSeverity: string | null }> {
+  try {
+    const since = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+    
+    const { data, error } = await supabase
+      .from('ai_anomalies')
+      .select('id, severity')
+      .eq('tenant_id', tenantId)
+      .eq('function_name', functionName)
+      .eq('anomaly_type', anomalyType)
+      .gte('detected_at', since.toISOString())
+      .order('detected_at', { ascending: false })
+      .limit(15);
+    
+    if (error) {
+      console.error('[ai-anomaly-detector] Failed to check recent anomalies:', error);
+      return { count: 0, lastSeverity: null };
+    }
+    
+    return {
+      count: data?.length || 0,
+      lastSeverity: data?.[0]?.severity || null
+    };
+  } catch (error) {
+    console.error('[ai-anomaly-detector] Error checking recent anomalies:', error);
+    return { count: 0, lastSeverity: null };
+  }
 }
 
 /**
@@ -196,7 +240,7 @@ export async function logAnomaly(
 }
 
 /**
- * Processa todas as anomalias detectadas
+ * Processa todas as anomalias detectadas com rate limiting
  */
 export async function processAnomalies(
   supabase: any,
@@ -205,19 +249,44 @@ export async function processAnomalies(
   additionalContext: Record<string, any> = {}
 ): Promise<void> {
   for (const anomaly of validation.anomalies) {
+    // Rate limiting: verificar ocorrências recentes
+    const recent = await checkRecentAnomalies(
+      supabase,
+      context.tenantId,
+      context.functionName,
+      anomaly.type
+    );
+    
+    // Skip se 10+ ocorrências (alert fatigue prevention)
+    if (recent.count >= SKIP_THRESHOLD) {
+      console.log(
+        `[ai-anomaly-detector] Rate limit: Skipping anomaly log for ${anomaly.type} - ${recent.count} occurrences in last ${RATE_LIMIT_HOURS}h`
+      );
+      continue;
+    }
+    
+    // Downgrade se 3+ ocorrências em 24h
+    if (recent.count >= DOWNGRADE_THRESHOLD && anomaly.severity === 'critical') {
+      anomaly.severity = 'warning';
+      anomaly.description += ' [Downgraded: repeated occurrence]';
+      console.log(
+        `[ai-anomaly-detector] Downgraded ${anomaly.type} from critical to warning - ${recent.count} recent occurrences`
+      );
+    }
+    
     await logAnomaly(
       supabase,
       context.tenantId,
       context.functionName,
       anomaly,
-      additionalContext
+      { ...additionalContext, recentCount: recent.count }
     );
   }
 
-  // Log resumo se houver anomalias críticas
-  if (validation.shouldBlock) {
+  // Log resumo se houver anomalias que requerem review
+  if (validation.requiresReview) {
     console.warn(
-      `[ai-anomaly-detector] CRITICAL: ${validation.anomalies.length} anomalies detected for ${context.functionName} in tenant ${context.tenantId}`
+      `[ai-anomaly-detector] REVIEW REQUIRED: ${validation.anomalies.length} anomalies detected for ${context.functionName} in tenant ${context.tenantId}`
     );
   }
 }
