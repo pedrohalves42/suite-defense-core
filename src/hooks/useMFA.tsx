@@ -60,10 +60,19 @@ export const useMFA = () => {
     fetchFactors();
   }, [fetchFactors]);
 
-  // Start MFA enrollment
+  // Start MFA enrollment - cleans up unverified factors first
   const startEnrollment = async (friendlyName?: string): Promise<MFAEnrollmentResult | null> => {
     setEnrolling(true);
     try {
+      // First, clean up any existing unverified factors to prevent "factor already exists" error
+      const { data: existingFactors } = await supabase.auth.mfa.listFactors();
+      const unverifiedFactors = existingFactors?.totp?.filter(f => f.status !== 'verified') || [];
+      
+      for (const factor of unverifiedFactors) {
+        logger.info('Removing unverified MFA factor before new enrollment', { factorId: factor.id });
+        await supabase.auth.mfa.unenroll({ factorId: factor.id });
+      }
+
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
         friendlyName: friendlyName || 'CyberShield Authenticator',
