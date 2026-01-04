@@ -8,54 +8,56 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 220 40% 6%;
-    --foreground: 180 20% 96%;
+    --background: 220 40% 5%;
+    --foreground: 200 20% 92%;
 
-    --card: 220 30% 10%;
-    --card-foreground: 180 20% 96%;
+    --card: 220 30% 8%;
+    --card-foreground: 200 20% 92%;
 
-    --popover: 220 30% 10%;
-    --popover-foreground: 180 20% 96%;
+    --popover: 220 30% 8%;
+    --popover-foreground: 200 20% 92%;
 
-    --primary: 174 100% 46%;
+    /* Enterprise palette - autoridade, não marketing */
+    --primary: 174 72% 38%;
     --primary-foreground: 220 40% 6%;
 
-    --secondary: 220 25% 18%;
-    --secondary-foreground: 180 20% 96%;
+    --secondary: 220 25% 16%;
+    --secondary-foreground: 200 20% 92%;
 
-    --muted: 220 20% 20%;
-    --muted-foreground: 180 15% 80%;
+    --muted: 220 20% 18%;
+    --muted-foreground: 200 15% 70%;
 
-    --accent: 189 94% 53%;
+    --accent: 189 65% 42%;
     --accent-foreground: 220 40% 6%;
 
-    --destructive: 0 70% 55%;
-    --destructive-foreground: 180 20% 98%;
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 200 20% 98%;
 
-    --warning: 35 100% 55%;
+    --warning: 35 85% 50%;
     --warning-foreground: 220 40% 6%;
 
-    --success: 142 76% 45%;
+    --success: 142 70% 42%;
     --success-foreground: 220 40% 6%;
 
-    --info: 198 93% 60%;
+    --info: 198 80% 55%;
     --info-foreground: 220 40% 6%;
 
-    --border: 220 20% 32%;
-    --input: 220 20% 28%;
-    --ring: 174 100% 46%;
+    --border: 220 18% 22%;
+    --input: 220 18% 20%;
+    --ring: 174 72% 38%;
 
     --radius: 0.5rem;
 
-    --gradient-hero: linear-gradient(135deg, hsl(220 40% 6%), hsl(220 35% 8%));
-    --gradient-card: linear-gradient(135deg, hsl(220 35% 9%), hsl(220 35% 7%));
-    --glow-primary: 0 0 40px hsl(174 100% 46% / 0.2);
-    --glow-accent: 0 0 30px hsl(189 94% 53% / 0.15);
-    --border-glow: 0 0 20px hsl(174 100% 46% / 0.3);
+    /* Enterprise background - infraestrutura silenciosa */
+    --gradient-hero: linear-gradient(180deg, hsl(220 40% 5%), hsl(220 38% 4%));
+    --gradient-card: linear-gradient(135deg, hsl(220 30% 7%), hsl(220 30% 6%));
+    --glow-primary: 0 0 30px hsl(174 72% 38% / 0.12);
+    --glow-accent: 0 0 20px hsl(189 65% 42% / 0.1);
+    --border-glow: 0 0 15px hsl(174 72% 38% / 0.15);
     
     /* RGB values for gradients */
-    --primary-rgb: 59, 221, 189;
-    --accent-rgb: 49, 196, 223;
+    --primary-rgb: 45, 158, 140;
+    --accent-rgb: 55, 145, 165;
   }
 }
 
