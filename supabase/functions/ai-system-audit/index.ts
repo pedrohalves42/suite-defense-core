@@ -1,72 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
+import { safeParseJSON, createFallbackAudit } from "../_shared/json-parser.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-tenant-id',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
-
-/**
- * Robust JSON extraction from AI responses v2.0
- */
-function extractJSON(content: string): any {
-  let cleaned = content
-    .replace(/```json\s*/gi, '')
-    .replace(/```\s*/g, '')
-    .trim();
-  
-  const firstBrace = cleaned.indexOf('{');
-  const lastBrace = cleaned.lastIndexOf('}');
-  
-  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-    throw new Error('No valid JSON object found in content');
-  }
-  
-  let jsonStr = cleaned.substring(firstBrace, lastBrace + 1);
-  
-  // Cleanup control characters
-  jsonStr = jsonStr
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-    .replace(/\r\n/g, '\\n')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '')
-    .replace(/\t/g, '\\t');
-  
-  try {
-    return JSON.parse(jsonStr);
-  } catch (firstError) {
-    // More aggressive cleanup
-    let cleanedJson = jsonStr
-      .replace(/,\s*}/g, '}')
-      .replace(/,\s*]/g, ']')
-      .replace(/\\n/g, ' ')
-      .replace(/\s+/g, ' ');
-    
-    try {
-      return JSON.parse(cleanedJson);
-    } catch {
-      // Fix unescaped quotes
-      cleanedJson = cleanedJson.replace(
-        /"([^"]+)":\s*"([^"]*)"/g,
-        (match, key, value) => {
-          if (value.includes('"')) {
-            return `"${key}":"${value.replace(/"/g, "'")}"`;
-          }
-          return match;
-        }
-      );
-      
-      try {
-        return JSON.parse(cleanedJson);
-      } catch {
-        console.error('[extractJSON] All attempts failed:', jsonStr.substring(0, 500));
-        throw new Error(`Failed to parse JSON: ${(firstError as Error).message}`);
-      }
-    }
-  }
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -238,16 +179,19 @@ serve(async (req) => {
       );
     }
 
-    // Parse AI response with robust extraction
-    let analysisResult;
+    // Parse AI response with robust stream-safe extraction
+    let analysisResult: any;
+    let fallbackUsed = false;
     try {
-      analysisResult = extractJSON(aiContent);
+      analysisResult = safeParseJSON(aiContent, 'ai-system-audit');
     } catch (parseError) {
-      console.error('Failed to parse AI response:', aiContent.substring(0, 1000));
-      return new Response(
-        JSON.stringify({ error: 'Failed to parse AI analysis', stage: 'parse' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error('[ai-system-audit] Parse failed, using fallback');
+      console.error('[ai-system-audit] Error:', parseError);
+      console.error('[ai-system-audit] Content length:', aiContent.length);
+      
+      // Use fallback - pipeline continues with partial result
+      analysisResult = createFallbackAudit('AI_JSON_PARSE_ERROR');
+      fallbackUsed = true;
     }
 
     // NOTE: Score floor policy REMOVED - showing real scores for transparency

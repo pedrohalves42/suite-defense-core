@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.ts";
+import { safeParseJSON, createFallbackAudit, createFallbackRedTeam } from "../_shared/json-parser.ts";
 
 /**
- * AI Full Audit Orchestrator v2.0
+ * AI Full Audit Orchestrator v2.1
  * 
  * Executes audits in anti-bias order:
  * 1. Red Team (adversarial, no prior context)
@@ -16,6 +17,12 @@ import { AIPromptRegistry, logPromptUsage } from "../_shared/ai-prompt-registry.
  * - Layer 3: Variation Guardrail (±10 max)
  * - Layer 4: Binary Criteria for threat_level (deterministic)
  * - Layer 5: Market Score (conservative smoothing)
+ * 
+ * JSON Parsing (4 layers):
+ * - Layer 1: Stream-safe extraction (respects string boundaries)
+ * - Layer 2: Minimal sanitization (control chars only)
+ * - Layer 3: Defensive parse with logging
+ * - Layer 4: Intelligent fallback (never breaks pipeline)
  */
 
 const corsHeaders = {
@@ -23,84 +30,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-tenant-id',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
-
-/**
- * Robust JSON extraction from AI responses v2.0
- * Handles: code blocks, unescaped quotes, control chars, irregular formatting
- */
-function extractJSON(content: string): any {
-  // Step 1: Remove code block markers
-  let cleaned = content
-    .replace(/```json\s*/gi, '')
-    .replace(/```\s*/g, '')
-    .trim();
-  
-  // Step 2: Find JSON boundaries (first { to last })
-  const firstBrace = cleaned.indexOf('{');
-  const lastBrace = cleaned.lastIndexOf('}');
-  
-  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-    console.error('[extractJSON] No valid JSON boundaries found');
-    throw new Error('No valid JSON object found in content');
-  }
-  
-  let jsonStr = cleaned.substring(firstBrace, lastBrace + 1);
-  
-  // Step 3: Aggressive cleanup for AI-generated JSON
-  jsonStr = jsonStr
-    // Remove literal control characters (keep escaped versions)
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-    // Replace literal newlines/tabs with escaped versions  
-    .replace(/\r\n/g, '\\n')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '')
-    .replace(/\t/g, '\\t');
-  
-  // Step 4: Attempt first parse
-  try {
-    return JSON.parse(jsonStr);
-  } catch (firstError) {
-    console.warn('[extractJSON] First parse attempt failed:', (firstError as Error).message);
-    
-    // Step 5: More aggressive cleanup
-    let cleanedJson = jsonStr
-      .replace(/,\s*}/g, '}')             // Remove trailing commas before }
-      .replace(/,\s*]/g, ']')             // Remove trailing commas before ]
-      .replace(/\\n/g, ' ')               // Replace escaped newlines with spaces
-      .replace(/\s+/g, ' ');              // Collapse multiple spaces
-    
-    try {
-      return JSON.parse(cleanedJson);
-    } catch (secondError) {
-      console.warn('[extractJSON] Second parse attempt failed, trying quote fix...');
-      
-      // Step 6: Fix unescaped quotes inside string values (heuristic)
-      // This handles cases like: "analysis": "The 'admin' role..."
-      // Pattern: find string values and replace internal double quotes with single
-      cleanedJson = cleanedJson.replace(
-        /"([^"]+)":\s*"([^"]*)"/g,
-        (match, key, value) => {
-          // Only process if value contains suspicious quote patterns
-          if (value.includes('"')) {
-            const fixedValue = value.replace(/"/g, "'");
-            return `"${key}":"${fixedValue}"`;
-          }
-          return match;
-        }
-      );
-      
-      try {
-        return JSON.parse(cleanedJson);
-      } catch (thirdError) {
-        console.error('[extractJSON] All parse attempts failed');
-        console.error('[extractJSON] Original error:', (firstError as Error).message);
-        console.error('[extractJSON] JSON string (first 1000 chars):', jsonStr.substring(0, 1000));
-        console.error('[extractJSON] JSON string (last 500 chars):', jsonStr.substring(jsonStr.length - 500));
-        throw new Error(`Failed to parse JSON: ${(firstError as Error).message}`);
-      }
-    }
-  }
-}
 
 /**
  * Calculate deterministic base score from metrics (no LLM variance)
@@ -473,15 +402,26 @@ serve(async (req) => {
       );
     }
 
-    let redResult;
+    // Parse Red Team response with robust stream-safe parser
+    let redResult: any;
+    let redTeamFallbackUsed = false;
     try {
-      redResult = extractJSON(redContent);
+      redResult = safeParseJSON(redContent, 'red-team');
     } catch (parseError) {
-      console.error('[ai-full-audit] Failed to parse Red Team content:', redContent.substring(0, 500));
+      console.error('[ai-full-audit] Red Team parse failed, using fallback');
       console.error('[ai-full-audit] Parse error:', parseError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to parse Red Team analysis', stage: 'red_team' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      console.error('[ai-full-audit] Content length:', redContent.length);
+      
+      // Use fallback with deterministic binary criteria
+      const fallbackCriteria = calculateBinaryCriteria(metrics);
+      redResult = createFallbackRedTeam('AI_JSON_PARSE_ERROR', fallbackCriteria);
+      redTeamFallbackUsed = true;
+      
+      await logGovernanceEvent(
+        serviceClient, tenantId, null, 'red_team_fallback',
+        null, 50, 'parse_error',
+        'Red Team JSON parse falhou, usando fallback determinístico',
+        { error: (parseError as Error).message, content_length: redContent.length }
       );
     }
 
@@ -667,15 +607,25 @@ INSTRUÇÃO: Considere esses riscos ao avaliar. Seu score deve refletir consciê
       );
     }
 
-    let anaResult;
+    // Parse Ana response with robust stream-safe parser
+    let anaResult: any;
+    let anaFallbackUsed = false;
     try {
-      anaResult = extractJSON(anaContent);
+      anaResult = safeParseJSON(anaContent, 'ana');
     } catch (parseError) {
-      console.error('[ai-full-audit] Failed to parse Ana content:', anaContent.substring(0, 500));
+      console.error('[ai-full-audit] Ana parse failed, using fallback');
       console.error('[ai-full-audit] Parse error:', parseError);
-      return new Response(
-        JSON.stringify({ error: 'Failed to parse Ana analysis', stage: 'ana' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      console.error('[ai-full-audit] Content length:', anaContent.length);
+      
+      // Use fallback audit result - pipeline continues
+      anaResult = createFallbackAudit('AI_JSON_PARSE_ERROR');
+      anaFallbackUsed = true;
+      
+      await logGovernanceEvent(
+        serviceClient, tenantId, null, 'ana_fallback',
+        null, 50, 'parse_error',
+        'Ana JSON parse falhou, usando fallback com score neutro',
+        { error: (parseError as Error).message, content_length: anaContent.length }
       );
     }
 
