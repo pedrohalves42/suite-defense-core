@@ -233,3 +233,15 @@ export function validateAIResponse(response: string): { valid: boolean; issues: 
     issues,
   };
 }
+
+// Re-export from ai-anomaly-detector for backward compatibility
+export { 
+  validateAIBehavior, 
+  logAnomaly, 
+  processAnomalies,
+  estimateTokenCount,
+  type AIContext,
+  type AIResponse,
+  type AnomalyFlag,
+  type BehaviorValidation,
+} from './ai-anomaly-detector.ts';

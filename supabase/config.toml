@@ -620,3 +620,13 @@ verify_jwt = false
 # === ADR-008: Admin Create User (username/password) ===
 [functions.admin-create-user]
 verify_jwt = true
+
+# === Credential Rotation Check (daily at 4:00 UTC) ===
+[functions.check-credential-rotation]
+verify_jwt = false
+schedule = "0 4 * * *"
+
+# === Agent Integrity Check (every 15 minutes) ===
+[functions.check-agent-integrity]
+verify_jwt = false
+schedule = "*/15 * * * *"
