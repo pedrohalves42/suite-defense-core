@@ -17,6 +17,7 @@ import { OnboardingWizard } from '@/components/OnboardingWizard';
 import { getAgentStatusInfo } from '@/lib/agent-utils';
 import { toast } from 'sonner';
 import { ProtectionTrendChart } from '@/components/admin/ProtectionTrendChart';
+import { GovernanceHealthBanner } from '@/components/admin/GovernanceHealthBanner';
 
 export default function Dashboard() {
   const { tenant } = useTenant();
@@ -225,6 +226,9 @@ export default function Dashboard() {
         <h1 className="text-xl font-bold text-foreground">Painel Principal</h1>
         <p className="text-muted-foreground text-xs">Visão geral da proteção dos seus computadores</p>
       </div>
+
+      {/* 🔐 GOVERNANCE HEALTH BANNER - MFA Enforcement + Metrics */}
+      <GovernanceHealthBanner />
 
       {/* 🔐 CARD PRINCIPAL DE STATUS - Responde "Estou protegido?" em 3 segundos */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
