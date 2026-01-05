@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import { Shield, ShieldCheck, ShieldAlert, AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import { ShieldCheck, ShieldAlert, AlertTriangle, RefreshCw, Info } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -25,6 +23,7 @@ export const IntegrityScoreCard = () => {
   const [metrics, setMetrics] = useState<IntegrityMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [lastChecked, setLastChecked] = useState<Date>(new Date());
 
   const loadMetrics = async () => {
     try {
@@ -49,7 +48,6 @@ export const IntegrityScoreCard = () => {
           failed_with_error: Number(data.failed_with_error) || 0,
         });
       } else {
-        // Default values if no data
         setMetrics({
           supply_chain_score: 100,
           job_integrity_score: 100,
@@ -63,6 +61,7 @@ export const IntegrityScoreCard = () => {
           failed_with_error: 0,
         });
       }
+      setLastChecked(new Date());
     } catch (error) {
       console.error('[IntegrityScoreCard] Error loading metrics:', error);
       setMetrics({
@@ -97,10 +96,10 @@ export const IntegrityScoreCard = () => {
   if (loading) {
     return (
       <Card className="border-border/50">
-        <CardContent className="py-8">
+        <CardContent className="py-6">
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
             <RefreshCw className="h-4 w-4 animate-spin" />
-            Carregando métricas de integridade...
+            Verificando integridade...
           </div>
         </CardContent>
       </Card>
@@ -113,194 +112,139 @@ export const IntegrityScoreCard = () => {
   const invalidReleases = metrics.active_releases - metrics.valid_active_releases;
   const jobViolations = metrics.completed_jobs - metrics.valid_completed_jobs;
   const failedWithoutError = metrics.failed_jobs - metrics.failed_with_error;
+  const hasIssues = invalidReleases > 0 || jobViolations > 0 || failedWithoutError > 0;
 
-  const getScoreStatus = (score: number) => {
-    if (score >= 95) return { status: 'excellent', color: 'text-success', bg: 'bg-success/10', border: 'border-success/30' };
-    if (score >= 80) return { status: 'good', color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/30' };
-    if (score >= 60) return { status: 'warning', color: 'text-warning', bg: 'bg-warning/10', border: 'border-warning/30' };
-    return { status: 'critical', color: 'text-destructive', bg: 'bg-destructive/10', border: 'border-destructive/30' };
+  // Determine status and message
+  const getStatusConfig = () => {
+    if (overallScore >= 95) {
+      return {
+        icon: ShieldCheck,
+        title: 'Sistema íntegro',
+        message: 'Todos os programas são originais e as verificações funcionam corretamente.',
+        color: 'text-success',
+        bg: 'bg-success/10',
+        border: 'border-success/30'
+      };
+    }
+    if (overallScore >= 80) {
+      return {
+        icon: ShieldCheck,
+        title: 'Sistema em bom estado',
+        message: 'Pequenas melhorias recomendadas, mas tudo funciona corretamente.',
+        color: 'text-primary',
+        bg: 'bg-primary/10',
+        border: 'border-primary/30'
+      };
+    }
+    if (overallScore >= 60) {
+      return {
+        icon: ShieldAlert,
+        title: 'Atenção necessária',
+        message: 'Alguns pontos precisam de verificação para garantir a integridade.',
+        color: 'text-warning',
+        bg: 'bg-warning/10',
+        border: 'border-warning/30'
+      };
+    }
+    return {
+      icon: ShieldAlert,
+      title: 'Ação requerida',
+      message: 'Problemas detectados que precisam de atenção imediata.',
+      color: 'text-destructive',
+      bg: 'bg-destructive/10',
+      border: 'border-destructive/30'
+    };
   };
 
-  const overallStatus = getScoreStatus(overallScore);
-  const supplyChainStatus = getScoreStatus(metrics.supply_chain_score);
-  const jobIntegrityStatus = getScoreStatus(metrics.job_integrity_score);
-  const failedJobsStatus = getScoreStatus(metrics.failed_jobs_score);
+  const status = getStatusConfig();
+  const StatusIcon = status.icon;
 
-  const StatusIcon = overallScore >= 95 ? ShieldCheck : 
-                     overallScore >= 60 ? Shield : ShieldAlert;
+  const timeAgo = () => {
+    const diff = Math.floor((new Date().getTime() - lastChecked.getTime()) / 1000);
+    if (diff < 60) return 'agora';
+    if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
+    return `há ${Math.floor(diff / 3600)}h`;
+  };
 
   return (
-    <Card className={cn("border-2 transition-all", overallStatus.border, overallStatus.bg)}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <StatusIcon className={cn("h-5 w-5", overallStatus.color)} />
-            Verificação de Integridade
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            <Badge variant={overallScore === 100 ? "default" : "secondary"} className="text-xs">
-              {overallScore === 100 ? 'Tudo Verificado ✓' : 'Atenção'}
-            </Badge>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={handleRefresh}
-              disabled={refreshing}
-            >
-              <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
-            </Button>
+    <Card className={cn("border-2 transition-all", status.border, status.bg)}>
+      <CardContent className="py-5">
+        <div className="flex items-start gap-4">
+          <div className={cn("p-2.5 rounded-lg", status.bg)}>
+            <StatusIcon className={cn("h-6 w-6", status.color)} />
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Overall Score */}
-        <div className="flex items-center gap-4">
-          <div className={cn(
-            "text-5xl font-bold tabular-nums",
-            overallStatus.color
-          )}>
-            {overallScore}%
-          </div>
-          <div className="flex-1 space-y-1">
-            <Progress 
-              value={overallScore} 
-              className="h-3"
-            />
-            <p className="text-xs text-muted-foreground">
-              {overallScore === 100 ? 'Tudo funcionando corretamente - Nenhum problema detectado' :
-               overallScore >= 80 ? 'Pequenas melhorias recomendadas' :
-               overallScore >= 60 ? 'Atenção necessária' :
-               'Ação imediata requerida'}
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="font-semibold text-foreground">{status.title}</h3>
+              <div className="flex items-center gap-1.5">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={handleRefresh}
+                        disabled={refreshing}
+                      >
+                        <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Atualizar verificação</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                        <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="font-medium mb-1">O que isso significa?</p>
+                      <p className="text-xs text-muted-foreground">
+                        Verifica se os programas são originais, se as tarefas estão sendo executadas 
+                        corretamente e se erros estão sendo documentados.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+            
+            <p className="text-sm text-muted-foreground mt-1">
+              {status.message}
+            </p>
+            
+            <p className="text-xs text-muted-foreground/70 mt-2">
+              Verificado {timeAgo()}
             </p>
           </div>
         </div>
 
-        {/* Breakdown - 3 columns now */}
-        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
-          {/* Supply Chain Score */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "p-2 rounded-lg cursor-help",
-                  supplyChainStatus.bg
-                )}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-medium text-muted-foreground">Origem</span>
-                    {invalidReleases > 0 ? (
-                      <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">
-                        {invalidReleases}
-                      </Badge>
-                    ) : (
-                      <CheckCircle2 className="h-3 w-3 text-success" />
-                    )}
-                  </div>
-                  <div className={cn("text-xl font-bold", supplyChainStatus.color)}>
-                    {Math.round(metrics.supply_chain_score)}%
-                  </div>
-                  <Progress value={metrics.supply_chain_score} className="h-1 mt-1" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
-                <p className="font-medium mb-1">Origem dos Programas</p>
-                <p className="text-xs text-muted-foreground">
-                  {metrics.valid_active_releases}/{metrics.active_releases} versões verificadas.
-                  Confirma que os programas são originais e seguros.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          {/* Job Integrity Score */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "p-2 rounded-lg cursor-help",
-                  jobIntegrityStatus.bg
-                )}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-medium text-muted-foreground">Concluídos</span>
-                    {jobViolations > 0 ? (
-                      <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">
-                        {jobViolations}
-                      </Badge>
-                    ) : (
-                      <CheckCircle2 className="h-3 w-3 text-success" />
-                    )}
-                  </div>
-                  <div className={cn("text-xl font-bold", jobIntegrityStatus.color)}>
-                    {Math.round(metrics.job_integrity_score)}%
-                  </div>
-                  <Progress value={metrics.job_integrity_score} className="h-1 mt-1" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
-                <p className="font-medium mb-1">Tarefas Concluídas</p>
-                <p className="text-xs text-muted-foreground">
-                  {metrics.valid_completed_jobs}/{metrics.completed_jobs} tarefas geraram resultados.
-                  Confirma que as verificações foram executadas corretamente.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          {/* Failed Jobs Score */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "p-2 rounded-lg cursor-help",
-                  failedJobsStatus.bg
-                )}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-medium text-muted-foreground">Com Erro</span>
-                    {failedWithoutError > 0 ? (
-                      <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">
-                        {failedWithoutError}
-                      </Badge>
-                    ) : (
-                      <CheckCircle2 className="h-3 w-3 text-success" />
-                    )}
-                  </div>
-                  <div className={cn("text-xl font-bold", failedJobsStatus.color)}>
-                    {Math.round(metrics.failed_jobs_score)}%
-                  </div>
-                  <Progress value={metrics.failed_jobs_score} className="h-1 mt-1" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs">
-                <p className="font-medium mb-1">Tarefas com Erro</p>
-                <p className="text-xs text-muted-foreground">
-                  {metrics.failed_with_error}/{metrics.failed_jobs} erros têm explicação.
-                  Mostra se os erros foram documentados para diagnóstico.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        {/* Warnings if any */}
-        {(invalidReleases > 0 || jobViolations > 0 || failedWithoutError > 0) && (
-          <div className="flex items-start gap-2 p-2 rounded-lg bg-warning/10 border border-warning/30 text-xs">
-            <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              {invalidReleases > 0 && (
-                <p className="text-warning-foreground">
-                  {invalidReleases} versão(ões) precisam de verificação
-                </p>
-              )}
-              {jobViolations > 0 && (
-                <p className="text-warning-foreground">
-                  {jobViolations} tarefa(s) concluídas sem resultado
-                </p>
-              )}
-              {failedWithoutError > 0 && (
-                <p className="text-warning-foreground">
-                  {failedWithoutError} erro(s) sem explicação
-                </p>
-              )}
+        {/* Warnings - only show if there are issues */}
+        {hasIssues && (
+          <div className="mt-4 pt-4 border-t border-border/50">
+            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-warning/10 border border-warning/30 text-xs">
+              <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                {invalidReleases > 0 && (
+                  <p className="text-foreground">
+                    {invalidReleases} programa(s) precisam de verificação de origem
+                  </p>
+                )}
+                {jobViolations > 0 && (
+                  <p className="text-foreground">
+                    {jobViolations} tarefa(s) concluídas sem gerar resultado
+                  </p>
+                )}
+                {failedWithoutError > 0 && (
+                  <p className="text-foreground">
+                    {failedWithoutError} erro(s) sem explicação documentada
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}
