@@ -46,6 +46,8 @@ export function useApproveAiAction() {
         .update({
           approved_at: now,
           approved_by: user.id,
+          human_reviewed: true,
+          reviewed_at: now,
         })
         .eq('id', actionId);
 

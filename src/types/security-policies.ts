@@ -25,6 +25,8 @@ export interface SecurityPolicy {
   created_at: string;
   updated_at: string;
   enabled?: boolean;
+  approved_at?: string | null;
+  approved_by?: string | null;
 }
 
 export interface SecurityPolicyRule {

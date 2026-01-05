@@ -3,21 +3,48 @@
  * Exibe o status de conformidade para auditoria SOC 2 Type I
  */
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Shield, FileText, CheckCircle2, Clock, Building2, Link2, Database, Code, AlertTriangle } from 'lucide-react';
+import { Shield, FileText, CheckCircle2, Clock, Building2, Link2, Database, Code, AlertTriangle, Download, Loader2, Package } from 'lucide-react';
 import { useSOC2Readiness, calculateOverallScore } from '@/hooks/useSOC2Readiness';
 import { SOC2_TRUST_CRITERIA, COMPLIANCE_POLICIES } from '@/types/soc2-compliance';
 import { PolicyApprovalWorkflow } from '@/components/soc2/PolicyApprovalWorkflow';
 import { VendorRiskRegistry } from '@/components/soc2/VendorRiskRegistry';
 import { AlertResolutionPanel } from '@/components/soc2/AlertResolutionPanel';
+import { useExportEvidenceBundle, useEvidenceBundles, formatBytes, BUNDLE_TYPE_LABELS } from '@/hooks/useEvidenceBundle';
+import { toast } from 'sonner';
 
 export default function SOC2Dashboard() {
   const { data: readinessData, isLoading } = useSOC2Readiness();
   const overallScore = readinessData ? calculateOverallScore(readinessData) : 0;
+  const exportBundle = useExportEvidenceBundle();
+  const { data: bundles } = useEvidenceBundles();
+
+  const handleExportBundle = () => {
+    const now = new Date();
+    const periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0];
+    const periodEnd = now.toISOString().split('T')[0];
+    
+    exportBundle.mutate({
+      periodStart,
+      periodEnd,
+      bundleType: 'audit',
+      includeOptions: {
+        securityEvents: true,
+        jobs: true,
+        signatures: true,
+        hashChain: true,
+        riskDecisions: true,
+        playbookExecutions: true,
+        auditLogs: true,
+      },
+    });
+  };
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -27,9 +54,23 @@ export default function SOC2Dashboard() {
           <h1 className="text-3xl font-bold">Prontidão para Auditoria SOC 2</h1>
           <p className="text-muted-foreground">Critérios de Confiança (Type I)</p>
         </div>
-        <Badge variant={overallScore >= 80 ? 'default' : overallScore >= 60 ? 'secondary' : 'destructive'} className="text-lg px-4 py-2">
-          {overallScore}% Pronto
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={handleExportBundle}
+            disabled={exportBundle.isPending}
+            className="gap-2"
+          >
+            {exportBundle.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Package className="h-4 w-4" />
+            )}
+            Exportar Bundle de Evidências
+          </Button>
+          <Badge variant={overallScore >= 80 ? 'default' : overallScore >= 60 ? 'secondary' : 'destructive'} className="text-lg px-4 py-2">
+            {overallScore}% Pronto
+          </Badge>
+        </div>
       </div>
 
       {/* Cards de Resumo */}
@@ -78,13 +119,15 @@ export default function SOC2Dashboard() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4 text-yellow-500" />
-              Tempo Estimado
+              <Package className="h-4 w-4 text-purple-500" />
+              Bundles de Evidência
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">60-90</div>
-            <p className="text-xs text-muted-foreground">dias para Type I</p>
+            <div className="text-3xl font-bold">{bundles?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {bundles?.length ? 'Exportados' : 'Nenhum exportado'}
+            </p>
           </CardContent>
         </Card>
       </div>
