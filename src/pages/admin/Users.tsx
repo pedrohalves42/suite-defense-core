@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,13 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
-import { ChevronLeft, ChevronRight, Mail, UserCheck, UserX } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Mail, UserCheck, UserX, Users as UsersIcon, Filter } from 'lucide-react';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { Link } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { AppRole, isValidRole, assertValidRole } from '@/types/roles';
 import { UserWithDetails } from '@/types/user';
 import { getRoleBadgeVariant, getUserStatusVariant, getUserStatusText } from '@/lib/badges';
+import { PageHeader } from '@/components/ui/page-header';
+import { EnterpriseCard } from '@/components/ui/enterprise-card';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -168,68 +169,60 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold">Gerenciar Usuarios</h2>
-          <p className="text-muted-foreground">Gerencie os usuarios e suas permissoes no sistema</p>
-        </div>
+      <PageHeader 
+        title="Gerenciar Usuários"
+        description="Gerencie os usuários e suas permissões no sistema"
+        icon={UsersIcon}
+      >
         <Link to="/admin/invites">
-          <Button>
-            <Mail className="h-4 w-4 mr-2" />
-            Convidar Usuario
+          <Button className="btn-enterprise gap-2">
+            <Mail className="h-4 w-4" />
+            Convidar Usuário
           </Button>
         </Link>
-      </div>
+      </PageHeader>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-          <CardDescription>Busque e filtre os usuarios</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Input
-                placeholder="Buscar por nome..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(0);
-                }}
-              />
-            </div>
-            <div>
-              <Select value={roleFilter} onValueChange={(value) => {
-                setRoleFilter(value);
+      <EnterpriseCard title="Filtros" description="Busque e filtre os usuários" icon={Filter}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Input
+              placeholder="Buscar por nome..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
                 setPage(0);
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrar por role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as Roles</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="operator">Operator</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              }}
+              className="input-enterprise"
+            />
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <Select value={roleFilter} onValueChange={(value) => {
+              setRoleFilter(value);
+              setPage(0);
+            }}>
+              <SelectTrigger className="input-enterprise">
+                <SelectValue placeholder="Filtrar por role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Roles</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="operator">Operator</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </EnterpriseCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Usuarios</CardTitle>
-          <CardDescription>
-            Mostrando {paginatedUsers.length} de {totalCount} usuarios
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8">Carregando...</div>
-          ) : (
-            <>
+      <EnterpriseCard 
+        title="Usuários" 
+        description={`Mostrando ${paginatedUsers.length} de ${totalCount} usuários`}
+        icon={UsersIcon}
+      >
+        {isLoading ? (
+          <div className="text-center py-8 text-muted-foreground/70">Carregando...</div>
+        ) : (
+          <>
               <Table>
               <TableHeader>
                 <TableRow>
@@ -330,9 +323,8 @@ export default function Users() {
               </div>
             )}
           </>
-          )}
-        </CardContent>
-      </Card>
+        )}
+      </EnterpriseCard>
 
       <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
         <AlertDialogContent>

@@ -222,9 +222,9 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl font-bold text-foreground">Painel Principal</h1>
-        <p className="text-muted-foreground text-xs">Visão geral da proteção dos seus computadores</p>
+      <div className="page-header-enterprise">
+        <h1>Painel Principal</h1>
+        <p>Visão geral da proteção dos seus computadores</p>
       </div>
 
       {/* 🔐 GOVERNANCE HEALTH BANNER - MFA Enforcement + Metrics */}

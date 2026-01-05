@@ -275,30 +275,35 @@ export const AppSidebar = () => {
     <TooltipProvider>
       <aside
         className={cn(
-          'fixed left-0 top-0 h-screen border-r border-border bg-card transition-all duration-300 z-40 flex flex-col',
+          'fixed left-0 top-0 h-screen border-r border-border/40',
+          'bg-card/95 backdrop-blur-xl transition-all duration-300 z-40 flex flex-col',
+          'shadow-[1px_0_10px_rgba(0,0,0,0.1)]',
           collapsed ? 'w-16' : 'w-60'
         )}
       >
-        {/* Logo */}
-        <div className="h-14 flex items-center justify-between px-3 border-b border-border">
+        {/* Logo CyberShield Cloud */}
+        <div className="h-14 flex items-center justify-between px-3 border-b border-border/30">
           {!collapsed && (
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-primary rounded-lg">
-                <Shield className="h-4 w-4 text-primary-foreground" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg shadow-inner">
+                <Shield className="h-5 w-5 text-primary" />
               </div>
-              <span className="font-semibold text-foreground">CyberShield</span>
+              <div className="flex flex-col">
+                <span className="font-semibold text-foreground text-sm tracking-tight">CyberShield</span>
+                <span className="text-[10px] text-muted-foreground/60 tracking-wider uppercase">Cloud</span>
+              </div>
             </div>
           )}
           {collapsed && (
-            <div className="p-1.5 bg-primary rounded-lg mx-auto">
-              <Shield className="h-4 w-4 text-primary-foreground" />
+            <div className="p-2 bg-primary/10 rounded-lg mx-auto">
+              <Shield className="h-5 w-5 text-primary" />
             </div>
           )}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(!collapsed)}
-            className={cn("shrink-0 h-8 w-8", collapsed && "absolute right-1 top-3")}
+            className={cn("shrink-0 h-8 w-8 btn-enterprise-ghost", collapsed && "absolute right-1 top-3")}
           >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </Button>
@@ -306,27 +311,27 @@ export const AppSidebar = () => {
 
         {/* Quick Search */}
         {!collapsed && (
-          <div className="px-2 py-2 border-b border-border">
+          <div className="px-2 py-2 border-b border-border/30">
             <Button 
               variant="outline" 
-              className="w-full justify-start text-muted-foreground h-9 px-3"
+              className="w-full justify-start text-muted-foreground/70 h-9 px-3 border-border/50 hover:bg-accent/30"
               onClick={() => window.dispatchEvent(new CustomEvent('open-search'))}
             >
               <Search className="h-4 w-4 mr-2" />
               <span className="flex-1 text-left text-sm">Buscar...</span>
-              <kbd className="text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
+              <kbd className="text-[10px] bg-muted/50 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
             </Button>
           </div>
         )}
 
         {collapsed && (
-          <div className="px-2 py-2 border-b border-border">
+          <div className="px-2 py-2 border-b border-border/30">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button 
                   variant="ghost" 
                   size="icon"
-                  className="w-full h-9"
+                  className="w-full h-9 btn-enterprise-ghost"
                   onClick={() => window.dispatchEvent(new CustomEvent('open-search'))}
                 >
                   <Search className="h-4 w-4" />
@@ -340,7 +345,7 @@ export const AppSidebar = () => {
         )}
 
         {/* Tenant Selector */}
-        <div className="border-b border-border">
+        <div className="border-b border-border/30">
           <SidebarTenantSelector collapsed={collapsed} />
         </div>
 
@@ -353,7 +358,7 @@ export const AppSidebar = () => {
                 {overviewItems.map((item, idx) => renderNavItem(item, idx))}
               </div>
 
-              <div className="my-2 mx-2 h-px bg-border" />
+              <div className="my-2 mx-2 h-px bg-border/30" />
 
               {/* PROTEÇÃO */}
               {renderCollapsibleSection('Proteção', 'protection', protectionItems)}
@@ -394,7 +399,7 @@ export const AppSidebar = () => {
           {/* Super Admin */}
           {isSuperAdmin && (
             <>
-              <div className="my-3 mx-2 h-px bg-border" />
+              <div className="my-3 mx-2 h-px bg-border/30" />
               {!collapsed ? (
                 <Collapsible 
                   open={sectionStates.superAdmin} 
@@ -429,22 +434,22 @@ export const AppSidebar = () => {
           )}
         </nav>
 
-        {/* Footer */}
-        <div className="border-t border-border p-2">
+        {/* Footer elegante */}
+        <div className="border-t border-border/30 p-3">
           {!collapsed ? (
-            <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
-              <Heart className="h-3 w-3" />
-              <span>CyberShield v2.0</span>
+            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/50">
+              <Shield className="h-3 w-3" />
+              <span className="tracking-wide">v2.0.0</span>
             </div>
           ) : (
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex justify-center py-2">
-                  <Heart className="h-3 w-3 text-muted-foreground" />
+                <div className="flex justify-center py-1">
+                  <Shield className="h-3 w-3 text-muted-foreground/50" />
                 </div>
               </TooltipTrigger>
               <TooltipContent side="right">
-                CyberShield v2.0
+                CyberShield v2.0.0
               </TooltipContent>
             </Tooltip>
           )}
