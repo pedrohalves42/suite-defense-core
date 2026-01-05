@@ -72,9 +72,10 @@ export function RiskScoreCard() {
     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
       <Card className={cn(
         "border-2 transition-colors",
-        status.variant === 'success' && "bg-green-500/10 border-green-500/30",
-        status.variant === 'warning' && "bg-yellow-500/10 border-yellow-500/30",
-        status.variant === 'danger' && "bg-red-500/10 border-red-500/30"
+        // Inverted: high score = success, low score = danger
+        status.variant === 'success' && "bg-success/10 border-success/30",
+        status.variant === 'warning' && "bg-warning/10 border-warning/30",
+        status.variant === 'danger' && "bg-destructive/10 border-destructive/30"
       )}>
         <CardContent className="py-6">
           <div className="flex items-center justify-between">
@@ -104,9 +105,10 @@ export function RiskScoreCard() {
                     strokeLinecap="round"
                     strokeDasharray={`${score * 2.51} 251`}
                     className={cn(
-                      score >= 80 && "text-green-500",
-                      score >= 60 && score < 80 && "text-yellow-500",
-                      score < 60 && "text-red-500"
+                      // Inverted: high score = good (green)
+                      score >= 80 && "text-success",
+                      score >= 60 && score < 80 && "text-warning",
+                      score < 60 && "text-destructive"
                     )}
                   />
                 </svg>
@@ -122,9 +124,9 @@ export function RiskScoreCard() {
                 <div className="flex items-center gap-2">
                   <h2 className={cn(
                     "text-lg font-bold",
-                    status.variant === 'success' && "text-green-600 dark:text-green-400",
-                    status.variant === 'warning' && "text-yellow-600 dark:text-yellow-400",
-                    status.variant === 'danger' && "text-red-600 dark:text-red-400"
+                    status.variant === 'success' && "text-success",
+                    status.variant === 'warning' && "text-warning",
+                    status.variant === 'danger' && "text-destructive"
                   )}>
                     {status.label}
                   </h2>

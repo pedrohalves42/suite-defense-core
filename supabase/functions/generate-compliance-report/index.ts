@@ -267,22 +267,26 @@ Deno.serve(async (req) => {
       .limit(1)
       .maybeSingle();
 
-    // ===== RISK CALCULATION (Enhanced) =====
-    let riskScore = 0;
-    riskScore += criticalVulns * 25;
-    riskScore += highVulns * 10;
-    riskScore += mediumVulns * 3;
-    riskScore += threatsFound * 15;
-    riskScore += criticalEvents * 20;
-    riskScore += highEvents * 8;
-    riskScore += offlineAgents.length * 5;
-    riskScore += failedLogins > 10 ? 10 : failedLogins > 5 ? 5 : 0;
-    riskScore += avOutdated * 8;
-    riskScore += failedJobs > 5 ? 10 : failedJobs > 2 ? 5 : 0;
-    riskScore = Math.min(riskScore, 100);
+    // ===== SECURITY SCORE CALCULATION (Inverted - 100 = excellent, 0 = critical) =====
+    // Snapshot time for data consistency
+    const snapshotTime = new Date().toISOString();
+    
+    let securityScore = 100;
+    securityScore -= criticalVulns * 25;
+    securityScore -= highVulns * 10;
+    securityScore -= mediumVulns * 3;
+    securityScore -= threatsFound * 15;
+    securityScore -= criticalEvents * 20;
+    securityScore -= highEvents * 8;
+    securityScore -= offlineAgents.length * 5;
+    securityScore -= failedLogins > 10 ? 10 : failedLogins > 5 ? 5 : 0;
+    securityScore -= avOutdated * 8;
+    securityScore -= failedJobs > 5 ? 10 : failedJobs > 2 ? 5 : 0;
+    securityScore = Math.max(securityScore, 0);
 
-    const riskLevel = riskScore >= 80 ? "CRÍTICO" : riskScore >= 60 ? "ALTO" : riskScore >= 40 ? "MÉDIO" : riskScore >= 20 ? "BAIXO" : "MÍNIMO";
-    const riskTrend = prevRiskScore ? (riskScore > prevRiskScore.score ? "subindo" : riskScore < prevRiskScore.score ? "descendo" : "estável") : "primeiro_calculo";
+    // Security level based on score (high = good)
+    const securityLevel = securityScore >= 90 ? "EXCELENTE" : securityScore >= 70 ? "BOM" : securityScore >= 50 ? "ADEQUADO" : securityScore >= 30 ? "ATENÇÃO" : "CRÍTICO";
+    const securityTrend = prevRiskScore ? (securityScore > (100 - prevRiskScore.score) ? "melhorando" : securityScore < (100 - prevRiskScore.score) ? "piorando" : "estável") : "primeiro_calculo";
 
     const now = new Date();
     const auditId = `LAUDO-${crypto.randomUUID().slice(0, 8).toUpperCase()}-${now.getTime()}`;
@@ -460,14 +464,16 @@ Deno.serve(async (req) => {
     // ===== EXECUTIVE SUMMARY (for laypeople) =====
     const executiveSummary = {
       title: "Resumo Executivo",
-      overallStatus: riskScore <= 20 ? "BOM" : riskScore <= 40 ? "ADEQUADO" : riskScore <= 60 ? "ATENÇÃO" : "CRÍTICO",
-      overallMessage: riskScore <= 20 
-        ? `A empresa "${tenantName}" está com boa segurança. Todos os principais controles estão funcionando e não há problemas urgentes.`
-        : riskScore <= 40 
-        ? `A empresa "${tenantName}" está com segurança adequada, mas alguns pontos merecem atenção. Recomendamos revisar os itens marcados.`
-        : riskScore <= 60
-        ? `A empresa "${tenantName}" precisa de atenção. Existem ${criticalVulns + highVulns} vulnerabilidades importantes que devem ser corrigidas.`
-        : `A empresa "${tenantName}" está em situação crítica. Ação imediata é necessária para corrigir ${criticalVulns} vulnerabilidades críticas.`,
+      overallStatus: securityLevel,
+      overallMessage: securityScore >= 90 
+        ? `Parabéns! A empresa "${tenantName}" está muito bem protegida. Todos os controles de segurança estão funcionando corretamente.`
+        : securityScore >= 70 
+        ? `A empresa "${tenantName}" está com boa segurança. Continue mantendo as boas práticas atuais.`
+        : securityScore >= 50
+        ? `A empresa "${tenantName}" está adequada, mas alguns pontos merecem atenção. Recomendamos revisar os itens destacados.`
+        : securityScore >= 30
+        ? `A empresa "${tenantName}" precisa de atenção. Existem ${criticalVulns + highVulns} vulnerabilidades que devem ser corrigidas.`
+        : `A empresa "${tenantName}" precisa de ação imediata. Corrija ${criticalVulns} vulnerabilidades críticas o mais rápido possível.`,
       highlights: [
         { 
           icon: "computer", 
@@ -541,7 +547,7 @@ Deno.serve(async (req) => {
       period_start: periodStart,
       period_end: periodEnd,
       generated_at: now.toISOString(),
-      risk_score: riskScore,
+      security_score: securityScore,
       statistics: {
         total_agents: agentCount ?? 0,
         online_agents: onlineAgents.length,
@@ -581,15 +587,16 @@ Deno.serve(async (req) => {
       (sec as any).evidence_refs = [sha256Hash.substring(idx * 4, idx * 4 + 8)];
     });
 
-    const riskDescription = riskScore >= 80 ? "Requer ação imediata - situação crítica de segurança" :
-      riskScore >= 60 ? "Atenção recomendada em 24-48h - problemas importantes identificados" :
-      riskScore >= 40 ? "Revisão semanal sugerida - alguns pontos de melhoria" :
-      riskScore >= 20 ? "Situação controlada - pequenos ajustes recomendados" : "Ambiente seguro - continue monitorando";
+    // Security description based on inverted score (high = good)
+    const securityDescription = securityScore >= 90 ? "Ambiente seguro - continue monitorando" :
+      securityScore >= 70 ? "Situação controlada - pequenos ajustes recomendados" :
+      securityScore >= 50 ? "Revisão semanal sugerida - alguns pontos de melhoria" :
+      securityScore >= 30 ? "Atenção recomendada em 24-48h - problemas importantes identificados" : "Requer ação imediata - situação crítica de segurança";
 
-    const riskLaymanDescription = riskScore >= 80 ? "Sua empresa precisa de atenção urgente. Existem problemas sérios de segurança." :
-      riskScore >= 60 ? "Existem alguns problemas que precisam ser resolvidos esta semana." :
-      riskScore >= 40 ? "Sua segurança está ok, mas pode melhorar. Revise quando puder." :
-      riskScore >= 20 ? "Sua empresa está bem protegida. Apenas pequenos ajustes." : "Parabéns! Sua empresa está com segurança excelente.";
+    const securityLaymanDescription = securityScore >= 90 ? "Parabéns! Sua empresa está com segurança excelente." :
+      securityScore >= 70 ? "Sua empresa está bem protegida. Apenas pequenos ajustes." :
+      securityScore >= 50 ? "Sua segurança está ok, mas pode melhorar. Revise quando puder." :
+      securityScore >= 30 ? "Existem alguns problemas que precisam ser resolvidos esta semana." : "Sua empresa precisa de atenção urgente. Existem problemas sérios de segurança.";
 
     // ===== FULL PAYLOAD =====
     const payload = {
@@ -627,12 +634,12 @@ Deno.serve(async (req) => {
       active_policies: blockedSites ?? [],
       policies_count: blockedSitesCount,
       
-      // Risk assessment
-      risk_score: riskScore,
-      risk_level: riskLevel,
-      risk_trend: riskTrend,
-      risk_description: riskDescription,
-      risk_layman_description: riskLaymanDescription,
+      // Security assessment (inverted: 100 = excellent, 0 = critical)
+      risk_score: securityScore,
+      risk_level: securityLevel,
+      risk_trend: securityTrend,
+      risk_description: securityDescription,
+      risk_layman_description: securityLaymanDescription,
       
       // Complete statistics
       statistics: {
@@ -676,8 +683,8 @@ Deno.serve(async (req) => {
         tenant_id: tenantId,
         report_type: `compliance_${template.toLowerCase()}`,
         title: `Relatório de Compliance ${template} - ${now.toLocaleDateString('pt-BR')}`,
-        risk_score: riskScore,
-        risk_level: riskLevel,
+        risk_score: securityScore,
+        risk_level: securityLevel,
         status: "generated",
         expires_at: payload.valid_until,
         audit_id: auditId,

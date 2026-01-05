@@ -99,27 +99,29 @@ export const useRiskScore = () => {
     },
   });
 
-  // Helper to get score color
+  // Helper to get score color (high score = good = green)
   const getScoreColor = (score: number): string => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 80) return 'text-success';
+    if (score >= 60) return 'text-warning';
+    return 'text-destructive';
   };
 
-  // Helper to get score status
+  // Helper to get score status (high score = secure)
   const getScoreStatus = (score: number): { label: string; variant: 'success' | 'warning' | 'danger' } => {
-    if (score >= 80) return { label: 'Seguro', variant: 'success' };
-    if (score >= 60) return { label: 'Atenção', variant: 'warning' };
-    return { label: 'Risco Alto', variant: 'danger' };
+    if (score >= 90) return { label: 'Excelente', variant: 'success' };
+    if (score >= 70) return { label: 'Bom', variant: 'success' };
+    if (score >= 50) return { label: 'Adequado', variant: 'warning' };
+    if (score >= 30) return { label: 'Atenção', variant: 'warning' };
+    return { label: 'Crítico', variant: 'danger' };
   };
 
   // Helper to get trend icon and label
   const getTrendInfo = (trend: 'up' | 'down' | 'stable' | null): { icon: string; label: string; color: string } => {
     switch (trend) {
       case 'up':
-        return { icon: '↑', label: 'Melhorou', color: 'text-green-600' };
+        return { icon: '↑', label: 'Melhorou', color: 'text-success' };
       case 'down':
-        return { icon: '↓', label: 'Piorou', color: 'text-red-600' };
+        return { icon: '↓', label: 'Piorou', color: 'text-destructive' };
       default:
         return { icon: '→', label: 'Estável', color: 'text-muted-foreground' };
     }
