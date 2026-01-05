@@ -11,8 +11,6 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getOsIcon } from '@/lib/os-utils';
-import { AgentStatusBadges } from '@/components/agents/AgentStatusBadges';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { OfflineAgentActions } from '@/components/admin/OfflineAgentActions';
 import { AgentAuthFailureAlert } from '@/components/admin/AgentAuthFailureAlert';
@@ -20,7 +18,9 @@ import { TooltipProvider as TooltipProviderWrapper } from '@/components/ui/toolt
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HealthTrendChart } from '@/components/admin/HealthTrendChart';
 import { AgentDetailsDrawer } from '@/components/agent/AgentDetailsDrawer';
-import { DiskMetricsPanel } from '@/components/agent/DiskMetricsPanel';
+import { AgentCard } from '@/components/agent/AgentCard';
+import { useAgentsSystemMetrics } from '@/hooks/useAgentSystemMetrics';
+import { useAgentsDiskMetrics } from '@/hooks/useAgentsDiskMetrics';
 import { Link } from 'react-router-dom';
 
 type StatusFilter = 'all' | 'problems' | 'protected' | 'offline';
@@ -117,6 +117,18 @@ export default function AgentHealthMonitor() {
         return agentsHealth;
     }
   }, [agentsHealth, statusFilter]);
+
+  // Get agent IDs for metrics fetching
+  const agentIds = useMemo(() => 
+    filteredAgents.map(a => a.id).filter((id): id is string => !!id),
+    [filteredAgents]
+  );
+
+  // Fetch system metrics (CPU, RAM, Disk) for all visible agents
+  const { data: systemMetrics = {} } = useAgentsSystemMetrics(agentIds);
+  
+  // Fetch disk metrics for all visible agents
+  const { data: diskMetrics = {} } = useAgentsDiskMetrics(agentIds);
 
   // Conditional returns AFTER all hooks
   if (isLoading) {
@@ -342,92 +354,45 @@ export default function AgentHealthMonitor() {
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {filteredAgents.map((agent, idx) => {
                 const isOnline = agent.health_status === 'healthy' || agent.health_status === 'critical';
-                const secondsSinceHeartbeat = agent.seconds_since_heartbeat || 0;
-                const lastSeenText = secondsSinceHeartbeat < 60 
-                  ? 'Agora mesmo'
-                  : secondsSinceHeartbeat < 3600 
-                    ? `Há ${Math.floor(secondsSinceHeartbeat / 60)} min`
-                    : secondsSinceHeartbeat < 86400
-                      ? `Há ${Math.floor(secondsSinceHeartbeat / 3600)} h`
-                      : `Há ${Math.floor(secondsSinceHeartbeat / 86400)} dias`;
-
                 const hasSpecialStatus = agent.is_throttled || agent.is_isolated || agent.is_in_safe_mode;
+                const agentMetrics = agent.id ? systemMetrics[agent.id] : undefined;
+                const agentDisks = agent.id ? diskMetrics[agent.id] : undefined;
+
+                // Determine health status for the card
+                const healthStatus: 'healthy' | 'warning' | 'critical' | undefined = 
+                  agent.health_status === 'critical' || agent.has_critical_alerts ? 'critical' :
+                  hasSpecialStatus ? 'warning' :
+                  agent.health_status === 'healthy' ? 'healthy' : undefined;
 
                 return (
-                  <div 
-                    key={agent.agent_name + idx}
-                    onClick={() => agent.id && tenant?.id && setSelectedAgent({
-                      id: agent.id,
-                      name: agent.agent_name,
-                      tenantId: tenant.id,
-                      isThrottled: agent.is_throttled,
-                      isIsolated: agent.is_isolated,
-                      isInSafeMode: agent.is_in_safe_mode
-                    })}
-                    className={cn(
-                      "p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer",
-                      agent.is_isolated ? "border-red-300 bg-red-50/50 dark:bg-red-950/20" :
-                      agent.is_throttled ? "border-amber-300 bg-amber-50/50 dark:bg-amber-950/20" :
-                      agent.is_in_safe_mode ? "border-orange-300 bg-orange-50/50 dark:bg-orange-950/20" :
-                      isOnline ? "border-green-200 bg-green-50/50 dark:bg-green-950/20" : "border-gray-200 bg-gray-50/50 dark:bg-gray-950/20"
-                    )}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">{getOsIcon(agent.os_type || 'windows')}</span>
-                        <div>
-                          <p className="font-medium">{agent.agent_name}</p>
-                          <p className="text-xs text-muted-foreground">{agent.hostname || 'N/A'}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={isOnline ? "default" : "secondary"} className={cn(
-                          isOnline ? "bg-green-500" : ""
-                        )}>
-                          {isOnline ? (
-                            <><Wifi className="w-3 h-3 mr-1" /> Online</>
-                          ) : (
-                            <><WifiOff className="w-3 h-3 mr-1" /> Offline</>
-                          )}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    {/* Rules Engine Status Badges */}
-                    {hasSpecialStatus && (
-                      <div className="mt-2">
-                        <TooltipProviderWrapper>
-                          <AgentStatusBadges
-                            isThrottled={agent.is_throttled}
-                            isIsolated={agent.is_isolated}
-                            isInSafeMode={agent.is_in_safe_mode}
-                            throttleReason={agent.throttle_reason}
-                            isolationReason={agent.isolation_reason}
-                            safeModeReason={agent.safe_mode_reason}
-                          />
-                        </TooltipProviderWrapper>
-                      </div>
-                    )}
+                  <div key={agent.agent_name + idx} className="space-y-2">
+                    <AgentCard
+                      id={agent.id || ''}
+                      name={agent.agent_name}
+                      hostname={agent.hostname}
+                      osVersion={agent.os_version || agent.os_type}
+                      agentVersion={agent.agent_version}
+                      isOnline={isOnline}
+                      healthStatus={healthStatus}
+                      lastHeartbeat={agent.last_heartbeat}
+                      uptimeSeconds={agentMetrics?.uptime_seconds ?? undefined}
+                      cpuPercent={agentMetrics?.cpu_usage_percent}
+                      memoryPercent={agentMetrics?.memory_usage_percent}
+                      diskPercent={agentMetrics?.disk_usage_percent}
+                      disks={agentDisks}
+                      isThrottled={agent.is_throttled}
+                      isIsolated={agent.is_isolated}
+                      isInSafeMode={agent.is_in_safe_mode}
+                      onClick={() => agent.id && tenant?.id && setSelectedAgent({
+                        id: agent.id,
+                        name: agent.agent_name,
+                        tenantId: tenant.id,
+                        isThrottled: agent.is_throttled,
+                        isIsolated: agent.is_isolated,
+                        isInSafeMode: agent.is_in_safe_mode
+                      })}
+                    />
                     
-                    {/* Agent info */}
-                    <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                      <p>Versão: {agent.agent_version || 'N/A'}</p>
-                      <p>SO: {agent.os_version || agent.os_type || 'N/A'}</p>
-                    </div>
-
-                    {/* Disk Metrics */}
-                    {agent.id && (
-                      <div className="mt-3 pt-3 border-t">
-                        <DiskMetricsPanel agentId={agent.id} compact />
-                      </div>
-                    )}
-
-                    {/* Last seen */}
-                    <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {agent.last_heartbeat ? lastSeenText : 'Nunca conectado'}
-                    </p>
-
                     {/* Auth Failure Alert for never_connected agents */}
                     {agent.health_status === 'never_connected' && agent.id && (
                       <TooltipProviderWrapper>
@@ -440,7 +405,7 @@ export default function AgentHealthMonitor() {
 
                     {/* Quick Actions for special states */}
                     {hasSpecialStatus && agent.id && (
-                      <div className="mt-3 pt-3 border-t">
+                      <div className="px-4 pb-3">
                         <AgentQuickActions
                           agentId={agent.id}
                           agentName={agent.agent_name}
@@ -453,12 +418,12 @@ export default function AgentHealthMonitor() {
 
                     {/* Offline Agent Actions */}
                     {!isOnline && !hasSpecialStatus && agent.id && tenant?.id && (
-                      <div className="mt-3 pt-3 border-t">
+                      <div className="px-4 pb-3">
                         <OfflineAgentActions
                           agentId={agent.id}
                           agentName={agent.agent_name}
                           tenantId={tenant.id}
-                          secondsOffline={secondsSinceHeartbeat}
+                          secondsOffline={agent.seconds_since_heartbeat || 0}
                         />
                       </div>
                     )}
