@@ -34,8 +34,8 @@ export default function Dashboard() {
     }
   }, [searchParams, setSearchParams]);
 
-  // Fetch agents
-  const { data: agents, isLoading: agentsLoading } = useQuery({
+  // Fetch agents - only when tenant is loaded
+  const { data: agents, isLoading: agentsLoading, isFetched: agentsFetched } = useQuery({
     queryKey: ['dashboard-agents', tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) return [];
@@ -119,9 +119,10 @@ export default function Dashboard() {
     },
   });
 
-  // Calculate stats
-  const onlineAgents = agents?.filter(a => getAgentStatusInfo(a).isOnline).length || 0;
-  const offlineAgents = (agents?.length || 0) - onlineAgents;
+  // Calculate stats - só calcula quando dados estão carregados
+  const hasAgentData = agentsFetched && agents && agents.length > 0;
+  const onlineAgents = hasAgentData ? agents.filter(a => getAgentStatusInfo(a).isOnline).length : 0;
+  const offlineAgents = hasAgentData ? agents.length - onlineAgents : 0;
   const criticalAlerts = alerts?.filter(a => a.severity === 'critical' || a.severity === 'high').length || 0;
 
   // Calculate security score (0-100) - Simplified without jobsStats
@@ -206,7 +207,8 @@ export default function Dashboard() {
     });
   }
 
-  if (agentsLoading) {
+  // Loading state: aguarda tenant E dados carregarem
+  if (!tenant?.id || agentsLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-64" />

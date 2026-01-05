@@ -23,8 +23,9 @@ import {
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area } from 'recharts';
 import { toast } from 'sonner';
-import { subHours } from 'date-fns';
+import { subHours, subMinutes } from 'date-fns';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { AGENT_STATUS_THRESHOLDS } from '@/lib/agent-status-constants';
 import { UI_LABELS, getAttackTypeLabel, getSeverityInfo } from '@/lib/ui-dictionary';
 import { HelpTooltip } from '@/components/ui/tech-tooltip';
 import { motion } from 'framer-motion';
@@ -106,13 +107,13 @@ export default function SecurityMonitoring() {
         .gte('created_at', since)
         .in('severity', ['high', 'critical']);
 
-      // Offline agents - filtered by tenant
-      const offlineThreshold = subHours(new Date(), 1).toISOString();
+      // Offline agents - usa threshold de alerta (1h) para segurança
+      const offlineAlertThreshold = subHours(new Date(), AGENT_STATUS_THRESHOLDS.OFFLINE_ALERT_HOURS).toISOString();
       const { count: offlineAgents } = await supabase
         .from('agents')
         .select('*', { count: 'exact' })
         .eq('tenant_id', tenant.id)
-        .lt('last_heartbeat', offlineThreshold)
+        .lt('last_heartbeat', offlineAlertThreshold)
         .eq('status', 'active');
 
       return {
