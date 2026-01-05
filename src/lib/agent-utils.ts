@@ -1,4 +1,5 @@
 // Utility functions for agent display names and formatting
+import { AGENT_STATUS_THRESHOLDS } from './agent-status-constants';
 
 /**
  * Get a user-friendly display name for an agent
@@ -35,18 +36,18 @@ export function getAgentStatusInfo(agent: {
 } {
   const now = new Date();
   const lastHeartbeat = agent.last_heartbeat ? new Date(agent.last_heartbeat) : null;
-  const twoMinutesAgo = new Date(now.getTime() - 2 * 60 * 1000);
-  const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+  const onlineThreshold = new Date(now.getTime() - AGENT_STATUS_THRESHOLDS.ONLINE_MAX_MINUTES * 60 * 1000);
+  const warningThreshold = new Date(now.getTime() - AGENT_STATUS_THRESHOLDS.WARNING_MAX_MINUTES * 60 * 1000);
   
   if (!lastHeartbeat) {
     return { label: 'Nunca Conectou', variant: 'outline', isOnline: false };
   }
   
-  if (lastHeartbeat > twoMinutesAgo) {
+  if (lastHeartbeat > onlineThreshold) {
     return { label: 'Online', variant: 'default', isOnline: true };
   }
   
-  if (lastHeartbeat > fiveMinutesAgo) {
+  if (lastHeartbeat > warningThreshold) {
     return { label: 'Intermitente', variant: 'secondary', isOnline: false };
   }
   
