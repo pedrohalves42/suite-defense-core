@@ -3049,6 +3049,7 @@ export type Database = {
           reversible: boolean | null
           review_decision: string | null
           review_justification: string | null
+          reviewed_at: string | null
           risk_level: string | null
           rollback_reason: string | null
           rollback_status: string | null
@@ -3085,6 +3086,7 @@ export type Database = {
           reversible?: boolean | null
           review_decision?: string | null
           review_justification?: string | null
+          reviewed_at?: string | null
           risk_level?: string | null
           rollback_reason?: string | null
           rollback_status?: string | null
@@ -3121,6 +3123,7 @@ export type Database = {
           reversible?: boolean | null
           review_decision?: string | null
           review_justification?: string | null
+          reviewed_at?: string | null
           risk_level?: string | null
           rollback_reason?: string | null
           rollback_status?: string | null
@@ -11600,6 +11603,7 @@ export type Database = {
           status: string
           tenant_id: string
           updated_at: string
+          verification_notes: string | null
           verified_at: string | null
           verified_by: string | null
         }
@@ -11619,6 +11623,7 @@ export type Database = {
           status?: string
           tenant_id: string
           updated_at?: string
+          verification_notes?: string | null
           verified_at?: string | null
           verified_by?: string | null
         }
@@ -11638,6 +11643,7 @@ export type Database = {
           status?: string
           tenant_id?: string
           updated_at?: string
+          verification_notes?: string | null
           verified_at?: string | null
           verified_by?: string | null
         }
