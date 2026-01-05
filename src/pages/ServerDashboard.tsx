@@ -14,6 +14,7 @@ import { OnboardingTour } from "@/components/OnboardingTour";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { Progress } from "@/components/ui/progress";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Line, LineChart as RechartsLineChart, Bar, BarChart as RechartsBarChart, Pie, PieChart as RechartsPieChart, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Tooltip } from "recharts";
 import { logger } from "@/lib/logger";
 import { getJobTypeLabel, getJobTypeLabelNoEmoji } from "@/lib/job-labels";
@@ -113,6 +114,7 @@ const ServerDashboard = () => {
   const navigate = useNavigate();
   const { showOnboarding, completeOnboarding, dismissFor7Days } = useOnboarding();
   const { isAdmin } = useIsAdmin();
+  const { isSuperAdmin } = useSuperAdmin();
   const { isOnline } = useOnlineStatus();
   const { tenant, loading: tenantLoading } = useTenant();
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -548,28 +550,29 @@ const ServerDashboard = () => {
         </Card>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            CAMADA 2 — INDICADORES SISTÊMICOS (Operacional)
-            Cada card responde UMA pergunta clara
+            CAMADA 2 — INDICADORES COM AFIRMAÇÕES (não perguntas)
+            Cada card mostra um fato claro e acionável
         ═══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {/* Card 1: Computadores Protegidos */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Card 1: Computadores Protegidos - AFIRMAÇÃO */}
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
                 <Users className="h-4 w-4 text-primary" />
-                Computadores Protegidos
+                Proteção Ativa
               </CardTitle>
-              <CardDescription className="text-[10px]">Quantos estão sob proteção?</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">{agents.length} ativos</div>
-              <p className="text-xs text-muted-foreground">
-                {Object.keys(agentsByTenant).length} empresa(s)
+              <div className="text-2xl font-bold text-foreground">
+                {agents.length} computador{agents.length !== 1 ? 'es' : ''}
+              </div>
+              <p className="text-xs text-success mt-1">
+                ✓ Monitorados em tempo real
               </p>
             </CardContent>
           </Card>
 
-          {/* Card 2: Conectividade */}
+          {/* Card 2: Conectividade - AFIRMAÇÃO */}
           <Card className={cn(
             "bg-gradient-card",
             offlineCount > 0 ? "border-warning/30" : "border-success/20"
@@ -577,22 +580,23 @@ const ServerDashboard = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
                 <Network className="h-4 w-4" />
-                Conectividade
+                Conexão
               </CardTitle>
-              <CardDescription className="text-[10px]">Existe risco silencioso agora?</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">{onlinePercentage}% online</div>
               <p className={cn(
-                "text-xs",
+                "text-xs mt-1",
                 offlineCount > 0 ? "text-warning" : "text-success"
               )}>
-                {offlineCount > 0 ? `${offlineCount} offline` : 'Todos conectados'}
+                {offlineCount > 0 
+                  ? `${offlineCount} precisa${offlineCount !== 1 ? 'm' : ''} de atenção` 
+                  : '✓ Todos conectados'}
               </p>
             </CardContent>
           </Card>
 
-          {/* Card 3: Alertas Reais */}
+          {/* Card 3: Alertas - AFIRMAÇÃO */}
           <Card className={cn(
             "bg-gradient-card",
             alerts > 0 ? "border-destructive/30" : "border-success/20"
@@ -602,123 +606,104 @@ const ServerDashboard = () => {
                 <AlertCircle className="h-4 w-4" />
                 Alertas
               </CardTitle>
-              <CardDescription className="text-[10px]">Algo exige ação humana agora?</CardDescription>
             </CardHeader>
             <CardContent>
               <div className={cn(
                 "text-2xl font-bold",
                 alerts > 0 ? "text-destructive" : "text-success"
               )}>
-                {alerts > 0 ? `${alerts} ativo(s)` : 'Nenhum'}
+                {alerts > 0 ? `${alerts} ativo${alerts !== 1 ? 's' : ''}` : 'Nenhum'}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {alerts > 0 ? 'Precisam de atenção' : 'Nenhum alerta crítico'}
+              <p className="text-xs text-muted-foreground mt-1">
+                {alerts > 0 ? 'Requer verificação' : '✓ Sem ações pendentes'}
               </p>
             </CardContent>
           </Card>
 
-          {/* Card 4: Execução */}
-          <Card className="bg-gradient-card border-accent/20">
+          {/* Card 4: Taxa de Sucesso - AFIRMAÇÃO */}
+          <Card className={cn(
+            "bg-gradient-card",
+            failedJobs > 0 ? "border-warning/30" : "border-success/20"
+          )}>
             <CardHeader className="pb-2">
               <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
                 <TrendingUp className="h-4 w-4" />
-                Execução
+                Verificações
               </CardTitle>
-              <CardDescription className="text-[10px]">O sistema está entregando?</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-foreground">{successRate}% sucesso</div>
               <p className={cn(
-                "text-xs",
-                failedJobs > 0 ? "text-warning" : "text-muted-foreground"
+                "text-xs mt-1",
+                failedJobs > 0 ? "text-warning" : "text-success"
               )}>
-                {failedJobs > 0 ? `${failedJobs} falha(s) nas 24h` : 'Tudo funcionando'}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Card 5: Empresas */}
-          <Card className="bg-gradient-card border-primary/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                <Briefcase className="h-4 w-4" />
-                Empresas
-              </CardTitle>
-              <CardDescription className="text-[10px]">O risco está concentrado?</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {Object.keys(agentsByTenant).length} monitoradas
-              </div>
-              <p className={cn(
-                "text-xs",
-                tenantsWithIssues > 0 ? "text-warning" : "text-success"
-              )}>
-                {tenantsWithIssues > 0 ? `${tenantsWithIssues} com pendências` : 'Todas saudáveis'}
+                {failedJobs > 0 
+                  ? `${failedJobs} falha${failedJobs !== 1 ? 's' : ''} nas 24h` 
+                  : '✓ Tudo funcionando'}
               </p>
             </CardContent>
           </Card>
         </div>
 
         {/* ═══════════════════════════════════════════════════════════════════
-            CAMADA 2.5 — INTEGRIDADE DO SISTEMA (Zero Trust)
-            Supply Chain + Job Integrity Score
+            CAMADA 2.5 — INTEGRIDADE DO SISTEMA (Simplificado)
+            Mostra estado geral com mensagem humanizada
         ═══════════════════════════════════════════════════════════════════ */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <IntegrityScoreCard />
-          
-          {/* Card de credenciais de acesso */}
-          <Card className="bg-gradient-card border-primary/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                <Key className="h-4 w-4 text-primary" />
-                Credenciais de Acesso
-              </CardTitle>
-              <CardDescription className="text-[10px]">Acessos autorizados no sistema</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {agentTokens.filter(t => t.is_active).length} ativos
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {agentTokens.filter(t => !t.is_active).length} inativos
-              </p>
-            </CardContent>
-          </Card>
+        {isAdmin && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <IntegrityScoreCard />
+            
+            {/* Card de credenciais de acesso - só para admin */}
+            <Card className="bg-gradient-card border-primary/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
+                  <Key className="h-4 w-4 text-primary" />
+                  Credenciais
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">
+                  {agentTokens.filter(t => t.is_active).length} ativas
+                </div>
+                <p className="text-xs text-success mt-1">
+                  ✓ Acessos autorizados
+                </p>
+              </CardContent>
+            </Card>
 
-          {/* Card de Rate Limits */}
-          <Card className="bg-gradient-card border-primary/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
-                <ShieldAlert className="h-4 w-4 text-primary" />
-                Rate Limiting
-              </CardTitle>
-              <CardDescription className="text-[10px]">Proteção contra abusos</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {rateLimits.filter(r => r.blocked_until && new Date(r.blocked_until) > new Date()).length} bloqueados
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {rateLimits.length} registros recentes
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+            {/* Card de Rate Limits - só para admin */}
+            <Card className="bg-gradient-card border-primary/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs font-medium flex items-center gap-2 text-muted-foreground">
+                  <ShieldAlert className="h-4 w-4 text-primary" />
+                  Proteção
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">
+                  {rateLimits.filter(r => r.blocked_until && new Date(r.blocked_until) > new Date()).length} bloqueados
+                </div>
+                <p className="text-xs text-success mt-1">
+                  ✓ Rate limiting ativo
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* ═══════════════════════════════════════════════════════════════════
-            CAMADA 3 — DISTRIBUIÇÃO DO RISCO (Diagnóstico)
-            Ordenado por gravidade — olhe primeiro os vermelhos
+            CAMADA 3 — DISTRIBUIÇÃO POR EMPRESA (Só para super_admin com múltiplos tenants)
+            Mostra visão multi-tenant apenas quando relevante
         ═══════════════════════════════════════════════════════════════════ */}
-        {Object.keys(agentsByTenant).length > 0 && (
+        {isSuperAdmin && Object.keys(agentsByTenant).length > 1 && (
           <Card className="bg-gradient-card border-primary/20">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Network className="h-5 w-5 text-primary" />
-                Distribuição por Empresa
+                <Briefcase className="h-5 w-5 text-primary" />
+                Visão Multi-Empresa
               </CardTitle>
               <CardDescription>
-                Ordenado por gravidade — olhe primeiro os vermelhos
+                {Object.keys(agentsByTenant).length} empresas • Ordenado por prioridade de atenção
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -744,10 +729,10 @@ const ServerDashboard = () => {
                         )}
                       >
                         {severity === 'critical' ? '🔴 Atenção' :
-                         severity === 'warning' ? '🟡 Atenção leve' : '🟢 Saudável'}
+                         severity === 'warning' ? '🟡 Atenção leve' : '🟢 Ok'}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{agentCount} computador(es)</p>
+                    <p className="text-sm text-muted-foreground">{agentCount} computador{agentCount !== 1 ? 'es' : ''}</p>
                     
                     {/* Detalhes dos problemas */}
                     {(offlineCount > 0 || failedJobsCount > 0) && (
@@ -755,13 +740,13 @@ const ServerDashboard = () => {
                         {offlineCount > 0 && (
                           <p className="text-xs text-warning flex items-center gap-1">
                             <XCircle className="h-3 w-3" />
-                            {offlineCount} computador(es) offline
+                            {offlineCount} offline
                           </p>
                         )}
                         {failedJobsCount > 0 && (
                           <p className="text-xs text-orange-500 flex items-center gap-1">
                             <AlertCircle className="h-3 w-3" />
-                            {failedJobsCount} verificação(ões) com erro
+                            {failedJobsCount} erro{failedJobsCount !== 1 ? 's' : ''}
                           </p>
                         )}
                       </div>
@@ -770,7 +755,7 @@ const ServerDashboard = () => {
                     {severity === 'healthy' && (
                       <p className="mt-3 text-xs text-success flex items-center gap-1">
                         <CheckCircle2 className="h-3 w-3" />
-                        Tudo funcionando normalmente
+                        Funcionando normalmente
                       </p>
                     )}
                   </div>
