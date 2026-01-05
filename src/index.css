@@ -164,6 +164,64 @@ All colors MUST be HSL.
       opacity: 0.8;
     }
   }
+
+  /* === ENTERPRISE DESIGN SYSTEM === */
+
+  /* Enterprise Card - estilo "cofre" */
+  .card-enterprise {
+    @apply backdrop-blur-xl bg-card/95 
+      border border-white/[0.06] 
+      shadow-[0_0_0_1px_rgba(45,158,140,0.03),0_20px_50px_rgba(0,0,0,0.4)]
+      rounded-xl;
+  }
+
+  /* Card hover enterprise */
+  .card-enterprise-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:border-white/[0.1];
+  }
+
+  /* Page header padronizado */
+  .page-header-enterprise {
+    @apply mb-6;
+  }
+  .page-header-enterprise h1,
+  .page-header-enterprise h2 {
+    @apply text-xl font-semibold text-foreground tracking-tight;
+  }
+  .page-header-enterprise p {
+    @apply text-sm text-muted-foreground/70 mt-1;
+  }
+
+  /* Stats card com borda lateral */
+  .stats-card-enterprise {
+    @apply border-l-2 bg-card/95 rounded-xl border border-white/[0.06];
+  }
+
+  /* Section label enterprise */
+  .section-label-enterprise {
+    @apply text-xs uppercase tracking-wider text-muted-foreground/60 font-medium;
+  }
+
+  /* Table enterprise */
+  .table-enterprise {
+    @apply bg-card/50 rounded-xl border border-white/[0.06];
+  }
+
+  /* Input focus enterprise */
+  .input-enterprise {
+    @apply focus:ring-2 focus:ring-primary/15 focus:border-primary/40 
+      transition-all duration-200 bg-background/50;
+  }
+
+  /* Button enterprise */
+  .btn-enterprise {
+    @apply bg-primary/90 hover:bg-primary text-primary-foreground
+      shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  .btn-enterprise-ghost {
+    @apply hover:bg-accent/30 transition-all duration-200;
+  }
 }
 
 @layer base {

@@ -49,55 +49,36 @@ export const TopBar = ({ alerts = 0 }: { alerts?: number }) => {
       )}
       <header 
         className={cn(
-          "fixed top-0 right-0 left-60 h-16 z-30 flex items-center justify-end px-6 gap-4 transition-all duration-300",
-          "bg-card/80 backdrop-blur-xl border-b border-border/50",
-          "shadow-lg shadow-primary/5",
+          "fixed top-0 right-0 left-60 h-14 z-30 flex items-center justify-end px-6 gap-4 transition-all duration-300",
+          "bg-card/80 backdrop-blur-xl border-b border-border/30",
+          "shadow-sm",
           showDiagnostics ? 'mt-10' : ''
         )}
-        style={{
-          backgroundImage: 'linear-gradient(to right, hsl(var(--primary) / 0.02), transparent)',
-        }}
       >
         {/* Notifications */}
-        <motion.div
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="relative btn-enterprise-ghost"
         >
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="relative hover:bg-accent/50 transition-all duration-300"
-          >
-            <Bell className="h-5 w-5" />
-            {alerts > 0 && (
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 500 }}
-              >
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-gradient-to-r from-red-500 to-red-600 animate-pulse">
-                  {alerts}
-                </Badge>
-              </motion.div>
-            )}
-          </Button>
-        </motion.div>
+          <Bell className="h-5 w-5 text-muted-foreground" />
+          {alerts > 0 && (
+            <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-destructive">
+              {alerts}
+            </Badge>
+          )}
+        </Button>
 
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="btn-enterprise-ghost"
             >
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="hover:bg-gradient-to-br hover:from-accent/50 hover:to-accent/30 transition-all duration-300"
-              >
-                <User className="h-5 w-5" />
-              </Button>
-            </motion.div>
+              <User className="h-5 w-5 text-muted-foreground" />
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent 
             align="end" 
