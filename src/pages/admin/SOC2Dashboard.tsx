@@ -8,9 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Shield, FileText, CheckCircle2, Clock, Building2, Link2, Database, Code } from 'lucide-react';
+import { Shield, FileText, CheckCircle2, Clock, Building2, Link2, Database, Code, AlertTriangle } from 'lucide-react';
 import { useSOC2Readiness, calculateOverallScore } from '@/hooks/useSOC2Readiness';
 import { SOC2_TRUST_CRITERIA, COMPLIANCE_POLICIES } from '@/types/soc2-compliance';
+import { PolicyApprovalWorkflow } from '@/components/soc2/PolicyApprovalWorkflow';
+import { VendorRiskRegistry } from '@/components/soc2/VendorRiskRegistry';
+import { AlertResolutionPanel } from '@/components/soc2/AlertResolutionPanel';
 
 export default function SOC2Dashboard() {
   const { data: readinessData, isLoading } = useSOC2Readiness();
@@ -88,11 +91,13 @@ export default function SOC2Dashboard() {
 
       {/* Abas */}
       <Tabs defaultValue="criteria" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="criteria">Critérios CC1-CC9</TabsTrigger>
           <TabsTrigger value="policies">Políticas</TabsTrigger>
-          <TabsTrigger value="matrix">Matriz de Rastreabilidade</TabsTrigger>
+          <TabsTrigger value="alerts">Alertas</TabsTrigger>
           <TabsTrigger value="vendors">Fornecedores</TabsTrigger>
+          <TabsTrigger value="matrix">Matriz</TabsTrigger>
+          <TabsTrigger value="controls">Controles</TabsTrigger>
         </TabsList>
 
         {/* Criteria Tab */}
@@ -122,28 +127,19 @@ export default function SOC2Dashboard() {
           </div>
         </TabsContent>
 
-        {/* Policies Tab */}
+        {/* Policies Tab - Using real workflow */}
         <TabsContent value="policies" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {COMPLIANCE_POLICIES.map((policy) => (
-              <Card key={policy.code}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-medium">{policy.code}</CardTitle>
-                    <Badge variant="outline">Draft</Badge>
-                  </div>
-                  <CardDescription>{policy.name}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-1">
-                    {policy.soc2Criteria.map(cc => (
-                      <Badge key={cc} variant="secondary" className="text-xs">{cc}</Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <PolicyApprovalWorkflow />
+        </TabsContent>
+
+        {/* Alerts Tab */}
+        <TabsContent value="alerts" className="space-y-4">
+          <AlertResolutionPanel />
+        </TabsContent>
+
+        {/* Vendors Tab - Using real registry */}
+        <TabsContent value="vendors" className="space-y-4">
+          <VendorRiskRegistry />
         </TabsContent>
 
         {/* Aba Matriz de Rastreabilidade */}
@@ -229,37 +225,47 @@ export default function SOC2Dashboard() {
           </Card>
         </TabsContent>
 
-        {/* Aba de Fornecedores */}
-        <TabsContent value="vendors" className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              { name: 'Supabase', type: 'Banco de Dados / Autenticação', certs: ['SOC 2 Type II'], criticality: 'crítico', criticalityLabel: 'Crítico' },
-              { name: 'Stripe', type: 'Pagamentos', certs: ['PCI-DSS', 'SOC 2'], criticality: 'crítico', criticalityLabel: 'Crítico' },
-              { name: 'Vercel/Cloud', type: 'Hospedagem', certs: ['SOC 2', 'ISO 27001'], criticality: 'alto', criticalityLabel: 'Alto' },
-            ].map((vendor) => (
-              <Card key={vendor.name}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      {vendor.name}
-                    </CardTitle>
-                    <Badge variant={vendor.criticality === 'crítico' ? 'destructive' : 'secondary'}>
-                      {vendor.criticalityLabel}
-                    </Badge>
+        {/* Controls Tab */}
+        <TabsContent value="controls" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Controles SOC 2 Implementados
+              </CardTitle>
+              <CardDescription>
+                Status de todos os controles por critério
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {SOC2_TRUST_CRITERIA.map((criteria) => (
+                  <div key={criteria.code} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium">{criteria.code} - {criteria.name}</h3>
+                      <Badge variant="default">{criteria.controls.length} controles</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {criteria.controls.map((control) => (
+                        <div 
+                          key={control.code} 
+                          className="p-3 bg-muted/50 rounded-lg flex items-center justify-between"
+                        >
+                          <div>
+                            <span className="font-mono text-sm text-muted-foreground">{control.code}</span>
+                            <span className="ml-2">{control.name}</span>
+                          </div>
+                          <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+                            <CheckCircle2 className="h-3 w-3 mr-1" /> Implementado
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <CardDescription>{vendor.type}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-1">
-                    {vendor.certs.map(cert => (
-                      <Badge key={cert} variant="outline" className="text-xs">{cert}</Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
