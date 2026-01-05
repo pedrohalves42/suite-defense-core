@@ -20,6 +20,8 @@ import { ProtectionTrendChart } from '@/components/admin/ProtectionTrendChart';
 import { GovernanceHealthBanner } from '@/components/admin/GovernanceHealthBanner';
 import { NotificationSetupBanner } from '@/components/admin/NotificationSetupBanner';
 import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredBanner';
+import { RBACMetricsCard } from '@/components/admin/RBACMetricsCard';
+import { SafeModeCounter } from '@/components/admin/SafeModeCounter';
 
 export default function Dashboard() {
   const { tenant } = useTenant();
@@ -484,6 +486,12 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </motion.div>
+      </div>
+
+      {/* 🛡️ RBAC Metrics + Safe Mode Counter */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <RBACMetricsCard />
+        <SafeModeCounter />
       </div>
 
       {/* Quick Links */}
