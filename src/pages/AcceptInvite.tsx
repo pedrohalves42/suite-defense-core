@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Shield, Loader2, AlertCircle } from 'lucide-react';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
+import { SecurityFooter, BrandSignature } from '@/components/auth/SecurityFooter';
+import { TrustIndicators } from '@/components/auth/TrustIndicators';
 
 const passwordSchema = z.string()
   .min(8, 'Senha deve ter pelo menos 8 caracteres')
@@ -153,8 +155,12 @@ export default function AcceptInvite() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(45,158,140,0.02),transparent_60%)] pointer-events-none" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+          <p className="text-sm text-muted-foreground/60">Verificando convite...</p>
+        </div>
       </div>
     );
   }
@@ -164,43 +170,66 @@ export default function AcceptInvite() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center justify-center mb-4">
-            <div className="p-3 bg-gradient-cyber rounded-xl border border-primary/20 shadow-glow-primary">
-              <Shield className="h-8 w-8 text-primary" />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
+      {/* Subtle enterprise background */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(45,158,140,0.02),transparent_60%)] pointer-events-none" />
+      
+      <Card className="w-full max-w-[460px] backdrop-blur-xl bg-card/95 border border-white/[0.06] shadow-[0_0_0_1px_rgba(0,255,200,0.05),0_30px_80px_rgba(0,0,0,0.7)] rounded-[14px] relative z-10">
+        <CardHeader className="space-y-1 text-center pb-2">
+          <div className="flex justify-center mb-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-tr from-primary/15 to-accent/15 rounded-full blur-xl" />
+              <div className="relative bg-gradient-to-br from-primary/10 to-accent/10 p-3.5 rounded-full backdrop-blur-sm border border-primary/10">
+                <Shield className="h-8 w-8 text-primary/80" />
+              </div>
             </div>
           </div>
-          <CardTitle className="text-2xl text-center">Aceitar Convite</CardTitle>
-          <CardDescription className="text-center">
-            Voce foi convidado como <strong>{invite.role}</strong>
+          <CardTitle className="text-xl font-semibold tracking-tight text-foreground/90">
+            Ativar Acesso Seguro
+          </CardTitle>
+          <CardDescription className="text-[13px] text-muted-foreground/70">
+            Bem-vindo ao ambiente CyberShield Cloud
           </CardDescription>
+          
+          <div className="pt-2">
+            <TrustIndicators />
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-6 pb-6">
           <form onSubmit={handleAccept} className="space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-xs font-medium text-muted-foreground/80">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={invite.email}
                 disabled
-                className="bg-secondary"
+                className="h-10 bg-background/30 border-border/30 text-muted-foreground/70"
               />
             </div>
-            <div>
-              <Label htmlFor="fullName">Nome Completo</Label>
+            <div className="space-y-2">
+              <Label htmlFor="role" className="text-xs font-medium text-muted-foreground/80">Função</Label>
+              <Input
+                id="role"
+                type="text"
+                value={invite.role}
+                disabled
+                className="h-10 bg-background/30 border-border/30 text-muted-foreground/70 capitalize"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="fullName" className="text-xs font-medium text-muted-foreground/80">Nome Completo</Label>
               <Input
                 id="fullName"
                 placeholder="Seu nome completo"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
+                className="h-10 bg-background/50 border-border/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
               />
             </div>
-            <div>
-              <Label htmlFor="password">Senha</Label>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-xs font-medium text-muted-foreground/80">Senha</Label>
               <Input
                 id="password"
                 type="password"
@@ -212,24 +241,25 @@ export default function AcceptInvite() {
                 }}
                 required
                 minLength={8}
+                className="h-10 bg-background/50 border-border/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
               />
               {passwordErrors.length > 0 && (
                 <div className="mt-2 space-y-1">
                   {passwordErrors.map((error, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-xs text-destructive">
+                    <div key={idx} className="flex items-start gap-2 text-[10px] text-destructive/80">
                       <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
                       <span>{error}</span>
                     </div>
                   ))}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground mt-2">
-                Senha deve conter: 8+ caracteres, maiuscula, minuscula, numero e caractere especial
+              <p className="text-[10px] text-muted-foreground/50 mt-2">
+                8+ caracteres, maiuscula, minuscula, numero e caractere especial
               </p>
             </div>
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full h-10 bg-primary/90 hover:bg-primary text-primary-foreground font-medium transition-all duration-200" 
               disabled={submitting}
             >
               {submitting ? (
@@ -238,9 +268,12 @@ export default function AcceptInvite() {
                   Criando conta...
                 </>
               ) : (
-                'Aceitar Convite e Criar Conta'
+                'Ativar Acesso e Criar Conta'
               )}
             </Button>
+            
+            <SecurityFooter />
+            <BrandSignature />
           </form>
         </CardContent>
       </Card>

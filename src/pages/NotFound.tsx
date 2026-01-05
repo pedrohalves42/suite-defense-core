@@ -1,22 +1,43 @@
-import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
-import { logger } from "@/lib/logger";
+import { Link } from "react-router-dom";
+import { Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BrandSignature } from "@/components/auth/SecurityFooter";
 
 const NotFound = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    logger.error("404 Error: User attempted to access non-existent route", undefined, { pathname: location.pathname });
-  }, [location.pathname]);
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-3xl font-bold text-foreground">404</h1>
-        <p className="mb-4 text-lg text-muted-foreground">Oops! Page not found</p>
-        <a href="/" className="text-primary underline hover:text-primary/80">
-          Return to Home
-        </a>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
+      {/* Subtle enterprise background */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(45,158,140,0.02),transparent_60%)] pointer-events-none" />
+      
+      <div className="text-center space-y-8 relative z-10">
+        <div className="relative mx-auto w-fit">
+          <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-accent/10 rounded-full blur-2xl scale-150" />
+          <Shield className="h-20 w-20 text-muted-foreground/20 relative" />
+        </div>
+        
+        <div className="space-y-3">
+          <h1 className="text-7xl font-bold text-foreground/10 tracking-tight">404</h1>
+          <p className="text-lg text-muted-foreground/60 font-medium">
+            Área não encontrada
+          </p>
+          <p className="text-sm text-muted-foreground/40 max-w-xs mx-auto">
+            A página solicitada não existe ou foi movida para outro local
+          </p>
+        </div>
+        
+        <Button 
+          variant="outline" 
+          asChild
+          className="border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all duration-200"
+        >
+          <Link to="/login">
+            Retornar ao Acesso Seguro
+          </Link>
+        </Button>
+        
+        <div className="pt-4">
+          <BrandSignature />
+        </div>
       </div>
     </div>
   );

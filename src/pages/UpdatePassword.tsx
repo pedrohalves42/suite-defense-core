@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Shield } from 'lucide-react';
+import { Shield, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
+import { SecurityFooter, BrandSignature } from '@/components/auth/SecurityFooter';
 
 const passwordSchema = z.object({
   password: z
@@ -94,28 +95,42 @@ const UpdatePassword = () => {
 
   if (!validToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(45,158,140,0.02),transparent_60%)] pointer-events-none" />
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary/60" />
+          <p className="text-sm text-muted-foreground/60">Verificando sessão...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 flex flex-col items-center">
-          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-            <Shield className="w-6 h-6 text-primary" />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
+      {/* Subtle enterprise background */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(45,158,140,0.02),transparent_60%)] pointer-events-none" />
+      
+      <Card className="w-full max-w-[460px] backdrop-blur-xl bg-card/95 border border-white/[0.06] shadow-[0_0_0_1px_rgba(0,255,200,0.05),0_30px_80px_rgba(0,0,0,0.7)] rounded-[14px] relative z-10">
+        <CardHeader className="space-y-1 text-center pb-2">
+          <div className="flex justify-center mb-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-tr from-primary/15 to-accent/15 rounded-full blur-xl" />
+              <div className="relative bg-gradient-to-br from-primary/10 to-accent/10 p-3.5 rounded-full backdrop-blur-sm border border-primary/10">
+                <Shield className="h-8 w-8 text-primary/80" />
+              </div>
+            </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-center">Nova senha</CardTitle>
-          <CardDescription className="text-center">
-            Escolha uma nova senha para sua conta
+          <CardTitle className="text-xl font-semibold tracking-tight text-foreground/90">
+            Definir Nova Senha Segura
+          </CardTitle>
+          <CardDescription className="text-[13px] text-muted-foreground/70">
+            Crie uma senha forte para proteger seu acesso
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-6 pb-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Nova senha</Label>
+              <Label htmlFor="password" className="text-xs font-medium text-muted-foreground/80">Nova senha</Label>
               <Input
                 id="password"
                 type="password"
@@ -126,10 +141,11 @@ const UpdatePassword = () => {
                 minLength={8}
                 maxLength={72}
                 disabled={loading}
+                className="h-10 bg-background/50 border-border/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar senha</Label>
+              <Label htmlFor="confirmPassword" className="text-xs font-medium text-muted-foreground/80">Confirmar senha</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -140,11 +156,19 @@ const UpdatePassword = () => {
                 minLength={8}
                 maxLength={72}
                 disabled={loading}
+                className="h-10 bg-background/50 border-border/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Atualizando...' : 'Atualizar senha'}
+            <Button 
+              type="submit" 
+              className="w-full h-10 bg-primary/90 hover:bg-primary text-primary-foreground font-medium transition-all duration-200" 
+              disabled={loading}
+            >
+              {loading ? 'Atualizando...' : 'Atualizar Senha'}
             </Button>
+            
+            <SecurityFooter />
+            <BrandSignature />
           </form>
         </CardContent>
       </Card>
