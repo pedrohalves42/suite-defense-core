@@ -11,6 +11,7 @@ import { AIInsightExplainer } from "@/components/admin/AIInsightExplainer";
 import { InsightsTrendChart } from "@/components/admin/InsightsTrendChart";
 import { InsightFeedbackButtons } from "@/components/insights/InsightFeedbackButtons";
 import { FeedbackStatsCard } from "@/components/admin/FeedbackStatsCard";
+import { AIApprovalMetrics } from "@/components/admin/AIApprovalMetrics";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 interface AIInsight {
@@ -345,12 +346,13 @@ export default function AIInsights() {
         </motion.div>
       </div>
 
-      {/* 📈 CAMADA 3: Gráfico de Tendência + Feedback Stats */}
+      {/* 📈 CAMADA 3: Gráfico de Tendência + Feedback Stats + Approval Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-1">
           <InsightsTrendChart />
         </div>
         <FeedbackStatsCard />
+        <AIApprovalMetrics />
       </div>
 
       {/* Insights Tabs - LINGUAGEM HUMANA */}
