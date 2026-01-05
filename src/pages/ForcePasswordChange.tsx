@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Shield, Lock, Eye, EyeOff, Loader2, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { SecurityFooter, BrandSignature } from '@/components/auth/SecurityFooter';
 
 const passwordSchema = z.object({
   newPassword: z.string()
@@ -99,64 +99,56 @@ export default function ForcePasswordChange() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-background via-background to-card">
-      {/* Animated Background Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(174,255,237,0.03),transparent_50%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_50%,#000_70%,transparent_110%)] opacity-20 pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background relative overflow-hidden">
+      {/* Subtle enterprise background */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(45,158,140,0.02),transparent_60%)] pointer-events-none" />
       
-      <Card className="w-full max-w-md backdrop-blur-xl bg-card/80 border-2 border-warning/30 shadow-2xl shadow-warning/10 animate-fade-in relative z-10">
-        <CardHeader className="space-y-1 text-center pb-6">
-          <div className="flex justify-center mb-6">
+      <Card className="w-full max-w-[460px] backdrop-blur-xl bg-card/95 border border-white/[0.06] shadow-[0_0_0_1px_rgba(0,255,200,0.05),0_30px_80px_rgba(0,0,0,0.7)] rounded-[14px] relative z-10">
+        <CardHeader className="space-y-1 text-center pb-2">
+          <div className="flex justify-center mb-4">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-tr from-warning/20 to-primary/20 rounded-full blur-xl animate-pulse-glow" />
-              <div className="relative bg-gradient-to-br from-warning/10 to-primary/10 p-4 rounded-full backdrop-blur-sm border border-warning/20">
-                <Shield className="h-12 w-12 text-warning drop-shadow-[0_0_8px_hsl(var(--warning))]" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-primary/15 to-accent/15 rounded-full blur-xl" />
+              <div className="relative bg-gradient-to-br from-primary/10 to-accent/10 p-3.5 rounded-full backdrop-blur-sm border border-primary/10">
+                <Shield className="h-8 w-8 text-primary/80" />
               </div>
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold text-foreground">
-            Troca de Senha Obrigatória
+          <CardTitle className="text-xl font-semibold tracking-tight text-foreground/90">
+            Atualização de Segurança
           </CardTitle>
-          <CardDescription className="text-base text-muted-foreground/80">
-            Por segurança, você deve definir uma nova senha antes de continuar.
+          <CardDescription className="text-[13px] text-muted-foreground/70">
+            Por segurança, defina uma nova senha para continuar
           </CardDescription>
         </CardHeader>
 
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-5">
-            <Alert className="border-warning/50 bg-warning/10">
-              <AlertTriangle className="h-4 w-4 text-warning" />
-              <AlertDescription className="text-sm">
-                Esta é uma medida de segurança. Defina uma senha forte e memorável.
-              </AlertDescription>
-            </Alert>
-
+          <CardContent className="space-y-5 px-6 pb-6">
             {/* New Password */}
             <div className="space-y-2">
-              <Label htmlFor="newPassword" className="font-medium">Nova Senha</Label>
+              <Label htmlFor="newPassword" className="text-xs font-medium text-muted-foreground/80">Nova Senha</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                 <Input
                   id="newPassword"
                   type={showNewPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="pl-10 pr-10"
+                  className="h-10 pl-10 pr-10 bg-background/50 border-border/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
                   autoComplete="new-password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
                   tabIndex={-1}
                 >
-                  {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
               {errors.newPassword && (
-                <p className="text-sm text-destructive">{errors.newPassword}</p>
+                <p className="text-xs text-destructive">{errors.newPassword}</p>
               )}
 
               {/* Password Strength Indicator */}
@@ -166,33 +158,33 @@ export default function ForcePasswordChange() {
                     {[1, 2, 3, 4].map((level) => (
                       <div
                         key={level}
-                        className={`h-1.5 flex-1 rounded-full transition-colors ${
+                        className={`h-1 flex-1 rounded-full transition-colors ${
                           passwordStrength >= level
                             ? level <= 2
-                              ? 'bg-destructive'
+                              ? 'bg-destructive/60'
                               : level === 3
-                              ? 'bg-warning'
-                              : 'bg-primary'
-                            : 'bg-muted'
+                              ? 'bg-warning/60'
+                              : 'bg-primary/60'
+                            : 'bg-muted/30'
                         }`}
                       />
                     ))}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className={`flex items-center gap-1 ${passwordChecks.length ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {passwordChecks.length ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                  <div className="grid grid-cols-2 gap-2 text-[10px]">
+                    <div className={`flex items-center gap-1 ${passwordChecks.length ? 'text-primary/80' : 'text-muted-foreground/50'}`}>
+                      {passwordChecks.length ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
                       8+ caracteres
                     </div>
-                    <div className={`flex items-center gap-1 ${passwordChecks.upper ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {passwordChecks.upper ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                    <div className={`flex items-center gap-1 ${passwordChecks.upper ? 'text-primary/80' : 'text-muted-foreground/50'}`}>
+                      {passwordChecks.upper ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
                       Maiúscula
                     </div>
-                    <div className={`flex items-center gap-1 ${passwordChecks.lower ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {passwordChecks.lower ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                    <div className={`flex items-center gap-1 ${passwordChecks.lower ? 'text-primary/80' : 'text-muted-foreground/50'}`}>
+                      {passwordChecks.lower ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
                       Minúscula
                     </div>
-                    <div className={`flex items-center gap-1 ${passwordChecks.number ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {passwordChecks.number ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                    <div className={`flex items-center gap-1 ${passwordChecks.number ? 'text-primary/80' : 'text-muted-foreground/50'}`}>
+                      {passwordChecks.number ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
                       Número
                     </div>
                   </div>
@@ -202,34 +194,34 @@ export default function ForcePasswordChange() {
 
             {/* Confirm Password */}
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="font-medium">Confirmar Senha</Label>
+              <Label htmlFor="confirmPassword" className="text-xs font-medium text-muted-foreground/80">Confirmar Senha</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
                 <Input
                   id="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="pl-10 pr-10"
+                  className="h-10 pl-10 pr-10 bg-background/50 border-border/50 focus:border-primary/40 focus:ring-2 focus:ring-primary/10 transition-all"
                   autoComplete="new-password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
                   tabIndex={-1}
                 >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                <p className="text-xs text-destructive">{errors.confirmPassword}</p>
               )}
               {confirmPassword && newPassword && confirmPassword === newPassword && (
-                <p className="text-sm text-primary flex items-center gap-1">
-                  <CheckCircle2 size={14} />
+                <p className="text-[10px] text-primary/80 flex items-center gap-1">
+                  <CheckCircle2 size={10} />
                   Senhas conferem
                 </p>
               )}
@@ -237,7 +229,7 @@ export default function ForcePasswordChange() {
 
             <Button 
               type="submit" 
-              className="w-full h-11 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+              className="w-full h-10 bg-primary/90 hover:bg-primary text-primary-foreground font-medium transition-all duration-200"
               disabled={loading || passwordStrength < 4}
             >
               {loading ? (
@@ -249,6 +241,9 @@ export default function ForcePasswordChange() {
                 'Definir Nova Senha'
               )}
             </Button>
+            
+            <SecurityFooter />
+            <BrandSignature />
           </CardContent>
         </form>
       </Card>
