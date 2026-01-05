@@ -12,11 +12,13 @@ export function RiskGauge({ score, level, size = "md", showLabel = true, classNa
   // Calculate rotation: 0 = -90deg (left), 100 = 90deg (right)
   const rotation = -90 + (score / 100) * 180;
   
+  // INVERTED: High score = good (green), Low score = bad (red)
+  // This represents a SECURITY SCORE where 100 = fully protected
   const getColors = () => {
-    if (score <= 20) return { bg: "from-success/20 to-success/10", text: "text-success", stroke: "#22c55e" };
-    if (score <= 40) return { bg: "from-emerald-500/20 to-emerald-500/10", text: "text-emerald-500", stroke: "#10b981" };
-    if (score <= 60) return { bg: "from-warning/20 to-warning/10", text: "text-warning", stroke: "#eab308" };
-    if (score <= 80) return { bg: "from-orange-500/20 to-orange-500/10", text: "text-orange-500", stroke: "#f97316" };
+    if (score >= 90) return { bg: "from-success/20 to-success/10", text: "text-success", stroke: "#22c55e" };
+    if (score >= 70) return { bg: "from-emerald-500/20 to-emerald-500/10", text: "text-emerald-500", stroke: "#10b981" };
+    if (score >= 50) return { bg: "from-warning/20 to-warning/10", text: "text-warning", stroke: "#eab308" };
+    if (score >= 30) return { bg: "from-orange-500/20 to-orange-500/10", text: "text-orange-500", stroke: "#f97316" };
     return { bg: "from-destructive/20 to-destructive/10", text: "text-destructive", stroke: "#ef4444" };
   };
 
