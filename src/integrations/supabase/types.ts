@@ -3476,6 +3476,9 @@ export type Database = {
           confidence_score: number | null
           created_at: string
           description: string
+          dismissal_reason: string | null
+          dismissed_at: string | null
+          dismissed_by: string | null
           evidence: Json
           evidence_pack: Json | null
           final_outcome: string | null
@@ -3507,6 +3510,9 @@ export type Database = {
           confidence_score?: number | null
           created_at?: string
           description: string
+          dismissal_reason?: string | null
+          dismissed_at?: string | null
+          dismissed_by?: string | null
           evidence?: Json
           evidence_pack?: Json | null
           final_outcome?: string | null
@@ -3538,6 +3544,9 @@ export type Database = {
           confidence_score?: number | null
           created_at?: string
           description?: string
+          dismissal_reason?: string | null
+          dismissed_at?: string | null
+          dismissed_by?: string | null
           evidence?: Json
           evidence_pack?: Json | null
           final_outcome?: string | null

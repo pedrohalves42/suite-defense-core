@@ -5,12 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, XCircle, Clock, AlertTriangle, Info, Loader2, Sparkles, Brain, Shield } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertTriangle, Info, Loader2, Sparkles, Brain, Shield, AlertOctagon } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useApproveAiAction, useRejectAiAction, requiresFormalApproval, RISK_LEVEL_COLORS } from '@/hooks/useAiActionApproval';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { useApprovalMetrics } from '@/components/admin/AIApprovalMetrics';
+import { cn } from '@/lib/utils';
 
 interface AIAction {
   id: string;
@@ -20,6 +24,7 @@ interface AIAction {
   action_payload: any;
   status: string;
   created_at: string;
+  risk_level?: string;
   ai_insights?: {
     title: string;
     description: string;
@@ -60,11 +65,17 @@ export default function AIActionApproval() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
+  const [selectedRiskLevel, setSelectedRiskLevel] = useState<string | null>(null);
   const [approvalNotes, setApprovalNotes] = useState('');
+  const [reviewedDetails, setReviewedDetails] = useState(false);
 
   // Use the new approval hooks
   const approveAction = useApproveAiAction();
   const rejectAction = useRejectAiAction();
+  
+  // AJUSTE 1: Check for suspicious pattern
+  const { data: approvalMetrics } = useApprovalMetrics();
+  const isSuspiciousPattern = approvalMetrics?.isSuspiciousPattern || false;
 
   // Buscar acoes pendentes
   const { data: pendingActions, isLoading } = useQuery({
@@ -120,13 +131,15 @@ export default function AIActionApproval() {
   });
 
   const handleApproveClick = (actionId: string, riskLevel: string | null) => {
-    if (requiresFormalApproval(riskLevel)) {
-      // Open dialog for formal approval with notes
+    // AJUSTE 1: Se padrão suspeito OU high/critical, exigir aprovação formal
+    if (isSuspiciousPattern || requiresFormalApproval(riskLevel)) {
       setSelectedActionId(actionId);
+      setSelectedRiskLevel(riskLevel);
       setApprovalNotes('');
+      setReviewedDetails(false);
       setApprovalDialogOpen(true);
     } else {
-      // Direct approval for low/medium risk
+      // Direct approval for low/medium risk when not suspicious
       setExecutingActions(prev => new Set(prev).add(actionId));
       approveAction.mutate(
         { actionId },
@@ -149,8 +162,13 @@ export default function AIActionApproval() {
     setExecutingActions(prev => new Set(prev).add(selectedActionId));
     setApprovalDialogOpen(false);
     
+    // AJUSTE 1: Passar forcedReview quando padrão suspeito
     approveAction.mutate(
-      { actionId: selectedActionId, approvalNotes },
+      { 
+        actionId: selectedActionId, 
+        approvalNotes,
+        forcedReview: isSuspiciousPattern || requiresFormalApproval(selectedRiskLevel),
+      },
       {
         onSettled: () => {
           setExecutingActions(prev => {
@@ -351,9 +369,15 @@ export default function AIActionApproval() {
         {pendingActions?.map((action) => {
           const config = getActionConfig(action.action_type);
           const isExecuting = executingActions.has(action.id);
+          const isHighRisk = config?.risk_level === 'high' || config?.risk_level === 'critical';
 
           return (
-            <Card key={action.id}>
+            <Card 
+              key={action.id}
+              className={cn(
+                isHighRisk && "border-2 border-orange-500/50 bg-orange-500/5"
+              )}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -373,6 +397,16 @@ export default function AIActionApproval() {
                     {action.ai_insights && getSeverityBadge(action.ai_insights.severity)}
                   </div>
                 </div>
+                
+                {/* AJUSTE 2: Banner de alto risco mais visível */}
+                {isHighRisk && (
+                  <div className="mt-3 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg flex items-center gap-2">
+                    <AlertOctagon className="h-5 w-5 text-orange-500" />
+                    <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                      ⚠️ Ação crítica — revisão atenta recomendada antes de aprovar
+                    </span>
+                  </div>
+                )}
               </CardHeader>
 
               <CardContent className="space-y-4">
@@ -441,12 +475,18 @@ export default function AIActionApproval() {
                   </div>
                 )}
 
-                {/* Botoes de Acao - Com indicador de aprovação formal para high/critical */}
-                <div className="flex gap-2 pt-4 border-t">
-                  {requiresFormalApproval(config?.risk_level || null) && (
-                    <Badge variant="outline" className="gap-1 mr-2">
+                {/* Botoes de Acao - Com indicador de aprovação formal para high/critical ou padrão suspeito */}
+                <div className="flex gap-2 pt-4 border-t flex-wrap">
+                  {(requiresFormalApproval(config?.risk_level || null) || isSuspiciousPattern) && (
+                    <Badge 
+                      variant="outline" 
+                      className={cn(
+                        "gap-1 mr-2",
+                        isSuspiciousPattern && "border-amber-500 text-amber-600"
+                      )}
+                    >
                       <Shield className="h-3 w-3" />
-                      Aprovação Formal Requerida
+                      {isSuspiciousPattern ? 'Revisão Obrigatória (Padrão 100%)' : 'Aprovação Formal Requerida'}
                     </Badge>
                   )}
                   <Button
@@ -482,26 +522,68 @@ export default function AIActionApproval() {
         })}
       </div>
 
-      {/* Dialog de Aprovação Formal para Ações High/Critical */}
+      {/* Dialog de Aprovação Formal para Ações High/Critical ou Padrão Suspeito */}
       <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-amber-500" />
-              Aprovação Formal Requerida
+              {isSuspiciousPattern ? (
+                <>
+                  <AlertTriangle className="h-5 w-5 text-amber-500" />
+                  Revisão Obrigatória - Padrão Suspeito Detectado
+                </>
+              ) : (
+                <>
+                  <Shield className="h-5 w-5 text-amber-500" />
+                  Aprovação Formal Requerida
+                </>
+              )}
             </DialogTitle>
             <DialogDescription>
-              Esta ação requer aprovação formal por ser de alto risco. 
-              Por favor, adicione notas explicando sua decisão para fins de auditoria.
+              {isSuspiciousPattern ? (
+                <>
+                  <strong className="text-amber-600">⚠️ Taxa de aprovação em 100%.</strong> Para evitar 
+                  fadiga de aprovação, você deve confirmar que revisou os detalhes desta ação.
+                </>
+              ) : (
+                <>Esta ação requer aprovação formal por ser de alto risco. 
+                Por favor, adicione notas explicando sua decisão para fins de auditoria.</>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <Textarea
-              placeholder="Notas de aprovação (obrigatório para auditoria)..."
-              value={approvalNotes}
-              onChange={(e) => setApprovalNotes(e.target.value)}
-              rows={4}
-            />
+            {/* AJUSTE 1: Checkbox de confirmação de revisão */}
+            <div className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+              <Checkbox 
+                id="reviewedDetails" 
+                checked={reviewedDetails}
+                onCheckedChange={(checked) => setReviewedDetails(checked === true)}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label 
+                  htmlFor="reviewedDetails" 
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Confirmo que revisei os detalhes desta ação
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Este registro será mantido para auditoria
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="approvalNotes">
+                Notas de aprovação {(isSuspiciousPattern || requiresFormalApproval(selectedRiskLevel)) ? '(obrigatório)' : '(opcional)'}
+              </Label>
+              <Textarea
+                id="approvalNotes"
+                placeholder="Explique por que está aprovando esta ação..."
+                value={approvalNotes}
+                onChange={(e) => setApprovalNotes(e.target.value)}
+                rows={4}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApprovalDialogOpen(false)}>
@@ -509,7 +591,11 @@ export default function AIActionApproval() {
             </Button>
             <Button 
               onClick={handleConfirmApproval}
-              disabled={approveAction.isPending}
+              disabled={
+                approveAction.isPending || 
+                !reviewedDetails || 
+                ((isSuspiciousPattern || requiresFormalApproval(selectedRiskLevel)) && !approvalNotes.trim())
+              }
               className="gap-2"
             >
               {approveAction.isPending ? (

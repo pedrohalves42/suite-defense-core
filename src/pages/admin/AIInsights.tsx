@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,13 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Brain, AlertTriangle, Info, CheckCircle, TrendingUp, Clock, Sparkles, Shield } from "lucide-react";
+import { Brain, AlertTriangle, Info, CheckCircle, TrendingUp, Clock, Sparkles, Shield, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AIInsightExplainer } from "@/components/admin/AIInsightExplainer";
 import { InsightsTrendChart } from "@/components/admin/InsightsTrendChart";
 import { InsightFeedbackButtons } from "@/components/insights/InsightFeedbackButtons";
 import { FeedbackStatsCard } from "@/components/admin/FeedbackStatsCard";
 import { AIApprovalMetrics } from "@/components/admin/AIApprovalMetrics";
+import { DismissInsightDialog } from "@/components/insights/DismissInsightDialog";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 interface AIInsight {
@@ -40,7 +42,8 @@ interface Statistics {
 
 export default function AIInsights() {
   const queryClient = useQueryClient();
-
+  const [dismissDialogOpen, setDismissDialogOpen] = useState(false);
+  const [selectedInsightForDismiss, setSelectedInsightForDismiss] = useState<{ id: string; title: string } | null>(null);
   const { data, isLoading } = useQuery({
     queryKey: ['ai-insights'],
     queryFn: async () => {
@@ -515,6 +518,21 @@ export default function AIInsights() {
                           Criar Jobs de Coleta
                         </Button>
                       )}
+                      
+                      {/* AJUSTE 3: Botão de Dispensar Insight */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedInsightForDismiss({ id: insight.id, title: insight.title });
+                          setDismissDialogOpen(true);
+                        }}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Dispensar
+                      </Button>
+                      
                       <Button
                         size="sm"
                         onClick={() => acknowledgeMutation.mutate(insight.id)}
@@ -576,6 +594,16 @@ export default function AIInsights() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Dialog para Dispensar Insight */}
+      {selectedInsightForDismiss && (
+        <DismissInsightDialog
+          open={dismissDialogOpen}
+          onOpenChange={setDismissDialogOpen}
+          insightId={selectedInsightForDismiss.id}
+          insightTitle={selectedInsightForDismiss.title}
+        />
+      )}
     </div>
   );
 }
