@@ -18,6 +18,7 @@ import { getOsDisplayName, getOsIcon } from '@/lib/os-utils';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import { useTenant } from '@/hooks/useTenant';
+import { prepareJobForInsert } from '@/lib/job-utils';
 
 interface AgentMetrics {
   id: string;
@@ -196,23 +197,75 @@ export default function AgentMonitoringAdvanced() {
   }, [alerts]);
 
   // Resolver grupo de alertas
-  const resolveAlertGroup = async (alertType: string, title: string) => {
+  const resolveAlertGroup = async (alertType: string, title: string, agentId?: string | null) => {
     try {
-      const { error } = await supabase
+      // Obter usuário atual (CRÍTICO para alertas críticos)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: 'Erro',
+          description: 'Você precisa estar logado para resolver alertas',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Resolver alertas com resolved_by (exigido pelo trigger para alertas críticos)
+      const { data: resolvedAlerts, error } = await supabase
         .from('system_alerts')
         .update({ 
           resolved: true, 
           resolved_at: new Date().toISOString(),
+          resolved_by: user.id,
         })
         .eq('alert_type', alertType)
         .ilike('title', title)
-        .eq('resolved', false);
+        .eq('resolved', false)
+        .select('id, agent_id');
 
       if (error) throw error;
 
+      const resolvedCount = resolvedAlerts?.length || 0;
+
+      // Criar job de verificação se houver agent_id
+      const targetAgentId = agentId || resolvedAlerts?.[0]?.agent_id;
+      let jobCreated = false;
+      
+      if (targetAgentId && tenant?.id) {
+        // Buscar nome do agente (obrigatório para a tabela jobs)
+        const targetAgent = agents.find(a => a.id === targetAgentId);
+        const agentName = targetAgent?.name || 'Agente Desconhecido';
+        
+        const jobPayload = { 
+          source: 'alert_resolution',
+          alert_type: alertType,
+          resolved_by: user.id,
+        };
+        
+        // Calcular payload_hash usando a função utilitária
+        const jobWithHash = await prepareJobForInsert({
+          tenant_id: tenant.id,
+          agent_id: targetAgentId,
+          agent_name: agentName,
+          type: 'health_report',
+          status: 'queued',
+          payload: jobPayload,
+        });
+        
+        const { error: jobError } = await supabase
+          .from('jobs')
+          .insert(jobWithHash);
+
+        if (!jobError) {
+          jobCreated = true;
+        } else {
+          logger.warn('Failed to create health_report job', jobError);
+        }
+      }
+
       toast({
-        title: 'Alertas Resolvidos',
-        description: 'Todos os alertas do grupo foram marcados como resolvidos',
+        title: '✓ Alertas Resolvidos',
+        description: `${resolvedCount} alerta(s) arquivado(s)${jobCreated ? ' e verificação iniciada' : ''}`,
       });
       
       fetchDashboardData();
@@ -220,7 +273,7 @@ export default function AgentMonitoringAdvanced() {
       logger.error('Error resolving alert group', error);
       toast({
         title: 'Erro',
-        description: 'Falha ao resolver alertas',
+        description: 'Falha ao resolver alertas. Verifique se está logado.',
         variant: 'destructive',
       });
     }
