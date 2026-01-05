@@ -17,6 +17,7 @@ import type { Json } from '@/integrations/supabase/types';
 export interface AiActionApprovalParams {
   actionId: string;
   approvalNotes?: string;
+  forcedReview?: boolean;
 }
 
 export function useApproveAiAction() {
@@ -24,7 +25,7 @@ export function useApproveAiAction() {
   const { tenant } = useTenant();
 
   return useMutation({
-    mutationFn: async ({ actionId, approvalNotes }: AiActionApprovalParams) => {
+    mutationFn: async ({ actionId, approvalNotes, forcedReview }: AiActionApprovalParams) => {
       // 1. Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('User not authenticated');
@@ -57,6 +58,7 @@ export function useApproveAiAction() {
         risk_level: action.risk_level,
         insight_id: action.insight_id,
         approval_notes: approvalNotes || null,
+        forced_review: forcedReview || false, // AJUSTE 1: Registrar se foi revisão forçada
         approved_at: now,
         approved_by: user.id,
         user_email: user.email,
