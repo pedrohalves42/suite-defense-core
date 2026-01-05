@@ -10755,6 +10755,8 @@ export type Database = {
       }
       security_events: {
         Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
           agent_id: string | null
           agent_name: string | null
           created_at: string
@@ -10763,6 +10765,9 @@ export type Database = {
           event_type: string | null
           id: string
           policy_id: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
           rule_id: string | null
           severity: string
           status: string
@@ -10771,6 +10776,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
           agent_id?: string | null
           agent_name?: string | null
           created_at?: string
@@ -10779,6 +10786,9 @@ export type Database = {
           event_type?: string | null
           id?: string
           policy_id?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           rule_id?: string | null
           severity: string
           status?: string
@@ -10787,6 +10797,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
           agent_id?: string | null
           agent_name?: string | null
           created_at?: string
@@ -10795,6 +10807,9 @@ export type Database = {
           event_type?: string | null
           id?: string
           policy_id?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           rule_id?: string | null
           severity?: string
           status?: string
