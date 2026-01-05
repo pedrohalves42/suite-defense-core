@@ -92,22 +92,77 @@ interface AuditLog {
   user_id: string | null;
 }
 
+// Helper: Formatar ações desconhecidas de forma legível
+const formatUnknownAction = (action: string, resource: string): string => {
+  // Mapear recursos para português
+  const resourceMap: Record<string, string> = {
+    'agent': 'computador',
+    'job': 'verificação',
+    'report': 'relatório',
+    'user': 'usuário',
+    'ai_action': 'sistema automático',
+    'enrollment_key': 'chave de registro',
+    'invite': 'convite',
+    'tenant': 'empresa',
+    'policy': 'política',
+  };
+  
+  // Transformar snake_case/camelCase para texto legível
+  const actionText = action
+    .replace(/^(UPDATE|INSERT|DELETE|SELECT)_/i, '')
+    .replace(/_/g, ' ')
+    .replace(/([A-Z])/g, ' $1')
+    .toLowerCase()
+    .trim();
+  
+  const resourceText = resourceMap[resource] || resource;
+  return `Ação em ${resourceText}`;
+};
+
 // Helper: Humanizar ações do sistema
 const humanizeAction = (action: string, resource: string): { icon: string; text: string } => {
   const map: Record<string, { icon: string; text: string }> = {
+    // Computadores
     'agent.enroll': { icon: '✓', text: 'Novo computador registrado' },
+    'agent_enrolled': { icon: '✓', text: 'Novo computador conectado' },
     'agent.heartbeat': { icon: '💓', text: 'Computador se comunicou' },
+    'cleanup_agent': { icon: '🗑️', text: 'Computador foi removido' },
+    
+    // Verificações (Jobs)
     'job.create': { icon: '⚙️', text: 'Nova verificação iniciada' },
+    'job_created': { icon: '⚙️', text: 'Nova verificação criada' },
     'job.complete': { icon: '✓', text: 'Verificação concluída com sucesso' },
     'job.fail': { icon: '⚠️', text: 'Verificação não foi concluída' },
+    'job_creation_denied': { icon: '🚫', text: 'Verificação não autorizada' },
+    
+    // Sistema inteligente (AI)
+    'UPDATE_ai_action': { icon: '🤖', text: 'Sistema aplicou correção automática' },
+    'ai_action': { icon: '🤖', text: 'Ação automática executada' },
+    'INSERT_ai_action': { icon: '🤖', text: 'Correção automática registrada' },
+    
+    // Chaves de registro
+    'enrollment_key_used': { icon: '🔑', text: 'Computador registrado com chave' },
+    'create_enrollment_key': { icon: '🔑', text: 'Nova chave de registro criada' },
+    'list_enrollment_key': { icon: '📋', text: 'Chaves de registro consultadas' },
+    
+    // Usuários
+    'create_user': { icon: '👤', text: 'Novo usuário criado' },
+    'invite_sent': { icon: '📧', text: 'Convite enviado para novo usuário' },
+    
+    // Scans e relatórios
     'scan.complete': { icon: '🛡️', text: 'Verificação de vírus realizada' },
+    'report.create': { icon: '📄', text: 'Novo relatório gerado' },
+    
+    // Login
     'login.success': { icon: '🔐', text: 'Login realizado' },
     'login.fail': { icon: '⚠️', text: 'Tentativa de login falhou' },
-    'report.create': { icon: '📄', text: 'Novo relatório gerado' },
+    
+    // Alertas
     'alert.create': { icon: '🚨', text: 'Novo alerta detectado' },
     'alert.resolve': { icon: '✓', text: 'Alerta resolvido' },
   };
-  return map[action] || { icon: '•', text: `${action} (${resource})` };
+  
+  return map[action] || { icon: '•', text: formatUnknownAction(action, resource) };
 };
 
 const ServerDashboard = () => {
