@@ -9,6 +9,8 @@ import { Brain, AlertTriangle, Info, CheckCircle, TrendingUp, Clock, Sparkles, S
 import { toast } from "sonner";
 import { AIInsightExplainer } from "@/components/admin/AIInsightExplainer";
 import { InsightsTrendChart } from "@/components/admin/InsightsTrendChart";
+import { InsightFeedbackButtons } from "@/components/insights/InsightFeedbackButtons";
+import { FeedbackStatsCard } from "@/components/admin/FeedbackStatsCard";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 interface AIInsight {
@@ -343,8 +345,13 @@ export default function AIInsights() {
         </motion.div>
       </div>
 
-      {/* 📈 CAMADA 3: Gráfico de Tendência */}
-      <InsightsTrendChart />
+      {/* 📈 CAMADA 3: Gráfico de Tendência + Feedback Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2">
+          <InsightsTrendChart />
+        </div>
+        <FeedbackStatsCard />
+      </div>
 
       {/* Insights Tabs - LINGUAGEM HUMANA */}
       <Tabs defaultValue="pending" className="space-y-4">
@@ -440,6 +447,11 @@ export default function AIInsights() {
                       </div>
                     </div>
                   )}
+
+                  {/* Feedback Buttons */}
+                  <div className="pt-2 border-t">
+                    <InsightFeedbackButtons insightId={insight.id} />
+                  </div>
 
                   {/* Metadata and Actions */}
                   <div className="flex items-center justify-between pt-2 border-t flex-wrap gap-2">
@@ -546,7 +558,10 @@ export default function AIInsights() {
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
+                  {/* Feedback on acknowledged insights */}
+                  <InsightFeedbackButtons insightId={insight.id} compact />
+                  
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{formatDate(insight.created_at)}</span>
                     {insight.acknowledged_at && (

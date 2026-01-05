@@ -18,6 +18,8 @@ import { getAgentStatusInfo } from '@/lib/agent-utils';
 import { toast } from 'sonner';
 import { ProtectionTrendChart } from '@/components/admin/ProtectionTrendChart';
 import { GovernanceHealthBanner } from '@/components/admin/GovernanceHealthBanner';
+import { NotificationSetupBanner } from '@/components/admin/NotificationSetupBanner';
+import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredBanner';
 
 export default function Dashboard() {
   const { tenant } = useTenant();
@@ -228,6 +230,12 @@ export default function Dashboard() {
         <h1>Painel Principal</h1>
         <p>Visão geral da proteção dos seus computadores</p>
       </div>
+
+      {/* 🚀 ONBOARDING BANNER - Setup inicial obrigatório */}
+      <OnboardingRequiredBanner />
+
+      {/* 🔔 NOTIFICATION SETUP BANNER */}
+      <NotificationSetupBanner />
 
       {/* 🔐 GOVERNANCE HEALTH BANNER - MFA Enforcement + Metrics */}
       <GovernanceHealthBanner />
