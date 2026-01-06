@@ -9,6 +9,8 @@ import { OutdatedAgentsBanner } from '@/components/OutdatedAgentsBanner';
 import { TenantSelector } from '@/components/TenantSelector';
 import { TenantSetupWizard } from '@/components/TenantSetupWizard';
 import { useTenantSetup } from '@/hooks/useTenantSetup';
+import { GlobalSearch } from '@/components/navigation/GlobalSearch';
+import { FirstTimeSetupWizard } from '@/components/onboarding/FirstTimeSetupWizard';
 
 export const AdminLayout = () => {
   const { isAdmin, loading } = useIsAdmin();
@@ -47,13 +49,19 @@ export const AdminLayout = () => {
 
   return (
     <div className="max-w-7xl mx-auto">
+      {/* First Time Setup Wizard */}
+      <FirstTimeSetupWizard />
+      
       {/* Tenant Setup Wizard - shows when tenant needs initial configuration */}
       <TenantSetupWizard open={needsSetup} />
 
       {/* Header with Tenant Selector */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-foreground">Painel Administrativo</h1>
-        <TenantSelector />
+        <div className="flex items-center gap-3">
+          <GlobalSearch />
+          <TenantSelector />
+        </div>
       </div>
       
       <OutdatedAgentsBanner />

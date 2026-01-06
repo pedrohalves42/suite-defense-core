@@ -630,3 +630,7 @@ schedule = "0 4 * * *"
 [functions.check-agent-integrity]
 verify_jwt = false
 schedule = "*/15 * * * *"
+
+# === Job Failure Pattern Analysis ===
+[functions.analyze-job-failure-patterns]
+verify_jwt = true

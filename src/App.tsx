@@ -124,6 +124,7 @@ import {
   MyProtection 
 } from "./pages/client";
 import MFASetupRequired from "./pages/admin/MFASetupRequired";
+import ExecutiveDashboard from "./pages/admin/ExecutiveDashboard";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 
 const App = () => (
@@ -185,6 +186,7 @@ const App = () => (
                 <Route index element={<ActionCenterDashboard />} />
                 <Route path="action-center" element={<ActionCenterDashboard />} />
                 <Route path="dashboard" element={<Dashboard />} />
+                <Route path="executive" element={<ExecutiveDashboard />} />
                 <Route path="monitoring-advanced" element={<AgentMonitoringAdvanced />} />
                 <Route path="members" element={<Members />} />
                 <Route path="plan-upgrade" element={<PlanUpgrade />} />
