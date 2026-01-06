@@ -5,7 +5,8 @@ import {
   Brain, Terminal, Globe, Clock, Gauge, 
   Bell, TrendingUp, PieChart, Target, DollarSign, Presentation, Scale, 
   Heart, Search, Monitor, AppWindow, GitBranch,
-  Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck, FileBarChart
+  Download, Building2, FileText, Cpu, Network, Percent, ClipboardCheck, FileBarChart,
+  AlertCircle, Lightbulb, Wrench
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
@@ -120,6 +121,10 @@ export const AppSidebar = () => {
     { icon: GitBranch, label: 'Versões', to: '/admin/agent-releases' },
     { icon: Terminal, label: 'Diagnóstico', to: '/admin/agent-diagnostics' },
     { icon: Gauge, label: 'Saúde Sistema', to: '/admin/system-health' },
+    { icon: AlertCircle, label: 'Resolução Alertas', to: '/admin/alert-resolution' },
+    { icon: Lightbulb, label: 'Triagem Insights', to: '/admin/insight-triage' },
+    { icon: TrendingUp, label: 'Gap de Confiança', to: '/admin/confidence-gap' },
+    { icon: Wrench, label: 'Saúde de Jobs', to: '/admin/job-health' },
     { icon: ClipboardCheck, label: 'SOC 2', to: '/admin/soc2-compliance' },
     { icon: FileText, label: 'Auditoria', to: '/admin/system-audit' },
     { icon: Scale, label: 'Compliance', to: '/admin/compliance-timeline' },
