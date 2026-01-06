@@ -127,6 +127,7 @@ import MFASetupRequired from "./pages/admin/MFASetupRequired";
 import ExecutiveDashboard from "./pages/admin/ExecutiveDashboard";
 import AlertResolutionCenter from "./pages/admin/AlertResolutionCenter";
 import InsightTriageCenter from "./pages/admin/InsightTriageCenter";
+import ConfidenceGapDashboardPage from "./pages/admin/ConfidenceGapDashboard";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 
 const App = () => (
@@ -248,6 +249,8 @@ const App = () => (
                 <Route path="archived-agents" element={<ArchivedAgents />} />
                 <Route path="alert-resolution" element={<AlertResolutionCenter />} />
                 <Route path="insight-triage" element={<InsightTriageCenter />} />
+                <Route path="confidence-gap" element={<ConfidenceGapDashboardPage />} />
+                <Route path="job-health" element={<JobsHealthDashboard />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}
