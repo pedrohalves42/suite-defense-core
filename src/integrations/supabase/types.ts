@@ -18064,6 +18064,7 @@ export type Database = {
           total_attempts: number
         }[]
       }
+      check_offline_agents_for_playbook: { Args: never; Returns: undefined }
       check_segregation_rule: {
         Args: {
           _action_type: string
