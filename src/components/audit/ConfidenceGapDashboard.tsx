@@ -170,8 +170,14 @@ export default function ConfidenceGapDashboard() {
       {/* Recalculate Button */}
       <div className="flex justify-end">
         <Button 
-          onClick={() => calculateGap.mutate(tenant?.id || '')}
-          disabled={calculateGap.isPending || !tenant?.id}
+          onClick={() => calculateGap.mutate({
+            auditId: latestGap?.audit_id || '',
+            redTeamId: latestGap?.red_team_id || '',
+            anaScore: latestGap?.ana_score || 70,
+            redScore: latestGap?.red_score || 65,
+            dimensionGaps: latestGap?.dimension_gaps || {},
+          })}
+          disabled={calculateGap.isPending || !tenant?.id || !latestGap?.audit_id}
           variant="outline"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${calculateGap.isPending ? 'animate-spin' : ''}`} />
