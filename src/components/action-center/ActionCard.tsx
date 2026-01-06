@@ -56,6 +56,30 @@ interface ActionCardProps {
 function extractKeyMetrics(context: Record<string, unknown>, triggerType: string): { icon: typeof Cpu; label: string; value: string }[] {
   const metrics: { icon: typeof Cpu; label: string; value: string }[] = [];
   
+  // First, try to extract from evidence.evidence_pack if it exists (real agent-specific data)
+  const evidence = context.evidence as Record<string, unknown> | undefined;
+  const evidencePack = evidence?.evidence_pack as Array<Record<string, unknown>> | undefined;
+  
+  if (evidencePack && Array.isArray(evidencePack) && evidencePack.length > 0) {
+    const agentData = evidencePack[0];
+    
+    if (typeof agentData.cpu_usage_percent === 'number') {
+      metrics.push({ icon: Cpu, label: 'CPU', value: `${Math.round(agentData.cpu_usage_percent)}%` });
+    }
+    if (typeof agentData.memory_usage_percent === 'number') {
+      metrics.push({ icon: MemoryStick, label: 'RAM', value: `${Math.round(agentData.memory_usage_percent)}%` });
+    }
+    if (typeof agentData.disk_usage_percent === 'number') {
+      metrics.push({ icon: HardDrive, label: 'Disco', value: `${Math.round(agentData.disk_usage_percent)}%` });
+    }
+    
+    // If we got metrics from evidence_pack, return them
+    if (metrics.length > 0) {
+      return metrics.slice(0, 4);
+    }
+  }
+  
+  // Fallback to direct context fields
   if (typeof context.cpu_percent === 'number') {
     metrics.push({ icon: Cpu, label: 'CPU', value: `${Math.round(context.cpu_percent)}%` });
   }
@@ -164,7 +188,10 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
 
   // Use humanized copy if available, otherwise use dynamic or from map
   const displayTitle = item.humanized?.title || dynamicContent.title || copy.title;
-  const displayDescription = item.humanized?.description || dynamicContent.description || item.description || copy.description;
+  // PRIORITY: Use item.description (real AI description) first, then fallbacks
+  // The AI generates specific descriptions like "O agente DESKTOP-X registrou pico de CPU 97%"
+  // which are much better than generic copy.description
+  const displayDescription = item.humanized?.description || item.description || dynamicContent.description || copy.description;
   // Updated CTA text with humanized options
   const displayCta = isInvestigateAction 
     ? 'Verificar agora' 

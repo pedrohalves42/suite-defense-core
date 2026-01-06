@@ -205,8 +205,75 @@ export function humanizeEvidence(evidence: Record<string, unknown>): HumanizedEv
   }
 
   const items: (HumanizedEvidence & { priority: number })[] = [];
+  
+  // First, check if there's agent-specific data in evidence_pack
+  const evidencePack = evidence.evidence_pack as Array<Record<string, unknown>> | undefined;
+  
+  // If evidence_pack exists and has agent-specific data, extract it
+  if (evidencePack && Array.isArray(evidencePack) && evidencePack.length > 0) {
+    // Use the first (or most relevant) agent's data from the pack
+    const agentData = evidencePack[0];
+    
+    // Extract real metrics from evidence_pack
+    if (agentData.cpu_usage_percent !== undefined) {
+      const cpuValue = Number(agentData.cpu_usage_percent);
+      if (!isNaN(cpuValue)) {
+        items.push({
+          label: 'CPU',
+          value: `${cpuValue.toFixed(0)}%`,
+          originalKey: 'cpu_usage_percent',
+          priority: 1,
+        });
+      }
+    }
+    
+    if (agentData.memory_usage_percent !== undefined) {
+      const memValue = Number(agentData.memory_usage_percent);
+      if (!isNaN(memValue)) {
+        items.push({
+          label: 'Memória',
+          value: `${memValue.toFixed(0)}%`,
+          originalKey: 'memory_usage_percent',
+          priority: 2,
+        });
+      }
+    }
+    
+    if (agentData.disk_usage_percent !== undefined) {
+      const diskValue = Number(agentData.disk_usage_percent);
+      if (!isNaN(diskValue)) {
+        items.push({
+          label: 'Disco',
+          value: `${diskValue.toFixed(0)}%`,
+          originalKey: 'disk_usage_percent',
+          priority: 3,
+        });
+      }
+    }
+    
+    if (agentData.agent_name) {
+      items.push({
+        label: 'Agente',
+        value: String(agentData.agent_name),
+        originalKey: 'agent_name',
+        priority: 0,
+      });
+    }
+    
+    // If we got data from evidence_pack, return it
+    if (items.length > 0) {
+      return items
+        .sort((a, b) => a.priority - b.priority)
+        .slice(0, 6)
+        .map(({ label, value, originalKey }) => ({ label, value, originalKey }));
+    }
+  }
 
+  // Fallback to standard evidence processing
   for (const [key, value] of Object.entries(evidence)) {
+    // Skip evidence_pack as we already processed it
+    if (key === 'evidence_pack') continue;
+    
     const config = EVIDENCE_LABELS[key];
     if (config && value !== null && value !== undefined) {
       items.push({
