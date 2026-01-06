@@ -19,6 +19,8 @@ import { formatBrazilDateTime } from '@/lib/date-utils';
 import { cn } from '@/lib/utils';
 import { useTenant } from '@/hooks/useTenant';
 import { prepareJobForInsert } from '@/lib/job-utils';
+import { AgentVersionStatus } from '@/components/monitoring/AgentVersionStatus';
+import { OrphanedJobsAlert } from '@/components/monitoring/OrphanedJobsAlert';
 
 interface AgentMetrics {
   id: string;
@@ -34,6 +36,7 @@ interface AgentMetrics {
   disk_usage: number | null;
   uptime_hours: number | null;
   metrics_age_minutes: number | null;
+  agent_version?: string;
 }
 
 interface DashboardSummary {
@@ -210,7 +213,10 @@ export default function AgentMonitoringAdvanced() {
         return;
       }
 
+      logger.info('[resolveAlertGroup] Resolvendo alertas:', { alertType, title });
+
       // Resolver alertas com resolved_by (exigido pelo trigger para alertas críticos)
+      // CORREÇÃO: Usar .eq() ao invés de .ilike() para match exato
       const { data: resolvedAlerts, error } = await supabase
         .from('system_alerts')
         .update({ 
@@ -219,13 +225,23 @@ export default function AgentMonitoringAdvanced() {
           resolved_by: user.id,
         })
         .eq('alert_type', alertType)
-        .ilike('title', title)
+        .eq('title', title)
         .eq('resolved', false)
         .select('id, agent_id');
 
       if (error) throw error;
 
       const resolvedCount = resolvedAlerts?.length || 0;
+
+      // MELHORIA: Feedback quando nenhum alerta foi encontrado
+      if (resolvedCount === 0) {
+        toast({
+          title: 'Nenhum alerta encontrado',
+          description: `Não foram encontrados alertas pendentes com este título`,
+          variant: 'default',
+        });
+        return;
+      }
 
       // Criar job de verificação se houver agent_id
       const targetAgentId = agentId || resolvedAlerts?.[0]?.agent_id;
@@ -269,11 +285,11 @@ export default function AgentMonitoringAdvanced() {
       });
       
       fetchDashboardData();
-    } catch (error) {
+    } catch (error: any) {
       logger.error('Error resolving alert group', error);
       toast({
-        title: 'Erro',
-        description: 'Falha ao resolver alertas. Verifique se está logado.',
+        title: 'Erro ao resolver alertas',
+        description: error?.message || 'Falha ao resolver alertas. Verifique se está logado.',
         variant: 'destructive',
       });
     }
@@ -469,6 +485,24 @@ export default function AgentMonitoringAdvanced() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Status de Versões dos Agentes */}
+      <AgentVersionStatus 
+        agents={agents.map(a => ({ 
+          id: a.id, 
+          name: a.name, 
+          agent_version: a.agent_version,
+          is_online: a.is_online 
+        }))} 
+        tenantId={tenant?.id || null}
+        onRefresh={() => fetchDashboardData()}
+      />
+
+      {/* Jobs Órfãos */}
+      <OrphanedJobsAlert 
+        tenantId={tenant?.id || null}
+        onRefresh={() => fetchDashboardData()}
+      />
 
       {/* Problemas Silenciosos */}
       {silentProblems.length > 0 && (
