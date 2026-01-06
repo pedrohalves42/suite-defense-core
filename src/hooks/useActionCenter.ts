@@ -144,13 +144,24 @@ export function useExecuteActionItem() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, { action }) => {
-      const messages: Record<string, string> = {
-        execute: 'Ação executada com sucesso',
-        ignore: 'Ação ignorada',
-        acknowledge: 'Alerta reconhecido',
-      };
-      toast.success(messages[action] || 'Operação concluída');
+    onSuccess: (response, { action, sourceType }) => {
+      // Mensagens específicas baseadas no tipo de resposta
+      let message = 'Operação concluída';
+      
+      if (response?.status === 'reviewed_no_action') {
+        message = 'Insight revisado - sem ações automatizadas disponíveis';
+      } else if (response?.status === 'acknowledged') {
+        message = 'Alerta reconhecido com sucesso';
+      } else {
+        const messages: Record<string, string> = {
+          execute: sourceType === 'ai_insight' ? 'Recomendação aplicada' : 'Ação executada com sucesso',
+          ignore: 'Item ignorado',
+          acknowledge: 'Alerta reconhecido',
+        };
+        message = messages[action] || 'Operação concluída';
+      }
+      
+      toast.success(message);
       queryClient.invalidateQueries({ queryKey: ['action-center', tenant?.id] });
       queryClient.invalidateQueries({ queryKey: ['playbook-executions-pending'] });
     },

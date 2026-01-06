@@ -61,8 +61,31 @@ function extractKeyMetrics(context: Record<string, unknown>, triggerType: string
   const evidencePack = evidence?.evidence_pack as Array<Record<string, unknown>> | undefined;
   
   if (evidencePack && Array.isArray(evidencePack) && evidencePack.length > 0) {
-    const agentData = evidencePack[0];
+    // Real structure: [{"value": {"cpu": 93, "disk": 51, "memory": 70}, "data_point": "Agente com Problema: DESKTOP-X"}]
+    const agentProblemEntry = evidencePack.find(entry => 
+      typeof entry.data_point === 'string' && (entry.data_point as string).startsWith('Agente com Problema:')
+    );
     
+    if (agentProblemEntry && typeof agentProblemEntry.value === 'object' && agentProblemEntry.value !== null) {
+      const agentMetrics = agentProblemEntry.value as Record<string, unknown>;
+      
+      if (typeof agentMetrics.cpu === 'number') {
+        metrics.push({ icon: Cpu, label: 'CPU', value: `${Math.round(agentMetrics.cpu)}%` });
+      }
+      if (typeof agentMetrics.memory === 'number') {
+        metrics.push({ icon: MemoryStick, label: 'RAM', value: `${Math.round(agentMetrics.memory)}%` });
+      }
+      if (typeof agentMetrics.disk === 'number') {
+        metrics.push({ icon: HardDrive, label: 'Disco', value: `${Math.round(agentMetrics.disk)}%` });
+      }
+      
+      if (metrics.length > 0) {
+        return metrics.slice(0, 4);
+      }
+    }
+    
+    // Fallback: try legacy flat structure
+    const agentData = evidencePack[0];
     if (typeof agentData.cpu_usage_percent === 'number') {
       metrics.push({ icon: Cpu, label: 'CPU', value: `${Math.round(agentData.cpu_usage_percent)}%` });
     }
@@ -73,7 +96,6 @@ function extractKeyMetrics(context: Record<string, unknown>, triggerType: string
       metrics.push({ icon: HardDrive, label: 'Disco', value: `${Math.round(agentData.disk_usage_percent)}%` });
     }
     
-    // If we got metrics from evidence_pack, return them
     if (metrics.length > 0) {
       return metrics.slice(0, 4);
     }
