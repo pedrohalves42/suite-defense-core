@@ -125,6 +125,8 @@ import {
 } from "./pages/client";
 import MFASetupRequired from "./pages/admin/MFASetupRequired";
 import ExecutiveDashboard from "./pages/admin/ExecutiveDashboard";
+import AlertResolutionCenter from "./pages/admin/AlertResolutionCenter";
+import InsightTriageCenter from "./pages/admin/InsightTriageCenter";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 
 const App = () => (
@@ -244,6 +246,8 @@ const App = () => (
                 <Route path="software-knowledge-base" element={<SoftwareKnowledgeBase />} />
                 <Route path="automations" element={<Automations />} />
                 <Route path="archived-agents" element={<ArchivedAgents />} />
+                <Route path="alert-resolution" element={<AlertResolutionCenter />} />
+                <Route path="insight-triage" element={<InsightTriageCenter />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}
