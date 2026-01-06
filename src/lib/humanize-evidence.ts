@@ -209,55 +209,90 @@ export function humanizeEvidence(evidence: Record<string, unknown>): HumanizedEv
   // First, check if there's agent-specific data in evidence_pack
   const evidencePack = evidence.evidence_pack as Array<Record<string, unknown>> | undefined;
   
-  // If evidence_pack exists and has agent-specific data, extract it
+  // If evidence_pack exists, parse its actual structure
+  // Real structure: [{"value": 10.84, "data_point": "Uso Médio de CPU"}, {"value": {"cpu": 93, "disk": 51}, "data_point": "Agente com Problema: DESKTOP-X"}]
   if (evidencePack && Array.isArray(evidencePack) && evidencePack.length > 0) {
-    // Use the first (or most relevant) agent's data from the pack
-    const agentData = evidencePack[0];
+    // Find the "Agente com Problema" entry which has real agent-specific data
+    const agentProblemEntry = evidencePack.find(entry => 
+      typeof entry.data_point === 'string' && entry.data_point.startsWith('Agente com Problema:')
+    );
     
-    // Extract real metrics from evidence_pack
-    if (agentData.cpu_usage_percent !== undefined) {
-      const cpuValue = Number(agentData.cpu_usage_percent);
-      if (!isNaN(cpuValue)) {
+    if (agentProblemEntry && typeof agentProblemEntry.value === 'object' && agentProblemEntry.value !== null) {
+      const agentMetrics = agentProblemEntry.value as Record<string, unknown>;
+      const agentName = (agentProblemEntry.data_point as string).replace('Agente com Problema: ', '');
+      
+      items.push({
+        label: 'Agente',
+        value: agentName,
+        originalKey: 'agent_name',
+        priority: 0,
+      });
+      
+      if (typeof agentMetrics.cpu === 'number') {
         items.push({
           label: 'CPU',
-          value: `${cpuValue.toFixed(0)}%`,
+          value: `${Math.round(agentMetrics.cpu)}%`,
+          originalKey: 'cpu',
+          priority: 1,
+        });
+      }
+      
+      if (typeof agentMetrics.memory === 'number') {
+        items.push({
+          label: 'Memória',
+          value: `${Math.round(agentMetrics.memory)}%`,
+          originalKey: 'memory',
+          priority: 2,
+        });
+      }
+      
+      if (typeof agentMetrics.disk === 'number') {
+        items.push({
+          label: 'Disco',
+          value: `${Math.round(agentMetrics.disk)}%`,
+          originalKey: 'disk',
+          priority: 3,
+        });
+      }
+    } else {
+      // Fallback: try legacy flat structure
+      const agentData = evidencePack[0];
+      
+      if (typeof agentData.cpu_usage_percent === 'number') {
+        items.push({
+          label: 'CPU',
+          value: `${Math.round(agentData.cpu_usage_percent)}%`,
           originalKey: 'cpu_usage_percent',
           priority: 1,
         });
       }
-    }
-    
-    if (agentData.memory_usage_percent !== undefined) {
-      const memValue = Number(agentData.memory_usage_percent);
-      if (!isNaN(memValue)) {
+      
+      if (typeof agentData.memory_usage_percent === 'number') {
         items.push({
           label: 'Memória',
-          value: `${memValue.toFixed(0)}%`,
+          value: `${Math.round(agentData.memory_usage_percent)}%`,
           originalKey: 'memory_usage_percent',
           priority: 2,
         });
       }
-    }
-    
-    if (agentData.disk_usage_percent !== undefined) {
-      const diskValue = Number(agentData.disk_usage_percent);
-      if (!isNaN(diskValue)) {
+      
+      if (typeof agentData.disk_usage_percent === 'number') {
         items.push({
           label: 'Disco',
-          value: `${diskValue.toFixed(0)}%`,
+          value: `${Math.round(agentData.disk_usage_percent)}%`,
           originalKey: 'disk_usage_percent',
           priority: 3,
         });
       }
-    }
-    
-    if (agentData.agent_name) {
-      items.push({
-        label: 'Agente',
-        value: String(agentData.agent_name),
-        originalKey: 'agent_name',
-        priority: 0,
-      });
+      
+      if (agentData.agent_name) {
+        items.push({
+          label: 'Agente',
+          value: String(agentData.agent_name),
+          originalKey: 'agent_name',
+          priority: 0,
+        });
+      }
     }
     
     // If we got data from evidence_pack, return it

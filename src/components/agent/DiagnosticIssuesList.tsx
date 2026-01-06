@@ -29,6 +29,91 @@ const SEVERITY_ICONS = {
   info: Info,
 } as const;
 
+// Mapeamento de chaves técnicas para português amigável
+const FIELD_LABELS: Record<string, string> = {
+  attempt: 'Tentativa',
+  success: 'Sucesso',
+  component: 'Componente',
+  action: 'Ação',
+  version: 'Versão',
+  state: 'Estado',
+  job_type: 'Tipo de Tarefa',
+  execution_id: 'ID da Execução',
+  status: 'Status',
+  error: 'Erro',
+  message: 'Mensagem',
+  timestamp: 'Data/Hora',
+  duration: 'Duração',
+  count: 'Quantidade',
+  cpu: 'CPU',
+  memory: 'Memória',
+  disk: 'Disco',
+  agent_name: 'Agente',
+  hostname: 'Hostname',
+  ip_address: 'Endereço IP',
+  last_seen: 'Última Atividade',
+  created_at: 'Criado em',
+  updated_at: 'Atualizado em',
+  reason: 'Motivo',
+  type: 'Tipo',
+  source: 'Origem',
+  target: 'Destino',
+  value: 'Valor',
+  threshold: 'Limite',
+  current: 'Atual',
+  expected: 'Esperado',
+};
+
+function formatValue(key: string, value: unknown): string {
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'boolean') return value ? 'Sim' : 'Não';
+  if (typeof value === 'number') {
+    if (key.includes('percent') || key === 'cpu' || key === 'memory' || key === 'disk') {
+      return `${value.toFixed(1)}%`;
+    }
+    if (key.includes('duration') || key.includes('seconds')) {
+      return `${value.toFixed(1)}s`;
+    }
+    return value.toLocaleString('pt-BR');
+  }
+  if (typeof value === 'string') {
+    // Try to parse as date
+    if (key.includes('at') || key.includes('timestamp') || key.includes('date')) {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleString('pt-BR');
+      }
+    }
+    return value;
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+function HumanizedDetails({ details }: { details: Record<string, unknown> }) {
+  const entries = Object.entries(details).filter(([, v]) => v !== null && v !== undefined);
+  
+  if (entries.length === 0) return null;
+  
+  return (
+    <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
+      {entries.map(([key, value]) => {
+        const label = FIELD_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const formattedValue = formatValue(key, value);
+        
+        return (
+          <div key={key} className="flex items-start gap-2 text-sm">
+            <span className="text-muted-foreground min-w-[100px] flex-shrink-0">{label}:</span>
+            <span className="font-medium break-all">{formattedValue}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 interface DiagnosticIssueItemProps {
   issue: DiagnosticIssue;
   compact?: boolean;
@@ -119,12 +204,10 @@ function DiagnosticIssueItem({ issue, compact, showActions = true, onAction }: D
             </div>
           )}
 
-          {/* Details in full mode */}
+          {/* Details in full mode - humanized */}
           {!compact && issue.details && Object.keys(issue.details).length > 0 && (
             <div className="mt-2">
-              <pre className="text-xs bg-muted p-2 rounded overflow-x-auto">
-                {JSON.stringify(issue.details, null, 2)}
-              </pre>
+              <HumanizedDetails details={issue.details} />
             </div>
           )}
 
