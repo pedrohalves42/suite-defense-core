@@ -23,6 +23,7 @@ import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredB
 import { RBACMetricsCard } from '@/components/admin/RBACMetricsCard';
 import { SafeModeCounter } from '@/components/admin/SafeModeCounter';
 import { GapsSummaryCard } from '@/components/admin/GapsSummaryCard';
+import { SystemCyclesHealthCard } from '@/components/admin/SystemCyclesHealthCard';
 
 export default function Dashboard() {
   const { tenant } = useTenant();
@@ -245,6 +246,9 @@ export default function Dashboard() {
 
       {/* 📊 GAPS SUMMARY - Ciclos e pendências do sistema */}
       <GapsSummaryCard />
+
+      {/* 🔄 CYCLES HEALTH - Saúde dos ciclos operacionais */}
+      <SystemCyclesHealthCard />
 
       {/* 🔐 CARD PRINCIPAL DE STATUS - Responde "Estou protegido?" em 3 segundos */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
