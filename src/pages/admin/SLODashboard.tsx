@@ -10,6 +10,8 @@ import { formatBrazilDateTime } from "@/lib/date-utils";
 import { HelpTooltip } from "@/components/ui/tech-tooltip";
 import { BlastRadiusPoliciesCard } from "@/components/slo/BlastRadiusPoliciesCard";
 import { ForensicSnapshotsCard } from "@/components/slo/ForensicSnapshotsCard";
+import { useCalculatedSLOs } from "@/hooks/useSLOData";
+import { SectionDivider } from "@/components/ui/section-divider";
 import { 
   Activity, 
   CheckCircle, 
@@ -71,6 +73,9 @@ export default function SLODashboard() {
   const [jobStats, setJobStats] = useState<JobStats | null>(null);
   const [agentStats, setAgentStats] = useState<AgentStats | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  // Use calculated SLOs hook for real-time metrics
+  const { data: calculatedSLOs, isLoading: sloLoading } = useCalculatedSLOs();
 
   useEffect(() => {
     if (tenantId) {
@@ -433,7 +438,84 @@ export default function SLODashboard() {
         </Card>
       </div>
 
+      {/* SLOs Calculados em Tempo Real */}
+      <SectionDivider label="Métricas em Tempo Real" />
+      
+      {calculatedSLOs && (
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card className={calculatedSLOs.heartbeat_success.is_breached ? "border-red-500/50" : "border-green-500/50"}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Activity className="h-4 w-4" />
+                Heartbeat
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {calculatedSLOs.heartbeat_success.value.toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Meta: {calculatedSLOs.heartbeat_success.target}% • {calculatedSLOs.heartbeat_success.sample_size} agentes
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className={calculatedSLOs.job_success.is_breached ? "border-red-500/50" : "border-green-500/50"}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Zap className="h-4 w-4" />
+                Jobs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {calculatedSLOs.job_success.value.toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Meta: {calculatedSLOs.job_success.target}% • {calculatedSLOs.job_success.sample_size} jobs
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className={calculatedSLOs.agent_uptime.is_breached ? "border-red-500/50" : "border-green-500/50"}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Server className="h-4 w-4" />
+                Uptime
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {calculatedSLOs.agent_uptime.value.toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Meta: {calculatedSLOs.agent_uptime.target}% • {calculatedSLOs.agent_uptime.sample_size} agentes
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className={calculatedSLOs.enrollment_success.is_breached ? "border-red-500/50" : "border-green-500/50"}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Enrollment
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {calculatedSLOs.enrollment_success.value.toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Meta: {calculatedSLOs.enrollment_success.target}% • {calculatedSLOs.enrollment_success.sample_size} chaves
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Estatísticas Detalhadas */}
+      <SectionDivider label="Estatísticas Detalhadas" />
+      
       <div className="grid gap-4 md:grid-cols-2">
         {/* Computadores */}
         <Card>

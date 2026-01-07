@@ -26,6 +26,7 @@ import { GapsSummaryCard } from '@/components/admin/GapsSummaryCard';
 import { SystemCyclesHealthCard } from '@/components/admin/SystemCyclesHealthCard';
 import { CompactAlert } from '@/components/ui/explainable-alert';
 import { getAlertExplanation } from '@/lib/leigo-translator';
+import { SectionDivider } from '@/components/ui/section-divider';
 
 export default function Dashboard() {
   const { tenant } = useTenant();
@@ -273,6 +274,9 @@ export default function Dashboard() {
       {/* 🔄 CYCLES HEALTH - Saúde dos ciclos operacionais */}
       <SystemCyclesHealthCard />
 
+      {/* Divisor visual entre seções */}
+      <SectionDivider label="Status de Proteção" />
+
       {/* 🔐 CARD PRINCIPAL DE STATUS - Responde "Estou protegido?" em 3 segundos */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
         <Card className={cn(
@@ -352,6 +356,9 @@ export default function Dashboard() {
           </Card>
         </motion.div>
       )}
+
+      {/* Divisor visual */}
+      <SectionDivider label="Alertas e Resumo" />
 
       {/* 2️⃣ Main Grid: Problems + Quick Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
