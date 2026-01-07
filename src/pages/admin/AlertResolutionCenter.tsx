@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { AlertTriangle, CheckCircle, Archive, RefreshCw, Cpu, HardDrive, Wifi, Shield } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { getAlertExplanation, ALERT_TYPE_LABELS } from '@/lib/leigo-translator';
 
 interface SystemAlert {
   id: string;
@@ -290,42 +291,59 @@ export default function AlertResolutionCenter() {
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredAlerts.map(alert => (
-                <div
-                  key={alert.id}
-                  className={`flex items-center gap-4 p-4 rounded-lg border ${
-                    selectedAlerts.has(alert.id) ? 'border-primary bg-primary/5' : 'border-border'
-                  }`}
-                >
-                  <Checkbox
-                    checked={selectedAlerts.has(alert.id)}
-                    onCheckedChange={() => toggleSelect(alert.id)}
-                  />
-                  <div className="flex-shrink-0">
-                    {ALERT_ICONS[alert.alert_type] || <AlertTriangle className="h-4 w-4" />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{alert.title}</span>
-                      <Badge className={SEVERITY_COLORS[alert.severity] || 'bg-gray-500'}>
-                        {alert.severity}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground truncate">{alert.message}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(alert.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => resolveMutation.mutate([alert.id])}
-                    disabled={resolveMutation.isPending}
+              {filteredAlerts.map(alert => {
+                const explanation = getAlertExplanation(alert.alert_type);
+                return (
+                  <div
+                    key={alert.id}
+                    className={`flex items-center gap-4 p-4 rounded-lg border transition-colors ${
+                      selectedAlerts.has(alert.id) ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent/30'
+                    }`}
                   >
-                    <CheckCircle className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+                    <Checkbox
+                      checked={selectedAlerts.has(alert.id)}
+                      onCheckedChange={() => toggleSelect(alert.id)}
+                    />
+                    <div className="flex-shrink-0 text-xl">
+                      {explanation.icon || '⚠️'}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate">
+                          {explanation.title || alert.title}
+                        </span>
+                        <Badge className={SEVERITY_COLORS[alert.severity] || 'bg-gray-500'}>
+                          {alert.severity === 'critical' ? 'Crítico' : 
+                           alert.severity === 'high' ? 'Alto' :
+                           alert.severity === 'medium' ? 'Médio' : 'Baixo'}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {explanation.explanation || alert.message}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(alert.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </p>
+                        {explanation.urgency && (
+                          <span className="text-xs text-primary font-medium">
+                            💡 {explanation.urgency}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => resolveMutation.mutate([alert.id])}
+                      disabled={resolveMutation.isPending}
+                      className="flex-shrink-0"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

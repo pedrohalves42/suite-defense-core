@@ -1,6 +1,8 @@
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle, Clock, Loader2, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { StatusType } from '@/components/ui/simple-status-indicator';
+import { translateTerm } from '@/lib/leigo-translator';
 
 interface JobStatusSimplifiedProps {
   status: string;
@@ -9,7 +11,7 @@ interface JobStatusSimplifiedProps {
 }
 
 // Helper to determine if a failure was due to timeout/offline
-function isTimeoutFailure(errorMessage?: string | null): boolean {
+export function isTimeoutFailure(errorMessage?: string | null): boolean {
   if (!errorMessage) return false;
   const timeoutPatterns = [
     'Auto-cleanup',
@@ -25,54 +27,75 @@ function isTimeoutFailure(errorMessage?: string | null): boolean {
   );
 }
 
-// Get humanized status info
+// Map job status to SimpleStatusIndicator type
+export function mapJobStatusToIndicatorType(status: string, errorMessage?: string | null): StatusType {
+  if (status === 'failed' && isTimeoutFailure(errorMessage)) return 'timeout';
+  
+  const statusMap: Record<string, StatusType> = {
+    'completed': 'completed',
+    'failed': 'failed',
+    'delivered': 'running',
+    'queued': 'pending',
+    'cancelled': 'cancelled',
+    'pending': 'pending',
+  };
+  
+  return statusMap[status] || 'unknown';
+}
+
+// Get humanized status info with leigo-translator integration
 export function getJobStatusInfo(status: string, errorMessage?: string | null) {
   switch (status) {
     case 'completed':
       return {
-        label: 'Concluído',
+        label: 'Pronto!',
         icon: CheckCircle,
         color: 'text-green-600',
         bgColor: 'bg-green-500/10',
         borderColor: 'border-green-500/30',
-        description: 'Tarefa executada com sucesso'
+        description: 'Tarefa executada com sucesso',
+        indicatorType: 'completed' as StatusType
       };
     case 'failed':
       if (isTimeoutFailure(errorMessage)) {
         return {
-          label: 'Expirou',
+          label: 'Tempo esgotado',
           icon: Clock,
           color: 'text-gray-500',
           bgColor: 'bg-gray-500/10',
           borderColor: 'border-gray-500/30',
-          description: 'Computador estava desligado'
+          description: 'Computador estava desligado ou demorou demais',
+          indicatorType: 'timeout' as StatusType
         };
       }
       return {
-        label: 'Erro',
+        label: 'Não deu certo',
         icon: XCircle,
         color: 'text-red-600',
         bgColor: 'bg-red-500/10',
         borderColor: 'border-red-500/30',
-        description: 'Tarefa falhou'
+        description: translateTerm('failure'),
+        indicatorType: 'failed' as StatusType
       };
     case 'delivered':
       return {
-        label: 'Em andamento',
+        label: 'Trabalhando...',
         icon: Loader2,
         color: 'text-blue-600',
         bgColor: 'bg-blue-500/10',
         borderColor: 'border-blue-500/30',
-        description: 'Executando no computador'
+        description: 'Executando no computador',
+        indicatorType: 'running' as StatusType
       };
     case 'queued':
       return {
-        label: 'Aguardando',
+        label: 'Na fila',
         icon: Clock,
         color: 'text-yellow-600',
         bgColor: 'bg-yellow-500/10',
         borderColor: 'border-yellow-500/30',
-        description: 'Na fila de execução'
+        description: 'Aguardando sua vez',
+        indicatorType: 'pending' as StatusType
       };
     case 'cancelled':
       return {
@@ -81,16 +104,18 @@ export function getJobStatusInfo(status: string, errorMessage?: string | null) {
         color: 'text-gray-500',
         bgColor: 'bg-gray-500/10',
         borderColor: 'border-gray-500/30',
-        description: 'Tarefa cancelada'
+        description: 'Foi interrompido',
+        indicatorType: 'cancelled' as StatusType
       };
     default:
       return {
-        label: status,
+        label: translateTerm(status) || status,
         icon: Clock,
         color: 'text-muted-foreground',
         bgColor: 'bg-muted/50',
         borderColor: 'border-border',
-        description: ''
+        description: '',
+        indicatorType: 'unknown' as StatusType
       };
   }
 }
