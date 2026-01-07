@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import { SimpleStatusIndicator, StatusType } from '@/components/ui/simple-status-indicator';
 import { prepareJobForInsert } from '@/lib/job-utils';
+import { useSimplifiedMessage } from '@/hooks/useSimplifiedMessage';
 
 interface DiagnosticTestRunnerProps {
   agentId: string | null;
@@ -58,6 +59,7 @@ export function DiagnosticTestRunner({
 }: DiagnosticTestRunnerProps) {
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
+  const { formatError } = useSimplifiedMessage();
   const [isRunning, setIsRunning] = useState(false);
   const [currentTestIndex, setCurrentTestIndex] = useState(-1);
   const [results, setResults] = useState<TestResult[]>([]);
@@ -134,12 +136,13 @@ export function DiagnosticTestRunner({
           result
         ]);
       } catch (error) {
-        // Mark as failed
+        // Mark as failed with simplified error
+        const errorInfo = formatError(error);
         const result: TestResult = {
           type: test.type,
           label: test.label,
           status: 'failed',
-          error: error instanceof Error ? error.message : 'Erro desconhecido',
+          error: errorInfo.description,
         };
         testResults.push(result);
         setResults(prev => [
