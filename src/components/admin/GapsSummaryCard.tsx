@@ -54,7 +54,7 @@ export function GapsSummaryCard() {
       const { count } = await supabase
         .from('ai_insights')
         .select('*', { count: 'exact', head: true })
-        .is('triaged_at', null)
+        .eq('acknowledged', false)
         .in('severity', ['high', 'critical']);
       return count || 0;
     },

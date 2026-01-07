@@ -22,6 +22,7 @@ import { NotificationSetupBanner } from '@/components/admin/NotificationSetupBan
 import { OnboardingRequiredBanner } from '@/components/admin/OnboardingRequiredBanner';
 import { RBACMetricsCard } from '@/components/admin/RBACMetricsCard';
 import { SafeModeCounter } from '@/components/admin/SafeModeCounter';
+import { GapsSummaryCard } from '@/components/admin/GapsSummaryCard';
 
 export default function Dashboard() {
   const { tenant } = useTenant();
@@ -241,6 +242,9 @@ export default function Dashboard() {
 
       {/* 🔐 GOVERNANCE HEALTH BANNER - MFA Enforcement + Metrics */}
       <GovernanceHealthBanner />
+
+      {/* 📊 GAPS SUMMARY - Ciclos e pendências do sistema */}
+      <GapsSummaryCard />
 
       {/* 🔐 CARD PRINCIPAL DE STATUS - Responde "Estou protegido?" em 3 segundos */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
