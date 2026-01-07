@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   AlertTriangle, 
   CheckCircle2, 
@@ -23,7 +24,9 @@ import {
   Crosshair,
   ListTodo,
   RotateCcw,
-  Loader2
+  Loader2,
+  History,
+  FileText
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -33,6 +36,7 @@ import {
   type TaskStatus, 
   type TaskSeverity 
 } from '@/hooks/useTasks';
+import { TaskTimeline } from './TaskTimeline';
 
 interface TaskDetailDrawerProps {
   task: Task | null;
@@ -93,7 +97,7 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
 
   return (
     <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <SheetContent className="w-[500px] sm:max-w-[500px] overflow-y-auto">
+      <SheetContent className="w-[540px] sm:max-w-[540px] overflow-y-auto">
         <SheetHeader>
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-full ${severity.color} text-white`}>
@@ -118,7 +122,7 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
             </Badge>
             <Badge variant="secondary">{severity.label}</Badge>
             {isSlaBreach && isActive && (
-              <Badge variant="destructive" className="gap-1">
+              <Badge variant="destructive" className="gap-1 animate-pulse">
                 <Clock className="h-3 w-3" />
                 SLA Violado
               </Badge>
@@ -133,63 +137,93 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
 
           <Separator />
 
-          {/* Description */}
-          {task.description && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Descrição</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{task.description}</p>
-              </CardContent>
-            </Card>
-          )}
+          {/* Tabs for different sections */}
+          <Tabs defaultValue="details" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="details" className="gap-2">
+                <FileText className="h-4 w-4" />
+                Detalhes
+              </TabsTrigger>
+              <TabsTrigger value="timeline" className="gap-2">
+                <History className="h-4 w-4" />
+                Timeline
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Timeline Info */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Timeline</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Criada:</span>
-                <span>{format(new Date(task.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
-              </div>
-              {task.due_at && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Prazo SLA:</span>
-                  <span className={isSlaBreach ? 'text-orange-500 font-medium' : ''}>
-                    {format(new Date(task.due_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    {isSlaBreach && ' (Violado)'}
-                  </span>
-                </div>
+            <TabsContent value="details" className="space-y-4 mt-4">
+              {/* Description */}
+              {task.description && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Descrição</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">{task.description}</p>
+                  </CardContent>
+                </Card>
               )}
-              {task.closed_at && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Fechada:</span>
-                  <span>{format(new Date(task.closed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Idade:</span>
-                <span>
-                  {formatDistanceToNow(new Date(task.created_at), { locale: ptBR })}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Closure Info (if closed) */}
-          {task.closure_reason && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Razão do Fechamento</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{task.closure_reason}</p>
-              </CardContent>
-            </Card>
-          )}
+              {/* Timeline Info */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Informações</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Criada:</span>
+                    <span>{format(new Date(task.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                  </div>
+                  {task.due_at && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Prazo SLA:</span>
+                      <span className={isSlaBreach ? 'text-destructive font-medium' : ''}>
+                        {format(new Date(task.due_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        {isSlaBreach && ' (Violado)'}
+                      </span>
+                    </div>
+                  )}
+                  {task.closed_at && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Fechada:</span>
+                      <span>{format(new Date(task.closed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Idade:</span>
+                    <span>
+                      {formatDistanceToNow(new Date(task.created_at), { locale: ptBR })}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Closure Info (if closed) */}
+              {task.closure_reason && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Razão do Fechamento</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">{task.closure_reason}</p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="timeline" className="mt-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    Histórico de Eventos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TaskTimeline taskId={task.id} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
 
           <Separator />
 
