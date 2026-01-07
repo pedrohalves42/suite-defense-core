@@ -12942,6 +12942,104 @@ export type Database = {
         }
         Relationships: []
       }
+      tasks: {
+        Row: {
+          assigned_to: string | null
+          auto_generated: boolean
+          closed_at: string | null
+          closed_by: string | null
+          closure_evidence: Json | null
+          closure_reason: string | null
+          created_at: string
+          description: string | null
+          due_at: string | null
+          id: string
+          playbook_id: string | null
+          requires_human_review: boolean
+          severity: string
+          sla_breached_at: string | null
+          source_id: string | null
+          source_type: string
+          status: string
+          tenant_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          auto_generated?: boolean
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_evidence?: Json | null
+          closure_reason?: string | null
+          created_at?: string
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          playbook_id?: string | null
+          requires_human_review?: boolean
+          severity: string
+          sla_breached_at?: string | null
+          source_id?: string | null
+          source_type: string
+          status?: string
+          tenant_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          auto_generated?: boolean
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_evidence?: Json | null
+          closure_reason?: string | null
+          created_at?: string
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          playbook_id?: string | null
+          requires_human_review?: boolean
+          severity?: string
+          sla_breached_at?: string | null
+          source_id?: string | null
+          source_type?: string
+          status?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tenant_action_policies: {
         Row: {
           created_at: string | null
@@ -18512,6 +18610,50 @@ export type Database = {
         }
         Relationships: []
       }
+      v_task_stats: {
+        Row: {
+          avg_resolution_hours: number | null
+          blocked_count: number | null
+          critical_open: number | null
+          high_open: number | null
+          ignored_count: number | null
+          in_progress_count: number | null
+          open_count: number | null
+          resolved_count: number | null
+          sla_breached: number | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_tenant_isolation_metrics: {
         Row: {
           isolated_count: number | null
@@ -18786,6 +18928,7 @@ export type Database = {
         }
         Returns: Json
       }
+      check_task_sla_breach: { Args: never; Returns: number }
       claim_jobs_for_agent:
         | {
             Args: { p_agent_id: string; p_agent_name: string; p_limit?: number }
