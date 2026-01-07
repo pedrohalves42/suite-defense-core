@@ -2941,6 +2941,68 @@ export type Database = {
           },
         ]
       }
+      ai_action_logs: {
+        Row: {
+          action_data: Json
+          action_type: string
+          created_at: string
+          error_message: string | null
+          id: string
+          processed_at: string | null
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          action_data?: Json
+          action_type: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          processed_at?: string | null
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          action_data?: Json
+          action_type?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          processed_at?: string | null
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_action_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_action_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_action_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "ai_action_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       ai_action_validations: {
         Row: {
           action_id: string
@@ -18808,6 +18870,13 @@ export type Database = {
       submit_approval: {
         Args: { p_decision: string; p_reason?: string; p_request_id: string }
         Returns: Json
+      }
+      sync_agent_state_from_heartbeat: {
+        Args: never
+        Returns: {
+          agent_ids: string[]
+          agents_updated: number
+        }[]
       }
       sync_agent_status_from_heartbeat: { Args: never; Returns: undefined }
       sync_pending_agents_status: {
