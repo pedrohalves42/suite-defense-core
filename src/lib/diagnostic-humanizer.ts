@@ -235,6 +235,88 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
     confidenceReason: 'Comparação direta com versão mais recente disponível'
   },
 
+  // Job types - novos diagnósticos
+  'collect_web_activity': {
+    title: 'Verificação de Sites Visitados',
+    explanation: 'Coletando lista de sites que foram acessados no computador.',
+    impact: 'Permite identificar se houve acesso a sites suspeitos ou não autorizados.',
+    actions: ['Aguardar conclusão', 'Ver relatório depois'],
+    confidence: 'high',
+    confidenceReason: 'Coleta direta do histórico do navegador'
+  },
+  'software_inventory_collect': {
+    title: 'Lista de Programas Instalados',
+    explanation: 'Verificando todos os programas instalados no computador.',
+    impact: 'Ajuda a encontrar programas desatualizados, não autorizados ou potencialmente perigosos.',
+    actions: ['Ver lista de programas', 'Verificar atualizações pendentes'],
+    confidence: 'high',
+    confidenceReason: 'Leitura direta do registro de software do Windows'
+  },
+  'collect_antivirus_status': {
+    title: 'Status do Antivírus',
+    explanation: 'Verificando se o antivírus está ativo e atualizado.',
+    impact: 'Computador sem antivírus ativo está vulnerável a vírus e malware.',
+    actions: ['Ativar antivírus se desligado', 'Atualizar definições'],
+    confidence: 'high',
+    confidenceReason: 'Consulta direta ao Windows Security Center'
+  },
+  'collect_network_info': {
+    title: 'Informações de Rede',
+    explanation: 'Coletando dados sobre a conexão de rede do computador.',
+    impact: 'Permite diagnosticar problemas de conectividade.',
+    actions: ['Verificar configuração de rede', 'Testar conexões'],
+    confidence: 'high',
+    confidenceReason: 'Dados coletados diretamente do adaptador de rede'
+  },
+  'light_vuln_scan': {
+    title: 'Busca por Vulnerabilidades',
+    explanation: 'Verificando se há falhas de segurança conhecidas no sistema.',
+    impact: 'Vulnerabilidades podem ser exploradas por atacantes.',
+    actions: ['Aplicar atualizações de segurança', 'Revisar configurações'],
+    confidence: 'medium',
+    confidenceReason: 'Baseado em banco de dados de vulnerabilidades conhecidas'
+  },
+  'ping': {
+    title: 'Teste de Conectividade',
+    explanation: 'Verificando se o computador está respondendo.',
+    impact: 'Confirma se o computador está online e acessível.',
+    actions: ['Aguardar resposta'],
+    confidence: 'high',
+    confidenceReason: 'Resposta direta do agente'
+  },
+  'health_report': {
+    title: 'Relatório de Saúde',
+    explanation: 'Coletando métricas gerais do sistema (CPU, memória, disco).',
+    impact: 'Visão geral do estado do computador.',
+    actions: ['Analisar métricas', 'Identificar gargalos'],
+    confidence: 'high',
+    confidenceReason: 'Métricas coletadas em tempo real do sistema'
+  },
+  'collect_logs': {
+    title: 'Coleta de Logs',
+    explanation: 'Solicitando os registros de atividade do agente.',
+    impact: 'Permite investigar problemas passados.',
+    actions: ['Aguardar upload', 'Analisar logs'],
+    confidence: 'high',
+    confidenceReason: 'Logs armazenados localmente no computador'
+  },
+  'check_services': {
+    title: 'Verificação de Serviços',
+    explanation: 'Listando o status dos serviços do agente.',
+    impact: 'Identifica se algum componente parou de funcionar.',
+    actions: ['Reiniciar serviços problemáticos'],
+    confidence: 'high',
+    confidenceReason: 'Status lido diretamente do gerenciador de serviços'
+  },
+  'test_dns': {
+    title: 'Teste de DNS',
+    explanation: 'Verificando se o computador consegue resolver nomes de internet.',
+    impact: 'Problemas de DNS impedem acesso a sites e serviços.',
+    actions: ['Verificar configuração de DNS', 'Testar servidores alternativos'],
+    confidence: 'medium',
+    confidenceReason: 'Depende do servidor DNS configurado'
+  },
+
   // Generic
   'unknown': {
     title: 'Problema Detectado',
