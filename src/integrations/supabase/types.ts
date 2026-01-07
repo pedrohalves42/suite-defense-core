@@ -12856,12 +12856,43 @@ export type Database = {
           },
         ]
       }
+      system_global_state: {
+        Row: {
+          acknowledged_by: string[] | null
+          expires_at: string | null
+          id: string
+          mode: string
+          reason: string
+          triggered_at: string
+          triggered_by: string
+        }
+        Insert: {
+          acknowledged_by?: string[] | null
+          expires_at?: string | null
+          id?: string
+          mode: string
+          reason: string
+          triggered_at?: string
+          triggered_by: string
+        }
+        Update: {
+          acknowledged_by?: string[] | null
+          expires_at?: string | null
+          id?: string
+          mode?: string
+          reason?: string
+          triggered_at?: string
+          triggered_by?: string
+        }
+        Relationships: []
+      }
       system_kill_switch: {
         Row: {
           activated_at: string | null
           activated_by: string | null
           created_at: string | null
           enabled: boolean
+          mode: string | null
           reason: string | null
           scope: string | null
           tenant_id: string
@@ -12872,6 +12903,7 @@ export type Database = {
           activated_by?: string | null
           created_at?: string | null
           enabled?: boolean
+          mode?: string | null
           reason?: string | null
           scope?: string | null
           tenant_id: string
@@ -12882,6 +12914,7 @@ export type Database = {
           activated_by?: string | null
           created_at?: string | null
           enabled?: boolean
+          mode?: string | null
           reason?: string | null
           scope?: string | null
           tenant_id?: string
@@ -12994,6 +13027,13 @@ export type Database = {
             foreignKeyName: "task_events_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
+            referencedRelation: "v_active_risk_debt"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_events_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
             referencedRelation: "v_tasks_requiring_closure"
             referencedColumns: ["id"]
           },
@@ -13076,6 +13116,13 @@ export type Database = {
             foreignKeyName: "task_evidence_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
+            referencedRelation: "v_active_risk_debt"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_evidence_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
             referencedRelation: "v_tasks_requiring_closure"
             referencedColumns: ["id"]
           },
@@ -13123,6 +13170,10 @@ export type Database = {
           id: string
           playbook_id: string | null
           requires_human_review: boolean
+          risk_accepted_at: string | null
+          risk_accepted_by: string | null
+          risk_expiry_at: string | null
+          risk_justification: string | null
           severity: string
           sla_breached_at: string | null
           source_id: string | null
@@ -13145,6 +13196,10 @@ export type Database = {
           id?: string
           playbook_id?: string | null
           requires_human_review?: boolean
+          risk_accepted_at?: string | null
+          risk_accepted_by?: string | null
+          risk_expiry_at?: string | null
+          risk_justification?: string | null
           severity: string
           sla_breached_at?: string | null
           source_id?: string | null
@@ -13167,6 +13222,10 @@ export type Database = {
           id?: string
           playbook_id?: string | null
           requires_human_review?: boolean
+          risk_accepted_at?: string | null
+          risk_accepted_by?: string | null
+          risk_expiry_at?: string | null
+          risk_justification?: string | null
           severity?: string
           sla_breached_at?: string | null
           source_id?: string | null
@@ -16548,6 +16607,77 @@ export type Database = {
         }
         Relationships: []
       }
+      v_active_risk_debt: {
+        Row: {
+          days_until_expiry: number | null
+          description: string | null
+          id: string | null
+          risk_accepted_at: string | null
+          risk_accepted_by: string | null
+          risk_expiry_at: string | null
+          risk_justification: string | null
+          risk_status: string | null
+          severity: string | null
+          tenant_id: string | null
+          title: string | null
+        }
+        Insert: {
+          days_until_expiry?: never
+          description?: string | null
+          id?: string | null
+          risk_accepted_at?: string | null
+          risk_accepted_by?: string | null
+          risk_expiry_at?: string | null
+          risk_justification?: string | null
+          risk_status?: never
+          severity?: string | null
+          tenant_id?: string | null
+          title?: string | null
+        }
+        Update: {
+          days_until_expiry?: never
+          description?: string | null
+          id?: string | null
+          risk_accepted_at?: string | null
+          risk_accepted_by?: string | null
+          risk_expiry_at?: string | null
+          risk_justification?: string | null
+          risk_status?: never
+          severity?: string | null
+          tenant_id?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_agent_archive_reason_tree: {
         Row: {
           actor_id: string | null
@@ -19091,6 +19221,7 @@ export type Database = {
             }
             Returns: undefined
           }
+      assert_system_not_stopped: { Args: never; Returns: undefined }
       authorize_agent_recovery: {
         Args: {
           p_agent_id: string
@@ -19220,6 +19351,7 @@ export type Database = {
           expired_count: number
         }[]
       }
+      check_expired_risks: { Args: never; Returns: undefined }
       check_installation_failure_rate: {
         Args: {
           p_hours_back?: number
@@ -19796,6 +19928,7 @@ export type Database = {
           risk_level: string
         }[]
       }
+      get_system_mode: { Args: never; Returns: Json }
       get_tenant_mfa_policy: { Args: { _tenant_id: string }; Returns: Json }
       get_valid_agent_signing_key: {
         Args: { p_agent_id: string; p_fingerprint: string }
