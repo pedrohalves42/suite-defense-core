@@ -260,6 +260,35 @@ export const ALERT_TYPE_LABELS: Record<string, {
     urgency: 'Pode ser necessário intervenção manual para voltar ao normal.',
     icon: '🔐'
   },
+  // Novos tipos para Dashboard
+  'agents_offline': {
+    title: 'Computadores Desconectados',
+    explanation: 'Alguns computadores pararam de responder.',
+    analogy: 'Como funcionários que não deram sinal de vida hoje.',
+    urgency: 'Verifique se estão ligados e conectados à rede.',
+    icon: '📡'
+  },
+  'vulnerability_critical': {
+    title: 'Brechas de Segurança Encontradas',
+    explanation: 'Programas desatualizados podem ser explorados por atacantes.',
+    analogy: 'Como uma porta com a fechadura quebrada.',
+    urgency: 'Atualize os programas afetados o mais rápido possível.',
+    icon: '🔓'
+  },
+  'ai_insights_pending': {
+    title: 'Sugestões da IA Aguardando',
+    explanation: 'A inteligência artificial encontrou formas de melhorar sua proteção.',
+    analogy: 'Como um consultor que preparou recomendações para você.',
+    urgency: 'Revise as sugestões quando tiver um momento.',
+    icon: '🧠'
+  },
+  'security_threat': {
+    title: 'Ameaça de Segurança Detectada',
+    explanation: 'Foi identificada uma possível ameaça ao sistema.',
+    analogy: 'Como um alarme de incêndio tocando.',
+    urgency: 'Verifique imediatamente os alertas de segurança.',
+    icon: '🚨'
+  },
 };
 
 /**

@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { AgentMetricsBar } from './AgentMetricsBar';
+import { StatusDot } from '@/components/ui/simple-status-indicator';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -143,15 +144,11 @@ export function AgentCard({
           </div>
           
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            {isOnline ? (
-              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0 h-5">
-                Online
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
-                Offline
-              </Badge>
-            )}
+            <StatusDot 
+              status={isOnline ? 'online' : 'offline'} 
+              pulse={isOnline} 
+              size="md" 
+            />
             {getHealthBadge(healthStatus)}
           </div>
         </div>
