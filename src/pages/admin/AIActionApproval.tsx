@@ -9,6 +9,7 @@ import { CheckCircle, XCircle, Clock, AlertTriangle, Info, Loader2, Sparkles, Br
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { formatBrazilDateTime } from '@/lib/date-utils';
 import { useApproveAiAction, useRejectAiAction, requiresFormalApproval, RISK_LEVEL_COLORS } from '@/hooks/useAiActionApproval';
+import { useCheckBlastRadius } from '@/hooks/useBlastRadius';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -73,6 +74,9 @@ export default function AIActionApproval() {
   const approveAction = useApproveAiAction();
   const rejectAction = useRejectAiAction();
   
+  // Check blast radius before approving actions
+  const checkBlastRadius = useCheckBlastRadius();
+  
   // AJUSTE 1: Check for suspicious pattern
   const { data: approvalMetrics } = useApprovalMetrics();
   const isSuspiciousPattern = approvalMetrics?.isSuspiciousPattern || false;
@@ -130,7 +134,39 @@ export default function AIActionApproval() {
     },
   });
 
-  const handleApproveClick = (actionId: string, riskLevel: string | null) => {
+  const handleApproveClick = async (actionId: string, riskLevel: string | null, action?: AIAction) => {
+    // Check blast radius before proceeding
+    if (action?.action_payload?.affected_count) {
+      try {
+        const blastResult = await checkBlastRadius.mutateAsync({
+          actionType: action.action_type,
+          affectedCount: action.action_payload.affected_count
+        });
+        
+        if (!blastResult.allowed) {
+          toast({
+            title: 'Ação bloqueada pelo Blast Radius',
+            description: blastResult.message,
+            variant: 'destructive'
+          });
+          return;
+        }
+        
+        if (blastResult.requires_approval) {
+          // Force formal approval dialog
+          setSelectedActionId(actionId);
+          setSelectedRiskLevel(riskLevel);
+          setApprovalNotes(`⚠️ Blast Radius: ${blastResult.message}`);
+          setReviewedDetails(false);
+          setApprovalDialogOpen(true);
+          return;
+        }
+      } catch (error) {
+        console.error('Blast radius check failed:', error);
+        // Continue with normal flow if check fails
+      }
+    }
+    
     // AJUSTE 1: Se padrão suspeito OU high/critical, exigir aprovação formal
     if (isSuspiciousPattern || requiresFormalApproval(riskLevel)) {
       setSelectedActionId(actionId);
@@ -490,8 +526,8 @@ export default function AIActionApproval() {
                     </Badge>
                   )}
                   <Button
-                    onClick={() => handleApproveClick(action.id, config?.risk_level || null)}
-                    disabled={isExecuting || approveAction.isPending}
+                    onClick={() => handleApproveClick(action.id, config?.risk_level || null, action)}
+                    disabled={isExecuting || approveAction.isPending || checkBlastRadius.isPending}
                     className="gap-2"
                   >
                     {isExecuting ? (
