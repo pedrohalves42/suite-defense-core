@@ -27,6 +27,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DiagnosticPanel } from '@/components/agent/DiagnosticPanel';
 import { AgentStateExplainer } from '@/components/agent/AgentStateExplainer';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
+import { JobLiveMonitor } from '@/components/admin/JobLiveMonitor';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { 
   AlertCircle, 
@@ -314,7 +315,7 @@ export default function DiagnosticsCenter() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Com Problema</CardTitle>
@@ -322,32 +323,46 @@ export default function DiagnosticsCenter() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{problemCounts.total}</div>
-            <p className="text-xs text-muted-foreground">Requerem atenção</p>
+            <p className="text-xs text-muted-foreground">Precisam de atenção</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sem Comunicação</CardTitle>
+            <CardTitle className="text-sm font-medium">Desconectados</CardTitle>
             <WifiOff className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{problemCounts.noHeartbeat}</div>
-            <p className="text-xs text-muted-foreground">Problemas de conectividade</p>
+            <p className="text-xs text-muted-foreground">Sem sinal de vida</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Credenciais Inválidas</CardTitle>
+            <CardTitle className="text-sm font-medium">Credenciais</CardTitle>
             <Key className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{problemCounts.noToken}</div>
-            <p className="text-xs text-muted-foreground">Precisam reinstalação</p>
+            <p className="text-xs text-muted-foreground">Precisam reinstalar</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total</CardTitle>
+            <Computer className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{allAgents.length}</div>
+            <p className="text-xs text-muted-foreground">Computadores</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Real-time Job Monitor */}
+      <JobLiveMonitor showSummary={false} maxJobs={5} className="border-primary/20" />
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-3">

@@ -37,6 +37,24 @@ export const JOB_TYPE_LABELS: Record<string, string> = {
   
   // === Testes ===
   integration_test_v3: '🧪 Teste de sistema',
+  
+  // === Diagnósticos remotos (NOVOS) ===
+  ping: '📡 Testar conexão',
+  health_report: '💚 Relatório de saúde',
+  collect_logs: '📋 Coletar registros',
+  check_services: '⚙️ Verificar serviços',
+  test_dns: '🌐 Testar internet',
+  heartbeat_check: '💓 Verificar sinal de vida',
+  force_sync: '🔄 Forçar sincronização',
+  restart_agent: '🔄 Reiniciar agente',
+  
+  // === Inventário ===
+  hardware_inventory: '🖥️ Informações do computador',
+  user_inventory: '👤 Usuários do computador',
+  
+  // === Quarentena ===
+  quarantine_file: '🔒 Isolar arquivo suspeito',
+  restore_file: '📂 Restaurar arquivo',
 };
 
 export const JOB_STATUS_LABELS: Record<string, string> = {
@@ -114,6 +132,24 @@ export const JOB_TYPE_LABELS_NO_EMOJI: Record<string, string> = {
   
   // === Testes ===
   integration_test_v3: 'Teste de sistema',
+  
+  // === Diagnósticos remotos (NOVOS) ===
+  ping: 'Testar conexão',
+  health_report: 'Relatório de saúde',
+  collect_logs: 'Coletar registros',
+  check_services: 'Verificar serviços',
+  test_dns: 'Testar internet',
+  heartbeat_check: 'Verificar sinal de vida',
+  force_sync: 'Forçar sincronização',
+  restart_agent: 'Reiniciar agente',
+  
+  // === Inventário ===
+  hardware_inventory: 'Informações do computador',
+  user_inventory: 'Usuários do computador',
+  
+  // === Quarentena ===
+  quarantine_file: 'Isolar arquivo suspeito',
+  restore_file: 'Restaurar arquivo',
 };
 
 // Lista de processos críticos do sistema que NÃO podem ser encerrados
