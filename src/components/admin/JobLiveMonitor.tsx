@@ -30,6 +30,7 @@ import { formatRelativeTime } from '@/lib/date-utils';
 import { JOB_TYPE_LABELS } from '@/lib/job-labels';
 import { getFailureExplanation, formatErrorForUser } from '@/lib/leigo-translator';
 import { useSimplifiedMessage } from '@/hooks/useSimplifiedMessage';
+import { getJobStatusInfo } from '@/components/admin/JobStatusSimplified';
 
 interface LiveJob {
   id: string;
@@ -341,6 +342,7 @@ function JobCard({ job }: { job: LiveJob }) {
   const failureInfo = job.failure_class ? getFailureExplanation(job.failure_class) : null;
   const { formatError } = useSimplifiedMessage();
   const simplifiedError = job.error_message ? formatError(job.error_message) : null;
+  const statusInfo = getJobStatusInfo(job.status, job.error_message);
   
   return (
     <div className={cn(
@@ -377,6 +379,11 @@ function JobCard({ job }: { job: LiveJob }) {
               <span className="truncate">{job.agent_name}</span>
               <span>•</span>
               <span>{formatRelativeTime(job.created_at)}</span>
+              {statusInfo.description && (
+                <span className="text-muted-foreground/70" title={statusInfo.description}>
+                  — {statusInfo.description}
+                </span>
+              )}
             </div>
             
             {job.status === 'failed' && (failureInfo || simplifiedError) && (

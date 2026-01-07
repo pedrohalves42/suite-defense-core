@@ -5,8 +5,11 @@ import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, CheckCircle, Target, TrendingDown, TrendingUp, Shield, RefreshCw } from 'lucide-react';
-import { useCalculateConfidenceGap, useLatestConfidenceGap, useConfidenceGapTrend } from '@/hooks/useConfidenceGap';
+import { AlertTriangle, CheckCircle, Target, TrendingDown, TrendingUp, Shield, RefreshCw, History } from 'lucide-react';
+import { useCalculateConfidenceGap, useLatestConfidenceGap, useConfidenceGapTrend, useConfidenceGapHistory } from '@/hooks/useConfidenceGap';
+import { SectionDivider } from '@/components/ui/section-divider';
+import { formatRelativeTime } from '@/lib/date-utils';
+import { cn } from '@/lib/utils';
 
 interface DimensionalScore {
   dimension: string;
@@ -43,6 +46,7 @@ export default function ConfidenceGapDashboard() {
   const { tenant } = useTenant();
   const { data: latestGap, isLoading: loadingGap } = useLatestConfidenceGap();
   const { data: gapTrend } = useConfidenceGapTrend();
+  const { data: gapHistory } = useConfidenceGapHistory();
   const calculateGap = useCalculateConfidenceGap();
 
   const { data: dimensionalScores } = useQuery({
@@ -229,7 +233,7 @@ export default function ConfidenceGapDashboard() {
         </CardContent>
       </Card>
 
-      {/* Gap History */}
+      {/* Gap History Chart */}
       {gapTrend && gapTrend.length > 0 && (
         <Card>
           <CardHeader>
@@ -260,6 +264,68 @@ export default function ConfidenceGapDashboard() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Detailed Gap History Table */}
+      {gapHistory && gapHistory.length > 0 && (
+        <>
+          <SectionDivider label="Histórico Detalhado" />
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Registros Recentes
+              </CardTitle>
+              <CardDescription>Últimas {Math.min(gapHistory.length, 10)} medições de gap de confiança</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {gapHistory.slice(0, 10).map((gap) => (
+                  <div 
+                    key={gap.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-2 h-2 rounded-full",
+                        gap.health_status === 'healthy' ? 'bg-green-500' :
+                        gap.health_status === 'attention' ? 'bg-yellow-500' : 'bg-red-500'
+                      )} />
+                      <div>
+                        <p className="text-sm font-medium">
+                          Gap: {gap.confidence_gap.toFixed(1)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatRelativeTime(gap.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {gap.gap_delta !== null && gap.gap_delta !== 0 && (
+                        <Badge variant="outline" className={cn(
+                          "text-xs",
+                          gap.gap_delta < 0 ? "text-green-600" : "text-red-600"
+                        )}>
+                          {gap.gap_delta < 0 ? (
+                            <TrendingDown className="h-3 w-3 mr-1" />
+                          ) : (
+                            <TrendingUp className="h-3 w-3 mr-1" />
+                          )}
+                          {gap.gap_delta > 0 ? '+' : ''}{gap.gap_delta.toFixed(1)}
+                        </Badge>
+                      )}
+                      {gap.alert_triggered && (
+                        <Badge variant="destructive" className="text-xs">
+                          Alerta
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );
