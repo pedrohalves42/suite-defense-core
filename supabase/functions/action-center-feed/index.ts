@@ -779,6 +779,9 @@ serve(async (req) => {
 
       // Handle ai_insight acknowledge action
       if (source_type === 'ai_insight' && action === 'acknowledge') {
+        // Cast item_id to UUID for proper comparison
+        const insightId = item_id as `${string}-${string}-${string}-${string}-${string}`;
+        
         const { error } = await serviceClient
           .from('ai_insights')
           .update({
@@ -786,7 +789,7 @@ serve(async (req) => {
             acknowledged_by: user.id,
             acknowledged_at: new Date().toISOString(),
           })
-          .eq('id', item_id)
+          .eq('id', insightId)
           .eq('tenant_id', tenantId);
 
         if (error) {
@@ -806,6 +809,7 @@ serve(async (req) => {
       // Handle ai_insight ignore action - closes the cycle as ignored
       if (source_type === 'ai_insight' && action === 'ignore') {
         const { reason } = body;
+        const insightId = item_id as `${string}-${string}-${string}-${string}-${string}`;
         
         const { error } = await serviceClient
           .from('ai_insights')
@@ -817,7 +821,7 @@ serve(async (req) => {
             acknowledged_by: user.id,
             acknowledged_at: new Date().toISOString(),
           })
-          .eq('id', item_id)
+          .eq('id', insightId)
           .eq('tenant_id', tenantId);
 
         if (error) {
@@ -839,6 +843,7 @@ serve(async (req) => {
       // Handle ai_insight reject action - formal rejection with reason and audit trail
       if (source_type === 'ai_insight' && action === 'reject') {
         const { reason, reason_category } = body;
+        const insightId = item_id as `${string}-${string}-${string}-${string}-${string}`;
         
         if (!reason) {
           return new Response(
@@ -853,7 +858,7 @@ serve(async (req) => {
         const { data: insight, error: insightError } = await serviceClient
           .from('ai_insights')
           .select('id, title, insight_type, severity, agent_id')
-          .eq('id', item_id)
+          .eq('id', insightId)
           .eq('tenant_id', tenantId)
           .single();
 
@@ -877,7 +882,7 @@ serve(async (req) => {
             acknowledged_by: user.id,
             status: 'rejected',
           })
-          .eq('id', item_id)
+          .eq('id', insightId)
           .eq('tenant_id', tenantId);
 
         if (updateError) {
