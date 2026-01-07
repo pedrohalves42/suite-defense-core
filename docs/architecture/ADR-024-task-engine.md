@@ -105,28 +105,43 @@ Function `check_task_sla_breach()` marks tasks that exceeded their due date.
 
 ### Database Objects Created
 - Table: `tasks`
+- Table: `task_events` (immutable timeline)
+- Table: `task_evidence` (audit evidence with hashes)
 - View: `v_task_stats` (with security_invoker)
+- View: `v_tasks_requiring_closure` (urgent tasks)
+- View: `v_governance_stats` (governance metrics)
 - Functions: 
   - `create_task_from_critical_insight()`
   - `create_task_from_system_alert()`
   - `sync_task_on_source_resolution()`
   - `check_task_sla_breach()`
+  - `log_task_event()` - automatic timeline logging
+  - `collect_task_evidence()` - automatic evidence collection
+  - `escalate_breached_sla_tasks()` - SLA escalation
 - Triggers:
   - `tr_create_task_from_insight` (ai_insights)
   - `tr_create_task_from_alert` (system_alerts)
   - `tr_sync_task_insight` (ai_insights)
   - `tr_sync_task_alert` (system_alerts)
   - `tr_tasks_updated_at` (tasks)
-- Realtime enabled for tasks table
+  - `tr_log_task_events` (tasks → task_events)
+  - `tr_collect_task_evidence` (tasks → task_evidence)
+- Realtime enabled for tasks and task_events tables
 
 ### Frontend Files Created
-- `src/hooks/useTasks.ts` - React Query hooks
+- `src/hooks/useTasks.ts` - React Query hooks for tasks
+- `src/hooks/useTaskEvents.ts` - React Query hooks for timeline
+- `src/hooks/useTaskEvidence.ts` - React Query hooks for evidence
+- `src/hooks/useGovernanceStats.ts` - Governance metrics hook
 - `src/pages/admin/Tasks.tsx` - Main tasks page
-- `src/components/tasks/TaskDetailDrawer.tsx` - Detail view
+- `src/pages/admin/Governance.tsx` - Governance dashboard
+- `src/components/tasks/TaskDetailDrawer.tsx` - Detail view with tabs
+- `src/components/tasks/TaskTimeline.tsx` - Immutable event timeline
+- `src/components/tasks/TaskEvidenceTab.tsx` - Evidence pack view
 - `src/components/dashboard/TasksSummaryCard.tsx` - Dashboard widget
 
 ### Files Modified
-- `src/App.tsx` - Added /admin/tasks route
+- `src/App.tsx` - Added /admin/tasks and /admin/governance routes
 - `src/components/GlobalJobWatcher.tsx` - Fixed navigation path
 
 ## References
