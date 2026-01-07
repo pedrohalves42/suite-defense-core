@@ -18,8 +18,7 @@ import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend, PieChart, Pie, Cell } from 'recharts';
 import { useTenant } from '@/hooks/useTenant';
 import { toast } from 'sonner';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// jsPDF is dynamically imported in exportPDF function
 
 interface EvidenceLog {
   id: string;
@@ -182,66 +181,77 @@ const ComplianceTimeline: React.FC = () => {
     toast.success('CSV exportado com sucesso');
   };
 
-  // Export to PDF
+  // Export to PDF - using dynamic import
   const exportPDF = async () => {
-    const doc = new jsPDF();
-    
-    // Header
-    doc.setFontSize(18);
-    doc.setTextColor(0, 100, 180);
-    doc.text('Relatório de Compliance - Timeline de Evidências', 14, 20);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 28);
-    doc.text(`Período: Últimos ${dateRange} dias`, 14, 34);
-    doc.text(`Total de eventos: ${filteredLogs.length}`, 14, 40);
-    
-    // Statistics
-    const criticalCount = filteredLogs.filter(l => l.severity === 'critical').length;
-    const highCount = filteredLogs.filter(l => l.severity === 'high').length;
-    
-    doc.setFontSize(12);
-    doc.setTextColor(0);
-    doc.text('Resumo de Severidade:', 14, 52);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(200, 0, 0);
-    doc.text(`• Crítico: ${criticalCount}`, 20, 60);
-    doc.setTextColor(255, 100, 0);
-    doc.text(`• Alto: ${highCount}`, 20, 66);
-    doc.setTextColor(0);
-    
-    // Table
-    const tableData = filteredLogs.slice(0, 100).map(log => [
-      format(new Date(log.created_at), 'dd/MM HH:mm'),
-      log.agent_name.substring(0, 15),
-      log.event_type.substring(0, 20),
-      log.severity || 'info',
-      log.state_before?.substring(0, 10) || '-',
-      log.state_after?.substring(0, 10) || '-'
-    ]);
-    
-    autoTable(doc, {
-      head: [['Data', 'Agente', 'Tipo', 'Severidade', 'De', 'Para']],
-      body: tableData,
-      startY: 75,
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [0, 100, 180] },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
-    });
-    
-    // Footer with hash
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(150);
-      doc.text(`Página ${i} de ${pageCount}`, 180, 290);
+    try {
+      // Dynamic import of jsPDF
+      const jsPDFModule = await import(/* @vite-ignore */ 'jspdf');
+      const jsPDFClass = jsPDFModule.jsPDF || jsPDFModule.default;
+      const autoTableModule = await import(/* @vite-ignore */ 'jspdf-autotable');
+      const autoTableFn = autoTableModule.default;
+      
+      const doc = new jsPDFClass();
+      
+      // Header
+      doc.setFontSize(18);
+      doc.setTextColor(0, 100, 180);
+      doc.text('Relatório de Compliance - Timeline de Evidências', 14, 20);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, 14, 28);
+      doc.text(`Período: Últimos ${dateRange} dias`, 14, 34);
+      doc.text(`Total de eventos: ${filteredLogs.length}`, 14, 40);
+      
+      // Statistics
+      const criticalCount = filteredLogs.filter(l => l.severity === 'critical').length;
+      const highCount = filteredLogs.filter(l => l.severity === 'high').length;
+      
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      doc.text('Resumo de Severidade:', 14, 52);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(200, 0, 0);
+      doc.text(`• Crítico: ${criticalCount}`, 20, 60);
+      doc.setTextColor(255, 100, 0);
+      doc.text(`• Alto: ${highCount}`, 20, 66);
+      doc.setTextColor(0);
+      
+      // Table
+      const tableData = filteredLogs.slice(0, 100).map(log => [
+        format(new Date(log.created_at), 'dd/MM HH:mm'),
+        log.agent_name.substring(0, 15),
+        log.event_type.substring(0, 20),
+        log.severity || 'info',
+        log.state_before?.substring(0, 10) || '-',
+        log.state_after?.substring(0, 10) || '-'
+      ]);
+      
+      autoTableFn(doc, {
+        head: [['Data', 'Agente', 'Tipo', 'Severidade', 'De', 'Para']],
+        body: tableData,
+        startY: 75,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [0, 100, 180] },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+      });
+      
+      // Footer with hash
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`Página ${i} de ${pageCount}`, 180, 290);
+      }
+      
+      doc.save(`compliance-timeline-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      toast.success('PDF exportado com sucesso');
+    } catch (error) {
+      console.error('Failed to load PDF library:', error);
+      toast.error('Erro ao carregar biblioteca de PDF');
     }
-    
-    doc.save(`compliance-timeline-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-    toast.success('PDF exportado com sucesso');
   };
 
   const getSeverityBadge = (severity: string | null) => {
