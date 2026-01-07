@@ -643,3 +643,8 @@ schedule = "0 2 * * *"
 # === Confidence Gap Trend Analysis ===
 [functions.analyze-confidence-gap-trend]
 verify_jwt = true
+
+# === Auto-Triage AI Insights (daily at 6 AM) ===
+[functions.auto-triage-insights]
+verify_jwt = false
+schedule = "0 6 * * *"
