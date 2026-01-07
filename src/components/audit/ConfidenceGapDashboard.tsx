@@ -175,6 +175,7 @@ export default function ConfidenceGapDashboard() {
       <div className="flex justify-end">
         <Button 
           onClick={() => calculateGap.mutate({
+            tenantId: tenant!.id,
             auditId: latestGap?.audit_id || '',
             redTeamId: latestGap?.red_team_id || '',
             anaScore: latestGap?.ana_score || 70,
