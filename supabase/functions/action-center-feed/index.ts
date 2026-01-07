@@ -533,24 +533,76 @@ serve(async (req) => {
           }, {} as Record<string, { agent_name: string; hostname: string }>);
         }
 
+        // First pass: collect hostnames that need resolution
+        const insightsNeedingResolution: Array<{ index: number; extractedHostname: string }> = [];
+        
+        (insights || []).forEach((insight: any, index: number) => {
+          if (!insight.agent_id && insight.title) {
+            const extracted = extractAgentFromTitle(insight.title);
+            if (extracted) {
+              insightsNeedingResolution.push({ index, extractedHostname: extracted });
+            }
+          }
+        });
+
+        // Batch resolve hostnames to agent_names
+        let hostnameToAgentMap: Record<string, { id: string; agent_name: string; hostname: string }> = {};
+        
+        if (insightsNeedingResolution.length > 0) {
+          const hostnames = [...new Set(insightsNeedingResolution.map(i => i.extractedHostname))];
+          
+          // Query agents by hostname or agent_name
+          const { data: resolvedAgents } = await serviceClient
+            .from('agents')
+            .select('id, agent_name, hostname')
+            .eq('tenant_id', tenantId)
+            .or(hostnames.map(h => `hostname.ilike.%${h}%,agent_name.ilike.%${h}%`).join(','));
+          
+          // Build map from hostname to agent info
+          if (resolvedAgents) {
+            for (const agent of resolvedAgents) {
+              if (agent.hostname) {
+                hostnameToAgentMap[agent.hostname.toUpperCase()] = agent;
+              }
+              if (agent.agent_name) {
+                hostnameToAgentMap[agent.agent_name.toUpperCase()] = agent;
+              }
+            }
+          }
+        }
+
         aiInsightItems = (insights || []).map((insight: any) => {
           const agent = insight.agent_id ? agentMap[insight.agent_id] : null;
           const severityScore = insight.severity === 'critical' ? 100 : 
                                 insight.severity === 'high' ? 75 : 
                                 insight.severity === 'medium' ? 50 : 25;
           
-          // Fallback: extract agent name from title if agent_id is null
+          // Resolve agent name: prefer DB agent, then resolve from hostname
           let agentName = agent?.agent_name || null;
           let hostname = agent?.hostname || null;
+          let resolvedAgentId = insight.agent_id;
           
           if (!agentName && insight.title) {
-            agentName = extractAgentFromTitle(insight.title);
+            const extractedHostname = extractAgentFromTitle(insight.title);
+            if (extractedHostname) {
+              const resolved = hostnameToAgentMap[extractedHostname.toUpperCase()];
+              if (resolved) {
+                // Use display name (agent_name) as primary, hostname as secondary
+                agentName = resolved.agent_name || extractedHostname;
+                hostname = resolved.hostname;
+                resolvedAgentId = resolved.id;
+              } else {
+                // Fallback to extracted hostname
+                agentName = extractedHostname;
+                hostname = extractedHostname;
+              }
+            }
           }
           
           return {
             item_id: insight.id,
             source_type: 'ai_insight' as const,
-            agent_id: insight.agent_id,
+            agent_id: resolvedAgentId,
             agent_name: agentName,
             hostname: hostname,
             title: insight.title,

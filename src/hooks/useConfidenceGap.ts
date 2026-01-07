@@ -91,12 +91,14 @@ export function useCalculateConfidenceGap() {
 
   return useMutation({
     mutationFn: async ({
+      tenantId,
       auditId,
       redTeamId,
       anaScore,
       redScore,
       dimensionGaps = {},
     }: {
+      tenantId: string;
       auditId: string;
       redTeamId: string;
       anaScore: number;
@@ -104,7 +106,7 @@ export function useCalculateConfidenceGap() {
       dimensionGaps?: Record<string, number>;
     }) => {
       const { data, error } = await supabase.rpc('calculate_confidence_gap', {
-        p_tenant_id: null, // Will be derived from context
+        p_tenant_id: tenantId,
         p_audit_id: auditId,
         p_red_team_id: redTeamId,
         p_ana_score: anaScore,
