@@ -78,7 +78,7 @@ export const GlobalJobWatcher = () => {
               duration: 10000,
               action: {
                 label: 'Ver Detalhes',
-                onClick: () => navigate('/tasks')
+                onClick: () => navigate('/admin/tasks')
               }
             });
           }
