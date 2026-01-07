@@ -12991,6 +12991,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "task_events_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "v_tasks_requiring_closure"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "task_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -13013,6 +13020,88 @@ export type Database = {
           },
           {
             foreignKeyName: "task_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      task_evidence: {
+        Row: {
+          content: Json
+          content_hash: string
+          created_at: string
+          created_by: string | null
+          evidence_type: string
+          id: string
+          storage_ref: string | null
+          task_id: string
+          tenant_id: string
+          title: string
+        }
+        Insert: {
+          content: Json
+          content_hash: string
+          created_at?: string
+          created_by?: string | null
+          evidence_type: string
+          id?: string
+          storage_ref?: string | null
+          task_id: string
+          tenant_id: string
+          title: string
+        }
+        Update: {
+          content?: Json
+          content_hash?: string
+          created_at?: string
+          created_by?: string | null
+          evidence_type?: string
+          id?: string
+          storage_ref?: string | null
+          task_id?: string
+          tenant_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_evidence_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_evidence_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "v_tasks_requiring_closure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_evidence_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "task_evidence_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_evidence_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "task_evidence_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
@@ -17614,6 +17703,49 @@ export type Database = {
           },
         ]
       }
+      v_governance_stats: {
+        Row: {
+          active_tasks: number | null
+          avg_resolution_hours: number | null
+          critical_open: number | null
+          high_open: number | null
+          ignored_24h: number | null
+          resolved_24h: number | null
+          sla_breached_active: number | null
+          tenant_id: string | null
+          unassigned_tasks: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_integrity_score: {
         Row: {
           active_releases: number | null
@@ -18732,6 +18864,113 @@ export type Database = {
           },
         ]
       }
+      v_tasks_requiring_closure: {
+        Row: {
+          assigned_to: string | null
+          auto_generated: boolean | null
+          closed_at: string | null
+          closed_by: string | null
+          closure_evidence: Json | null
+          closure_reason: string | null
+          created_at: string | null
+          description: string | null
+          due_at: string | null
+          hours_open: number | null
+          id: string | null
+          needs_owner: boolean | null
+          playbook_id: string | null
+          requires_human_review: boolean | null
+          severity: string | null
+          sla_breached_at: string | null
+          source_id: string | null
+          source_type: string | null
+          status: string | null
+          tenant_id: string | null
+          title: string | null
+          updated_at: string | null
+          urgency_level: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          auto_generated?: boolean | null
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_evidence?: Json | null
+          closure_reason?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_at?: string | null
+          hours_open?: never
+          id?: string | null
+          needs_owner?: never
+          playbook_id?: string | null
+          requires_human_review?: boolean | null
+          severity?: string | null
+          sla_breached_at?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          title?: string | null
+          updated_at?: string | null
+          urgency_level?: never
+        }
+        Update: {
+          assigned_to?: string | null
+          auto_generated?: boolean | null
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_evidence?: Json | null
+          closure_reason?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_at?: string | null
+          hours_open?: never
+          id?: string | null
+          needs_owner?: never
+          playbook_id?: string | null
+          requires_human_review?: boolean | null
+          severity?: string | null
+          sla_breached_at?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          title?: string | null
+          updated_at?: string | null
+          urgency_level?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       v_tenant_isolation_metrics: {
         Row: {
           isolated_count: number | null
@@ -19296,6 +19535,7 @@ export type Database = {
         }
         Returns: Json
       }
+      escalate_breached_sla_tasks: { Args: never; Returns: undefined }
       evaluate_decision_rules: { Args: never; Returns: Json }
       evaluate_playbook_trigger: {
         Args: {
