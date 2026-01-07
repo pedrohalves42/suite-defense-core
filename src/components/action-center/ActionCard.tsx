@@ -51,6 +51,7 @@ import { RejectInsightDialog } from './RejectInsightDialog';
 import { InsightInvestigationDrawer } from './InsightInvestigationDrawer';
 import { getSuggestedActions } from '@/lib/insight-action-mapping';
 import { executeInsightAction } from '@/lib/insight-actions';
+import { useTenant } from '@/hooks/useTenant';
 
 interface ActionCardProps {
   item: ActionItem;
@@ -144,7 +145,9 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [investigationDrawerOpen, setInvestigationDrawerOpen] = useState(false);
   const [ignoreReason, setIgnoreReason] = useState('');
+  const [executingAction, setExecutingAction] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { tenant } = useTenant();
   
   const executeAction = useExecuteActionItem();
   const copy = getActionCopy(item.trigger_type);
@@ -173,6 +176,45 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
 
   // Get suggested actions for this insight type
   const suggestedActions = isAIInsight ? getSuggestedActions(item.trigger_type) : [];
+
+  // Handler for suggested actions - uses executeInsightAction
+  const handleSuggestedAction = async (actionType: string) => {
+    // Handle navigation separately
+    if (actionType === 'navigate_agent' && item.agent_id) {
+      navigate(`/admin/agent-health?agent=${item.agent_id}`);
+      return;
+    }
+
+    if (!item.agent_id || !tenant?.id) {
+      hToast.error('Agente ou tenant não identificado');
+      return;
+    }
+
+    setExecutingAction(actionType);
+    try {
+      const result = await executeInsightAction(
+        actionType,
+        item.agent_id,
+        item.agent_name || 'Agent',
+        tenant.id,
+        item.item_id
+      );
+      
+      if (result.success) {
+        hToast.success(result.message);
+        if (result.jobId) {
+          hToast.info(`Job criado: ${result.jobId.slice(0, 8)}...`);
+        }
+      } else {
+        hToast.error(result.message);
+      }
+    } catch (error) {
+      console.error('Error executing suggested action:', error);
+      hToast.error('Erro ao executar ação');
+    } finally {
+      setExecutingAction(null);
+    }
+  };
 
   const handleExecute = async () => {
     // For investigate actions, open investigation drawer instead of navigating
@@ -438,14 +480,12 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
                       "text-xs",
                       action.requires_approval && "border-amber-500/30 text-amber-700 dark:text-amber-400"
                     )}
-                    onClick={() => {
-                      if (action.action === 'navigate_agent' && item.agent_id) {
-                        navigate(`/admin/agent-health?agent=${item.agent_id}`);
-                      } else {
-                        hToast.info(`Ação "${action.label}" será implementada em breve`);
-                      }
-                    }}
+                    onClick={() => handleSuggestedAction(action.action)}
+                    disabled={executingAction !== null}
                   >
+                    {executingAction === action.action && (
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                    )}
                     {action.label}
                     {action.requires_approval && (
                       <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0">
