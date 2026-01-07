@@ -784,6 +784,94 @@ serve(async (req) => {
         );
       }
 
+      // Handle ai_insight reject action - formal rejection with reason and audit trail
+      if (source_type === 'ai_insight' && action === 'reject') {
+        const { reason, reason_category } = body;
+        
+        if (!reason) {
+          return new Response(
+            JSON.stringify({ error: 'Rejection reason is required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        const now = new Date().toISOString();
+
+        // Get insight details for audit
+        const { data: insight, error: insightError } = await serviceClient
+          .from('ai_insights')
+          .select('id, title, insight_type, severity, agent_id')
+          .eq('id', item_id)
+          .eq('tenant_id', tenantId)
+          .single();
+
+        if (insightError) {
+          console.error('[action-center-feed] Get insight for reject error:', insightError);
+          return new Response(
+            JSON.stringify({ error: 'Insight not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Update insight with rejection
+        const { error: updateError } = await serviceClient
+          .from('ai_insights')
+          .update({
+            rejected_at: now,
+            rejected_by: user.id,
+            rejection_reason: reason,
+            acknowledged: true,
+            acknowledged_at: now,
+            acknowledged_by: user.id,
+            status: 'rejected',
+          })
+          .eq('id', item_id)
+          .eq('tenant_id', tenantId);
+
+        if (updateError) {
+          console.error('[action-center-feed] Reject insight error:', updateError);
+          return new Response(
+            JSON.stringify({ error: updateError.message }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Create decision event for audit trail
+        const { error: eventError } = await serviceClient
+          .from('decision_events')
+          .insert({
+            tenant_id: tenantId,
+            rule_code: 'AI_INSIGHT_REJECTION',
+            action: 'reject_ai_insight',
+            evidence: {
+              insight_id: item_id,
+              insight_type: insight?.insight_type,
+              insight_title: insight?.title,
+              severity: insight?.severity,
+              rejection_reason: reason,
+              rejection_category: reason_category || 'unspecified',
+              rejected_at: now,
+              rejected_by: user.id,
+              user_email: user.email,
+              agent_id: insight?.agent_id,
+            },
+            decision_source: 'human',
+            decision_type: 'rejection',
+          });
+
+        if (eventError) {
+          console.warn('[action-center-feed] Failed to create rejection event:', eventError);
+          // Don't fail the request, the insight was already rejected
+        }
+
+        console.log(`[action-center-feed] Insight ${item_id} REJECTED by user ${user.id} - reason: ${reason}`);
+
+        return new Response(
+          JSON.stringify({ success: true, status: 'rejected' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       // Handle agent_offline execute action - treat as acknowledge
       if (source_type === 'agent_offline' && action === 'execute') {
         const agentId = item_id.replace('offline_', '');

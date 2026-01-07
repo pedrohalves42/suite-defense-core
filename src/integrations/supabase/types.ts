@@ -3658,6 +3658,9 @@ export type Database = {
           reasoning_summary: string | null
           recommendation: string | null
           recommended_actions: Json | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
           resolution_method: string | null
           resolved_at: string | null
           resolved_by: string | null
@@ -3692,6 +3695,9 @@ export type Database = {
           reasoning_summary?: string | null
           recommendation?: string | null
           recommended_actions?: Json | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
           resolution_method?: string | null
           resolved_at?: string | null
           resolved_by?: string | null
@@ -3726,6 +3732,9 @@ export type Database = {
           reasoning_summary?: string | null
           recommendation?: string | null
           recommended_actions?: Json | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
           resolution_method?: string | null
           resolved_at?: string | null
           resolved_by?: string | null

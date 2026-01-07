@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   Loader2,
   X,
+  XCircle,
   ChevronRight,
   Monitor,
   AlertTriangle,
@@ -35,6 +36,7 @@ import {
   Search,
   Sparkles,
   Target,
+  Wand2,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -45,6 +47,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { hToast } from '@/lib/humanized-toast';
 import { ArchiveReasonTree } from './ArchiveReasonTree';
 import { humanizeEvidence } from '@/lib/humanize-evidence';
+import { RejectInsightDialog } from './RejectInsightDialog';
+import { getSuggestedActions } from '@/lib/insight-action-mapping';
 
 interface ActionCardProps {
   item: ActionItem;
@@ -135,6 +139,7 @@ function extractKeyMetrics(context: Record<string, unknown>, triggerType: string
 
 export function ActionCard({ item, compact = false, onExecuted }: ActionCardProps) {
   const [ignoreDialogOpen, setIgnoreDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [ignoreReason, setIgnoreReason] = useState('');
   const navigate = useNavigate();
   
@@ -162,6 +167,9 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
   
   // Extract key metrics
   const keyMetrics = extractKeyMetrics(item.context || {}, item.trigger_type);
+
+  // Get suggested actions for this insight type
+  const suggestedActions = isAIInsight ? getSuggestedActions(item.trigger_type) : [];
 
   const handleExecute = async () => {
     // For investigate actions, navigate to agent details instead of executing
@@ -418,6 +426,43 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
             <ArchiveReasonTree agentId={item.agent_id} />
           )}
 
+          {/* Suggested Actions Section - for AI Insights */}
+          {isAIInsight && suggestedActions.length > 0 && (
+            <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-3">
+              <p className="text-xs font-semibold text-blue-600 mb-2 flex items-center gap-1">
+                <Wand2 className="h-3 w-3" />
+                Ações Sugeridas
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {suggestedActions.slice(0, 4).map((action, idx) => (
+                  <Button 
+                    key={idx} 
+                    variant="outline" 
+                    size="sm"
+                    className={cn(
+                      "text-xs",
+                      action.requires_approval && "border-amber-500/30 text-amber-700 dark:text-amber-400"
+                    )}
+                    onClick={() => {
+                      if (action.action === 'navigate_agent' && item.agent_id) {
+                        navigate(`/admin/agent-health?agent=${item.agent_id}`);
+                      } else {
+                        hToast.info(`Ação "${action.label}" será implementada em breve`);
+                      }
+                    }}
+                  >
+                    {action.label}
+                    {action.requires_approval && (
+                      <Badge variant="outline" className="ml-1 text-[10px] px-1 py-0">
+                        Aprovação
+                      </Badge>
+                    )}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Actions - with updated labels */}
           <div className="flex items-center gap-2 pt-2 border-t flex-wrap">
             <TooltipProvider>
@@ -489,22 +534,43 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
             )}
 
             {item.source_type === 'ai_insight' && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={handleAcknowledge}
-                      disabled={executeAction.isPending}
-                    >
-                      Entendido
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="max-w-xs">Marcar insight como revisado sem executar ação</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        onClick={handleAcknowledge}
+                        disabled={executeAction.isPending}
+                      >
+                        Entendido
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Marcar insight como revisado sem executar ação</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setRejectDialogOpen(true)}
+                        disabled={executeAction.isPending}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Rejeitar
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">Marcar como falso positivo ou não relevante. Isso ajuda a melhorar as detecções futuras.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
             )}
 
             {item.source_type === 'agent_offline' && (
@@ -584,6 +650,17 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reject Insight Dialog */}
+      <RejectInsightDialog
+        open={rejectDialogOpen}
+        onOpenChange={setRejectDialogOpen}
+        insightId={item.item_id}
+        insightTitle={displayTitle}
+        insightType={item.trigger_type}
+        agentName={agentDisplay}
+        onRejected={onExecuted}
+      />
     </>
   );
 }
