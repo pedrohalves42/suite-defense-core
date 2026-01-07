@@ -30,6 +30,7 @@ import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { JobLiveMonitor } from '@/components/admin/JobLiveMonitor';
 import { DiagnosticTestRunner } from '@/components/admin/DiagnosticTestRunner';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { AgentHealthAlerts } from '@/components/admin/AgentHealthAlerts';
 import { 
   AlertCircle, 
   CheckCircle2, 
@@ -364,6 +365,9 @@ export default function DiagnosticsCenter() {
 
       {/* Real-time Job Monitor */}
       <JobLiveMonitor showSummary={false} maxJobs={5} className="border-primary/20" />
+
+      {/* Watchdog de Execução - Alertas de Agentes */}
+      <AgentHealthAlerts />
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-3">
