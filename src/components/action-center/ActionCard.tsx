@@ -48,7 +48,9 @@ import { hToast } from '@/lib/humanized-toast';
 import { ArchiveReasonTree } from './ArchiveReasonTree';
 import { humanizeEvidence } from '@/lib/humanize-evidence';
 import { RejectInsightDialog } from './RejectInsightDialog';
+import { InsightInvestigationDrawer } from './InsightInvestigationDrawer';
 import { getSuggestedActions } from '@/lib/insight-action-mapping';
+import { executeInsightAction } from '@/lib/insight-actions';
 
 interface ActionCardProps {
   item: ActionItem;
@@ -140,6 +142,7 @@ function extractKeyMetrics(context: Record<string, unknown>, triggerType: string
 export function ActionCard({ item, compact = false, onExecuted }: ActionCardProps) {
   const [ignoreDialogOpen, setIgnoreDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [investigationDrawerOpen, setInvestigationDrawerOpen] = useState(false);
   const [ignoreReason, setIgnoreReason] = useState('');
   const navigate = useNavigate();
   
@@ -172,17 +175,9 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
   const suggestedActions = isAIInsight ? getSuggestedActions(item.trigger_type) : [];
 
   const handleExecute = async () => {
-    // For investigate actions, navigate to agent details instead of executing
+    // For investigate actions, open investigation drawer instead of navigating
     if (isInvestigateAction && item.agent_id) {
-      hToast.info('Abrindo investigação do agente...');
-      navigate(`/admin/agent-health?agent=${item.agent_id}`);
-      // Also acknowledge the insight so it's marked as seen
-      await executeAction.mutateAsync({
-        itemId: item.item_id,
-        sourceType: item.source_type,
-        action: 'acknowledge',
-      });
-      onExecuted?.();
+      setInvestigationDrawerOpen(true);
       return;
     }
     
@@ -660,6 +655,14 @@ export function ActionCard({ item, compact = false, onExecuted }: ActionCardProp
         insightType={item.trigger_type}
         agentName={agentDisplay}
         onRejected={onExecuted}
+      />
+
+      {/* Investigation Drawer */}
+      <InsightInvestigationDrawer
+        open={investigationDrawerOpen}
+        onOpenChange={setInvestigationDrawerOpen}
+        item={item}
+        onActionComplete={onExecuted}
       />
     </>
   );

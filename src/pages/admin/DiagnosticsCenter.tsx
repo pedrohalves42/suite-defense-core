@@ -11,7 +11,7 @@
 
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/hooks/useTenant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,8 +47,14 @@ import {
   FileText,
   Wrench,
   Target,
-  Eye
+  Eye,
+  Wifi,
+  Settings,
+  Zap,
+  History,
+  Globe
 } from 'lucide-react';
+import { prepareJobForInsert } from '@/lib/job-utils';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/date-utils';
 import { getOsIcon } from '@/lib/os-utils';
@@ -77,6 +83,7 @@ export default function DiagnosticsCenter() {
   const viewMode = searchParams.get('view') as 'default' | 'soc' | null;
   
   const { tenant } = useTenant();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(preSelectedAgentId);
   const [agentToCleanup, setAgentToCleanup] = useState<ProblematicAgent | null>(null);
@@ -593,50 +600,254 @@ export default function DiagnosticsCenter() {
 
                 {/* Tools Tab */}
                 <TabsContent value="tools" className="mt-4 space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Download className="h-4 w-4" />
-                          Script de Reinstalação
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-xs text-muted-foreground mb-3">
-                          Script PowerShell para reinstalar o agente remotamente
-                        </p>
-                        <Button size="sm" onClick={handleDownloadReinstallScript}>
-                          <Download className="h-3 w-3 mr-2" />
-                          Baixar Script
-                        </Button>
-                      </CardContent>
-                    </Card>
+                  {/* Remote Diagnostic Tools */}
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                      <Wifi className="h-4 w-4" />
+                      Diagnóstico Remoto
+                    </h4>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Activity className="h-4 w-4 text-green-500" />
+                            Testar Conectividade
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Envia ping ao agente para confirmar comunicação
+                          </p>
+                          <Button 
+                            size="sm" 
+                            onClick={async () => {
+                              if (!selectedAgent || !tenant?.id) return;
+                              const job = await prepareJobForInsert({
+                                tenant_id: tenant.id,
+                                agent_id: selectedAgent.id,
+                                agent_name: selectedAgent.agent_name,
+                                type: 'ping',
+                                status: 'queued',
+                                payload: { source: 'diagnostics_center' },
+                              });
+                              await supabase.from('jobs').insert(job);
+                              toast.success('Ping enviado! Aguarde resultado.');
+                            }}
+                          >
+                            <Zap className="h-3 w-3 mr-2" />
+                            Testar Agora
+                          </Button>
+                        </CardContent>
+                      </Card>
 
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                          Limpar Registro
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-xs text-muted-foreground mb-3">
-                          Remove registros problemáticos para permitir nova instalação
-                        </p>
-                        <Button 
-                          size="sm" 
-                          variant="destructive"
-                          onClick={() => {
-                            const probAgent = problematicAgents.find(a => a.id === selectedAgentId);
-                            if (probAgent) setAgentToCleanup(probAgent);
-                            else toast.info('Este computador não está na lista de problemáticos');
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3 mr-2" />
-                          Limpar e Resetar
-                        </Button>
-                      </CardContent>
-                    </Card>
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-blue-500" />
+                            Coletar Logs
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Solicita upload dos logs das últimas 24h
+                          </p>
+                          <Button 
+                            size="sm" 
+                            onClick={async () => {
+                              if (!selectedAgent || !tenant?.id) return;
+                              const job = await prepareJobForInsert({
+                                tenant_id: tenant.id,
+                                agent_id: selectedAgent.id,
+                                agent_name: selectedAgent.agent_name,
+                                type: 'collect_logs',
+                                status: 'queued',
+                                payload: { source: 'diagnostics_center', period: '24h' },
+                              });
+                              await supabase.from('jobs').insert(job);
+                              toast.success('Coleta de logs solicitada!');
+                            }}
+                          >
+                            <Download className="h-3 w-3 mr-2" />
+                            Solicitar Logs
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Settings className="h-4 w-4 text-purple-500" />
+                            Verificar Serviços
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Lista status dos componentes do agente
+                          </p>
+                          <Button 
+                            size="sm" 
+                            onClick={async () => {
+                              if (!selectedAgent || !tenant?.id) return;
+                              const job = await prepareJobForInsert({
+                                tenant_id: tenant.id,
+                                agent_id: selectedAgent.id,
+                                agent_name: selectedAgent.agent_name,
+                                type: 'check_services',
+                                status: 'queued',
+                                payload: { source: 'diagnostics_center' },
+                              });
+                              await supabase.from('jobs').insert(job);
+                              toast.success('Verificação de serviços iniciada!');
+                            }}
+                          >
+                            <CheckCircle2 className="h-3 w-3 mr-2" />
+                            Verificar
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <RefreshCw className="h-4 w-4 text-orange-500" />
+                            Forçar Health Report
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Solicita métricas atualizadas imediatamente
+                          </p>
+                          <Button 
+                            size="sm" 
+                            onClick={async () => {
+                              if (!selectedAgent || !tenant?.id) return;
+                              const job = await prepareJobForInsert({
+                                tenant_id: tenant.id,
+                                agent_id: selectedAgent.id,
+                                agent_name: selectedAgent.agent_name,
+                                type: 'health_report',
+                                status: 'queued',
+                                payload: { source: 'diagnostics_center', priority: 'high' },
+                              });
+                              await supabase.from('jobs').insert(job);
+                              toast.success('Relatório de saúde solicitado!');
+                            }}
+                          >
+                            <Zap className="h-3 w-3 mr-2" />
+                            Executar
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Globe className="h-4 w-4 text-cyan-500" />
+                            Testar DNS
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Verifica resolução de nomes do agente
+                          </p>
+                          <Button 
+                            size="sm" 
+                            onClick={async () => {
+                              if (!selectedAgent || !tenant?.id) return;
+                              const job = await prepareJobForInsert({
+                                tenant_id: tenant.id,
+                                agent_id: selectedAgent.id,
+                                agent_name: selectedAgent.agent_name,
+                                type: 'test_dns',
+                                status: 'queued',
+                                payload: { source: 'diagnostics_center', targets: ['google.com', 'microsoft.com'] },
+                              });
+                              await supabase.from('jobs').insert(job);
+                              toast.success('Teste de DNS iniciado!');
+                            }}
+                          >
+                            <Network className="h-3 w-3 mr-2" />
+                            Testar
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <History className="h-4 w-4 text-indigo-500" />
+                            Histórico Heartbeats
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Últimos 50 heartbeats com latência
+                          </p>
+                          <Button 
+                            size="sm" 
+                            onClick={() => {
+                              navigate(`/admin/agent-timeline?agent=${selectedAgentId}`);
+                            }}
+                          >
+                            <Clock className="h-3 w-3 mr-2" />
+                            Ver Histórico
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+
+                  {/* Original Tools */}
+                  <div>
+                    <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                      <Wrench className="h-4 w-4" />
+                      Ferramentas de Reinstalação
+                    </h4>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Download className="h-4 w-4" />
+                            Script de Reinstalação
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Script PowerShell para reinstalar o agente remotamente
+                          </p>
+                          <Button size="sm" onClick={handleDownloadReinstallScript}>
+                            <Download className="h-3 w-3 mr-2" />
+                            Baixar Script
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                            Limpar Registro
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-xs text-muted-foreground mb-3">
+                            Remove registros problemáticos para permitir nova instalação
+                          </p>
+                          <Button 
+                            size="sm" 
+                            variant="destructive"
+                            onClick={() => {
+                              const probAgent = problematicAgents.find(a => a.id === selectedAgentId);
+                              if (probAgent) setAgentToCleanup(probAgent);
+                              else toast.info('Este computador não está na lista de problemáticos');
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3 mr-2" />
+                            Limpar e Resetar
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </div>
                   </div>
 
                   {/* Bulk cleanup */}
