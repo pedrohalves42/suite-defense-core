@@ -18,6 +18,9 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { CoverageGates } from '@/components/governance/CoverageGates';
+import { RiskDebtCard } from '@/components/governance/RiskDebtCard';
+import { KillSwitchControl } from '@/components/governance/KillSwitchControl';
 
 export default function Governance() {
   const { data: govStats, isLoading: govLoading } = useGovernanceStats();
@@ -294,6 +297,15 @@ export default function Governance() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* New Governance Controls */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <CoverageGates />
+        <RiskDebtCard />
+      </div>
+
+      {/* Kill Switch Control */}
+      <KillSwitchControl />
     </div>
   );
 }
