@@ -7163,6 +7163,86 @@ export type Database = {
           },
         ]
       }
+      governance_reports: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          executive_summary: string
+          generated_at: string
+          generated_by: string
+          human_decisions: Json | null
+          id: string
+          key_metrics: Json
+          period_end: string
+          period_start: string
+          report_type: string
+          risk_debt_summary: Json | null
+          sla_performance: Json | null
+          tenant_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          executive_summary: string
+          generated_at?: string
+          generated_by?: string
+          human_decisions?: Json | null
+          id?: string
+          key_metrics?: Json
+          period_end: string
+          period_start: string
+          report_type: string
+          risk_debt_summary?: Json | null
+          sla_performance?: Json | null
+          tenant_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          executive_summary?: string
+          generated_at?: string
+          generated_by?: string
+          human_decisions?: Json | null
+          id?: string
+          key_metrics?: Json
+          period_end?: string
+          period_start?: string
+          report_type?: string
+          risk_debt_summary?: Json | null
+          sla_performance?: Json | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "governance_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "governance_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "governance_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       hmac_signatures_2025_12: {
         Row: {
           agent_name: string
@@ -17835,12 +17915,14 @@ export type Database = {
       }
       v_governance_stats: {
         Row: {
+          active_risk_debt: number | null
           active_tasks: number | null
           avg_resolution_hours: number | null
           critical_open: number | null
           high_open: number | null
           ignored_24h: number | null
           resolved_24h: number | null
+          risks_expiring_soon: number | null
           sla_breached_active: number | null
           tenant_id: string | null
           unassigned_tasks: number | null
@@ -19516,6 +19598,10 @@ export type Database = {
           job_ids: string[]
         }[]
       }
+      collect_weekly_governance_metrics: {
+        Args: { tenant_uuid: string; week_start?: string }
+        Returns: Json
+      }
       create_approval_request: {
         Args: {
           p_action_payload: Json
@@ -20199,6 +20285,10 @@ export type Database = {
           max_uses: number
           tenant_id: string
         }[]
+      }
+      validate_governance_coverage: {
+        Args: { tenant_uuid?: string }
+        Returns: Json
       }
       verify_audit_log_chain: {
         Args: {

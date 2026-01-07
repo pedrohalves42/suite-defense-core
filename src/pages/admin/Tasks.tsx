@@ -43,6 +43,7 @@ const statusConfig: Record<TaskStatus, { label: string; color: string; icon: Rea
   blocked: { label: 'Bloqueada', color: 'bg-red-500', icon: <Ban className="h-4 w-4" /> },
   resolved: { label: 'Resolvida', color: 'bg-green-500', icon: <CheckCircle2 className="h-4 w-4" /> },
   ignored: { label: 'Ignorada', color: 'bg-slate-500', icon: <XCircle className="h-4 w-4" /> },
+  accepted_risk: { label: 'Risco Aceito', color: 'bg-orange-500', icon: <AlertTriangle className="h-4 w-4" /> },
 };
 
 const sourceTypeConfig = {
