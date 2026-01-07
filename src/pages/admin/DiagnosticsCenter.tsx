@@ -28,6 +28,7 @@ import { DiagnosticPanel } from '@/components/agent/DiagnosticPanel';
 import { AgentStateExplainer } from '@/components/agent/AgentStateExplainer';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { JobLiveMonitor } from '@/components/admin/JobLiveMonitor';
+import { DiagnosticTestRunner } from '@/components/admin/DiagnosticTestRunner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { 
   AlertCircle, 
@@ -810,6 +811,32 @@ export default function DiagnosticsCenter() {
                         </CardContent>
                       </Card>
                     </div>
+                  </div>
+
+                  {/* Test Battery Section */}
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                      <Stethoscope className="h-4 w-4" />
+                      Bateria de Testes
+                    </h4>
+                    <Card className="border-dashed">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Stethoscope className="h-4 w-4 text-primary" />
+                          Testar Todas as Ferramentas
+                        </CardTitle>
+                        <CardDescription>
+                          Execute uma sequência de testes para verificar as ferramentas de diagnóstico
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <DiagnosticTestRunner 
+                          agentId={selectedAgentId} 
+                          agentName={selectedAgent?.agent_name}
+                          onComplete={() => queryClient.invalidateQueries({ queryKey: ['jobs'] })}
+                        />
+                      </CardContent>
+                    </Card>
                   </div>
 
                   {/* Original Tools */}
