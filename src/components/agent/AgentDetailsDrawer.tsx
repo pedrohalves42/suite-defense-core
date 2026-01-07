@@ -22,7 +22,9 @@ import { AgentStateExplainer } from '@/components/agent/AgentStateExplainer';
 import { AgentQuickActions } from '@/components/admin/AgentQuickActions';
 import { DiagnosticPanel } from '@/components/agent/DiagnosticPanel';
 import { useAgentCausality } from '@/hooks/useAgentCausality';
+import { useAntivirusStatus } from '@/hooks/useAntivirusStatus';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SectionDivider } from '@/components/ui/section-divider';
 import { 
   Stethoscope, 
   ExternalLink, 
@@ -88,6 +90,7 @@ export function AgentDetailsDrawer({
 }: AgentDetailsDrawerProps) {
   const navigate = useNavigate();
   const { data: causality, isLoading } = useAgentCausality(agentId);
+  const { data: antivirusStatus } = useAntivirusStatus(agentId || '', !!agentId);
 
   const handleAgentDeleted = () => {
     onClose();
@@ -168,6 +171,26 @@ export function AgentDetailsDrawer({
               <TabsContent value="overview" className="mt-4 space-y-4">
                 {/* Explicador de Estado Completo */}
                 <AgentStateExplainer agentId={agentId} />
+
+                {/* Antivirus Status */}
+                {antivirusStatus && antivirusStatus.length > 0 && (
+                  <>
+                    <SectionDivider label="Antivírus" />
+                    <div className="p-3 rounded-lg bg-muted/30 border">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">{antivirusStatus[0].engine_name || 'Antivírus'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {antivirusStatus[0].engine_version || 'Versão desconhecida'}
+                          </p>
+                        </div>
+                        <Badge variant={antivirusStatus[0].status === 'active' ? 'default' : 'destructive'}>
+                          {antivirusStatus[0].status || 'Status desconhecido'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Links para Mais Detalhes */}
                 <div className="space-y-2 pt-2">

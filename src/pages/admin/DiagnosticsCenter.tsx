@@ -31,6 +31,8 @@ import { JobLiveMonitor } from '@/components/admin/JobLiveMonitor';
 import { DiagnosticTestRunner } from '@/components/admin/DiagnosticTestRunner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AgentHealthAlerts } from '@/components/admin/AgentHealthAlerts';
+import { DynamicValidationSystem } from '@/components/admin/DynamicValidationSystem';
+import { SectionDivider } from '@/components/ui/section-divider';
 import { 
   AlertCircle, 
   CheckCircle2, 
@@ -368,6 +370,11 @@ export default function DiagnosticsCenter() {
 
       {/* Watchdog de Execução - Alertas de Agentes */}
       <AgentHealthAlerts />
+
+      <SectionDivider label="Sistema de Validação" />
+
+      {/* Dynamic Validation System */}
+      <DynamicValidationSystem />
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-3">

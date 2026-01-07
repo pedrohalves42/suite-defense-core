@@ -6,6 +6,9 @@ import { Progress } from '@/components/ui/progress';
 import { useActiveTenant } from '@/hooks/useActiveTenant';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { ExecutiveSummaryCard } from '@/components/admin/ExecutiveSummaryCard';
+import { SectionDivider } from '@/components/ui/section-divider';
+import { useRiskDeltaHistory } from '@/hooks/useRiskDelta';
 import { 
   Shield, 
   ShieldCheck, 
@@ -233,6 +236,11 @@ export default function ExecutiveDashboard() {
           Atualizar
         </Button>
       </div>
+
+      {/* Executive Summary Card - Risk Delta */}
+      <ExecutiveSummaryCard />
+
+      <SectionDivider label="Status de Proteção" />
 
       {/* Card Principal - Status de Proteção */}
       <Card className={cn(

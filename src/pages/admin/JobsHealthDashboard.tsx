@@ -18,6 +18,8 @@ import { useJobsHealth } from '@/hooks/useJobsHealth';
 import { JobMetricsByTypeTable } from '@/components/admin/jobs/JobMetricsByTypeTable';
 import { JobsTrendChart } from '@/components/admin/jobs/JobsTrendChart';
 import { StuckJobsAlert } from '@/components/admin/jobs/StuckJobsAlert';
+import { calculateRealSuccessRate } from '@/components/admin/JobStatusSimplified';
+import { SectionDivider } from '@/components/ui/section-divider';
 import { cn } from '@/lib/utils';
 
 function KPICard({ 
@@ -114,6 +116,8 @@ export default function JobsHealthDashboard() {
 
       {/* Stuck Jobs Alert */}
       <StuckJobsAlert stuckJobs={stuckJobs} onRefresh={refetch} />
+
+      <SectionDivider label="Métricas de Performance" />
 
       {/* KPI Cards */}
       <motion.div 
