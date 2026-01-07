@@ -28,7 +28,8 @@ import {
 } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/date-utils';
 import { JOB_TYPE_LABELS } from '@/lib/job-labels';
-import { getFailureExplanation } from '@/lib/leigo-translator';
+import { getFailureExplanation, formatErrorForUser } from '@/lib/leigo-translator';
+import { useSimplifiedMessage } from '@/hooks/useSimplifiedMessage';
 
 interface LiveJob {
   id: string;
@@ -338,6 +339,8 @@ function JobCard({ job }: { job: LiveJob }) {
   const visual = getJobVisual(job.status);
   const Icon = visual.icon;
   const failureInfo = job.failure_class ? getFailureExplanation(job.failure_class) : null;
+  const { formatError } = useSimplifiedMessage();
+  const simplifiedError = job.error_message ? formatError(job.error_message) : null;
   
   return (
     <div className={cn(
@@ -376,14 +379,27 @@ function JobCard({ job }: { job: LiveJob }) {
               <span>{formatRelativeTime(job.created_at)}</span>
             </div>
             
-            {job.status === 'failed' && failureInfo && (
+            {job.status === 'failed' && (failureInfo || simplifiedError) && (
               <div className="mt-2 p-2 rounded bg-red-500/5 border border-red-500/10">
-                <p className="text-xs font-medium text-red-500">
-                  {failureInfo.icon} {failureInfo.title}
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {failureInfo.explanation}
-                </p>
+                {failureInfo ? (
+                  <>
+                    <p className="text-xs font-medium text-red-500">
+                      {failureInfo.icon} {failureInfo.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {failureInfo.explanation}
+                    </p>
+                  </>
+                ) : simplifiedError && (
+                  <>
+                    <p className="text-xs font-medium text-red-500">
+                      {simplifiedError.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {simplifiedError.description}
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </div>

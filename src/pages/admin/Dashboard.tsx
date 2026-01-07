@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,10 +24,13 @@ import { RBACMetricsCard } from '@/components/admin/RBACMetricsCard';
 import { SafeModeCounter } from '@/components/admin/SafeModeCounter';
 import { GapsSummaryCard } from '@/components/admin/GapsSummaryCard';
 import { SystemCyclesHealthCard } from '@/components/admin/SystemCyclesHealthCard';
+import { CompactAlert } from '@/components/ui/explainable-alert';
+import { getAlertExplanation } from '@/lib/leigo-translator';
 
 export default function Dashboard() {
   const { tenant } = useTenant();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -170,8 +173,24 @@ export default function Dashboard() {
 
   const globalStatus = getGlobalStatus();
 
+  // Map problem type to alert type
+  const mapProblemToAlertType = (priority: 'high' | 'medium' | 'low', problemKey: string): string => {
+    if (problemKey === 'criticalAlerts') return 'security_threat';
+    if (problemKey === 'offlineAgents') return 'agents_offline';
+    if (problemKey === 'vulnCritical') return 'vulnerability_critical';
+    if (problemKey === 'aiInsights') return 'ai_insights_pending';
+    return 'security_threat';
+  };
+
   // Build problems list with fear/consequence format
-  const problems = [];
+  const problems: Array<{
+    icon: typeof AlertTriangle;
+    problem: string;
+    consequence: string;
+    to: string;
+    priority: 'high' | 'medium' | 'low';
+    alertType: string;
+  }> = [];
   
   if (criticalAlerts > 0) {
     problems.push({
@@ -179,7 +198,8 @@ export default function Dashboard() {
       problem: `${criticalAlerts} alerta${criticalAlerts > 1 ? 's' : ''} crítico${criticalAlerts > 1 ? 's' : ''} ativo${criticalAlerts > 1 ? 's' : ''}`,
       consequence: 'Podem indicar ameaças ativas no sistema',
       to: '/admin/security-monitoring',
-      priority: 'high' as const
+      priority: 'high' as const,
+      alertType: 'security_threat',
     });
   }
   
@@ -189,7 +209,8 @@ export default function Dashboard() {
       problem: `${offlineAgents} computador${offlineAgents > 1 ? 'es estão' : ' está'} desligado${offlineAgents > 1 ? 's' : ''}`,
       consequence: 'Podem não receber atualizações de segurança',
       to: '/admin/agent-health',
-      priority: 'medium' as const
+      priority: 'medium' as const,
+      alertType: 'agents_offline',
     });
   }
   
@@ -199,7 +220,8 @@ export default function Dashboard() {
       problem: `${vulnStats?.critical} vulnerabilidade${(vulnStats?.critical || 0) > 1 ? 's' : ''} crítica${(vulnStats?.critical || 0) > 1 ? 's' : ''} encontrada${(vulnStats?.critical || 0) > 1 ? 's' : ''}`,
       consequence: 'Podem ser exploradas por atacantes',
       to: '/admin/vulnerabilities',
-      priority: 'high' as const
+      priority: 'high' as const,
+      alertType: 'vulnerability_critical',
     });
   }
   
@@ -209,7 +231,8 @@ export default function Dashboard() {
       problem: `${insightsCount} insight${(insightsCount || 0) > 1 ? 's' : ''} da IA aguardando`,
       consequence: 'Recomendações para melhorar sua proteção',
       to: '/admin/ai-insights',
-      priority: 'low' as const
+      priority: 'low' as const,
+      alertType: 'ai_insights_pending',
     });
   }
 
@@ -357,46 +380,14 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {problems.slice(0, 3).map((item, idx) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={idx}
-                        to={item.to}
-                        className={cn(
-                          "flex items-center justify-between p-4 rounded-lg transition-colors group",
-                          item.priority === 'high' 
-                            ? "bg-red-500/5 hover:bg-red-500/10 border border-red-500/20" 
-                            : item.priority === 'medium'
-                            ? "bg-yellow-500/5 hover:bg-yellow-500/10 border border-yellow-500/20"
-                            : "bg-muted/30 hover:bg-muted/50 border border-border/50"
-                        )}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Icon className={cn(
-                            "h-5 w-5 mt-0.5",
-                            item.priority === 'high' ? "text-red-500" : 
-                            item.priority === 'medium' ? "text-yellow-600" : 
-                            "text-muted-foreground"
-                          )} />
-                          <div className="flex flex-col">
-                            <span className={cn(
-                              "font-medium",
-                              item.priority === 'high' ? "text-red-700 dark:text-red-400" : 
-                              item.priority === 'medium' ? "text-yellow-700 dark:text-yellow-400" : 
-                              "text-foreground"
-                            )}>
-                              {item.problem}
-                            </span>
-                            <span className="text-xs text-muted-foreground mt-0.5">
-                              {item.consequence}
-                            </span>
-                          </div>
-                        </div>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                      </Link>
-                    );
-                  })}
+                  {problems.slice(0, 3).map((item, idx) => (
+                    <CompactAlert
+                      key={idx}
+                      type={item.alertType}
+                      severity={item.priority === 'high' ? 'error' : item.priority === 'medium' ? 'warning' : 'info'}
+                      onClick={() => navigate(item.to)}
+                    />
+                  ))}
                 </div>
               )}
             </CardContent>
