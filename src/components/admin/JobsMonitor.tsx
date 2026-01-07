@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, Clock, RefreshCw, Trash2, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { formatRelativeTimePt } from '@/lib/agent-utils';
 import { formatBrazilDateTime } from '@/lib/date-utils';
+import { JobStatusSimplified } from '@/components/admin/JobStatusSimplified';
 
 interface StuckJob {
   id: string;
@@ -147,13 +148,10 @@ export function JobsMonitor() {
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${severity.color}`}>
-                      {job.minutes_stuck >= 60 ? (
-                        <AlertTriangle className="h-4 w-4" />
-                      ) : (
-                        <Clock className="h-4 w-4" />
-                      )}
-                    </div>
+                    <JobStatusSimplified 
+                      status={job.status} 
+                      errorMessage={job.minutes_stuck >= 60 ? 'Job travado há mais de 1 hora' : undefined}
+                    />
                     <div>
                       <p className="font-medium text-sm">{job.agent_name}</p>
                       <p className="text-xs text-muted-foreground">

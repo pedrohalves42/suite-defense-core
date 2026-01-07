@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { AlertTriangle, CheckCircle, Archive, RefreshCw, Cpu, HardDrive, Wifi, Shield } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Archive, RefreshCw, Cpu, HardDrive, Wifi, Shield, Lightbulb, Zap } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { getAlertExplanation, ALERT_TYPE_LABELS } from '@/lib/leigo-translator';
+import { ExplainableAlert } from '@/components/ui/explainable-alert';
 
 interface SystemAlert {
   id: string;
@@ -290,9 +291,44 @@ export default function AlertResolutionCenter() {
               <p className="text-muted-foreground">Seu ambiente está saudável.</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {filteredAlerts.map(alert => {
+                const isCriticalOrHigh = alert.severity === 'critical' || alert.severity === 'high';
                 const explanation = getAlertExplanation(alert.alert_type);
+                
+                // Para alertas críticos/altos, usar ExplainableAlert
+                if (isCriticalOrHigh) {
+                  return (
+                    <div key={alert.id} className="flex items-start gap-3">
+                      <Checkbox
+                        checked={selectedAlerts.has(alert.id)}
+                        onCheckedChange={() => toggleSelect(alert.id)}
+                        className="mt-4"
+                      />
+                      <div className="flex-1">
+                        <ExplainableAlert
+                          type={alert.alert_type}
+                          severity={alert.severity === 'critical' ? 'error' : 'warning'}
+                          showAnalogy
+                          showActions
+                          actions={[
+                            { 
+                              label: 'Resolver', 
+                              onClick: () => resolveMutation.mutate([alert.id]),
+                              variant: 'default'
+                            }
+                          ]}
+                        >
+                          <div className="text-xs text-muted-foreground mt-2">
+                            Detectado em: {format(new Date(alert.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </div>
+                        </ExplainableAlert>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // Para alertas médios/baixos, manter card simples
                 return (
                   <div
                     key={alert.id}
@@ -313,9 +349,7 @@ export default function AlertResolutionCenter() {
                           {explanation.title || alert.title}
                         </span>
                         <Badge className={SEVERITY_COLORS[alert.severity] || 'bg-gray-500'}>
-                          {alert.severity === 'critical' ? 'Crítico' : 
-                           alert.severity === 'high' ? 'Alto' :
-                           alert.severity === 'medium' ? 'Médio' : 'Baixo'}
+                          {alert.severity === 'medium' ? 'Médio' : 'Baixo'}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">

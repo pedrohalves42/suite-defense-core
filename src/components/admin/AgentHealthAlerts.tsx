@@ -33,6 +33,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
+import { HumanizedAlertCard } from '@/components/admin/HumanizedAlertCard';
 
 function getSeverityIcon(severity: string) {
   switch (severity) {
@@ -380,18 +381,21 @@ export function AgentHealthAlerts() {
         </div>
       )}
 
-      {/* Pending Alerts */}
+      {/* Pending Alerts - usando HumanizedAlertCard */}
       {(alerts?.length ?? 0) > 0 && (
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground">
             Alertas Pendentes ({alerts?.length})
           </h4>
           {alerts?.map((alert) => (
-            <AlertCard 
-              key={alert.id} 
-              alert={alert}
-              onResolve={() => resolveAlert.mutate({ alertId: alert.id })}
-              isResolving={resolveAlert.isPending}
+            <HumanizedAlertCard 
+              key={alert.id}
+              alertType={alert.alert_type || 'execution_stale'}
+              agentName={alert.title?.replace('Agent ', '') || undefined}
+              timestamp={alert.created_at}
+              onAction={() => resolveAlert.mutate({ alertId: alert.id })}
+              actionLabel="Resolver"
+              compact
             />
           ))}
         </div>
