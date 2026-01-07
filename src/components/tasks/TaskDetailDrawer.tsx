@@ -1,0 +1,290 @@
+import { useState } from 'react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { 
+  AlertTriangle, 
+  CheckCircle2, 
+  Clock, 
+  AlertOctagon,
+  Timer,
+  TrendingUp,
+  Eye,
+  Play,
+  XCircle,
+  Ban,
+  Brain,
+  Bell,
+  Shield,
+  Crosshair,
+  ListTodo,
+  RotateCcw,
+  Loader2
+} from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { 
+  useUpdateTaskStatus, 
+  type Task, 
+  type TaskStatus, 
+  type TaskSeverity 
+} from '@/hooks/useTasks';
+
+interface TaskDetailDrawerProps {
+  task: Task | null;
+  open: boolean;
+  onClose: () => void;
+}
+
+const severityConfig: Record<TaskSeverity, { label: string; color: string; icon: React.ReactNode }> = {
+  critical: { label: 'Crítico', color: 'bg-red-500', icon: <AlertOctagon className="h-4 w-4" /> },
+  high: { label: 'Alto', color: 'bg-orange-500', icon: <AlertTriangle className="h-4 w-4" /> },
+  medium: { label: 'Médio', color: 'bg-yellow-500', icon: <Timer className="h-4 w-4" /> },
+  low: { label: 'Baixo', color: 'bg-blue-500', icon: <TrendingUp className="h-4 w-4" /> },
+  info: { label: 'Info', color: 'bg-slate-500', icon: <Eye className="h-4 w-4" /> },
+};
+
+const statusConfig: Record<TaskStatus, { label: string; color: string; icon: React.ReactNode }> = {
+  open: { label: 'Aberta', color: 'bg-yellow-500', icon: <ListTodo className="h-4 w-4" /> },
+  in_progress: { label: 'Em Progresso', color: 'bg-blue-500', icon: <Play className="h-4 w-4" /> },
+  blocked: { label: 'Bloqueada', color: 'bg-red-500', icon: <Ban className="h-4 w-4" /> },
+  resolved: { label: 'Resolvida', color: 'bg-green-500', icon: <CheckCircle2 className="h-4 w-4" /> },
+  ignored: { label: 'Ignorada', color: 'bg-slate-500', icon: <XCircle className="h-4 w-4" /> },
+};
+
+const sourceTypeConfig = {
+  ai_insight: { label: 'AI Insight', icon: <Brain className="h-5 w-5" /> },
+  system_alert: { label: 'Alerta do Sistema', icon: <Bell className="h-5 w-5" /> },
+  playbook_execution: { label: 'Execução de Playbook', icon: <Shield className="h-5 w-5" /> },
+  red_team: { label: 'Simulação Red Team', icon: <Crosshair className="h-5 w-5" /> },
+  manual: { label: 'Criação Manual', icon: <ListTodo className="h-5 w-5" /> },
+};
+
+export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps) {
+  const [closureReason, setClosureReason] = useState('');
+  const updateStatus = useUpdateTaskStatus();
+
+  if (!task) return null;
+
+  const severity = severityConfig[task.severity];
+  const status = statusConfig[task.status];
+  const source = sourceTypeConfig[task.source_type];
+  const isActive = task.status === 'open' || task.status === 'in_progress';
+  const isSlaBreach = !!task.sla_breached_at;
+
+  const handleStatusChange = (newStatus: TaskStatus) => {
+    updateStatus.mutate({
+      taskId: task.id,
+      status: newStatus,
+      closureReason: newStatus === 'resolved' || newStatus === 'ignored' ? closureReason : undefined,
+    }, {
+      onSuccess: () => {
+        setClosureReason('');
+        if (newStatus === 'resolved' || newStatus === 'ignored') {
+          onClose();
+        }
+      }
+    });
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <SheetContent className="w-[500px] sm:max-w-[500px] overflow-y-auto">
+        <SheetHeader>
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-full ${severity.color} text-white`}>
+              {severity.icon}
+            </div>
+            <div>
+              <SheetTitle>{task.title}</SheetTitle>
+              <SheetDescription className="flex items-center gap-2 mt-1">
+                {source.icon}
+                <span>{source.label}</span>
+              </SheetDescription>
+            </div>
+          </div>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-6">
+          {/* Status Badges */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="outline" className="gap-1">
+              {status.icon}
+              {status.label}
+            </Badge>
+            <Badge variant="secondary">{severity.label}</Badge>
+            {isSlaBreach && isActive && (
+              <Badge variant="destructive" className="gap-1">
+                <Clock className="h-3 w-3" />
+                SLA Violado
+              </Badge>
+            )}
+            {task.requires_human_review && (
+              <Badge variant="outline">Revisão Humana Requerida</Badge>
+            )}
+            {task.auto_generated && (
+              <Badge variant="outline">Auto-gerada</Badge>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Description */}
+          {task.description && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Descrição</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{task.description}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Timeline Info */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Timeline</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Criada:</span>
+                <span>{format(new Date(task.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+              </div>
+              {task.due_at && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Prazo SLA:</span>
+                  <span className={isSlaBreach ? 'text-orange-500 font-medium' : ''}>
+                    {format(new Date(task.due_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                    {isSlaBreach && ' (Violado)'}
+                  </span>
+                </div>
+              )}
+              {task.closed_at && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Fechada:</span>
+                  <span>{format(new Date(task.closed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Idade:</span>
+                <span>
+                  {formatDistanceToNow(new Date(task.created_at), { locale: ptBR })}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Closure Info (if closed) */}
+          {task.closure_reason && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Razão do Fechamento</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{task.closure_reason}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          <Separator />
+
+          {/* Actions */}
+          {isActive ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="closure-reason">Razão do Fechamento (opcional)</Label>
+                <Textarea
+                  id="closure-reason"
+                  placeholder="Descreva o que foi feito para resolver ou por que está ignorando..."
+                  value={closureReason}
+                  onChange={(e) => setClosureReason(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                {task.status === 'open' && (
+                  <Button 
+                    onClick={() => handleStatusChange('in_progress')}
+                    disabled={updateStatus.isPending}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    {updateStatus.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Play className="h-4 w-4 mr-2" />
+                    )}
+                    Iniciar Trabalho
+                  </Button>
+                )}
+                
+                <Button 
+                  onClick={() => handleStatusChange('resolved')}
+                  disabled={updateStatus.isPending}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  {updateStatus.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                  )}
+                  Marcar como Resolvida
+                </Button>
+
+                <Button 
+                  onClick={() => handleStatusChange('ignored')}
+                  disabled={updateStatus.isPending}
+                  className="w-full"
+                  variant="outline"
+                >
+                  {updateStatus.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <XCircle className="h-4 w-4 mr-2" />
+                  )}
+                  Ignorar (com justificativa)
+                </Button>
+
+                <Button 
+                  onClick={() => handleStatusChange('blocked')}
+                  disabled={updateStatus.isPending}
+                  className="w-full"
+                  variant="destructive"
+                >
+                  {updateStatus.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Ban className="h-4 w-4 mr-2" />
+                  )}
+                  Marcar como Bloqueada
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <Button 
+                onClick={() => handleStatusChange('open')}
+                disabled={updateStatus.isPending}
+                className="w-full"
+                variant="outline"
+              >
+                {updateStatus.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                )}
+                Reabrir Task
+              </Button>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
