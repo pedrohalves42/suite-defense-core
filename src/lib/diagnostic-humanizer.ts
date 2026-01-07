@@ -5,11 +5,15 @@
  * Maps technical issue_type keys to user-friendly titles, explanations, impacts, and suggested actions.
  */
 
+export type ConfidenceLevel = 'low' | 'medium' | 'high';
+
 export interface DiagnosticExplanation {
   title: string;
   explanation: string;
   impact: string;
   actions: string[];
+  confidence: ConfidenceLevel;
+  confidenceReason?: string;
 }
 
 export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
@@ -23,7 +27,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Verificar conectividade de rede',
       'Verificar se o serviço CyberShield está rodando',
       'Verificar regras de firewall'
-    ]
+    ],
+    confidence: 'high',
+    confidenceReason: 'Baseado em ausência de heartbeat por mais de 10 minutos'
   },
   'stale_heartbeat': {
     title: 'Comunicação Atrasada',
@@ -32,7 +38,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
     actions: [
       'Verificar carga de CPU no computador',
       'Verificar se há problemas de rede intermitentes'
-    ]
+    ],
+    confidence: 'medium',
+    confidenceReason: 'Pode ser causado por carga de rede temporária'
   },
   'offline': {
     title: 'Computador Offline',
@@ -42,7 +50,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Verificar conectividade de rede',
       'Verificar se o computador está ligado',
       'Verificar status do serviço CyberShield'
-    ]
+    ],
+    confidence: 'high',
+    confidenceReason: 'Ausência prolongada confirmada por múltiplos checks'
   },
 
   // Resource issues
@@ -55,7 +65,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Identificar processos suspeitos',
       'Reiniciar serviços pesados',
       'Agendar verificação de malware'
-    ]
+    ],
+    confidence: 'high',
+    confidenceReason: 'Baseado em múltiplas métricas de CPU coletadas em tempo real'
   },
   'high_memory': {
     title: 'Memória RAM Elevada',
@@ -65,7 +77,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Verificar processos consumindo memória',
       'Fechar aplicações não essenciais',
       'Reiniciar o computador se necessário'
-    ]
+    ],
+    confidence: 'high',
+    confidenceReason: 'Métricas de memória confirmadas pelo sistema operacional'
   },
   'high_disk': {
     title: 'Disco Quase Cheio',
@@ -76,7 +90,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Remover arquivos antigos',
       'Verificar logs crescentes',
       'Verificar lixeira'
-    ]
+    ],
+    confidence: 'high',
+    confidenceReason: 'Leitura direta do sistema de arquivos'
   },
   'critical_disk': {
     title: 'Disco Crítico',
@@ -86,7 +102,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Ação imediata: liberar espaço',
       'Remover arquivos desnecessários',
       'Verificar logs e backups antigos'
-    ]
+    ],
+    confidence: 'high',
+    confidenceReason: 'Situação crítica confirmada - ação imediata necessária'
   },
 
   // Security issues
@@ -98,7 +116,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Gerar novo instalador',
       'Reinstalar o agente',
       'Verificar rotação de chaves'
-    ]
+    ],
+    confidence: 'high',
+    confidenceReason: 'Token ausente ou rejeitado pela API'
   },
   'safe_mode': {
     title: 'Modo de Segurança Ativo',
@@ -108,7 +128,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Investigar causa das falhas',
       'Autorizar recuperação do modo seguro',
       'Verificar logs de erro'
-    ]
+    ],
+    confidence: 'high',
+    confidenceReason: 'Estado reportado diretamente pelo agente'
   },
   'isolated': {
     title: 'Agente Isolado',
@@ -118,7 +140,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Verificar motivo do isolamento',
       'Analisar eventos de segurança',
       'Remover isolamento quando seguro'
-    ]
+    ],
+    confidence: 'high',
+    confidenceReason: 'Isolamento registrado em log de auditoria'
   },
   'throttled': {
     title: 'Agente Limitado',
@@ -128,7 +152,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Aguardar período de cooldown',
       'Verificar configuração de polling',
       'Investigar causa do excesso de tráfego'
-    ]
+    ],
+    confidence: 'medium',
+    confidenceReason: 'Baseado em contagem de requisições - pode ser temporário'
   },
 
   // Job issues
@@ -140,7 +166,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Verificar logs de erro das tarefas',
       'Retentar tarefas manualmente',
       'Investigar causa raiz'
-    ]
+    ],
+    confidence: 'high',
+    confidenceReason: 'Falhas registradas no banco de dados'
   },
   'pending_jobs': {
     title: 'Tarefas Pendentes',
@@ -150,7 +178,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Verificar status do agente',
       'Verificar conectividade',
       'Verificar fila de tarefas'
-    ]
+    ],
+    confidence: 'medium',
+    confidenceReason: 'Pode ser normal em agentes offline temporariamente'
   },
 
   // Network issues
@@ -162,7 +192,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Verificar configuração de DNS',
       'Testar resolução de nomes',
       'Verificar conectividade de rede'
-    ]
+    ],
+    confidence: 'low',
+    confidenceReason: 'Requer confirmação manual - pode ser falso positivo de rede'
   },
   'https_failure': {
     title: 'Falha de HTTPS',
@@ -172,7 +204,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Verificar certificados SSL',
       'Verificar proxy corporativo',
       'Verificar regras de firewall'
-    ]
+    ],
+    confidence: 'medium',
+    confidenceReason: 'Pode ser causado por proxy ou firewall corporativo'
   },
 
   // Update issues
@@ -184,7 +218,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Verificar logs de atualização',
       'Tentar atualização manual',
       'Verificar permissões de escrita'
-    ]
+    ],
+    confidence: 'high',
+    confidenceReason: 'Falha registrada no processo de atualização'
   },
   'outdated_version': {
     title: 'Versão Desatualizada',
@@ -194,7 +230,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
       'Agendar atualização',
       'Verificar se há bloqueios para atualização',
       'Forçar atualização se necessário'
-    ]
+    ],
+    confidence: 'high',
+    confidenceReason: 'Comparação direta com versão mais recente disponível'
   },
 
   // Generic
@@ -205,7 +243,9 @@ export const DIAGNOSTIC_EXPLANATIONS: Record<string, DiagnosticExplanation> = {
     actions: [
       'Verificar logs do agente',
       'Coletar diagnóstico completo'
-    ]
+    ],
+    confidence: 'low',
+    confidenceReason: 'Problema não classificado - requer investigação'
   }
 };
 
@@ -222,4 +262,34 @@ export function getHumanizedExplanation(issueType: string): DiagnosticExplanatio
  */
 export function getHumanizedTitle(issueType: string): string {
   return getHumanizedExplanation(issueType).title;
+}
+
+/**
+ * Gets badge styling properties for a confidence level.
+ */
+export function getConfidenceBadge(confidence: ConfidenceLevel): {
+  label: string;
+  variant: 'default' | 'secondary' | 'outline';
+  className: string;
+} {
+  switch (confidence) {
+    case 'high':
+      return { 
+        label: 'Alta confiança', 
+        variant: 'default',
+        className: 'bg-green-500/10 text-green-600 border-green-500/20 dark:text-green-400'
+      };
+    case 'medium':
+      return { 
+        label: 'Confiança média', 
+        variant: 'secondary',
+        className: 'bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400'
+      };
+    case 'low':
+      return { 
+        label: 'Baixa confiança', 
+        variant: 'outline',
+        className: 'bg-muted/50 text-muted-foreground border-muted'
+      };
+  }
 }

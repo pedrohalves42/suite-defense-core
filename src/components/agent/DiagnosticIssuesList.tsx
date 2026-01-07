@@ -21,6 +21,7 @@ import {
   getSeverityLabel 
 } from '@/types/diagnostic';
 import { getRecommendedAction } from '@/lib/diagnostic-actions';
+import { getHumanizedExplanation, getConfidenceBadge } from '@/lib/diagnostic-humanizer';
 
 const SEVERITY_ICONS = {
   critical: XCircle,
@@ -129,6 +130,10 @@ function DiagnosticIssueItem({ issue, compact, showActions = true, onAction }: D
     : getRecommendedAction(issue.issue_type);
   const isCriticalOrHigh = issue.severity === 'critical' || issue.severity === 'high';
   
+  // Get humanized explanation with confidence
+  const humanized = getHumanizedExplanation(issue.issue_type);
+  const confidenceBadge = getConfidenceBadge(humanized.confidence);
+  
   return (
     <div className={`p-3 rounded-lg border-l-4 bg-card ${getSeverityBorderColor(issue.severity)}`}>
       <div className="flex items-start gap-3">
@@ -144,6 +149,23 @@ function DiagnosticIssueItem({ issue, compact, showActions = true, onAction }: D
             <Badge className={`${getSeverityColor(issue.severity)} text-xs`}>
               {getSeverityLabel(issue.severity)}
             </Badge>
+            {/* Confidence badge */}
+            {!compact && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant={confidenceBadge.variant} className={`text-xs ${confidenceBadge.className}`}>
+                      {confidenceBadge.label}
+                    </Badge>
+                  </TooltipTrigger>
+                  {humanized.confidenceReason && (
+                    <TooltipContent>
+                      <p className="text-xs max-w-[200px]">{humanized.confidenceReason}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+            )}
           </div>
           
           {/* Origin badge - shows where the issue came from */}
