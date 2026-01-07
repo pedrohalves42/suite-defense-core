@@ -26,7 +26,8 @@ import {
   RotateCcw,
   Loader2,
   History,
-  FileText
+  FileText,
+  Package
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -37,6 +38,7 @@ import {
   type TaskSeverity 
 } from '@/hooks/useTasks';
 import { TaskTimeline } from './TaskTimeline';
+import { TaskEvidenceTab } from './TaskEvidenceTab';
 
 interface TaskDetailDrawerProps {
   task: Task | null;
@@ -139,7 +141,7 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
 
           {/* Tabs for different sections */}
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="details" className="gap-2">
                 <FileText className="h-4 w-4" />
                 Detalhes
@@ -147,6 +149,10 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
               <TabsTrigger value="timeline" className="gap-2">
                 <History className="h-4 w-4" />
                 Timeline
+              </TabsTrigger>
+              <TabsTrigger value="evidence" className="gap-2">
+                <Package className="h-4 w-4" />
+                Evidências
               </TabsTrigger>
             </TabsList>
 
@@ -220,6 +226,20 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
                 </CardHeader>
                 <CardContent>
                   <TaskTimeline taskId={task.id} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="evidence" className="mt-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Pacote de Evidências
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TaskEvidenceTab taskId={task.id} />
                 </CardContent>
               </Card>
             </TabsContent>
