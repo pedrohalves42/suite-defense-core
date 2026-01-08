@@ -347,10 +347,33 @@ Este ADR representa o fechamento da vulnerabilidade de isolamento lógico multi-
 
 ---
 
+## Ciclos Fechados (2026-01-08)
+
+### ✅ Fase 1: Limpeza de RLS Policies Legadas
+- Removidas 40+ policies legadas (`Super admins can...`, `Users can view...`)
+- Mantidas apenas policies `*_active_tenant` para tabelas multi-tenant
+
+### ✅ Fase 2: Views de Risk Debt (ADR-025)
+- `v_risk_debt_active` - Lista itens de risco aceito com data de expiração
+- `v_risk_debt_summary` - Resumo por tenant (total, critical, expiring_soon)
+
+### ✅ Fase 3: ESLint Plugin AST
+- Plugin `eslint-plugin-multitenant` criado
+- Regra `no-supabase-query-without-tenant` implementada
+- Detecta queries a tabelas multi-tenant sem filtro tenant_id
+
+### ✅ Fase 4: Testes E2E Habilitados
+- Testes de isolamento prontos em `tools/tests/multi-tenant-isolation.test.ts`
+- Cobertura: SELECT, INSERT, UPDATE, DELETE cross-tenant
+- Verificação de invariantes de segurança
+
+---
+
 ## Arquivos de Migração
 
 1. `20260108121108_*` - Criação de `get_active_tenant_id()` e `is_active_tenant()`
 2. `20260108124*` - Migração de todas as RLS policies para modelo active tenant
+3. `20260108134*` - Limpeza de policies legadas + views de Risk Debt
 
 ---
 
@@ -364,3 +387,4 @@ Este ADR representa o fechamento da vulnerabilidade de isolamento lógico multi-
 - `supabase/functions/set-active-tenant/index.ts`
 - `scripts/check-tenant-queries.sh`
 - `tools/tests/multi-tenant-isolation.test.ts`
+- `eslint-plugin-multitenant/` - Plugin ESLint para CI

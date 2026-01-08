@@ -13114,6 +13114,13 @@ export type Database = {
             foreignKeyName: "task_events_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
+            referencedRelation: "v_risk_debt_active"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_events_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
             referencedRelation: "v_tasks_requiring_closure"
             referencedColumns: ["id"]
           },
@@ -13197,6 +13204,13 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "v_active_risk_debt"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_evidence_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "v_risk_debt_active"
             referencedColumns: ["id"]
           },
           {
@@ -18841,6 +18855,107 @@ export type Database = {
           },
           {
             foreignKeyName: "user_roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      v_risk_debt_active: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          expires_at: string | null
+          id: string | null
+          justification: string | null
+          severity: string | null
+          tenant_id: string | null
+          title: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          expires_at?: never
+          id?: string | null
+          justification?: string | null
+          severity?: string | null
+          tenant_id?: string | null
+          title?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          expires_at?: never
+          id?: string | null
+          justification?: string | null
+          severity?: string | null
+          tenant_id?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      v_risk_debt_summary: {
+        Row: {
+          critical_count: number | null
+          expiring_soon: number | null
+          high_count: number | null
+          tenant_id: string | null
+          total_active: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "tasks_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "v_tenant_plan_status"
