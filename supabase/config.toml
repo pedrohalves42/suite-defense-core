@@ -648,3 +648,7 @@ verify_jwt = true
 [functions.auto-triage-insights]
 verify_jwt = false
 schedule = "0 6 * * *"
+
+# === ADR-026: Multi-Tenant Active Context ===
+[functions.set-active-tenant]
+verify_jwt = false
