@@ -50,6 +50,13 @@ const MULTI_TENANT_TABLES = new Set([
   'tenant_subscriptions',
   'vendor_risk_registry',
   'virus_scans',
+  // ADR-026 FASE 2 - 6 additional tables with active_tenant policies
+  'anomaly_events',
+  'audit_reason_trees',
+  'ai_action_validations',
+  'antivirus_status',
+  'custom_trials',
+  'policy_assignments',
 ]);
 
 type TableName = keyof Database['public']['Tables'];

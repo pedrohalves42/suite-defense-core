@@ -63,6 +63,13 @@ const MULTI_TENANT_TABLES = new Set([
   'policy_assignments',
 ]);
 
+// Whitelist of client names that bypass tenant checks (service-level access)
+const BYPASS_CLIENTS = new Set([
+  'adminClient',
+  'serviceClient',
+  'supabaseAdmin',
+]);
+
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://docs.example.com/rules/${name}`
 );
@@ -109,18 +116,23 @@ export const noSupabaseQueryWithoutTenant = createRule<[], MessageIds>({
         }
       },
 
-      // Detect supabase.from('table') calls
+      // Detect *.from('table') calls
       'CallExpression[callee.property.name="from"]'(
         node: TSESTree.CallExpression
       ) {
         // Skip if we're inside tenantQuery
         if (inTenantQuery) return;
 
-        // Check if this is supabase.from()
+        // Check if this is supabase.from() or similar client.from()
         const callee = node.callee as TSESTree.MemberExpression;
         if (callee.object.type !== 'Identifier') return;
         
         const objectName = callee.object.name;
+        
+        // Skip bypass clients (adminClient, serviceClient, etc.)
+        if (BYPASS_CLIENTS.has(objectName)) return;
+        
+        // Only check supabase client
         if (objectName !== 'supabase') return;
 
         // Get the table name from the first argument
