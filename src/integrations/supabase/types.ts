@@ -20073,6 +20073,7 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      is_current_super_admin: { Args: never; Returns: boolean }
       is_operator_or_viewer: { Args: { _user_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       log_scheduled_job_run: {
