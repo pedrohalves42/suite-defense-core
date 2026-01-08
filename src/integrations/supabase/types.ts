@@ -18866,6 +18866,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           accepted_by: string | null
+          approved_by: string | null
           expires_at: string | null
           id: string | null
           justification: string | null
@@ -18876,6 +18877,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           accepted_by?: string | null
+          approved_by?: never
           expires_at?: never
           id?: string | null
           justification?: string | null
@@ -18886,6 +18888,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           accepted_by?: string | null
+          approved_by?: never
           expires_at?: never
           id?: string | null
           justification?: string | null
