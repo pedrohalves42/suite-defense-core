@@ -4,6 +4,7 @@ import { TopBar } from '@/components/TopBar';
 import { NotificationSystem } from '@/components/NotificationSystem';
 import { ConnectivityIndicator } from '@/components/ConnectivityIndicator';
 import { GlobalJobWatcher } from '@/components/GlobalJobWatcher';
+import { GlobalKillSwitchBanner } from '@/components/layout/GlobalKillSwitchBanner';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -47,6 +48,7 @@ export const AppLayout = () => {
         <GlobalJobWatcher />
         <NotificationSystem />
         <ConnectivityIndicator />
+        <GlobalKillSwitchBanner />
         
         <AppSidebar />
         <div className={cn('transition-all duration-300', collapsed ? 'pl-16' : 'pl-60')}>

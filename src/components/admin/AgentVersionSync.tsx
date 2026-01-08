@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { prepareJobForInsert } from "@/lib/job-utils";
+import { useTenant } from "@/hooks/useTenant";
 
 interface Agent {
   id: string;
@@ -30,16 +31,20 @@ interface AgentVersionSyncProps {
 
 export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
   const queryClient = useQueryClient();
+  const { tenant } = useTenant();
   const [syncingAll, setSyncingAll] = useState(false);
   const [syncingAgent, setSyncingAgent] = useState<string | null>(null);
 
-  // Fetch active agents
+  // Fetch active agents - FILTERED BY TENANT
   const { data: agents = [], isLoading } = useQuery({
-    queryKey: ['agents-for-sync'],
+    queryKey: ['agents-for-sync', tenant?.id],
     queryFn: async () => {
+      if (!tenant?.id) return [];
+      
       const { data, error } = await supabase
         .from('agents')
         .select('id, agent_name, agent_version, status, last_heartbeat, os_type, tenant_id')
+        .eq('tenant_id', tenant.id)
         .eq('status', 'active')
         .is('archived_at', null)
         .order('agent_name');
@@ -47,6 +52,7 @@ export function AgentVersionSync({ latestVersions }: AgentVersionSyncProps) {
       if (error) throw error;
       return data as (Agent & { tenant_id: string })[];
     },
+    enabled: !!tenant?.id,
     refetchInterval: 30000 // Refresh every 30s
   });
 

@@ -130,6 +130,7 @@ import InsightTriageCenter from "./pages/admin/InsightTriageCenter";
 import ConfidenceGapDashboardPage from "./pages/admin/ConfidenceGapDashboard";
 import Tasks from "./pages/admin/Tasks";
 import Governance from "./pages/admin/Governance";
+import GovernanceReports from "./pages/admin/GovernanceReports";
 import { AdminMFAGuard } from "./components/auth/AdminMFAGuard";
 
 const App = () => (
@@ -255,6 +256,7 @@ const App = () => (
                 <Route path="job-health" element={<JobsHealthDashboard />} />
                 <Route path="tasks" element={<Tasks />} />
                 <Route path="governance" element={<Governance />} />
+                <Route path="governance-reports" element={<GovernanceReports />} />
               </Route>
 
               {/* Super Admin Routes (System-wide) - Protected by MFA Guard */}

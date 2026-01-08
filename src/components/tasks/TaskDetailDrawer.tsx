@@ -27,7 +27,8 @@ import {
   Loader2,
   History,
   FileText,
-  Package
+  Package,
+  ShieldAlert
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -39,6 +40,7 @@ import {
 } from '@/hooks/useTasks';
 import { TaskTimeline } from './TaskTimeline';
 import { TaskEvidenceTab } from './TaskEvidenceTab';
+import { AcceptRiskDialog } from './AcceptRiskDialog';
 
 interface TaskDetailDrawerProps {
   task: Task | null;
@@ -73,6 +75,7 @@ const sourceTypeConfig = {
 
 export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps) {
   const [closureReason, setClosureReason] = useState('');
+  const [acceptRiskDialogOpen, setAcceptRiskDialogOpen] = useState(false);
   const updateStatus = useUpdateTaskStatus();
 
   if (!task) return null;
@@ -87,13 +90,31 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
     updateStatus.mutate({
       taskId: task.id,
       status: newStatus,
-      closureReason: newStatus === 'resolved' || newStatus === 'ignored' ? closureReason : undefined,
+      closureReason: newStatus === 'resolved' || newStatus === 'ignored' || newStatus === 'accepted_risk' ? closureReason : undefined,
     }, {
       onSuccess: () => {
         setClosureReason('');
-        if (newStatus === 'resolved' || newStatus === 'ignored') {
+        if (newStatus === 'resolved' || newStatus === 'ignored' || newStatus === 'accepted_risk') {
           onClose();
         }
+      }
+    });
+  };
+
+  const handleAcceptRisk = (justification: string, expiryDate: Date) => {
+    updateStatus.mutate({
+      taskId: task.id,
+      status: 'accepted_risk' as TaskStatus,
+      closureReason: justification,
+      closureEvidence: {
+        type: 'risk_acceptance',
+        expiry_date: expiryDate.toISOString(),
+        accepted_at: new Date().toISOString(),
+      },
+    }, {
+      onSuccess: () => {
+        setAcceptRiskDialogOpen(false);
+        onClose();
       }
     });
   };
@@ -307,6 +328,15 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
                 </Button>
 
                 <Button 
+                  onClick={() => setAcceptRiskDialogOpen(true)}
+                  disabled={updateStatus.isPending}
+                  className="w-full bg-orange-600 hover:bg-orange-700"
+                >
+                  <ShieldAlert className="h-4 w-4 mr-2" />
+                  Aceitar Risco
+                </Button>
+
+                <Button 
                   onClick={() => handleStatusChange('blocked')}
                   disabled={updateStatus.isPending}
                   className="w-full"
@@ -339,6 +369,15 @@ export function TaskDetailDrawer({ task, open, onClose }: TaskDetailDrawerProps)
             </div>
           )}
         </div>
+
+        {/* Accept Risk Dialog */}
+        <AcceptRiskDialog
+          task={task}
+          open={acceptRiskDialogOpen}
+          onClose={() => setAcceptRiskDialogOpen(false)}
+          onConfirm={handleAcceptRisk}
+          isPending={updateStatus.isPending}
+        />
       </SheetContent>
     </Sheet>
   );

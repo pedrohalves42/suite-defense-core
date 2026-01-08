@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useTenant } from '@/hooks/useTenant';
 
 export interface AgentSyncStatus {
   id: string;
@@ -12,12 +13,17 @@ export interface AgentSyncStatus {
 }
 
 export function useAgentSyncStatus() {
+  const { tenant } = useTenant();
+  
   const { data: agents, isLoading, error, refetch } = useQuery({
-    queryKey: ['agent-sync-status'],
+    queryKey: ['agent-sync-status', tenant?.id],
     queryFn: async (): Promise<AgentSyncStatus[]> => {
+      if (!tenant?.id) return [];
+      
       const { data, error } = await supabase
         .from('agents')
         .select('id, agent_name, display_name, status, last_heartbeat, last_block_sync_at, archived_at')
+        .eq('tenant_id', tenant.id)
         .eq('status', 'active')
         .is('archived_at', null)
         .order('agent_name');
@@ -53,6 +59,7 @@ export function useAgentSyncStatus() {
         };
       });
     },
+    enabled: !!tenant?.id,
     staleTime: 30 * 1000,
   });
 
