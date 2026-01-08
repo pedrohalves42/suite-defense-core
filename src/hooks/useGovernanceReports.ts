@@ -17,6 +17,7 @@ export interface GovernanceReport {
   human_decisions: Record<string, unknown> | null;
   generated_by: string;
   generated_at: string;
+  created_at: string;
   approved_by: string | null;
   approved_at: string | null;
 }
