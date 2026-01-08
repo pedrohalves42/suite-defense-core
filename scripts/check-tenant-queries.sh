@@ -14,6 +14,9 @@ set -e
 TABLES="agents|tasks|system_alerts|jobs|ai_insights|computers|agent_web_activity"
 TABLES="$TABLES|agent_system_metrics|agent_disk_metrics|agent_network_info"
 TABLES="$TABLES|agent_builds|enrollment_keys|governance_reports"
+# ADR-026 FASE 2 - Additional tables with active_tenant policies
+TABLES="$TABLES|anomaly_events|audit_reason_trees|ai_action_validations"
+TABLES="$TABLES|antivirus_status|custom_trials|policy_assignments"
 
 FAILED=0
 ISSUES_FOUND=0
