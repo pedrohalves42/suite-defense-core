@@ -22,7 +22,7 @@ interface UserTenantRole {
 interface ActiveTenantContextType {
   tenants: Tenant[];
   activeTenant: Tenant | null;
-  setActiveTenant: (tenant: Tenant) => void;
+  setActiveTenant: (tenant: Tenant) => Promise<void>;
   loading: boolean;
   hasMultipleTenants: boolean;
 }
@@ -30,6 +30,35 @@ interface ActiveTenantContextType {
 const ActiveTenantContext = createContext<ActiveTenantContextType | undefined>(undefined);
 
 const ACTIVE_TENANT_KEY = 'cybershield_active_tenant_id';
+
+/**
+ * Syncs the active tenant to the backend, updating the user's JWT app_metadata.
+ * This ensures RLS policies can optionally use active_tenant_id for stricter isolation.
+ */
+async function syncActiveTenantToBackend(tenantId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.functions.invoke('set-active-tenant', {
+      body: { tenant_id: tenantId }
+    });
+
+    if (error) {
+      console.error('[syncActiveTenantToBackend] Edge function error:', error);
+      return false;
+    }
+
+    // Refresh session to get updated JWT with active_tenant_id
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) {
+      console.warn('[syncActiveTenantToBackend] Session refresh warning:', refreshError);
+      // Non-blocking - continue even if refresh fails
+    }
+
+    return true;
+  } catch (err) {
+    console.error('[syncActiveTenantToBackend] Unexpected error:', err);
+    return false;
+  }
+}
 
 export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
@@ -100,17 +129,32 @@ export const ActiveTenantProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [activeTenant?.id]);
 
-  const setActiveTenant = useCallback((tenant: Tenant) => {
+  // Sync initial tenant to backend when user logs in
+  useEffect(() => {
+    if (activeTenant && user) {
+      // Sync on initial load (non-blocking)
+      syncActiveTenantToBackend(activeTenant.id);
+    }
+  }, [activeTenant?.id, user?.id]);
+
+  const setActiveTenant = useCallback(async (tenant: Tenant) => {
     const previousTenantId = activeTenantId;
     
+    // Update local state immediately for responsive UI
     setActiveTenantId(tenant.id);
     localStorage.setItem(ACTIVE_TENANT_KEY, tenant.id);
     
-    // Invalidate all queries to force refetch with new tenant
     if (previousTenantId !== tenant.id) {
+      // Sync to backend (updates JWT app_metadata)
+      const synced = await syncActiveTenantToBackend(tenant.id);
+      
+      // Invalidate all queries to force refetch with new tenant
       queryClient.invalidateQueries();
+      
       toast.success(`Alterado para ${tenant.name}`, {
-        description: 'Dados atualizados para a nova empresa'
+        description: synced 
+          ? 'Dados atualizados para a nova empresa'
+          : 'Dados locais atualizados (sincronização pendente)'
       });
     }
   }, [activeTenantId, queryClient]);
