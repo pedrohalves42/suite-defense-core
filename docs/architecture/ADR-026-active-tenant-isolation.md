@@ -296,7 +296,7 @@ USING (
 );
 ```
 
-### Tabelas Migradas (18 tabelas)
+### Tabelas Migradas (40+ tabelas, 157 policies)
 
 | Tabela | Operações Migradas |
 |--------|---------------------|
@@ -311,8 +311,10 @@ USING (
 | `agent_rollback_events` | SELECT |
 | `agent_safe_mode_events` | SELECT, UPDATE |
 | `agent_system_metrics` | SELECT |
+| `agents_groups` | SELECT, INSERT, UPDATE, DELETE ✨ |
 | `ai_insights` | SELECT, INSERT, UPDATE |
 | `audit_logs` | SELECT |
+| `chaos_test_results` | SELECT, INSERT, DELETE (super admin only) ✨ |
 | `enrollment_keys` | SELECT, INSERT, UPDATE, DELETE |
 | `governance_reports` | SELECT, INSERT, UPDATE |
 | `invites` | SELECT, INSERT, UPDATE, DELETE |
@@ -324,6 +326,8 @@ USING (
 | `tasks` | SELECT, INSERT, UPDATE, DELETE |
 | `tenant_features` | SELECT, INSERT (super_admin), UPDATE (super_admin) |
 | `user_roles` | SELECT, INSERT, UPDATE, DELETE |
+
+✨ = Adicionado em FASE 4A (2026-01-08)
 
 ---
 
@@ -341,15 +345,17 @@ USING (
 
 ## Status Final — FECHAMENTO DEFINITIVO
 
-🟢 **CLOSED — Active Tenant Isolation Fully Enforced**
+🟢 **FULLY CLOSED — All Cycles Complete (2026-01-08)**
 
 - **0 legacy RLS policies remain** (user_has_tenant_access, user_belongs_to_tenant)
-- **131 active_tenant policies** enforcing isolation
-- **35+ multi-tenant tables** protected
+- **157 active_tenant policies** enforcing isolation (150 base + 7 FASE 4A)
+- **40+ multi-tenant tables** protected with RLS
+- **0 tables without policy** (views excluded)
 - Frontend errors cannot bypass database isolation
-- CI blocks regression at lint + E2E levels
+- ESLint plugin blocks insecure queries at dev time
+- CI blocks regression at lint + E2E levels (hard fail)
 
-Este ADR representa o fechamento definitivo da vulnerabilidade de isolamento lógico multi-tenant identificada em auditoria.
+Este ADR representa o **FECHAMENTO DEFINITIVO** de todos os ciclos de segurança multi-tenant.
 
 ### Garantias Pós-Implementação
 
@@ -385,6 +391,15 @@ Este ADR representa o fechamento definitivo da vulnerabilidade de isolamento ló
 - Testes de isolamento prontos em `tools/tests/multi-tenant-isolation.test.ts`
 - Cobertura: SELECT, INSERT, UPDATE, DELETE cross-tenant
 - Verificação de invariantes de segurança
+
+### ✅ Fase 5: CI Hard Gates (2026-01-08)
+- ESLint rule `multitenant/no-supabase-query-without-tenant` = error
+- E2E tests `continue-on-error` removido
+- Plugin multitenant buildado antes do lint no CI
+
+### ✅ Fase 6: Últimos Gaps de RLS (2026-01-08)
+- `agents_groups`: 4 policies CRUD (herda tenant via `group_id`)
+- `chaos_test_results`: 3 policies (super admin only)
 
 ---
 
