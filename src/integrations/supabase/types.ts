@@ -19801,6 +19801,7 @@ export type Database = {
         Returns: Json
       }
       get_action_center_feed: { Args: { p_tenant_id: string }; Returns: Json }
+      get_active_tenant_id: { Args: never; Returns: string }
       get_agent_disk_details: {
         Args: { p_agent_id: string }
         Returns: {
@@ -20067,6 +20068,7 @@ export type Database = {
           window_interval: string
         }[]
       }
+      is_active_tenant: { Args: { _tenant_id: string }; Returns: boolean }
       is_break_glass_user: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
