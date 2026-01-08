@@ -224,6 +224,121 @@ E NENHUM agent do Tenant B aparece
 
 ---
 
+## Implementação de RLS (2026-01-08)
+
+### Funções SQL Criadas
+
+```sql
+-- Extrai tenant ativo do JWT
+CREATE OR REPLACE FUNCTION public.get_active_tenant_id()
+RETURNS uuid AS $$
+  SELECT NULLIF(
+    current_setting('request.jwt.claims', true)::json->>'active_tenant_id',
+    ''
+  )::uuid;
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
+-- Verifica se tenant fornecido é o ativo
+CREATE OR REPLACE FUNCTION public.is_active_tenant(_tenant_id uuid)
+RETURNS boolean AS $$
+  SELECT _tenant_id = public.get_active_tenant_id();
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
+-- Verifica se usuário atual é super admin
+CREATE OR REPLACE FUNCTION public.is_current_super_admin()
+RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM user_roles
+    WHERE user_id = auth.uid()
+    AND role = 'super_admin'
+  );
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+```
+
+### Padrão RLS Implementado
+
+Todas as tabelas multi-tenant agora usam este padrão:
+
+```sql
+-- SELECT policy
+CREATE POLICY "table_select_active_tenant"
+ON table_name FOR SELECT
+USING (
+  tenant_id = public.get_active_tenant_id()
+  OR public.is_current_super_admin()
+);
+
+-- INSERT policy
+CREATE POLICY "table_insert_active_tenant"
+ON table_name FOR INSERT
+WITH CHECK (
+  tenant_id = public.get_active_tenant_id()
+  OR public.is_current_super_admin()
+);
+
+-- UPDATE policy
+CREATE POLICY "table_update_active_tenant"
+ON table_name FOR UPDATE
+USING (
+  tenant_id = public.get_active_tenant_id()
+  OR public.is_current_super_admin()
+)
+WITH CHECK (
+  tenant_id = public.get_active_tenant_id()
+  OR public.is_current_super_admin()
+);
+
+-- DELETE policy (super admin only)
+CREATE POLICY "table_delete_active_tenant"
+ON table_name FOR DELETE
+USING (
+  public.is_current_super_admin()
+);
+```
+
+### Tabelas Migradas (18 tabelas)
+
+| Tabela | Operações Migradas |
+|--------|---------------------|
+| `agents` | SELECT, INSERT, UPDATE, DELETE |
+| `agent_builds` | SELECT, INSERT |
+| `agent_disk_metrics` | SELECT |
+| `agent_evidence_logs` | SELECT |
+| `agent_groups` | SELECT, INSERT, UPDATE, DELETE |
+| `agent_metrics_daily` | SELECT |
+| `agent_network_info` | SELECT |
+| `agent_recovery_authorizations` | SELECT, INSERT, UPDATE |
+| `agent_rollback_events` | SELECT |
+| `agent_safe_mode_events` | SELECT, UPDATE |
+| `agent_system_metrics` | SELECT |
+| `ai_insights` | SELECT, INSERT, UPDATE |
+| `audit_logs` | SELECT |
+| `enrollment_keys` | SELECT, INSERT, UPDATE, DELETE |
+| `governance_reports` | SELECT, INSERT, UPDATE |
+| `invites` | SELECT, INSERT, UPDATE, DELETE |
+| `jobs` | SELECT, INSERT, UPDATE, DELETE |
+| `playbook_executions` | SELECT, INSERT, UPDATE, DELETE |
+| `scheduled_jobs` | SELECT, INSERT, UPDATE, DELETE |
+| `security_policies` | SELECT, INSERT, UPDATE, DELETE |
+| `system_alerts` | SELECT, INSERT, UPDATE, DELETE |
+| `tasks` | SELECT, INSERT, UPDATE, DELETE |
+| `tenant_features` | SELECT, INSERT (super_admin), UPDATE (super_admin) |
+| `user_roles` | SELECT, INSERT, UPDATE, DELETE |
+
+---
+
+## Garantias de Segurança
+
+| Vetor de Ataque | Resultado |
+|-----------------|-----------|
+| Query sem filtro tenant_id | ❌ Bloqueado por RLS |
+| Usuário acessando dados de outro tenant | ❌ Bloqueado por RLS |
+| Manipulação de JWT | ❌ Servidor valida acesso |
+| Bug de UI expondo dados cross-tenant | ❌ Camada de banco impõe isolamento |
+| Abuso de Super Admin | ✅ Controlado e auditado |
+
+---
+
 ## Status Final
 
 ✅ **Decisão aprovada e obrigatória para todas as tabelas multi-tenant.**
@@ -232,11 +347,20 @@ Este ADR representa o fechamento da vulnerabilidade de isolamento lógico multi-
 
 ---
 
+## Arquivos de Migração
+
+1. `20260108121108_*` - Criação de `get_active_tenant_id()` e `is_active_tenant()`
+2. `20260108124*` - Migração de todas as RLS policies para modelo active tenant
+
+---
+
 ## Referências
 
 - ADR-019: Multi-Tenant RLS Design
+- ADR-023: RLS Hardening
 - ADR-025: Governance Closure
 - `src/hooks/useRequiredTenant.ts`
 - `src/lib/tenantQuery.ts`
 - `supabase/functions/set-active-tenant/index.ts`
 - `scripts/check-tenant-queries.sh`
+- `tools/tests/multi-tenant-isolation.test.ts`
