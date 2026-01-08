@@ -10,12 +10,14 @@
 import { ESLintUtils, TSESTree } from '@typescript-eslint/utils';
 
 const MULTI_TENANT_TABLES = new Set([
+  // Core tables
   'agents',
   'tasks',
   'system_alerts',
   'jobs',
   'ai_insights',
   'computers',
+  // Agent metrics & activity
   'agent_web_activity',
   'agent_system_metrics',
   'agent_disk_metrics',
@@ -24,6 +26,7 @@ const MULTI_TENANT_TABLES = new Set([
   'agent_evidence_logs',
   'agent_rollback_events',
   'agent_safe_mode_events',
+  // Security & governance
   'enrollment_keys',
   'security_policies',
   'governance_reports',
@@ -35,6 +38,22 @@ const MULTI_TENANT_TABLES = new Set([
   'tenant_features',
   'tenant_action_policies',
   'blocked_websites',
+  // ADR-026 final closure - 15 additional tables
+  'ai_action_logs',
+  'api_keys',
+  'api_request_logs',
+  'compliance_policies',
+  'failed_login_attempts',
+  'quarantined_files',
+  'report_executions',
+  'reports',
+  'security_logs',
+  'soc2_controls',
+  'soc2_criteria',
+  'tenant_settings',
+  'tenant_subscriptions',
+  'vendor_risk_registry',
+  'virus_scans',
 ]);
 
 const createRule = ESLintUtils.RuleCreator(
