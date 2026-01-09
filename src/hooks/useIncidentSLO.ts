@@ -1,0 +1,207 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useActiveTenant } from '@/hooks/useActiveTenant';
+
+export interface IncidentSLOState {
+  id: string;
+  fingerprint_id: string;
+  slo_target: number;
+  error_budget: number;
+  burn_rate_1h: number;
+  burn_rate_6h: number;
+  burn_rate_24h: number;
+  budget_consumed: number;
+  budget_remaining: number;
+  occurrences_1h: number;
+  occurrences_6h: number;
+  occurrences_24h: number;
+  status: 'ok' | 'alert' | 'warning' | 'high' | 'critical';
+  last_evaluated_at: string;
+}
+
+export interface IncidentGroupWithSLO {
+  id: string;
+  fingerprint_hash: string;
+  source_type: 'job' | 'dlq' | 'alert';
+  failure_class: string;
+  normalized_signature: {
+    source_type?: string;
+    job_type?: string;
+    error_code?: string;
+    failure_class?: string;
+    agent_version_major?: string;
+  };
+  severity_hint: 'critical' | 'high' | 'medium' | 'low';
+  total_occurrences: number;
+  distinct_tenants: number;
+  distinct_agents: number;
+  first_seen_at: string;
+  last_seen_at: string;
+  is_active: boolean;
+  is_ongoing: boolean;
+  // SLO data
+  slo_target: number;
+  error_budget: number;
+  burn_rate_1h: number;
+  burn_rate_6h: number;
+  burn_rate_24h: number;
+  budget_consumed: number;
+  budget_remaining: number;
+  slo_status: string;
+  occurrences_1h: number;
+  occurrences_6h: number;
+  last_evaluated_at: string | null;
+}
+
+export type BurnRateLevel = 'ok' | 'alert' | 'warning' | 'high' | 'critical';
+
+export interface BurnRateInfo {
+  level: BurnRateLevel;
+  text: string;
+  bg: string;
+  label: string;
+  labelEn: string;
+}
+
+/**
+ * Returns color and label info for a given burn rate value
+ */
+export function getBurnRateInfo(rate: number): BurnRateInfo {
+  if (rate >= 5) {
+    return {
+      level: 'critical',
+      text: 'text-red-600 dark:text-red-400',
+      bg: 'bg-red-500/10',
+      label: 'CRÍTICO',
+      labelEn: 'CRITICAL',
+    };
+  }
+  if (rate >= 2) {
+    return {
+      level: 'high',
+      text: 'text-orange-600 dark:text-orange-400',
+      bg: 'bg-orange-500/10',
+      label: 'ALTO',
+      labelEn: 'HIGH',
+    };
+  }
+  if (rate >= 1.5) {
+    return {
+      level: 'warning',
+      text: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-500/10',
+      label: 'ATENÇÃO',
+      labelEn: 'WARNING',
+    };
+  }
+  if (rate >= 1) {
+    return {
+      level: 'alert',
+      text: 'text-yellow-600 dark:text-yellow-400',
+      bg: 'bg-yellow-500/10',
+      label: 'ALERTA',
+      labelEn: 'ALERT',
+    };
+  }
+  return {
+    level: 'ok',
+    text: 'text-green-600 dark:text-green-400',
+    bg: 'bg-green-500/10',
+    label: 'OK',
+    labelEn: 'OK',
+  };
+}
+
+/**
+ * Returns the highest severity burn rate status from the three windows
+ */
+export function getOverallBurnRateStatus(
+  burn1h: number,
+  burn6h: number,
+  burn24h: number
+): BurnRateInfo {
+  // Use the 1h rate as primary indicator, but check compound conditions
+  if (burn1h >= 5 && burn6h >= 2) {
+    return getBurnRateInfo(5); // Critical
+  }
+  if (burn1h >= 4 || burn6h >= 2) {
+    return getBurnRateInfo(2); // High
+  }
+  if (burn1h >= 2 || burn6h >= 1.5) {
+    return getBurnRateInfo(1.5); // Warning
+  }
+  if (burn1h >= 1) {
+    return getBurnRateInfo(1); // Alert
+  }
+  return getBurnRateInfo(0); // OK
+}
+
+/**
+ * Returns color for error budget bar based on consumption percentage
+ */
+export function getErrorBudgetColor(consumed: number): string {
+  if (consumed >= 80) return 'bg-red-500';
+  if (consumed >= 50) return 'bg-orange-500';
+  if (consumed >= 30) return 'bg-amber-500';
+  return 'bg-green-500';
+}
+
+/**
+ * Hook to fetch incident groups with SLO data
+ */
+export const useIncidentGroupsWithSLO = (limit = 50) => {
+  const { activeTenant } = useActiveTenant();
+
+  return useQuery({
+    queryKey: ['incident-groups-slo', activeTenant?.id, limit],
+    queryFn: async (): Promise<IncidentGroupWithSLO[]> => {
+      const { data, error } = await supabase
+        .from('v_incident_groups_with_slo' as any)
+        .select('*')
+        .limit(limit);
+
+      if (error) throw error;
+      return (data || []) as unknown as IncidentGroupWithSLO[];
+    },
+    enabled: !!activeTenant?.id,
+    refetchInterval: 30000, // 30s for fresher burn rate data
+    staleTime: 15000,
+  });
+};
+
+/**
+ * Hook to fetch SLO summary stats
+ */
+export const useIncidentSLOSummary = () => {
+  const { activeTenant } = useActiveTenant();
+
+  return useQuery({
+    queryKey: ['incident-slo-summary', activeTenant?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('incident_slo_state' as any)
+        .select('status, burn_rate_1h, budget_consumed');
+
+      if (error) throw error;
+
+      const states = data || [];
+      return {
+        total: states.length,
+        critical: states.filter((s: any) => s.status === 'critical').length,
+        high: states.filter((s: any) => s.status === 'high').length,
+        warning: states.filter((s: any) => s.status === 'warning').length,
+        alert: states.filter((s: any) => s.status === 'alert').length,
+        ok: states.filter((s: any) => s.status === 'ok').length,
+        avgBurnRate1h: states.length > 0
+          ? states.reduce((sum: number, s: any) => sum + (s.burn_rate_1h || 0), 0) / states.length
+          : 0,
+        avgBudgetConsumed: states.length > 0
+          ? states.reduce((sum: number, s: any) => sum + (s.budget_consumed || 0), 0) / states.length
+          : 0,
+      };
+    },
+    enabled: !!activeTenant?.id,
+    refetchInterval: 30000,
+    staleTime: 15000,
+  });
+};
