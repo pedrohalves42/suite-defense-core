@@ -6644,6 +6644,142 @@ export type Database = {
           },
         ]
       }
+      failure_fingerprints: {
+        Row: {
+          created_at: string
+          distinct_agents: number
+          distinct_tenants: number
+          failure_class: string
+          fingerprint_hash: string
+          fingerprint_version: number
+          first_seen_at: string
+          id: string
+          is_active: boolean
+          is_trending: boolean
+          last_seen_at: string
+          normalized_signature: Json
+          severity_hint: string
+          source_type: string
+          total_occurrences: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          distinct_agents?: number
+          distinct_tenants?: number
+          failure_class: string
+          fingerprint_hash: string
+          fingerprint_version?: number
+          first_seen_at?: string
+          id?: string
+          is_active?: boolean
+          is_trending?: boolean
+          last_seen_at?: string
+          normalized_signature: Json
+          severity_hint: string
+          source_type: string
+          total_occurrences?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          distinct_agents?: number
+          distinct_tenants?: number
+          failure_class?: string
+          fingerprint_hash?: string
+          fingerprint_version?: number
+          first_seen_at?: string
+          id?: string
+          is_active?: boolean
+          is_trending?: boolean
+          last_seen_at?: string
+          normalized_signature?: Json
+          severity_hint?: string
+          source_type?: string
+          total_occurrences?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      failure_occurrences: {
+        Row: {
+          agent_id: string | null
+          created_at: string
+          error_excerpt: string | null
+          fingerprint_id: string
+          id: string
+          occurred_at: string
+          source_id: string
+          source_type: string
+          tenant_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string
+          error_excerpt?: string | null
+          fingerprint_id: string
+          id?: string
+          occurred_at?: string
+          source_id: string
+          source_type: string
+          tenant_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string
+          error_excerpt?: string | null
+          fingerprint_id?: string
+          id?: string
+          occurred_at?: string
+          source_id?: string
+          source_type?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "failure_occurrences_fingerprint_id_fkey"
+            columns: ["fingerprint_id"]
+            isOneToOne: false
+            referencedRelation: "failure_fingerprints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failure_occurrences_fingerprint_id_fkey"
+            columns: ["fingerprint_id"]
+            isOneToOne: false
+            referencedRelation: "v_incident_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failure_occurrences_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "governance_health_metrics"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "failure_occurrences_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "failure_occurrences_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_system_operations_summary"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "failure_occurrences_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "v_tenant_plan_status"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       feature_flags: {
         Row: {
           created_at: string
@@ -13360,6 +13496,7 @@ export type Database = {
           created_at: string
           description: string | null
           due_at: string | null
+          fingerprint_id: string | null
           id: string
           playbook_id: string | null
           requires_human_review: boolean
@@ -13386,6 +13523,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_at?: string | null
+          fingerprint_id?: string | null
           id?: string
           playbook_id?: string | null
           requires_human_review?: boolean
@@ -13412,6 +13550,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_at?: string | null
+          fingerprint_id?: string | null
           id?: string
           playbook_id?: string | null
           requires_human_review?: boolean
@@ -13429,6 +13568,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_fingerprint_id_fkey"
+            columns: ["fingerprint_id"]
+            isOneToOne: false
+            referencedRelation: "failure_fingerprints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_fingerprint_id_fkey"
+            columns: ["fingerprint_id"]
+            isOneToOne: false
+            referencedRelation: "v_incident_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -18071,6 +18224,60 @@ export type Database = {
           },
         ]
       }
+      v_incident_groups: {
+        Row: {
+          distinct_agents: number | null
+          distinct_tenants: number | null
+          failure_class: string | null
+          fingerprint_hash: string | null
+          first_seen_at: string | null
+          id: string | null
+          is_active: boolean | null
+          is_ongoing: boolean | null
+          is_trending: boolean | null
+          last_seen_at: string | null
+          normalized_signature: Json | null
+          occurrences_24h: number | null
+          severity_hint: string | null
+          source_type: string | null
+          total_occurrences: number | null
+        }
+        Insert: {
+          distinct_agents?: number | null
+          distinct_tenants?: number | null
+          failure_class?: string | null
+          fingerprint_hash?: string | null
+          first_seen_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_ongoing?: never
+          is_trending?: boolean | null
+          last_seen_at?: string | null
+          normalized_signature?: Json | null
+          occurrences_24h?: never
+          severity_hint?: string | null
+          source_type?: string | null
+          total_occurrences?: number | null
+        }
+        Update: {
+          distinct_agents?: number | null
+          distinct_tenants?: number | null
+          failure_class?: string | null
+          fingerprint_hash?: string | null
+          first_seen_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_ongoing?: never
+          is_trending?: boolean | null
+          last_seen_at?: string | null
+          normalized_signature?: Json | null
+          occurrences_24h?: never
+          severity_hint?: string | null
+          source_type?: string | null
+          total_occurrences?: number | null
+        }
+        Relationships: []
+      }
       v_integrity_score: {
         Row: {
           active_releases: number | null
@@ -19586,6 +19793,7 @@ export type Database = {
         Args: { p_context: Json; p_event_type: string }
         Returns: number
       }
+      calculate_fingerprint_hash: { Args: { signature: Json }; Returns: string }
       calculate_next_run: {
         Args: { from_time?: string; pattern: string }
         Returns: string
@@ -20338,6 +20546,10 @@ export type Database = {
         Returns: undefined
       }
       must_change_password: { Args: never; Returns: boolean }
+      normalize_job_failure: {
+        Args: { job_record: Database["public"]["Tables"]["jobs"]["Row"] }
+        Returns: Json
+      }
       parse_version_code: { Args: { version_text: string }; Returns: number }
       persist_chain_breaks: { Args: never; Returns: number }
       process_autonomous_safe_mode: { Args: never; Returns: Json }
@@ -20368,6 +20580,17 @@ export type Database = {
           valid_from: string
           version: number
         }[]
+      }
+      register_failure_occurrence: {
+        Args: {
+          p_agent_id?: string
+          p_error_excerpt?: string
+          p_signature: Json
+          p_source_id: string
+          p_source_type: string
+          p_tenant_id: string
+        }
+        Returns: string
       }
       remove_agent_isolation: { Args: { p_agent_id: string }; Returns: boolean }
       remove_agent_throttle: { Args: { p_agent_id: string }; Returns: boolean }
