@@ -3,13 +3,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
-  useIncidentGroups, 
+  useIncidentGroupsWithSLO, 
+  getBurnRateInfo,
+  getOverallBurnRateStatus,
+  type IncidentGroupWithSLO,
+} from '@/hooks/useIncidentSLO';
+import { 
   getIncidentLabel, 
   getIncidentStatus,
   getSeverityColor,
   getSeverityLabel,
-  type IncidentGroup 
 } from '@/hooks/useIncidentGroups';
+import { BurnRateIndicator } from './BurnRateIndicator';
+import { ErrorBudgetBar } from './ErrorBudgetBar';
 import { 
   AlertOctagon, 
   RefreshCw, 
@@ -21,12 +27,14 @@ import {
   Layers,
   Users,
   Server,
-  Clock
+  Clock,
+  Gauge
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const StatusIcon = ({ status }: { status: ReturnType<typeof getIncidentStatus> }) => {
   switch (status.icon) {
@@ -41,10 +49,38 @@ const StatusIcon = ({ status }: { status: ReturnType<typeof getIncidentStatus> }
   }
 };
 
-const IncidentRow = ({ incident }: { incident: IncidentGroup }) => {
-  const status = getIncidentStatus(incident);
+const SLOStatusBadge = ({ status }: { status: string }) => {
+  const statusConfig: Record<string, { text: string; bg: string; label: string }> = {
+    critical: { text: 'text-red-600', bg: 'bg-red-500/10', label: 'CRÍTICO' },
+    high: { text: 'text-orange-600', bg: 'bg-orange-500/10', label: 'ALTO' },
+    warning: { text: 'text-amber-600', bg: 'bg-amber-500/10', label: 'ATENÇÃO' },
+    alert: { text: 'text-yellow-600', bg: 'bg-yellow-500/10', label: 'ALERTA' },
+    ok: { text: 'text-green-600', bg: 'bg-green-500/10', label: 'OK' },
+  };
+
+  const config = statusConfig[status] || statusConfig.ok;
+
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded",
+      config.bg,
+      config.text
+    )}>
+      <Gauge className="h-2.5 w-2.5" />
+      {config.label}
+    </span>
+  );
+};
+
+const IncidentRow = ({ incident }: { incident: IncidentGroupWithSLO }) => {
+  const status = getIncidentStatus(incident as any);
   const severityColors = getSeverityColor(incident.severity_hint);
-  const label = getIncidentLabel(incident);
+  const label = getIncidentLabel(incident as any);
+  const burnRateStatus = getOverallBurnRateStatus(
+    incident.burn_rate_1h,
+    incident.burn_rate_6h,
+    incident.burn_rate_24h
+  );
   
   const statusColors = {
     red: 'text-red-600 dark:text-red-400 bg-red-500/10',
@@ -52,6 +88,9 @@ const IncidentRow = ({ incident }: { incident: IncidentGroup }) => {
     amber: 'text-amber-600 dark:text-amber-400 bg-amber-500/10',
     green: 'text-green-600 dark:text-green-400 bg-green-500/10',
   };
+
+  // Check if has SLO data
+  const hasSLOData = incident.burn_rate_1h > 0 || incident.burn_rate_6h > 0 || incident.burn_rate_24h > 0;
 
   return (
     <div className={cn(
@@ -70,6 +109,21 @@ const IncidentRow = ({ incident }: { incident: IncidentGroup }) => {
             <span className="font-medium text-sm truncate">{label}</span>
           </div>
           
+          {/* 🔥 NEW: Burn Rate & Error Budget (ADR-034) */}
+          {hasSLOData && (
+            <div className="mb-2 space-y-1.5 p-2 rounded bg-background/50 border border-border/50">
+              <BurnRateIndicator
+                burn1h={incident.burn_rate_1h}
+                burn6h={incident.burn_rate_6h}
+                burn24h={incident.burn_rate_24h}
+              />
+              <ErrorBudgetBar
+                consumed={incident.budget_consumed}
+                target={incident.slo_target}
+              />
+            </div>
+          )}
+
           {/* Stats row */}
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
@@ -105,7 +159,7 @@ const IncidentRow = ({ incident }: { incident: IncidentGroup }) => {
           </div>
         </div>
 
-        {/* Right side: severity + status */}
+        {/* Right side: severity + status + SLO status */}
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <Badge 
             variant="outline" 
@@ -120,6 +174,9 @@ const IncidentRow = ({ incident }: { incident: IncidentGroup }) => {
             <StatusIcon status={status} />
             <span>{status.label}</span>
           </div>
+          {hasSLOData && (
+            <SLOStatusBadge status={incident.slo_status} />
+          )}
         </div>
       </div>
     </div>
@@ -127,7 +184,7 @@ const IncidentRow = ({ incident }: { incident: IncidentGroup }) => {
 };
 
 export function IncidentGroupsCard() {
-  const { data: incidents, isLoading, refetch } = useIncidentGroups(10);
+  const { data: incidents, isLoading, refetch } = useIncidentGroupsWithSLO(10);
 
   if (isLoading) {
     return (
@@ -138,7 +195,7 @@ export function IncidentGroupsCard() {
         <CardContent>
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-24" />
+              <Skeleton key={i} className="h-32" />
             ))}
           </div>
         </CardContent>
@@ -149,79 +206,95 @@ export function IncidentGroupsCard() {
   const activeIncidents = incidents?.filter(i => i.is_active) || [];
   const ongoingCount = activeIncidents.filter(i => i.is_ongoing).length;
   const criticalCount = activeIncidents.filter(i => i.severity_hint === 'critical').length;
+  const highBurnCount = activeIncidents.filter(i => i.burn_rate_1h >= 2).length;
+  const criticalSLOCount = activeIncidents.filter(i => i.slo_status === 'critical' || i.slo_status === 'high').length;
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Flame className="h-4 w-4 text-muted-foreground" />
-            Incident Groups
-            {activeIncidents.length > 0 && (
-              <Badge variant="secondary" className="ml-1">
-                {activeIncidents.length} ativo{activeIncidents.length !== 1 ? 's' : ''}
-              </Badge>
-            )}
-          </CardTitle>
-          <div className="flex items-center gap-2">
-            {/* Quick stats badges */}
-            {ongoingCount > 0 && (
-              <Badge variant="outline" className="text-xs text-red-600 border-red-500">
-                <Flame className="h-3 w-3 mr-1" />
-                {ongoingCount} ongoing
-              </Badge>
-            )}
-            {criticalCount > 0 && (
-              <Badge variant="outline" className="text-xs text-red-600 border-red-500">
-                {criticalCount} crítico{criticalCount !== 1 ? 's' : ''}
-              </Badge>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => refetch()}
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+    <TooltipProvider>
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Flame className="h-4 w-4 text-muted-foreground" />
+              Incident Groups
+              {activeIncidents.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {activeIncidents.length} ativo{activeIncidents.length !== 1 ? 's' : ''}
+                </Badge>
+              )}
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              {/* Quick stats badges */}
+              {highBurnCount > 0 && (
+                <Badge variant="outline" className="text-xs text-orange-600 border-orange-500">
+                  <Flame className="h-3 w-3 mr-1" />
+                  {highBurnCount} burn ≥2×
+                </Badge>
+              )}
+              {criticalSLOCount > 0 && (
+                <Badge variant="outline" className="text-xs text-red-600 border-red-500">
+                  <Gauge className="h-3 w-3 mr-1" />
+                  {criticalSLOCount} SLO crítico
+                </Badge>
+              )}
+              {ongoingCount > 0 && !highBurnCount && (
+                <Badge variant="outline" className="text-xs text-red-600 border-red-500">
+                  <Flame className="h-3 w-3 mr-1" />
+                  {ongoingCount} ongoing
+                </Badge>
+              )}
+              {criticalCount > 0 && !criticalSLOCount && (
+                <Badge variant="outline" className="text-xs text-red-600 border-red-500">
+                  {criticalCount} crítico{criticalCount !== 1 ? 's' : ''}
+                </Badge>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => refetch()}
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {activeIncidents.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <CheckCircle2 className="h-12 w-12 text-green-500 mb-3" />
-            <p className="text-sm font-medium">Nenhum incidente ativo</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Falhas isoladas ainda não formaram padrões recorrentes
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {activeIncidents.slice(0, 5).map((incident) => (
-              <IncidentRow key={incident.id} incident={incident} />
-            ))}
-          </div>
-        )}
+        </CardHeader>
+        <CardContent>
+          {activeIncidents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <CheckCircle2 className="h-12 w-12 text-green-500 mb-3" />
+              <p className="text-sm font-medium">Nenhum incidente ativo</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Falhas isoladas ainda não formaram padrões recorrentes
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {activeIncidents.slice(0, 5).map((incident) => (
+                <IncidentRow key={incident.id} incident={incident} />
+              ))}
+            </div>
+          )}
 
-        {/* Link to full list */}
-        {activeIncidents.length > 5 && (
-          <div className="mt-4 pt-3 border-t">
-            <Link 
-              to="/admin/incident-groups" 
-              className="flex items-center justify-center gap-1 text-sm text-primary hover:underline"
-            >
-              Ver todos os {activeIncidents.length} incident groups
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </div>
-        )}
+          {/* Link to full list */}
+          {activeIncidents.length > 5 && (
+            <div className="mt-4 pt-3 border-t">
+              <Link 
+                to="/admin/incident-groups" 
+                className="flex items-center justify-center gap-1 text-sm text-primary hover:underline"
+              >
+                Ver todos os {activeIncidents.length} incident groups
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </div>
+          )}
 
-        {/* Info about fingerprinting */}
-        <div className="mt-4 p-2 rounded-md bg-muted/30 text-xs text-muted-foreground text-center">
-          Incident Groups agregam falhas recorrentes por padrão de assinatura
-        </div>
-      </CardContent>
-    </Card>
+          {/* Info about SLO monitoring */}
+          <div className="mt-4 p-2 rounded-md bg-muted/30 text-xs text-muted-foreground text-center">
+            Burn Rate mede velocidade de consumo do Error Budget (≥2× = incidente ativo)
+          </div>
+        </CardContent>
+      </Card>
+    </TooltipProvider>
   );
 }
